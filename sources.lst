@@ -1,0 +1,4 @@
+-sourceroots
+src/main/java/com/ittera/cometa:src/main/aspectj/com/ittera/cometa
+-d
+target/classes
