@@ -3,6 +3,10 @@ package com.ittera.cometa;
 /**
  * Created by libre on 7/31/16.
  */
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.reflect.CodeSignature;
+
+
 aspect TestAspect {
 
 	pointcut allClasses(): !within(TestAspect);
@@ -17,51 +21,64 @@ aspect TestAspect {
 
 	pointcut allGets(): allClasses() && get(* *);
 
-	void around(): voidMethods() {	
-		String s=" --- void method called: "+thisJoinPoint;
-		if (thisJoinPoint.getArgs().length>0) {
-			s=s+" arg 0="+thisJoinPoint.getArgs()[0];
-		}
+	static final void print(String s) {
 		System.out.println(s);
+	}
+
+	void around(): voidMethods() {	
+		print(" --> void method called: "+thisJoinPoint);
+		printContext(thisJoinPoint);
+		printParameters(thisJoinPoint);
 		proceed();
 	}
 
 	Object around(): nonVoidMethods() {	
-		String s=" --- non-void method called: "+thisJoinPoint;
-		if (thisJoinPoint.getArgs().length>0) {
-			s=s+" arg 0="+thisJoinPoint.getArgs()[0];
-		}
-		System.out.println(s);
+		print(" --> non-void method called: "+thisJoinPoint);
+		printContext(thisJoinPoint);
+		printParameters(thisJoinPoint);
 		Object a=proceed();
 		return a;
 	}
 
 
 	Object around(): allConstructors() {	
-		String s=" --- constructor called: "+thisJoinPoint;
-		if (thisJoinPoint.getArgs().length>0) {
-			s=s+" arg 0="+thisJoinPoint.getArgs()[0];
-		}
-		System.out.println(s);
+		print(" --> constructor called: "+thisJoinPoint);
+		printContext(thisJoinPoint);
+		printParameters(thisJoinPoint);
 		Object a=proceed();
 		return a;
 	}
 
 	void around(): allSets() {	
-		String s=" --- set field called: "+thisJoinPoint;
-		if (thisJoinPoint.getArgs().length>0) {
-			s=s+" arg 0="+thisJoinPoint.getArgs()[0];
-		}
-		System.out.println(s);
+		print(" --> set field called: "+thisJoinPoint);
+		//printParameters(thisJoinPoint);
 	}
 
 	Object around(): allGets() {	
-		String s=" --- get field called: "+thisJoinPoint;
-		if (thisJoinPoint.getArgs().length>0) {
-			s=s+" arg 0="+thisJoinPoint.getArgs()[0];
-		}
-		System.out.println(s);
+		print(" --> get field called: "+thisJoinPoint);
+		printContext(thisJoinPoint);
+		//printParameters(thisJoinPoint);
 		Object a=proceed();
 		return a;
+	}
+
+
+	static private void printContext(JoinPoint jp) {
+		print(" --- signature="+jp.getSignature().getName());
+		print(" --- target class="+jp.getSignature().getDeclaringType().getName());
+		print(" --- target object="+jp.getTarget());
+		print(" --- this="+jp.getThis());
+	}
+
+	static private void printParameters(JoinPoint jp) {
+		Object[] args = jp.getArgs();
+		String[] names = ((CodeSignature)jp.getSignature()).getParameterNames();
+		Class[] types = ((CodeSignature)jp.getSignature()).getParameterTypes();
+		if (args.length>0) {
+			print(" --- Arguments: " );
+		}
+		for (int i = 0; i < args.length; i++) {
+			print(" ---   "  +i+ ". " +names[i]+ " : " +types[i].getName()+ " = " +args[i]);
+		}
 	}
 }
