@@ -1,4 +1,4 @@
-package com.ittera.cometa;
+package com.ittera.cometa.demos;
 
 /**
  * Hello world!
