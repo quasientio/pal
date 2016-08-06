@@ -8,7 +8,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import com.ittera.cometa.util.SuperStack;
-import org.apache.logging.log4j.core.config.plugins.convert.TypeConverters;
 
 import java.lang.reflect.Field;
 
@@ -40,29 +39,16 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized void instanceMethodWithArgs(Object sender, Object receiver, String methodName,
     String methodSignature, SuperStack paramStack) throws Throwable {
-    logger.debug("instanceMethodWithArgs: llamando a " + methodName);
+    logger.debug("instanceMethodWithArgs: calling " + methodName);
 
-    String senderClassName;
+    final String senderClassName = sender==null? "" : sender.getClass().getName();
 
-    if (sender != null) {
-      senderClassName = sender.getClass().getName();
-    } else {
-      senderClassName = "";
-    }
+    final String receiverClassName = receiver.getClass().getName();
 
-    String receiverClassName = receiver.getClass().getName();
-
-    ExecutableMessage mensaje = null;
-
-    if (paramStack == null) {
-      mensaje = new NoArgsInstanceMethodMessage(id, sender, senderClassName, receiver, receiverClassName,
-          methodName, methodSignature);
-    } else {
-      mensaje = new InstanceMethodMessage(id, sender, senderClassName, receiver, receiverClassName, methodName,
+    final ExecutableMessage message = new InstanceMethodMessage(id, sender, senderClassName, receiver, receiverClassName, methodName,
           methodSignature, paramStack);
-    }
 
-    sendExecutableMessage(mensaje);
+    sendExecutableMessage(message);
   }
 
   /** Para llamadas a metodos de instancias sin parametros.
@@ -72,8 +58,18 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized void instanceMethodNoArgs(Object sender, Object receiver, String methodName,
     String methodSignature) throws Throwable {
-    logger.debug("instanceMethodNoArgs: llamando a " + methodName);
-    instanceMethodWithArgs(sender, receiver, methodName, methodSignature, null);
+    logger.debug("instanceMethodNoArgs: calling " + methodName);
+
+    final String senderClassName = sender==null? "" : sender.getClass().getName();
+
+    String receiverClassName = receiver.getClass().getName();
+
+    ExecutableMessage message = null;
+
+    message = new NoArgsInstanceMethodMessage(id, sender, senderClassName, receiver, receiverClassName,
+          methodName, methodSignature);
+
+    sendExecutableMessage(message);
   }
 
   /** Para llamadas a metodos de clases estaticas con parametros.
@@ -85,25 +81,14 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized void staticMethodWithArgs(Object sender, String receiverClassName, String methodName,
     String methodSignature, SuperStack paramStack) throws Throwable {
-    logger.debug("staticMethodWithArgs:l lamando a " + methodName);
-    String senderClassName;
+    logger.debug("staticMethodWithArgs: calling " + methodName);
 
-    if (sender != null) {
-      senderClassName = sender.getClass().getName();
-    } else {
-      senderClassName = "";
-    }
+    final String senderClassName = sender==null? "" : sender.getClass().getName();
 
-    ExecutableMessage mensaje = null;
-    if (paramStack == null) {
-      mensaje = new NoArgsClassMethodMessage(id, sender, senderClassName, receiverClassName, methodName,
-          methodSignature);
-    } else {
-      mensaje = new ClassMethodMessage(id, sender, senderClassName, receiverClassName, methodName,
+    ExecutableMessage message = new ClassMethodMessage(id, sender, senderClassName, receiverClassName, methodName,
           methodSignature, paramStack);
-    }
 
-    sendExecutableMessage(mensaje);
+    sendExecutableMessage(message);
   }
 
   /** Para llamadas a metodos de clases estaticas sin parametros.
@@ -113,8 +98,14 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized void staticMethodNoArgs(Object sender, String receiverClassName, String methodName,
     String methodSignature) throws Throwable {
-    logger.debug("staticMethodNoArgs: llamando a " + methodName);
-    staticMethodWithArgs(sender, receiverClassName, methodName, methodSignature, null);
+    logger.debug("staticMethodNoArgs: calling " + methodName);
+
+    final String senderClassName = sender==null? "" : sender.getClass().getName();
+
+    ExecutableMessage mensaje = new NoArgsClassMethodMessage(id, sender, senderClassName, receiverClassName, methodName,
+          methodSignature);
+
+    sendExecutableMessage(mensaje);
   }
 
   /** Para llamadas a constructores con parametros.
@@ -123,26 +114,14 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized void initWithArgs(Object sender, String receiverClassName, String methodSignature,
     SuperStack paramStack) throws Throwable {
-    logger.debug("initWithArgs: llamando a constructor de " + receiverClassName + "\n Superstack :" + paramStack);
+    logger.debug("initWithArgs: calling constructor of " + receiverClassName + "\n w/ superstack :" + paramStack);
 
-    String senderClassName;
+    final String senderClassName = sender==null? "" : sender.getClass().getName();
 
-    if (sender != null) {
-      senderClassName = sender.getClass().getName();
-    } else {
-      senderClassName = "";
-    }
-
-    ExecutableMessage mensaje = null;
-
-    if (paramStack == null) {
-      mensaje = new NoArgsConstructorMessage(id, senderClassName, sender, receiverClassName);
-    } else {
-      mensaje = new ConstructorMessage(id, senderClassName, sender, receiverClassName, methodSignature,
+    ExecutableMessage message =  new ConstructorMessage(id, senderClassName, sender, receiverClassName, methodSignature,
           paramStack);
-    }
 
-    sendExecutableMessage(mensaje);
+    sendExecutableMessage(message);
   }
 
   /** Para llamadas a constructores sin parametros.
@@ -150,8 +129,12 @@ public abstract class AbstractDistributor implements IDistributor {
      */
   public synchronized void initNoArgs(Object sender, String receiverClassName)
     throws Throwable {
-    logger.debug("initNoArgs: llamando a constructor de " + receiverClassName);
-    initWithArgs(sender, receiverClassName, null, null);
+    logger.debug("initNoArgs: calling constructor of " + receiverClassName);
+    final String senderClassName = sender==null? "" : sender.getClass().getName();
+
+    ExecutableMessage message = new NoArgsConstructorMessage(id, senderClassName, sender, receiverClassName);
+
+    sendExecutableMessage(message);
   }
 
   // </editor-fold>
@@ -256,139 +239,121 @@ public abstract class AbstractDistributor implements IDistributor {
     try {
       fieldValue = getAccessibleDeclaredClassField(className, fieldName).get(null);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized boolean getStaticBoolean(String className, String fieldName) {
-    boolean fieldValue = false;
+    final boolean fieldValue;
 
     try {
       fieldValue = getAccessibleDeclaredClassField(className, fieldName).getBoolean(null);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized byte getStaticByte(String className, String fieldName) {
-    byte fieldValue = 0;
+    final byte fieldValue;
 
     try {
       fieldValue = getAccessibleDeclaredClassField(className, fieldName).getByte(null);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized char getStaticChar(String className, String fieldName) {
-    char fieldValue = 0;
+    final char fieldValue;
 
     try {
       fieldValue = getAccessibleDeclaredClassField(className, fieldName).getChar(null);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized int getStaticInt(String className, String fieldName) {
-    int fieldValue = 0;
+    final int fieldValue;
 
     try {
       fieldValue = getAccessibleDeclaredClassField(className, fieldName).getInt(null);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized double getStaticDouble(String className, String fieldName) {
-    double fieldValue = 0;
+    final double fieldValue;
 
     try {
       fieldValue = getAccessibleDeclaredClassField(className, fieldName).getDouble(null);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized float getStaticFloat(String className, String fieldName) {
-    float fieldValue = 0;
+    final float fieldValue;
 
     try {
       fieldValue = getAccessibleDeclaredClassField(className, fieldName).getFloat(null);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized long getStaticLong(String className, String fieldName) {
-    long fieldValue = 0;
+    final long fieldValue;
 
     try {
       fieldValue = getAccessibleDeclaredClassField(className, fieldName).getLong(null);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized short getStaticShort(String className, String fieldName) {
-    short fieldValue = 0;
+    final short fieldValue;
 
     try {
       fieldValue = getAccessibleDeclaredClassField(className, fieldName).getShort(null);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
@@ -402,136 +367,118 @@ public abstract class AbstractDistributor implements IDistributor {
 
   // <editor-fold defaultstate="collapsed" desc="GETFIELD OPERATIONS">
   public synchronized Object getObject(Object objectref, String fieldName) {
-    Object fieldValue = null;
+    final Object fieldValue;
 
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).get(objectref);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized boolean getBoolean(Object objectref, String fieldName) {
-    boolean fieldValue = false;
+    final boolean fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getBoolean(objectref);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized byte getByte(Object objectref, String fieldName) {
-    byte fieldValue = 0;
+    final byte fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getByte(objectref);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized char getChar(Object objectref, String fieldName) {
-    char fieldValue = 0;
+    final char fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getChar(objectref);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized int getInt(Object objectref, String fieldName) {
-    int fieldValue = 0;
+    final int fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getInt(objectref);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized double getDouble(Object objectref, String fieldName) {
-    double fieldValue = 0;
+    final double fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getDouble(objectref);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized float getFloat(Object objectref, String fieldName) {
-    float fieldValue = 0;
+    final float fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getFloat(objectref);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized long getLong(Object objectref, String fieldName) {
-    long fieldValue = 0;
+    final long fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getLong(objectref);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
   }
 
   public synchronized short getShort(Object objectref, String fieldName) {
-    short fieldValue = 0;
+    final short fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getShort(objectref);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
 
     return fieldValue;
@@ -545,146 +492,110 @@ public abstract class AbstractDistributor implements IDistributor {
 
   // <editor-fold defaultstate="collapsed" desc="PUTSTATIC OPERATIONS">
   public synchronized void putStatic(Object value, String className, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredClassField(className, fieldName);
+    final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
       objectField.set(null, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putStatic(boolean value, String className, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredClassField(className, fieldName);
+    final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
       objectField.setBoolean(null, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putStatic(byte value, String className, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredClassField(className, fieldName);
+    final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
       objectField.setByte(null, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putStatic(char value, String className, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredClassField(className, fieldName);
+    final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
       objectField.setChar(null, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putStatic(int value, String className, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredClassField(className, fieldName);
+    final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
       objectField.setInt(null, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putStatic(double value, String className, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredClassField(className, fieldName);
+    final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
       objectField.setDouble(null, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putStatic(float value, String className, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredClassField(className, fieldName);
+    final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
       objectField.setFloat(null, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putStatic(long value, String className, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredClassField(className, fieldName);
+    final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
       objectField.setLong(null, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putStatic(short value, String className, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredClassField(className, fieldName);
+    final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
       objectField.setShort(null, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
@@ -692,146 +603,110 @@ public abstract class AbstractDistributor implements IDistributor {
 
   // <editor-fold defaultstate="collapsed" desc="PUTFIELD OPERATIONS">
   public synchronized void putField(Object objectref, Object value, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
+    final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
       objectField.set(objectref, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putField(Object objectref, boolean value, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
+    final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
       objectField.setBoolean(objectref, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putField(Object objectref, byte value, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
+    final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
       objectField.setByte(objectref, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putField(Object objectref, char value, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
+    final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
       objectField.setChar(objectref, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putField(Object objectref, int value, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
+    final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
       objectField.setInt(objectref, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putField(Object objectref, double value, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
+    final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
       objectField.setDouble(objectref, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putField(Object objectref, float value, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
+    final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
       objectField.setFloat(objectref, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putField(Object objectref, long value, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
+    final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
       objectField.setLong(objectref, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
   public synchronized void putField(Object objectref, short value, String fieldName) {
-    Field objectField = null;
-
-    objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
+    final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
       objectField.setShort(objectref, value);
     } catch (IllegalAccessException ex) {
-      logger.error("Illegal access", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal access",ex);
     } catch (IllegalArgumentException ex) {
-      logger.error("Illegal argument", ex);
-      System.exit(1);
+      throw new DistributorError("Illegal argument",ex);
     }
   }
 
@@ -845,12 +720,10 @@ public abstract class AbstractDistributor implements IDistributor {
     try {
       objectField = objectref.getClass().getDeclaredField(fieldName);
     } catch (SecurityException ex) {
-      logger.error("Security exception caught when trying to access field " + fieldName + " for class " +
+      throw new DistributorError("Security exception caught when trying to access field " + fieldName + " for class " +
         objectref.getClass().getName(), ex);
-      System.exit(1);
     } catch (NoSuchFieldException ex) {
-      logger.error("No such field", ex);
-      System.exit(1);
+      throw new DistributorError("No such field", ex);
     }
 
     objectField.setAccessible(true);
@@ -863,14 +736,12 @@ public abstract class AbstractDistributor implements IDistributor {
     try {
       classField = Class.forName(className).getDeclaredField(fieldName);
     } catch (ClassNotFoundException ex1) {
-      logger.error("Class not found", ex1);
+      throw new DistributorError("Class not found", ex1);
     } catch (SecurityException ex) {
-      logger.error("Security exception caught when trying to access field " + fieldName + " for class " +
+      throw new DistributorError("Security exception caught when trying to access field " + fieldName + " for class " +
         className, ex);
-      System.exit(1);
     } catch (NoSuchFieldException ex) {
-      logger.error("No such field", ex);
-      System.exit(1);
+      throw new DistributorError("No such field", ex);
     }
 
     classField.setAccessible(true);
@@ -895,8 +766,7 @@ public abstract class AbstractDistributor implements IDistributor {
     ExceptionWrapper exceptionWra = (ExceptionWrapper) raisedExceptions.removeLast();
 
     if (!(exceptionWra.getException() instanceof Exception)) {
-      logger.error("Can't handle Error o Throwable:", exceptionWra.getException());
-      System.exit(0);
+      throw new DistributorError("Can't handle Error o Throwable:", exceptionWra.getException());
     }
 
     logger.debug("passing back exception : " + exceptionWra.getException());
@@ -914,12 +784,11 @@ public abstract class AbstractDistributor implements IDistributor {
     //if the object is in another distributor, forward the call
 
     //otherwise perform the instanceof here
-    Class clazz = null;
+    final Class clazz;
     try {
       clazz = Class.forName(className);
     } catch (ClassNotFoundException cnfe) {
-      logger.error("Can't find the class of an object that is supposed to be loaded: " + cnfe, cnfe);
-      throw new DistributorError("Can't find the class of an object that is supposed to be loaded");
+      throw new DistributorError("Can't find the class of an object that is supposed to be loaded", cnfe);
     }
 
     if (clazz.isInstance(object)) {
