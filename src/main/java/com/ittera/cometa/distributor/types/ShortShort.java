@@ -1,14 +1,16 @@
-package com.ittera.cometa.util;
+package com.ittera.cometa.distributor.types;
 
+
+import com.ittera.cometa.util.Primitive;
 
 /**
  *
  * @author libre
  */
-class ShortShort implements Primitivo {
+public class ShortShort implements Primitive {
   short value;
 
-  ShortShort(short s) {
+  public ShortShort(short s) {
     value = s;
   }
 

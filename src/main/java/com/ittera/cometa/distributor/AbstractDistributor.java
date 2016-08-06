@@ -1,5 +1,6 @@
 package com.ittera.cometa.distributor;
 
+import com.ittera.cometa.distributor.messages.*;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
 import com.ittera.cometa.distributor.returntypes.Null;
 
@@ -7,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import com.ittera.cometa.util.SuperStack;
+import org.apache.logging.log4j.core.config.plugins.convert.TypeConverters;
 
 import java.lang.reflect.Field;
 
@@ -19,7 +21,7 @@ import java.util.LinkedList;
  * @author libre
  */
 public abstract class AbstractDistributor implements IDistributor {
-  protected Logger logger = LogManager.getLogger(this.getClass());
+  protected static Logger logger = LogManager.getLogger("distributor");
   protected int id;
   protected Deque<ExceptionWrapper> raisedExceptions = new LinkedList<ExceptionWrapper>();
   protected java.lang.ClassLoader classLoader;
@@ -31,9 +33,9 @@ public abstract class AbstractDistributor implements IDistributor {
   /** Para llamadas a metodos de instancias con parametros.
    * @param sender
    * @param receiver Objeto al que se invoca.
-   * @param NombreMetodo Nombre del metodo al que se invoca.
+   * @param methodName Nombre del metodo al que se invoca.
    * @param methodSignature Firma (Signature) que identifica los tipos de parametros y el return type.
-   * @param Parametros SuperSuperStack que alberga los parametros al metodo estatico. Estos se meten en el orden
+   * @param paramStack SuperSuperStack que alberga los parametros al metodo estatico. Estos se meten en el orden
    * de los parametros en el metodo, y se han de sacar (popear) en el orden inverso.
    */
   public synchronized void instanceMethodWithArgs(Object sender, Object receiver, String methodName,
@@ -50,13 +52,13 @@ public abstract class AbstractDistributor implements IDistributor {
 
     String receiverClassName = receiver.getClass().getName();
 
-    MensajeEjecutable mensaje = null;
+    ExecutableMessage mensaje = null;
 
     if (paramStack == null) {
-      mensaje = new MetodoInstanciaNoArgsMensaje(id, sender, senderClassName, receiver, receiverClassName,
+      mensaje = new NoArgsInstanceMethodMessage(id, sender, senderClassName, receiver, receiverClassName,
           methodName, methodSignature);
     } else {
-      mensaje = new MetodoInstanciaMensaje(id, sender, senderClassName, receiver, receiverClassName, methodName,
+      mensaje = new InstanceMethodMessage(id, sender, senderClassName, receiver, receiverClassName, methodName,
           methodSignature, paramStack);
     }
 
@@ -65,7 +67,7 @@ public abstract class AbstractDistributor implements IDistributor {
 
   /** Para llamadas a metodos de instancias sin parametros.
    * @param receiver Objeto al que se invoca.
-   * @param NombreMetodo Nombre del metodo al que se invoca.
+   * @param methodName Nombre del metodo al que se invoca.
    * @param methodSignature Firma (Signature) que identifica los tipos de parametros y el return type.
    */
   public synchronized void instanceMethodNoArgs(Object sender, Object receiver, String methodName,
@@ -75,8 +77,8 @@ public abstract class AbstractDistributor implements IDistributor {
   }
 
   /** Para llamadas a metodos de clases estaticas con parametros.
-   * @param Clasereceiver Clase a la que se invoca.
-   * @param NombreMetodo Nombre del metodo estatico al que se invoca.
+   * @param receiverClassName Clase a la que se invoca.
+   * @param methodName Nombre del metodo estatico al que se invoca.
    * @param methodSignature Firma (Signature) que identifica los tipos de parametros y el return type.
    * @param paramStack SuperStack que alberga los parametros al metodo estatico. Estos se meten en el orden
    * de los parametros en el metodo, y se han de sacar (popear) en el orden inverso.
@@ -92,12 +94,12 @@ public abstract class AbstractDistributor implements IDistributor {
       senderClassName = "";
     }
 
-    MensajeEjecutable mensaje = null;
+    ExecutableMessage mensaje = null;
     if (paramStack == null) {
-      mensaje = new MetodoClaseNoArgsMensaje(id, sender, senderClassName, receiverClassName, methodName,
+      mensaje = new NoArgsClassMethodMessage(id, sender, senderClassName, receiverClassName, methodName,
           methodSignature);
     } else {
-      mensaje = new MetodoClaseMensaje(id, sender, senderClassName, receiverClassName, methodName,
+      mensaje = new ClassMethodMessage(id, sender, senderClassName, receiverClassName, methodName,
           methodSignature, paramStack);
     }
 
@@ -105,8 +107,8 @@ public abstract class AbstractDistributor implements IDistributor {
   }
 
   /** Para llamadas a metodos de clases estaticas sin parametros.
-   * @param Clasereceiver Clase a la que se invoca.
-   * @param NombreMetodo Nombre del metodo estatico al que se invoca.
+   * @param receiverClassName Clase a la que se invoca.
+   * @param methodName Nombre del metodo estatico al que se invoca.
    * @param methodSignature Firma (Signature) que identifica los tipos de parametros y el return type.
    */
   public synchronized void staticMethodNoArgs(Object sender, String receiverClassName, String methodName,
@@ -116,7 +118,7 @@ public abstract class AbstractDistributor implements IDistributor {
   }
 
   /** Para llamadas a constructores con parametros.
-   * @param Clasereceiver Clase del nuevo objeto a crear.
+   * @param receiverClassName Clase del nuevo objeto a crear.
    * @param paramStack SuperStack que alberga los parametros del constructor deseado.
    */
   public synchronized void initWithArgs(Object sender, String receiverClassName, String methodSignature,
@@ -131,12 +133,12 @@ public abstract class AbstractDistributor implements IDistributor {
       senderClassName = "";
     }
 
-    MensajeEjecutable mensaje = null;
+    ExecutableMessage mensaje = null;
 
     if (paramStack == null) {
-      mensaje = new MetodoConstructorNoArgsMensaje(id, senderClassName, sender, receiverClassName);
+      mensaje = new NoArgsConstructorMessage(id, senderClassName, sender, receiverClassName);
     } else {
-      mensaje = new MetodoConstructorMensaje(id, senderClassName, sender, receiverClassName, methodSignature,
+      mensaje = new ConstructorMessage(id, senderClassName, sender, receiverClassName, methodSignature,
           paramStack);
     }
 
@@ -144,7 +146,7 @@ public abstract class AbstractDistributor implements IDistributor {
   }
 
   /** Para llamadas a constructores sin parametros.
-     * @param Clasereceiver Clase del nuevo objeto a crear.
+     * @param receiverClassName Clase del nuevo objeto a crear.
      */
   public synchronized void initNoArgs(Object sender, String receiverClassName)
     throws Throwable {
@@ -187,7 +189,7 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized long getReturnedLong() throws Throwable {
     Object value = getLastReturnedObject();
-    return ((Long) value).longValue();
+    return (long) value;
   }
 
   /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
@@ -195,7 +197,7 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized double getReturnedDouble() throws Throwable {
     Object value = getLastReturnedObject();
-    return ((Double) value).doubleValue();
+    return (double) value;
   }
 
   /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
@@ -203,7 +205,7 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized int getReturnedInt() throws Throwable {
     Object value = getLastReturnedObject();
-    return ((Integer) value).intValue();
+    return (int) value;
   }
 
   /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
@@ -211,7 +213,7 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized boolean getReturnedBoolean() throws Throwable {
     Object value = getLastReturnedObject();
-    return ((Boolean) value).booleanValue();
+    return (boolean) value;
   }
 
   /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
@@ -219,7 +221,7 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized float getReturnedFloat() throws Throwable {
     Object value = getLastReturnedObject();
-    return ((Float) value).floatValue();
+    return (float)value;
   }
 
   /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
@@ -227,7 +229,7 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized short getReturnedShort() throws Throwable {
     Object value = getLastReturnedObject();
-    return ((Short) value).shortValue();
+    return (short)value;
   }
 
   /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
@@ -235,7 +237,7 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized char getReturnedChar() throws Throwable {
     Object value = getLastReturnedObject();
-    return ((Character) value).charValue();
+    return (char)value;
   }
 
   /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
@@ -243,7 +245,7 @@ public abstract class AbstractDistributor implements IDistributor {
    */
   public synchronized byte getReturnedByte() throws Throwable {
     Object value = getLastReturnedObject();
-    return ((Byte) value).byteValue();
+    return (byte)value;
   }
 
   // </editor-fold>
@@ -934,7 +936,7 @@ public abstract class AbstractDistributor implements IDistributor {
   }
 
   // </editor-fold>
-  protected abstract void sendExecutableMessage(MensajeEjecutable mensaje);
+  protected abstract void sendExecutableMessage(ExecutableMessage mensaje);
 
   protected abstract Object getLastReturnedObject();
 

@@ -1,9 +1,11 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.distributor.messages;
 
 import com.ittera.cometa.common.ByteSerializable;
 import com.ittera.cometa.common.exceptions.ErrorConstituyendoMensaje;
 import com.ittera.cometa.common.exceptions.ErrorReconstituyendoMensaje;
 
+import com.ittera.cometa.distributor.ExcepcionCreandoMensajeEjecutable;
+import com.ittera.cometa.distributor.ExcepcionEjecutandoMensaje;
 import com.ittera.cometa.distributor.returntypes.ErrorWrapper;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
 import com.ittera.cometa.distributor.returntypes.RuntimeExceptionWrapper;
@@ -15,7 +17,7 @@ import java.lang.reflect.Method;
 import java.util.Stack;
 
 
-class MetodoInstanciaMensaje extends ArgedMensaje implements MensajeEjecutable, ByteSerializable {
+public class InstanceMethodMessage extends ArgedMessage implements ExecutableMessage, ByteSerializable {
   public static byte MAGIC = 105;
   private int distributorID;
   private String nombreClaseSender;
@@ -24,8 +26,8 @@ class MetodoInstanciaMensaje extends ArgedMensaje implements MensajeEjecutable, 
   private Object receiver;
   private String nombreMetodo;
 
-  MetodoInstanciaMensaje(int distributor, Object sender, String nombreClaseSender, Object receiver,
-    String nombreClaseReceiver, String nombreMetodo, String firmaMetodo, Stack args)
+  public InstanceMethodMessage(int distributor, Object sender, String nombreClaseSender, Object receiver,
+                               String nombreClaseReceiver, String nombreMetodo, String firmaMetodo, Stack args)
     throws ExcepcionCreandoMensajeEjecutable {
     this.distributorID = distributor;
     this.nombreClaseSender = nombreClaseSender;
@@ -98,8 +100,8 @@ class MetodoInstanciaMensaje extends ArgedMensaje implements MensajeEjecutable, 
     return null;
   }
 
-  public MensajeLigero toMensajeLigero() {
-    MensajeLigero ml = new MensajeLigero();
+  public ThinMessage toMensajeLigero() {
+    ThinMessage ml = new ThinMessage();
 
     ml.DistributorID = this.distributorID;
     ml.MensajeEjecutableRef = 0;
@@ -117,7 +119,7 @@ class MetodoInstanciaMensaje extends ArgedMensaje implements MensajeEjecutable, 
   @Override
   public String toString() {
     // falta imprimir los parametros como una lista
-    return ("Mensaje Llamada\n" + "---------------\n" + "Distributor:        " + distributorID + "\n" +
+    return ("Message Llamada\n" + "---------------\n" + "Distributor:        " + distributorID + "\n" +
     "Sender (Ref):       " + sender + "\n" + "ClaseSender:       " + nombreClaseSender + "\n" +
     "Receiver (Ref):     " + receiver + "\n" + "ClaseReceiver:     " + nombreClaseReceiver + "\n" +
     "Metodo:              " + nombreMetodo + "\n" + "Firma M�todo      " + firmaMetodo + "\n" +

@@ -1,5 +1,7 @@
 package com.ittera.cometa.util;
 
+import com.ittera.cometa.distributor.types.*;
+
 public class SuperStack extends java.util.Stack<Object> {
   private static final long serialVersionUID = 20040622L;
 

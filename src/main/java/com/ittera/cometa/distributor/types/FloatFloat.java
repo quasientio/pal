@@ -1,14 +1,16 @@
-package com.ittera.cometa.util;
+package com.ittera.cometa.distributor.types;
 
+
+import com.ittera.cometa.util.Primitive;
 
 /**
  *
  * @author libre
  */
-class FloatFloat implements Primitivo {
+public class FloatFloat implements Primitive {
   float value;
 
-  FloatFloat(float f) {
+  public FloatFloat(float f) {
     value = f;
   }
 

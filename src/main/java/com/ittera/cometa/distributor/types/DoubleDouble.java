@@ -1,14 +1,16 @@
-package com.ittera.cometa.util;
+package com.ittera.cometa.distributor.types;
 
+
+import com.ittera.cometa.util.Primitive;
 
 /**
  *
  * @author libre
  */
-class DoubleDouble implements Primitivo {
+public class DoubleDouble implements Primitive {
   double value;
 
-  DoubleDouble(double d) {
+  public DoubleDouble(double d) {
     value = d;
   }
 

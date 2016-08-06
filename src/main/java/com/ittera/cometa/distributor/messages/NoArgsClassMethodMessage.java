@@ -1,9 +1,11 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.distributor.messages;
 
 import com.ittera.cometa.common.ByteSerializable;
 import com.ittera.cometa.common.exceptions.ErrorConstituyendoMensaje;
 import com.ittera.cometa.common.exceptions.ErrorReconstituyendoMensaje;
 
+import com.ittera.cometa.distributor.ExcepcionCreandoMensajeEjecutable;
+import com.ittera.cometa.distributor.ExcepcionEjecutandoMensaje;
 import com.ittera.cometa.distributor.returntypes.ErrorWrapper;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
 import com.ittera.cometa.distributor.returntypes.RuntimeExceptionWrapper;
@@ -16,7 +18,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 
-class MetodoClaseNoArgsMensaje implements MensajeEjecutable, ByteSerializable {
+public class NoArgsClassMethodMessage implements ExecutableMessage, ByteSerializable {
   protected Logger logger = LogManager.getLogger(this.getClass());
   public static byte MAGIC = 104;
   private int distributorID;
@@ -26,8 +28,8 @@ class MetodoClaseNoArgsMensaje implements MensajeEjecutable, ByteSerializable {
   private String firmaMetodo;
   private String nombreMetodo;
 
-  MetodoClaseNoArgsMensaje(int distributor, Object sender, String nombreClaseSender, String nombreClaseReceiver,
-    String nombreMetodo, String firmaMetodo) throws ExcepcionCreandoMensajeEjecutable {
+  public NoArgsClassMethodMessage(int distributor, Object sender, String nombreClaseSender, String nombreClaseReceiver,
+                                  String nombreMetodo, String firmaMetodo) throws ExcepcionCreandoMensajeEjecutable {
     this.distributorID = distributor;
     this.nombreClaseSender = nombreClaseSender;
     this.sender = sender;
@@ -91,8 +93,8 @@ class MetodoClaseNoArgsMensaje implements MensajeEjecutable, ByteSerializable {
     return null;
   }
 
-  public MensajeLigero toMensajeLigero() {
-    MensajeLigero ml = new MensajeLigero();
+  public ThinMessage toMensajeLigero() {
+    ThinMessage ml = new ThinMessage();
 
     ml.DistributorID = this.distributorID;
     ml.MensajeEjecutableRef = 0;

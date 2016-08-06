@@ -3,6 +3,7 @@ package com.ittera.cometa.distributor;
 import com.ittera.cometa.common.ByteSerializable;
 import com.ittera.cometa.common.exceptions.ErrorReconstituyendoMensaje;
 
+import com.ittera.cometa.distributor.messages.*;
 import com.ittera.cometa.distributor.returntypes.ErrorWrapper;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
 import com.ittera.cometa.distributor.returntypes.Null;
@@ -50,8 +51,8 @@ public class SocketDistributor extends AbstractDistributor {
   private Socket conexionRed;
   private DataInputStream bytesIn;
   private DataOutputStream bytesOut;
-  private MensajeLigero ultimoMensajeEnviado;
-  private MensajeEjecutable ultimoMensajeAEjecutar;
+  private ThinMessage ultimoMensajeEnviado;
+  private ExecutableMessage ultimoMensajeAEjecutar;
 
   // VARIABLE QUE GUARDA EL ULTIMO VALOR HASTA QUE ES SOLICITADO LLAMANDO A getReturnedXXX()
   protected Deque<Object> valoresRecibidos = new LinkedList<Object>();
@@ -104,23 +105,23 @@ public class SocketDistributor extends AbstractDistributor {
     // deberia ver si la respuesta es CONTINUE
   }
 
-  protected void sendExecutableMessage(MensajeEjecutable mensaje) {
+  protected void sendExecutableMessage(ExecutableMessage mensaje) {
     ultimoMensajeAEjecutar = mensaje;
 
-    // Ahora creamos el mensaje ligero, con una referencia al MensajeEjecutable
-    MensajeLigero mensajeLigero = mensaje.toMensajeLigero();
+    // Ahora creamos el mensaje ligero, con una referencia al ExecutableMessage
+    ThinMessage thinMessage = mensaje.toMensajeLigero();
 
     // Y se envia a la red
-    Enviar(mensajeLigero);
+    Enviar(thinMessage);
 
     // Lo guardamos, pero no en la tabla de objetos
-    ultimoMensajeEnviado = mensajeLigero;
+    ultimoMensajeEnviado = thinMessage;
 
     Recibir();
   }
 
   /* Envia un mensaje ligero a la red*/
-  private void Enviar(MensajeLigero mensaje) {
+  private void Enviar(ThinMessage mensaje) {
     try {
       bytesOut.write(mensaje.toBytes());
     } catch (Exception ex) {
@@ -146,13 +147,13 @@ public class SocketDistributor extends AbstractDistributor {
     logger.debug("mensaje recibido");
 
     // si es mensaje de llamada, ejecutar
-    if (mensaje instanceof MensajeLigero) {
-      MensajeLigero mensajeLigero = (MensajeLigero) mensaje;
+    if (mensaje instanceof ThinMessage) {
+      ThinMessage thinMessage = (ThinMessage) mensaje;
 
-      EjecutarMensaje(mensajeLigero);
+      EjecutarMensaje(thinMessage);
     } // si es un mensaje de valor, guardarlo
-    else if (mensaje instanceof MensajeValorLigero) {
-      MensajeValorLigero mensajeValor = (MensajeValorLigero) mensaje;
+    else if (mensaje instanceof ThinValueMessage) {
+      ThinValueMessage mensajeValor = (ThinValueMessage) mensaje;
 
       if (mensajeValor.isNull()) {
         valoresRecibidos.add(new Null());
@@ -161,8 +162,8 @@ public class SocketDistributor extends AbstractDistributor {
       }
     }
     // si es un mensaje de excepcion, guardarlo
-    else if (mensaje instanceof MensajeException) {
-      MensajeException mensajeException = (MensajeException) mensaje;
+    else if (mensaje instanceof ExceptionMessage) {
+      ExceptionMessage mensajeException = (ExceptionMessage) mensaje;
 
       raisedExceptions.add((ExceptionWrapper) objetos.extractObject(new ObjectRef(mensajeException.ObjetoValorRef)));
     }
@@ -184,12 +185,12 @@ public class SocketDistributor extends AbstractDistributor {
 
     ByteSerializable mensaje;
 
-    if (magic == MensajeLigero.MAGIC) {
-      mensaje = new MensajeLigero();
-    } else if (magic == MensajeValorLigero.MAGIC) {
-      mensaje = new MensajeValorLigero();
-    } else if (magic == MensajeException.MAGIC) {
-      mensaje = new MensajeException();
+    if (magic == ThinMessage.MAGIC) {
+      mensaje = new ThinMessage();
+    } else if (magic == ThinValueMessage.MAGIC) {
+      mensaje = new ThinValueMessage();
+    } else if (magic == ExceptionMessage.MAGIC) {
+      mensaje = new ExceptionMessage();
     } else {
       throw new MagicInvalido("Magic byte no es correcto. Valor=" + magic);
     }
@@ -222,8 +223,8 @@ public class SocketDistributor extends AbstractDistributor {
   }
 
   /* Ejecuta un mensaje llamada recibido de la red, devolviendo el valor de la llamada a la red*/
-  private void EjecutarMensaje(MensajeLigero llamada) {
-    MensajeEjecutable mensajejecutable = ultimoMensajeAEjecutar;
+  private void EjecutarMensaje(ThinMessage llamada) {
+    ExecutableMessage mensajejecutable = ultimoMensajeAEjecutar;
     Object valor_devuelto = null;
 
     try {
@@ -234,28 +235,28 @@ public class SocketDistributor extends AbstractDistributor {
     }
 
     // Ahora creamos el MensajeValor con la referencia al objeto devuelto por la llamada
-    Mensaje mensaje;
+    Message mensaje;
 
     if (valor_devuelto instanceof Void) {
       return;
     }
 
     if (valor_devuelto == null) {
-      mensaje = new MensajeValorLigero();
-      ((MensajeValorLigero) mensaje).setNull();
-      ((MensajeValorLigero) mensaje).setType("unknown");
+      mensaje = new ThinValueMessage();
+      ((ThinValueMessage) mensaje).setNull();
+      ((ThinValueMessage) mensaje).setType("unknown");
     } else if (valor_devuelto instanceof ExceptionWrapper) {
       logger.debug("exception wrapper returned");
-      mensaje = new MensajeException(objetos.putObject(valor_devuelto).getInt());
-      ((MensajeException) mensaje).message = ((ExceptionWrapper) valor_devuelto).toString();
+      mensaje = new ExceptionMessage(objetos.putObject(valor_devuelto).getInt());
+      ((ExceptionMessage) mensaje).message = ((ExceptionWrapper) valor_devuelto).toString();
     } else if (valor_devuelto instanceof ErrorWrapper) {
       throw new RuntimeException("Can't handle RuntimeException: ", ((ErrorWrapper) valor_devuelto).getError());
     } else if (valor_devuelto instanceof RuntimeExceptionWrapper) {
       throw new RuntimeException("Can't handle error: ",
         ((RuntimeExceptionWrapper) valor_devuelto).getRuntimeException());
     } else {
-      mensaje = new MensajeValorLigero(objetos.putObject(valor_devuelto).getInt());
-      ((MensajeValorLigero) mensaje).setType(valor_devuelto.getClass().getName());
+      mensaje = new ThinValueMessage(objetos.putObject(valor_devuelto).getInt());
+      ((ThinValueMessage) mensaje).setType(valor_devuelto.getClass().getName());
     }
 
     // enviar mensaje aqui

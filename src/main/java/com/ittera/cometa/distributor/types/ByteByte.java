@@ -1,14 +1,16 @@
-package com.ittera.cometa.util;
+package com.ittera.cometa.distributor.types;
 
+
+import com.ittera.cometa.util.Primitive;
 
 /**
  *
  * @author libre
  */
-class ByteByte implements Primitivo {
+public class ByteByte implements Primitive {
   byte value;
 
-  ByteByte(byte b) {
+  public ByteByte(byte b) {
     value = b;
   }
 

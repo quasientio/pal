@@ -1,48 +1,46 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.distributor.messages;
 
 import com.ittera.cometa.common.ByteSerializable;
 import com.ittera.cometa.common.exceptions.ErrorConstituyendoMensaje;
 import com.ittera.cometa.common.exceptions.ErrorReconstituyendoMensaje;
 
+import com.ittera.cometa.distributor.ExcepcionCreandoMensajeEjecutable;
+import com.ittera.cometa.distributor.ExcepcionEjecutandoMensaje;
 import com.ittera.cometa.distributor.returntypes.ErrorWrapper;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
 import com.ittera.cometa.distributor.returntypes.RuntimeExceptionWrapper;
-import com.ittera.cometa.distributor.returntypes.Void;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
-
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+
+import java.util.Stack;
 
 
-class MetodoInstanciaNoArgsMensaje implements MensajeEjecutable, ByteSerializable {
-  protected Logger logger = LogManager.getLogger(this.getClass());
-  public static byte MAGIC = 106;
+public class ConstructorMessage extends ArgedMessage implements ExecutableMessage, ByteSerializable {
+  public static byte MAGIC = 101;
   private int distributorID;
   private String nombreClaseSender;
   private Object sender;
   private String nombreClaseReceiver;
-  private Object receiver;
-  private String firmaMetodo;
-  private String nombreMetodo;
 
-  MetodoInstanciaNoArgsMensaje(int distributor, Object sender, String nombreClaseSender, Object receiver,
-    String nombreClaseReceiver, String nombreMetodo, String firmaMetodo)
-    throws ExcepcionCreandoMensajeEjecutable {
+  public ConstructorMessage(int distributor, String nombreClaseSender, Object sender, String nombreClaseReceiver,
+                            String firmaMetodo, Stack args) throws ExcepcionCreandoMensajeEjecutable {
     this.distributorID = distributor;
     this.nombreClaseSender = nombreClaseSender;
     this.sender = sender;
-    this.nombreClaseReceiver = nombreClaseReceiver;
-    this.receiver = receiver;
+    this.firmaMetodo = firmaMetodo;
 
-    if ((nombreMetodo == null) || nombreMetodo.isEmpty()) {
-      throw new ExcepcionCreandoMensajeEjecutable("Nombre del Metodo es null o <empty string>.");
+    if ((nombreClaseReceiver == null) || nombreClaseReceiver.isEmpty()) {
+      throw new ExcepcionCreandoMensajeEjecutable("Nombre de la ClaseReceiver es null o <empty string>.");
     } else {
-      this.nombreMetodo = nombreMetodo;
+      this.nombreClaseReceiver = nombreClaseReceiver;
     }
 
-    this.firmaMetodo = firmaMetodo;
+    if (args == null) {
+      throw new ExcepcionCreandoMensajeEjecutable("Par�metros = null.");
+    } else {
+      setParametros(args);
+    }
   }
 
   public Object Ejecutar(java.lang.ClassLoader classLoader)
@@ -50,22 +48,17 @@ class MetodoInstanciaNoArgsMensaje implements MensajeEjecutable, ByteSerializabl
     Object valor_devuelto = null;
 
     try {
-      Method Metodo = null;
+      Constructor _Constructor = null;
 
       try {
-        Metodo = Class.forName(nombreClaseReceiver, true, classLoader).getMethod(nombreMetodo, (Class[]) null);
+        _Constructor = Class.forName(nombreClaseReceiver, true, classLoader).getConstructor(clasesParametros);
       } catch (NoSuchMethodException E) {
-        Metodo = Class.forName(nombreClaseReceiver, true, classLoader)
-                      .getDeclaredMethod(nombreMetodo, (Class[]) null);
+        _Constructor = Class.forName(nombreClaseReceiver, true, classLoader)
+                            .getDeclaredConstructor(clasesParametros);
       }
 
-      Metodo.setAccessible(true);
-      if (Metodo.getReturnType() == void.class) {
-        valor_devuelto = new Void();
-        Metodo.invoke(receiver, (Object[]) null);
-      } else {
-        valor_devuelto = Metodo.invoke(receiver, (Object[]) null);
-      }
+      _Constructor.setAccessible(true);
+      valor_devuelto = _Constructor.newInstance(parametros);
     } catch (Exception ex) {
       if (ex instanceof InvocationTargetException) {
         Throwable realEx = ex.getCause();
@@ -94,8 +87,8 @@ class MetodoInstanciaNoArgsMensaje implements MensajeEjecutable, ByteSerializabl
     return null;
   }
 
-  public MensajeLigero toMensajeLigero() {
-    MensajeLigero ml = new MensajeLigero();
+  public ThinMessage toMensajeLigero() {
+    ThinMessage ml = new ThinMessage();
 
     ml.DistributorID = this.distributorID;
     ml.MensajeEjecutableRef = 0;
@@ -103,9 +96,9 @@ class MetodoInstanciaNoArgsMensaje implements MensajeEjecutable, ByteSerializabl
     ml.Sender = 0;
     ml.NombreClaseReceiver = this.nombreClaseReceiver;
     ml.Receiver = 0;
-    ml.NombreMetodo = this.nombreMetodo;
+    ml.NombreMetodo = "new";
     ml.Parametros = 0;
-    ml.FirmaMetodo = firmaMetodo;
+    ml.FirmaMetodo = "";
 
     return ml;
   }

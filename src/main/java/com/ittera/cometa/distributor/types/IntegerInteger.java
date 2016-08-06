@@ -1,14 +1,16 @@
-package com.ittera.cometa.util;
+package com.ittera.cometa.distributor.types;
 
+
+import com.ittera.cometa.util.Primitive;
 
 /**
  *
  * @author libre
  */
-class IntegerInteger implements Primitivo {
+public class IntegerInteger implements Primitive {
   int value;
 
-  IntegerInteger(int i) {
+  public IntegerInteger(int i) {
     value = i;
   }
 

@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.distributor.messages;
 
 import com.ittera.cometa.common.ByteSerializable;
 import com.ittera.cometa.common.exceptions.ErrorConstituyendoMensaje;
@@ -16,7 +16,7 @@ import org.apache.logging.log4j.LogManager;
  * @author not attributable
  * @version 1.0
  */
-abstract public class Mensaje implements ByteSerializable {
+abstract public class Message implements ByteSerializable {
   protected Logger logger = LogManager.getLogger(this.getClass());
 
   /**

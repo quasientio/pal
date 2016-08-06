@@ -1,14 +1,16 @@
-package com.ittera.cometa.util;
+package com.ittera.cometa.distributor.types;
 
+
+import com.ittera.cometa.util.Primitive;
 
 /**
  *
  * @author libre
  */
-class BooleanBoolean implements Primitivo {
+public class BooleanBoolean implements Primitive {
   boolean value;
 
-  BooleanBoolean(boolean b) {
+  public BooleanBoolean(boolean b) {
     value = b;
   }
 

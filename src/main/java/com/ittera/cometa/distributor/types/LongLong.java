@@ -1,14 +1,16 @@
-package com.ittera.cometa.util;
+package com.ittera.cometa.distributor.types;
 
+
+import com.ittera.cometa.util.Primitive;
 
 /**
  *
  * @author libre
  */
-class LongLong implements Primitivo {
+public class LongLong implements Primitive {
   long value;
 
-  LongLong(long l) {
+  public LongLong(long l) {
     value = l;
   }
 

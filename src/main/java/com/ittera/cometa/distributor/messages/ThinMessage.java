@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.distributor.messages;
 
 import com.ittera.cometa.common.exceptions.ErrorConstituyendoMensaje;
 import com.ittera.cometa.common.exceptions.ErrorReconstituyendoMensaje;
@@ -10,7 +10,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 
-public class MensajeLigero extends Mensaje {
+public class ThinMessage extends Message {
   // FLAGS - no usado
   // static final short ES_PROTOCOLO;
   // short FLAGS;
@@ -41,7 +41,7 @@ public class MensajeLigero extends Mensaje {
       out.writeUTF(FirmaMetodo);
       out.writeInt(Parametros);
     } catch (IOException ex) {
-      logger.error("Error en MensajeLigero::toBytes()", ex);
+      logger.error("Error en ThinMessage::toBytes()", ex);
       throw new ErrorConstituyendoMensaje("No se ha podido constituir el mensaje. Ver IOException.");
     }
 
@@ -68,7 +68,7 @@ public class MensajeLigero extends Mensaje {
       FirmaMetodo = in.readUTF();
       Parametros = in.readInt();
     } catch (Exception ex) {
-      logger.error("Error en MensajeLigero::fromBytes()", ex);
+      logger.error("Error en ThinMessage::fromBytes()", ex);
       throw new ErrorReconstituyendoMensaje("No se ha podido reconstituir el mensaje: ver IOException.");
     }
   }
@@ -90,8 +90,8 @@ public class MensajeLigero extends Mensaje {
 
   @Override
   public boolean equals(Object another) {
-    if (another instanceof MensajeLigero) {
-      MensajeLigero aMensaje = (MensajeLigero) another;
+    if (another instanceof ThinMessage) {
+      ThinMessage aMensaje = (ThinMessage) another;
 
       return ((aMensaje.MensajeEjecutableRef == MensajeEjecutableRef) &&
       (aMensaje.DistributorID == DistributorID) && (aMensaje.NombreClaseSender.equals(NombreClaseSender)) &&
@@ -105,7 +105,7 @@ public class MensajeLigero extends Mensaje {
 
   @Override
   public String toString() {
-    return ("\n" + "Mensaje Llamada Ligero\n" + "--------------------\n" + "Distributor:     " + DistributorID +
+    return ("\n" + "Message Llamada Ligero\n" + "--------------------\n" + "Distributor:     " + DistributorID +
     "\n" + "ClaseSender:     " + new String(NombreClaseSender) + "\n" + "ClaseReceiver:   " +
     new String(NombreClaseReceiver) + "\n" + "Metodo:          " + new String(NombreMetodo) + "\n" +
     "Firma Metodo  :  " + new String(FirmaMetodo) + "\n");

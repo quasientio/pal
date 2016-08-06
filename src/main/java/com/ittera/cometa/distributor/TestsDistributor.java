@@ -1,5 +1,6 @@
 package com.ittera.cometa.distributor;
 
+import com.ittera.cometa.distributor.messages.ExecutableMessage;
 import com.ittera.cometa.distributor.returntypes.ErrorWrapper;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
 import com.ittera.cometa.distributor.returntypes.Null;
@@ -26,7 +27,7 @@ public class TestsDistributor extends AbstractDistributor {
   private ObjectTable objetos = new ObjectTable();
 
   @Override
-  protected void sendExecutableMessage(MensajeEjecutable mensaje) {
+  protected void sendExecutableMessage(ExecutableMessage mensaje) {
     Object valor_devuelto = null;
     try {
       valor_devuelto = mensaje.Ejecutar(classLoader);

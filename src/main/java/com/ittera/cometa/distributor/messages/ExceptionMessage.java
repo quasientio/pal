@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.distributor.messages;
 
 
 /**
@@ -17,16 +17,16 @@ import org.apache.logging.log4j.LogManager;
 import java.io.*;
 
 
-public class MensajeException extends Mensaje {
+public class ExceptionMessage extends Message {
   private Logger logger = LogManager.getLogger(this.getClass());
   public String message;
   public int ObjetoValorRef;
   public final static byte MAGIC = 70;
 
-  public MensajeException() {
+  public ExceptionMessage() {
   }
 
-  MensajeException(int ref) {
+  public ExceptionMessage(int ref) {
     ObjetoValorRef = ref;
   }
 
@@ -48,7 +48,7 @@ public class MensajeException extends Mensaje {
       message = in.readUTF();
       ObjetoValorRef = in.readInt();
     } catch (Exception E) {
-      System.err.println("Error en MensajeException::fromBytes().");
+      System.err.println("Error en ExceptionMessage::fromBytes().");
       System.err.println(E.getMessage());
       throw new ErrorReconstituyendoMensaje("No se ha podido reconstituir el mensaje: ver IOException.");
     }
@@ -69,7 +69,7 @@ public class MensajeException extends Mensaje {
       out.writeUTF(message);
       out.writeInt(ObjetoValorRef);
     } catch (IOException E) {
-      System.err.println("Error en MensajeException::toBytes().");
+      System.err.println("Error en ExceptionMessage::toBytes().");
       System.err.println(E.getMessage());
     }
 
@@ -87,8 +87,8 @@ public class MensajeException extends Mensaje {
 
   @Override
   public boolean equals(Object another) {
-    if (another instanceof MensajeException) {
-      MensajeException anotherMensajeException = (MensajeException) another;
+    if (another instanceof ExceptionMessage) {
+      ExceptionMessage anotherMensajeException = (ExceptionMessage) another;
 
       return ((anotherMensajeException.ObjetoValorRef == this.ObjetoValorRef) &&
       (anotherMensajeException.message.equals(this.message)));

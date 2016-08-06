@@ -1,6 +1,6 @@
 package com.ittera.cometa.util;
 
-public interface Primitivo {
+public interface Primitive {
   Class cogerClass();
 
   Object cogerJavaWrapper();

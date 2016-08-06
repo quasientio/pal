@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.distributor.messages;
 
 import com.ittera.cometa.common.exceptions.ErrorConstituyendoMensaje;
 import com.ittera.cometa.common.exceptions.ErrorReconstituyendoMensaje;
@@ -10,7 +10,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 
-public class MensajeValorLigero extends Mensaje {
+public class ThinValueMessage extends Message {
   // FLAGS - no usado
   // static final short ES_PROTOCOLO;
   // short FLAGS;
@@ -19,10 +19,10 @@ public class MensajeValorLigero extends Mensaje {
   private boolean isNull;
   private String type = "not determined";
 
-  public MensajeValorLigero() {
+  public ThinValueMessage() {
   }
 
-  public MensajeValorLigero(int objetoValorRef) {
+  public ThinValueMessage(int objetoValorRef) {
     this.objetoValorRef = objetoValorRef;
   }
 
@@ -57,7 +57,7 @@ public class MensajeValorLigero extends Mensaje {
       out.writeInt(objetoValorRef);
       out.writeUTF(type);
     } catch (IOException ex) {
-      logger.error("Error en MensajeValorLigero::toBytes()", ex);
+      logger.error("Error en ThinValueMessage::toBytes()", ex);
       throw new ErrorConstituyendoMensaje("No se ha podido reconstituir el mensaje: ver IOException.");
     }
 
@@ -78,7 +78,7 @@ public class MensajeValorLigero extends Mensaje {
       objetoValorRef = in.readInt();
       type = in.readUTF();
     } catch (Exception ex) {
-      logger.error("Error en MensajeValorLigero::fromBytes()", ex);
+      logger.error("Error en ThinValueMessage::fromBytes()", ex);
       throw new ErrorReconstituyendoMensaje("No se ha podido reconstituir el mensaje: ver IOException.");
     }
   }
@@ -93,8 +93,8 @@ public class MensajeValorLigero extends Mensaje {
 
   @Override
   public boolean equals(Object another) {
-    if (another instanceof MensajeValorLigero) {
-      MensajeValorLigero aMensaje = (MensajeValorLigero) another;
+    if (another instanceof ThinValueMessage) {
+      ThinValueMessage aMensaje = (ThinValueMessage) another;
 
       return ((aMensaje.getObjectRef() == getObjectRef()) && (aMensaje.isNull() == isNull()));
     }
@@ -112,6 +112,6 @@ public class MensajeValorLigero extends Mensaje {
       s = "Valor no es Null";
     }
 
-    return ("\n" + "Mensaje Valor Ligero\n" + "-----------------\n" + s + "\n" + "Type: " + type);
+    return ("\n" + "Message Valor Ligero\n" + "-----------------\n" + s + "\n" + "Type: " + type);
   }
 }

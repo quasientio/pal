@@ -1,14 +1,16 @@
-package com.ittera.cometa.util;
+package com.ittera.cometa.distributor.types;
 
+
+import com.ittera.cometa.util.Primitive;
 
 /**
  *
  * @author libre
  */
-class CharChar implements Primitivo {
+public class CharChar implements Primitive {
   char value;
 
-  CharChar(char c) {
+  public CharChar(char c) {
     value = c;
   }
 

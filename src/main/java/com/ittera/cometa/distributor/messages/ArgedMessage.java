@@ -1,10 +1,10 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.distributor.messages;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import com.ittera.cometa.util.FirmaMetodo;
-import com.ittera.cometa.util.Primitivo;
+import com.ittera.cometa.util.Primitive;
 
 import java.util.Stack;
 
@@ -17,7 +17,7 @@ import java.util.Stack;
  * @author not attributable
  * @version 1.0
  */
-abstract class ArgedMensaje {
+abstract class ArgedMessage {
   protected Logger logger = LogManager.getLogger(this.getClass());
   protected String firmaMetodo;
   protected Class[] clasesParametros;
@@ -34,8 +34,8 @@ abstract class ArgedMensaje {
 
     for (int i = paramCount - 1; i >= 0; i--) {
       parametros[i] = args.pop();
-      if (parametros[i] instanceof Primitivo) {
-        parametros[i] = ((Primitivo) parametros[i]).cogerJavaWrapper();
+      if (parametros[i] instanceof Primitive) {
+        parametros[i] = ((Primitive) parametros[i]).cogerJavaWrapper();
       }
     }
   }

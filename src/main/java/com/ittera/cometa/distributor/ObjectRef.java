@@ -3,7 +3,7 @@ package com.ittera.cometa.distributor;
 
 /*
  * Esta clase sustituye la referencia a un objeto.
- * Resulta que para serializar un objeto Mensaje, no basta con que la clase Mensaje
+ * Resulta que para serializar un objeto Message, no basta con que la clase Message
  * implemente Serializable, tambien cada uno de sus campos ha de implementarlo.
  *
  * Como la Class a las que Sender y Receiver pertenecen son impredecibles, quedan dos soluciones:
