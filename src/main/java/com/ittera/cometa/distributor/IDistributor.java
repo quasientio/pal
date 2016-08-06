@@ -139,11 +139,4 @@ public interface IDistributor {
   void putField(Object objectref, short value, String fieldName);
 
   // </editor-fold>
-  boolean raisedException();
-
-  Exception getException();
-
-  int instanceOf(Object object, String className);
-
-  void checkcast(Object object, String className);
 }
