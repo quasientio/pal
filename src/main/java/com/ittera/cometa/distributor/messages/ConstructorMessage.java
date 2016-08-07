@@ -4,8 +4,8 @@ import com.ittera.cometa.common.ByteSerializable;
 import com.ittera.cometa.common.exceptions.ErrorConstituyendoMensaje;
 import com.ittera.cometa.common.exceptions.ErrorReconstituyendoMensaje;
 
-import com.ittera.cometa.distributor.ExcepcionCreandoMensajeEjecutable;
-import com.ittera.cometa.distributor.ExcepcionEjecutandoMensaje;
+import com.ittera.cometa.distributor.ExecutableMessageCreationException;
+import com.ittera.cometa.distributor.MessageExecutionException;
 import com.ittera.cometa.distributor.returntypes.ErrorWrapper;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
 import com.ittera.cometa.distributor.returntypes.RuntimeExceptionWrapper;
@@ -18,47 +18,46 @@ import java.util.Stack;
 
 public class ConstructorMessage extends ArgedMessage implements ExecutableMessage, ByteSerializable {
   public static byte MAGIC = 101;
-  private int distributorID;
-  private String nombreClaseSender;
+  private int distributorID=-1;
+  private String senderClassName;
   private Object sender;
-  private String nombreClaseReceiver;
+  private String receiverClassName;
 
-  public ConstructorMessage(int distributor, String nombreClaseSender, Object sender, String nombreClaseReceiver,
-                            String firmaMetodo, Stack args) throws ExcepcionCreandoMensajeEjecutable {
-    this.distributorID = distributor;
-    this.nombreClaseSender = nombreClaseSender;
+  public ConstructorMessage(String senderClassName, Object sender, String receiverClassName,
+                            String methodSignatureStr, Stack args) throws ExecutableMessageCreationException {
+    this.senderClassName = senderClassName;
     this.sender = sender;
-    this.firmaMetodo = firmaMetodo;
+    this.methodSignatureStr = methodSignatureStr;
 
-    if ((nombreClaseReceiver == null) || nombreClaseReceiver.isEmpty()) {
-      throw new ExcepcionCreandoMensajeEjecutable("Nombre de la ClaseReceiver es null o <empty string>.");
+    if ((receiverClassName == null) || receiverClassName.isEmpty()) {
+      throw new ExecutableMessageCreationException("Nombre de la ClaseReceiver es null o <empty string>.");
     } else {
-      this.nombreClaseReceiver = nombreClaseReceiver;
+      this.receiverClassName = receiverClassName;
     }
 
     if (args == null) {
-      throw new ExcepcionCreandoMensajeEjecutable("Par�metros = null.");
+      throw new ExecutableMessageCreationException("Par�metros = null.");
     } else {
-      setParametros(args);
+      setParameters(args);
     }
   }
 
-  public Object Ejecutar(java.lang.ClassLoader classLoader)
-    throws ExcepcionEjecutandoMensaje {
+  public Object execute()
+    throws MessageExecutionException {
     Object valor_devuelto = null;
 
     try {
       Constructor _Constructor = null;
 
       try {
-        _Constructor = Class.forName(nombreClaseReceiver, true, classLoader).getConstructor(clasesParametros);
+        _Constructor = Class.forName(receiverClassName).getConstructor(parameterClasses);
       } catch (NoSuchMethodException E) {
-        _Constructor = Class.forName(nombreClaseReceiver, true, classLoader)
-                            .getDeclaredConstructor(clasesParametros);
+        _Constructor = Class.forName(receiverClassName)
+                            .getDeclaredConstructor(parameterClasses);
       }
 
       _Constructor.setAccessible(true);
-      valor_devuelto = _Constructor.newInstance(parametros);
+      valor_devuelto = _Constructor.newInstance(parameters);
     } catch (Exception ex) {
       if (ex instanceof InvocationTargetException) {
         Throwable realEx = ex.getCause();
@@ -69,11 +68,11 @@ public class ConstructorMessage extends ArgedMessage implements ExecutableMessag
         } else if (realEx instanceof Exception) {
           valor_devuelto = new ExceptionWrapper((Exception) realEx);
         } else {
-          return new ExcepcionEjecutandoMensaje("Throwable type is not wrappable");
+          return new MessageExecutionException("Throwable type is not wrappable");
         }
       } else {
         logger.error("Error caught:", ex);
-        throw new ExcepcionEjecutandoMensaje(ex.getMessage());
+        throw new MessageExecutionException(ex.getMessage());
       }
     }
 
@@ -92,9 +91,9 @@ public class ConstructorMessage extends ArgedMessage implements ExecutableMessag
 
     ml.DistributorID = this.distributorID;
     ml.MensajeEjecutableRef = 0;
-    ml.NombreClaseSender = this.nombreClaseSender;
+    ml.NombreClaseSender = this.senderClassName;
     ml.Sender = 0;
-    ml.NombreClaseReceiver = this.nombreClaseReceiver;
+    ml.NombreClaseReceiver = this.receiverClassName;
     ml.Receiver = 0;
     ml.NombreMetodo = "new";
     ml.Parametros = 0;

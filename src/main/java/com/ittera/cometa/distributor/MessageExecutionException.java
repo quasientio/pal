@@ -11,18 +11,18 @@ package com.ittera.cometa.distributor;
  *
  * @author  libre
  */
-public class ExcepcionEjecutandoMensaje extends java.lang.Exception {
+public class MessageExecutionException extends java.lang.Exception {
   /**
    * Creates a new instance of <code>MensajeNoEjecutable</code> without detail message.
    */
-  public ExcepcionEjecutandoMensaje() {
+  public MessageExecutionException() {
   }
 
   /**
    * Constructs an instance of <code>MensajeNoEjecutable</code> with the specified detail message.
    * @param msg the detail message.
    */
-  public ExcepcionEjecutandoMensaje(String msg) {
+  public MessageExecutionException(String msg) {
     super(msg);
   }
 }

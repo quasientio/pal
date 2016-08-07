@@ -6,14 +6,14 @@
 package com.ittera.cometa.distributor.messages;
 
 
-import com.ittera.cometa.distributor.ExcepcionEjecutandoMensaje;
+import com.ittera.cometa.distributor.MessageExecutionException;
 
 /**
  *
  * @author  libre
  */
 public interface ExecutableMessage {
-  Object Ejecutar(java.lang.ClassLoader classLoader) throws ExcepcionEjecutandoMensaje;
+  Object execute() throws MessageExecutionException;
 
   ThinMessage toMensajeLigero();
 }

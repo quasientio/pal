@@ -8,13 +8,13 @@ import java.lang.reflect.Array;
 import java.util.*;
 
 
-public class FirmaMetodo {
-  private static Logger logger = LogManager.getLogger("util.FirmaMetodo");
+public class MethodSignature {
+  private static Logger logger = LogManager.getLogger("util.MethodSignature");
   private int pos = 0;
   private String firma;
   private String args;
 
-  public FirmaMetodo(String firma) {
+  public MethodSignature(String firma) {
     this.firma = firma;
   }
 
@@ -144,7 +144,7 @@ public class FirmaMetodo {
   public static void main(String[] args) {
     String unafirma = "(Ljava/lang/String;II[[Ljava/lang/Float;)V";
 
-    FirmaMetodo m = new FirmaMetodo(unafirma);
+    MethodSignature m = new MethodSignature(unafirma);
 
     logger.debug("Parseando " + unafirma);
     Class[] tipos_clases = m.parseTiposParametros();

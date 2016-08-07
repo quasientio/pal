@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>@author Manuel Martinez</p>
  * @todo Two-way communication with the Cell
  */
-public class SocketDistributor extends AbstractDistributor {
+public class SocketDistributor extends Distributor {
   /* CONSTANTES */
   public static final byte bye = 50;
   private static final short Puerto = 3313;
@@ -48,17 +48,19 @@ public class SocketDistributor extends AbstractDistributor {
   public static final byte EJECUTA = 1;
 
   /* VARIABLES DE CONEXION A LA RED DE MENSAJERIA*/
-  private Socket conexionRed;
-  private DataInputStream bytesIn;
-  private DataOutputStream bytesOut;
-  private ThinMessage ultimoMensajeEnviado;
-  private ExecutableMessage ultimoMensajeAEjecutar;
+  private static Socket conexionRed;
+  private static DataInputStream bytesIn;
+  private static DataOutputStream bytesOut;
+  private static ThinMessage ultimoMensajeEnviado;
+  private static ExecutableMessage ultimoMensajeAEjecutar;
 
   // VARIABLE QUE GUARDA EL ULTIMO VALOR HASTA QUE ES SOLICITADO LLAMANDO A getReturnedXXX()
-  protected Deque<Object> valoresRecibidos = new LinkedList<Object>();
+  protected static Deque<Object> valoresRecibidos = new LinkedList<Object>();
 
   /* HASH TABLE DE TODOS LOS OBJETOS QUE PASAN POR LOS MENSAJES */
-  private ObjectTable objetos = new ObjectTable();
+  private static ObjectTable objetos = new ObjectTable();
+
+  protected static Deque<ExceptionWrapper> raisedExceptions = new LinkedList<ExceptionWrapper>();
 
   //loggers
   private static Logger stLogger = LogManager.getLogger(SocketDistributor.class);
@@ -72,7 +74,7 @@ public class SocketDistributor extends AbstractDistributor {
   /** Mensajes de gestion.
    * @param MensajeInterno Identificador de mensaje.
    */
-  private void EnviarMensaje(byte MensajeInterno) {
+  private static void EnviarMensaje(byte MensajeInterno) {
     try {
       bytesOut.writeByte(MensajeInterno);
     } catch (Exception ex) {
@@ -105,7 +107,7 @@ public class SocketDistributor extends AbstractDistributor {
     // deberia ver si la respuesta es CONTINUE
   }
 
-  protected void sendExecutableMessage(ExecutableMessage mensaje) {
+  protected static void sendExecutableMessage(ExecutableMessage mensaje) {
     ultimoMensajeAEjecutar = mensaje;
 
     // Ahora creamos el mensaje ligero, con una referencia al ExecutableMessage
@@ -121,7 +123,7 @@ public class SocketDistributor extends AbstractDistributor {
   }
 
   /* Envia un mensaje ligero a la red*/
-  private void Enviar(ThinMessage mensaje) {
+  private static void Enviar(ThinMessage mensaje) {
     try {
       bytesOut.write(mensaje.toBytes());
     } catch (Exception ex) {
@@ -131,7 +133,7 @@ public class SocketDistributor extends AbstractDistributor {
   }
 
   /* Recibe y procesa cualquier mensaje de la red*/
-  private void Recibir() {
+  private static void Recibir() {
     // Recibir de la red el siguiente mensaje
     Object mensaje = null;
 
@@ -169,7 +171,7 @@ public class SocketDistributor extends AbstractDistributor {
     }
   }
 
-  private Object RecibirDeRed() throws IOException, MagicInvalido {
+  private static Object RecibirDeRed() throws IOException, MagicInvalido {
     byte magic;
 
     try {
@@ -223,13 +225,13 @@ public class SocketDistributor extends AbstractDistributor {
   }
 
   /* Ejecuta un mensaje llamada recibido de la red, devolviendo el valor de la llamada a la red*/
-  private void EjecutarMensaje(ThinMessage llamada) {
+  private static void EjecutarMensaje(ThinMessage llamada) {
     ExecutableMessage mensajejecutable = ultimoMensajeAEjecutar;
     Object valor_devuelto = null;
 
     try {
-      valor_devuelto = mensajejecutable.Ejecutar(classLoader);
-    } catch (ExcepcionEjecutandoMensaje ex) {
+      valor_devuelto = mensajejecutable.execute();
+    } catch (MessageExecutionException ex) {
       logger.error("Error ejecutando mensaje", ex);
       System.exit(1);
     }
@@ -270,8 +272,8 @@ public class SocketDistributor extends AbstractDistributor {
     Recibir();
   }
 
-  @Override
-  protected Object getLastReturnedObject() {
+  //@Override
+  protected static Object getLastReturnedObject() {
     return valoresRecibidos.removeLast();
   }
 
@@ -281,8 +283,7 @@ public class SocketDistributor extends AbstractDistributor {
 
   public static SocketDistributor newInstance() {
     SocketDistributor newDistributor = new SocketDistributor();
-    distributorInstances.put(distributorIDCounter.incrementAndGet(), newDistributor);
-    newDistributor.setId(distributorIDCounter.get());
+    distributorInstances.put(distributorIDCounter.incrementAndGet(), (IDistributor) newDistributor);
     return newDistributor;
   }
 
@@ -297,7 +298,6 @@ public class SocketDistributor extends AbstractDistributor {
     }
 
     SocketDistributor distributor = newInstance();
-    int distributorID = distributor.getId();
 
     String nombreAplicacion = args[0];
 
@@ -320,7 +320,8 @@ public class SocketDistributor extends AbstractDistributor {
     Class<? > clase = null;
 
     try {
-      clase = distributor.classLoader.loadClass(nombreAplicacion);
+      //clase = distributor.classLoader.loadClass(nombreAplicacion);
+      clase = distributor.getClass().getClassLoader().loadClass(nombreAplicacion);
     } catch (ClassNotFoundException ex) {
       stLogger.error(ex.getStackTrace());
       System.exit(0);

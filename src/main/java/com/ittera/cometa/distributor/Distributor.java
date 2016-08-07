@@ -2,28 +2,22 @@ package com.ittera.cometa.distributor;
 
 import com.ittera.cometa.distributor.messages.*;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
-import com.ittera.cometa.distributor.returntypes.Null;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import com.ittera.cometa.util.SuperStack;
 
-import java.lang.reflect.Field;
-
 import java.util.Deque;
 import java.util.LinkedList;
 
+import java.lang.reflect.Field;
 
-/**
- * @TODO remove System.exit() calls
- * @author libre
- */
-public abstract class AbstractDistributor implements IDistributor {
+
+public class Distributor {
   protected static Logger logger = LogManager.getLogger("distributor");
-  protected int id;
-  protected Deque<ExceptionWrapper> raisedExceptions = new LinkedList<ExceptionWrapper>();
-  protected java.lang.ClassLoader classLoader;
+  protected static Deque<Object> returnedValues = new LinkedList<Object>();
+  protected static Deque<ExceptionWrapper> raisedExceptions = new LinkedList<>();
 
   /************************ INTERFACE ***************************/
 
@@ -34,42 +28,21 @@ public abstract class AbstractDistributor implements IDistributor {
    * @param receiver Objeto al que se invoca.
    * @param methodName Nombre del metodo al que se invoca.
    * @param methodSignature Firma (Signature) que identifica los tipos de parametros y el return type.
-   * @param paramStack SuperSuperStack que alberga los parametros al metodo estatico. Estos se meten en el orden
+   * @param args SuperSuperStack que alberga los parametros al metodo estatico. Estos se meten en el orden
    * de los parametros en el metodo, y se han de sacar (popear) en el orden inverso.
    */
-  public synchronized void instanceMethodWithArgs(Object sender, Object receiver, String methodName,
-    String methodSignature, SuperStack paramStack) throws Throwable {
-    logger.debug("instanceMethodWithArgs: calling " + methodName);
+  public static void instanceMethod(Object sender, Object receiver, String methodName,
+    String methodSignature, Class[] parameterTypes, Object[] args) throws ExecutableMessageCreationException {
+    logger.debug("instanceMethod: calling " + methodName);
 
     final String senderClassName = sender==null? "" : sender.getClass().getName();
 
     final String receiverClassName = receiver.getClass().getName();
 
-    final ExecutableMessage message = new InstanceMethodMessage(id, sender, senderClassName, receiver, receiverClassName, methodName,
-          methodSignature, paramStack);
+    final ExecutableMessage message = new InstanceMethodMessage(sender, senderClassName, receiver, receiverClassName, methodName,
+          methodSignature, parameterTypes, args);
 
-    sendExecutableMessage(message);
-  }
-
-  /** Para llamadas a metodos de instancias sin parametros.
-   * @param receiver Objeto al que se invoca.
-   * @param methodName Nombre del metodo al que se invoca.
-   * @param methodSignature Firma (Signature) que identifica los tipos de parametros y el return type.
-   */
-  public synchronized void instanceMethodNoArgs(Object sender, Object receiver, String methodName,
-    String methodSignature) throws Throwable {
-    logger.debug("instanceMethodNoArgs: calling " + methodName);
-
-    final String senderClassName = sender==null? "" : sender.getClass().getName();
-
-    String receiverClassName = receiver.getClass().getName();
-
-    ExecutableMessage message = null;
-
-    message = new NoArgsInstanceMethodMessage(id, sender, senderClassName, receiver, receiverClassName,
-          methodName, methodSignature);
-
-    sendExecutableMessage(message);
+    MessageExecutor.sendExecutableMessage(message);
   }
 
   /** Para llamadas a metodos de clases estaticas con parametros.
@@ -79,162 +52,38 @@ public abstract class AbstractDistributor implements IDistributor {
    * @param paramStack SuperStack que alberga los parametros al metodo estatico. Estos se meten en el orden
    * de los parametros en el metodo, y se han de sacar (popear) en el orden inverso.
    */
-  public synchronized void staticMethodWithArgs(Object sender, String receiverClassName, String methodName,
+  public static void staticMethod(Object sender, String receiverClassName, String methodName,
     String methodSignature, SuperStack paramStack) throws Throwable {
-    logger.debug("staticMethodWithArgs: calling " + methodName);
+    logger.debug("staticMethod: calling " + methodName);
 
     final String senderClassName = sender==null? "" : sender.getClass().getName();
 
-    ExecutableMessage message = new ClassMethodMessage(id, sender, senderClassName, receiverClassName, methodName,
+    ExecutableMessage message = new ClassMethodMessage(sender, senderClassName, receiverClassName, methodName,
           methodSignature, paramStack);
 
     sendExecutableMessage(message);
-  }
-
-  /** Para llamadas a metodos de clases estaticas sin parametros.
-   * @param receiverClassName Clase a la que se invoca.
-   * @param methodName Nombre del metodo estatico al que se invoca.
-   * @param methodSignature Firma (Signature) que identifica los tipos de parametros y el return type.
-   */
-  public synchronized void staticMethodNoArgs(Object sender, String receiverClassName, String methodName,
-    String methodSignature) throws Throwable {
-    logger.debug("staticMethodNoArgs: calling " + methodName);
-
-    final String senderClassName = sender==null? "" : sender.getClass().getName();
-
-    ExecutableMessage mensaje = new NoArgsClassMethodMessage(id, sender, senderClassName, receiverClassName, methodName,
-          methodSignature);
-
-    sendExecutableMessage(mensaje);
   }
 
   /** Para llamadas a constructores con parametros.
    * @param receiverClassName Clase del nuevo objeto a crear.
    * @param paramStack SuperStack que alberga los parametros del constructor deseado.
    */
-  public synchronized void initWithArgs(Object sender, String receiverClassName, String methodSignature,
+  public static void constructor(Object sender, String receiverClassName, String methodSignature,
     SuperStack paramStack) throws Throwable {
-    logger.debug("initWithArgs: calling constructor of " + receiverClassName + "\n w/ superstack :" + paramStack);
+    logger.debug("constructor: calling constructor of " + receiverClassName + "\n w/ superstack :" + paramStack);
 
     final String senderClassName = sender==null? "" : sender.getClass().getName();
 
-    ExecutableMessage message =  new ConstructorMessage(id, senderClassName, sender, receiverClassName, methodSignature,
+    ExecutableMessage message =  new ConstructorMessage(senderClassName, sender, receiverClassName, methodSignature,
           paramStack);
 
     sendExecutableMessage(message);
   }
 
-  /** Para llamadas a constructores sin parametros.
-     * @param receiverClassName Clase del nuevo objeto a crear.
-     */
-  public synchronized void initNoArgs(Object sender, String receiverClassName)
-    throws Throwable {
-    logger.debug("initNoArgs: calling constructor of " + receiverClassName);
-    final String senderClassName = sender==null? "" : sender.getClass().getName();
-
-    ExecutableMessage message = new NoArgsConstructorMessage(id, senderClassName, sender, receiverClassName);
-
-    sendExecutableMessage(message);
-  }
-
-  // </editor-fold>
-
-  // <editor-fold defaultstate="collapsed" desc="GETTERS FOR VALUES RETURNED FROM METHODS">
-
-  /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
-   * @return Objeto devuelto por el ultimo metodo ejecutado.
-   */
-  public synchronized Object getReturnedObject() throws Throwable {
-    Object value = getLastReturnedObject();
-    logger.debug("getReturnedObject: value grabbed: " + value);
-    if (value instanceof Null) {
-      return null;
-    } else {
-      return value;
-    }
-  }
-
-  /**
-   * Like getObject for String methods
-   * @return String
-   */
-  public synchronized String getReturnedString() throws Throwable {
-    Object value = getLastReturnedObject();
-    if (value == null) {
-      logger.debug("returned String is null");
-    }
-
-    return (String) value;
-  }
-
-  /** Entrega el objeto devuelto como un Long.
-   * @return ultimo valor como primitivo de tipo long.
-   */
-  public synchronized long getReturnedLong() throws Throwable {
-    Object value = getLastReturnedObject();
-    return (long) value;
-  }
-
-  /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
-   * @return ultimo valor como primitivo de tipo double.
-   */
-  public synchronized double getReturnedDouble() throws Throwable {
-    Object value = getLastReturnedObject();
-    return (double) value;
-  }
-
-  /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
-   * @return ultimo valor como primitivo de tipo int.
-   */
-  public synchronized int getReturnedInt() throws Throwable {
-    Object value = getLastReturnedObject();
-    return (int) value;
-  }
-
-  /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
-   * @return ultimo valor como primitivo de tipo boolean.
-   */
-  public synchronized boolean getReturnedBoolean() throws Throwable {
-    Object value = getLastReturnedObject();
-    return (boolean) value;
-  }
-
-  /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
-   * @return ultimo valor como primitivo de tipo float.
-   */
-  public synchronized float getReturnedFloat() throws Throwable {
-    Object value = getLastReturnedObject();
-    return (float)value;
-  }
-
-  /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
-   * @return ultimo valor como primitivo de tipo short.
-   */
-  public synchronized short getReturnedShort() throws Throwable {
-    Object value = getLastReturnedObject();
-    return (short)value;
-  }
-
-  /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
-   * @return ultimo valor como primitivo de tipo char.
-   */
-  public synchronized char getReturnedChar() throws Throwable {
-    Object value = getLastReturnedObject();
-    return (char)value;
-  }
-
-  /** Entrega el objeto devuelto por el ultimo metodo ejecutado.
-   * @return ultimo valor como primitivo de tipo byte.
-   */
-  public synchronized byte getReturnedByte() throws Throwable {
-    Object value = getLastReturnedObject();
-    return (byte)value;
-  }
-
   // </editor-fold>
 
   // <editor-fold defaultstate="collapsed" desc="GETSTATIC OPERATIONS">
-  public synchronized Object getStaticObject(String className, String fieldName) {
+  public static Object getStaticObject(String className, String fieldName) {
     Object fieldValue = null;
     try {
       fieldValue = getAccessibleDeclaredClassField(className, fieldName).get(null);
@@ -247,7 +96,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized boolean getStaticBoolean(String className, String fieldName) {
+  public static boolean getStaticBoolean(String className, String fieldName) {
     final boolean fieldValue;
 
     try {
@@ -261,7 +110,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized byte getStaticByte(String className, String fieldName) {
+  public static byte getStaticByte(String className, String fieldName) {
     final byte fieldValue;
 
     try {
@@ -275,7 +124,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized char getStaticChar(String className, String fieldName) {
+  public static char getStaticChar(String className, String fieldName) {
     final char fieldValue;
 
     try {
@@ -289,7 +138,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized int getStaticInt(String className, String fieldName) {
+  public static int getStaticInt(String className, String fieldName) {
     final int fieldValue;
 
     try {
@@ -303,7 +152,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized double getStaticDouble(String className, String fieldName) {
+  public static double getStaticDouble(String className, String fieldName) {
     final double fieldValue;
 
     try {
@@ -317,7 +166,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized float getStaticFloat(String className, String fieldName) {
+  public static float getStaticFloat(String className, String fieldName) {
     final float fieldValue;
 
     try {
@@ -331,7 +180,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized long getStaticLong(String className, String fieldName) {
+  public static long getStaticLong(String className, String fieldName) {
     final long fieldValue;
 
     try {
@@ -345,7 +194,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized short getStaticShort(String className, String fieldName) {
+  public static short getStaticShort(String className, String fieldName) {
     final short fieldValue;
 
     try {
@@ -359,14 +208,14 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized String getStaticString(String className, String fieldName) {
+  public static String getStaticString(String className, String fieldName) {
     return (String) getStaticObject(className, fieldName);
   }
 
   // </editor-fold>
 
   // <editor-fold defaultstate="collapsed" desc="GETFIELD OPERATIONS">
-  public synchronized Object getObject(Object objectref, String fieldName) {
+  public static Object getObject(Object objectref, String fieldName) {
     final Object fieldValue;
 
     try {
@@ -380,7 +229,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized boolean getBoolean(Object objectref, String fieldName) {
+  public static boolean getBoolean(Object objectref, String fieldName) {
     final boolean fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getBoolean(objectref);
@@ -393,7 +242,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized byte getByte(Object objectref, String fieldName) {
+  public static byte getByte(Object objectref, String fieldName) {
     final byte fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getByte(objectref);
@@ -406,7 +255,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized char getChar(Object objectref, String fieldName) {
+  public static char getChar(Object objectref, String fieldName) {
     final char fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getChar(objectref);
@@ -419,7 +268,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized int getInt(Object objectref, String fieldName) {
+  public static int getInt(Object objectref, String fieldName) {
     final int fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getInt(objectref);
@@ -432,7 +281,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized double getDouble(Object objectref, String fieldName) {
+  public static double getDouble(Object objectref, String fieldName) {
     final double fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getDouble(objectref);
@@ -445,7 +294,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized float getFloat(Object objectref, String fieldName) {
+  public static float getFloat(Object objectref, String fieldName) {
     final float fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getFloat(objectref);
@@ -458,7 +307,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized long getLong(Object objectref, String fieldName) {
+  public static long getLong(Object objectref, String fieldName) {
     final long fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getLong(objectref);
@@ -471,7 +320,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized short getShort(Object objectref, String fieldName) {
+  public static short getShort(Object objectref, String fieldName) {
     final short fieldValue;
     try {
       fieldValue = getAccessibleDeclaredObjectField(objectref, fieldName).getShort(objectref);
@@ -484,14 +333,14 @@ public abstract class AbstractDistributor implements IDistributor {
     return fieldValue;
   }
 
-  public synchronized String getString(Object objectref, String fieldName) {
+  public static String getString(Object objectref, String fieldName) {
     return (String) getObject(objectref, fieldName);
   }
 
   // </editor-fold>
 
   // <editor-fold defaultstate="collapsed" desc="PUTSTATIC OPERATIONS">
-  public synchronized void putStatic(Object value, String className, String fieldName) {
+  public static void putStatic(Object value, String className, String fieldName) {
     final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
@@ -503,7 +352,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putStatic(boolean value, String className, String fieldName) {
+  public static void putStatic(boolean value, String className, String fieldName) {
     final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
@@ -515,7 +364,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putStatic(byte value, String className, String fieldName) {
+  public static void putStatic(byte value, String className, String fieldName) {
     final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
@@ -527,7 +376,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putStatic(char value, String className, String fieldName) {
+  public static void putStatic(char value, String className, String fieldName) {
     final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
@@ -539,7 +388,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putStatic(int value, String className, String fieldName) {
+  public static void putStatic(int value, String className, String fieldName) {
     final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
@@ -551,7 +400,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putStatic(double value, String className, String fieldName) {
+  public static void putStatic(double value, String className, String fieldName) {
     final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
@@ -563,7 +412,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putStatic(float value, String className, String fieldName) {
+  public static void putStatic(float value, String className, String fieldName) {
     final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
@@ -575,7 +424,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putStatic(long value, String className, String fieldName) {
+  public static void putStatic(long value, String className, String fieldName) {
     final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
@@ -587,7 +436,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putStatic(short value, String className, String fieldName) {
+  public static void putStatic(short value, String className, String fieldName) {
     final Field objectField = getAccessibleDeclaredClassField(className, fieldName);
 
     try {
@@ -602,7 +451,7 @@ public abstract class AbstractDistributor implements IDistributor {
   // </editor-fold>
 
   // <editor-fold defaultstate="collapsed" desc="PUTFIELD OPERATIONS">
-  public synchronized void putField(Object objectref, Object value, String fieldName) {
+  public static void putField(Object objectref, Object value, String fieldName) {
     final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
@@ -614,7 +463,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putField(Object objectref, boolean value, String fieldName) {
+  public static void putField(Object objectref, boolean value, String fieldName) {
     final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
@@ -626,7 +475,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putField(Object objectref, byte value, String fieldName) {
+  public static void putField(Object objectref, byte value, String fieldName) {
     final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
@@ -638,7 +487,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putField(Object objectref, char value, String fieldName) {
+  public static void putField(Object objectref, char value, String fieldName) {
     final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
@@ -650,7 +499,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putField(Object objectref, int value, String fieldName) {
+  public static void putField(Object objectref, int value, String fieldName) {
     final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
@@ -662,7 +511,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putField(Object objectref, double value, String fieldName) {
+  public static void putField(Object objectref, double value, String fieldName) {
     final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
@@ -674,7 +523,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putField(Object objectref, float value, String fieldName) {
+  public static void putField(Object objectref, float value, String fieldName) {
     final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
@@ -686,7 +535,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putField(Object objectref, long value, String fieldName) {
+  public static void putField(Object objectref, long value, String fieldName) {
     final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
@@ -698,7 +547,7 @@ public abstract class AbstractDistributor implements IDistributor {
     }
   }
 
-  public synchronized void putField(Object objectref, short value, String fieldName) {
+  public static void putField(Object objectref, short value, String fieldName) {
     final Field objectField = getAccessibleDeclaredObjectField(objectref, fieldName);
 
     try {
@@ -714,7 +563,7 @@ public abstract class AbstractDistributor implements IDistributor {
 
   //@TODO field operations should also be sent as messages
   // <editor-fold defaultstate="collapsed" desc="helper methods for field operations">
-  private Field getAccessibleDeclaredObjectField(Object objectref, String fieldName) {
+  private static Field getAccessibleDeclaredObjectField(Object objectref, String fieldName) {
     Field objectField = null;
 
     try {
@@ -730,7 +579,7 @@ public abstract class AbstractDistributor implements IDistributor {
     return objectField;
   }
 
-  private Field getAccessibleDeclaredClassField(String className, String fieldName) {
+  private static Field getAccessibleDeclaredClassField(String className, String fieldName) {
     Field classField = null;
 
     try {
@@ -750,78 +599,15 @@ public abstract class AbstractDistributor implements IDistributor {
 
   // </editor-fold>
 
-  // <editor-fold defaultstate="collapsed" desc="EXCEPTION AND ERROR METHODS">
-  public boolean raisedException() {
-    logger.debug("raisedException");
-    return (!raisedExceptions.isEmpty());
+  protected static Object getLastReturnedObject() {
+    return MessageExecutor.getLastReturnedObject();
+  }
+  /**
+   * As of Java 7, static and abstract are incompatible. Otherwise this method should be abstract.
+   * @param message
+   */
+   protected static void sendExecutableMessage(ExecutableMessage message) {
+    throw new RuntimeException("sendExecutableMessage is not implemented, must be overriden in Distributor's subclasses!");
   }
 
-  public synchronized Exception getException() {
-    // logger.error("getException");
-    if (raisedExceptions.isEmpty()) {
-      logger.error("exception vector empty");
-      System.exit(1);
-    }
-
-    ExceptionWrapper exceptionWra = (ExceptionWrapper) raisedExceptions.removeLast();
-
-    if (!(exceptionWra.getException() instanceof Exception)) {
-      throw new DistributorError("Can't handle Error o Throwable:", exceptionWra.getException());
-    }
-
-    logger.debug("passing back exception : " + exceptionWra.getException());
-    return (Exception) exceptionWra.getException();
-  }
-
-  // </editor-fold>
-
-  // <editor-fold defaultstate="collapsed" desc="INSTANCEOF && CHECKCAST METHODS">
-  public synchronized int instanceOf(Object object, String className) {
-    if (object == null) {
-      return 0;
-    }
-
-    //if the object is in another distributor, forward the call
-
-    //otherwise perform the instanceof here
-    final Class clazz;
-    try {
-      clazz = Class.forName(className);
-    } catch (ClassNotFoundException cnfe) {
-      throw new DistributorError("Can't find the class of an object that is supposed to be loaded", cnfe);
-    }
-
-    if (clazz.isInstance(object)) {
-      return 1;
-    } else {
-      return 0;
-    }
-  }
-
-  public synchronized void checkcast(Object object, String className) {
-    if ((object != null) && (instanceOf(object, className) == 0)) {
-      throw new ClassCastException(object + " is not an instance of " + className);
-    }
-  }
-
-  // </editor-fold>
-  protected abstract void sendExecutableMessage(ExecutableMessage mensaje);
-
-  protected abstract Object getLastReturnedObject();
-
-  public java.lang.ClassLoader getClassLoader() {
-    return classLoader;
-  }
-
-  public void setClassLoader(java.lang.ClassLoader classLoader) {
-    this.classLoader = classLoader;
-  }
-
-  public void setId(int id) {
-    this.id = id;
-  }
-
-  public int getId() {
-    return id;
-  }
 }

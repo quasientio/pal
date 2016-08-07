@@ -4,8 +4,8 @@ import com.ittera.cometa.common.ByteSerializable;
 import com.ittera.cometa.common.exceptions.ErrorConstituyendoMensaje;
 import com.ittera.cometa.common.exceptions.ErrorReconstituyendoMensaje;
 
-import com.ittera.cometa.distributor.ExcepcionCreandoMensajeEjecutable;
-import com.ittera.cometa.distributor.ExcepcionEjecutandoMensaje;
+import com.ittera.cometa.distributor.ExecutableMessageCreationException;
+import com.ittera.cometa.distributor.MessageExecutionException;
 import com.ittera.cometa.distributor.returntypes.ErrorWrapper;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
 import com.ittera.cometa.distributor.returntypes.RuntimeExceptionWrapper;
@@ -14,83 +14,82 @@ import com.ittera.cometa.distributor.returntypes.Void;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import java.util.Stack;
-
-
 public class InstanceMethodMessage extends ArgedMessage implements ExecutableMessage, ByteSerializable {
   public static byte MAGIC = 105;
-  private int distributorID;
-  private String nombreClaseSender;
+  private int distributorID=-1;
+  private String senderClassName;
   private Object sender;
-  private String nombreClaseReceiver;
+  private String receiverClassName;
   private Object receiver;
-  private String nombreMetodo;
+  private String methodName;
 
-  public InstanceMethodMessage(int distributor, Object sender, String nombreClaseSender, Object receiver,
-                               String nombreClaseReceiver, String nombreMetodo, String firmaMetodo, Stack args)
-    throws ExcepcionCreandoMensajeEjecutable {
-    this.distributorID = distributor;
-    this.nombreClaseSender = nombreClaseSender;
+  public InstanceMethodMessage(Object sender, String senderClassName, Object receiver,
+                               String receiverClassName, String methodName, String methodSignatureStr, Class[] parameterTypes, Object[] args)
+    throws ExecutableMessageCreationException {
+    this.senderClassName = senderClassName;
     this.sender = sender;
-    this.nombreClaseReceiver = nombreClaseReceiver;
+    this.receiverClassName = receiverClassName;
     this.receiver = receiver;
 
-    if ((nombreMetodo == null) || nombreMetodo.isEmpty()) {
-      throw new ExcepcionCreandoMensajeEjecutable("Nombre del Metodo es null o <empty string>.");
+    if (methodName == null || methodName.isEmpty()) {
+      throw new ExecutableMessageCreationException("Method name is null or <empty string>.");
     } else {
-      this.nombreMetodo = nombreMetodo;
+      this.methodName = methodName;
     }
 
-    this.firmaMetodo = firmaMetodo;
+    this.methodSignatureStr = methodSignatureStr;
 
     if (args == null) {
-      throw new ExcepcionCreandoMensajeEjecutable("Par�metros = null.");
+      throw new ExecutableMessageCreationException("Parametros = null.");
     } else {
-      setParametros(args);
+      setParameters(args, parameterTypes);
     }
   }
 
-  public Object Ejecutar(java.lang.ClassLoader classLoader)
-    throws ExcepcionEjecutandoMensaje {
-    Object valor_devuelto = null;
-    Class clase = null;
+  public Object execute()
+    throws MessageExecutionException {
+    Object returnedValue = null;
 
     try {
-      Method Metodo = null;
+      Method method = null;
 
       try {
-        Metodo = Class.forName(nombreClaseReceiver, true, classLoader).getMethod(nombreMetodo, clasesParametros);
+        method = Class.forName(receiverClassName).getMethod(methodName, parameterClasses);
       } catch (NoSuchMethodException E) {
-        Metodo = Class.forName(nombreClaseReceiver, true, classLoader)
-                      .getDeclaredMethod(nombreMetodo, clasesParametros);
+        method = Class.forName(receiverClassName)
+                      .getDeclaredMethod(methodName, parameterClasses);
       }
 
-      Metodo.setAccessible(true);
-      if (Metodo.getReturnType() == void.class) {
-        valor_devuelto = new Void();
-        Metodo.invoke(receiver, parametros);
+      method.setAccessible(true);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Calling method name:" + method.getName() + " on object:" + receiver);
+      }
+      if (method.getReturnType() == void.class) {
+        returnedValue = new Void();
+        method.invoke(receiver, parameters);
       } else {
-        valor_devuelto = Metodo.invoke(receiver, parametros);
+        returnedValue = method.invoke(receiver, parameters);
       }
     } catch (Exception ex) {
       if (ex instanceof InvocationTargetException) {
         Throwable realEx = ex.getCause();
         if (realEx instanceof Error) {
-          valor_devuelto = new ErrorWrapper((Error) realEx);
+          returnedValue = new ErrorWrapper((Error) realEx);
         } else if (realEx instanceof RuntimeException) {
-          valor_devuelto = new RuntimeExceptionWrapper((RuntimeException) realEx);
+          returnedValue = new RuntimeExceptionWrapper((RuntimeException) realEx);
         } else if (realEx instanceof Exception) {
-          valor_devuelto = new ExceptionWrapper((Exception) realEx);
+          returnedValue = new ExceptionWrapper((Exception) realEx);
         } else {
-          return new ExcepcionEjecutandoMensaje("Throwable type is not wrappable");
+          return new MessageExecutionException("Throwable type is not wrappable");
         }
       } else {
+        ex.printStackTrace();
         logger.error("Error caught:", ex);
-        throw new ExcepcionEjecutandoMensaje(ex.getMessage());
+        throw new MessageExecutionException(ex.getMessage());
       }
     }
 
-    return valor_devuelto;
+    return returnedValue;
   }
 
   public void fromBytes(byte[] bytes) throws ErrorReconstituyendoMensaje {
@@ -105,13 +104,13 @@ public class InstanceMethodMessage extends ArgedMessage implements ExecutableMes
 
     ml.DistributorID = this.distributorID;
     ml.MensajeEjecutableRef = 0;
-    ml.NombreClaseSender = this.nombreClaseSender;
+    ml.NombreClaseSender = this.senderClassName;
     ml.Sender = 0;
-    ml.NombreClaseReceiver = this.nombreClaseReceiver;
+    ml.NombreClaseReceiver = this.receiverClassName;
     ml.Receiver = 0;
-    ml.NombreMetodo = this.nombreMetodo;
+    ml.NombreMetodo = this.methodName;
     ml.Parametros = 0;
-    ml.FirmaMetodo = firmaMetodo;
+    ml.FirmaMetodo = methodSignatureStr;
 
     return ml;
   }
@@ -120,9 +119,9 @@ public class InstanceMethodMessage extends ArgedMessage implements ExecutableMes
   public String toString() {
     // falta imprimir los parametros como una lista
     return ("Message Llamada\n" + "---------------\n" + "Distributor:        " + distributorID + "\n" +
-    "Sender (Ref):       " + sender + "\n" + "ClaseSender:       " + nombreClaseSender + "\n" +
-    "Receiver (Ref):     " + receiver + "\n" + "ClaseReceiver:     " + nombreClaseReceiver + "\n" +
-    "Metodo:              " + nombreMetodo + "\n" + "Firma M�todo      " + firmaMetodo + "\n" +
-    "Parametros:        " + parametros);
+    "Sender (Ref):       " + sender + "\n" + "ClaseSender:       " + senderClassName + "\n" +
+    "Receiver (Ref):     " + receiver + "\n" + "ClaseReceiver:     " + receiverClassName + "\n" +
+    "Metodo:              " + methodName + "\n" + "Firma M�todo      " + methodSignatureStr + "\n" +
+    "Parametros:        " + parameters);
   }
 }

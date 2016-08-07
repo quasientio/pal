@@ -43,10 +43,10 @@
       <version>2.6.2</version>
     </dependency>
   <!-- https://mvnrepository.com/artifact/org.aspectj/aspectjweaver -->
-    <dependency>
+    <!--dependency>
       <groupId>org.aspectj</groupId>
         <artifactId>aspectjweaver</artifactId>
         <version>1.8.9</version>
-    </dependency>
+    </dependency-->
   </dependencies>
 </project>
