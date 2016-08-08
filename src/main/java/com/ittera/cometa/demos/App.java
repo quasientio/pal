@@ -7,18 +7,27 @@ package com.ittera.cometa.demos;
 public class App 
 {
 
-    Integer x=null;
-    String s=null;
+    Integer anInt=null;
+    String someString=null;
+    boolean aBool = false;
     App b=null;
+    static float aFloat = 8.5f;
+    static float aLong = 53382303;
+    static String aClassString=null;
+
+   static void doSomethingStatically() {
+        System.out.println("whatever");
+        aClassString="I'm classy";
+    }
 
     void doSomething() {
-        x=Integer.valueOf(60);
-        s=new String("hello there");
+        anInt=Integer.valueOf(60);
+        someString=new String("hello there");
         b=new App();
     }
 
     Integer giveMeX() {
-        return x;
+        return anInt;
     }
 
     private void test() {
@@ -31,13 +40,24 @@ public class App
 
     public static void main( String[] args )
     {
-        for (int i=0; i<2000; i++) {
-            System.out.println("Hello World!");
-            App a = new App();
-            a.test();
-            a.doSomething();
-            a.giveMeX();
-            a.testArg("dummy val");
+       short times=2000;
+
+       for (short i=0; i<times; i++) {
+         System.out.println("Hello World!");
+         App a = new App();
+         a.test();
+         a.doSomething();
+         System.out.println("X = " + a.giveMeX());
+         a.testArg("dummy val");
+         doSomethingStatically();
+         System.out.println("aBool is " + a.aBool);
+         a.aBool=!a.aBool;
+         System.out.println("aBool is now " + a.aBool);
+         System.out.println("Getting someString field = " + a.someString);
+         System.out.println("a class str = " + a.aClassString);
+         System.out.println("aLong = " + a.aLong);
+         a.aLong*=2;
+         System.out.println("aLong (times 2) = " + a.aLong);
         }
     }
 }

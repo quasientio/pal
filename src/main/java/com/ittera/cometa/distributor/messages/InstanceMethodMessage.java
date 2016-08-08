@@ -4,7 +4,6 @@ import com.ittera.cometa.common.ByteSerializable;
 import com.ittera.cometa.common.exceptions.ErrorConstituyendoMensaje;
 import com.ittera.cometa.common.exceptions.ErrorReconstituyendoMensaje;
 
-import com.ittera.cometa.distributor.ExecutableMessageCreationException;
 import com.ittera.cometa.distributor.MessageExecutionException;
 import com.ittera.cometa.distributor.returntypes.ErrorWrapper;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
@@ -13,6 +12,8 @@ import com.ittera.cometa.distributor.returntypes.Void;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+
+import org.aspectj.lang.reflect.CodeSignature;
 
 public class InstanceMethodMessage extends ArgedMessage implements ExecutableMessage, ByteSerializable {
   public static byte MAGIC = 105;
@@ -23,27 +24,13 @@ public class InstanceMethodMessage extends ArgedMessage implements ExecutableMes
   private Object receiver;
   private String methodName;
 
-  public InstanceMethodMessage(Object sender, String senderClassName, Object receiver,
-                               String receiverClassName, String methodName, String methodSignatureStr, Class[] parameterTypes, Object[] args)
-    throws ExecutableMessageCreationException {
-    this.senderClassName = senderClassName;
+  public InstanceMethodMessage(CodeSignature codeSignature, Object sender, Object receiver, Object[] args) {
+    this.senderClassName = sender==null? "" : sender.getClass().getName();
     this.sender = sender;
-    this.receiverClassName = receiverClassName;
+    this.receiverClassName =  receiver.getClass().getName();
     this.receiver = receiver;
-
-    if (methodName == null || methodName.isEmpty()) {
-      throw new ExecutableMessageCreationException("Method name is null or <empty string>.");
-    } else {
-      this.methodName = methodName;
-    }
-
-    this.methodSignatureStr = methodSignatureStr;
-
-    if (args == null) {
-      throw new ExecutableMessageCreationException("Parametros = null.");
-    } else {
-      setParameters(args, parameterTypes);
-    }
+    this.methodName=codeSignature.getName();
+    setParameters(args, codeSignature.getParameterTypes());
   }
 
   public Object execute()
@@ -110,7 +97,6 @@ public class InstanceMethodMessage extends ArgedMessage implements ExecutableMes
     ml.Receiver = 0;
     ml.NombreMetodo = this.methodName;
     ml.Parametros = 0;
-    ml.FirmaMetodo = methodSignatureStr;
 
     return ml;
   }
@@ -121,7 +107,6 @@ public class InstanceMethodMessage extends ArgedMessage implements ExecutableMes
     return ("Message Llamada\n" + "---------------\n" + "Distributor:        " + distributorID + "\n" +
     "Sender (Ref):       " + sender + "\n" + "ClaseSender:       " + senderClassName + "\n" +
     "Receiver (Ref):     " + receiver + "\n" + "ClaseReceiver:     " + receiverClassName + "\n" +
-    "Metodo:              " + methodName + "\n" + "Firma M�todo      " + methodSignatureStr + "\n" +
-    "Parametros:        " + parameters);
+    "Metodo:              " + methodName + "\n" + "Parametros:        " + parameters);
   }
 }

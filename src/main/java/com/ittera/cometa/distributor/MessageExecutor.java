@@ -23,34 +23,38 @@ public class MessageExecutor {
   protected static Deque<ExceptionWrapper> raisedExceptions = new LinkedList<>();
 
   public static void sendExecutableMessage(ExecutableMessage message) {
-    Object valor_devuelto = null;
+    Object returnedVal = null;
     try {
-      valor_devuelto = message.execute();
+      returnedVal = message.execute();
     } catch (MessageExecutionException ex) {
-      throw new DistributorError("Error ejecutando mensaje", ex);
+      throw new DistributorError("Error executing mensaje", ex);
     }
 
-    if (valor_devuelto instanceof Void) {
+    if (returnedVal instanceof Void) {
       //we're done
       return;
     }
 
-    if (valor_devuelto == null) {
+    if (returnedVal == null) {
       returnedValues.add(new Null());
-    } else if (valor_devuelto instanceof ExceptionWrapper) {
+    } else if (returnedVal instanceof ExceptionWrapper) {
       logger.debug("exception wrapper returned");
-      raisedExceptions.add((ExceptionWrapper) valor_devuelto);
-    } else if (valor_devuelto instanceof ErrorWrapper) {
-      throw new RuntimeException("Can't handle RuntimeException: ", ((ErrorWrapper) valor_devuelto).getError());
-    } else if (valor_devuelto instanceof RuntimeExceptionWrapper) {
+      raisedExceptions.add((ExceptionWrapper) returnedVal);
+    } else if (returnedVal instanceof ErrorWrapper) {
+      throw new RuntimeException("Can't handle RuntimeException: ", ((ErrorWrapper) returnedVal).getError());
+    } else if (returnedVal instanceof RuntimeExceptionWrapper) {
       throw new RuntimeException("Can't handle error: ",
-        ((RuntimeExceptionWrapper) valor_devuelto).getRuntimeException());
+        ((RuntimeExceptionWrapper) returnedVal).getRuntimeException());
     } else {
-      returnedValues.add(valor_devuelto);
+      returnedValues.add(returnedVal);
     }
   }
 
   public static Object getLastReturnedObject() {
-    return returnedValues.removeLast();
+    Object value=returnedValues.removeLast();
+    if (value instanceof Null) {
+      return null;
+    }
+    return value;
   }
 }

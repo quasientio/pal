@@ -4,7 +4,6 @@ import com.ittera.cometa.common.ByteSerializable;
 import com.ittera.cometa.common.exceptions.ErrorConstituyendoMensaje;
 import com.ittera.cometa.common.exceptions.ErrorReconstituyendoMensaje;
 
-import com.ittera.cometa.distributor.ExecutableMessageCreationException;
 import com.ittera.cometa.distributor.MessageExecutionException;
 import com.ittera.cometa.distributor.returntypes.ErrorWrapper;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
@@ -13,7 +12,7 @@ import com.ittera.cometa.distributor.returntypes.RuntimeExceptionWrapper;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
-import java.util.Stack;
+import org.aspectj.lang.reflect.CodeSignature;
 
 
 public class ConstructorMessage extends ArgedMessage implements ExecutableMessage, ByteSerializable {
@@ -23,23 +22,11 @@ public class ConstructorMessage extends ArgedMessage implements ExecutableMessag
   private Object sender;
   private String receiverClassName;
 
-  public ConstructorMessage(String senderClassName, Object sender, String receiverClassName,
-                            String methodSignatureStr, Stack args) throws ExecutableMessageCreationException {
-    this.senderClassName = senderClassName;
+  public ConstructorMessage(CodeSignature codeSignature, Object sender, Object[] args) {
+    this.senderClassName = sender==null? "" : sender.getClass().getName();
     this.sender = sender;
-    this.methodSignatureStr = methodSignatureStr;
-
-    if ((receiverClassName == null) || receiverClassName.isEmpty()) {
-      throw new ExecutableMessageCreationException("Nombre de la ClaseReceiver es null o <empty string>.");
-    } else {
-      this.receiverClassName = receiverClassName;
-    }
-
-    if (args == null) {
-      throw new ExecutableMessageCreationException("Par�metros = null.");
-    } else {
-      setParameters(args);
-    }
+    this.receiverClassName =  codeSignature.getDeclaringTypeName();
+    setParameters(args, codeSignature.getParameterTypes());
   }
 
   public Object execute()

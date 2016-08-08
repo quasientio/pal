@@ -5,7 +5,6 @@ import com.ittera.cometa.common.ByteSerializable;
 import com.ittera.cometa.common.exceptions.ErrorConstituyendoMensaje;
 import com.ittera.cometa.common.exceptions.ErrorReconstituyendoMensaje;
 
-import com.ittera.cometa.distributor.ExecutableMessageCreationException;
 import com.ittera.cometa.distributor.MessageExecutionException;
 import com.ittera.cometa.distributor.returntypes.ErrorWrapper;
 import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
@@ -15,8 +14,7 @@ import com.ittera.cometa.distributor.returntypes.Void;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import java.util.Stack;
-
+import org.aspectj.lang.reflect.CodeSignature;
 
 public class ClassMethodMessage extends ArgedMessage implements ExecutableMessage, ByteSerializable {
   public static byte MAGIC = 103;
@@ -26,26 +24,13 @@ public class ClassMethodMessage extends ArgedMessage implements ExecutableMessag
   private String receiverClassName;
   private String methodName;
 
-  public ClassMethodMessage(Object sender, String senderClassName, String receiverClassName,
-                     String methodName, String methodSignatureStr, Stack args)
-    throws ExecutableMessageCreationException {
-    this.senderClassName = senderClassName;
+  public ClassMethodMessage(CodeSignature codeSignature, Object sender, Object[] args) {
+    this.senderClassName = sender==null? "" : sender.getClass().getName();
     this.sender = sender;
-    this.receiverClassName = receiverClassName;
+    this.receiverClassName =  codeSignature.getDeclaringTypeName();
+    this.methodName = codeSignature.getName();
 
-    if ((methodName == null) || methodName.isEmpty()) {
-      throw new ExecutableMessageCreationException("Nombre del Metodo es null o <empty string>.");
-    } else {
-      this.methodName = methodName;
-    }
-
-    this.methodSignatureStr = methodSignatureStr;
-
-    if (args == null) {
-      throw new ExecutableMessageCreationException("Par�metros = null.");
-    } else {
-      setParameters(args);
-    }
+    setParameters(args, codeSignature.getParameterTypes());
   }
 
   public Object execute()
@@ -108,7 +93,6 @@ public class ClassMethodMessage extends ArgedMessage implements ExecutableMessag
     ml.Receiver = 0;
     ml.NombreMetodo = this.methodName;
     ml.Parametros = 0;
-    ml.FirmaMetodo = methodSignatureStr;
 
     return ml;
   }
