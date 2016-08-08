@@ -8,13 +8,13 @@ import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.reflect.CodeSignature;
 import org.aspectj.lang.reflect.FieldSignature;
 
-import com.ittera.cometa.distributor.ExecutableMessageCreationException;
 import com.ittera.cometa.distributor.Distributor;
 
 aspect DistributeAspect {
-
+	//if false, no output at all
 	private static final boolean verbose=false;
 
+	/** POINTCUT DEFINITIONS **/
 	pointcut allClasses(): !within(DistributeAspect);
 
 	pointcut voidInstanceMethods(): allClasses() && call(!static void *(..));
@@ -35,9 +35,8 @@ aspect DistributeAspect {
 
 	pointcut nonStaticPutfields(): allClasses() && set(!static * *);
 
-	static final void print(String s) {
-		System.out.println(s);
-	}
+
+	/** ADVICE for Methods **/
 
 	void around(): voidInstanceMethods() {	
 		if (verbose) {
@@ -65,7 +64,6 @@ aspect DistributeAspect {
 			thisJoinPoint.getThis(), //Object sender
 			thisJoinPoint.getArgs()); //parameters
 	}
-
 
 	Object around(): nonVoidInstanceMethods() {	
 		if (verbose) {
@@ -117,6 +115,8 @@ aspect DistributeAspect {
 	}
 
 
+	/** ADVICE for Fields **/
+
 	Object around(): staticGetfields() {	
 		if (verbose) {
 			print(" D --> get static: "+thisJoinPoint);
@@ -130,7 +130,6 @@ aspect DistributeAspect {
 
 		return returnedValue;
 	}
-
 
 	Object around(): nonStaticGetfields() {	
 		if (verbose) {
@@ -176,6 +175,11 @@ aspect DistributeAspect {
 	}
 
 
+	/** Utility methods **/
+
+	static final void print(String s) {
+		System.out.println(s);
+	}
 
 	static private void printStaticCtxt(JoinPoint.StaticPart jpsp) {
 		print(" ... jp.id="+jpsp.getId());
