@@ -14,6 +14,13 @@ public class App
     static float aFloat = 8.5f;
     static float aLong = 53382303;
     static String aClassString=null;
+    static double aDbl=0d;
+
+    static {
+      System.out.println("aDbl before="+aDbl);
+      aDbl=5;
+      System.out.println("aDbl after="+aDbl);
+    }
 
    static void doSomethingStatically() {
         System.out.println("whatever");
@@ -40,7 +47,7 @@ public class App
 
     public static void main( String[] args )
     {
-       short times=2000;
+       short times=1;
 
        for (short i=0; i<times; i++) {
          System.out.println("Hello World!");
