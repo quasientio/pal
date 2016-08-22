@@ -13,6 +13,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
 import org.aspectj.lang.reflect.CodeSignature;
+import org.aspectj.lang.reflect.ConstructorSignature;
 
 
 public class ConstructorMessage extends ArgedMessage implements ExecutableMessage, ByteSerializable {
@@ -21,11 +22,13 @@ public class ConstructorMessage extends ArgedMessage implements ExecutableMessag
   private String senderClassName;
   private Object sender;
   private String receiverClassName;
+  private Constructor constructor;
 
   public ConstructorMessage(CodeSignature codeSignature, Object sender, Object[] args) {
     this.senderClassName = sender==null? "" : sender.getClass().getName();
     this.sender = sender;
     this.receiverClassName =  codeSignature.getDeclaringTypeName();
+    this.constructor = ((ConstructorSignature) codeSignature).getConstructor();
     setParameters(args, codeSignature.getParameterTypes());
   }
 

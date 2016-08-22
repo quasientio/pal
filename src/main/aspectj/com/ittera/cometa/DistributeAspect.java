@@ -46,7 +46,7 @@ aspect DistributeAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		Distributor.voidInstanceMethod((CodeSignature)thisJoinPointStaticPart.getSignature(), //signature
+		Distributor.voidInstanceMethod(thisJoinPointStaticPart,
 			thisJoinPoint.getThis(), //Object sender
 			thisJoinPoint.getTarget(), //Object receiver
 			thisJoinPoint.getArgs()); //parameters
@@ -60,7 +60,7 @@ aspect DistributeAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		Distributor.voidClassMethod((CodeSignature)thisJoinPointStaticPart.getSignature(), //signature
+		Distributor.voidClassMethod(thisJoinPointStaticPart,
 			thisJoinPoint.getThis(), //Object sender
 			thisJoinPoint.getArgs()); //parameters
 	}
@@ -74,7 +74,7 @@ aspect DistributeAspect {
 		}
 
 		Object returnedValue = Distributor.nonVoidInstanceMethod(
-			(CodeSignature)thisJoinPointStaticPart.getSignature(), //signature
+			thisJoinPointStaticPart,
 			thisJoinPoint.getThis(), //Object sender
 			thisJoinPoint.getTarget(), //Object receiver
 			thisJoinPoint.getArgs()); //parameters
@@ -91,7 +91,7 @@ aspect DistributeAspect {
 		}
 
 		Object returnedValue = Distributor.nonVoidClassMethod(
-			(CodeSignature)thisJoinPointStaticPart.getSignature(), //signature
+			thisJoinPointStaticPart,
 			thisJoinPoint.getThis(), //Object sender
 			thisJoinPoint.getArgs()); //parameters
 
@@ -107,7 +107,7 @@ aspect DistributeAspect {
 		}
 
 		Object returnedValue = Distributor.constructor(
-			(CodeSignature)thisJoinPointStaticPart.getSignature(), //signature
+			thisJoinPointStaticPart,
 			thisJoinPoint.getThis(), //Object sender
 			thisJoinPoint.getArgs()); //parameters
 
@@ -125,7 +125,7 @@ aspect DistributeAspect {
 			//printParameters(thisJoinPoint);
 		}
 		Object returnedValue = Distributor.getObjectStatic(
-			(FieldSignature)thisJoinPointStaticPart.getSignature(), //signature
+			thisJoinPointStaticPart,
 			thisJoinPoint.getThis()); //Object sender
 
 		return returnedValue;
@@ -139,7 +139,7 @@ aspect DistributeAspect {
 			//printParameters(thisJoinPoint);
 		}
 		Object returnedValue = Distributor.getObject(
-			(FieldSignature)thisJoinPointStaticPart.getSignature(), //signature
+			thisJoinPointStaticPart,
 			thisJoinPoint.getThis(), //Object sender
 			thisJoinPoint.getTarget()); //Object receiver
 
@@ -154,7 +154,7 @@ aspect DistributeAspect {
 			//printParameters(thisJoinPoint);
 		}
 		Distributor.putStatic(
-			(FieldSignature)thisJoinPointStaticPart.getSignature(), //signature
+			thisJoinPointStaticPart,
 			thisJoinPoint.getThis(), //Object sender
 			thisJoinPoint.getArgs()); //parameters
 	}
@@ -168,7 +168,7 @@ aspect DistributeAspect {
 		}
 
 		Distributor.putField(
-			(FieldSignature)thisJoinPointStaticPart.getSignature(), //signature
+			thisJoinPointStaticPart,
 			thisJoinPoint.getThis(), //Object sender
 			thisJoinPoint.getTarget(), //Object receiver
 			thisJoinPoint.getArgs()); //parameters
