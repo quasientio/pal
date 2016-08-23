@@ -1,0 +1,144 @@
+package messages.data;
+
+option java_package = "com.ittera.cometa.distributor.messages.data";
+option java_outer_classname = "Calls";
+option optimize_for = SPEED;
+
+message ConstructorCall {
+    // --- CONTEXT
+
+    optional int32 distributorId = 1;
+
+    //NOTE: The id of a terminated thread may be reused
+    optional int64 threadId = 2;
+
+    required int64 currentTime = 3;
+
+    //TO DO:  IP or hostname for this Distributor
+
+    // --- CONTEXT
+
+    //Constructor name and classname are the same
+    required string name = 4;
+
+    //The modifiers can be decoded with the Modifier class
+    optional int32 modifiers = 5;
+
+    repeated string parameterNames = 6;
+    repeated string parameterClasses = 7;
+    repeated string exceptionTypes = 8;
+
+    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+    repeated int32 parameters = 9;
+
+    optional string senderClassName = 10;
+
+    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+    optional int32 sender = 11;
+
+    //source context from where the call was made
+    optional string sourceLocationFile = 12;
+    optional int32 sourceLocationLine = 13;
+    optional string sourceLocationType = 14;
+
+
+    //TO DO:  annotations
+}
+
+message InstanceMethodCall {
+    // --- CONTEXT
+
+    optional int32 distributorId = 1;
+
+    //NOTE: The id of a terminated thread may be reused
+    optional int64 threadId = 2;
+
+    required int64 currentTime = 3;
+
+    //TO DO:  IP or hostname for this Distributor
+
+    // --- CONTEXT
+
+    //class name
+    required string class = 4;
+
+    //method name
+    required string name = 5;
+
+    //target object
+    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+    required int32 target = 6;
+
+    //The modifiers can be decoded with the Modifier class
+    optional int32 modifiers = 7;
+
+    repeated string parameterNames = 8;
+    repeated string parameterClasses = 9;
+    repeated string exceptionTypes = 10;
+
+    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+    repeated int32 parameters = 11;
+
+    optional string senderClassName = 12;
+
+    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+    optional int32 sender = 13;
+
+    //source context from where the call was made
+    optional string sourceLocationFile = 14;
+    optional int32 sourceLocationLine = 15;
+    optional string sourceLocationType = 16;
+
+
+    //TO DO:  annotations
+}
+
+message ClInitCall {
+
+}
+
+message ClassMethodCall {
+    // --- CONTEXT
+
+    optional int32 distributorId = 1;
+
+    //NOTE: The id of a terminated thread may be reused
+    optional int64 threadId = 2;
+
+    required int64 currentTime = 3;
+
+    //TO DO:  IP or hostname for this Distributor
+
+    // --- CONTEXT
+
+    //class name
+    required string class = 4;
+
+    //method name
+    required string name = 5;
+
+    //The modifiers can be decoded with the Modifier class
+    optional int32 modifiers = 6;
+
+    repeated string parameterNames = 7;
+    repeated string parameterClasses = 8;
+    repeated string exceptionTypes = 9;
+
+    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+    repeated int32 parameters = 10;
+
+    optional string senderClassName = 11;
+
+    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+    optional int32 sender = 12;
+
+    //source context from where the call was made
+    optional string sourceLocationFile = 13;
+    optional int32 sourceLocationLine = 14;
+    optional string sourceLocationType = 15;
+
+
+    //TO DO:  annotations
+}
+
+

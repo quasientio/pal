@@ -45,6 +45,14 @@ public class App
         System.out.println(arg);
     }
 
+    private static void testVoidStatic(String arg) {
+        System.out.println(arg);
+    }
+
+    private static String testNonVoidStatic(String arg) {
+        return arg.toLowerCase();
+    }
+
     public static void main( String[] args )
     {
        short times=1;
@@ -65,6 +73,8 @@ public class App
          System.out.println("aLong = " + a.aLong);
          a.aLong*=2;
          System.out.println("aLong (times 2) = " + a.aLong);
+         testVoidStatic("a otra cosa");
+         testNonVoidStatic("mariposa");
         }
     }
 }

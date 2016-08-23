@@ -1,15 +1,9 @@
 package com.ittera.cometa.distributor;
-
 import com.ittera.cometa.distributor.messages.*;
 import com.ittera.cometa.distributor.messages.data.Calls;
-import com.ittera.cometa.distributor.returntypes.ExceptionWrapper;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
-
-import java.lang.reflect.Constructor;
-import java.util.Deque;
-import java.util.LinkedList;
 
 import org.aspectj.lang.reflect.CodeSignature;
 import org.aspectj.lang.reflect.ConstructorSignature;
@@ -17,14 +11,28 @@ import org.aspectj.lang.reflect.FieldSignature;
 import org.aspectj.lang.JoinPoint.StaticPart;
 
 import java.lang.reflect.Field;
+import java.util.Properties;
 
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.aspectj.lang.reflect.MethodSignature;
 
 public class Distributor {
-  protected static Logger logger = LogManager.getLogger("distributor");
-  protected static Deque<Object> returnedValues = new LinkedList<Object>();
-  protected static Deque<ExceptionWrapper> raisedExceptions = new LinkedList<>();
-
+  protected static final Logger logger = LogManager.getLogger("distributor");
+  protected static final KafkaProducer producer;
+  protected static final String kafkaTopic = "test";
   protected static final int id = 10;
+
+  static {
+    //Initialize Kafka Producer
+    final Properties props = new Properties();
+    props.put("bootstrap.servers", "localhost:9092");
+    props.put("client.id", String.valueOf(id));
+    props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+    props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+    //props.put("value.serializer", "com.ittera.cometa.distributor.messages.ProtobufSerializer");
+    producer = new KafkaProducer<>(props);
+  }
 
   /************************ INTERFACE ***************************/
 
@@ -33,6 +41,11 @@ public class Distributor {
   public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object receiver, Object[] args) {
     logger.debug("in D.voidInstanceMethod: " + staticPart.getSignature());
 
+    final Calls.InstanceMethodCall call = buildInstanceMethodMessage(staticPart, sender, receiver, args);
+    /** TO DO: send call down the wire to execute **/
+    //ATTENTION: this send is asynchronous. Must call get later.
+    producer.send(new ProducerRecord(kafkaTopic,call.toString()));
+
     final ExecutableMessage message = new InstanceMethodMessage((CodeSignature)staticPart.getSignature(), sender, receiver, args);
     MessageExecutor.sendExecutableMessage(message);
   }
@@ -40,15 +53,61 @@ public class Distributor {
   public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object receiver, Object[] args) {
     logger.debug("in D.nonVoidInstanceMethod: " + staticPart.getSignature());
 
+    final Calls.InstanceMethodCall call = buildInstanceMethodMessage(staticPart, sender, receiver, args);
+    /** TO DO: send call down the wire to execute **/
+    //ATTENTION: this send is asynchronous. Must call get later.
+    producer.send(new ProducerRecord(kafkaTopic,call.toString()));
+
     final ExecutableMessage message = new InstanceMethodMessage((CodeSignature)staticPart.getSignature(), sender, receiver, args);
     MessageExecutor.sendExecutableMessage(message);
     //WARNING: NOT THREAD-SAFE!!
     return MessageExecutor.getLastReturnedObject();
   }
 
+  private static Calls.InstanceMethodCall buildInstanceMethodMessage(StaticPart staticPart, Object sender, Object receiver, Object[] args) {
+
+    /** Build protobuf message **/
+    final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
+    final Calls.InstanceMethodCall.Builder callBuilder = Calls.InstanceMethodCall.newBuilder();
+    callBuilder.setDistributorId(id); //1
+    callBuilder.setThreadId(Thread.currentThread().getId()); //2
+    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
+    callBuilder.setClass_(codeSignature.getDeclaringTypeName()); //4
+    callBuilder.setName(codeSignature.getName()); //5
+    callBuilder.setTarget(System.identityHashCode(receiver)); //6
+    callBuilder.setModifiers(codeSignature.getModifiers()); //7
+    //8
+    for (String name: codeSignature.getParameterNames()) {
+      callBuilder.addParameterNames(name);
+    }
+    //9
+    for (Class clazz: codeSignature.getParameterTypes()) {
+      callBuilder.addParameterClasses(clazz.getName());
+    }
+    //10
+    for (Class clazz: codeSignature.getExceptionTypes()) {
+      callBuilder.addExceptionTypes(clazz.getPackage().getName()+"."+clazz.getName());
+    }
+    //11
+    for (Object param: args) {
+      callBuilder.addParameters(System.identityHashCode(param));
+    }
+    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //12
+    callBuilder.setSender(System.identityHashCode(sender)); //13
+    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //14
+    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //15
+    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //16
+
+    return callBuilder.build();
+  }
 
   public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) {
     logger.debug("in D.voidClassMethod: " + staticPart.getSignature());
+
+    final Calls.ClassMethodCall call = buildClassMethodMessage(staticPart, sender, args);
+    /** TO DO: send call down the wire to execute **/
+    //ATTENTION: this send is asynchronous. Must call get later.
+    producer.send(new ProducerRecord(kafkaTopic,call.toString()));
 
     ExecutableMessage message = new ClassMethodMessage((CodeSignature)staticPart.getSignature(), sender, args);
     MessageExecutor.sendExecutableMessage(message);
@@ -57,53 +116,94 @@ public class Distributor {
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) {
     logger.debug("in D.nonVoidClassMethod: " + staticPart.getSignature());
 
+    final Calls.ClassMethodCall call = buildClassMethodMessage(staticPart, sender, args);
+    /** TO DO: send call down the wire to execute **/
+    //ATTENTION: this send is asynchronous. Must call get later.
+    producer.send(new ProducerRecord(kafkaTopic,call.toString()));
+
     ExecutableMessage message = new ClassMethodMessage((CodeSignature)staticPart.getSignature(), sender, args);
     MessageExecutor.sendExecutableMessage(message);
     //WARNING: NOT THREAD-SAFE!!
     return MessageExecutor.getLastReturnedObject();
   }
 
+  private static Calls.ClassMethodCall buildClassMethodMessage(StaticPart staticPart, Object sender, Object[] args) {
+
+    /** Build protobuf message **/
+    final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
+    final Calls.ClassMethodCall.Builder callBuilder = Calls.ClassMethodCall.newBuilder();
+    callBuilder.setDistributorId(id); //1
+    callBuilder.setThreadId(Thread.currentThread().getId()); //2
+    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
+    callBuilder.setClass_(codeSignature.getDeclaringTypeName()); //4
+    callBuilder.setName(codeSignature.getName()); //5
+    callBuilder.setModifiers(codeSignature.getModifiers()); //6
+    //7
+    for (String name: codeSignature.getParameterNames()) {
+      callBuilder.addParameterNames(name);
+    }
+    //8
+    for (Class clazz: codeSignature.getParameterTypes()) {
+      callBuilder.addParameterClasses(clazz.getName());
+    }
+    //9
+    for (Class clazz: codeSignature.getExceptionTypes()) {
+      callBuilder.addExceptionTypes(clazz.getPackage().getName()+"."+clazz.getName());
+    }
+    //10
+    for (Object param: args) {
+      callBuilder.addParameters(System.identityHashCode(param));
+    }
+    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //11
+    callBuilder.setSender(System.identityHashCode(sender)); //12
+    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //13
+    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //14
+    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //15
+
+    return callBuilder.build();
+  }
 
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) {
     logger.debug("in D.constructor: " + staticPart.getSignature());
 
-    /**
-    ExecutableMessage message =  new ConstructorMessage(codeSignature, sender, args);
-    MessageExecutor.sendExecutableMessage(message);
-    //WARNING: NOT THREAD-SAFE!!
-    return MessageExecutor.getLastReturnedObject();
-     */
-    CodeSignature codeSignature = (CodeSignature) staticPart.getSignature();
-    Calls.ConstructorCall.Builder callBuilder = Calls.ConstructorCall.newBuilder();
-    callBuilder.setDistributorId(id);
-    callBuilder.setThreadId(Thread.currentThread().getId());
-    callBuilder.setCurrentTime(System.currentTimeMillis());
-    callBuilder.setName(codeSignature.getDeclaringTypeName());
-    callBuilder.setModifiers(codeSignature.getModifiers());
+    /** Build protobuf message **/
+    final ConstructorSignature codeSignature = (ConstructorSignature) staticPart.getSignature();
+    final Calls.ConstructorCall.Builder callBuilder = Calls.ConstructorCall.newBuilder();
+    callBuilder.setDistributorId(id); //1
+    callBuilder.setThreadId(Thread.currentThread().getId()); //2
+    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
+    callBuilder.setName(codeSignature.getDeclaringTypeName()); //4
+    callBuilder.setModifiers(codeSignature.getModifiers()); //5
+    //6
     for (String name: codeSignature.getParameterNames()) {
       callBuilder.addParameterNames(name);
     }
+    //7
     for (Class clazz: codeSignature.getParameterTypes()) {
-      callBuilder.addParameterClasses(clazz.getPackage().getName()+"."+clazz.getName());
+      callBuilder.addParameterClasses(clazz.getName());
     }
+    //8
     for (Class clazz: codeSignature.getExceptionTypes()) {
       callBuilder.addExceptionTypes(clazz.getPackage().getName()+"."+clazz.getName());
     }
+    //9
     for (Object param: args) {
       callBuilder.addParameters(System.identityHashCode(param));
     }
-    callBuilder.setSenderClassName(sender==null? "" : sender.getClass().getName());
-    callBuilder.setSender(System.identityHashCode(sender));
-    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
-    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
-    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getPackage().getName()+"."+
-            staticPart.getSourceLocation().getWithinType().getClass().getName());
+    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //10
+    callBuilder.setSender(System.identityHashCode(sender)); //11
+    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //12
+    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //13
+    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //14
 
-    Calls.ConstructorCall call = callBuilder.build();
+    final Calls.ConstructorCall call = callBuilder.build();
 
+    /** TO DO: send call down the wire to execute **/
+    //ATTENTION: this send is asynchronous. Must call get later.
+    producer.send(new ProducerRecord(kafkaTopic,call.toString()));
 
-    //TO DO: send call down the wire to execute
-    //MessageExecutor.sendExecutableMessage(message);
+    final ExecutableMessage message = new ConstructorMessage(codeSignature, sender, args);
+    MessageExecutor.sendExecutableMessage(message);
 
     //WARNING: NOT THREAD-SAFE!!
     return MessageExecutor.getLastReturnedObject();
