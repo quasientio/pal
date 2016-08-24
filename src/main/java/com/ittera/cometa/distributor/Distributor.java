@@ -5,17 +5,15 @@ import com.ittera.cometa.distributor.messages.data.Calls;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
-import org.aspectj.lang.reflect.CodeSignature;
-import org.aspectj.lang.reflect.ConstructorSignature;
-import org.aspectj.lang.reflect.FieldSignature;
+import org.aspectj.lang.reflect.*;
 import org.aspectj.lang.JoinPoint.StaticPart;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Properties;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.aspectj.lang.reflect.MethodSignature;
 
 public class Distributor {
   protected static final Logger logger = LogManager.getLogger("distributor");
@@ -69,6 +67,7 @@ public class Distributor {
     /** Build protobuf message **/
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
     final Calls.InstanceMethodCall.Builder callBuilder = Calls.InstanceMethodCall.newBuilder();
+    callBuilder.setMsgType("Instance method");
     callBuilder.setDistributorId(id); //1
     callBuilder.setThreadId(Thread.currentThread().getId()); //2
     callBuilder.setCurrentTime(System.currentTimeMillis()); //3
@@ -132,6 +131,7 @@ public class Distributor {
     /** Build protobuf message **/
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
     final Calls.ClassMethodCall.Builder callBuilder = Calls.ClassMethodCall.newBuilder();
+    callBuilder.setMsgType("Class method");
     callBuilder.setDistributorId(id); //1
     callBuilder.setThreadId(Thread.currentThread().getId()); //2
     callBuilder.setCurrentTime(System.currentTimeMillis()); //3
@@ -169,6 +169,7 @@ public class Distributor {
     /** Build protobuf message **/
     final ConstructorSignature codeSignature = (ConstructorSignature) staticPart.getSignature();
     final Calls.ConstructorCall.Builder callBuilder = Calls.ConstructorCall.newBuilder();
+    callBuilder.setMsgType("Constructor");
     callBuilder.setDistributorId(id); //1
     callBuilder.setThreadId(Thread.currentThread().getId()); //2
     callBuilder.setCurrentTime(System.currentTimeMillis()); //3
@@ -207,6 +208,48 @@ public class Distributor {
 
     //WARNING: NOT THREAD-SAFE!!
     return MessageExecutor.getLastReturnedObject();
+  }
+
+  public static Class classConstructor(StaticPart staticPart, Object sender) {
+    logger.debug("in D.classConstructor: " + staticPart.getSignature());
+
+    /** Build protobuf message **/
+    final InitializerSignature codeSignature = (InitializerSignature) staticPart.getSignature();
+    final Calls.ClInitCall.Builder callBuilder = Calls.ClInitCall.newBuilder();
+    callBuilder.setMsgType("Static Constructor");
+    callBuilder.setDistributorId(id); //1
+    callBuilder.setThreadId(Thread.currentThread().getId()); //2
+    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
+    callBuilder.setName(codeSignature.getDeclaringTypeName()); //4
+    callBuilder.setModifiers(codeSignature.getModifiers()); //5
+    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //6
+    callBuilder.setSender(System.identityHashCode(sender)); //7
+    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //8
+    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //9
+    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //10
+
+    final Calls.ClInitCall call = callBuilder.build();
+
+    /** TO DO: send call down the wire to execute **/
+    //ATTENTION: this send is asynchronous. Must call get later.
+    producer.send(new ProducerRecord(kafkaTopic,call.toString()));
+
+    //final ExecutableMessage message = new ConstructorMessage(codeSignature, sender);
+    //MessageExecutor.sendExecutableMessage(message);
+
+    //For some reason the class is not being initialized!
+      Class clazz=null;
+    try {
+      clazz = Class.forName(codeSignature.getDeclaringTypeName());
+      //Class.forName(codeSignature.getDeclaringTypeName(),true, Distributor.class.getClassLoader());
+    } catch (ClassNotFoundException e) {
+      e.printStackTrace();
+      logger.error(e);
+    }
+
+    //For now, we will return it if we want to aspectj to proceed(), or null if we dont
+//    return null; //if we don't want to proceed()
+    return clazz;
   }
 
   // </editor-fold>

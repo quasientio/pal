@@ -41,6 +41,7 @@ message ConstructorCall {
     optional int32 sourceLocationLine = 13;
     optional string sourceLocationType = 14;
 
+    required string msgType = 15;
 
     //TO DO:  annotations
 }
@@ -89,12 +90,44 @@ message InstanceMethodCall {
     optional int32 sourceLocationLine = 15;
     optional string sourceLocationType = 16;
 
+    required string msgType = 17;
 
     //TO DO:  annotations
 }
 
 message ClInitCall {
+    // --- CONTEXT
 
+    optional int32 distributorId = 1;
+
+    //NOTE: The id of a terminated thread may be reused
+    optional int64 threadId = 2;
+
+    required int64 currentTime = 3;
+
+    //TO DO:  IP or hostname for this Distributor
+
+    // --- CONTEXT
+
+    //Constructor name and classname are the same
+    required string name = 4;
+
+    //The modifiers can be decoded with the Modifier class
+    optional int32 modifiers = 5;
+
+    optional string senderClassName = 6;
+
+    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+    optional int32 sender = 7;
+
+    //source context from where the call was made
+    optional string sourceLocationFile = 8;
+    optional int32 sourceLocationLine = 9;
+    optional string sourceLocationType = 10;
+
+    required string msgType = 11;
+
+    //TO DO:  annotations
 }
 
 message ClassMethodCall {
@@ -137,6 +170,8 @@ message ClassMethodCall {
     optional int32 sourceLocationLine = 14;
     optional string sourceLocationType = 15;
 
+
+    required string msgType = 16;
 
     //TO DO:  annotations
 }

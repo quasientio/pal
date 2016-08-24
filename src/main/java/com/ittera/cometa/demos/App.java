@@ -33,6 +33,18 @@ public class App
         b=new App();
     }
 
+
+    public static class MyInnerClass {
+        static int anInt;
+        static {
+            anInt = 5;
+            System.out.println("printing from <clinit>");
+        }
+       MyInnerClass() {
+           System.out.println("printing an int from <init> : "+anInt);
+       }
+    }
+
     Integer giveMeX() {
         return anInt;
     }
@@ -75,6 +87,8 @@ public class App
          System.out.println("aLong (times 2) = " + a.aLong);
          testVoidStatic("a otra cosa");
          testNonVoidStatic("mariposa");
+         //test static constructor and instance constructor
+         new MyInnerClass();
         }
     }
 }

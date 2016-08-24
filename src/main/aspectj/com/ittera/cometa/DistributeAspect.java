@@ -25,7 +25,7 @@ aspect DistributeAspect {
 
 	pointcut nonVoidClassMethods(): allClasses() && call(static !void *(..));
 
-	pointcut allConstructors(): allClasses() && call(new(..));
+	pointcut constructors(): allClasses() && call(new(..));
 
 	pointcut staticGetfields(): allClasses() && get(static * *);
 
@@ -35,6 +35,7 @@ aspect DistributeAspect {
 
 	pointcut nonStaticPutfields(): allClasses() && set(!static * *);
 
+	pointcut staticConstructors(): allClasses() && staticinitialization(*);
 
 	/** ADVICE for Methods **/
 
@@ -98,7 +99,7 @@ aspect DistributeAspect {
 		return returnedValue;
 	}
 
-	Object around(): allConstructors() {	
+	Object around(): constructors() {	
 		if (verbose) {
 			print(" D --> constructor: "+thisJoinPoint);
 			printStaticCtxt(thisJoinPointStaticPart);
@@ -112,6 +113,23 @@ aspect DistributeAspect {
 			thisJoinPoint.getArgs()); //parameters
 
 		return returnedValue;
+	}
+
+	void around(): staticConstructors() {
+		if (verbose) {
+			print(" D --> static constructor: "+thisJoinPoint);
+			printStaticCtxt(thisJoinPointStaticPart);
+			printNonStaticCtxt(thisJoinPoint);
+			printParameters(thisJoinPoint);
+		}
+
+		Class loadedClass = Distributor.classConstructor(
+			thisJoinPointStaticPart,
+			thisJoinPoint.getThis()); //Object sender
+
+		if (loadedClass != null) {
+			proceed();
+		}
 	}
 
 
