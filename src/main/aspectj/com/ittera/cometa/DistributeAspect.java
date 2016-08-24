@@ -140,7 +140,6 @@ aspect DistributeAspect {
 			print(" D --> get static: "+thisJoinPoint);
 			printStaticCtxt(thisJoinPointStaticPart);
 			printNonStaticCtxt(thisJoinPoint);
-			//printParameters(thisJoinPoint);
 		}
 		Object returnedValue = Distributor.getObjectStatic(
 			thisJoinPointStaticPart,
@@ -154,7 +153,6 @@ aspect DistributeAspect {
 			print(" D --> get field: "+thisJoinPoint);
 			printStaticCtxt(thisJoinPointStaticPart);
 			printNonStaticCtxt(thisJoinPoint);
-			//printParameters(thisJoinPoint);
 		}
 		Object returnedValue = Distributor.getObject(
 			thisJoinPointStaticPart,
@@ -169,7 +167,6 @@ aspect DistributeAspect {
 			print(" D --> put static: "+thisJoinPoint);
 			printStaticCtxt(thisJoinPointStaticPart);
 			printNonStaticCtxt(thisJoinPoint);
-			//printParameters(thisJoinPoint);
 		}
 		Distributor.putStatic(
 			thisJoinPointStaticPart,
@@ -182,7 +179,6 @@ aspect DistributeAspect {
 			print(" D --> put field: "+thisJoinPoint);
 			printStaticCtxt(thisJoinPointStaticPart);
 			printNonStaticCtxt(thisJoinPoint);
-			//printParameters(thisJoinPoint);
 		}
 
 		Distributor.putField(
@@ -202,7 +198,6 @@ aspect DistributeAspect {
 	static private void printStaticCtxt(JoinPoint.StaticPart jpsp) {
 		print(" ... jp.id="+jpsp.getId());
 		print(" ... jp.kind="+jpsp.getKind());
-		//print(" ... jp.signature="+jpsp.getSignature());
 		print(" ... jp.signature="+jpsp.getSignature().toShortString());
 		print(" ... jp.source="+jpsp.getSourceLocation());
 		print(" ... jp.toLongString="+jpsp.toLongString());
