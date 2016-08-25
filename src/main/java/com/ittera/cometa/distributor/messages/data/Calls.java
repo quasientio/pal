@@ -251,20 +251,6 @@ public final class Calls {
      */
     com.google.protobuf.ByteString
         getSourceLocationTypeBytes();
-
-    /**
-     * <code>required string msgType = 15;</code>
-     */
-    boolean hasMsgType();
-    /**
-     * <code>required string msgType = 15;</code>
-     */
-    java.lang.String getMsgType();
-    /**
-     * <code>required string msgType = 15;</code>
-     */
-    com.google.protobuf.ByteString
-        getMsgTypeBytes();
   }
   /**
    * Protobuf type {@code messages.data.ConstructorCall}
@@ -422,12 +408,6 @@ public final class Calls {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000200;
               sourceLocationType_ = bs;
-              break;
-            }
-            case 122: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000400;
-              msgType_ = bs;
               break;
             }
           }
@@ -909,48 +889,6 @@ public final class Calls {
       }
     }
 
-    public static final int MSGTYPE_FIELD_NUMBER = 15;
-    private java.lang.Object msgType_;
-    /**
-     * <code>required string msgType = 15;</code>
-     */
-    public boolean hasMsgType() {
-      return ((bitField0_ & 0x00000400) == 0x00000400);
-    }
-    /**
-     * <code>required string msgType = 15;</code>
-     */
-    public java.lang.String getMsgType() {
-      java.lang.Object ref = msgType_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          msgType_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>required string msgType = 15;</code>
-     */
-    public com.google.protobuf.ByteString
-        getMsgTypeBytes() {
-      java.lang.Object ref = msgType_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        msgType_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
     private void initFields() {
       distributorId_ = 0;
       threadId_ = 0L;
@@ -966,7 +904,6 @@ public final class Calls {
       sourceLocationFile_ = "";
       sourceLocationLine_ = 0;
       sourceLocationType_ = "";
-      msgType_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -979,10 +916,6 @@ public final class Calls {
         return false;
       }
       if (!hasName()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasMsgType()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -1034,9 +967,6 @@ public final class Calls {
       }
       if (((bitField0_ & 0x00000200) == 0x00000200)) {
         output.writeBytes(14, getSourceLocationTypeBytes());
-      }
-      if (((bitField0_ & 0x00000400) == 0x00000400)) {
-        output.writeBytes(15, getMsgTypeBytes());
       }
       getUnknownFields().writeTo(output);
     }
@@ -1122,10 +1052,6 @@ public final class Calls {
       if (((bitField0_ & 0x00000200) == 0x00000200)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(14, getSourceLocationTypeBytes());
-      }
-      if (((bitField0_ & 0x00000400) == 0x00000400)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(15, getMsgTypeBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1276,8 +1202,6 @@ public final class Calls {
         bitField0_ = (bitField0_ & ~0x00001000);
         sourceLocationType_ = "";
         bitField0_ = (bitField0_ & ~0x00002000);
-        msgType_ = "";
-        bitField0_ = (bitField0_ & ~0x00004000);
         return this;
       }
 
@@ -1366,10 +1290,6 @@ public final class Calls {
           to_bitField0_ |= 0x00000200;
         }
         result.sourceLocationType_ = sourceLocationType_;
-        if (((from_bitField0_ & 0x00004000) == 0x00004000)) {
-          to_bitField0_ |= 0x00000400;
-        }
-        result.msgType_ = msgType_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1464,11 +1384,6 @@ public final class Calls {
           sourceLocationType_ = other.sourceLocationType_;
           onChanged();
         }
-        if (other.hasMsgType()) {
-          bitField0_ |= 0x00004000;
-          msgType_ = other.msgType_;
-          onChanged();
-        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -1479,10 +1394,6 @@ public final class Calls {
           return false;
         }
         if (!hasName()) {
-          
-          return false;
-        }
-        if (!hasMsgType()) {
           
           return false;
         }
@@ -2473,82 +2384,6 @@ public final class Calls {
         return this;
       }
 
-      private java.lang.Object msgType_ = "";
-      /**
-       * <code>required string msgType = 15;</code>
-       */
-      public boolean hasMsgType() {
-        return ((bitField0_ & 0x00004000) == 0x00004000);
-      }
-      /**
-       * <code>required string msgType = 15;</code>
-       */
-      public java.lang.String getMsgType() {
-        java.lang.Object ref = msgType_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            msgType_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>required string msgType = 15;</code>
-       */
-      public com.google.protobuf.ByteString
-          getMsgTypeBytes() {
-        java.lang.Object ref = msgType_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          msgType_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>required string msgType = 15;</code>
-       */
-      public Builder setMsgType(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00004000;
-        msgType_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>required string msgType = 15;</code>
-       */
-      public Builder clearMsgType() {
-        bitField0_ = (bitField0_ & ~0x00004000);
-        msgType_ = getDefaultInstance().getMsgType();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>required string msgType = 15;</code>
-       */
-      public Builder setMsgTypeBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00004000;
-        msgType_ = value;
-        onChanged();
-        return this;
-      }
-
       // @@protoc_insertion_point(builder_scope:messages.data.ConstructorCall)
     }
 
@@ -2848,20 +2683,6 @@ public final class Calls {
      */
     com.google.protobuf.ByteString
         getSourceLocationTypeBytes();
-
-    /**
-     * <code>required string msgType = 17;</code>
-     */
-    boolean hasMsgType();
-    /**
-     * <code>required string msgType = 17;</code>
-     */
-    java.lang.String getMsgType();
-    /**
-     * <code>required string msgType = 17;</code>
-     */
-    com.google.protobuf.ByteString
-        getMsgTypeBytes();
   }
   /**
    * Protobuf type {@code messages.data.InstanceMethodCall}
@@ -3030,12 +2851,6 @@ public final class Calls {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000800;
               sourceLocationType_ = bs;
-              break;
-            }
-            case 138: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00001000;
-              msgType_ = bs;
               break;
             }
           }
@@ -3596,48 +3411,6 @@ public final class Calls {
       }
     }
 
-    public static final int MSGTYPE_FIELD_NUMBER = 17;
-    private java.lang.Object msgType_;
-    /**
-     * <code>required string msgType = 17;</code>
-     */
-    public boolean hasMsgType() {
-      return ((bitField0_ & 0x00001000) == 0x00001000);
-    }
-    /**
-     * <code>required string msgType = 17;</code>
-     */
-    public java.lang.String getMsgType() {
-      java.lang.Object ref = msgType_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          msgType_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>required string msgType = 17;</code>
-     */
-    public com.google.protobuf.ByteString
-        getMsgTypeBytes() {
-      java.lang.Object ref = msgType_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        msgType_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
     private void initFields() {
       distributorId_ = 0;
       threadId_ = 0L;
@@ -3655,7 +3428,6 @@ public final class Calls {
       sourceLocationFile_ = "";
       sourceLocationLine_ = 0;
       sourceLocationType_ = "";
-      msgType_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3676,10 +3448,6 @@ public final class Calls {
         return false;
       }
       if (!hasTarget()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasMsgType()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -3737,9 +3505,6 @@ public final class Calls {
       }
       if (((bitField0_ & 0x00000800) == 0x00000800)) {
         output.writeBytes(16, getSourceLocationTypeBytes());
-      }
-      if (((bitField0_ & 0x00001000) == 0x00001000)) {
-        output.writeBytes(17, getMsgTypeBytes());
       }
       getUnknownFields().writeTo(output);
     }
@@ -3833,10 +3598,6 @@ public final class Calls {
       if (((bitField0_ & 0x00000800) == 0x00000800)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(16, getSourceLocationTypeBytes());
-      }
-      if (((bitField0_ & 0x00001000) == 0x00001000)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(17, getMsgTypeBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3991,8 +3752,6 @@ public final class Calls {
         bitField0_ = (bitField0_ & ~0x00004000);
         sourceLocationType_ = "";
         bitField0_ = (bitField0_ & ~0x00008000);
-        msgType_ = "";
-        bitField0_ = (bitField0_ & ~0x00010000);
         return this;
       }
 
@@ -4089,10 +3848,6 @@ public final class Calls {
           to_bitField0_ |= 0x00000800;
         }
         result.sourceLocationType_ = sourceLocationType_;
-        if (((from_bitField0_ & 0x00010000) == 0x00010000)) {
-          to_bitField0_ |= 0x00001000;
-        }
-        result.msgType_ = msgType_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4195,11 +3950,6 @@ public final class Calls {
           sourceLocationType_ = other.sourceLocationType_;
           onChanged();
         }
-        if (other.hasMsgType()) {
-          bitField0_ |= 0x00010000;
-          msgType_ = other.msgType_;
-          onChanged();
-        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -4218,10 +3968,6 @@ public final class Calls {
           return false;
         }
         if (!hasTarget()) {
-          
-          return false;
-        }
-        if (!hasMsgType()) {
           
           return false;
         }
@@ -5364,82 +5110,6 @@ public final class Calls {
         return this;
       }
 
-      private java.lang.Object msgType_ = "";
-      /**
-       * <code>required string msgType = 17;</code>
-       */
-      public boolean hasMsgType() {
-        return ((bitField0_ & 0x00010000) == 0x00010000);
-      }
-      /**
-       * <code>required string msgType = 17;</code>
-       */
-      public java.lang.String getMsgType() {
-        java.lang.Object ref = msgType_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            msgType_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>required string msgType = 17;</code>
-       */
-      public com.google.protobuf.ByteString
-          getMsgTypeBytes() {
-        java.lang.Object ref = msgType_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          msgType_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>required string msgType = 17;</code>
-       */
-      public Builder setMsgType(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00010000;
-        msgType_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>required string msgType = 17;</code>
-       */
-      public Builder clearMsgType() {
-        bitField0_ = (bitField0_ & ~0x00010000);
-        msgType_ = getDefaultInstance().getMsgType();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>required string msgType = 17;</code>
-       */
-      public Builder setMsgTypeBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00010000;
-        msgType_ = value;
-        onChanged();
-        return this;
-      }
-
       // @@protoc_insertion_point(builder_scope:messages.data.InstanceMethodCall)
     }
 
@@ -5612,20 +5282,6 @@ public final class Calls {
      */
     com.google.protobuf.ByteString
         getSourceLocationTypeBytes();
-
-    /**
-     * <code>required string msgType = 11;</code>
-     */
-    boolean hasMsgType();
-    /**
-     * <code>required string msgType = 11;</code>
-     */
-    java.lang.String getMsgType();
-    /**
-     * <code>required string msgType = 11;</code>
-     */
-    com.google.protobuf.ByteString
-        getMsgTypeBytes();
   }
   /**
    * Protobuf type {@code messages.data.ClInitCall}
@@ -5735,12 +5391,6 @@ public final class Calls {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000200;
               sourceLocationType_ = bs;
-              break;
-            }
-            case 90: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000400;
-              msgType_ = bs;
               break;
             }
           }
@@ -6089,48 +5739,6 @@ public final class Calls {
       }
     }
 
-    public static final int MSGTYPE_FIELD_NUMBER = 11;
-    private java.lang.Object msgType_;
-    /**
-     * <code>required string msgType = 11;</code>
-     */
-    public boolean hasMsgType() {
-      return ((bitField0_ & 0x00000400) == 0x00000400);
-    }
-    /**
-     * <code>required string msgType = 11;</code>
-     */
-    public java.lang.String getMsgType() {
-      java.lang.Object ref = msgType_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          msgType_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>required string msgType = 11;</code>
-     */
-    public com.google.protobuf.ByteString
-        getMsgTypeBytes() {
-      java.lang.Object ref = msgType_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        msgType_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
     private void initFields() {
       distributorId_ = 0;
       threadId_ = 0L;
@@ -6142,7 +5750,6 @@ public final class Calls {
       sourceLocationFile_ = "";
       sourceLocationLine_ = 0;
       sourceLocationType_ = "";
-      msgType_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -6155,10 +5762,6 @@ public final class Calls {
         return false;
       }
       if (!hasName()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasMsgType()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -6198,9 +5801,6 @@ public final class Calls {
       }
       if (((bitField0_ & 0x00000200) == 0x00000200)) {
         output.writeBytes(10, getSourceLocationTypeBytes());
-      }
-      if (((bitField0_ & 0x00000400) == 0x00000400)) {
-        output.writeBytes(11, getMsgTypeBytes());
       }
       getUnknownFields().writeTo(output);
     }
@@ -6250,10 +5850,6 @@ public final class Calls {
       if (((bitField0_ & 0x00000200) == 0x00000200)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(10, getSourceLocationTypeBytes());
-      }
-      if (((bitField0_ & 0x00000400) == 0x00000400)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(11, getMsgTypeBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -6396,8 +5992,6 @@ public final class Calls {
         bitField0_ = (bitField0_ & ~0x00000100);
         sourceLocationType_ = "";
         bitField0_ = (bitField0_ & ~0x00000200);
-        msgType_ = "";
-        bitField0_ = (bitField0_ & ~0x00000400);
         return this;
       }
 
@@ -6466,10 +6060,6 @@ public final class Calls {
           to_bitField0_ |= 0x00000200;
         }
         result.sourceLocationType_ = sourceLocationType_;
-        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
-          to_bitField0_ |= 0x00000400;
-        }
-        result.msgType_ = msgType_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -6524,11 +6114,6 @@ public final class Calls {
           sourceLocationType_ = other.sourceLocationType_;
           onChanged();
         }
-        if (other.hasMsgType()) {
-          bitField0_ |= 0x00000400;
-          msgType_ = other.msgType_;
-          onChanged();
-        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -6539,10 +6124,6 @@ public final class Calls {
           return false;
         }
         if (!hasName()) {
-          
-          return false;
-        }
-        if (!hasMsgType()) {
           
           return false;
         }
@@ -7160,82 +6741,6 @@ public final class Calls {
         return this;
       }
 
-      private java.lang.Object msgType_ = "";
-      /**
-       * <code>required string msgType = 11;</code>
-       */
-      public boolean hasMsgType() {
-        return ((bitField0_ & 0x00000400) == 0x00000400);
-      }
-      /**
-       * <code>required string msgType = 11;</code>
-       */
-      public java.lang.String getMsgType() {
-        java.lang.Object ref = msgType_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            msgType_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>required string msgType = 11;</code>
-       */
-      public com.google.protobuf.ByteString
-          getMsgTypeBytes() {
-        java.lang.Object ref = msgType_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          msgType_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>required string msgType = 11;</code>
-       */
-      public Builder setMsgType(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000400;
-        msgType_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>required string msgType = 11;</code>
-       */
-      public Builder clearMsgType() {
-        bitField0_ = (bitField0_ & ~0x00000400);
-        msgType_ = getDefaultInstance().getMsgType();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>required string msgType = 11;</code>
-       */
-      public Builder setMsgTypeBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000400;
-        msgType_ = value;
-        onChanged();
-        return this;
-      }
-
       // @@protoc_insertion_point(builder_scope:messages.data.ClInitCall)
     }
 
@@ -7516,20 +7021,6 @@ public final class Calls {
      */
     com.google.protobuf.ByteString
         getSourceLocationTypeBytes();
-
-    /**
-     * <code>required string msgType = 16;</code>
-     */
-    boolean hasMsgType();
-    /**
-     * <code>required string msgType = 16;</code>
-     */
-    java.lang.String getMsgType();
-    /**
-     * <code>required string msgType = 16;</code>
-     */
-    com.google.protobuf.ByteString
-        getMsgTypeBytes();
   }
   /**
    * Protobuf type {@code messages.data.ClassMethodCall}
@@ -7693,12 +7184,6 @@ public final class Calls {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000400;
               sourceLocationType_ = bs;
-              break;
-            }
-            case 130: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000800;
-              msgType_ = bs;
               break;
             }
           }
@@ -8234,48 +7719,6 @@ public final class Calls {
       }
     }
 
-    public static final int MSGTYPE_FIELD_NUMBER = 16;
-    private java.lang.Object msgType_;
-    /**
-     * <code>required string msgType = 16;</code>
-     */
-    public boolean hasMsgType() {
-      return ((bitField0_ & 0x00000800) == 0x00000800);
-    }
-    /**
-     * <code>required string msgType = 16;</code>
-     */
-    public java.lang.String getMsgType() {
-      java.lang.Object ref = msgType_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          msgType_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>required string msgType = 16;</code>
-     */
-    public com.google.protobuf.ByteString
-        getMsgTypeBytes() {
-      java.lang.Object ref = msgType_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        msgType_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
     private void initFields() {
       distributorId_ = 0;
       threadId_ = 0L;
@@ -8292,7 +7735,6 @@ public final class Calls {
       sourceLocationFile_ = "";
       sourceLocationLine_ = 0;
       sourceLocationType_ = "";
-      msgType_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -8309,10 +7751,6 @@ public final class Calls {
         return false;
       }
       if (!hasName()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasMsgType()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -8367,9 +7805,6 @@ public final class Calls {
       }
       if (((bitField0_ & 0x00000400) == 0x00000400)) {
         output.writeBytes(15, getSourceLocationTypeBytes());
-      }
-      if (((bitField0_ & 0x00000800) == 0x00000800)) {
-        output.writeBytes(16, getMsgTypeBytes());
       }
       getUnknownFields().writeTo(output);
     }
@@ -8459,10 +7894,6 @@ public final class Calls {
       if (((bitField0_ & 0x00000400) == 0x00000400)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(15, getSourceLocationTypeBytes());
-      }
-      if (((bitField0_ & 0x00000800) == 0x00000800)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(16, getMsgTypeBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -8615,8 +8046,6 @@ public final class Calls {
         bitField0_ = (bitField0_ & ~0x00002000);
         sourceLocationType_ = "";
         bitField0_ = (bitField0_ & ~0x00004000);
-        msgType_ = "";
-        bitField0_ = (bitField0_ & ~0x00008000);
         return this;
       }
 
@@ -8709,10 +8138,6 @@ public final class Calls {
           to_bitField0_ |= 0x00000400;
         }
         result.sourceLocationType_ = sourceLocationType_;
-        if (((from_bitField0_ & 0x00008000) == 0x00008000)) {
-          to_bitField0_ |= 0x00000800;
-        }
-        result.msgType_ = msgType_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -8812,11 +8237,6 @@ public final class Calls {
           sourceLocationType_ = other.sourceLocationType_;
           onChanged();
         }
-        if (other.hasMsgType()) {
-          bitField0_ |= 0x00008000;
-          msgType_ = other.msgType_;
-          onChanged();
-        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -8831,10 +8251,6 @@ public final class Calls {
           return false;
         }
         if (!hasName()) {
-          
-          return false;
-        }
-        if (!hasMsgType()) {
           
           return false;
         }
@@ -9925,82 +9341,6 @@ public final class Calls {
         return this;
       }
 
-      private java.lang.Object msgType_ = "";
-      /**
-       * <code>required string msgType = 16;</code>
-       */
-      public boolean hasMsgType() {
-        return ((bitField0_ & 0x00008000) == 0x00008000);
-      }
-      /**
-       * <code>required string msgType = 16;</code>
-       */
-      public java.lang.String getMsgType() {
-        java.lang.Object ref = msgType_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            msgType_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>required string msgType = 16;</code>
-       */
-      public com.google.protobuf.ByteString
-          getMsgTypeBytes() {
-        java.lang.Object ref = msgType_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          msgType_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>required string msgType = 16;</code>
-       */
-      public Builder setMsgType(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00008000;
-        msgType_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>required string msgType = 16;</code>
-       */
-      public Builder clearMsgType() {
-        bitField0_ = (bitField0_ & ~0x00008000);
-        msgType_ = getDefaultInstance().getMsgType();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>required string msgType = 16;</code>
-       */
-      public Builder setMsgTypeBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00008000;
-        msgType_ = value;
-        onChanged();
-        return this;
-      }
-
       // @@protoc_insertion_point(builder_scope:messages.data.ClassMethodCall)
     }
 
@@ -10041,7 +9381,7 @@ public final class Calls {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013calls.proto\022\rmessages.data\"\334\002\n\017Constru" +
+      "\n\013calls.proto\022\rmessages.data\"\313\002\n\017Constru" +
       "ctorCall\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010threa" +
       "dId\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(\003\022\014\n\004name\030\004" +
       " \002(\t\022\021\n\tmodifiers\030\005 \001(\005\022\026\n\016parameterName" +
@@ -10050,33 +9390,32 @@ public final class Calls {
       "\017senderClassName\030\n \001(\t\022\016\n\006sender\030\013 \001(\005\022\032" +
       "\n\022sourceLocationFile\030\014 \001(\t\022\032\n\022sourceLoca" +
       "tionLine\030\r \001(\005\022\032\n\022sourceLocationType\030\016 \001" +
-      "(\t\022\017\n\007msgType\030\017 \002(\t\"\376\002\n\022InstanceMethodCa",
-      "ll\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010threadId\030\002 " +
-      "\001(\003\022\023\n\013currentTime\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022" +
-      "\014\n\004name\030\005 \002(\t\022\016\n\006target\030\006 \002(\005\022\021\n\tmodifie" +
-      "rs\030\007 \001(\005\022\026\n\016parameterNames\030\010 \003(\t\022\030\n\020para" +
-      "meterClasses\030\t \003(\t\022\026\n\016exceptionTypes\030\n \003" +
-      "(\t\022\022\n\nparameters\030\013 \003(\005\022\027\n\017senderClassNam" +
-      "e\030\014 \001(\t\022\016\n\006sender\030\r \001(\005\022\032\n\022sourceLocatio" +
-      "nFile\030\016 \001(\t\022\032\n\022sourceLocationLine\030\017 \001(\005\022" +
-      "\032\n\022sourceLocationType\030\020 \001(\t\022\017\n\007msgType\030\021" +
-      " \002(\t\"\371\001\n\nClInitCall\022\025\n\rdistributorId\030\001 \001",
-      "(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(" +
-      "\003\022\014\n\004name\030\004 \002(\t\022\021\n\tmodifiers\030\005 \001(\005\022\027\n\017se" +
-      "nderClassName\030\006 \001(\t\022\016\n\006sender\030\007 \001(\005\022\032\n\022s" +
-      "ourceLocationFile\030\010 \001(\t\022\032\n\022sourceLocatio" +
-      "nLine\030\t \001(\005\022\032\n\022sourceLocationType\030\n \001(\t\022" +
-      "\017\n\007msgType\030\013 \002(\t\"\353\002\n\017ClassMethodCall\022\025\n\r" +
-      "distributorId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n" +
-      "\013currentTime\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022\014\n\004nam" +
-      "e\030\005 \002(\t\022\021\n\tmodifiers\030\006 \001(\005\022\026\n\016parameterN" +
-      "ames\030\007 \003(\t\022\030\n\020parameterClasses\030\010 \003(\t\022\026\n\016",
-      "exceptionTypes\030\t \003(\t\022\022\n\nparameters\030\n \003(\005" +
-      "\022\027\n\017senderClassName\030\013 \001(\t\022\016\n\006sender\030\014 \001(" +
-      "\005\022\032\n\022sourceLocationFile\030\r \001(\t\022\032\n\022sourceL" +
-      "ocationLine\030\016 \001(\005\022\032\n\022sourceLocationType\030" +
-      "\017 \001(\t\022\017\n\007msgType\030\020 \002(\tB6\n+com.ittera.com" +
-      "eta.distributor.messages.dataB\005CallsH\001"
+      "(\t\"\355\002\n\022InstanceMethodCall\022\025\n\rdistributor",
+      "Id\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTim" +
+      "e\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022\014\n\004name\030\005 \002(\t\022\016\n\006" +
+      "target\030\006 \002(\005\022\021\n\tmodifiers\030\007 \001(\005\022\026\n\016param" +
+      "eterNames\030\010 \003(\t\022\030\n\020parameterClasses\030\t \003(" +
+      "\t\022\026\n\016exceptionTypes\030\n \003(\t\022\022\n\nparameters\030" +
+      "\013 \003(\005\022\027\n\017senderClassName\030\014 \001(\t\022\016\n\006sender" +
+      "\030\r \001(\005\022\032\n\022sourceLocationFile\030\016 \001(\t\022\032\n\022so" +
+      "urceLocationLine\030\017 \001(\005\022\032\n\022sourceLocation" +
+      "Type\030\020 \001(\t\"\350\001\n\nClInitCall\022\025\n\rdistributor" +
+      "Id\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTim",
+      "e\030\003 \002(\003\022\014\n\004name\030\004 \002(\t\022\021\n\tmodifiers\030\005 \001(\005" +
+      "\022\027\n\017senderClassName\030\006 \001(\t\022\016\n\006sender\030\007 \001(" +
+      "\005\022\032\n\022sourceLocationFile\030\010 \001(\t\022\032\n\022sourceL" +
+      "ocationLine\030\t \001(\005\022\032\n\022sourceLocationType\030" +
+      "\n \001(\t\"\332\002\n\017ClassMethodCall\022\025\n\rdistributor" +
+      "Id\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTim" +
+      "e\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022\014\n\004name\030\005 \002(\t\022\021\n\t" +
+      "modifiers\030\006 \001(\005\022\026\n\016parameterNames\030\007 \003(\t\022" +
+      "\030\n\020parameterClasses\030\010 \003(\t\022\026\n\016exceptionTy" +
+      "pes\030\t \003(\t\022\022\n\nparameters\030\n \003(\005\022\027\n\017senderC",
+      "lassName\030\013 \001(\t\022\016\n\006sender\030\014 \001(\005\022\032\n\022source" +
+      "LocationFile\030\r \001(\t\022\032\n\022sourceLocationLine" +
+      "\030\016 \001(\005\022\032\n\022sourceLocationType\030\017 \001(\tB6\n+co" +
+      "m.ittera.cometa.distributor.messages.dat" +
+      "aB\005CallsH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -10095,25 +9434,25 @@ public final class Calls {
     internal_static_messages_data_ConstructorCall_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_ConstructorCall_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Name", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameters", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", "MsgType", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Name", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameters", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
     internal_static_messages_data_InstanceMethodCall_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_messages_data_InstanceMethodCall_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_InstanceMethodCall_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Target", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameters", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", "MsgType", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Target", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameters", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
     internal_static_messages_data_ClInitCall_descriptor =
       getDescriptor().getMessageTypes().get(2);
     internal_static_messages_data_ClInitCall_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_ClInitCall_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Name", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", "MsgType", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Name", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
     internal_static_messages_data_ClassMethodCall_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_messages_data_ClassMethodCall_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_ClassMethodCall_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameters", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", "MsgType", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameters", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

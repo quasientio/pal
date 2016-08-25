@@ -37,8 +37,6 @@ message StaticFieldGet {
     optional int32 sourceLocationLine = 11;
     optional string sourceLocationType = 12;
 
-    required string msgType = 13;
-
     //TO DO:  annotations
 }
 
@@ -78,8 +76,6 @@ message StaticFieldPut {
     optional int32 sourceLocationLine = 12;
     optional string sourceLocationType = 13;
 
-    required string msgType = 14;
-
     //TO DO:  annotations
 }
 
@@ -118,8 +114,6 @@ message InstanceFieldGet {
     optional string sourceLocationFile = 11;
     optional int32 sourceLocationLine = 12;
     optional string sourceLocationType = 13;
-
-    required string msgType = 14;
 
     //TO DO:  annotations
 }
@@ -162,8 +156,6 @@ message InstanceFieldPut {
     optional string sourceLocationFile = 12;
     optional int32 sourceLocationLine = 13;
     optional string sourceLocationType = 14;
-
-    required string msgType = 15;
 
     //TO DO:  annotations
 

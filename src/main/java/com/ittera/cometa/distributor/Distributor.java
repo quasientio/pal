@@ -1,8 +1,11 @@
 package com.ittera.cometa.distributor;
-import com.ittera.cometa.distributor.messages.*;
-import com.ittera.cometa.distributor.messages.data.Calls;
 
+import com.ittera.cometa.distributor.messages.*;
+
+import com.ittera.cometa.distributor.messages.data.Calls;
 import com.ittera.cometa.distributor.messages.data.Fields;
+import com.ittera.cometa.distributor.messages.data.Wrappers;
+
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
@@ -40,7 +43,7 @@ public class Distributor {
   public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object receiver, Object[] args) {
     logger.debug("in D.voidInstanceMethod: " + staticPart.getSignature());
 
-    final Calls.InstanceMethodCall msg = buildInstanceMethodMessage(staticPart, sender, receiver, args);
+    final Wrappers.DataMessage msg = buildInstanceMethodMessage(staticPart, sender, receiver, args);
 
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
@@ -52,7 +55,7 @@ public class Distributor {
   public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object receiver, Object[] args) {
     logger.debug("in D.nonVoidInstanceMethod: " + staticPart.getSignature());
 
-    final Calls.InstanceMethodCall msg = buildInstanceMethodMessage(staticPart, sender, receiver, args);
+    final Wrappers.DataMessage msg = buildInstanceMethodMessage(staticPart, sender, receiver, args);
 
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
@@ -64,12 +67,14 @@ public class Distributor {
     return MessageExecutor.getLastReturnedObject();
   }
 
-  private static Calls.InstanceMethodCall buildInstanceMethodMessage(StaticPart staticPart, Object sender, Object receiver, Object[] args) {
+  private static Wrappers.DataMessage buildInstanceMethodMessage(StaticPart staticPart, Object sender, Object receiver, Object[] args) {
 
     /** Build protobuf message **/
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
+
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
     final Calls.InstanceMethodCall.Builder callBuilder = Calls.InstanceMethodCall.newBuilder();
-    callBuilder.setMsgType("Instance method");
     callBuilder.setDistributorId(id); //1
     callBuilder.setThreadId(Thread.currentThread().getId()); //2
     callBuilder.setCurrentTime(System.currentTimeMillis()); //3
@@ -98,14 +103,16 @@ public class Distributor {
     callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //14
     callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //15
     callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //16
+    msgBuilder.setMsgType("Instance method");
+    msgBuilder.setInstanceMethodCall(callBuilder);
 
-    return callBuilder.build();
+    return msgBuilder.build();
   }
 
   public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) {
     logger.debug("in D.voidClassMethod: " + staticPart.getSignature());
 
-    final Calls.ClassMethodCall msg = buildClassMethodMessage(staticPart, sender, args);
+    final Wrappers.DataMessage msg = buildClassMethodMessage(staticPart, sender, args);
 
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
@@ -117,7 +124,7 @@ public class Distributor {
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) {
     logger.debug("in D.nonVoidClassMethod: " + staticPart.getSignature());
 
-    final Calls.ClassMethodCall msg = buildClassMethodMessage(staticPart, sender, args);
+    final Wrappers.DataMessage msg = buildClassMethodMessage(staticPart, sender, args);
 
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
@@ -129,12 +136,14 @@ public class Distributor {
     return MessageExecutor.getLastReturnedObject();
   }
 
-  private static Calls.ClassMethodCall buildClassMethodMessage(StaticPart staticPart, Object sender, Object[] args) {
+  private static Wrappers.DataMessage buildClassMethodMessage(StaticPart staticPart, Object sender, Object[] args) {
 
     /** Build protobuf message **/
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
+
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
     final Calls.ClassMethodCall.Builder callBuilder = Calls.ClassMethodCall.newBuilder();
-    callBuilder.setMsgType("Class method");
     callBuilder.setDistributorId(id); //1
     callBuilder.setThreadId(Thread.currentThread().getId()); //2
     callBuilder.setCurrentTime(System.currentTimeMillis()); //3
@@ -163,7 +172,10 @@ public class Distributor {
     callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //14
     callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //15
 
-    return callBuilder.build();
+    msgBuilder.setMsgType("Class method");
+    msgBuilder.setClassMethodCall(callBuilder);
+
+    return msgBuilder.build();
   }
 
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) {
@@ -171,8 +183,10 @@ public class Distributor {
 
     /** Build protobuf message **/
     final ConstructorSignature codeSignature = (ConstructorSignature) staticPart.getSignature();
+
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
     final Calls.ConstructorCall.Builder callBuilder = Calls.ConstructorCall.newBuilder();
-    callBuilder.setMsgType("Constructor");
     callBuilder.setDistributorId(id); //1
     callBuilder.setThreadId(Thread.currentThread().getId()); //2
     callBuilder.setCurrentTime(System.currentTimeMillis()); //3
@@ -200,10 +214,11 @@ public class Distributor {
     callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //13
     callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //14
 
-    final Calls.ConstructorCall msg = callBuilder.build();
+    msgBuilder.setMsgType("Constructor");
+    msgBuilder.setConstructorCall(callBuilder);
 
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
+    producer.send(new ProducerRecord(kafkaTopic,msgBuilder.build().toString()));
 
     final ExecutableMessage message = new ConstructorMessage(codeSignature, sender, args);
     MessageExecutor.sendExecutableMessage(message);
@@ -217,8 +232,10 @@ public class Distributor {
 
     /** Build protobuf message **/
     final InitializerSignature codeSignature = (InitializerSignature) staticPart.getSignature();
+
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
     final Calls.ClInitCall.Builder callBuilder = Calls.ClInitCall.newBuilder();
-    callBuilder.setMsgType("Static Constructor");
     callBuilder.setDistributorId(id); //1
     callBuilder.setThreadId(Thread.currentThread().getId()); //2
     callBuilder.setCurrentTime(System.currentTimeMillis()); //3
@@ -230,10 +247,11 @@ public class Distributor {
     callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //9
     callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //10
 
-    final Calls.ClInitCall msg = callBuilder.build();
+    msgBuilder.setMsgType("Static Constructor");
+    msgBuilder.setClinitCall(callBuilder);
 
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
+    producer.send(new ProducerRecord(kafkaTopic,msgBuilder.build().toString()));
 
     //final ExecutableMessage message = new ConstructorMessage(codeSignature, sender);
     //MessageExecutor.sendExecutableMessage(message);
@@ -262,8 +280,10 @@ public class Distributor {
 
     /** Build protobuf message **/
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
+
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
     final Fields.StaticFieldGet.Builder fieldBuilder = Fields.StaticFieldGet.newBuilder();
-    fieldBuilder.setMsgType("Get static");
     fieldBuilder.setDistributorId(id); //1
     fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
     fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
@@ -277,10 +297,11 @@ public class Distributor {
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //11
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //12
 
-    final Fields.StaticFieldGet msg = fieldBuilder.build();
+    msgBuilder.setMsgType("Get static");
+    msgBuilder.setStaticFieldGet(fieldBuilder);
 
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
+    producer.send(new ProducerRecord(kafkaTopic,msgBuilder.build().toString()));
 
     Field field = fieldSignature.getField();
     field.setAccessible(true);
@@ -302,8 +323,10 @@ public class Distributor {
 
     /** Build protobuf message **/
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
+
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
     final Fields.InstanceFieldGet.Builder fieldBuilder = Fields.InstanceFieldGet.newBuilder();
-    fieldBuilder.setMsgType("Get field");
     fieldBuilder.setDistributorId(id); //1
     fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
     fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
@@ -318,10 +341,11 @@ public class Distributor {
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //12
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //13
 
-    final Fields.InstanceFieldGet msg = fieldBuilder.build();
+    msgBuilder.setMsgType("Get field");
+    msgBuilder.setInstanceFieldGet(fieldBuilder);
 
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
+    producer.send(new ProducerRecord(kafkaTopic,msgBuilder.build().toString()));
 
 
     Field field = fieldSignature.getField();
@@ -344,8 +368,10 @@ public class Distributor {
 
     /** Build protobuf message **/
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
+
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
     final Fields.StaticFieldPut.Builder fieldBuilder = Fields.StaticFieldPut.newBuilder();
-    fieldBuilder.setMsgType("Put static");
     fieldBuilder.setDistributorId(id); //1
     fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
     fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
@@ -360,11 +386,12 @@ public class Distributor {
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //12
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //13
 
-    final Fields.StaticFieldPut msg = fieldBuilder.build();
+    msgBuilder.setMsgType("Put static");
+    msgBuilder.setStaticFieldPut(fieldBuilder);
 
     /** TO DO: send call down the wire to execute **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
+    producer.send(new ProducerRecord(kafkaTopic,msgBuilder.build().toString()));
 
 
     Field field = fieldSignature.getField();
@@ -384,8 +411,10 @@ public class Distributor {
 
     /** Build protobuf message **/
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
+
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
     final Fields.InstanceFieldPut.Builder fieldBuilder = Fields.InstanceFieldPut.newBuilder();
-    fieldBuilder.setMsgType("Put field");
     fieldBuilder.setDistributorId(id); //1
     fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
     fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
@@ -401,11 +430,12 @@ public class Distributor {
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //13
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //14
 
-    final Fields.InstanceFieldPut msg = fieldBuilder.build();
+    msgBuilder.setMsgType("Put field");
+    msgBuilder.setInstanceFieldPut(fieldBuilder);
 
     /** TO DO: send call down the wire to execute **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
+    producer.send(new ProducerRecord(kafkaTopic,msgBuilder.build().toString()));
 
     Field field = fieldSignature.getField();
     field.setAccessible(true);

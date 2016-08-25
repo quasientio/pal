@@ -41,8 +41,6 @@ message ConstructorCall {
     optional int32 sourceLocationLine = 13;
     optional string sourceLocationType = 14;
 
-    required string msgType = 15;
-
     //TO DO:  annotations
 }
 
@@ -90,8 +88,6 @@ message InstanceMethodCall {
     optional int32 sourceLocationLine = 15;
     optional string sourceLocationType = 16;
 
-    required string msgType = 17;
-
     //TO DO:  annotations
 }
 
@@ -124,8 +120,6 @@ message ClInitCall {
     optional string sourceLocationFile = 8;
     optional int32 sourceLocationLine = 9;
     optional string sourceLocationType = 10;
-
-    required string msgType = 11;
 
     //TO DO:  annotations
 }
@@ -170,10 +164,6 @@ message ClassMethodCall {
     optional int32 sourceLocationLine = 14;
     optional string sourceLocationType = 15;
 
-
-    required string msgType = 16;
-
     //TO DO:  annotations
 }
-
 
