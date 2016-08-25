@@ -29,7 +29,7 @@ public class Distributor {
   protected static final String kafkaTopic = "test";
   protected static final int id = 10;
 
-  protected static final int STRING_MAX_LEN=100;
+  protected static final int STRING_MAX_LEN=50;
 
   static {
     //Initialize Kafka Producer
@@ -471,7 +471,7 @@ public class Distributor {
     if (object != null) {
       if (object instanceof String) {
         if (((String) object).length() > STRING_MAX_LEN) {
-          value.setValue(((String) object).substring(0, STRING_MAX_LEN-1));
+          value.setValue(((String) object).substring(0, STRING_MAX_LEN));
           //5
           value.setTrimmed(true);
        } else {
