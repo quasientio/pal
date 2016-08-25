@@ -75,7 +75,9 @@ public class App
          a.test();
          a.doSomething();
          System.out.println("X = " + a.giveMeX());
-         a.testArg("dummy val");
+         //string > 100 chars to test trimming
+         a.testArg("averylongsaverylongsaverylongsaverylongsaverylongsaverylongsaverylongsaverylongsaverylongsaverylongstring");
+         a.someString=new StringBuffer("averylongsaverylongsaverylongsaverylong").append("saverylongsaverylongsaverylongsaverylongsaverylongsaverylongstring").toString();
          doSomethingStatically();
          System.out.println("aBool is " + a.aBool);
          a.aBool=!a.aBool;

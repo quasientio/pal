@@ -1,5 +1,7 @@
 package messages.data;
 
+import "primitives.proto";
+
 option java_package = "com.ittera.cometa.distributor.messages.data";
 option java_outer_classname = "Fields";
 option optimize_for = SPEED;
@@ -29,8 +31,7 @@ message StaticFieldGet {
 
     optional string senderClassName = 8;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    optional int32 sender = 9;
+    optional Value sender = 9;
 
     //source context from where the call was made
     optional string sourceLocationFile = 10;
@@ -60,16 +61,14 @@ message StaticFieldPut {
 
     required string fieldType = 6;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    required int32 value = 7;
+    required Value value = 7;
 
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 8;
 
     optional string senderClassName = 9;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    optional int32 sender = 10;
+    optional Value sender = 10;
 
     //source context from where the call was made
     optional string sourceLocationFile = 11;
@@ -95,8 +94,7 @@ message InstanceFieldGet {
 
     required string class = 4;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    required int32 target = 5;
+    required Value target = 5;
 
     required string field = 6;
 
@@ -107,8 +105,7 @@ message InstanceFieldGet {
 
     optional string senderClassName = 9;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    optional int32 sender = 10;
+    optional Value sender = 10;
 
     //source context from where the call was made
     optional string sourceLocationFile = 11;
@@ -134,23 +131,20 @@ message InstanceFieldPut {
 
     required string class = 4;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    required int32 target = 5;
+    required Value target = 5;
 
     required string field = 6;
 
     required string fieldType = 7;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    required int32 value = 8;
+    required Value value = 8;
 
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 9;
 
     optional string senderClassName = 10;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    optional int32 sender = 11;
+    optional Value sender = 11;
 
     //source context from where the call was made
     optional string sourceLocationFile = 12;

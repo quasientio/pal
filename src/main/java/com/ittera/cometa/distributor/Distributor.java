@@ -2,6 +2,7 @@ package com.ittera.cometa.distributor;
 
 import com.ittera.cometa.distributor.messages.*;
 
+import com.ittera.cometa.distributor.messages.data.Primitives;
 import com.ittera.cometa.distributor.messages.data.Calls;
 import com.ittera.cometa.distributor.messages.data.Fields;
 import com.ittera.cometa.distributor.messages.data.Wrappers;
@@ -9,21 +10,26 @@ import com.ittera.cometa.distributor.messages.data.Wrappers;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
-import org.aspectj.lang.reflect.*;
+import org.aspectj.lang.reflect.CodeSignature;
+import org.aspectj.lang.reflect.InitializerSignature;
+import org.aspectj.lang.reflect.ConstructorSignature;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.aspectj.lang.JoinPoint.StaticPart;
+import org.aspectj.runtime.reflect.FieldSignatureImpl;
 
 import java.lang.reflect.Field;
 import java.util.Properties;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.aspectj.runtime.reflect.FieldSignatureImpl;
 
 public class Distributor {
   protected static final Logger logger = LogManager.getLogger("distributor");
   protected static final KafkaProducer producer;
   protected static final String kafkaTopic = "test";
   protected static final int id = 10;
+
+  protected static final int STRING_MAX_LEN=100;
 
   static {
     //Initialize Kafka Producer
@@ -292,7 +298,7 @@ public class Distributor {
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //6
     fieldBuilder.setModifiers(fieldSignature.getModifiers()); //7
     fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //8
-    fieldBuilder.setSender(System.identityHashCode(sender)); //9
+    fieldBuilder.setSender(getWrappedValue(sender)); //9
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //10
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //11
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //12
@@ -331,12 +337,12 @@ public class Distributor {
     fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
     fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
     fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
-    fieldBuilder.setTarget(System.identityHashCode(receiver)); //5
+    fieldBuilder.setTarget(getWrappedValue(receiver)); //5
     fieldBuilder.setField(fieldSignature.getName()); //6
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //7
     fieldBuilder.setModifiers(fieldSignature.getModifiers()); //8
     fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //9
-    fieldBuilder.setSender(System.identityHashCode(sender)); //10
+    fieldBuilder.setSender(getWrappedValue(sender)); //10
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //11
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //12
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //13
@@ -378,10 +384,10 @@ public class Distributor {
     fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
     fieldBuilder.setField(fieldSignature.getName()); //5
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //6
-    fieldBuilder.setValue(System.identityHashCode(args[0])); //7
+    fieldBuilder.setValue(getWrappedValue(args[0])); //7
     fieldBuilder.setModifiers(fieldSignature.getModifiers()); //8
     fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //9
-    fieldBuilder.setSender(System.identityHashCode(sender)); //10
+    fieldBuilder.setSender(getWrappedValue(sender)); //10
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //11
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //12
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //13
@@ -419,13 +425,13 @@ public class Distributor {
     fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
     fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
     fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
-    fieldBuilder.setTarget(System.identityHashCode(receiver)); //5
+    fieldBuilder.setTarget(getWrappedValue(receiver)); //5
     fieldBuilder.setField(fieldSignature.getName()); //6
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //7
-    fieldBuilder.setValue(System.identityHashCode(args[0])); //8
+    fieldBuilder.setValue(getWrappedValue(args[0])); //8
     fieldBuilder.setModifiers(fieldSignature.getModifiers()); //9
     fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //10
-    fieldBuilder.setSender(System.identityHashCode(sender)); //11
+    fieldBuilder.setSender(getWrappedValue(sender)); //11
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //12
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //13
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //14
@@ -451,6 +457,47 @@ public class Distributor {
   // </editor-fold>
 
 
+  /**
+   * Returns actual value if object is a primitive or if String
+   * Strings of length > STRING_MAX_LEN are trimmed
+   * Otherwise, it returns the identityHashCode
+   * @param object
+   * @return
+   */
+  protected static Primitives.Value getWrappedValue(Object object) {
+    final Primitives.Value.Builder value = Primitives.Value.newBuilder();
+
+    //1
+    if (object != null) {
+      if (object instanceof String) {
+        if (((String) object).length() > STRING_MAX_LEN) {
+          value.setValue(((String) object).substring(0, STRING_MAX_LEN-1));
+          //5
+          value.setTrimmed(true);
+       } else {
+         value.setValue(String.valueOf(object));
+       }
+     }
+    else if (object.getClass().isPrimitive() || com.google.common.primitives.Primitives.isWrapperType(object.getClass())) {
+       value.setValue(String.valueOf(object));
+     }
+    }
+
+    //2
+    if (object!=null) {
+      value.setHash(object.hashCode());
+    }
+
+    //3
+    value.setIdentityHash(System.identityHashCode(object));
+
+    //4
+    if (object!=null) {
+      value.setClass_(object.getClass().getCanonicalName());
+    }
+
+    return value.build();
+  }
 
   protected static Object getLastReturnedObject() {
     return MessageExecutor.getLastReturnedObject();
