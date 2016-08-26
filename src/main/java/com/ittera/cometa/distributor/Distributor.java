@@ -1,7 +1,5 @@
 package com.ittera.cometa.distributor;
 
-import com.ittera.cometa.distributor.messages.*;
-
 import com.ittera.cometa.distributor.messages.data.Primitives;
 import com.ittera.cometa.distributor.messages.data.Calls;
 import com.ittera.cometa.distributor.messages.data.Fields;
@@ -54,8 +52,8 @@ public class Distributor {
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
 
-    final ExecutableMessage message = new InstanceMethodMessage((CodeSignature)staticPart.getSignature(), sender, receiver, args);
-    MessageExecutor.sendExecutableMessage(message);
+    //LocalJavaExecutor.executeInstanceMethodMessage(msg);
+    return;
   }
 
   public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object receiver, Object[] args) {
@@ -66,11 +64,8 @@ public class Distributor {
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
 
-    final ExecutableMessage message = new InstanceMethodMessage((CodeSignature)staticPart.getSignature(), sender, receiver, args);
-    MessageExecutor.sendExecutableMessage(message);
-
-    //WARNING: NOT THREAD-SAFE!!
-    return MessageExecutor.getLastReturnedObject();
+    //return LocalJavaExecutor.executeInstanceMethodMessage(msg);
+    return null;
   }
 
   private static Wrappers.DataMessage buildInstanceMethodMessage(StaticPart staticPart, Object sender, Object receiver, Object[] args) {
@@ -123,8 +118,8 @@ public class Distributor {
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
 
-    ExecutableMessage message = new ClassMethodMessage((CodeSignature)staticPart.getSignature(), sender, args);
-    MessageExecutor.sendExecutableMessage(message);
+    //LocalJavaExecutor.executeClassMethodMessage(msg);
+    return;
   }
 
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) {
@@ -135,11 +130,8 @@ public class Distributor {
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
 
-    ExecutableMessage message = new ClassMethodMessage((CodeSignature)staticPart.getSignature(), sender, args);
-    MessageExecutor.sendExecutableMessage(message);
-
-    //WARNING: NOT THREAD-SAFE!!
-    return MessageExecutor.getLastReturnedObject();
+    //LocalJavaExecutor.executeClassMethodMessage(msg);
+    return null;
   }
 
   private static Wrappers.DataMessage buildClassMethodMessage(StaticPart staticPart, Object sender, Object[] args) {
@@ -226,11 +218,9 @@ public class Distributor {
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msgBuilder.build().toString()));
 
-    final ExecutableMessage message = new ConstructorMessage(codeSignature, sender, args);
-    MessageExecutor.sendExecutableMessage(message);
-
     //WARNING: NOT THREAD-SAFE!!
-    return MessageExecutor.getLastReturnedObject();
+//    LocalJavaExecutor.executeConstructorMessage(msg);
+    return null;
   }
 
   public static Class classConstructor(StaticPart staticPart, Object sender) {
@@ -273,7 +263,7 @@ public class Distributor {
     }
 
     //For now, we will return it if we want to aspectj to proceed(), or null if we dont
-//    return null; //if we don't want to proceed()
+//    return null; //if we don't want to proceed() BETTER to just return boolean then
     return clazz;
   }
 
@@ -458,9 +448,9 @@ public class Distributor {
 
 
   /**
-   * Returns actual value if object is a primitive or if String
-   * Strings of length > STRING_MAX_LEN are trimmed
-   * Otherwise, it returns the identityHashCode
+   * Wrapped is the actual value if object is a primitive or if String (Strings of length > STRING_MAX_LEN are trimmed)
+   * If the object isn't null, the hashCode and class are also returned
+   * It always returns the identityHashCode
    * @param object
    * @return
    */
@@ -498,16 +488,4 @@ public class Distributor {
 
     return value.build();
   }
-
-  protected static Object getLastReturnedObject() {
-    return MessageExecutor.getLastReturnedObject();
-  }
-  /**
-   * As of Java 7, static and abstract are incompatible. Otherwise this method should be abstract.
-   * @param message
-   */
-   protected static void sendExecutableMessage(ExecutableMessage message) {
-    throw new RuntimeException("sendExecutableMessage is not implemented, must be overriden in Distributor's subclasses!");
-  }
-
 }
