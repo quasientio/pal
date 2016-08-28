@@ -129,6 +129,32 @@ public final class Wrappers {
      * <code>optional .messages.data.InstanceFieldPut instanceFieldPut = 9;</code>
      */
     com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutOrBuilder getInstanceFieldPutOrBuilder();
+
+    /**
+     * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+     */
+    boolean hasRaisedThrowable();
+    /**
+     * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable getRaisedThrowable();
+    /**
+     * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowableOrBuilder getRaisedThrowableOrBuilder();
+
+    /**
+     * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+     */
+    boolean hasReturnValue();
+    /**
+     * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Values.ReturnValue getReturnValue();
+    /**
+     * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Values.ReturnValueOrBuilder getReturnValueOrBuilder();
   }
   /**
    * Protobuf type {@code messages.data.DataMessage}
@@ -292,6 +318,32 @@ public final class Wrappers {
               calltypeCase_ = 9;
               break;
             }
+            case 82: {
+              com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.Builder subBuilder = null;
+              if (calltypeCase_ == 10) {
+                subBuilder = ((com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) calltype_).toBuilder();
+              }
+              calltype_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom((com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) calltype_);
+                calltype_ = subBuilder.buildPartial();
+              }
+              calltypeCase_ = 10;
+              break;
+            }
+            case 90: {
+              com.ittera.cometa.distributor.messages.data.Values.ReturnValue.Builder subBuilder = null;
+              if (calltypeCase_ == 11) {
+                subBuilder = ((com.ittera.cometa.distributor.messages.data.Values.ReturnValue) calltype_).toBuilder();
+              }
+              calltype_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Values.ReturnValue.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom((com.ittera.cometa.distributor.messages.data.Values.ReturnValue) calltype_);
+                calltype_ = subBuilder.buildPartial();
+              }
+              calltypeCase_ = 11;
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -344,6 +396,8 @@ public final class Wrappers {
       STATICFIELDPUT(7),
       INSTANCEFIELDGET(8),
       INSTANCEFIELDPUT(9),
+      RAISEDTHROWABLE(10),
+      RETURNVALUE(11),
       CALLTYPE_NOT_SET(0);
       private int value = 0;
       private CalltypeCase(int value) {
@@ -359,6 +413,8 @@ public final class Wrappers {
           case 7: return STATICFIELDPUT;
           case 8: return INSTANCEFIELDGET;
           case 9: return INSTANCEFIELDPUT;
+          case 10: return RAISEDTHROWABLE;
+          case 11: return RETURNVALUE;
           case 0: return CALLTYPE_NOT_SET;
           default: throw new java.lang.IllegalArgumentException(
             "Value is undefined for this oneof enum.");
@@ -625,6 +681,58 @@ public final class Wrappers {
       return com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.getDefaultInstance();
     }
 
+    public static final int RAISEDTHROWABLE_FIELD_NUMBER = 10;
+    /**
+     * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+     */
+    public boolean hasRaisedThrowable() {
+      return calltypeCase_ == 10;
+    }
+    /**
+     * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable getRaisedThrowable() {
+      if (calltypeCase_ == 10) {
+         return (com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) calltype_;
+      }
+      return com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.getDefaultInstance();
+    }
+    /**
+     * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowableOrBuilder getRaisedThrowableOrBuilder() {
+      if (calltypeCase_ == 10) {
+         return (com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) calltype_;
+      }
+      return com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.getDefaultInstance();
+    }
+
+    public static final int RETURNVALUE_FIELD_NUMBER = 11;
+    /**
+     * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+     */
+    public boolean hasReturnValue() {
+      return calltypeCase_ == 11;
+    }
+    /**
+     * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Values.ReturnValue getReturnValue() {
+      if (calltypeCase_ == 11) {
+         return (com.ittera.cometa.distributor.messages.data.Values.ReturnValue) calltype_;
+      }
+      return com.ittera.cometa.distributor.messages.data.Values.ReturnValue.getDefaultInstance();
+    }
+    /**
+     * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Values.ReturnValueOrBuilder getReturnValueOrBuilder() {
+      if (calltypeCase_ == 11) {
+         return (com.ittera.cometa.distributor.messages.data.Values.ReturnValue) calltype_;
+      }
+      return com.ittera.cometa.distributor.messages.data.Values.ReturnValue.getDefaultInstance();
+    }
+
     private void initFields() {
       msgType_ = "";
     }
@@ -686,6 +794,18 @@ public final class Wrappers {
           return false;
         }
       }
+      if (hasRaisedThrowable()) {
+        if (!getRaisedThrowable().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      if (hasReturnValue()) {
+        if (!getReturnValue().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -719,6 +839,12 @@ public final class Wrappers {
       }
       if (calltypeCase_ == 9) {
         output.writeMessage(9, (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut) calltype_);
+      }
+      if (calltypeCase_ == 10) {
+        output.writeMessage(10, (com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) calltype_);
+      }
+      if (calltypeCase_ == 11) {
+        output.writeMessage(11, (com.ittera.cometa.distributor.messages.data.Values.ReturnValue) calltype_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -764,6 +890,14 @@ public final class Wrappers {
       if (calltypeCase_ == 9) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(9, (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut) calltype_);
+      }
+      if (calltypeCase_ == 10) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(10, (com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) calltype_);
+      }
+      if (calltypeCase_ == 11) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(11, (com.ittera.cometa.distributor.messages.data.Values.ReturnValue) calltype_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -974,6 +1108,20 @@ public final class Wrappers {
             result.calltype_ = instanceFieldPutBuilder_.build();
           }
         }
+        if (calltypeCase_ == 10) {
+          if (raisedThrowableBuilder_ == null) {
+            result.calltype_ = calltype_;
+          } else {
+            result.calltype_ = raisedThrowableBuilder_.build();
+          }
+        }
+        if (calltypeCase_ == 11) {
+          if (returnValueBuilder_ == null) {
+            result.calltype_ = calltype_;
+          } else {
+            result.calltype_ = returnValueBuilder_.build();
+          }
+        }
         result.bitField0_ = to_bitField0_;
         result.calltypeCase_ = calltypeCase_;
         onBuilt();
@@ -1027,6 +1175,14 @@ public final class Wrappers {
           }
           case INSTANCEFIELDPUT: {
             mergeInstanceFieldPut(other.getInstanceFieldPut());
+            break;
+          }
+          case RAISEDTHROWABLE: {
+            mergeRaisedThrowable(other.getRaisedThrowable());
+            break;
+          }
+          case RETURNVALUE: {
+            mergeReturnValue(other.getReturnValue());
             break;
           }
           case CALLTYPE_NOT_SET: {
@@ -1086,6 +1242,18 @@ public final class Wrappers {
         }
         if (hasInstanceFieldPut()) {
           if (!getInstanceFieldPut().isInitialized()) {
+            
+            return false;
+          }
+        }
+        if (hasRaisedThrowable()) {
+          if (!getRaisedThrowable().isInitialized()) {
+            
+            return false;
+          }
+        }
+        if (hasReturnValue()) {
+          if (!getReturnValue().isInitialized()) {
             
             return false;
           }
@@ -2283,6 +2451,276 @@ public final class Wrappers {
         return instanceFieldPutBuilder_;
       }
 
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable, com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowableOrBuilder> raisedThrowableBuilder_;
+      /**
+       * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+       */
+      public boolean hasRaisedThrowable() {
+        return calltypeCase_ == 10;
+      }
+      /**
+       * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable getRaisedThrowable() {
+        if (raisedThrowableBuilder_ == null) {
+          if (calltypeCase_ == 10) {
+            return (com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) calltype_;
+          }
+          return com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.getDefaultInstance();
+        } else {
+          if (calltypeCase_ == 10) {
+            return raisedThrowableBuilder_.getMessage();
+          }
+          return com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+       */
+      public Builder setRaisedThrowable(com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable value) {
+        if (raisedThrowableBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          calltype_ = value;
+          onChanged();
+        } else {
+          raisedThrowableBuilder_.setMessage(value);
+        }
+        calltypeCase_ = 10;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+       */
+      public Builder setRaisedThrowable(
+          com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.Builder builderForValue) {
+        if (raisedThrowableBuilder_ == null) {
+          calltype_ = builderForValue.build();
+          onChanged();
+        } else {
+          raisedThrowableBuilder_.setMessage(builderForValue.build());
+        }
+        calltypeCase_ = 10;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+       */
+      public Builder mergeRaisedThrowable(com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable value) {
+        if (raisedThrowableBuilder_ == null) {
+          if (calltypeCase_ == 10 &&
+              calltype_ != com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.getDefaultInstance()) {
+            calltype_ = com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.newBuilder((com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) calltype_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            calltype_ = value;
+          }
+          onChanged();
+        } else {
+          if (calltypeCase_ == 10) {
+            raisedThrowableBuilder_.mergeFrom(value);
+          }
+          raisedThrowableBuilder_.setMessage(value);
+        }
+        calltypeCase_ = 10;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+       */
+      public Builder clearRaisedThrowable() {
+        if (raisedThrowableBuilder_ == null) {
+          if (calltypeCase_ == 10) {
+            calltypeCase_ = 0;
+            calltype_ = null;
+            onChanged();
+          }
+        } else {
+          if (calltypeCase_ == 10) {
+            calltypeCase_ = 0;
+            calltype_ = null;
+          }
+          raisedThrowableBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.Builder getRaisedThrowableBuilder() {
+        return getRaisedThrowableFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowableOrBuilder getRaisedThrowableOrBuilder() {
+        if ((calltypeCase_ == 10) && (raisedThrowableBuilder_ != null)) {
+          return raisedThrowableBuilder_.getMessageOrBuilder();
+        } else {
+          if (calltypeCase_ == 10) {
+            return (com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) calltype_;
+          }
+          return com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>optional .messages.data.RaisedThrowable raisedThrowable = 10;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable, com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowableOrBuilder> 
+          getRaisedThrowableFieldBuilder() {
+        if (raisedThrowableBuilder_ == null) {
+          if (!(calltypeCase_ == 10)) {
+            calltype_ = com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.getDefaultInstance();
+          }
+          raisedThrowableBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable, com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowableOrBuilder>(
+                  (com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) calltype_,
+                  getParentForChildren(),
+                  isClean());
+          calltype_ = null;
+        }
+        calltypeCase_ = 10;
+        return raisedThrowableBuilder_;
+      }
+
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Values.ReturnValue, com.ittera.cometa.distributor.messages.data.Values.ReturnValue.Builder, com.ittera.cometa.distributor.messages.data.Values.ReturnValueOrBuilder> returnValueBuilder_;
+      /**
+       * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+       */
+      public boolean hasReturnValue() {
+        return calltypeCase_ == 11;
+      }
+      /**
+       * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Values.ReturnValue getReturnValue() {
+        if (returnValueBuilder_ == null) {
+          if (calltypeCase_ == 11) {
+            return (com.ittera.cometa.distributor.messages.data.Values.ReturnValue) calltype_;
+          }
+          return com.ittera.cometa.distributor.messages.data.Values.ReturnValue.getDefaultInstance();
+        } else {
+          if (calltypeCase_ == 11) {
+            return returnValueBuilder_.getMessage();
+          }
+          return com.ittera.cometa.distributor.messages.data.Values.ReturnValue.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+       */
+      public Builder setReturnValue(com.ittera.cometa.distributor.messages.data.Values.ReturnValue value) {
+        if (returnValueBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          calltype_ = value;
+          onChanged();
+        } else {
+          returnValueBuilder_.setMessage(value);
+        }
+        calltypeCase_ = 11;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+       */
+      public Builder setReturnValue(
+          com.ittera.cometa.distributor.messages.data.Values.ReturnValue.Builder builderForValue) {
+        if (returnValueBuilder_ == null) {
+          calltype_ = builderForValue.build();
+          onChanged();
+        } else {
+          returnValueBuilder_.setMessage(builderForValue.build());
+        }
+        calltypeCase_ = 11;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+       */
+      public Builder mergeReturnValue(com.ittera.cometa.distributor.messages.data.Values.ReturnValue value) {
+        if (returnValueBuilder_ == null) {
+          if (calltypeCase_ == 11 &&
+              calltype_ != com.ittera.cometa.distributor.messages.data.Values.ReturnValue.getDefaultInstance()) {
+            calltype_ = com.ittera.cometa.distributor.messages.data.Values.ReturnValue.newBuilder((com.ittera.cometa.distributor.messages.data.Values.ReturnValue) calltype_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            calltype_ = value;
+          }
+          onChanged();
+        } else {
+          if (calltypeCase_ == 11) {
+            returnValueBuilder_.mergeFrom(value);
+          }
+          returnValueBuilder_.setMessage(value);
+        }
+        calltypeCase_ = 11;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+       */
+      public Builder clearReturnValue() {
+        if (returnValueBuilder_ == null) {
+          if (calltypeCase_ == 11) {
+            calltypeCase_ = 0;
+            calltype_ = null;
+            onChanged();
+          }
+        } else {
+          if (calltypeCase_ == 11) {
+            calltypeCase_ = 0;
+            calltype_ = null;
+          }
+          returnValueBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Values.ReturnValue.Builder getReturnValueBuilder() {
+        return getReturnValueFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Values.ReturnValueOrBuilder getReturnValueOrBuilder() {
+        if ((calltypeCase_ == 11) && (returnValueBuilder_ != null)) {
+          return returnValueBuilder_.getMessageOrBuilder();
+        } else {
+          if (calltypeCase_ == 11) {
+            return (com.ittera.cometa.distributor.messages.data.Values.ReturnValue) calltype_;
+          }
+          return com.ittera.cometa.distributor.messages.data.Values.ReturnValue.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>optional .messages.data.ReturnValue returnValue = 11;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Values.ReturnValue, com.ittera.cometa.distributor.messages.data.Values.ReturnValue.Builder, com.ittera.cometa.distributor.messages.data.Values.ReturnValueOrBuilder> 
+          getReturnValueFieldBuilder() {
+        if (returnValueBuilder_ == null) {
+          if (!(calltypeCase_ == 11)) {
+            calltype_ = com.ittera.cometa.distributor.messages.data.Values.ReturnValue.getDefaultInstance();
+          }
+          returnValueBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Values.ReturnValue, com.ittera.cometa.distributor.messages.data.Values.ReturnValue.Builder, com.ittera.cometa.distributor.messages.data.Values.ReturnValueOrBuilder>(
+                  (com.ittera.cometa.distributor.messages.data.Values.ReturnValue) calltype_,
+                  getParentForChildren(),
+                  isClean());
+          calltype_ = null;
+        }
+        calltypeCase_ = 11;
+        return returnValueBuilder_;
+      }
+
       // @@protoc_insertion_point(builder_scope:messages.data.DataMessage)
     }
 
@@ -2309,21 +2747,25 @@ public final class Wrappers {
   static {
     java.lang.String[] descriptorData = {
       "\n\016wrappers.proto\022\rmessages.data\032\013calls.p" +
-      "roto\032\014fields.proto\"\376\003\n\013DataMessage\022\017\n\007ms" +
-      "gType\030\001 \002(\t\0229\n\017constructorCall\030\002 \001(\0132\036.m" +
-      "essages.data.ConstructorCallH\000\022?\n\022instan" +
-      "ceMethodCall\030\003 \001(\0132!.messages.data.Insta" +
-      "nceMethodCallH\000\0229\n\017classMethodCall\030\004 \001(\013" +
-      "2\036.messages.data.ClassMethodCallH\000\022/\n\ncl" +
-      "initCall\030\005 \001(\0132\031.messages.data.ClInitCal" +
-      "lH\000\0227\n\016staticFieldGet\030\006 \001(\0132\035.messages.d" +
-      "ata.StaticFieldGetH\000\0227\n\016staticFieldPut\030\007",
-      " \001(\0132\035.messages.data.StaticFieldPutH\000\022;\n" +
-      "\020instanceFieldGet\030\010 \001(\0132\037.messages.data." +
-      "InstanceFieldGetH\000\022;\n\020instanceFieldPut\030\t" +
-      " \001(\0132\037.messages.data.InstanceFieldPutH\000B" +
-      "\n\n\010calltypeB/\n+com.ittera.cometa.distrib" +
-      "utor.messages.dataH\001"
+      "roto\032\014fields.proto\032\020exceptions.proto\032\014va" +
+      "lues.proto\"\354\004\n\013DataMessage\022\017\n\007msgType\030\001 " +
+      "\002(\t\0229\n\017constructorCall\030\002 \001(\0132\036.messages." +
+      "data.ConstructorCallH\000\022?\n\022instanceMethod" +
+      "Call\030\003 \001(\0132!.messages.data.InstanceMetho" +
+      "dCallH\000\0229\n\017classMethodCall\030\004 \001(\0132\036.messa" +
+      "ges.data.ClassMethodCallH\000\022/\n\nclinitCall" +
+      "\030\005 \001(\0132\031.messages.data.ClInitCallH\000\0227\n\016s" +
+      "taticFieldGet\030\006 \001(\0132\035.messages.data.Stat",
+      "icFieldGetH\000\0227\n\016staticFieldPut\030\007 \001(\0132\035.m" +
+      "essages.data.StaticFieldPutH\000\022;\n\020instanc" +
+      "eFieldGet\030\010 \001(\0132\037.messages.data.Instance" +
+      "FieldGetH\000\022;\n\020instanceFieldPut\030\t \001(\0132\037.m" +
+      "essages.data.InstanceFieldPutH\000\0229\n\017raise" +
+      "dThrowable\030\n \001(\0132\036.messages.data.RaisedT" +
+      "hrowableH\000\0221\n\013returnValue\030\013 \001(\0132\032.messag" +
+      "es.data.ReturnValueH\000B\n\n\010calltypeB/\n+com" +
+      ".ittera.cometa.distributor.messages.data" +
+      "H\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -2338,15 +2780,19 @@ public final class Wrappers {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.ittera.cometa.distributor.messages.data.Calls.getDescriptor(),
           com.ittera.cometa.distributor.messages.data.Fields.getDescriptor(),
+          com.ittera.cometa.distributor.messages.data.Exceptions.getDescriptor(),
+          com.ittera.cometa.distributor.messages.data.Values.getDescriptor(),
         }, assigner);
     internal_static_messages_data_DataMessage_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_messages_data_DataMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_DataMessage_descriptor,
-        new java.lang.String[] { "MsgType", "ConstructorCall", "InstanceMethodCall", "ClassMethodCall", "ClinitCall", "StaticFieldGet", "StaticFieldPut", "InstanceFieldGet", "InstanceFieldPut", "Calltype", });
+        new java.lang.String[] { "MsgType", "ConstructorCall", "InstanceMethodCall", "ClassMethodCall", "ClinitCall", "StaticFieldGet", "StaticFieldPut", "InstanceFieldGet", "InstanceFieldPut", "RaisedThrowable", "ReturnValue", "Calltype", });
     com.ittera.cometa.distributor.messages.data.Calls.getDescriptor();
     com.ittera.cometa.distributor.messages.data.Fields.getDescriptor();
+    com.ittera.cometa.distributor.messages.data.Exceptions.getDescriptor();
+    com.ittera.cometa.distributor.messages.data.Values.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

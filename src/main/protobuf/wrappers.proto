@@ -2,6 +2,8 @@ package messages.data;
 
 import "calls.proto";
 import "fields.proto";
+import "exceptions.proto";
+import "values.proto";
 
 option java_package = "com.ittera.cometa.distributor.messages.data";
 option optimize_for = SPEED;
@@ -18,5 +20,7 @@ message DataMessage {
        StaticFieldPut staticFieldPut = 7;
        InstanceFieldGet instanceFieldGet = 8;
        InstanceFieldPut instanceFieldPut = 9;
+       RaisedThrowable raisedThrowable = 10;
+       ReturnValue returnValue = 11;
     }
 }

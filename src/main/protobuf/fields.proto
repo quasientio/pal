@@ -31,7 +31,7 @@ message StaticFieldGet {
 
     optional string senderClassName = 8;
 
-    optional Value sender = 9;
+    optional Object sender = 9;
 
     //source context from where the call was made
     optional string sourceLocationFile = 10;
@@ -61,14 +61,14 @@ message StaticFieldPut {
 
     required string fieldType = 6;
 
-    required Value value = 7;
+    required Object value = 7;
 
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 8;
 
     optional string senderClassName = 9;
 
-    optional Value sender = 10;
+    optional Object sender = 10;
 
     //source context from where the call was made
     optional string sourceLocationFile = 11;
@@ -94,7 +94,7 @@ message InstanceFieldGet {
 
     required string class = 4;
 
-    required Value target = 5;
+    required Object target = 5;
 
     required string field = 6;
 
@@ -105,7 +105,7 @@ message InstanceFieldGet {
 
     optional string senderClassName = 9;
 
-    optional Value sender = 10;
+    optional Object sender = 10;
 
     //source context from where the call was made
     optional string sourceLocationFile = 11;
@@ -131,20 +131,20 @@ message InstanceFieldPut {
 
     required string class = 4;
 
-    required Value target = 5;
+    required Object target = 5;
 
     required string field = 6;
 
     required string fieldType = 7;
 
-    required Value value = 8;
+    required Object value = 8;
 
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 9;
 
     optional string senderClassName = 10;
 
-    optional Value sender = 11;
+    optional Object sender = 11;
 
     //source context from where the call was made
     optional string sourceLocationFile = 12;

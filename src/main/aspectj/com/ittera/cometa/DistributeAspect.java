@@ -14,7 +14,16 @@ aspect DistributeAspect {
 	//if false, no output at all
 	private static final boolean verbose=false;
 
+	//Exception softening of calls to Distributor
+	declare soft: ClassNotFoundException : call (boolean Distributor.classConstructor(..));
+	declare soft: Throwable : call (Object Distributor.constructor(..));
+	declare soft: Throwable : call (void Distributor.voidInstanceMethod(..));
+	declare soft: Throwable : call (Object Distributor.nonVoidInstanceMethod(..));
+	declare soft: Throwable : call (void Distributor.voidClassMethod(..));
+	declare soft: Throwable : call (Object Distributor.nonVoidClassMethod(..));
+
 	/** POINTCUT DEFINITIONS **/
+
 	pointcut allClasses(): !within(DistributeAspect);
 
 	pointcut voidInstanceMethods(): allClasses() && call(!static void *(..));
@@ -36,6 +45,7 @@ aspect DistributeAspect {
 	pointcut nonStaticPutfields(): allClasses() && set(!static * *);
 
 	pointcut staticConstructors(): allClasses() && staticinitialization(*);
+
 
 	/** ADVICE for Methods **/
 
@@ -123,11 +133,11 @@ aspect DistributeAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		Class loadedClass = Distributor.classConstructor(
+		boolean classLoaded = Distributor.classConstructor(
 			thisJoinPointStaticPart,
 			thisJoinPoint.getThis()); //Object sender
 
-		if (loadedClass != null) {
+		if (!classLoaded) {
 			proceed();
 		}
 	}

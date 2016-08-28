@@ -1,0 +1,31 @@
+package messages.data;
+
+import "primitives.proto";
+
+option java_package = "com.ittera.cometa.distributor.messages.data";
+option java_outer_classname = "Values";
+option optimize_for = SPEED;
+
+message ReturnValue {
+    // --- CONTEXT
+
+    optional int32 distributorId = 1;
+
+    //NOTE: The id of a terminated thread may be reused
+    optional int64 threadId = 2;
+
+    required int64 currentTime = 3;
+
+    //TO DO:  IP or hostname for this Distributor
+
+    //TO DO: Reference ID or hash to the constructor or method message that caused it
+
+    //TO DO: more context, i.e. args, etc.
+
+    // --- CONTEXT
+
+    optional bool isVoid = 4 [default = false];
+
+    optional Object value = 5;
+}
+

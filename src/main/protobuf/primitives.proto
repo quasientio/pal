@@ -3,7 +3,7 @@ package messages.data;
 option java_package = "com.ittera.cometa.distributor.messages.data";
 option optimize_for = SPEED;
 
-message Value {
+message Object {
     optional string value = 1;
     optional int32 hash = 2;
     required int32 identityHash = 3;

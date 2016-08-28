@@ -1,0 +1,52 @@
+package messages.data;
+
+option java_package = "com.ittera.cometa.distributor.messages.data";
+option java_outer_classname = "Exceptions";
+option optimize_for = SPEED;
+
+message Throwable {
+    required string type = 1;
+    optional string message = 2;
+    repeated string stackTraceElement = 3;
+    optional Throwable cause = 4;
+}
+
+
+message RaisedThrowable {
+    // --- CONTEXT
+
+    optional int32 distributorId = 1;
+
+    //NOTE: The id of a terminated thread may be reused
+    optional int64 threadId = 2;
+
+    required int64 currentTime = 3;
+
+    //TO DO:  IP or hostname for this Distributor
+
+    //TO DO: Reference ID or hash to the constructor or method message that caused it
+
+    //TO DO: more context, i.e. args, etc.
+
+    // --- CONTEXT
+
+    required string className = 4;
+
+    //for static init (<clinit)
+    optional bool inInitializer = 5 [default = false];
+
+    oneof callType {
+        //for constructor (makes sense only if wrapping real constructor, as name same as classname)
+        string constructor = 6;
+        //for methods
+        string method = 7;
+        //for fields
+        string field = 8;
+    }
+
+    optional int32 modifiers = 9;
+
+    required Throwable throwable = 10;
+}
+
+
