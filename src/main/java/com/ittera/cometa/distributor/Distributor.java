@@ -416,92 +416,214 @@ public class Distributor {
 
   // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
   //@TODO field operations should also be sent as messages
-  public static Object getObjectStatic(StaticPart staticPart, Object sender) {
+  public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
 
+    /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetStaticMessage(id, staticPart, sender);
 
+    /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
+
+    /** 3. Receive message **/
+
+    //TO DO receive
+
+    //TO DO compare
+
+    /** 4. Get Object **/
 
     Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
     field.setAccessible(true);
 
-    final Object fieldValue;
+    IllegalAccessException exceptionGettingObject = null;
+    Object fieldValue = null;
     try {
       fieldValue = field.get(null);
-    } catch (IllegalAccessException ex) {
-      throw new DistributorError("Illegal access",ex);
-    } catch (IllegalArgumentException ex) {
-      throw new DistributorError("Illegal argument",ex);
+    } catch (IllegalAccessException iae) {
+        exceptionGettingObject = iae;
+    }
+
+    /** 5. Wrap exception if any **/
+    Wrappers.DataMessage exceptionMsg = null;
+    if (exceptionGettingObject != null) {
+      exceptionMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
+    }
+
+    /** 6. Send object/exception **/
+    if (exceptionGettingObject != null) {
+      producer.send(new ProducerRecord(kafkaTopic, exceptionMsg.toString()));
+    }
+
+    /** 7. Receive object/exception **/
+
+    //TO DO receive
+
+    //TO DO compare
+
+    /** 8. Return or re-raise exception **/
+    if (exceptionGettingObject != null) {
+      throw exceptionGettingObject;
     }
 
     return fieldValue;
   }
 
-  public static Object getObject(StaticPart staticPart, Object sender, Object target) {
+  public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
 
+    /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetObjectMessage(id, staticPart, sender, target);
 
+    /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
+
+    /** 3. Receive message **/
+
+    //TO DO receive
+
+    //TO DO compare
+
+    /** 4. Get Object **/
 
     Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
     field.setAccessible(true);
 
-    final Object fieldValue;
+    IllegalAccessException exceptionGettingObject = null;
+    Object fieldValue = null;
     try {
       fieldValue = field.get(target);
-    } catch (IllegalAccessException ex) {
-      throw new DistributorError("Illegal access",ex);
-    } catch (IllegalArgumentException ex) {
-      throw new DistributorError("Illegal argument",ex);
+    } catch (IllegalAccessException iae) {
+        exceptionGettingObject = iae;
+    }
+
+    /** 5. Wrap exception if any **/
+    Wrappers.DataMessage exceptionMsg = null;
+    if (exceptionGettingObject != null) {
+      exceptionMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
+    }
+
+    /** 6. Send object/exception **/
+    if (exceptionGettingObject != null) {
+      producer.send(new ProducerRecord(kafkaTopic, exceptionMsg.toString()));
+    }
+
+    /** 7. Receive object/exception **/
+
+    //TO DO receive
+
+    //TO DO compare
+
+    /** 8. Return or re-raise exception **/
+    if (exceptionGettingObject != null) {
+      throw exceptionGettingObject;
     }
 
     return fieldValue;
   }
 
-  public static void putStatic(StaticPart staticPart, Object sender, Object[] args) {
+  public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
 
+    /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildPutStaticMessage(id, staticPart, sender, args[0]);
 
-    /** TO DO: send call down the wire to execute **/
+    /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
 
+    /** 3. Receive message **/
+
+    //TO DO receive
+
+    //TO DO compare
+
+    /** 4. Put Object **/
 
     Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
     field.setAccessible(true);
 
+    IllegalAccessException exceptionSettingObject = null;
     try {
       field.set(null, args[0]);
-    } catch (IllegalAccessException ex) {
-      throw new DistributorError("Illegal access",ex);
-    } catch (IllegalArgumentException ex) {
-      throw new DistributorError("Illegal argument",ex);
+    } catch (IllegalAccessException iae) {
+        exceptionSettingObject = iae;
     }
+
+    /** 5. Wrap exception if any **/
+    Wrappers.DataMessage exceptionMsg = null;
+    if (exceptionSettingObject != null) {
+      exceptionMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionSettingObject);
+    }
+
+    /** 6. Send object/exception **/
+    if (exceptionSettingObject != null) {
+      producer.send(new ProducerRecord(kafkaTopic, exceptionMsg.toString()));
+    }
+
+    /** 7. Receive object/exception **/
+
+    //TO DO receive
+
+    //TO DO compare
+
+    /** 8. Return or re-raise exception **/
+    if (exceptionSettingObject != null) {
+      throw exceptionSettingObject;
+    }
+
+    return;
   }
 
-  public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) {
+  public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) throws IllegalAccessException {
 
-    final Wrappers.DataMessage msg = DataMessageFactory.buildPutObjectMessage(id,staticPart,sender,target,args[0]);
+    /** 1. Wrap message **/
+    final Wrappers.DataMessage msg = DataMessageFactory.buildPutObjectMessage(id, staticPart, sender, target, args[0]);
 
-    /** TO DO: send call down the wire to execute **/
+    /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg.toString()));
+    producer.send(new ProducerRecord(kafkaTopic, msg.toString()));
+
+    /** 3. Receive message **/
+
+    //TO DO receive
+
+    //TO DO compare
+
+    /** 4. Put Object **/
 
     Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
     field.setAccessible(true);
 
+    IllegalAccessException exceptionSettingObject = null;
     try {
       field.set(target, args[0]);
-    } catch (IllegalAccessException ex) {
-      throw new DistributorError("Illegal access",ex);
-    } catch (IllegalArgumentException ex) {
-      throw new DistributorError("Illegal argument",ex);
+    } catch (IllegalAccessException iae) {
+      exceptionSettingObject = iae;
+    }
+
+    /** 5. Wrap exception if any **/
+    Wrappers.DataMessage exceptionMsg = null;
+    if (exceptionSettingObject != null) {
+      exceptionMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionSettingObject);
+    }
+
+    /** 6. Send object/exception **/
+    if (exceptionSettingObject != null) {
+      producer.send(new ProducerRecord(kafkaTopic, exceptionMsg.toString()));
+    }
+
+    /** 7. Receive object/exception **/
+
+    //TO DO receive
+
+    //TO DO compare
+
+    /** 8. Return or re-raise exception **/
+    if (exceptionSettingObject != null) {
+      throw exceptionSettingObject;
     }
   }
+
   // </editor-fold>
-
-
 
 }

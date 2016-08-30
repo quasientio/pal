@@ -21,6 +21,10 @@ aspect DistributeAspect {
 	declare soft: Throwable : call (Object Distributor.nonVoidInstanceMethod(..));
 	declare soft: Throwable : call (void Distributor.voidClassMethod(..));
 	declare soft: Throwable : call (Object Distributor.nonVoidClassMethod(..));
+	declare soft: IllegalAccessException : call (Object Distributor.getStatic(..));
+	declare soft: IllegalAccessException : call (Object Distributor.getObject(..));
+	declare soft: IllegalAccessException : call (void Distributor.putStatic(..));
+	declare soft: IllegalAccessException : call (void Distributor.putField(..));
 
 	/** POINTCUT DEFINITIONS **/
 
@@ -109,6 +113,8 @@ aspect DistributeAspect {
 		return returnedValue;
 	}
 
+	/** ADVICE for Constructors **/
+
 	Object around(): constructors() {	
 		if (verbose) {
 			print(" D --> constructor: "+thisJoinPoint);
@@ -124,6 +130,8 @@ aspect DistributeAspect {
 
 		return returnedValue;
 	}
+
+	/** ADVICE for Initializers (ie. class constructors) **/
 
 	void around(): staticConstructors() {
 		if (verbose) {
@@ -151,7 +159,7 @@ aspect DistributeAspect {
 			printStaticCtxt(thisJoinPointStaticPart);
 			printNonStaticCtxt(thisJoinPoint);
 		}
-		Object returnedValue = Distributor.getObjectStatic(
+		Object returnedValue = Distributor.getStatic(
 			thisJoinPointStaticPart,
 			thisJoinPoint.getThis()); //Object sender
 
