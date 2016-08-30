@@ -1,9 +1,7 @@
 package com.ittera.cometa.distributor;
 
-import com.ittera.cometa.distributor.messages.data.*;
-
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import com.ittera.cometa.distributor.messages.data.DataMessageFactory;
+import com.ittera.cometa.distributor.messages.data.Wrappers;
 
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -23,7 +21,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Properties;
 
 public class Distributor {
-  protected static final Logger logger = LogManager.getLogger("distributor");
   protected static final KafkaProducer producer;
   protected static final String kafkaTopic = "test";
   protected static final int id = 10;
@@ -44,7 +41,6 @@ public class Distributor {
 
   // <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
   public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
-    logger.debug("in D.classConstructor: " + staticPart.getSignature());
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildClassInitializerMessage(id, staticPart, sender);
@@ -98,7 +94,6 @@ public class Distributor {
   }
 
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.debug("in D.constructor: " + staticPart.getSignature());
 
     final ConstructorSignature codeSignature = (ConstructorSignature) staticPart.getSignature();
 
@@ -166,7 +161,6 @@ public class Distributor {
   // <editor-fold defaultstate="collapsed" desc="METHOD CALLS">
 
   public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.debug("in D.voidInstanceMethod: " + staticPart.getSignature());
 
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
 
@@ -230,7 +224,6 @@ public class Distributor {
   }
 
   public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.debug("in D.nonVoidInstanceMethod: " + staticPart.getSignature());
 
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
 
@@ -294,7 +287,6 @@ public class Distributor {
   }
 
   public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.debug("in D.voidClassMethod: " + staticPart.getSignature());
 
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
 
@@ -357,7 +349,6 @@ public class Distributor {
   }
 
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.debug("in D.nonVoidClassMethod: " + staticPart.getSignature());
 
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
 
@@ -426,7 +417,6 @@ public class Distributor {
   // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
   //@TODO field operations should also be sent as messages
   public static Object getObjectStatic(StaticPart staticPart, Object sender) {
-    logger.debug("in D.getstatic: " + staticPart.getSignature());
 
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetStaticMessage(id, staticPart, sender);
 
@@ -449,7 +439,6 @@ public class Distributor {
   }
 
   public static Object getObject(StaticPart staticPart, Object sender, Object target) {
-    logger.debug("in D.getfield: " + staticPart.getSignature());
 
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetObjectMessage(id, staticPart, sender, target);
 
@@ -472,7 +461,6 @@ public class Distributor {
   }
 
   public static void putStatic(StaticPart staticPart, Object sender, Object[] args) {
-    logger.debug("in D.putstatic: " + staticPart.getSignature());
 
     final Wrappers.DataMessage msg = DataMessageFactory.buildPutStaticMessage(id, staticPart, sender, args[0]);
 
@@ -494,7 +482,6 @@ public class Distributor {
   }
 
   public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) {
-    logger.debug("in D.putfield: " + staticPart.getSignature());
 
     final Wrappers.DataMessage msg = DataMessageFactory.buildPutObjectMessage(id,staticPart,sender,target,args[0]);
 
