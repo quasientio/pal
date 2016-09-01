@@ -13,7 +13,7 @@ public class ProtobufSerializer implements Serializer {
 
     @Override
     public byte[] serialize(String s, Object o) {
-         return ((com.ittera.cometa.distributor.messages.data.Calls.ConstructorCall)o).toByteArray();
+         return ((com.ittera.cometa.distributor.messages.data.Wrappers.DataMessage)o).toByteArray();
     }
 
     @Override

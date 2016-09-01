@@ -883,11 +883,656 @@ public final class Primitives {
     // @@protoc_insertion_point(class_scope:messages.data.Object)
   }
 
+  public interface ClassOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:messages.data.Class)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>optional string classname = 1;</code>
+     */
+    boolean hasClassname();
+    /**
+     * <code>optional string classname = 1;</code>
+     */
+    java.lang.String getClassname();
+    /**
+     * <code>optional string classname = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getClassnameBytes();
+
+    /**
+     * <code>optional int32 hash = 2;</code>
+     */
+    boolean hasHash();
+    /**
+     * <code>optional int32 hash = 2;</code>
+     */
+    int getHash();
+
+    /**
+     * <code>required int32 identityHash = 3;</code>
+     */
+    boolean hasIdentityHash();
+    /**
+     * <code>required int32 identityHash = 3;</code>
+     */
+    int getIdentityHash();
+  }
+  /**
+   * Protobuf type {@code messages.data.Class}
+   */
+  public static final class Class extends
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.Class)
+      ClassOrBuilder {
+    // Use Class.newBuilder() to construct.
+    private Class(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private Class(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final Class defaultInstance;
+    public static Class getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public Class getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private Class(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000001;
+              classname_ = bs;
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              hash_ = input.readInt32();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              identityHash_ = input.readInt32();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.ittera.cometa.distributor.messages.data.Primitives.internal_static_messages_data_Class_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.ittera.cometa.distributor.messages.data.Primitives.internal_static_messages_data_Class_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.distributor.messages.data.Primitives.Class.class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<Class> PARSER =
+        new com.google.protobuf.AbstractParser<Class>() {
+      public Class parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new Class(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Class> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    public static final int CLASSNAME_FIELD_NUMBER = 1;
+    private java.lang.Object classname_;
+    /**
+     * <code>optional string classname = 1;</code>
+     */
+    public boolean hasClassname() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional string classname = 1;</code>
+     */
+    public java.lang.String getClassname() {
+      java.lang.Object ref = classname_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          classname_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string classname = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getClassnameBytes() {
+      java.lang.Object ref = classname_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        classname_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int HASH_FIELD_NUMBER = 2;
+    private int hash_;
+    /**
+     * <code>optional int32 hash = 2;</code>
+     */
+    public boolean hasHash() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional int32 hash = 2;</code>
+     */
+    public int getHash() {
+      return hash_;
+    }
+
+    public static final int IDENTITYHASH_FIELD_NUMBER = 3;
+    private int identityHash_;
+    /**
+     * <code>required int32 identityHash = 3;</code>
+     */
+    public boolean hasIdentityHash() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required int32 identityHash = 3;</code>
+     */
+    public int getIdentityHash() {
+      return identityHash_;
+    }
+
+    private void initFields() {
+      classname_ = "";
+      hash_ = 0;
+      identityHash_ = 0;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasIdentityHash()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getClassnameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeInt32(2, hash_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt32(3, identityHash_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getClassnameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(2, hash_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(3, identityHash_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static com.ittera.cometa.distributor.messages.data.Primitives.Class parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Primitives.Class parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Primitives.Class parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Primitives.Class parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Primitives.Class parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Primitives.Class parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Primitives.Class parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Primitives.Class parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Primitives.Class parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Primitives.Class parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.ittera.cometa.distributor.messages.data.Primitives.Class prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code messages.data.Class}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.Class)
+        com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.ittera.cometa.distributor.messages.data.Primitives.internal_static_messages_data_Class_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.ittera.cometa.distributor.messages.data.Primitives.internal_static_messages_data_Class_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.distributor.messages.data.Primitives.Class.class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder.class);
+      }
+
+      // Construct using com.ittera.cometa.distributor.messages.data.Primitives.Class.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        classname_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        hash_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        identityHash_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.ittera.cometa.distributor.messages.data.Primitives.internal_static_messages_data_Class_descriptor;
+      }
+
+      public com.ittera.cometa.distributor.messages.data.Primitives.Class getDefaultInstanceForType() {
+        return com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+      }
+
+      public com.ittera.cometa.distributor.messages.data.Primitives.Class build() {
+        com.ittera.cometa.distributor.messages.data.Primitives.Class result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public com.ittera.cometa.distributor.messages.data.Primitives.Class buildPartial() {
+        com.ittera.cometa.distributor.messages.data.Primitives.Class result = new com.ittera.cometa.distributor.messages.data.Primitives.Class(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.classname_ = classname_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.hash_ = hash_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.identityHash_ = identityHash_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.ittera.cometa.distributor.messages.data.Primitives.Class) {
+          return mergeFrom((com.ittera.cometa.distributor.messages.data.Primitives.Class)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.ittera.cometa.distributor.messages.data.Primitives.Class other) {
+        if (other == com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance()) return this;
+        if (other.hasClassname()) {
+          bitField0_ |= 0x00000001;
+          classname_ = other.classname_;
+          onChanged();
+        }
+        if (other.hasHash()) {
+          setHash(other.getHash());
+        }
+        if (other.hasIdentityHash()) {
+          setIdentityHash(other.getIdentityHash());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasIdentityHash()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.ittera.cometa.distributor.messages.data.Primitives.Class parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (com.ittera.cometa.distributor.messages.data.Primitives.Class) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object classname_ = "";
+      /**
+       * <code>optional string classname = 1;</code>
+       */
+      public boolean hasClassname() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional string classname = 1;</code>
+       */
+      public java.lang.String getClassname() {
+        java.lang.Object ref = classname_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            classname_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string classname = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getClassnameBytes() {
+        java.lang.Object ref = classname_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          classname_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string classname = 1;</code>
+       */
+      public Builder setClassname(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        classname_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string classname = 1;</code>
+       */
+      public Builder clearClassname() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        classname_ = getDefaultInstance().getClassname();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string classname = 1;</code>
+       */
+      public Builder setClassnameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        classname_ = value;
+        onChanged();
+        return this;
+      }
+
+      private int hash_ ;
+      /**
+       * <code>optional int32 hash = 2;</code>
+       */
+      public boolean hasHash() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional int32 hash = 2;</code>
+       */
+      public int getHash() {
+        return hash_;
+      }
+      /**
+       * <code>optional int32 hash = 2;</code>
+       */
+      public Builder setHash(int value) {
+        bitField0_ |= 0x00000002;
+        hash_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 hash = 2;</code>
+       */
+      public Builder clearHash() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        hash_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private int identityHash_ ;
+      /**
+       * <code>required int32 identityHash = 3;</code>
+       */
+      public boolean hasIdentityHash() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>required int32 identityHash = 3;</code>
+       */
+      public int getIdentityHash() {
+        return identityHash_;
+      }
+      /**
+       * <code>required int32 identityHash = 3;</code>
+       */
+      public Builder setIdentityHash(int value) {
+        bitField0_ |= 0x00000004;
+        identityHash_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required int32 identityHash = 3;</code>
+       */
+      public Builder clearIdentityHash() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        identityHash_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:messages.data.Class)
+    }
+
+    static {
+      defaultInstance = new Class(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:messages.data.Class)
+  }
+
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_Object_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_messages_data_Object_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_messages_data_Class_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_Class_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -900,8 +1545,10 @@ public final class Primitives {
       "\n\020primitives.proto\022\rmessages.data\"b\n\006Obj" +
       "ect\022\r\n\005value\030\001 \001(\t\022\014\n\004hash\030\002 \001(\005\022\024\n\014iden" +
       "tityHash\030\003 \002(\005\022\r\n\005class\030\004 \001(\t\022\026\n\007trimmed" +
-      "\030\005 \001(\010:\005falseB/\n+com.ittera.cometa.distr" +
-      "ibutor.messages.dataH\001"
+      "\030\005 \001(\010:\005false\">\n\005Class\022\021\n\tclassname\030\001 \001(" +
+      "\t\022\014\n\004hash\030\002 \001(\005\022\024\n\014identityHash\030\003 \002(\005B/\n" +
+      "+com.ittera.cometa.distributor.messages." +
+      "dataH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -921,6 +1568,12 @@ public final class Primitives {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_Object_descriptor,
         new java.lang.String[] { "Value", "Hash", "IdentityHash", "Class_", "Trimmed", });
+    internal_static_messages_data_Class_descriptor =
+      getDescriptor().getMessageTypes().get(1);
+    internal_static_messages_data_Class_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_messages_data_Class_descriptor,
+        new java.lang.String[] { "Classname", "Hash", "IdentityHash", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

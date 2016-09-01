@@ -16,7 +16,7 @@ message StaticFieldGet {
 
     required int64 currentTime = 3;
 
-    //TO DO:  IP or hostname for this Distributor
+    //TODO:  IP or hostname for this Distributor
 
     // --- CONTEXT
 
@@ -38,7 +38,7 @@ message StaticFieldGet {
     optional int32 sourceLocationLine = 11;
     optional string sourceLocationType = 12;
 
-    //TO DO:  annotations
+    //TODO:  annotations
 }
 
 message StaticFieldPut {
@@ -51,7 +51,7 @@ message StaticFieldPut {
 
     required int64 currentTime = 3;
 
-    //TO DO:  IP or hostname for this Distributor
+    //TODO:  IP or hostname for this Distributor
 
     // --- CONTEXT
 
@@ -75,9 +75,40 @@ message StaticFieldPut {
     optional int32 sourceLocationLine = 12;
     optional string sourceLocationType = 13;
 
-    //TO DO:  annotations
+    //TODO:  annotations
 }
 
+message StaticFieldPutDone {
+    // --- CONTEXT
+
+    optional int32 distributorId = 1;
+
+    //NOTE: The id of a terminated thread may be reused
+    optional int64 threadId = 2;
+
+    required int64 currentTime = 3;
+
+    //TODO:  IP or hostname for this Distributor
+
+    // --- CONTEXT
+
+    //TODO from here all should be replaced by reference to originator StaticFieldPut message
+    required string class = 4;
+
+    required string field = 5;
+
+    required string fieldType = 6;
+
+    required Object value = 7;
+
+    //The modifiers can be decoded with the Modifier class
+    optional int32 modifiers = 8;
+
+    optional string senderClassName = 9;
+
+    optional Object sender = 10;
+
+}
 message InstanceFieldGet {
     // --- CONTEXT
 
@@ -88,7 +119,7 @@ message InstanceFieldGet {
 
     required int64 currentTime = 3;
 
-    //TO DO:  IP or hostname for this Distributor
+    //TODO:  IP or hostname for this Distributor
 
     // --- CONTEXT
 
@@ -112,7 +143,7 @@ message InstanceFieldGet {
     optional int32 sourceLocationLine = 12;
     optional string sourceLocationType = 13;
 
-    //TO DO:  annotations
+    //TODO:  annotations
 }
 
 message InstanceFieldPut {
@@ -125,7 +156,7 @@ message InstanceFieldPut {
 
     required int64 currentTime = 3;
 
-    //TO DO:  IP or hostname for this Distributor
+    //TODO:  IP or hostname for this Distributor
 
     // --- CONTEXT
 
@@ -151,6 +182,41 @@ message InstanceFieldPut {
     optional int32 sourceLocationLine = 13;
     optional string sourceLocationType = 14;
 
-    //TO DO:  annotations
+    //TODO:  annotations
 
+}
+
+
+message InstanceFieldPutDone {
+    // --- CONTEXT
+
+    optional int32 distributorId = 1;
+
+    //NOTE: The id of a terminated thread may be reused
+    optional int64 threadId = 2;
+
+    required int64 currentTime = 3;
+
+    //TODO:  IP or hostname for this Distributor
+
+    // --- CONTEXT
+
+    //TODO from here all should be replaced by reference to originator InstanceFieldPut message
+
+    required string class = 4;
+
+    required Object target = 5;
+
+    required string field = 6;
+
+    required string fieldType = 7;
+
+    required Object value = 8;
+
+    //The modifiers can be decoded with the Modifier class
+    optional int32 modifiers = 9;
+
+    optional string senderClassName = 10;
+
+    optional Object sender = 11;
 }

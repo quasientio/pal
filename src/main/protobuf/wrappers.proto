@@ -10,17 +10,20 @@ option optimize_for = SPEED;
 
 message DataMessage {
     required string msgType = 1;
+    required int64 threadId = 2;
 
     oneof calltype {
-       ConstructorCall constructorCall = 2;
-       InstanceMethodCall instanceMethodCall = 3;
-       ClassMethodCall classMethodCall = 4;
-       ClInitCall clinitCall = 5;
-       StaticFieldGet staticFieldGet = 6;
-       StaticFieldPut staticFieldPut = 7;
-       InstanceFieldGet instanceFieldGet = 8;
-       InstanceFieldPut instanceFieldPut = 9;
-       RaisedThrowable raisedThrowable = 10;
-       ReturnValue returnValue = 11;
+       ConstructorCall constructorCall = 3;
+       InstanceMethodCall instanceMethodCall = 4;
+       ClassMethodCall classMethodCall = 5;
+       ClInitCall clinitCall = 6;
+       StaticFieldGet staticFieldGet = 7;
+       StaticFieldPut staticFieldPut = 8;
+       InstanceFieldGet instanceFieldGet = 9;
+       InstanceFieldPut instanceFieldPut = 10;
+       RaisedThrowable raisedThrowable = 11;
+       ReturnValue returnValue = 12;
+       StaticFieldPutDone staticFieldPutDone = 13;
+       InstanceFieldPutDone instanceFieldPutDone = 14;
     }
 }

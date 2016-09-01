@@ -11,3 +11,9 @@ message Object {
     optional bool trimmed = 5 [default = false];
 }
 
+message Class {
+    optional string classname = 1;
+    optional int32 hash = 2;
+    required int32 identityHash = 3;
+}
+

@@ -26,6 +26,10 @@ message ReturnValue {
 
     optional bool isVoid = 4 [default = false];
 
-    optional Object value = 5;
+    optional bool isClass = 5 [default = false];
+
+    optional Object value = 6;
+
+    optional Class clazz = 7;
 }
 

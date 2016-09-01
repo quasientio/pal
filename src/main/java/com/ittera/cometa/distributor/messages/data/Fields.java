@@ -4221,6 +4221,1823 @@ public final class Fields {
     // @@protoc_insertion_point(class_scope:messages.data.StaticFieldPut)
   }
 
+  public interface StaticFieldPutDoneOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:messages.data.StaticFieldPutDone)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>optional int32 distributorId = 1;</code>
+     */
+    boolean hasDistributorId();
+    /**
+     * <code>optional int32 distributorId = 1;</code>
+     */
+    int getDistributorId();
+
+    /**
+     * <code>optional int64 threadId = 2;</code>
+     *
+     * <pre>
+     *NOTE: The id of a terminated thread may be reused
+     * </pre>
+     */
+    boolean hasThreadId();
+    /**
+     * <code>optional int64 threadId = 2;</code>
+     *
+     * <pre>
+     *NOTE: The id of a terminated thread may be reused
+     * </pre>
+     */
+    long getThreadId();
+
+    /**
+     * <code>required int64 currentTime = 3;</code>
+     */
+    boolean hasCurrentTime();
+    /**
+     * <code>required int64 currentTime = 3;</code>
+     */
+    long getCurrentTime();
+
+    /**
+     * <code>required string class = 4;</code>
+     *
+     * <pre>
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
+     * </pre>
+     */
+    boolean hasClass_();
+    /**
+     * <code>required string class = 4;</code>
+     *
+     * <pre>
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
+     * </pre>
+     */
+    java.lang.String getClass_();
+    /**
+     * <code>required string class = 4;</code>
+     *
+     * <pre>
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
+     * </pre>
+     */
+    com.google.protobuf.ByteString
+        getClass_Bytes();
+
+    /**
+     * <code>required string field = 5;</code>
+     */
+    boolean hasField();
+    /**
+     * <code>required string field = 5;</code>
+     */
+    java.lang.String getField();
+    /**
+     * <code>required string field = 5;</code>
+     */
+    com.google.protobuf.ByteString
+        getFieldBytes();
+
+    /**
+     * <code>required string fieldType = 6;</code>
+     */
+    boolean hasFieldType();
+    /**
+     * <code>required string fieldType = 6;</code>
+     */
+    java.lang.String getFieldType();
+    /**
+     * <code>required string fieldType = 6;</code>
+     */
+    com.google.protobuf.ByteString
+        getFieldTypeBytes();
+
+    /**
+     * <code>required .messages.data.Object value = 7;</code>
+     */
+    boolean hasValue();
+    /**
+     * <code>required .messages.data.Object value = 7;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.Object getValue();
+    /**
+     * <code>required .messages.data.Object value = 7;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getValueOrBuilder();
+
+    /**
+     * <code>optional int32 modifiers = 8;</code>
+     *
+     * <pre>
+     *The modifiers can be decoded with the Modifier class
+     * </pre>
+     */
+    boolean hasModifiers();
+    /**
+     * <code>optional int32 modifiers = 8;</code>
+     *
+     * <pre>
+     *The modifiers can be decoded with the Modifier class
+     * </pre>
+     */
+    int getModifiers();
+
+    /**
+     * <code>optional string senderClassName = 9;</code>
+     */
+    boolean hasSenderClassName();
+    /**
+     * <code>optional string senderClassName = 9;</code>
+     */
+    java.lang.String getSenderClassName();
+    /**
+     * <code>optional string senderClassName = 9;</code>
+     */
+    com.google.protobuf.ByteString
+        getSenderClassNameBytes();
+
+    /**
+     * <code>optional .messages.data.Object sender = 10;</code>
+     */
+    boolean hasSender();
+    /**
+     * <code>optional .messages.data.Object sender = 10;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
+    /**
+     * <code>optional .messages.data.Object sender = 10;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder();
+  }
+  /**
+   * Protobuf type {@code messages.data.StaticFieldPutDone}
+   *
+   * <pre>
+   * --- CONTEXT
+   * </pre>
+   */
+  public static final class StaticFieldPutDone extends
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.StaticFieldPutDone)
+      StaticFieldPutDoneOrBuilder {
+    // Use StaticFieldPutDone.newBuilder() to construct.
+    private StaticFieldPutDone(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private StaticFieldPutDone(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final StaticFieldPutDone defaultInstance;
+    public static StaticFieldPutDone getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public StaticFieldPutDone getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private StaticFieldPutDone(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              distributorId_ = input.readInt32();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              threadId_ = input.readInt64();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              currentTime_ = input.readInt64();
+              break;
+            }
+            case 34: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000008;
+              class__ = bs;
+              break;
+            }
+            case 42: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000010;
+              field_ = bs;
+              break;
+            }
+            case 50: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000020;
+              fieldType_ = bs;
+              break;
+            }
+            case 58: {
+              com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000040) == 0x00000040)) {
+                subBuilder = value_.toBuilder();
+              }
+              value_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(value_);
+                value_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000040;
+              break;
+            }
+            case 64: {
+              bitField0_ |= 0x00000080;
+              modifiers_ = input.readInt32();
+              break;
+            }
+            case 74: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000100;
+              senderClassName_ = bs;
+              break;
+            }
+            case 82: {
+              com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000200) == 0x00000200)) {
+                subBuilder = sender_.toBuilder();
+              }
+              sender_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(sender_);
+                sender_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000200;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPutDone_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPutDone_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<StaticFieldPutDone> PARSER =
+        new com.google.protobuf.AbstractParser<StaticFieldPutDone>() {
+      public StaticFieldPutDone parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new StaticFieldPutDone(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<StaticFieldPutDone> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    public static final int DISTRIBUTORID_FIELD_NUMBER = 1;
+    private int distributorId_;
+    /**
+     * <code>optional int32 distributorId = 1;</code>
+     */
+    public boolean hasDistributorId() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional int32 distributorId = 1;</code>
+     */
+    public int getDistributorId() {
+      return distributorId_;
+    }
+
+    public static final int THREADID_FIELD_NUMBER = 2;
+    private long threadId_;
+    /**
+     * <code>optional int64 threadId = 2;</code>
+     *
+     * <pre>
+     *NOTE: The id of a terminated thread may be reused
+     * </pre>
+     */
+    public boolean hasThreadId() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional int64 threadId = 2;</code>
+     *
+     * <pre>
+     *NOTE: The id of a terminated thread may be reused
+     * </pre>
+     */
+    public long getThreadId() {
+      return threadId_;
+    }
+
+    public static final int CURRENTTIME_FIELD_NUMBER = 3;
+    private long currentTime_;
+    /**
+     * <code>required int64 currentTime = 3;</code>
+     */
+    public boolean hasCurrentTime() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required int64 currentTime = 3;</code>
+     */
+    public long getCurrentTime() {
+      return currentTime_;
+    }
+
+    public static final int CLASS_FIELD_NUMBER = 4;
+    private java.lang.Object class__;
+    /**
+     * <code>required string class = 4;</code>
+     *
+     * <pre>
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
+     * </pre>
+     */
+    public boolean hasClass_() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>required string class = 4;</code>
+     *
+     * <pre>
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
+     * </pre>
+     */
+    public java.lang.String getClass_() {
+      java.lang.Object ref = class__;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          class__ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string class = 4;</code>
+     *
+     * <pre>
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
+     * </pre>
+     */
+    public com.google.protobuf.ByteString
+        getClass_Bytes() {
+      java.lang.Object ref = class__;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        class__ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int FIELD_FIELD_NUMBER = 5;
+    private java.lang.Object field_;
+    /**
+     * <code>required string field = 5;</code>
+     */
+    public boolean hasField() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>required string field = 5;</code>
+     */
+    public java.lang.String getField() {
+      java.lang.Object ref = field_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          field_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string field = 5;</code>
+     */
+    public com.google.protobuf.ByteString
+        getFieldBytes() {
+      java.lang.Object ref = field_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        field_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int FIELDTYPE_FIELD_NUMBER = 6;
+    private java.lang.Object fieldType_;
+    /**
+     * <code>required string fieldType = 6;</code>
+     */
+    public boolean hasFieldType() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>required string fieldType = 6;</code>
+     */
+    public java.lang.String getFieldType() {
+      java.lang.Object ref = fieldType_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          fieldType_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string fieldType = 6;</code>
+     */
+    public com.google.protobuf.ByteString
+        getFieldTypeBytes() {
+      java.lang.Object ref = fieldType_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        fieldType_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int VALUE_FIELD_NUMBER = 7;
+    private com.ittera.cometa.distributor.messages.data.Primitives.Object value_;
+    /**
+     * <code>required .messages.data.Object value = 7;</code>
+     */
+    public boolean hasValue() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>required .messages.data.Object value = 7;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.Object getValue() {
+      return value_;
+    }
+    /**
+     * <code>required .messages.data.Object value = 7;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getValueOrBuilder() {
+      return value_;
+    }
+
+    public static final int MODIFIERS_FIELD_NUMBER = 8;
+    private int modifiers_;
+    /**
+     * <code>optional int32 modifiers = 8;</code>
+     *
+     * <pre>
+     *The modifiers can be decoded with the Modifier class
+     * </pre>
+     */
+    public boolean hasModifiers() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional int32 modifiers = 8;</code>
+     *
+     * <pre>
+     *The modifiers can be decoded with the Modifier class
+     * </pre>
+     */
+    public int getModifiers() {
+      return modifiers_;
+    }
+
+    public static final int SENDERCLASSNAME_FIELD_NUMBER = 9;
+    private java.lang.Object senderClassName_;
+    /**
+     * <code>optional string senderClassName = 9;</code>
+     */
+    public boolean hasSenderClassName() {
+      return ((bitField0_ & 0x00000100) == 0x00000100);
+    }
+    /**
+     * <code>optional string senderClassName = 9;</code>
+     */
+    public java.lang.String getSenderClassName() {
+      java.lang.Object ref = senderClassName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          senderClassName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string senderClassName = 9;</code>
+     */
+    public com.google.protobuf.ByteString
+        getSenderClassNameBytes() {
+      java.lang.Object ref = senderClassName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        senderClassName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int SENDER_FIELD_NUMBER = 10;
+    private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
+    /**
+     * <code>optional .messages.data.Object sender = 10;</code>
+     */
+    public boolean hasSender() {
+      return ((bitField0_ & 0x00000200) == 0x00000200);
+    }
+    /**
+     * <code>optional .messages.data.Object sender = 10;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
+      return sender_;
+    }
+    /**
+     * <code>optional .messages.data.Object sender = 10;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
+      return sender_;
+    }
+
+    private void initFields() {
+      distributorId_ = 0;
+      threadId_ = 0L;
+      currentTime_ = 0L;
+      class__ = "";
+      field_ = "";
+      fieldType_ = "";
+      value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+      modifiers_ = 0;
+      senderClassName_ = "";
+      sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasCurrentTime()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasClass_()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasField()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasFieldType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasValue()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getValue().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (hasSender()) {
+        if (!getSender().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeInt32(1, distributorId_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeInt64(2, threadId_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt64(3, currentTime_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBytes(4, getClass_Bytes());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBytes(5, getFieldBytes());
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBytes(6, getFieldTypeBytes());
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeMessage(7, value_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeInt32(8, modifiers_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        output.writeBytes(9, getSenderClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        output.writeMessage(10, sender_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(1, distributorId_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, threadId_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(3, currentTime_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, getClass_Bytes());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(5, getFieldBytes());
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(6, getFieldTypeBytes());
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(7, value_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(8, modifiers_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(9, getSenderClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(10, sender_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code messages.data.StaticFieldPutDone}
+     *
+     * <pre>
+     * --- CONTEXT
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.StaticFieldPutDone)
+        com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDoneOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPutDone_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPutDone_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.Builder.class);
+      }
+
+      // Construct using com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getValueFieldBuilder();
+          getSenderFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        distributorId_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        threadId_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        currentTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        class__ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
+        field_ = "";
+        bitField0_ = (bitField0_ & ~0x00000010);
+        fieldType_ = "";
+        bitField0_ = (bitField0_ & ~0x00000020);
+        if (valueBuilder_ == null) {
+          value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+        } else {
+          valueBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000040);
+        modifiers_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000080);
+        senderClassName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000100);
+        if (senderBuilder_ == null) {
+          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+        } else {
+          senderBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000200);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPutDone_descriptor;
+      }
+
+      public com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone getDefaultInstanceForType() {
+        return com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance();
+      }
+
+      public com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone build() {
+        com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone buildPartial() {
+        com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone result = new com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.distributorId_ = distributorId_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.threadId_ = threadId_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.currentTime_ = currentTime_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.class__ = class__;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.field_ = field_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.fieldType_ = fieldType_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        if (valueBuilder_ == null) {
+          result.value_ = value_;
+        } else {
+          result.value_ = valueBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.modifiers_ = modifiers_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000100;
+        }
+        result.senderClassName_ = senderClassName_;
+        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
+          to_bitField0_ |= 0x00000200;
+        }
+        if (senderBuilder_ == null) {
+          result.sender_ = sender_;
+        } else {
+          result.sender_ = senderBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) {
+          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone other) {
+        if (other == com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance()) return this;
+        if (other.hasDistributorId()) {
+          setDistributorId(other.getDistributorId());
+        }
+        if (other.hasThreadId()) {
+          setThreadId(other.getThreadId());
+        }
+        if (other.hasCurrentTime()) {
+          setCurrentTime(other.getCurrentTime());
+        }
+        if (other.hasClass_()) {
+          bitField0_ |= 0x00000008;
+          class__ = other.class__;
+          onChanged();
+        }
+        if (other.hasField()) {
+          bitField0_ |= 0x00000010;
+          field_ = other.field_;
+          onChanged();
+        }
+        if (other.hasFieldType()) {
+          bitField0_ |= 0x00000020;
+          fieldType_ = other.fieldType_;
+          onChanged();
+        }
+        if (other.hasValue()) {
+          mergeValue(other.getValue());
+        }
+        if (other.hasModifiers()) {
+          setModifiers(other.getModifiers());
+        }
+        if (other.hasSenderClassName()) {
+          bitField0_ |= 0x00000100;
+          senderClassName_ = other.senderClassName_;
+          onChanged();
+        }
+        if (other.hasSender()) {
+          mergeSender(other.getSender());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasCurrentTime()) {
+          
+          return false;
+        }
+        if (!hasClass_()) {
+          
+          return false;
+        }
+        if (!hasField()) {
+          
+          return false;
+        }
+        if (!hasFieldType()) {
+          
+          return false;
+        }
+        if (!hasValue()) {
+          
+          return false;
+        }
+        if (!getValue().isInitialized()) {
+          
+          return false;
+        }
+        if (hasSender()) {
+          if (!getSender().isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private int distributorId_ ;
+      /**
+       * <code>optional int32 distributorId = 1;</code>
+       */
+      public boolean hasDistributorId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional int32 distributorId = 1;</code>
+       */
+      public int getDistributorId() {
+        return distributorId_;
+      }
+      /**
+       * <code>optional int32 distributorId = 1;</code>
+       */
+      public Builder setDistributorId(int value) {
+        bitField0_ |= 0x00000001;
+        distributorId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 distributorId = 1;</code>
+       */
+      public Builder clearDistributorId() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        distributorId_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private long threadId_ ;
+      /**
+       * <code>optional int64 threadId = 2;</code>
+       *
+       * <pre>
+       *NOTE: The id of a terminated thread may be reused
+       * </pre>
+       */
+      public boolean hasThreadId() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional int64 threadId = 2;</code>
+       *
+       * <pre>
+       *NOTE: The id of a terminated thread may be reused
+       * </pre>
+       */
+      public long getThreadId() {
+        return threadId_;
+      }
+      /**
+       * <code>optional int64 threadId = 2;</code>
+       *
+       * <pre>
+       *NOTE: The id of a terminated thread may be reused
+       * </pre>
+       */
+      public Builder setThreadId(long value) {
+        bitField0_ |= 0x00000002;
+        threadId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int64 threadId = 2;</code>
+       *
+       * <pre>
+       *NOTE: The id of a terminated thread may be reused
+       * </pre>
+       */
+      public Builder clearThreadId() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        threadId_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      private long currentTime_ ;
+      /**
+       * <code>required int64 currentTime = 3;</code>
+       */
+      public boolean hasCurrentTime() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>required int64 currentTime = 3;</code>
+       */
+      public long getCurrentTime() {
+        return currentTime_;
+      }
+      /**
+       * <code>required int64 currentTime = 3;</code>
+       */
+      public Builder setCurrentTime(long value) {
+        bitField0_ |= 0x00000004;
+        currentTime_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required int64 currentTime = 3;</code>
+       */
+      public Builder clearCurrentTime() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        currentTime_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object class__ = "";
+      /**
+       * <code>required string class = 4;</code>
+       *
+       * <pre>
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
+       * </pre>
+       */
+      public boolean hasClass_() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>required string class = 4;</code>
+       *
+       * <pre>
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
+       * </pre>
+       */
+      public java.lang.String getClass_() {
+        java.lang.Object ref = class__;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            class__ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string class = 4;</code>
+       *
+       * <pre>
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
+       * </pre>
+       */
+      public com.google.protobuf.ByteString
+          getClass_Bytes() {
+        java.lang.Object ref = class__;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          class__ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string class = 4;</code>
+       *
+       * <pre>
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
+       * </pre>
+       */
+      public Builder setClass_(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        class__ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string class = 4;</code>
+       *
+       * <pre>
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
+       * </pre>
+       */
+      public Builder clearClass_() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        class__ = getDefaultInstance().getClass_();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string class = 4;</code>
+       *
+       * <pre>
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
+       * </pre>
+       */
+      public Builder setClass_Bytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        class__ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object field_ = "";
+      /**
+       * <code>required string field = 5;</code>
+       */
+      public boolean hasField() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>required string field = 5;</code>
+       */
+      public java.lang.String getField() {
+        java.lang.Object ref = field_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            field_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string field = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+          getFieldBytes() {
+        java.lang.Object ref = field_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          field_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string field = 5;</code>
+       */
+      public Builder setField(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        field_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string field = 5;</code>
+       */
+      public Builder clearField() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        field_ = getDefaultInstance().getField();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string field = 5;</code>
+       */
+      public Builder setFieldBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        field_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object fieldType_ = "";
+      /**
+       * <code>required string fieldType = 6;</code>
+       */
+      public boolean hasFieldType() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <code>required string fieldType = 6;</code>
+       */
+      public java.lang.String getFieldType() {
+        java.lang.Object ref = fieldType_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            fieldType_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string fieldType = 6;</code>
+       */
+      public com.google.protobuf.ByteString
+          getFieldTypeBytes() {
+        java.lang.Object ref = fieldType_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          fieldType_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string fieldType = 6;</code>
+       */
+      public Builder setFieldType(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        fieldType_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string fieldType = 6;</code>
+       */
+      public Builder clearFieldType() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        fieldType_ = getDefaultInstance().getFieldType();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string fieldType = 6;</code>
+       */
+      public Builder setFieldTypeBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        fieldType_ = value;
+        onChanged();
+        return this;
+      }
+
+      private com.ittera.cometa.distributor.messages.data.Primitives.Object value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> valueBuilder_;
+      /**
+       * <code>required .messages.data.Object value = 7;</code>
+       */
+      public boolean hasValue() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>required .messages.data.Object value = 7;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object getValue() {
+        if (valueBuilder_ == null) {
+          return value_;
+        } else {
+          return valueBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .messages.data.Object value = 7;</code>
+       */
+      public Builder setValue(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (valueBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          value_ = value;
+          onChanged();
+        } else {
+          valueBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000040;
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object value = 7;</code>
+       */
+      public Builder setValue(
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (valueBuilder_ == null) {
+          value_ = builderForValue.build();
+          onChanged();
+        } else {
+          valueBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000040;
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object value = 7;</code>
+       */
+      public Builder mergeValue(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (valueBuilder_ == null) {
+          if (((bitField0_ & 0x00000040) == 0x00000040) &&
+              value_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+            value_ =
+              com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(value_).mergeFrom(value).buildPartial();
+          } else {
+            value_ = value;
+          }
+          onChanged();
+        } else {
+          valueBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000040;
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object value = 7;</code>
+       */
+      public Builder clearValue() {
+        if (valueBuilder_ == null) {
+          value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+          onChanged();
+        } else {
+          valueBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000040);
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object value = 7;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getValueBuilder() {
+        bitField0_ |= 0x00000040;
+        onChanged();
+        return getValueFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .messages.data.Object value = 7;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getValueOrBuilder() {
+        if (valueBuilder_ != null) {
+          return valueBuilder_.getMessageOrBuilder();
+        } else {
+          return value_;
+        }
+      }
+      /**
+       * <code>required .messages.data.Object value = 7;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getValueFieldBuilder() {
+        if (valueBuilder_ == null) {
+          valueBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getValue(),
+                  getParentForChildren(),
+                  isClean());
+          value_ = null;
+        }
+        return valueBuilder_;
+      }
+
+      private int modifiers_ ;
+      /**
+       * <code>optional int32 modifiers = 8;</code>
+       *
+       * <pre>
+       *The modifiers can be decoded with the Modifier class
+       * </pre>
+       */
+      public boolean hasModifiers() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      /**
+       * <code>optional int32 modifiers = 8;</code>
+       *
+       * <pre>
+       *The modifiers can be decoded with the Modifier class
+       * </pre>
+       */
+      public int getModifiers() {
+        return modifiers_;
+      }
+      /**
+       * <code>optional int32 modifiers = 8;</code>
+       *
+       * <pre>
+       *The modifiers can be decoded with the Modifier class
+       * </pre>
+       */
+      public Builder setModifiers(int value) {
+        bitField0_ |= 0x00000080;
+        modifiers_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 modifiers = 8;</code>
+       *
+       * <pre>
+       *The modifiers can be decoded with the Modifier class
+       * </pre>
+       */
+      public Builder clearModifiers() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        modifiers_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object senderClassName_ = "";
+      /**
+       * <code>optional string senderClassName = 9;</code>
+       */
+      public boolean hasSenderClassName() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      /**
+       * <code>optional string senderClassName = 9;</code>
+       */
+      public java.lang.String getSenderClassName() {
+        java.lang.Object ref = senderClassName_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            senderClassName_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string senderClassName = 9;</code>
+       */
+      public com.google.protobuf.ByteString
+          getSenderClassNameBytes() {
+        java.lang.Object ref = senderClassName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          senderClassName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string senderClassName = 9;</code>
+       */
+      public Builder setSenderClassName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000100;
+        senderClassName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string senderClassName = 9;</code>
+       */
+      public Builder clearSenderClassName() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        senderClassName_ = getDefaultInstance().getSenderClassName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string senderClassName = 9;</code>
+       */
+      public Builder setSenderClassNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000100;
+        senderClassName_ = value;
+        onChanged();
+        return this;
+      }
+
+      private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
+      /**
+       * <code>optional .messages.data.Object sender = 10;</code>
+       */
+      public boolean hasSender() {
+        return ((bitField0_ & 0x00000200) == 0x00000200);
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 10;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
+        if (senderBuilder_ == null) {
+          return sender_;
+        } else {
+          return senderBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 10;</code>
+       */
+      public Builder setSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (senderBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          sender_ = value;
+          onChanged();
+        } else {
+          senderBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000200;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 10;</code>
+       */
+      public Builder setSender(
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (senderBuilder_ == null) {
+          sender_ = builderForValue.build();
+          onChanged();
+        } else {
+          senderBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000200;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 10;</code>
+       */
+      public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (senderBuilder_ == null) {
+          if (((bitField0_ & 0x00000200) == 0x00000200) &&
+              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+            sender_ =
+              com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
+          } else {
+            sender_ = value;
+          }
+          onChanged();
+        } else {
+          senderBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000200;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 10;</code>
+       */
+      public Builder clearSender() {
+        if (senderBuilder_ == null) {
+          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+          onChanged();
+        } else {
+          senderBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000200);
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 10;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getSenderBuilder() {
+        bitField0_ |= 0x00000200;
+        onChanged();
+        return getSenderFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 10;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
+        if (senderBuilder_ != null) {
+          return senderBuilder_.getMessageOrBuilder();
+        } else {
+          return sender_;
+        }
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 10;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getSenderFieldBuilder() {
+        if (senderBuilder_ == null) {
+          senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getSender(),
+                  getParentForChildren(),
+                  isClean());
+          sender_ = null;
+        }
+        return senderBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:messages.data.StaticFieldPutDone)
+    }
+
+    static {
+      defaultInstance = new StaticFieldPutDone(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:messages.data.StaticFieldPutDone)
+  }
+
   public interface InstanceFieldGetOrBuilder extends
       // @@protoc_insertion_point(interface_extends:messages.data.InstanceFieldGet)
       com.google.protobuf.MessageOrBuilder {
@@ -8844,6 +10661,1980 @@ public final class Fields {
     // @@protoc_insertion_point(class_scope:messages.data.InstanceFieldPut)
   }
 
+  public interface InstanceFieldPutDoneOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:messages.data.InstanceFieldPutDone)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>optional int32 distributorId = 1;</code>
+     */
+    boolean hasDistributorId();
+    /**
+     * <code>optional int32 distributorId = 1;</code>
+     */
+    int getDistributorId();
+
+    /**
+     * <code>optional int64 threadId = 2;</code>
+     *
+     * <pre>
+     *NOTE: The id of a terminated thread may be reused
+     * </pre>
+     */
+    boolean hasThreadId();
+    /**
+     * <code>optional int64 threadId = 2;</code>
+     *
+     * <pre>
+     *NOTE: The id of a terminated thread may be reused
+     * </pre>
+     */
+    long getThreadId();
+
+    /**
+     * <code>required int64 currentTime = 3;</code>
+     */
+    boolean hasCurrentTime();
+    /**
+     * <code>required int64 currentTime = 3;</code>
+     */
+    long getCurrentTime();
+
+    /**
+     * <code>required string class = 4;</code>
+     */
+    boolean hasClass_();
+    /**
+     * <code>required string class = 4;</code>
+     */
+    java.lang.String getClass_();
+    /**
+     * <code>required string class = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getClass_Bytes();
+
+    /**
+     * <code>required .messages.data.Object target = 5;</code>
+     */
+    boolean hasTarget();
+    /**
+     * <code>required .messages.data.Object target = 5;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.Object getTarget();
+    /**
+     * <code>required .messages.data.Object target = 5;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getTargetOrBuilder();
+
+    /**
+     * <code>required string field = 6;</code>
+     */
+    boolean hasField();
+    /**
+     * <code>required string field = 6;</code>
+     */
+    java.lang.String getField();
+    /**
+     * <code>required string field = 6;</code>
+     */
+    com.google.protobuf.ByteString
+        getFieldBytes();
+
+    /**
+     * <code>required string fieldType = 7;</code>
+     */
+    boolean hasFieldType();
+    /**
+     * <code>required string fieldType = 7;</code>
+     */
+    java.lang.String getFieldType();
+    /**
+     * <code>required string fieldType = 7;</code>
+     */
+    com.google.protobuf.ByteString
+        getFieldTypeBytes();
+
+    /**
+     * <code>required .messages.data.Object value = 8;</code>
+     */
+    boolean hasValue();
+    /**
+     * <code>required .messages.data.Object value = 8;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.Object getValue();
+    /**
+     * <code>required .messages.data.Object value = 8;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getValueOrBuilder();
+
+    /**
+     * <code>optional int32 modifiers = 9;</code>
+     *
+     * <pre>
+     *The modifiers can be decoded with the Modifier class
+     * </pre>
+     */
+    boolean hasModifiers();
+    /**
+     * <code>optional int32 modifiers = 9;</code>
+     *
+     * <pre>
+     *The modifiers can be decoded with the Modifier class
+     * </pre>
+     */
+    int getModifiers();
+
+    /**
+     * <code>optional string senderClassName = 10;</code>
+     */
+    boolean hasSenderClassName();
+    /**
+     * <code>optional string senderClassName = 10;</code>
+     */
+    java.lang.String getSenderClassName();
+    /**
+     * <code>optional string senderClassName = 10;</code>
+     */
+    com.google.protobuf.ByteString
+        getSenderClassNameBytes();
+
+    /**
+     * <code>optional .messages.data.Object sender = 11;</code>
+     */
+    boolean hasSender();
+    /**
+     * <code>optional .messages.data.Object sender = 11;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
+    /**
+     * <code>optional .messages.data.Object sender = 11;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder();
+  }
+  /**
+   * Protobuf type {@code messages.data.InstanceFieldPutDone}
+   *
+   * <pre>
+   * --- CONTEXT
+   * </pre>
+   */
+  public static final class InstanceFieldPutDone extends
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.InstanceFieldPutDone)
+      InstanceFieldPutDoneOrBuilder {
+    // Use InstanceFieldPutDone.newBuilder() to construct.
+    private InstanceFieldPutDone(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private InstanceFieldPutDone(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final InstanceFieldPutDone defaultInstance;
+    public static InstanceFieldPutDone getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public InstanceFieldPutDone getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private InstanceFieldPutDone(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              distributorId_ = input.readInt32();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              threadId_ = input.readInt64();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              currentTime_ = input.readInt64();
+              break;
+            }
+            case 34: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000008;
+              class__ = bs;
+              break;
+            }
+            case 42: {
+              com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000010) == 0x00000010)) {
+                subBuilder = target_.toBuilder();
+              }
+              target_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(target_);
+                target_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000010;
+              break;
+            }
+            case 50: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000020;
+              field_ = bs;
+              break;
+            }
+            case 58: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000040;
+              fieldType_ = bs;
+              break;
+            }
+            case 66: {
+              com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000080) == 0x00000080)) {
+                subBuilder = value_.toBuilder();
+              }
+              value_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(value_);
+                value_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000080;
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000100;
+              modifiers_ = input.readInt32();
+              break;
+            }
+            case 82: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000200;
+              senderClassName_ = bs;
+              break;
+            }
+            case 90: {
+              com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000400) == 0x00000400)) {
+                subBuilder = sender_.toBuilder();
+              }
+              sender_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(sender_);
+                sender_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000400;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPutDone_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPutDone_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<InstanceFieldPutDone> PARSER =
+        new com.google.protobuf.AbstractParser<InstanceFieldPutDone>() {
+      public InstanceFieldPutDone parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new InstanceFieldPutDone(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<InstanceFieldPutDone> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    public static final int DISTRIBUTORID_FIELD_NUMBER = 1;
+    private int distributorId_;
+    /**
+     * <code>optional int32 distributorId = 1;</code>
+     */
+    public boolean hasDistributorId() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional int32 distributorId = 1;</code>
+     */
+    public int getDistributorId() {
+      return distributorId_;
+    }
+
+    public static final int THREADID_FIELD_NUMBER = 2;
+    private long threadId_;
+    /**
+     * <code>optional int64 threadId = 2;</code>
+     *
+     * <pre>
+     *NOTE: The id of a terminated thread may be reused
+     * </pre>
+     */
+    public boolean hasThreadId() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional int64 threadId = 2;</code>
+     *
+     * <pre>
+     *NOTE: The id of a terminated thread may be reused
+     * </pre>
+     */
+    public long getThreadId() {
+      return threadId_;
+    }
+
+    public static final int CURRENTTIME_FIELD_NUMBER = 3;
+    private long currentTime_;
+    /**
+     * <code>required int64 currentTime = 3;</code>
+     */
+    public boolean hasCurrentTime() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required int64 currentTime = 3;</code>
+     */
+    public long getCurrentTime() {
+      return currentTime_;
+    }
+
+    public static final int CLASS_FIELD_NUMBER = 4;
+    private java.lang.Object class__;
+    /**
+     * <code>required string class = 4;</code>
+     */
+    public boolean hasClass_() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>required string class = 4;</code>
+     */
+    public java.lang.String getClass_() {
+      java.lang.Object ref = class__;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          class__ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string class = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getClass_Bytes() {
+      java.lang.Object ref = class__;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        class__ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int TARGET_FIELD_NUMBER = 5;
+    private com.ittera.cometa.distributor.messages.data.Primitives.Object target_;
+    /**
+     * <code>required .messages.data.Object target = 5;</code>
+     */
+    public boolean hasTarget() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>required .messages.data.Object target = 5;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.Object getTarget() {
+      return target_;
+    }
+    /**
+     * <code>required .messages.data.Object target = 5;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getTargetOrBuilder() {
+      return target_;
+    }
+
+    public static final int FIELD_FIELD_NUMBER = 6;
+    private java.lang.Object field_;
+    /**
+     * <code>required string field = 6;</code>
+     */
+    public boolean hasField() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>required string field = 6;</code>
+     */
+    public java.lang.String getField() {
+      java.lang.Object ref = field_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          field_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string field = 6;</code>
+     */
+    public com.google.protobuf.ByteString
+        getFieldBytes() {
+      java.lang.Object ref = field_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        field_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int FIELDTYPE_FIELD_NUMBER = 7;
+    private java.lang.Object fieldType_;
+    /**
+     * <code>required string fieldType = 7;</code>
+     */
+    public boolean hasFieldType() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>required string fieldType = 7;</code>
+     */
+    public java.lang.String getFieldType() {
+      java.lang.Object ref = fieldType_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          fieldType_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string fieldType = 7;</code>
+     */
+    public com.google.protobuf.ByteString
+        getFieldTypeBytes() {
+      java.lang.Object ref = fieldType_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        fieldType_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int VALUE_FIELD_NUMBER = 8;
+    private com.ittera.cometa.distributor.messages.data.Primitives.Object value_;
+    /**
+     * <code>required .messages.data.Object value = 8;</code>
+     */
+    public boolean hasValue() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>required .messages.data.Object value = 8;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.Object getValue() {
+      return value_;
+    }
+    /**
+     * <code>required .messages.data.Object value = 8;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getValueOrBuilder() {
+      return value_;
+    }
+
+    public static final int MODIFIERS_FIELD_NUMBER = 9;
+    private int modifiers_;
+    /**
+     * <code>optional int32 modifiers = 9;</code>
+     *
+     * <pre>
+     *The modifiers can be decoded with the Modifier class
+     * </pre>
+     */
+    public boolean hasModifiers() {
+      return ((bitField0_ & 0x00000100) == 0x00000100);
+    }
+    /**
+     * <code>optional int32 modifiers = 9;</code>
+     *
+     * <pre>
+     *The modifiers can be decoded with the Modifier class
+     * </pre>
+     */
+    public int getModifiers() {
+      return modifiers_;
+    }
+
+    public static final int SENDERCLASSNAME_FIELD_NUMBER = 10;
+    private java.lang.Object senderClassName_;
+    /**
+     * <code>optional string senderClassName = 10;</code>
+     */
+    public boolean hasSenderClassName() {
+      return ((bitField0_ & 0x00000200) == 0x00000200);
+    }
+    /**
+     * <code>optional string senderClassName = 10;</code>
+     */
+    public java.lang.String getSenderClassName() {
+      java.lang.Object ref = senderClassName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          senderClassName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string senderClassName = 10;</code>
+     */
+    public com.google.protobuf.ByteString
+        getSenderClassNameBytes() {
+      java.lang.Object ref = senderClassName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        senderClassName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int SENDER_FIELD_NUMBER = 11;
+    private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
+    /**
+     * <code>optional .messages.data.Object sender = 11;</code>
+     */
+    public boolean hasSender() {
+      return ((bitField0_ & 0x00000400) == 0x00000400);
+    }
+    /**
+     * <code>optional .messages.data.Object sender = 11;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
+      return sender_;
+    }
+    /**
+     * <code>optional .messages.data.Object sender = 11;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
+      return sender_;
+    }
+
+    private void initFields() {
+      distributorId_ = 0;
+      threadId_ = 0L;
+      currentTime_ = 0L;
+      class__ = "";
+      target_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+      field_ = "";
+      fieldType_ = "";
+      value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+      modifiers_ = 0;
+      senderClassName_ = "";
+      sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasCurrentTime()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasClass_()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasTarget()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasField()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasFieldType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasValue()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getTarget().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getValue().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (hasSender()) {
+        if (!getSender().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeInt32(1, distributorId_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeInt64(2, threadId_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt64(3, currentTime_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBytes(4, getClass_Bytes());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeMessage(5, target_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBytes(6, getFieldBytes());
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeBytes(7, getFieldTypeBytes());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeMessage(8, value_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        output.writeInt32(9, modifiers_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        output.writeBytes(10, getSenderClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000400) == 0x00000400)) {
+        output.writeMessage(11, sender_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(1, distributorId_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, threadId_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(3, currentTime_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, getClass_Bytes());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(5, target_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(6, getFieldBytes());
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(7, getFieldTypeBytes());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(8, value_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(9, modifiers_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(10, getSenderClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000400) == 0x00000400)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(11, sender_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code messages.data.InstanceFieldPutDone}
+     *
+     * <pre>
+     * --- CONTEXT
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.InstanceFieldPutDone)
+        com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDoneOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPutDone_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPutDone_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.Builder.class);
+      }
+
+      // Construct using com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getTargetFieldBuilder();
+          getValueFieldBuilder();
+          getSenderFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        distributorId_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        threadId_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        currentTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        class__ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
+        if (targetBuilder_ == null) {
+          target_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+        } else {
+          targetBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000010);
+        field_ = "";
+        bitField0_ = (bitField0_ & ~0x00000020);
+        fieldType_ = "";
+        bitField0_ = (bitField0_ & ~0x00000040);
+        if (valueBuilder_ == null) {
+          value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+        } else {
+          valueBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000080);
+        modifiers_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000100);
+        senderClassName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000200);
+        if (senderBuilder_ == null) {
+          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+        } else {
+          senderBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000400);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPutDone_descriptor;
+      }
+
+      public com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone getDefaultInstanceForType() {
+        return com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance();
+      }
+
+      public com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone build() {
+        com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone buildPartial() {
+        com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone result = new com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.distributorId_ = distributorId_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.threadId_ = threadId_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.currentTime_ = currentTime_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.class__ = class__;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        if (targetBuilder_ == null) {
+          result.target_ = target_;
+        } else {
+          result.target_ = targetBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.field_ = field_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.fieldType_ = fieldType_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        if (valueBuilder_ == null) {
+          result.value_ = value_;
+        } else {
+          result.value_ = valueBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000100;
+        }
+        result.modifiers_ = modifiers_;
+        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
+          to_bitField0_ |= 0x00000200;
+        }
+        result.senderClassName_ = senderClassName_;
+        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
+          to_bitField0_ |= 0x00000400;
+        }
+        if (senderBuilder_ == null) {
+          result.sender_ = sender_;
+        } else {
+          result.sender_ = senderBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) {
+          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone other) {
+        if (other == com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance()) return this;
+        if (other.hasDistributorId()) {
+          setDistributorId(other.getDistributorId());
+        }
+        if (other.hasThreadId()) {
+          setThreadId(other.getThreadId());
+        }
+        if (other.hasCurrentTime()) {
+          setCurrentTime(other.getCurrentTime());
+        }
+        if (other.hasClass_()) {
+          bitField0_ |= 0x00000008;
+          class__ = other.class__;
+          onChanged();
+        }
+        if (other.hasTarget()) {
+          mergeTarget(other.getTarget());
+        }
+        if (other.hasField()) {
+          bitField0_ |= 0x00000020;
+          field_ = other.field_;
+          onChanged();
+        }
+        if (other.hasFieldType()) {
+          bitField0_ |= 0x00000040;
+          fieldType_ = other.fieldType_;
+          onChanged();
+        }
+        if (other.hasValue()) {
+          mergeValue(other.getValue());
+        }
+        if (other.hasModifiers()) {
+          setModifiers(other.getModifiers());
+        }
+        if (other.hasSenderClassName()) {
+          bitField0_ |= 0x00000200;
+          senderClassName_ = other.senderClassName_;
+          onChanged();
+        }
+        if (other.hasSender()) {
+          mergeSender(other.getSender());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasCurrentTime()) {
+          
+          return false;
+        }
+        if (!hasClass_()) {
+          
+          return false;
+        }
+        if (!hasTarget()) {
+          
+          return false;
+        }
+        if (!hasField()) {
+          
+          return false;
+        }
+        if (!hasFieldType()) {
+          
+          return false;
+        }
+        if (!hasValue()) {
+          
+          return false;
+        }
+        if (!getTarget().isInitialized()) {
+          
+          return false;
+        }
+        if (!getValue().isInitialized()) {
+          
+          return false;
+        }
+        if (hasSender()) {
+          if (!getSender().isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private int distributorId_ ;
+      /**
+       * <code>optional int32 distributorId = 1;</code>
+       */
+      public boolean hasDistributorId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional int32 distributorId = 1;</code>
+       */
+      public int getDistributorId() {
+        return distributorId_;
+      }
+      /**
+       * <code>optional int32 distributorId = 1;</code>
+       */
+      public Builder setDistributorId(int value) {
+        bitField0_ |= 0x00000001;
+        distributorId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 distributorId = 1;</code>
+       */
+      public Builder clearDistributorId() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        distributorId_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private long threadId_ ;
+      /**
+       * <code>optional int64 threadId = 2;</code>
+       *
+       * <pre>
+       *NOTE: The id of a terminated thread may be reused
+       * </pre>
+       */
+      public boolean hasThreadId() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional int64 threadId = 2;</code>
+       *
+       * <pre>
+       *NOTE: The id of a terminated thread may be reused
+       * </pre>
+       */
+      public long getThreadId() {
+        return threadId_;
+      }
+      /**
+       * <code>optional int64 threadId = 2;</code>
+       *
+       * <pre>
+       *NOTE: The id of a terminated thread may be reused
+       * </pre>
+       */
+      public Builder setThreadId(long value) {
+        bitField0_ |= 0x00000002;
+        threadId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int64 threadId = 2;</code>
+       *
+       * <pre>
+       *NOTE: The id of a terminated thread may be reused
+       * </pre>
+       */
+      public Builder clearThreadId() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        threadId_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      private long currentTime_ ;
+      /**
+       * <code>required int64 currentTime = 3;</code>
+       */
+      public boolean hasCurrentTime() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>required int64 currentTime = 3;</code>
+       */
+      public long getCurrentTime() {
+        return currentTime_;
+      }
+      /**
+       * <code>required int64 currentTime = 3;</code>
+       */
+      public Builder setCurrentTime(long value) {
+        bitField0_ |= 0x00000004;
+        currentTime_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required int64 currentTime = 3;</code>
+       */
+      public Builder clearCurrentTime() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        currentTime_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object class__ = "";
+      /**
+       * <code>required string class = 4;</code>
+       */
+      public boolean hasClass_() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>required string class = 4;</code>
+       */
+      public java.lang.String getClass_() {
+        java.lang.Object ref = class__;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            class__ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string class = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getClass_Bytes() {
+        java.lang.Object ref = class__;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          class__ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string class = 4;</code>
+       */
+      public Builder setClass_(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        class__ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string class = 4;</code>
+       */
+      public Builder clearClass_() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        class__ = getDefaultInstance().getClass_();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string class = 4;</code>
+       */
+      public Builder setClass_Bytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        class__ = value;
+        onChanged();
+        return this;
+      }
+
+      private com.ittera.cometa.distributor.messages.data.Primitives.Object target_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> targetBuilder_;
+      /**
+       * <code>required .messages.data.Object target = 5;</code>
+       */
+      public boolean hasTarget() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>required .messages.data.Object target = 5;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object getTarget() {
+        if (targetBuilder_ == null) {
+          return target_;
+        } else {
+          return targetBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .messages.data.Object target = 5;</code>
+       */
+      public Builder setTarget(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (targetBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          target_ = value;
+          onChanged();
+        } else {
+          targetBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000010;
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object target = 5;</code>
+       */
+      public Builder setTarget(
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (targetBuilder_ == null) {
+          target_ = builderForValue.build();
+          onChanged();
+        } else {
+          targetBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000010;
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object target = 5;</code>
+       */
+      public Builder mergeTarget(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (targetBuilder_ == null) {
+          if (((bitField0_ & 0x00000010) == 0x00000010) &&
+              target_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+            target_ =
+              com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(target_).mergeFrom(value).buildPartial();
+          } else {
+            target_ = value;
+          }
+          onChanged();
+        } else {
+          targetBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000010;
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object target = 5;</code>
+       */
+      public Builder clearTarget() {
+        if (targetBuilder_ == null) {
+          target_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+          onChanged();
+        } else {
+          targetBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000010);
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object target = 5;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getTargetBuilder() {
+        bitField0_ |= 0x00000010;
+        onChanged();
+        return getTargetFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .messages.data.Object target = 5;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getTargetOrBuilder() {
+        if (targetBuilder_ != null) {
+          return targetBuilder_.getMessageOrBuilder();
+        } else {
+          return target_;
+        }
+      }
+      /**
+       * <code>required .messages.data.Object target = 5;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getTargetFieldBuilder() {
+        if (targetBuilder_ == null) {
+          targetBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getTarget(),
+                  getParentForChildren(),
+                  isClean());
+          target_ = null;
+        }
+        return targetBuilder_;
+      }
+
+      private java.lang.Object field_ = "";
+      /**
+       * <code>required string field = 6;</code>
+       */
+      public boolean hasField() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <code>required string field = 6;</code>
+       */
+      public java.lang.String getField() {
+        java.lang.Object ref = field_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            field_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string field = 6;</code>
+       */
+      public com.google.protobuf.ByteString
+          getFieldBytes() {
+        java.lang.Object ref = field_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          field_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string field = 6;</code>
+       */
+      public Builder setField(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        field_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string field = 6;</code>
+       */
+      public Builder clearField() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        field_ = getDefaultInstance().getField();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string field = 6;</code>
+       */
+      public Builder setFieldBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        field_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object fieldType_ = "";
+      /**
+       * <code>required string fieldType = 7;</code>
+       */
+      public boolean hasFieldType() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>required string fieldType = 7;</code>
+       */
+      public java.lang.String getFieldType() {
+        java.lang.Object ref = fieldType_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            fieldType_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string fieldType = 7;</code>
+       */
+      public com.google.protobuf.ByteString
+          getFieldTypeBytes() {
+        java.lang.Object ref = fieldType_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          fieldType_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string fieldType = 7;</code>
+       */
+      public Builder setFieldType(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
+        fieldType_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string fieldType = 7;</code>
+       */
+      public Builder clearFieldType() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        fieldType_ = getDefaultInstance().getFieldType();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string fieldType = 7;</code>
+       */
+      public Builder setFieldTypeBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
+        fieldType_ = value;
+        onChanged();
+        return this;
+      }
+
+      private com.ittera.cometa.distributor.messages.data.Primitives.Object value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> valueBuilder_;
+      /**
+       * <code>required .messages.data.Object value = 8;</code>
+       */
+      public boolean hasValue() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      /**
+       * <code>required .messages.data.Object value = 8;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object getValue() {
+        if (valueBuilder_ == null) {
+          return value_;
+        } else {
+          return valueBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .messages.data.Object value = 8;</code>
+       */
+      public Builder setValue(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (valueBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          value_ = value;
+          onChanged();
+        } else {
+          valueBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object value = 8;</code>
+       */
+      public Builder setValue(
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (valueBuilder_ == null) {
+          value_ = builderForValue.build();
+          onChanged();
+        } else {
+          valueBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object value = 8;</code>
+       */
+      public Builder mergeValue(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (valueBuilder_ == null) {
+          if (((bitField0_ & 0x00000080) == 0x00000080) &&
+              value_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+            value_ =
+              com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(value_).mergeFrom(value).buildPartial();
+          } else {
+            value_ = value;
+          }
+          onChanged();
+        } else {
+          valueBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object value = 8;</code>
+       */
+      public Builder clearValue() {
+        if (valueBuilder_ == null) {
+          value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+          onChanged();
+        } else {
+          valueBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000080);
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Object value = 8;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getValueBuilder() {
+        bitField0_ |= 0x00000080;
+        onChanged();
+        return getValueFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .messages.data.Object value = 8;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getValueOrBuilder() {
+        if (valueBuilder_ != null) {
+          return valueBuilder_.getMessageOrBuilder();
+        } else {
+          return value_;
+        }
+      }
+      /**
+       * <code>required .messages.data.Object value = 8;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getValueFieldBuilder() {
+        if (valueBuilder_ == null) {
+          valueBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getValue(),
+                  getParentForChildren(),
+                  isClean());
+          value_ = null;
+        }
+        return valueBuilder_;
+      }
+
+      private int modifiers_ ;
+      /**
+       * <code>optional int32 modifiers = 9;</code>
+       *
+       * <pre>
+       *The modifiers can be decoded with the Modifier class
+       * </pre>
+       */
+      public boolean hasModifiers() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      /**
+       * <code>optional int32 modifiers = 9;</code>
+       *
+       * <pre>
+       *The modifiers can be decoded with the Modifier class
+       * </pre>
+       */
+      public int getModifiers() {
+        return modifiers_;
+      }
+      /**
+       * <code>optional int32 modifiers = 9;</code>
+       *
+       * <pre>
+       *The modifiers can be decoded with the Modifier class
+       * </pre>
+       */
+      public Builder setModifiers(int value) {
+        bitField0_ |= 0x00000100;
+        modifiers_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 modifiers = 9;</code>
+       *
+       * <pre>
+       *The modifiers can be decoded with the Modifier class
+       * </pre>
+       */
+      public Builder clearModifiers() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        modifiers_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object senderClassName_ = "";
+      /**
+       * <code>optional string senderClassName = 10;</code>
+       */
+      public boolean hasSenderClassName() {
+        return ((bitField0_ & 0x00000200) == 0x00000200);
+      }
+      /**
+       * <code>optional string senderClassName = 10;</code>
+       */
+      public java.lang.String getSenderClassName() {
+        java.lang.Object ref = senderClassName_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            senderClassName_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string senderClassName = 10;</code>
+       */
+      public com.google.protobuf.ByteString
+          getSenderClassNameBytes() {
+        java.lang.Object ref = senderClassName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          senderClassName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string senderClassName = 10;</code>
+       */
+      public Builder setSenderClassName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000200;
+        senderClassName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string senderClassName = 10;</code>
+       */
+      public Builder clearSenderClassName() {
+        bitField0_ = (bitField0_ & ~0x00000200);
+        senderClassName_ = getDefaultInstance().getSenderClassName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string senderClassName = 10;</code>
+       */
+      public Builder setSenderClassNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000200;
+        senderClassName_ = value;
+        onChanged();
+        return this;
+      }
+
+      private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
+      /**
+       * <code>optional .messages.data.Object sender = 11;</code>
+       */
+      public boolean hasSender() {
+        return ((bitField0_ & 0x00000400) == 0x00000400);
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 11;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
+        if (senderBuilder_ == null) {
+          return sender_;
+        } else {
+          return senderBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 11;</code>
+       */
+      public Builder setSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (senderBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          sender_ = value;
+          onChanged();
+        } else {
+          senderBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000400;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 11;</code>
+       */
+      public Builder setSender(
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (senderBuilder_ == null) {
+          sender_ = builderForValue.build();
+          onChanged();
+        } else {
+          senderBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000400;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 11;</code>
+       */
+      public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (senderBuilder_ == null) {
+          if (((bitField0_ & 0x00000400) == 0x00000400) &&
+              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+            sender_ =
+              com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
+          } else {
+            sender_ = value;
+          }
+          onChanged();
+        } else {
+          senderBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000400;
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 11;</code>
+       */
+      public Builder clearSender() {
+        if (senderBuilder_ == null) {
+          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+          onChanged();
+        } else {
+          senderBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000400);
+        return this;
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 11;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getSenderBuilder() {
+        bitField0_ |= 0x00000400;
+        onChanged();
+        return getSenderFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 11;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
+        if (senderBuilder_ != null) {
+          return senderBuilder_.getMessageOrBuilder();
+        } else {
+          return sender_;
+        }
+      }
+      /**
+       * <code>optional .messages.data.Object sender = 11;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getSenderFieldBuilder() {
+        if (senderBuilder_ == null) {
+          senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getSender(),
+                  getParentForChildren(),
+                  isClean());
+          sender_ = null;
+        }
+        return senderBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:messages.data.InstanceFieldPutDone)
+    }
+
+    static {
+      defaultInstance = new InstanceFieldPutDone(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:messages.data.InstanceFieldPutDone)
+  }
+
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_StaticFieldGet_descriptor;
   private static
@@ -8855,6 +12646,11 @@ public final class Fields {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_messages_data_StaticFieldPut_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_messages_data_StaticFieldPutDone_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_StaticFieldPutDone_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_InstanceFieldGet_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -8864,6 +12660,11 @@ public final class Fields {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_messages_data_InstanceFieldPut_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_messages_data_InstanceFieldPutDone_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_InstanceFieldPutDone_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -8890,26 +12691,40 @@ public final class Fields {
       "sender\030\n \001(\0132\025.messages.data.Object\022\032\n\022s" +
       "ourceLocationFile\030\013 \001(\t\022\032\n\022sourceLocatio" +
       "nLine\030\014 \001(\005\022\032\n\022sourceLocationType\030\r \001(\t\"" +
-      "\317\002\n\020InstanceFieldGet\022\025\n\rdistributorId\030\001 " +
-      "\001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTime\030\003 \002" +
-      "(\003\022\r\n\005class\030\004 \002(\t\022%\n\006target\030\005 \002(\0132\025.mess",
-      "ages.data.Object\022\r\n\005field\030\006 \002(\t\022\021\n\tfield" +
-      "Type\030\007 \002(\t\022\021\n\tmodifiers\030\010 \001(\005\022\027\n\017senderC" +
-      "lassName\030\t \001(\t\022%\n\006sender\030\n \001(\0132\025.message" +
-      "s.data.Object\022\032\n\022sourceLocationFile\030\013 \001(" +
-      "\t\022\032\n\022sourceLocationLine\030\014 \001(\005\022\032\n\022sourceL" +
-      "ocationType\030\r \001(\t\"\365\002\n\020InstanceFieldPut\022\025" +
-      "\n\rdistributorId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022" +
-      "\023\n\013currentTime\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022%\n\006t" +
-      "arget\030\005 \002(\0132\025.messages.data.Object\022\r\n\005fi" +
-      "eld\030\006 \002(\t\022\021\n\tfieldType\030\007 \002(\t\022$\n\005value\030\010 ",
-      "\002(\0132\025.messages.data.Object\022\021\n\tmodifiers\030" +
-      "\t \001(\005\022\027\n\017senderClassName\030\n \001(\t\022%\n\006sender" +
-      "\030\013 \001(\0132\025.messages.data.Object\022\032\n\022sourceL" +
-      "ocationFile\030\014 \001(\t\022\032\n\022sourceLocationLine\030" +
-      "\r \001(\005\022\032\n\022sourceLocationType\030\016 \001(\tB7\n+com" +
-      ".ittera.cometa.distributor.messages.data" +
-      "B\006FieldsH\001"
+      "\374\001\n\022StaticFieldPutDone\022\025\n\rdistributorId\030" +
+      "\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTime\030\003" +
+      " \002(\003\022\r\n\005class\030\004 \002(\t\022\r\n\005field\030\005 \002(\t\022\021\n\tfi",
+      "eldType\030\006 \002(\t\022$\n\005value\030\007 \002(\0132\025.messages." +
+      "data.Object\022\021\n\tmodifiers\030\010 \001(\005\022\027\n\017sender" +
+      "ClassName\030\t \001(\t\022%\n\006sender\030\n \001(\0132\025.messag" +
+      "es.data.Object\"\317\002\n\020InstanceFieldGet\022\025\n\rd" +
+      "istributorId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013" +
+      "currentTime\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022%\n\006targ" +
+      "et\030\005 \002(\0132\025.messages.data.Object\022\r\n\005field" +
+      "\030\006 \002(\t\022\021\n\tfieldType\030\007 \002(\t\022\021\n\tmodifiers\030\010" +
+      " \001(\005\022\027\n\017senderClassName\030\t \001(\t\022%\n\006sender\030" +
+      "\n \001(\0132\025.messages.data.Object\022\032\n\022sourceLo",
+      "cationFile\030\013 \001(\t\022\032\n\022sourceLocationLine\030\014" +
+      " \001(\005\022\032\n\022sourceLocationType\030\r \001(\t\"\365\002\n\020Ins" +
+      "tanceFieldPut\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010" +
+      "threadId\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(\003\022\r\n\005c" +
+      "lass\030\004 \002(\t\022%\n\006target\030\005 \002(\0132\025.messages.da" +
+      "ta.Object\022\r\n\005field\030\006 \002(\t\022\021\n\tfieldType\030\007 " +
+      "\002(\t\022$\n\005value\030\010 \002(\0132\025.messages.data.Objec" +
+      "t\022\021\n\tmodifiers\030\t \001(\005\022\027\n\017senderClassName\030" +
+      "\n \001(\t\022%\n\006sender\030\013 \001(\0132\025.messages.data.Ob" +
+      "ject\022\032\n\022sourceLocationFile\030\014 \001(\t\022\032\n\022sour",
+      "ceLocationLine\030\r \001(\005\022\032\n\022sourceLocationTy" +
+      "pe\030\016 \001(\t\"\245\002\n\024InstanceFieldPutDone\022\025\n\rdis" +
+      "tributorId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013cu" +
+      "rrentTime\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022%\n\006target" +
+      "\030\005 \002(\0132\025.messages.data.Object\022\r\n\005field\030\006" +
+      " \002(\t\022\021\n\tfieldType\030\007 \002(\t\022$\n\005value\030\010 \002(\0132\025" +
+      ".messages.data.Object\022\021\n\tmodifiers\030\t \001(\005" +
+      "\022\027\n\017senderClassName\030\n \001(\t\022%\n\006sender\030\013 \001(" +
+      "\0132\025.messages.data.ObjectB7\n+com.ittera.c" +
+      "ometa.distributor.messages.dataB\006FieldsH",
+      "\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -8936,18 +12751,30 @@ public final class Fields {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_StaticFieldPut_descriptor,
         new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
-    internal_static_messages_data_InstanceFieldGet_descriptor =
+    internal_static_messages_data_StaticFieldPutDone_descriptor =
       getDescriptor().getMessageTypes().get(2);
+    internal_static_messages_data_StaticFieldPutDone_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_messages_data_StaticFieldPutDone_descriptor,
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender", });
+    internal_static_messages_data_InstanceFieldGet_descriptor =
+      getDescriptor().getMessageTypes().get(3);
     internal_static_messages_data_InstanceFieldGet_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_InstanceFieldGet_descriptor,
         new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Target", "Field", "FieldType", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
     internal_static_messages_data_InstanceFieldPut_descriptor =
-      getDescriptor().getMessageTypes().get(3);
+      getDescriptor().getMessageTypes().get(4);
     internal_static_messages_data_InstanceFieldPut_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_InstanceFieldPut_descriptor,
         new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Target", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
+    internal_static_messages_data_InstanceFieldPutDone_descriptor =
+      getDescriptor().getMessageTypes().get(5);
+    internal_static_messages_data_InstanceFieldPutDone_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_messages_data_InstanceFieldPutDone_descriptor,
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Target", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender", });
     com.ittera.cometa.distributor.messages.data.Primitives.getDescriptor();
   }
 
