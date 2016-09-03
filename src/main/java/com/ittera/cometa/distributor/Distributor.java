@@ -12,6 +12,8 @@ import org.aspectj.runtime.reflect.FieldSignatureImpl;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.lang.Class;
 import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
@@ -27,31 +29,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
-public class Distributor {
-  protected static final Logger logger = LogManager.getLogger("distributor");
+import org.apache.commons.lang3.StringUtils;
 
-  protected static final KafkaProducer producer;
-  protected static final String kafkaTopic = "test.data";
-  protected static final int id = 10;
+public class Distributor {
+  protected static final Logger logger = LogManager.getLogger(Distributor.class);
+
+  protected static KafkaProducer producer;
+  protected static String kafkaTopic;
+  protected static int id;
 
   //static data shared by all threads - sources of contention
   static Map<Long,BlockingQueue> threadBlockingQueueMap = new ConcurrentHashMap<Long,BlockingQueue>();
-
-  static {
-    //Initialize Kafka Producer
-    final Properties props = new Properties();
-    props.put("bootstrap.servers", "localhost:9092");
-    props.put("client.id", String.valueOf(id));
-    props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-    //props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-    props.put("value.serializer", "com.ittera.cometa.distributor.messages.ProtobufSerializer");
-    producer = new KafkaProducer<>(props);
-
-    //Initialize Kafka Consumer thread
-    DataMessageDispatcher messageDispatcher = DataMessageDispatcher.getInstance();
-    messageDispatcher.start();
-
-  }
 
   private static Wrappers.DataMessage receiveMsgForCurrentThread() {
     long currThreadId = Thread.currentThread().getId();
@@ -728,4 +716,69 @@ public class Distributor {
 
   // </editor-fold>
 
+  /**
+   * The Distributor takes 1 only argument, which is the location of the configuration (.properties) file
+   * @param args
+   */
+  public static void main(String[] args) {
+    if (args.length != 1) {
+      System.err.println("Please provide the path to a configuration file");
+      System.exit(1);
+    }
+
+    Properties properties = new Properties();
+    try {
+      properties.load(new FileInputStream(args[0]));
+    } catch (IOException e) {
+      System.err.println("Please provide a valid path to the configuration file");
+      e.printStackTrace();
+      System.exit(2);
+    }
+
+
+    /** Configure Distributor **/
+    Distributor.id = Integer.valueOf(properties.getProperty("id"));
+    kafkaTopic = properties.getProperty("kafkaTopic");
+
+
+
+
+    /** Configure and Initialize Kafka Producer **/
+    final Properties kafkaProducerProps = new Properties();
+    //common kafka properties
+    for (String propKey: properties.stringPropertyNames()) {
+      if (propKey.startsWith("kafka.")) {
+        kafkaProducerProps.put(StringUtils.substringAfter(propKey,"kafka."),properties.getProperty(propKey));
+      }
+    }
+    //producer properties
+    for (String propKey: properties.stringPropertyNames()) {
+      if (propKey.startsWith("kafka.producer.")) {
+        kafkaProducerProps.put(StringUtils.substringAfter(propKey,"kafka.producer."),properties.getProperty(propKey));
+      }
+    }
+    //other producer specific props
+    kafkaProducerProps.put("client.id", String.valueOf(Distributor.id));
+    producer = new KafkaProducer<>(kafkaProducerProps);
+
+
+
+
+    /** Configure and Initialize Kafka Message Consumer/Dispatcher thread **/
+    Properties msgDispatcherProps = new Properties();
+    for (String propKey: properties.stringPropertyNames()) {
+      if (propKey.startsWith("kafka.")) {
+        msgDispatcherProps.put(StringUtils.substringAfter(propKey,"kafka."),properties.getProperty(propKey));
+      }
+    }
+    //consumer properties
+    for (String propKey: properties.stringPropertyNames()) {
+      if (propKey.startsWith("kafka.consumer.")) {
+        msgDispatcherProps.put(StringUtils.substringAfter(propKey,"kafka.consumer."),properties.getProperty(propKey));
+      }
+    }
+    DataMessageDispatcher messageDispatcher = DataMessageDispatcher.getInstance(msgDispatcherProps);
+    messageDispatcher.start();
+
+  }
 }

@@ -14,36 +14,42 @@ import com.ittera.cometa.distributor.messages.data.Wrappers;
 
 public class DataMessageDispatcher extends Thread {
 
-    protected static final Logger logger = LogManager.getLogger("distributor");
+    protected static final Logger logger = LogManager.getLogger(DataMessageDispatcher.class);
 
-    private static DataMessageDispatcher ourInstance = new DataMessageDispatcher();
+    private static long pollTimeout;
+
+    private static DataMessageDispatcher ourInstance;
 
     private KafkaConsumer<String, String> consumer;
 
+    //to be called once initialized
     public static DataMessageDispatcher getInstance() {
+        if (ourInstance==null) {
+            throw new IllegalStateException("DataMessageDispatcher has not been initialized from properties");
+        }
         return ourInstance;
     }
 
-    private DataMessageDispatcher() {
-        Properties props = new Properties();
-        props.put("bootstrap.servers", "localhost:9092");
+    //singleton accessor for initial construction
+    public static DataMessageDispatcher getInstance(Properties properties) {
+        ourInstance = new DataMessageDispatcher(properties);
+        return ourInstance;
+    }
+
+    private DataMessageDispatcher(Properties props) {
+        pollTimeout = Long.valueOf((String)props.remove("pollTimeout"));
         props.put("group.id", String.valueOf(Distributor.id));
-        props.put("enable.auto.commit", "true");
-        props.put("auto.commit.interval.ms", "500");
-        props.put("session.timeout.ms", "30000");
-        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        //props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put("value.deserializer", "com.ittera.cometa.distributor.messages.ProtobufDeserializer");
         consumer = new KafkaConsumer<>(props);
         consumer.subscribe(Arrays.asList(Distributor.kafkaTopic));
-        setDaemon(true);
         logger.info("DataMessageDispatcher initialized");
     }
 
     public void run() {
       while (true) {
-          ConsumerRecords<String, String> records = consumer.poll(10);
-          logger.info("Records read:"+records.count());
+          ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+          if (records.count()>0) {
+            logger.info("Records read:" + records.count());
+          }
           for (ConsumerRecord record: records) {
               if (logger.isDebugEnabled()) {
                   logger.debug("Processing received record:\n"+record);
