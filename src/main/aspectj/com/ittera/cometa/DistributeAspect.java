@@ -14,17 +14,13 @@ aspect DistributeAspect{
 //if false, no output at all
 private static final boolean verbose=false;
 
-  //Exception softening of calls to Distributor
-  declare soft:ClassNotFoundException:call(boolean Distributor.classConstructor(..));
-  declare soft:Throwable:call(Object Distributor.constructor(..));
-  declare soft:Throwable:call(void Distributor.voidInstanceMethod(..));
-  declare soft:Throwable:call(Object Distributor.nonVoidInstanceMethod(..));
-  declare soft:Throwable:call(void Distributor.voidClassMethod(..));
-  declare soft:Throwable:call(Object Distributor.nonVoidClassMethod(..));
-  declare soft:IllegalAccessException:call(Object Distributor.getStatic(..));
-  declare soft:IllegalAccessException:call(Object Distributor.getObject(..));
-  declare soft:IllegalAccessException:call(void Distributor.putStatic(..));
-  declare soft:IllegalAccessException:call(void Distributor.putField(..));
+	//Exception softening of calls to Distributor
+	declare soft: ClassNotFoundException : call (boolean Distributor.classConstructor(..));
+	declare soft: Throwable : call (Object Distributor.constructor(..));
+	declare soft: Throwable : call (void Distributor.voidInstanceMethod(..));
+	declare soft: Throwable : call (Object Distributor.nonVoidInstanceMethod(..));
+	declare soft: Throwable : call (void Distributor.voidClassMethod(..));
+	declare soft: Throwable : call (Object Distributor.nonVoidClassMethod(..));
 
   /** POINTCUT DEFINITIONS **/
 
@@ -113,8 +109,6 @@ private static final boolean verbose=false;
   return returnedValue;
   }
 
-  /** ADVICE for Constructors **/
-
   Object around():constructors(){
   if(verbose){
   print(" D --> constructor: "+thisJoinPoint);
@@ -130,8 +124,6 @@ private static final boolean verbose=false;
 
   return returnedValue;
   }
-
-  /** ADVICE for Initializers (ie. class constructors) **/
 
   void around():staticConstructors(){
   if(verbose){
@@ -153,15 +145,15 @@ private static final boolean verbose=false;
 
   /** ADVICE for Fields **/
 
-  Object around():staticGetfields(){
-  if(verbose){
-  print(" D --> get static: "+thisJoinPoint);
-  printStaticCtxt(thisJoinPointStaticPart);
-  printNonStaticCtxt(thisJoinPoint);
-  }
-  Object returnedValue=Distributor.getStatic(
-  thisJoinPointStaticPart,
-  thisJoinPoint.getThis()); //Object sender
+	Object around(): staticGetfields() {	
+		if (verbose) {
+			print(" D --> get static: "+thisJoinPoint);
+			printStaticCtxt(thisJoinPointStaticPart);
+			printNonStaticCtxt(thisJoinPoint);
+		}
+		Object returnedValue = Distributor.getObjectStatic(
+			thisJoinPointStaticPart,
+			thisJoinPoint.getThis()); //Object sender
 
   return returnedValue;
   }
