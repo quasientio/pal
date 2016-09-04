@@ -45,7 +45,7 @@ public class Distributor {
   private static Wrappers.DataMessage receiveMsgForCurrentThread() {
     long currThreadId = Thread.currentThread().getId();
     if (threadBlockingQueueMap.get(currThreadId) == null) {
-      threadBlockingQueueMap.put(currThreadId, new ArrayBlockingQueue(1));
+      threadBlockingQueueMap.put(currThreadId, new ArrayBlockingQueue(1000));
     }
     Wrappers.DataMessage rcvdMsg = null;
     do {
@@ -75,11 +75,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 3. Receive message **/
-    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(msg)) {
+      /** 3. Receive message **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 4. Load and initialize class  -  WARNING: For some reason the class is not being initialized! **/
     Class clazz = null;
@@ -105,11 +107,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 7. Receive object/exception **/
-    rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(invokedMsg)) {
+      /** 7. Receive object/exception **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 8. Return or re-raise exception **/
     if (exceptionWhileLoadingClass != null) {
@@ -120,6 +124,68 @@ public class Distributor {
     return false;
   }
 
+  /**
+   * This method currently only support calling constructor whose arg(s) value(s) are fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
+   *
+   * @param constructorCall
+   * @throws Throwable
+   */
+  static void incomingConstructor(Calls.ConstructorCall constructorCall) {
+    logger.debug("in D.incomingConstructor: " + constructorCall.getName());
+
+    /** 1. Unwrap message and load constructor **/
+    final Class clazz;
+    final List<Class> paramClasses = new ArrayList<>();
+    Constructor constructor = null;
+    Exception exceptionWhileLoading = null;
+    try {
+      clazz = Class.forName(constructorCall.getName());
+      for (String paramClassStr : constructorCall.getParameterClassesList()) {
+        paramClasses.add(Class.forName(paramClassStr));
+      }
+      constructor = clazz.getDeclaredConstructor((Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
+    } catch (Exception e) {
+      exceptionWhileLoading = e;
+    }
+
+
+    /** 2. If class and constructor loaded, unwrap arguments and invoke constructor **/
+    Exception exceptionWhileInvoking = null;
+    Object newObject = null;
+
+    if (exceptionWhileLoading == null) {
+      constructor.setAccessible(true);
+      try {
+        List<Object> args = new ArrayList<>();
+        int objIdx = 0;
+        for (Primitives.Object obj : constructorCall.getParameterList()) {
+          args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
+        }
+        newObject = constructor.newInstance(args);
+      } catch (Exception ite) {
+        exceptionWhileInvoking = ite;
+      }
+    }
+
+    /** 3. Wrap new object or exception **/
+    final Wrappers.DataMessage invokedMsg;
+
+    if (exceptionWhileLoading != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileLoading);
+    } else if (exceptionWhileInvoking != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking);
+    } else {
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, false);
+    }
+
+
+    /** 4. Send object/exception **/
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
+    if (logger.isDebugEnabled()) {
+      logger.debug("Sent new message!");
+    }
+  }
+
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.debug("in D.constructor: " + staticPart.getSignature());
 
@@ -128,7 +194,6 @@ public class Distributor {
     /** 1. Wrap message **/
     final Wrappers.DataMessage callMsg = DataMessageFactory.buildConstructorMessage(id, staticPart, sender, args);
 
-
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic, callMsg));
@@ -136,11 +201,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 3. Receive message **/
-    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(callMsg)) {
+      /** 3. Receive message **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
 
     /** 4. Invoke constructor **/
@@ -173,11 +240,13 @@ public class Distributor {
     }
 
 
-    /** 7. Receive object/exception **/
-    rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(invokedMsg)) {
+      /** 7. Receive object/exception **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 8. Return object or re-raise exception **/
     if (exceptionWhileInvoking != null) {
@@ -210,11 +279,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 3. Receive message **/
-    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(msg)) {
+      /** 3. Receive message **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
 
     /** 4. Invoke method **/
@@ -246,11 +317,13 @@ public class Distributor {
     }
 
 
-    /** 7. Receive object/exception **/
-    rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(invokedMsg)) {
+      /** 7. Receive object/exception **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 8. Return object or re-raise exception **/
     if (exceptionWhileInvoking != null) {
@@ -280,11 +353,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 3. Receive message **/
-    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(msg)) {
+      /** 3. Receive message **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
 
     /** 4. Invoke method **/
@@ -316,11 +391,13 @@ public class Distributor {
     }
 
 
-    /** 7. Receive object/exception **/
-    rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(invokedMsg)) {
+      /** 7. Receive object/exception **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 8. Return object or re-raise exception **/
     if (exceptionWhileInvoking != null) {
@@ -337,64 +414,63 @@ public class Distributor {
   /**
    * This method currently only support calling method whose value is fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
    *
-   * @param classMethodCall
-   * @throws Throwable
+   * @param instanceMethodCall
    */
-  static void incomingVoidClassMethod(Calls.ClassMethodCall classMethodCall) throws Throwable {
-    logger.debug("in D.incomingVoidClassMethod: " + classMethodCall.getName());
+  static void incomingInstanceMethod(Calls.InstanceMethodCall instanceMethodCall) {
+    logger.debug("in D.incomingInstanceMethod: " + instanceMethodCall.getName());
 
-    Class clazz = Class.forName(classMethodCall.getClass_());
+    /** 1. Unwrap message and load method **/
+    Class clazz = null;
+    Method method = null;
+    Exception exceptionWhileLoading = null;
     List<Class> paramClasses = new ArrayList<>();
-    for (String paramClassStr : classMethodCall.getParameterClassesList()) {
-      paramClasses.add(Class.forName(paramClassStr));
-    }
-
-    Method method = clazz.getDeclaredMethod(classMethodCall.getName(), (Class[]) paramClasses.toArray(new Class[]{}));
-
-    List<Object> args = new ArrayList<>();
-    int objIdx = 0;
-    for (Primitives.Object obj : classMethodCall.getParameterList()) {
-      args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
-    }
-    Exception exceptionWhileInvoking = null;
-    method.setAccessible(true);
     try {
-      method.invoke(null, args.toArray());
+      clazz = Class.forName(instanceMethodCall.getClass_());
+      for (String paramClassStr : instanceMethodCall.getParameterClassesList()) {
+        paramClasses.add(Class.forName(paramClassStr));
+      }
+      method = clazz.getDeclaredMethod(instanceMethodCall.getName(), (Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
     } catch (Exception e) {
-      exceptionWhileInvoking = e;
+      exceptionWhileLoading = e;
     }
 
-    /** 5. Wrap new object or exception **/
+    /** 2. If class and method loaded, unwrap arguments and invoke method **/
+    Exception exceptionWhileInvoking = null;
+    Object returnValue = null;
+    if (exceptionWhileLoading != null) {
+      List<Object> args = new ArrayList<>();
+      int objIdx = 0;
+      for (Primitives.Object obj : instanceMethodCall.getParameterList()) {
+        args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
+      }
+      method.setAccessible(true);
+      try {
+        Object target = lookupTargetObject(instanceMethodCall.getTarget());
+        returnValue = method.invoke(target, args.toArray());
+      } catch (Exception e) {
+        exceptionWhileInvoking = e;
+      }
+    }
+
+    /** 3. Wrap return value or exception **/
     final Wrappers.DataMessage invokedMsg;
 
-    if (exceptionWhileInvoking != null) {
+    if (exceptionWhileLoading != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileLoading);
+    } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, true);
+      if (method.getReturnType() == Void.class) {
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, true);
+      } else {
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, false);
+      }
     }
 
-
-    /** 6. Send object/exception **/
+    /** 4. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
-    }
-
-
-    /** 7. Receive object/exception **/
-    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
-
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
-
-    /** 8. Return object or re-raise exception */
-    /** TODO Does it make sense to re-throw an exception when the call is incoming?? */
-    if (exceptionWhileInvoking != null) {
-      if (exceptionWhileInvoking instanceof InvocationTargetException) {
-        throw exceptionWhileInvoking.getCause();
-      } else {
-        throw exceptionWhileInvoking;
-      }
     }
 
     return;
@@ -416,11 +492,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 3. Receive message **/
-    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(msg)) {
+      /** 3. Receive message **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
 
     /** 4. Invoke method **/
@@ -451,11 +529,13 @@ public class Distributor {
     }
 
 
-    /** 7. Receive object/exception **/
-    rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(invokedMsg)) {
+      /** 7. Receive object/exception **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 8. Return object or re-raise exception **/
     if (exceptionWhileInvoking != null) {
@@ -468,6 +548,71 @@ public class Distributor {
 
     return;
   }
+
+  /**
+   * This method currently only support calling method whose value is fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
+   *
+   * @param classMethodCall
+   */
+  static void incomingClassMethod(Calls.ClassMethodCall classMethodCall) {
+    logger.debug("in D.incomingClassMethod: " + classMethodCall.getName());
+
+    /** 1. Unwrap message and load method **/
+    Class clazz = null;
+    Method method = null;
+    Exception exceptionWhileLoading = null;
+    List<Class> paramClasses = new ArrayList<>();
+    try {
+      clazz = Class.forName(classMethodCall.getClass_());
+      for (String paramClassStr : classMethodCall.getParameterClassesList()) {
+        paramClasses.add(Class.forName(paramClassStr));
+      }
+      method = clazz.getDeclaredMethod(classMethodCall.getName(), (Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
+    } catch (Exception e) {
+      exceptionWhileLoading = e;
+    }
+
+    /** 2. If class and method loaded, unwrap arguments and invoke method **/
+    Exception exceptionWhileInvoking = null;
+    Object returnValue = null;
+    if (exceptionWhileLoading != null) {
+      List<Object> args = new ArrayList<>();
+      int objIdx = 0;
+      for (Primitives.Object obj : classMethodCall.getParameterList()) {
+        args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
+      }
+      method.setAccessible(true);
+      try {
+        returnValue = method.invoke(null, args.toArray());
+      } catch (Exception e) {
+        exceptionWhileInvoking = e;
+      }
+    }
+
+    /** 3. Wrap return value or exception **/
+    final Wrappers.DataMessage invokedMsg;
+
+    if (exceptionWhileLoading != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileLoading);
+    } else if (exceptionWhileInvoking != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
+    } else {
+      if (method.getReturnType() == Void.class) {
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, true);
+      } else {
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, false);
+      }
+    }
+
+    /** 4. Send object/exception **/
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
+    if (logger.isDebugEnabled()) {
+      logger.debug("Sent new message!");
+    }
+
+    return;
+  }
+
 
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.debug("in D.nonVoidClassMethod: " + staticPart.getSignature());
@@ -485,11 +630,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 3. Receive message **/
-    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(msg)) {
+      /** 3. Receive message **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
 
     /** 4. Invoke method **/
@@ -521,11 +668,13 @@ public class Distributor {
     }
 
 
-    /** 7. Receive object/exception **/
-    rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(invokedMsg)) {
+      /** 7. Receive object/exception **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 8. Return object or re-raise exception **/
     if (exceptionWhileInvoking != null) {
@@ -557,11 +706,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 3. Receive message **/
-    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(msg)) {
+      /** 3. Receive message **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 4. Get Object **/
 
@@ -590,11 +741,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 7. Receive object/exception **/
-    rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(invokedMsg)) {
+      /** 7. Receive object/exception **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 8. Return or re-raise exception **/
     if (exceptionGettingObject != null) {
@@ -617,11 +770,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 3. Receive message **/
-    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(msg)) {
+      /** 3. Receive message **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
 
     /** 4. Get Object **/
@@ -651,11 +806,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 7. Receive object/exception **/
-    rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(invokedMsg)) {
+      /** 7. Receive object/exception **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 8. Return or re-raise exception **/
     if (exceptionGettingObject != null) {
@@ -678,11 +835,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 3. Receive message **/
-    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(msg)) {
+      /** 3. Receive message **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 4. Put Object **/
 
@@ -710,11 +869,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 7. Receive object/exception **/
-    rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(msg)) {
+      /** 7. Receive object/exception **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 8. Return or re-raise exception **/
     if (exceptionSettingObject != null) {
@@ -737,11 +898,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 3. Receive message **/
-    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(msg)) {
+      /** 3. Receive message **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 4. Put Object **/
 
@@ -769,11 +932,13 @@ public class Distributor {
       logger.debug("Sent new message!");
     }
 
-    /** 7. Receive object/exception **/
-    rcvdMsg = receiveMsgForCurrentThread();
+    if (mustWait(invokedMsg)) {
+      /** 7. Receive object/exception **/
+      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-    //TODO compare
-    logger.info("Message received: " + rcvdMsg.getMsgType());
+      //TODO compare
+      logger.info("Message received: " + rcvdMsg.getMsgType());
+    }
 
     /** 8. Return or re-raise exception **/
     if (exceptionSettingObject != null) {
@@ -782,6 +947,27 @@ public class Distributor {
   }
 
   // </editor-fold>
+
+
+  /**
+   * TODO: IMPLEMENT
+   *
+   * @param dataMessage
+   * @return
+   */
+  private static boolean mustWait(Wrappers.DataMessage dataMessage) {
+    return false;
+  }
+
+  /**
+   * TODO: IMPLEMENT
+   *
+   * @param targetHash
+   * @return
+   */
+  private static Object lookupTargetObject(int targetHash) {
+    return null;
+  }
 
   /**
    * The Distributor takes 1 only argument, which is the location of the configuration (.properties) file

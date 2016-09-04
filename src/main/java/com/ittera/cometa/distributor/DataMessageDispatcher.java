@@ -67,14 +67,17 @@ public class DataMessageDispatcher extends Thread {
           executorService.submit(new Runnable() {
             @Override
             public void run() {
-              if (dataMessage.hasClassMethodCall()) {
+              //TODO call Distributor.incomingCall() which should dispatch as done here based on encapsulated type
+              if (dataMessage.hasConstructorCall()) {
+                Calls.ConstructorCall constructorCall = dataMessage.getConstructorCall();
+                Distributor.incomingConstructor(constructorCall);
+              } else if (dataMessage.hasClassMethodCall()) {
                 Calls.ClassMethodCall methodCall = dataMessage.getClassMethodCall();
-                try {
-                  Distributor.incomingVoidClassMethod(methodCall);
-                } catch (Throwable thr) {
-                  logger.error("Error caught invoking class method call:" + methodCall.toString(), thr);
-                }
-              }
+                Distributor.incomingClassMethod(methodCall);
+              } else if (dataMessage.hasInstanceMethodCall()) {
+                Calls.InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
+                Distributor.incomingInstanceMethod(methodCall);
+              } //TODO : field op calls
             }
           });
         }
