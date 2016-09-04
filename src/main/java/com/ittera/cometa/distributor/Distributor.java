@@ -1,7 +1,6 @@
 package com.ittera.cometa.distributor;
 
-import com.ittera.cometa.distributor.messages.data.DataMessageFactory;
-import com.ittera.cometa.distributor.messages.data.Wrappers;
+import com.ittera.cometa.distributor.messages.data.*;
 
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -22,6 +21,8 @@ import java.lang.reflect.InvocationTargetException;
 
 import java.util.Properties;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -122,7 +123,7 @@ public class Distributor {
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.debug("in D.constructor: " + staticPart.getSignature());
 
-    final ConstructorSignature codeSignature = (ConstructorSignature) staticPart.getSignature();
+    final ConstructorSignature constructorSignature = (ConstructorSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage callMsg = DataMessageFactory.buildConstructorMessage(id, staticPart, sender, args);
@@ -144,7 +145,7 @@ public class Distributor {
 
     /** 4. Invoke constructor **/
 
-    Constructor constructor = codeSignature.getConstructor();
+    Constructor constructor = constructorSignature.getConstructor();
 
     Object newObject = null;
     Exception exceptionWhileInvoking = null;
@@ -196,7 +197,7 @@ public class Distributor {
   public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
     logger.debug("in D.voidInstanceMethod: " + staticPart.getSignature());
 
-    final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
+    final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildInstanceMethodMessage(id, staticPart, sender, target, args);
@@ -218,7 +219,7 @@ public class Distributor {
 
     /** 4. Invoke method **/
 
-    Method method = codeSignature.getMethod();
+    Method method = methodSignature.getMethod();
 
     Exception exceptionWhileInvoking = null;
     method.setAccessible(true);
@@ -266,7 +267,7 @@ public class Distributor {
   public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
     logger.debug("in D.nonVoidInstanceMethod: " + staticPart.getSignature());
 
-    final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
+    final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildInstanceMethodMessage(id, staticPart, sender, target, args);
@@ -288,7 +289,7 @@ public class Distributor {
 
     /** 4. Invoke method **/
 
-    Method method = codeSignature.getMethod();
+    Method method = methodSignature.getMethod();
     Object returnValue = null;
     Exception exceptionWhileInvoking = null;
     method.setAccessible(true);
@@ -333,10 +334,75 @@ public class Distributor {
     return returnValue;
   }
 
+  /**
+   * This method currently only support calling method whose value is fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
+   * @param classMethodCall
+   * @throws Throwable
+   */
+  static void incomingVoidClassMethod(Calls.ClassMethodCall classMethodCall) throws Throwable {
+    logger.debug("in D.incomingVoidClassMethod: " + classMethodCall.getName());
+
+    Class clazz = Class.forName(classMethodCall.getClass_());
+    List<Class> paramClasses = new ArrayList<>();
+    for (String paramClassStr: classMethodCall.getParameterClassesList()) {
+      paramClasses.add(Class.forName(paramClassStr));
+    }
+
+    Method method = clazz.getDeclaredMethod(classMethodCall.getName(), (Class[]) paramClasses.toArray(new Class[]{}));
+
+    List<Object> args = new ArrayList<>();
+    int objIdx=0;
+    for (Primitives.Object obj : classMethodCall.getParameterList()) {
+      args.add(ProtobufUtils.unwrapObject(obj,paramClasses.get(objIdx)));
+    }
+    Exception exceptionWhileInvoking = null;
+    method.setAccessible(true);
+    try {
+      method.invoke(null, args.toArray());
+    } catch (Exception e) {
+      exceptionWhileInvoking = e;
+    }
+
+    /** 5. Wrap new object or exception **/
+    final Wrappers.DataMessage invokedMsg;
+
+    if (exceptionWhileInvoking != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id,method,exceptionWhileInvoking);
+    } else {
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, true);
+    }
+
+
+    /** 6. Send object/exception **/
+    producer.send(new ProducerRecord(kafkaTopic,invokedMsg));
+    if (logger.isDebugEnabled()) {
+      logger.debug("Sent new message!");
+    }
+
+
+    /** 7. Receive object/exception **/
+    Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+
+    //TODO compare
+    logger.info("Message received: "+rcvdMsg.getMsgType());
+
+    /** 8. Return object or re-raise exception */
+    /** TODO Does it make sense to re-throw an exception when the call is incoming?? */
+    if (exceptionWhileInvoking != null) {
+      if (exceptionWhileInvoking instanceof InvocationTargetException) {
+        throw exceptionWhileInvoking.getCause();
+      } else {
+        throw exceptionWhileInvoking;
+      }
+    }
+
+    return;
+  }
+
   public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.debug("in D.voidClassMethod: " + staticPart.getSignature());
 
-    final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
+    final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildClassMethodMessage(id, staticPart, sender, args);
@@ -358,7 +424,7 @@ public class Distributor {
 
     /** 4. Invoke method **/
 
-    Method method = codeSignature.getMethod();
+    Method method = methodSignature.getMethod();
     Exception exceptionWhileInvoking = null;
     method.setAccessible(true);
     try {
@@ -405,7 +471,7 @@ public class Distributor {
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.debug("in D.nonVoidClassMethod: " + staticPart.getSignature());
 
-    final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
+    final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildClassMethodMessage(id, staticPart, sender, args);
@@ -427,7 +493,7 @@ public class Distributor {
 
     /** 4. Invoke method **/
 
-    Method method = codeSignature.getMethod();
+    Method method = methodSignature.getMethod();
     Object returnValue = null;
     Exception exceptionWhileInvoking = null;
     method.setAccessible(true);
@@ -747,7 +813,7 @@ public class Distributor {
     final Properties kafkaProducerProps = new Properties();
     //common kafka properties
     for (String propKey: properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.")) {
+      if (propKey.startsWith("kafka.") && ! (propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer")) ) {
         kafkaProducerProps.put(StringUtils.substringAfter(propKey,"kafka."),properties.getProperty(propKey));
       }
     }
@@ -767,7 +833,7 @@ public class Distributor {
     /** Configure and Initialize Kafka Message Consumer/Dispatcher thread **/
     Properties msgDispatcherProps = new Properties();
     for (String propKey: properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.")) {
+       if (propKey.startsWith("kafka.") && ! (propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer")) ) {
         msgDispatcherProps.put(StringUtils.substringAfter(propKey,"kafka."),properties.getProperty(propKey));
       }
     }

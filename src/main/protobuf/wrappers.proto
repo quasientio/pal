@@ -10,7 +10,7 @@ option optimize_for = SPEED;
 
 message DataMessage {
     required string msgType = 1;
-    required int64 threadId = 2;
+    required int64 threadId = 2 [default = -1];
 
     oneof calltype {
        ConstructorCall constructorCall = 3;

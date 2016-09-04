@@ -148,29 +148,48 @@ public final class Calls {
         getExceptionTypesBytes(int index);
 
     /**
-     * <code>repeated int32 parameters = 9;</code>
+     * <code>repeated .messages.data.Object parameter = 9;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    java.util.List<java.lang.Integer> getParametersList();
+    java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> 
+        getParameterList();
     /**
-     * <code>repeated int32 parameters = 9;</code>
+     * <code>repeated .messages.data.Object parameter = 9;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    int getParametersCount();
+    com.ittera.cometa.distributor.messages.data.Primitives.Object getParameter(int index);
     /**
-     * <code>repeated int32 parameters = 9;</code>
+     * <code>repeated .messages.data.Object parameter = 9;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    int getParameters(int index);
+    int getParameterCount();
+    /**
+     * <code>repeated .messages.data.Object parameter = 9;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+        getParameterOrBuilderList();
+    /**
+     * <code>repeated .messages.data.Object parameter = 9;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getParameterOrBuilder(
+        int index);
 
     /**
      * <code>optional string senderClassName = 10;</code>
@@ -361,25 +380,12 @@ public final class Calls {
               exceptionTypes_.add(bs);
               break;
             }
-            case 72: {
-              if (!((mutable_bitField0_ & 0x00000100) == 0x00000100)) {
-                parameters_ = new java.util.ArrayList<java.lang.Integer>();
-                mutable_bitField0_ |= 0x00000100;
-              }
-              parameters_.add(input.readInt32());
-              break;
-            }
             case 74: {
-              int length = input.readRawVarint32();
-              int limit = input.pushLimit(length);
-              if (!((mutable_bitField0_ & 0x00000100) == 0x00000100) && input.getBytesUntilLimit() > 0) {
-                parameters_ = new java.util.ArrayList<java.lang.Integer>();
+              if (!((mutable_bitField0_ & 0x00000100) == 0x00000100)) {
+                parameter_ = new java.util.ArrayList<com.ittera.cometa.distributor.messages.data.Primitives.Object>();
                 mutable_bitField0_ |= 0x00000100;
               }
-              while (input.getBytesUntilLimit() > 0) {
-                parameters_.add(input.readInt32());
-              }
-              input.popLimit(limit);
+              parameter_.add(input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry));
               break;
             }
             case 82: {
@@ -428,7 +434,7 @@ public final class Calls {
           exceptionTypes_ = exceptionTypes_.getUnmodifiableView();
         }
         if (((mutable_bitField0_ & 0x00000100) == 0x00000100)) {
-          parameters_ = java.util.Collections.unmodifiableList(parameters_);
+          parameter_ = java.util.Collections.unmodifiableList(parameter_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -679,38 +685,59 @@ public final class Calls {
       return exceptionTypes_.getByteString(index);
     }
 
-    public static final int PARAMETERS_FIELD_NUMBER = 9;
-    private java.util.List<java.lang.Integer> parameters_;
+    public static final int PARAMETER_FIELD_NUMBER = 9;
+    private java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> parameter_;
     /**
-     * <code>repeated int32 parameters = 9;</code>
+     * <code>repeated .messages.data.Object parameter = 9;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    public java.util.List<java.lang.Integer>
-        getParametersList() {
-      return parameters_;
+    public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> getParameterList() {
+      return parameter_;
     }
     /**
-     * <code>repeated int32 parameters = 9;</code>
+     * <code>repeated .messages.data.Object parameter = 9;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    public int getParametersCount() {
-      return parameters_.size();
+    public java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+        getParameterOrBuilderList() {
+      return parameter_;
     }
     /**
-     * <code>repeated int32 parameters = 9;</code>
+     * <code>repeated .messages.data.Object parameter = 9;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    public int getParameters(int index) {
-      return parameters_.get(index);
+    public int getParameterCount() {
+      return parameter_.size();
+    }
+    /**
+     * <code>repeated .messages.data.Object parameter = 9;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.Object getParameter(int index) {
+      return parameter_.get(index);
+    }
+    /**
+     * <code>repeated .messages.data.Object parameter = 9;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getParameterOrBuilder(
+        int index) {
+      return parameter_.get(index);
     }
 
     public static final int SENDERCLASSNAME_FIELD_NUMBER = 10;
@@ -898,7 +925,7 @@ public final class Calls {
       parameterNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       parameterClasses_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       exceptionTypes_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-      parameters_ = java.util.Collections.emptyList();
+      parameter_ = java.util.Collections.emptyList();
       senderClassName_ = "";
       sender_ = 0;
       sourceLocationFile_ = "";
@@ -918,6 +945,12 @@ public final class Calls {
       if (!hasName()) {
         memoizedIsInitialized = 0;
         return false;
+      }
+      for (int i = 0; i < getParameterCount(); i++) {
+        if (!getParameter(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
       }
       memoizedIsInitialized = 1;
       return true;
@@ -950,8 +983,8 @@ public final class Calls {
       for (int i = 0; i < exceptionTypes_.size(); i++) {
         output.writeBytes(8, exceptionTypes_.getByteString(i));
       }
-      for (int i = 0; i < parameters_.size(); i++) {
-        output.writeInt32(9, parameters_.get(i));
+      for (int i = 0; i < parameter_.size(); i++) {
+        output.writeMessage(9, parameter_.get(i));
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeBytes(10, getSenderClassNameBytes());
@@ -1024,14 +1057,9 @@ public final class Calls {
         size += dataSize;
         size += 1 * getExceptionTypesList().size();
       }
-      {
-        int dataSize = 0;
-        for (int i = 0; i < parameters_.size(); i++) {
-          dataSize += com.google.protobuf.CodedOutputStream
-            .computeInt32SizeNoTag(parameters_.get(i));
-        }
-        size += dataSize;
-        size += 1 * getParametersList().size();
+      for (int i = 0; i < parameter_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(9, parameter_.get(i));
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1166,6 +1194,7 @@ public final class Calls {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getParameterFieldBuilder();
         }
       }
       private static Builder create() {
@@ -1190,8 +1219,12 @@ public final class Calls {
         bitField0_ = (bitField0_ & ~0x00000040);
         exceptionTypes_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000080);
-        parameters_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000100);
+        if (parameterBuilder_ == null) {
+          parameter_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000100);
+        } else {
+          parameterBuilder_.clear();
+        }
         senderClassName_ = "";
         bitField0_ = (bitField0_ & ~0x00000200);
         sender_ = 0;
@@ -1265,11 +1298,15 @@ public final class Calls {
           bitField0_ = (bitField0_ & ~0x00000080);
         }
         result.exceptionTypes_ = exceptionTypes_;
-        if (((bitField0_ & 0x00000100) == 0x00000100)) {
-          parameters_ = java.util.Collections.unmodifiableList(parameters_);
-          bitField0_ = (bitField0_ & ~0x00000100);
+        if (parameterBuilder_ == null) {
+          if (((bitField0_ & 0x00000100) == 0x00000100)) {
+            parameter_ = java.util.Collections.unmodifiableList(parameter_);
+            bitField0_ = (bitField0_ & ~0x00000100);
+          }
+          result.parameter_ = parameter_;
+        } else {
+          result.parameter_ = parameterBuilder_.build();
         }
-        result.parameters_ = parameters_;
         if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
           to_bitField0_ |= 0x00000020;
         }
@@ -1353,15 +1390,31 @@ public final class Calls {
           }
           onChanged();
         }
-        if (!other.parameters_.isEmpty()) {
-          if (parameters_.isEmpty()) {
-            parameters_ = other.parameters_;
-            bitField0_ = (bitField0_ & ~0x00000100);
-          } else {
-            ensureParametersIsMutable();
-            parameters_.addAll(other.parameters_);
+        if (parameterBuilder_ == null) {
+          if (!other.parameter_.isEmpty()) {
+            if (parameter_.isEmpty()) {
+              parameter_ = other.parameter_;
+              bitField0_ = (bitField0_ & ~0x00000100);
+            } else {
+              ensureParameterIsMutable();
+              parameter_.addAll(other.parameter_);
+            }
+            onChanged();
           }
-          onChanged();
+        } else {
+          if (!other.parameter_.isEmpty()) {
+            if (parameterBuilder_.isEmpty()) {
+              parameterBuilder_.dispose();
+              parameterBuilder_ = null;
+              parameter_ = other.parameter_;
+              bitField0_ = (bitField0_ & ~0x00000100);
+              parameterBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getParameterFieldBuilder() : null;
+            } else {
+              parameterBuilder_.addAllMessages(other.parameter_);
+            }
+          }
         }
         if (other.hasSenderClassName()) {
           bitField0_ |= 0x00000200;
@@ -1396,6 +1449,12 @@ public final class Calls {
         if (!hasName()) {
           
           return false;
+        }
+        for (int i = 0; i < getParameterCount(); i++) {
+          if (!getParameter(i).isInitialized()) {
+            
+            return false;
+          }
         }
         return true;
       }
@@ -1958,98 +2017,316 @@ public final class Calls {
         return this;
       }
 
-      private java.util.List<java.lang.Integer> parameters_ = java.util.Collections.emptyList();
-      private void ensureParametersIsMutable() {
+      private java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> parameter_ =
+        java.util.Collections.emptyList();
+      private void ensureParameterIsMutable() {
         if (!((bitField0_ & 0x00000100) == 0x00000100)) {
-          parameters_ = new java.util.ArrayList<java.lang.Integer>(parameters_);
+          parameter_ = new java.util.ArrayList<com.ittera.cometa.distributor.messages.data.Primitives.Object>(parameter_);
           bitField0_ |= 0x00000100;
          }
       }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> parameterBuilder_;
+
       /**
-       * <code>repeated int32 parameters = 9;</code>
+       * <code>repeated .messages.data.Object parameter = 9;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public java.util.List<java.lang.Integer>
-          getParametersList() {
-        return java.util.Collections.unmodifiableList(parameters_);
+      public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> getParameterList() {
+        if (parameterBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(parameter_);
+        } else {
+          return parameterBuilder_.getMessageList();
+        }
       }
       /**
-       * <code>repeated int32 parameters = 9;</code>
+       * <code>repeated .messages.data.Object parameter = 9;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public int getParametersCount() {
-        return parameters_.size();
+      public int getParameterCount() {
+        if (parameterBuilder_ == null) {
+          return parameter_.size();
+        } else {
+          return parameterBuilder_.getCount();
+        }
       }
       /**
-       * <code>repeated int32 parameters = 9;</code>
+       * <code>repeated .messages.data.Object parameter = 9;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public int getParameters(int index) {
-        return parameters_.get(index);
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object getParameter(int index) {
+        if (parameterBuilder_ == null) {
+          return parameter_.get(index);
+        } else {
+          return parameterBuilder_.getMessage(index);
+        }
       }
       /**
-       * <code>repeated int32 parameters = 9;</code>
+       * <code>repeated .messages.data.Object parameter = 9;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder setParameters(
-          int index, int value) {
-        ensureParametersIsMutable();
-        parameters_.set(index, value);
-        onChanged();
+      public Builder setParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (parameterBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureParameterIsMutable();
+          parameter_.set(index, value);
+          onChanged();
+        } else {
+          parameterBuilder_.setMessage(index, value);
+        }
         return this;
       }
       /**
-       * <code>repeated int32 parameters = 9;</code>
+       * <code>repeated .messages.data.Object parameter = 9;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder addParameters(int value) {
-        ensureParametersIsMutable();
-        parameters_.add(value);
-        onChanged();
+      public Builder setParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          parameterBuilder_.setMessage(index, builderForValue.build());
+        }
         return this;
       }
       /**
-       * <code>repeated int32 parameters = 9;</code>
+       * <code>repeated .messages.data.Object parameter = 9;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder addAllParameters(
-          java.lang.Iterable<? extends java.lang.Integer> values) {
-        ensureParametersIsMutable();
-        com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, parameters_);
-        onChanged();
+      public Builder addParameter(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (parameterBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureParameterIsMutable();
+          parameter_.add(value);
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(value);
+        }
         return this;
       }
       /**
-       * <code>repeated int32 parameters = 9;</code>
+       * <code>repeated .messages.data.Object parameter = 9;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder clearParameters() {
-        parameters_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000100);
-        onChanged();
+      public Builder addParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (parameterBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureParameterIsMutable();
+          parameter_.add(index, value);
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(index, value);
+        }
         return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 9;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder addParameter(
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.add(builderForValue.build());
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 9;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder addParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 9;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder addAllParameter(
+          java.lang.Iterable<? extends com.ittera.cometa.distributor.messages.data.Primitives.Object> values) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, parameter_);
+          onChanged();
+        } else {
+          parameterBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 9;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder clearParameter() {
+        if (parameterBuilder_ == null) {
+          parameter_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000100);
+          onChanged();
+        } else {
+          parameterBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 9;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder removeParameter(int index) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.remove(index);
+          onChanged();
+        } else {
+          parameterBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 9;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getParameterBuilder(
+          int index) {
+        return getParameterFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 9;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getParameterOrBuilder(
+          int index) {
+        if (parameterBuilder_ == null) {
+          return parameter_.get(index);  } else {
+          return parameterBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 9;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+           getParameterOrBuilderList() {
+        if (parameterBuilder_ != null) {
+          return parameterBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(parameter_);
+        }
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 9;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder addParameterBuilder() {
+        return getParameterFieldBuilder().addBuilder(
+            com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 9;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder addParameterBuilder(
+          int index) {
+        return getParameterFieldBuilder().addBuilder(
+            index, com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 9;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder> 
+           getParameterBuilderList() {
+        return getParameterFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getParameterFieldBuilder() {
+        if (parameterBuilder_ == null) {
+          parameterBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  parameter_,
+                  ((bitField0_ & 0x00000100) == 0x00000100),
+                  getParentForChildren(),
+                  isClean());
+          parameter_ = null;
+        }
+        return parameterBuilder_;
       }
 
       private java.lang.Object senderClassName_ = "";
@@ -2580,29 +2857,48 @@ public final class Calls {
         getExceptionTypesBytes(int index);
 
     /**
-     * <code>repeated int32 parameters = 11;</code>
+     * <code>repeated .messages.data.Object parameter = 11;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    java.util.List<java.lang.Integer> getParametersList();
+    java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> 
+        getParameterList();
     /**
-     * <code>repeated int32 parameters = 11;</code>
+     * <code>repeated .messages.data.Object parameter = 11;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    int getParametersCount();
+    com.ittera.cometa.distributor.messages.data.Primitives.Object getParameter(int index);
     /**
-     * <code>repeated int32 parameters = 11;</code>
+     * <code>repeated .messages.data.Object parameter = 11;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    int getParameters(int index);
+    int getParameterCount();
+    /**
+     * <code>repeated .messages.data.Object parameter = 11;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+        getParameterOrBuilderList();
+    /**
+     * <code>repeated .messages.data.Object parameter = 11;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getParameterOrBuilder(
+        int index);
 
     /**
      * <code>optional string senderClassName = 12;</code>
@@ -2804,25 +3100,12 @@ public final class Calls {
               exceptionTypes_.add(bs);
               break;
             }
-            case 88: {
-              if (!((mutable_bitField0_ & 0x00000400) == 0x00000400)) {
-                parameters_ = new java.util.ArrayList<java.lang.Integer>();
-                mutable_bitField0_ |= 0x00000400;
-              }
-              parameters_.add(input.readInt32());
-              break;
-            }
             case 90: {
-              int length = input.readRawVarint32();
-              int limit = input.pushLimit(length);
-              if (!((mutable_bitField0_ & 0x00000400) == 0x00000400) && input.getBytesUntilLimit() > 0) {
-                parameters_ = new java.util.ArrayList<java.lang.Integer>();
+              if (!((mutable_bitField0_ & 0x00000400) == 0x00000400)) {
+                parameter_ = new java.util.ArrayList<com.ittera.cometa.distributor.messages.data.Primitives.Object>();
                 mutable_bitField0_ |= 0x00000400;
               }
-              while (input.getBytesUntilLimit() > 0) {
-                parameters_.add(input.readInt32());
-              }
-              input.popLimit(limit);
+              parameter_.add(input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry));
               break;
             }
             case 98: {
@@ -2871,7 +3154,7 @@ public final class Calls {
           exceptionTypes_ = exceptionTypes_.getUnmodifiableView();
         }
         if (((mutable_bitField0_ & 0x00000400) == 0x00000400)) {
-          parameters_ = java.util.Collections.unmodifiableList(parameters_);
+          parameter_ = java.util.Collections.unmodifiableList(parameter_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -3201,38 +3484,59 @@ public final class Calls {
       return exceptionTypes_.getByteString(index);
     }
 
-    public static final int PARAMETERS_FIELD_NUMBER = 11;
-    private java.util.List<java.lang.Integer> parameters_;
+    public static final int PARAMETER_FIELD_NUMBER = 11;
+    private java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> parameter_;
     /**
-     * <code>repeated int32 parameters = 11;</code>
+     * <code>repeated .messages.data.Object parameter = 11;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    public java.util.List<java.lang.Integer>
-        getParametersList() {
-      return parameters_;
+    public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> getParameterList() {
+      return parameter_;
     }
     /**
-     * <code>repeated int32 parameters = 11;</code>
+     * <code>repeated .messages.data.Object parameter = 11;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    public int getParametersCount() {
-      return parameters_.size();
+    public java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+        getParameterOrBuilderList() {
+      return parameter_;
     }
     /**
-     * <code>repeated int32 parameters = 11;</code>
+     * <code>repeated .messages.data.Object parameter = 11;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    public int getParameters(int index) {
-      return parameters_.get(index);
+    public int getParameterCount() {
+      return parameter_.size();
+    }
+    /**
+     * <code>repeated .messages.data.Object parameter = 11;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.Object getParameter(int index) {
+      return parameter_.get(index);
+    }
+    /**
+     * <code>repeated .messages.data.Object parameter = 11;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getParameterOrBuilder(
+        int index) {
+      return parameter_.get(index);
     }
 
     public static final int SENDERCLASSNAME_FIELD_NUMBER = 12;
@@ -3422,7 +3726,7 @@ public final class Calls {
       parameterNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       parameterClasses_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       exceptionTypes_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-      parameters_ = java.util.Collections.emptyList();
+      parameter_ = java.util.Collections.emptyList();
       senderClassName_ = "";
       sender_ = 0;
       sourceLocationFile_ = "";
@@ -3450,6 +3754,12 @@ public final class Calls {
       if (!hasTarget()) {
         memoizedIsInitialized = 0;
         return false;
+      }
+      for (int i = 0; i < getParameterCount(); i++) {
+        if (!getParameter(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
       }
       memoizedIsInitialized = 1;
       return true;
@@ -3488,8 +3798,8 @@ public final class Calls {
       for (int i = 0; i < exceptionTypes_.size(); i++) {
         output.writeBytes(10, exceptionTypes_.getByteString(i));
       }
-      for (int i = 0; i < parameters_.size(); i++) {
-        output.writeInt32(11, parameters_.get(i));
+      for (int i = 0; i < parameter_.size(); i++) {
+        output.writeMessage(11, parameter_.get(i));
       }
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         output.writeBytes(12, getSenderClassNameBytes());
@@ -3570,14 +3880,9 @@ public final class Calls {
         size += dataSize;
         size += 1 * getExceptionTypesList().size();
       }
-      {
-        int dataSize = 0;
-        for (int i = 0; i < parameters_.size(); i++) {
-          dataSize += com.google.protobuf.CodedOutputStream
-            .computeInt32SizeNoTag(parameters_.get(i));
-        }
-        size += dataSize;
-        size += 1 * getParametersList().size();
+      for (int i = 0; i < parameter_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(11, parameter_.get(i));
       }
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         size += com.google.protobuf.CodedOutputStream
@@ -3712,6 +4017,7 @@ public final class Calls {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getParameterFieldBuilder();
         }
       }
       private static Builder create() {
@@ -3740,8 +4046,12 @@ public final class Calls {
         bitField0_ = (bitField0_ & ~0x00000100);
         exceptionTypes_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000200);
-        parameters_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000400);
+        if (parameterBuilder_ == null) {
+          parameter_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000400);
+        } else {
+          parameterBuilder_.clear();
+        }
         senderClassName_ = "";
         bitField0_ = (bitField0_ & ~0x00000800);
         sender_ = 0;
@@ -3823,11 +4133,15 @@ public final class Calls {
           bitField0_ = (bitField0_ & ~0x00000200);
         }
         result.exceptionTypes_ = exceptionTypes_;
-        if (((bitField0_ & 0x00000400) == 0x00000400)) {
-          parameters_ = java.util.Collections.unmodifiableList(parameters_);
-          bitField0_ = (bitField0_ & ~0x00000400);
+        if (parameterBuilder_ == null) {
+          if (((bitField0_ & 0x00000400) == 0x00000400)) {
+            parameter_ = java.util.Collections.unmodifiableList(parameter_);
+            bitField0_ = (bitField0_ & ~0x00000400);
+          }
+          result.parameter_ = parameter_;
+        } else {
+          result.parameter_ = parameterBuilder_.build();
         }
-        result.parameters_ = parameters_;
         if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
           to_bitField0_ |= 0x00000080;
         }
@@ -3919,15 +4233,31 @@ public final class Calls {
           }
           onChanged();
         }
-        if (!other.parameters_.isEmpty()) {
-          if (parameters_.isEmpty()) {
-            parameters_ = other.parameters_;
-            bitField0_ = (bitField0_ & ~0x00000400);
-          } else {
-            ensureParametersIsMutable();
-            parameters_.addAll(other.parameters_);
+        if (parameterBuilder_ == null) {
+          if (!other.parameter_.isEmpty()) {
+            if (parameter_.isEmpty()) {
+              parameter_ = other.parameter_;
+              bitField0_ = (bitField0_ & ~0x00000400);
+            } else {
+              ensureParameterIsMutable();
+              parameter_.addAll(other.parameter_);
+            }
+            onChanged();
           }
-          onChanged();
+        } else {
+          if (!other.parameter_.isEmpty()) {
+            if (parameterBuilder_.isEmpty()) {
+              parameterBuilder_.dispose();
+              parameterBuilder_ = null;
+              parameter_ = other.parameter_;
+              bitField0_ = (bitField0_ & ~0x00000400);
+              parameterBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getParameterFieldBuilder() : null;
+            } else {
+              parameterBuilder_.addAllMessages(other.parameter_);
+            }
+          }
         }
         if (other.hasSenderClassName()) {
           bitField0_ |= 0x00000800;
@@ -3970,6 +4300,12 @@ public final class Calls {
         if (!hasTarget()) {
           
           return false;
+        }
+        for (int i = 0; i < getParameterCount(); i++) {
+          if (!getParameter(i).isInitialized()) {
+            
+            return false;
+          }
         }
         return true;
       }
@@ -4684,98 +5020,316 @@ public final class Calls {
         return this;
       }
 
-      private java.util.List<java.lang.Integer> parameters_ = java.util.Collections.emptyList();
-      private void ensureParametersIsMutable() {
+      private java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> parameter_ =
+        java.util.Collections.emptyList();
+      private void ensureParameterIsMutable() {
         if (!((bitField0_ & 0x00000400) == 0x00000400)) {
-          parameters_ = new java.util.ArrayList<java.lang.Integer>(parameters_);
+          parameter_ = new java.util.ArrayList<com.ittera.cometa.distributor.messages.data.Primitives.Object>(parameter_);
           bitField0_ |= 0x00000400;
          }
       }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> parameterBuilder_;
+
       /**
-       * <code>repeated int32 parameters = 11;</code>
+       * <code>repeated .messages.data.Object parameter = 11;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public java.util.List<java.lang.Integer>
-          getParametersList() {
-        return java.util.Collections.unmodifiableList(parameters_);
+      public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> getParameterList() {
+        if (parameterBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(parameter_);
+        } else {
+          return parameterBuilder_.getMessageList();
+        }
       }
       /**
-       * <code>repeated int32 parameters = 11;</code>
+       * <code>repeated .messages.data.Object parameter = 11;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public int getParametersCount() {
-        return parameters_.size();
+      public int getParameterCount() {
+        if (parameterBuilder_ == null) {
+          return parameter_.size();
+        } else {
+          return parameterBuilder_.getCount();
+        }
       }
       /**
-       * <code>repeated int32 parameters = 11;</code>
+       * <code>repeated .messages.data.Object parameter = 11;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public int getParameters(int index) {
-        return parameters_.get(index);
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object getParameter(int index) {
+        if (parameterBuilder_ == null) {
+          return parameter_.get(index);
+        } else {
+          return parameterBuilder_.getMessage(index);
+        }
       }
       /**
-       * <code>repeated int32 parameters = 11;</code>
+       * <code>repeated .messages.data.Object parameter = 11;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder setParameters(
-          int index, int value) {
-        ensureParametersIsMutable();
-        parameters_.set(index, value);
-        onChanged();
+      public Builder setParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (parameterBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureParameterIsMutable();
+          parameter_.set(index, value);
+          onChanged();
+        } else {
+          parameterBuilder_.setMessage(index, value);
+        }
         return this;
       }
       /**
-       * <code>repeated int32 parameters = 11;</code>
+       * <code>repeated .messages.data.Object parameter = 11;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder addParameters(int value) {
-        ensureParametersIsMutable();
-        parameters_.add(value);
-        onChanged();
+      public Builder setParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          parameterBuilder_.setMessage(index, builderForValue.build());
+        }
         return this;
       }
       /**
-       * <code>repeated int32 parameters = 11;</code>
+       * <code>repeated .messages.data.Object parameter = 11;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder addAllParameters(
-          java.lang.Iterable<? extends java.lang.Integer> values) {
-        ensureParametersIsMutable();
-        com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, parameters_);
-        onChanged();
+      public Builder addParameter(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (parameterBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureParameterIsMutable();
+          parameter_.add(value);
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(value);
+        }
         return this;
       }
       /**
-       * <code>repeated int32 parameters = 11;</code>
+       * <code>repeated .messages.data.Object parameter = 11;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder clearParameters() {
-        parameters_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000400);
-        onChanged();
+      public Builder addParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (parameterBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureParameterIsMutable();
+          parameter_.add(index, value);
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(index, value);
+        }
         return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 11;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder addParameter(
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.add(builderForValue.build());
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 11;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder addParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 11;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder addAllParameter(
+          java.lang.Iterable<? extends com.ittera.cometa.distributor.messages.data.Primitives.Object> values) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, parameter_);
+          onChanged();
+        } else {
+          parameterBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 11;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder clearParameter() {
+        if (parameterBuilder_ == null) {
+          parameter_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000400);
+          onChanged();
+        } else {
+          parameterBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 11;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder removeParameter(int index) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.remove(index);
+          onChanged();
+        } else {
+          parameterBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 11;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getParameterBuilder(
+          int index) {
+        return getParameterFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 11;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getParameterOrBuilder(
+          int index) {
+        if (parameterBuilder_ == null) {
+          return parameter_.get(index);  } else {
+          return parameterBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 11;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+           getParameterOrBuilderList() {
+        if (parameterBuilder_ != null) {
+          return parameterBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(parameter_);
+        }
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 11;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder addParameterBuilder() {
+        return getParameterFieldBuilder().addBuilder(
+            com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 11;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder addParameterBuilder(
+          int index) {
+        return getParameterFieldBuilder().addBuilder(
+            index, com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 11;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder> 
+           getParameterBuilderList() {
+        return getParameterFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getParameterFieldBuilder() {
+        if (parameterBuilder_ == null) {
+          parameterBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  parameter_,
+                  ((bitField0_ & 0x00000400) == 0x00000400),
+                  getParentForChildren(),
+                  isClean());
+          parameter_ = null;
+        }
+        return parameterBuilder_;
       }
 
       private java.lang.Object senderClassName_ = "";
@@ -6918,29 +7472,48 @@ public final class Calls {
         getExceptionTypesBytes(int index);
 
     /**
-     * <code>repeated int32 parameters = 10;</code>
+     * <code>repeated .messages.data.Object parameter = 10;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    java.util.List<java.lang.Integer> getParametersList();
+    java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> 
+        getParameterList();
     /**
-     * <code>repeated int32 parameters = 10;</code>
+     * <code>repeated .messages.data.Object parameter = 10;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    int getParametersCount();
+    com.ittera.cometa.distributor.messages.data.Primitives.Object getParameter(int index);
     /**
-     * <code>repeated int32 parameters = 10;</code>
+     * <code>repeated .messages.data.Object parameter = 10;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    int getParameters(int index);
+    int getParameterCount();
+    /**
+     * <code>repeated .messages.data.Object parameter = 10;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+        getParameterOrBuilderList();
+    /**
+     * <code>repeated .messages.data.Object parameter = 10;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getParameterOrBuilder(
+        int index);
 
     /**
      * <code>optional string senderClassName = 11;</code>
@@ -7137,25 +7710,12 @@ public final class Calls {
               exceptionTypes_.add(bs);
               break;
             }
-            case 80: {
-              if (!((mutable_bitField0_ & 0x00000200) == 0x00000200)) {
-                parameters_ = new java.util.ArrayList<java.lang.Integer>();
-                mutable_bitField0_ |= 0x00000200;
-              }
-              parameters_.add(input.readInt32());
-              break;
-            }
             case 82: {
-              int length = input.readRawVarint32();
-              int limit = input.pushLimit(length);
-              if (!((mutable_bitField0_ & 0x00000200) == 0x00000200) && input.getBytesUntilLimit() > 0) {
-                parameters_ = new java.util.ArrayList<java.lang.Integer>();
+              if (!((mutable_bitField0_ & 0x00000200) == 0x00000200)) {
+                parameter_ = new java.util.ArrayList<com.ittera.cometa.distributor.messages.data.Primitives.Object>();
                 mutable_bitField0_ |= 0x00000200;
               }
-              while (input.getBytesUntilLimit() > 0) {
-                parameters_.add(input.readInt32());
-              }
-              input.popLimit(limit);
+              parameter_.add(input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry));
               break;
             }
             case 90: {
@@ -7204,7 +7764,7 @@ public final class Calls {
           exceptionTypes_ = exceptionTypes_.getUnmodifiableView();
         }
         if (((mutable_bitField0_ & 0x00000200) == 0x00000200)) {
-          parameters_ = java.util.Collections.unmodifiableList(parameters_);
+          parameter_ = java.util.Collections.unmodifiableList(parameter_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -7509,38 +8069,59 @@ public final class Calls {
       return exceptionTypes_.getByteString(index);
     }
 
-    public static final int PARAMETERS_FIELD_NUMBER = 10;
-    private java.util.List<java.lang.Integer> parameters_;
+    public static final int PARAMETER_FIELD_NUMBER = 10;
+    private java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> parameter_;
     /**
-     * <code>repeated int32 parameters = 10;</code>
+     * <code>repeated .messages.data.Object parameter = 10;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    public java.util.List<java.lang.Integer>
-        getParametersList() {
-      return parameters_;
+    public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> getParameterList() {
+      return parameter_;
     }
     /**
-     * <code>repeated int32 parameters = 10;</code>
+     * <code>repeated .messages.data.Object parameter = 10;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    public int getParametersCount() {
-      return parameters_.size();
+    public java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+        getParameterOrBuilderList() {
+      return parameter_;
     }
     /**
-     * <code>repeated int32 parameters = 10;</code>
+     * <code>repeated .messages.data.Object parameter = 10;</code>
      *
      * <pre>
      *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
      * </pre>
      */
-    public int getParameters(int index) {
-      return parameters_.get(index);
+    public int getParameterCount() {
+      return parameter_.size();
+    }
+    /**
+     * <code>repeated .messages.data.Object parameter = 10;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.Object getParameter(int index) {
+      return parameter_.get(index);
+    }
+    /**
+     * <code>repeated .messages.data.Object parameter = 10;</code>
+     *
+     * <pre>
+     *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+     * </pre>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getParameterOrBuilder(
+        int index) {
+      return parameter_.get(index);
     }
 
     public static final int SENDERCLASSNAME_FIELD_NUMBER = 11;
@@ -7729,7 +8310,7 @@ public final class Calls {
       parameterNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       parameterClasses_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       exceptionTypes_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-      parameters_ = java.util.Collections.emptyList();
+      parameter_ = java.util.Collections.emptyList();
       senderClassName_ = "";
       sender_ = 0;
       sourceLocationFile_ = "";
@@ -7753,6 +8334,12 @@ public final class Calls {
       if (!hasName()) {
         memoizedIsInitialized = 0;
         return false;
+      }
+      for (int i = 0; i < getParameterCount(); i++) {
+        if (!getParameter(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
       }
       memoizedIsInitialized = 1;
       return true;
@@ -7788,8 +8375,8 @@ public final class Calls {
       for (int i = 0; i < exceptionTypes_.size(); i++) {
         output.writeBytes(9, exceptionTypes_.getByteString(i));
       }
-      for (int i = 0; i < parameters_.size(); i++) {
-        output.writeInt32(10, parameters_.get(i));
+      for (int i = 0; i < parameter_.size(); i++) {
+        output.writeMessage(10, parameter_.get(i));
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeBytes(11, getSenderClassNameBytes());
@@ -7866,14 +8453,9 @@ public final class Calls {
         size += dataSize;
         size += 1 * getExceptionTypesList().size();
       }
-      {
-        int dataSize = 0;
-        for (int i = 0; i < parameters_.size(); i++) {
-          dataSize += com.google.protobuf.CodedOutputStream
-            .computeInt32SizeNoTag(parameters_.get(i));
-        }
-        size += dataSize;
-        size += 1 * getParametersList().size();
+      for (int i = 0; i < parameter_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(10, parameter_.get(i));
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
@@ -8008,6 +8590,7 @@ public final class Calls {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getParameterFieldBuilder();
         }
       }
       private static Builder create() {
@@ -8034,8 +8617,12 @@ public final class Calls {
         bitField0_ = (bitField0_ & ~0x00000080);
         exceptionTypes_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000100);
-        parameters_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000200);
+        if (parameterBuilder_ == null) {
+          parameter_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000200);
+        } else {
+          parameterBuilder_.clear();
+        }
         senderClassName_ = "";
         bitField0_ = (bitField0_ & ~0x00000400);
         sender_ = 0;
@@ -8113,11 +8700,15 @@ public final class Calls {
           bitField0_ = (bitField0_ & ~0x00000100);
         }
         result.exceptionTypes_ = exceptionTypes_;
-        if (((bitField0_ & 0x00000200) == 0x00000200)) {
-          parameters_ = java.util.Collections.unmodifiableList(parameters_);
-          bitField0_ = (bitField0_ & ~0x00000200);
+        if (parameterBuilder_ == null) {
+          if (((bitField0_ & 0x00000200) == 0x00000200)) {
+            parameter_ = java.util.Collections.unmodifiableList(parameter_);
+            bitField0_ = (bitField0_ & ~0x00000200);
+          }
+          result.parameter_ = parameter_;
+        } else {
+          result.parameter_ = parameterBuilder_.build();
         }
-        result.parameters_ = parameters_;
         if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
           to_bitField0_ |= 0x00000040;
         }
@@ -8206,15 +8797,31 @@ public final class Calls {
           }
           onChanged();
         }
-        if (!other.parameters_.isEmpty()) {
-          if (parameters_.isEmpty()) {
-            parameters_ = other.parameters_;
-            bitField0_ = (bitField0_ & ~0x00000200);
-          } else {
-            ensureParametersIsMutable();
-            parameters_.addAll(other.parameters_);
+        if (parameterBuilder_ == null) {
+          if (!other.parameter_.isEmpty()) {
+            if (parameter_.isEmpty()) {
+              parameter_ = other.parameter_;
+              bitField0_ = (bitField0_ & ~0x00000200);
+            } else {
+              ensureParameterIsMutable();
+              parameter_.addAll(other.parameter_);
+            }
+            onChanged();
           }
-          onChanged();
+        } else {
+          if (!other.parameter_.isEmpty()) {
+            if (parameterBuilder_.isEmpty()) {
+              parameterBuilder_.dispose();
+              parameterBuilder_ = null;
+              parameter_ = other.parameter_;
+              bitField0_ = (bitField0_ & ~0x00000200);
+              parameterBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getParameterFieldBuilder() : null;
+            } else {
+              parameterBuilder_.addAllMessages(other.parameter_);
+            }
+          }
         }
         if (other.hasSenderClassName()) {
           bitField0_ |= 0x00000400;
@@ -8253,6 +8860,12 @@ public final class Calls {
         if (!hasName()) {
           
           return false;
+        }
+        for (int i = 0; i < getParameterCount(); i++) {
+          if (!getParameter(i).isInitialized()) {
+            
+            return false;
+          }
         }
         return true;
       }
@@ -8915,98 +9528,316 @@ public final class Calls {
         return this;
       }
 
-      private java.util.List<java.lang.Integer> parameters_ = java.util.Collections.emptyList();
-      private void ensureParametersIsMutable() {
+      private java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> parameter_ =
+        java.util.Collections.emptyList();
+      private void ensureParameterIsMutable() {
         if (!((bitField0_ & 0x00000200) == 0x00000200)) {
-          parameters_ = new java.util.ArrayList<java.lang.Integer>(parameters_);
+          parameter_ = new java.util.ArrayList<com.ittera.cometa.distributor.messages.data.Primitives.Object>(parameter_);
           bitField0_ |= 0x00000200;
          }
       }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> parameterBuilder_;
+
       /**
-       * <code>repeated int32 parameters = 10;</code>
+       * <code>repeated .messages.data.Object parameter = 10;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public java.util.List<java.lang.Integer>
-          getParametersList() {
-        return java.util.Collections.unmodifiableList(parameters_);
+      public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> getParameterList() {
+        if (parameterBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(parameter_);
+        } else {
+          return parameterBuilder_.getMessageList();
+        }
       }
       /**
-       * <code>repeated int32 parameters = 10;</code>
+       * <code>repeated .messages.data.Object parameter = 10;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public int getParametersCount() {
-        return parameters_.size();
+      public int getParameterCount() {
+        if (parameterBuilder_ == null) {
+          return parameter_.size();
+        } else {
+          return parameterBuilder_.getCount();
+        }
       }
       /**
-       * <code>repeated int32 parameters = 10;</code>
+       * <code>repeated .messages.data.Object parameter = 10;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public int getParameters(int index) {
-        return parameters_.get(index);
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object getParameter(int index) {
+        if (parameterBuilder_ == null) {
+          return parameter_.get(index);
+        } else {
+          return parameterBuilder_.getMessage(index);
+        }
       }
       /**
-       * <code>repeated int32 parameters = 10;</code>
+       * <code>repeated .messages.data.Object parameter = 10;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder setParameters(
-          int index, int value) {
-        ensureParametersIsMutable();
-        parameters_.set(index, value);
-        onChanged();
+      public Builder setParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (parameterBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureParameterIsMutable();
+          parameter_.set(index, value);
+          onChanged();
+        } else {
+          parameterBuilder_.setMessage(index, value);
+        }
         return this;
       }
       /**
-       * <code>repeated int32 parameters = 10;</code>
+       * <code>repeated .messages.data.Object parameter = 10;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder addParameters(int value) {
-        ensureParametersIsMutable();
-        parameters_.add(value);
-        onChanged();
+      public Builder setParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          parameterBuilder_.setMessage(index, builderForValue.build());
+        }
         return this;
       }
       /**
-       * <code>repeated int32 parameters = 10;</code>
+       * <code>repeated .messages.data.Object parameter = 10;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder addAllParameters(
-          java.lang.Iterable<? extends java.lang.Integer> values) {
-        ensureParametersIsMutable();
-        com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, parameters_);
-        onChanged();
+      public Builder addParameter(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (parameterBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureParameterIsMutable();
+          parameter_.add(value);
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(value);
+        }
         return this;
       }
       /**
-       * <code>repeated int32 parameters = 10;</code>
+       * <code>repeated .messages.data.Object parameter = 10;</code>
        *
        * <pre>
        *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
        * </pre>
        */
-      public Builder clearParameters() {
-        parameters_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000200);
-        onChanged();
+      public Builder addParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (parameterBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureParameterIsMutable();
+          parameter_.add(index, value);
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(index, value);
+        }
         return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 10;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder addParameter(
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.add(builderForValue.build());
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 10;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder addParameter(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          parameterBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 10;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder addAllParameter(
+          java.lang.Iterable<? extends com.ittera.cometa.distributor.messages.data.Primitives.Object> values) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, parameter_);
+          onChanged();
+        } else {
+          parameterBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 10;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder clearParameter() {
+        if (parameterBuilder_ == null) {
+          parameter_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000200);
+          onChanged();
+        } else {
+          parameterBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 10;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public Builder removeParameter(int index) {
+        if (parameterBuilder_ == null) {
+          ensureParameterIsMutable();
+          parameter_.remove(index);
+          onChanged();
+        } else {
+          parameterBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 10;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getParameterBuilder(
+          int index) {
+        return getParameterFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 10;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getParameterOrBuilder(
+          int index) {
+        if (parameterBuilder_ == null) {
+          return parameter_.get(index);  } else {
+          return parameterBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 10;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+           getParameterOrBuilderList() {
+        if (parameterBuilder_ != null) {
+          return parameterBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(parameter_);
+        }
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 10;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder addParameterBuilder() {
+        return getParameterFieldBuilder().addBuilder(
+            com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 10;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder addParameterBuilder(
+          int index) {
+        return getParameterFieldBuilder().addBuilder(
+            index, com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .messages.data.Object parameter = 10;</code>
+       *
+       * <pre>
+       *NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
+       * </pre>
+       */
+      public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder> 
+           getParameterBuilderList() {
+        return getParameterFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getParameterFieldBuilder() {
+        if (parameterBuilder_ == null) {
+          parameterBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  parameter_,
+                  ((bitField0_ & 0x00000200) == 0x00000200),
+                  getParentForChildren(),
+                  isClean());
+          parameter_ = null;
+        }
+        return parameterBuilder_;
       }
 
       private java.lang.Object senderClassName_ = "";
@@ -9381,41 +10212,43 @@ public final class Calls {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013calls.proto\022\rmessages.data\"\313\002\n\017Constru" +
-      "ctorCall\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010threa" +
-      "dId\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(\003\022\014\n\004name\030\004" +
-      " \002(\t\022\021\n\tmodifiers\030\005 \001(\005\022\026\n\016parameterName" +
-      "s\030\006 \003(\t\022\030\n\020parameterClasses\030\007 \003(\t\022\026\n\016exc" +
-      "eptionTypes\030\010 \003(\t\022\022\n\nparameters\030\t \003(\005\022\027\n" +
+      "\n\013calls.proto\022\rmessages.data\032\020primitives" +
+      ".proto\"\341\002\n\017ConstructorCall\022\025\n\rdistributo" +
+      "rId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTi" +
+      "me\030\003 \002(\003\022\014\n\004name\030\004 \002(\t\022\021\n\tmodifiers\030\005 \001(" +
+      "\005\022\026\n\016parameterNames\030\006 \003(\t\022\030\n\020parameterCl" +
+      "asses\030\007 \003(\t\022\026\n\016exceptionTypes\030\010 \003(\t\022(\n\tp" +
+      "arameter\030\t \003(\0132\025.messages.data.Object\022\027\n" +
       "\017senderClassName\030\n \001(\t\022\016\n\006sender\030\013 \001(\005\022\032" +
       "\n\022sourceLocationFile\030\014 \001(\t\022\032\n\022sourceLoca" +
-      "tionLine\030\r \001(\005\022\032\n\022sourceLocationType\030\016 \001" +
-      "(\t\"\355\002\n\022InstanceMethodCall\022\025\n\rdistributor",
+      "tionLine\030\r \001(\005\022\032\n\022sourceLocationType\030\016 \001",
+      "(\t\"\203\003\n\022InstanceMethodCall\022\025\n\rdistributor" +
       "Id\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTim" +
       "e\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022\014\n\004name\030\005 \002(\t\022\016\n\006" +
       "target\030\006 \002(\005\022\021\n\tmodifiers\030\007 \001(\005\022\026\n\016param" +
       "eterNames\030\010 \003(\t\022\030\n\020parameterClasses\030\t \003(" +
-      "\t\022\026\n\016exceptionTypes\030\n \003(\t\022\022\n\nparameters\030" +
-      "\013 \003(\005\022\027\n\017senderClassName\030\014 \001(\t\022\016\n\006sender" +
-      "\030\r \001(\005\022\032\n\022sourceLocationFile\030\016 \001(\t\022\032\n\022so" +
-      "urceLocationLine\030\017 \001(\005\022\032\n\022sourceLocation" +
-      "Type\030\020 \001(\t\"\350\001\n\nClInitCall\022\025\n\rdistributor" +
-      "Id\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTim",
-      "e\030\003 \002(\003\022\014\n\004name\030\004 \002(\t\022\021\n\tmodifiers\030\005 \001(\005" +
-      "\022\027\n\017senderClassName\030\006 \001(\t\022\016\n\006sender\030\007 \001(" +
-      "\005\022\032\n\022sourceLocationFile\030\010 \001(\t\022\032\n\022sourceL" +
-      "ocationLine\030\t \001(\005\022\032\n\022sourceLocationType\030" +
-      "\n \001(\t\"\332\002\n\017ClassMethodCall\022\025\n\rdistributor" +
-      "Id\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTim" +
-      "e\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022\014\n\004name\030\005 \002(\t\022\021\n\t" +
-      "modifiers\030\006 \001(\005\022\026\n\016parameterNames\030\007 \003(\t\022" +
-      "\030\n\020parameterClasses\030\010 \003(\t\022\026\n\016exceptionTy" +
-      "pes\030\t \003(\t\022\022\n\nparameters\030\n \003(\005\022\027\n\017senderC",
-      "lassName\030\013 \001(\t\022\016\n\006sender\030\014 \001(\005\022\032\n\022source" +
-      "LocationFile\030\r \001(\t\022\032\n\022sourceLocationLine" +
-      "\030\016 \001(\005\022\032\n\022sourceLocationType\030\017 \001(\tB6\n+co" +
-      "m.ittera.cometa.distributor.messages.dat" +
-      "aB\005CallsH\001"
+      "\t\022\026\n\016exceptionTypes\030\n \003(\t\022(\n\tparameter\030\013" +
+      " \003(\0132\025.messages.data.Object\022\027\n\017senderCla" +
+      "ssName\030\014 \001(\t\022\016\n\006sender\030\r \001(\005\022\032\n\022sourceLo" +
+      "cationFile\030\016 \001(\t\022\032\n\022sourceLocationLine\030\017" +
+      " \001(\005\022\032\n\022sourceLocationType\030\020 \001(\t\"\350\001\n\nClI",
+      "nitCall\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010thread" +
+      "Id\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(\003\022\014\n\004name\030\004 " +
+      "\002(\t\022\021\n\tmodifiers\030\005 \001(\005\022\027\n\017senderClassNam" +
+      "e\030\006 \001(\t\022\016\n\006sender\030\007 \001(\005\022\032\n\022sourceLocatio" +
+      "nFile\030\010 \001(\t\022\032\n\022sourceLocationLine\030\t \001(\005\022" +
+      "\032\n\022sourceLocationType\030\n \001(\t\"\360\002\n\017ClassMet" +
+      "hodCall\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010thread" +
+      "Id\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(\003\022\r\n\005class\030\004" +
+      " \002(\t\022\014\n\004name\030\005 \002(\t\022\021\n\tmodifiers\030\006 \001(\005\022\026\n" +
+      "\016parameterNames\030\007 \003(\t\022\030\n\020parameterClasse",
+      "s\030\010 \003(\t\022\026\n\016exceptionTypes\030\t \003(\t\022(\n\tparam" +
+      "eter\030\n \003(\0132\025.messages.data.Object\022\027\n\017sen" +
+      "derClassName\030\013 \001(\t\022\016\n\006sender\030\014 \001(\005\022\032\n\022so" +
+      "urceLocationFile\030\r \001(\t\022\032\n\022sourceLocation" +
+      "Line\030\016 \001(\005\022\032\n\022sourceLocationType\030\017 \001(\tB6" +
+      "\n+com.ittera.cometa.distributor.messages" +
+      ".dataB\005CallsH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -9428,19 +10261,20 @@ public final class Calls {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
+          com.ittera.cometa.distributor.messages.data.Primitives.getDescriptor(),
         }, assigner);
     internal_static_messages_data_ConstructorCall_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_messages_data_ConstructorCall_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_ConstructorCall_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Name", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameters", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Name", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameter", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
     internal_static_messages_data_InstanceMethodCall_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_messages_data_InstanceMethodCall_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_InstanceMethodCall_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Target", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameters", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Target", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameter", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
     internal_static_messages_data_ClInitCall_descriptor =
       getDescriptor().getMessageTypes().get(2);
     internal_static_messages_data_ClInitCall_fieldAccessorTable = new
@@ -9452,7 +10286,8 @@ public final class Calls {
     internal_static_messages_data_ClassMethodCall_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_ClassMethodCall_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameters", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Modifiers", "ParameterNames", "ParameterClasses", "ExceptionTypes", "Parameter", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
+    com.ittera.cometa.distributor.messages.data.Primitives.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

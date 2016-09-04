@@ -27,11 +27,11 @@ public final class Wrappers {
         getMsgTypeBytes();
 
     /**
-     * <code>required int64 threadId = 2;</code>
+     * <code>required int64 threadId = 2 [default = -1];</code>
      */
     boolean hasThreadId();
     /**
-     * <code>required int64 threadId = 2;</code>
+     * <code>required int64 threadId = 2 [default = -1];</code>
      */
     long getThreadId();
 
@@ -546,13 +546,13 @@ public final class Wrappers {
     public static final int THREADID_FIELD_NUMBER = 2;
     private long threadId_;
     /**
-     * <code>required int64 threadId = 2;</code>
+     * <code>required int64 threadId = 2 [default = -1];</code>
      */
     public boolean hasThreadId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required int64 threadId = 2;</code>
+     * <code>required int64 threadId = 2 [default = -1];</code>
      */
     public long getThreadId() {
       return threadId_;
@@ -872,7 +872,7 @@ public final class Wrappers {
 
     private void initFields() {
       msgType_ = "";
-      threadId_ = 0L;
+      threadId_ = -1L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1193,7 +1193,7 @@ public final class Wrappers {
         super.clear();
         msgType_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
-        threadId_ = 0L;
+        threadId_ = -1L;
         bitField0_ = (bitField0_ & ~0x00000002);
         calltypeCase_ = 0;
         calltype_ = null;
@@ -1593,21 +1593,21 @@ public final class Wrappers {
         return this;
       }
 
-      private long threadId_ ;
+      private long threadId_ = -1L;
       /**
-       * <code>required int64 threadId = 2;</code>
+       * <code>required int64 threadId = 2 [default = -1];</code>
        */
       public boolean hasThreadId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required int64 threadId = 2;</code>
+       * <code>required int64 threadId = 2 [default = -1];</code>
        */
       public long getThreadId() {
         return threadId_;
       }
       /**
-       * <code>required int64 threadId = 2;</code>
+       * <code>required int64 threadId = 2 [default = -1];</code>
        */
       public Builder setThreadId(long value) {
         bitField0_ |= 0x00000002;
@@ -1616,11 +1616,11 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>required int64 threadId = 2;</code>
+       * <code>required int64 threadId = 2 [default = -1];</code>
        */
       public Builder clearThreadId() {
         bitField0_ = (bitField0_ & ~0x00000002);
-        threadId_ = 0L;
+        threadId_ = -1L;
         onChanged();
         return this;
       }
@@ -3272,27 +3272,27 @@ public final class Wrappers {
     java.lang.String[] descriptorData = {
       "\n\016wrappers.proto\022\rmessages.data\032\013calls.p" +
       "roto\032\014fields.proto\032\020exceptions.proto\032\014va" +
-      "lues.proto\"\204\006\n\013DataMessage\022\017\n\007msgType\030\001 " +
-      "\002(\t\022\020\n\010threadId\030\002 \002(\003\0229\n\017constructorCall" +
-      "\030\003 \001(\0132\036.messages.data.ConstructorCallH\000" +
-      "\022?\n\022instanceMethodCall\030\004 \001(\0132!.messages." +
-      "data.InstanceMethodCallH\000\0229\n\017classMethod" +
-      "Call\030\005 \001(\0132\036.messages.data.ClassMethodCa" +
-      "llH\000\022/\n\nclinitCall\030\006 \001(\0132\031.messages.data" +
-      ".ClInitCallH\000\0227\n\016staticFieldGet\030\007 \001(\0132\035.",
-      "messages.data.StaticFieldGetH\000\0227\n\016static" +
-      "FieldPut\030\010 \001(\0132\035.messages.data.StaticFie" +
-      "ldPutH\000\022;\n\020instanceFieldGet\030\t \001(\0132\037.mess" +
-      "ages.data.InstanceFieldGetH\000\022;\n\020instance" +
-      "FieldPut\030\n \001(\0132\037.messages.data.InstanceF" +
-      "ieldPutH\000\0229\n\017raisedThrowable\030\013 \001(\0132\036.mes" +
-      "sages.data.RaisedThrowableH\000\0221\n\013returnVa" +
-      "lue\030\014 \001(\0132\032.messages.data.ReturnValueH\000\022" +
-      "?\n\022staticFieldPutDone\030\r \001(\0132!.messages.d" +
-      "ata.StaticFieldPutDoneH\000\022C\n\024instanceFiel",
-      "dPutDone\030\016 \001(\0132#.messages.data.InstanceF" +
-      "ieldPutDoneH\000B\n\n\010calltypeB/\n+com.ittera." +
-      "cometa.distributor.messages.dataH\001"
+      "lues.proto\"\210\006\n\013DataMessage\022\017\n\007msgType\030\001 " +
+      "\002(\t\022\024\n\010threadId\030\002 \002(\003:\002-1\0229\n\017constructor" +
+      "Call\030\003 \001(\0132\036.messages.data.ConstructorCa" +
+      "llH\000\022?\n\022instanceMethodCall\030\004 \001(\0132!.messa" +
+      "ges.data.InstanceMethodCallH\000\0229\n\017classMe" +
+      "thodCall\030\005 \001(\0132\036.messages.data.ClassMeth" +
+      "odCallH\000\022/\n\nclinitCall\030\006 \001(\0132\031.messages." +
+      "data.ClInitCallH\000\0227\n\016staticFieldGet\030\007 \001(",
+      "\0132\035.messages.data.StaticFieldGetH\000\0227\n\016st" +
+      "aticFieldPut\030\010 \001(\0132\035.messages.data.Stati" +
+      "cFieldPutH\000\022;\n\020instanceFieldGet\030\t \001(\0132\037." +
+      "messages.data.InstanceFieldGetH\000\022;\n\020inst" +
+      "anceFieldPut\030\n \001(\0132\037.messages.data.Insta" +
+      "nceFieldPutH\000\0229\n\017raisedThrowable\030\013 \001(\0132\036" +
+      ".messages.data.RaisedThrowableH\000\0221\n\013retu" +
+      "rnValue\030\014 \001(\0132\032.messages.data.ReturnValu" +
+      "eH\000\022?\n\022staticFieldPutDone\030\r \001(\0132!.messag" +
+      "es.data.StaticFieldPutDoneH\000\022C\n\024instance",
+      "FieldPutDone\030\016 \001(\0132#.messages.data.Insta" +
+      "nceFieldPutDoneH\000B\n\n\010calltypeB/\n+com.itt" +
+      "era.cometa.distributor.messages.dataH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {

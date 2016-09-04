@@ -2,7 +2,10 @@ package com.ittera.cometa.distributor;
 
 import java.util.Properties;
 import java.util.Arrays;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
+import com.ittera.cometa.distributor.messages.data.Calls;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -17,6 +20,8 @@ public class DataMessageDispatcher extends Thread {
     protected static final Logger logger = LogManager.getLogger(DataMessageDispatcher.class);
 
     private static long pollTimeout;
+
+    private static ExecutorService executorService;
 
     private static DataMessageDispatcher ourInstance;
 
@@ -42,6 +47,7 @@ public class DataMessageDispatcher extends Thread {
         consumer = new KafkaConsumer<>(props);
         consumer.subscribe(Arrays.asList(Distributor.kafkaTopic));
         logger.info("DataMessageDispatcher initialized");
+        executorService = Executors.newCachedThreadPool();
     }
 
     public void run() {
@@ -54,15 +60,35 @@ public class DataMessageDispatcher extends Thread {
               if (logger.isDebugEnabled()) {
                   logger.debug("Processing received record:\n"+record);
               }
-              Wrappers.DataMessage dataMessage = (Wrappers.DataMessage) record.value();
+              final Wrappers.DataMessage dataMessage = (Wrappers.DataMessage) record.value();
               long threadId=dataMessage.getThreadId();
-              try {
+              //if threadId not in our threadQueue, then push to new/random thread
+              if (!Distributor.threadBlockingQueueMap.containsKey(threadId)) {
+                executorService.submit(new Runnable() {
+                  @Override
+                  public void run() {
+                    if (dataMessage.hasClassMethodCall()) {
+                        Calls.ClassMethodCall methodCall = dataMessage.getClassMethodCall();
+                        try {
+                            Distributor.incomingVoidClassMethod(methodCall);
+                        } catch (Throwable thr) {
+                            logger.error("Error caught invoking class method call:"+methodCall.toString(), thr);
+                        }
+                    }
+                  }
+                });
+              }
+
+              //else, push to queue of this thread
+              else {
+                try {
                   //push to queue of the Destination thread
-                Distributor.threadBlockingQueueMap.get(threadId).put(dataMessage);
-                logger.info("Pushed message to thread queue");
-               } catch (InterruptedException e) {
-                logger.error("Interrupted while putting message in queue");
-                //TODO: should we do something about it?
+                  Distributor.threadBlockingQueueMap.get(threadId).put(dataMessage);
+                  logger.info("Pushed message to thread queue");
+                 } catch (InterruptedException e) {
+                   logger.error("Interrupted while putting message in queue");
+                   //TODO: should we do something about it?
+                }
               }
           }
       }

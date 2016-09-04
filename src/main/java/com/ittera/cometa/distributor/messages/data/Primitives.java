@@ -59,11 +59,44 @@ public final class Primitives {
         getClass_Bytes();
 
     /**
-     * <code>optional bool trimmed = 5 [default = false];</code>
+     * <code>optional bool isArray = 5 [default = false];</code>
+     */
+    boolean hasIsArray();
+    /**
+     * <code>optional bool isArray = 5 [default = false];</code>
+     */
+    boolean getIsArray();
+
+    /**
+     * <code>repeated .messages.data.Object arrayValue = 6;</code>
+     */
+    java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> 
+        getArrayValueList();
+    /**
+     * <code>repeated .messages.data.Object arrayValue = 6;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.Object getArrayValue(int index);
+    /**
+     * <code>repeated .messages.data.Object arrayValue = 6;</code>
+     */
+    int getArrayValueCount();
+    /**
+     * <code>repeated .messages.data.Object arrayValue = 6;</code>
+     */
+    java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+        getArrayValueOrBuilderList();
+    /**
+     * <code>repeated .messages.data.Object arrayValue = 6;</code>
+     */
+    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getArrayValueOrBuilder(
+        int index);
+
+    /**
+     * <code>optional bool trimmed = 7 [default = false];</code>
      */
     boolean hasTrimmed();
     /**
-     * <code>optional bool trimmed = 5 [default = false];</code>
+     * <code>optional bool trimmed = 7 [default = false];</code>
      */
     boolean getTrimmed();
   }
@@ -143,6 +176,19 @@ public final class Primitives {
             }
             case 40: {
               bitField0_ |= 0x00000010;
+              isArray_ = input.readBool();
+              break;
+            }
+            case 50: {
+              if (!((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+                arrayValue_ = new java.util.ArrayList<com.ittera.cometa.distributor.messages.data.Primitives.Object>();
+                mutable_bitField0_ |= 0x00000020;
+              }
+              arrayValue_.add(input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry));
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000020;
               trimmed_ = input.readBool();
               break;
             }
@@ -154,6 +200,9 @@ public final class Primitives {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e.getMessage()).setUnfinishedMessage(this);
       } finally {
+        if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+          arrayValue_ = java.util.Collections.unmodifiableList(arrayValue_);
+        }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
@@ -300,16 +349,66 @@ public final class Primitives {
       }
     }
 
-    public static final int TRIMMED_FIELD_NUMBER = 5;
-    private boolean trimmed_;
+    public static final int ISARRAY_FIELD_NUMBER = 5;
+    private boolean isArray_;
     /**
-     * <code>optional bool trimmed = 5 [default = false];</code>
+     * <code>optional bool isArray = 5 [default = false];</code>
      */
-    public boolean hasTrimmed() {
+    public boolean hasIsArray() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     /**
-     * <code>optional bool trimmed = 5 [default = false];</code>
+     * <code>optional bool isArray = 5 [default = false];</code>
+     */
+    public boolean getIsArray() {
+      return isArray_;
+    }
+
+    public static final int ARRAYVALUE_FIELD_NUMBER = 6;
+    private java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> arrayValue_;
+    /**
+     * <code>repeated .messages.data.Object arrayValue = 6;</code>
+     */
+    public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> getArrayValueList() {
+      return arrayValue_;
+    }
+    /**
+     * <code>repeated .messages.data.Object arrayValue = 6;</code>
+     */
+    public java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+        getArrayValueOrBuilderList() {
+      return arrayValue_;
+    }
+    /**
+     * <code>repeated .messages.data.Object arrayValue = 6;</code>
+     */
+    public int getArrayValueCount() {
+      return arrayValue_.size();
+    }
+    /**
+     * <code>repeated .messages.data.Object arrayValue = 6;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.Object getArrayValue(int index) {
+      return arrayValue_.get(index);
+    }
+    /**
+     * <code>repeated .messages.data.Object arrayValue = 6;</code>
+     */
+    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getArrayValueOrBuilder(
+        int index) {
+      return arrayValue_.get(index);
+    }
+
+    public static final int TRIMMED_FIELD_NUMBER = 7;
+    private boolean trimmed_;
+    /**
+     * <code>optional bool trimmed = 7 [default = false];</code>
+     */
+    public boolean hasTrimmed() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>optional bool trimmed = 7 [default = false];</code>
      */
     public boolean getTrimmed() {
       return trimmed_;
@@ -320,6 +419,8 @@ public final class Primitives {
       hash_ = 0;
       identityHash_ = 0;
       class__ = "";
+      isArray_ = false;
+      arrayValue_ = java.util.Collections.emptyList();
       trimmed_ = false;
     }
     private byte memoizedIsInitialized = -1;
@@ -331,6 +432,12 @@ public final class Primitives {
       if (!hasIdentityHash()) {
         memoizedIsInitialized = 0;
         return false;
+      }
+      for (int i = 0; i < getArrayValueCount(); i++) {
+        if (!getArrayValue(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
       }
       memoizedIsInitialized = 1;
       return true;
@@ -352,7 +459,13 @@ public final class Primitives {
         output.writeBytes(4, getClass_Bytes());
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeBool(5, trimmed_);
+        output.writeBool(5, isArray_);
+      }
+      for (int i = 0; i < arrayValue_.size(); i++) {
+        output.writeMessage(6, arrayValue_.get(i));
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBool(7, trimmed_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -381,7 +494,15 @@ public final class Primitives {
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(5, trimmed_);
+          .computeBoolSize(5, isArray_);
+      }
+      for (int i = 0; i < arrayValue_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(6, arrayValue_.get(i));
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(7, trimmed_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -492,6 +613,7 @@ public final class Primitives {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getArrayValueFieldBuilder();
         }
       }
       private static Builder create() {
@@ -508,8 +630,16 @@ public final class Primitives {
         bitField0_ = (bitField0_ & ~0x00000004);
         class__ = "";
         bitField0_ = (bitField0_ & ~0x00000008);
-        trimmed_ = false;
+        isArray_ = false;
         bitField0_ = (bitField0_ & ~0x00000010);
+        if (arrayValueBuilder_ == null) {
+          arrayValue_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000020);
+        } else {
+          arrayValueBuilder_.clear();
+        }
+        trimmed_ = false;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -557,6 +687,19 @@ public final class Primitives {
         if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000010;
         }
+        result.isArray_ = isArray_;
+        if (arrayValueBuilder_ == null) {
+          if (((bitField0_ & 0x00000020) == 0x00000020)) {
+            arrayValue_ = java.util.Collections.unmodifiableList(arrayValue_);
+            bitField0_ = (bitField0_ & ~0x00000020);
+          }
+          result.arrayValue_ = arrayValue_;
+        } else {
+          result.arrayValue_ = arrayValueBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000020;
+        }
         result.trimmed_ = trimmed_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -590,6 +733,35 @@ public final class Primitives {
           class__ = other.class__;
           onChanged();
         }
+        if (other.hasIsArray()) {
+          setIsArray(other.getIsArray());
+        }
+        if (arrayValueBuilder_ == null) {
+          if (!other.arrayValue_.isEmpty()) {
+            if (arrayValue_.isEmpty()) {
+              arrayValue_ = other.arrayValue_;
+              bitField0_ = (bitField0_ & ~0x00000020);
+            } else {
+              ensureArrayValueIsMutable();
+              arrayValue_.addAll(other.arrayValue_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.arrayValue_.isEmpty()) {
+            if (arrayValueBuilder_.isEmpty()) {
+              arrayValueBuilder_.dispose();
+              arrayValueBuilder_ = null;
+              arrayValue_ = other.arrayValue_;
+              bitField0_ = (bitField0_ & ~0x00000020);
+              arrayValueBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getArrayValueFieldBuilder() : null;
+            } else {
+              arrayValueBuilder_.addAllMessages(other.arrayValue_);
+            }
+          }
+        }
         if (other.hasTrimmed()) {
           setTrimmed(other.getTrimmed());
         }
@@ -601,6 +773,12 @@ public final class Primitives {
         if (!hasIdentityHash()) {
           
           return false;
+        }
+        for (int i = 0; i < getArrayValueCount(); i++) {
+          if (!getArrayValue(i).isInitialized()) {
+            
+            return false;
+          }
         }
         return true;
       }
@@ -840,33 +1018,305 @@ public final class Primitives {
         return this;
       }
 
-      private boolean trimmed_ ;
+      private boolean isArray_ ;
       /**
-       * <code>optional bool trimmed = 5 [default = false];</code>
+       * <code>optional bool isArray = 5 [default = false];</code>
        */
-      public boolean hasTrimmed() {
+      public boolean hasIsArray() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       /**
-       * <code>optional bool trimmed = 5 [default = false];</code>
+       * <code>optional bool isArray = 5 [default = false];</code>
+       */
+      public boolean getIsArray() {
+        return isArray_;
+      }
+      /**
+       * <code>optional bool isArray = 5 [default = false];</code>
+       */
+      public Builder setIsArray(boolean value) {
+        bitField0_ |= 0x00000010;
+        isArray_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool isArray = 5 [default = false];</code>
+       */
+      public Builder clearIsArray() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        isArray_ = false;
+        onChanged();
+        return this;
+      }
+
+      private java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> arrayValue_ =
+        java.util.Collections.emptyList();
+      private void ensureArrayValueIsMutable() {
+        if (!((bitField0_ & 0x00000020) == 0x00000020)) {
+          arrayValue_ = new java.util.ArrayList<com.ittera.cometa.distributor.messages.data.Primitives.Object>(arrayValue_);
+          bitField0_ |= 0x00000020;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> arrayValueBuilder_;
+
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object> getArrayValueList() {
+        if (arrayValueBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(arrayValue_);
+        } else {
+          return arrayValueBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public int getArrayValueCount() {
+        if (arrayValueBuilder_ == null) {
+          return arrayValue_.size();
+        } else {
+          return arrayValueBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object getArrayValue(int index) {
+        if (arrayValueBuilder_ == null) {
+          return arrayValue_.get(index);
+        } else {
+          return arrayValueBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public Builder setArrayValue(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (arrayValueBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureArrayValueIsMutable();
+          arrayValue_.set(index, value);
+          onChanged();
+        } else {
+          arrayValueBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public Builder setArrayValue(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (arrayValueBuilder_ == null) {
+          ensureArrayValueIsMutable();
+          arrayValue_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          arrayValueBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public Builder addArrayValue(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (arrayValueBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureArrayValueIsMutable();
+          arrayValue_.add(value);
+          onChanged();
+        } else {
+          arrayValueBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public Builder addArrayValue(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (arrayValueBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureArrayValueIsMutable();
+          arrayValue_.add(index, value);
+          onChanged();
+        } else {
+          arrayValueBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public Builder addArrayValue(
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (arrayValueBuilder_ == null) {
+          ensureArrayValueIsMutable();
+          arrayValue_.add(builderForValue.build());
+          onChanged();
+        } else {
+          arrayValueBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public Builder addArrayValue(
+          int index, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+        if (arrayValueBuilder_ == null) {
+          ensureArrayValueIsMutable();
+          arrayValue_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          arrayValueBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public Builder addAllArrayValue(
+          java.lang.Iterable<? extends com.ittera.cometa.distributor.messages.data.Primitives.Object> values) {
+        if (arrayValueBuilder_ == null) {
+          ensureArrayValueIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, arrayValue_);
+          onChanged();
+        } else {
+          arrayValueBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public Builder clearArrayValue() {
+        if (arrayValueBuilder_ == null) {
+          arrayValue_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000020);
+          onChanged();
+        } else {
+          arrayValueBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public Builder removeArrayValue(int index) {
+        if (arrayValueBuilder_ == null) {
+          ensureArrayValueIsMutable();
+          arrayValue_.remove(index);
+          onChanged();
+        } else {
+          arrayValueBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getArrayValueBuilder(
+          int index) {
+        return getArrayValueFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getArrayValueOrBuilder(
+          int index) {
+        if (arrayValueBuilder_ == null) {
+          return arrayValue_.get(index);  } else {
+          return arrayValueBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public java.util.List<? extends com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+           getArrayValueOrBuilderList() {
+        if (arrayValueBuilder_ != null) {
+          return arrayValueBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(arrayValue_);
+        }
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder addArrayValueBuilder() {
+        return getArrayValueFieldBuilder().addBuilder(
+            com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder addArrayValueBuilder(
+          int index) {
+        return getArrayValueFieldBuilder().addBuilder(
+            index, com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .messages.data.Object arrayValue = 6;</code>
+       */
+      public java.util.List<com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder> 
+           getArrayValueBuilderList() {
+        return getArrayValueFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getArrayValueFieldBuilder() {
+        if (arrayValueBuilder_ == null) {
+          arrayValueBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  arrayValue_,
+                  ((bitField0_ & 0x00000020) == 0x00000020),
+                  getParentForChildren(),
+                  isClean());
+          arrayValue_ = null;
+        }
+        return arrayValueBuilder_;
+      }
+
+      private boolean trimmed_ ;
+      /**
+       * <code>optional bool trimmed = 7 [default = false];</code>
+       */
+      public boolean hasTrimmed() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional bool trimmed = 7 [default = false];</code>
        */
       public boolean getTrimmed() {
         return trimmed_;
       }
       /**
-       * <code>optional bool trimmed = 5 [default = false];</code>
+       * <code>optional bool trimmed = 7 [default = false];</code>
        */
       public Builder setTrimmed(boolean value) {
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000040;
         trimmed_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional bool trimmed = 5 [default = false];</code>
+       * <code>optional bool trimmed = 7 [default = false];</code>
        */
       public Builder clearTrimmed() {
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000040);
         trimmed_ = false;
         onChanged();
         return this;
@@ -1542,13 +1992,14 @@ public final class Primitives {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\020primitives.proto\022\rmessages.data\"b\n\006Obj" +
-      "ect\022\r\n\005value\030\001 \001(\t\022\014\n\004hash\030\002 \001(\005\022\024\n\014iden" +
-      "tityHash\030\003 \002(\005\022\r\n\005class\030\004 \001(\t\022\026\n\007trimmed" +
-      "\030\005 \001(\010:\005false\">\n\005Class\022\021\n\tclassname\030\001 \001(" +
-      "\t\022\014\n\004hash\030\002 \001(\005\022\024\n\014identityHash\030\003 \002(\005B/\n" +
-      "+com.ittera.cometa.distributor.messages." +
-      "dataH\001"
+      "\n\020primitives.proto\022\rmessages.data\"\245\001\n\006Ob" +
+      "ject\022\r\n\005value\030\001 \001(\t\022\014\n\004hash\030\002 \001(\005\022\024\n\014ide" +
+      "ntityHash\030\003 \002(\005\022\r\n\005class\030\004 \001(\t\022\026\n\007isArra" +
+      "y\030\005 \001(\010:\005false\022)\n\narrayValue\030\006 \003(\0132\025.mes" +
+      "sages.data.Object\022\026\n\007trimmed\030\007 \001(\010:\005fals" +
+      "e\">\n\005Class\022\021\n\tclassname\030\001 \001(\t\022\014\n\004hash\030\002 " +
+      "\001(\005\022\024\n\014identityHash\030\003 \002(\005B/\n+com.ittera." +
+      "cometa.distributor.messages.dataH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -1567,7 +2018,7 @@ public final class Primitives {
     internal_static_messages_data_Object_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_Object_descriptor,
-        new java.lang.String[] { "Value", "Hash", "IdentityHash", "Class_", "Trimmed", });
+        new java.lang.String[] { "Value", "Hash", "IdentityHash", "Class_", "IsArray", "ArrayValue", "Trimmed", });
     internal_static_messages_data_Class_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_messages_data_Class_fieldAccessorTable = new

@@ -8,7 +8,9 @@ message Object {
     optional int32 hash = 2;
     required int32 identityHash = 3;
     optional string class = 4;
-    optional bool trimmed = 5 [default = false];
+    optional bool isArray = 5 [default = false];
+    repeated Object arrayValue = 6;
+    optional bool trimmed = 7 [default = false];
 }
 
 message Class {

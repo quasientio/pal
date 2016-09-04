@@ -9,12 +9,18 @@ import org.aspectj.lang.JoinPoint.StaticPart;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 /**
  * Methods of this class receive aspectj objects (i.e. StaticPart) as arguments as convenience.
  * TO DO: Unwrapp the necessary arguments in the caller (Distributor) to make this class agnostic
  */
 public class DataMessageFactory {
+  protected static final Logger logger = LogManager.getLogger(DataMessageFactory.class);
+
   protected static final int STRING_MAX_LEN=50;
 
   public static Wrappers.DataMessage buildClassInitializerMessage(int distributorId, StaticPart staticPart, Object sender) {
@@ -69,7 +75,7 @@ public class DataMessageFactory {
     }
     //9
     for (Object param: args) {
-      callBuilder.addParameters(System.identityHashCode(param));
+      callBuilder.addParameter(getWrappedValue(param, true));
     }
     callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //10
     callBuilder.setSender(System.identityHashCode(sender)); //11
@@ -114,7 +120,7 @@ public class DataMessageFactory {
     }
     //11
     for (Object param: args) {
-      callBuilder.addParameters(System.identityHashCode(param));
+      callBuilder.addParameter(getWrappedValue(param, true));
     }
     callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //12
     callBuilder.setSender(System.identityHashCode(sender)); //13
@@ -129,6 +135,35 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
+
+  /** This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: AppLauncher */
+  public static Wrappers.DataMessage buildClassMethodMessage(String distributorId, String className, String methodName, int modifiers, Class returnType, Class[] parameterTypes, Object[] args) {
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
+    final Calls.ClassMethodCall.Builder callBuilder = Calls.ClassMethodCall.newBuilder();
+    callBuilder.setDistributorId(Integer.valueOf(distributorId)); //1
+    callBuilder.setThreadId(Thread.currentThread().getId());
+    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
+    callBuilder.setClass_(className); //4
+    callBuilder.setName(methodName); //5
+    for (Class paramType: parameterTypes) {
+      callBuilder.addParameterClasses(paramType.getName());
+    }
+    boolean isMain = isMain(methodName, returnType, parameterTypes, modifiers);
+    if (!isMain) {
+      throw new IllegalArgumentException("Currently only calls to psvm can be wrapped by this method");
+    }
+    for (Object param: args) {
+      callBuilder.addParameter(getWrappedValue(param, !isMain));
+    }
+
+    msgBuilder.setThreadId(Thread.currentThread().getId());
+    msgBuilder.setMsgType("Class method");
+    msgBuilder.setClassMethodCall(callBuilder);
+
+    return msgBuilder.build();
+
+  }
 
   public static Wrappers.DataMessage buildClassMethodMessage(int distributorId, StaticPart staticPart, Object sender, Object[] args) {
 
@@ -157,8 +192,9 @@ public class DataMessageFactory {
       callBuilder.addExceptionTypes(clazz.getPackage().getName()+"."+clazz.getName());
     }
     //10
+    boolean methodIsMain = isMain(staticPart);
     for (Object param: args) {
-      callBuilder.addParameters(System.identityHashCode(param));
+      callBuilder.addParameter(getWrappedValue(param, !methodIsMain));
     }
     callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //11
     callBuilder.setSender(System.identityHashCode(sender)); //12
@@ -190,7 +226,7 @@ public class DataMessageFactory {
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //6
     fieldBuilder.setModifiers(fieldSignature.getModifiers()); //7
     fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //8
-    fieldBuilder.setSender(getWrappedValue(sender)); //9
+    fieldBuilder.setSender(getWrappedValue(sender, true)); //9
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //10
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //11
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //12
@@ -214,12 +250,12 @@ public class DataMessageFactory {
     fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
     fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
     fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
-    fieldBuilder.setTarget(getWrappedValue(target)); //5
+    fieldBuilder.setTarget(getWrappedValue(target, true)); //5
     fieldBuilder.setField(fieldSignature.getName()); //6
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //7
     fieldBuilder.setModifiers(fieldSignature.getModifiers()); //8
     fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //9
-    fieldBuilder.setSender(getWrappedValue(sender)); //10
+    fieldBuilder.setSender(getWrappedValue(sender, true)); //10
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //11
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //12
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //13
@@ -245,10 +281,10 @@ public class DataMessageFactory {
     fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
     fieldBuilder.setField(fieldSignature.getName()); //5
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //6
-    fieldBuilder.setValue(getWrappedValue(arg)); //7
+    fieldBuilder.setValue(getWrappedValue(arg, true)); //7
     fieldBuilder.setModifiers(fieldSignature.getModifiers()); //8
     fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //9
-    fieldBuilder.setSender(getWrappedValue(sender)); //10
+    fieldBuilder.setSender(getWrappedValue(sender, true)); //10
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //11
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //12
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //13
@@ -274,10 +310,10 @@ public class DataMessageFactory {
     fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
     fieldBuilder.setField(fieldSignature.getName()); //5
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //6
-    fieldBuilder.setValue(getWrappedValue(arg)); //7
+    fieldBuilder.setValue(getWrappedValue(arg, true)); //7
     fieldBuilder.setModifiers(fieldSignature.getModifiers()); //8
     fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //9
-    fieldBuilder.setSender(getWrappedValue(sender)); //10
+    fieldBuilder.setSender(getWrappedValue(sender, true)); //10
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Put static done");
@@ -298,13 +334,13 @@ public class DataMessageFactory {
     fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
     fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
     fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
-    fieldBuilder.setTarget(getWrappedValue(target)); //5
+    fieldBuilder.setTarget(getWrappedValue(target, true)); //5
     fieldBuilder.setField(fieldSignature.getName()); //6
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //7
-    fieldBuilder.setValue(getWrappedValue(arg)); //8
+    fieldBuilder.setValue(getWrappedValue(arg, true)); //8
     fieldBuilder.setModifiers(fieldSignature.getModifiers()); //9
     fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //10
-    fieldBuilder.setSender(getWrappedValue(sender)); //11
+    fieldBuilder.setSender(getWrappedValue(sender, true)); //11
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //12
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //13
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //14
@@ -328,13 +364,13 @@ public class DataMessageFactory {
     fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
     fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
     fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
-    fieldBuilder.setTarget(getWrappedValue(target)); //5
+    fieldBuilder.setTarget(getWrappedValue(target, true)); //5
     fieldBuilder.setField(fieldSignature.getName()); //6
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //7
-    fieldBuilder.setValue(getWrappedValue(arg)); //8
+    fieldBuilder.setValue(getWrappedValue(arg, true)); //8
     fieldBuilder.setModifiers(fieldSignature.getModifiers()); //9
     fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //10
-    fieldBuilder.setSender(getWrappedValue(sender)); //11
+    fieldBuilder.setSender(getWrappedValue(sender, true)); //11
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Put field done");
@@ -351,11 +387,12 @@ public class DataMessageFactory {
     thrBuilder.setDistributorId(distributorId);
     thrBuilder.setThreadId(Thread.currentThread().getId());
     thrBuilder.setCurrentTime(System.currentTimeMillis());
+    thrBuilder.setClassName(exception.getClass().getName());
     if (accessibleObject instanceof Constructor) {
       thrBuilder.setConstructor(((Constructor)accessibleObject).getDeclaringClass().getName());
       thrBuilder.setModifiers(((Constructor)accessibleObject).getModifiers());
     } else if (accessibleObject instanceof Method) {
-      thrBuilder.setMethod(((Method)accessibleObject).getDeclaringClass().getName());
+      thrBuilder.setMethod(((Method)accessibleObject).getName());
       thrBuilder.setModifiers(((Method)accessibleObject).getModifiers());
     }
     thrBuilder.setThrowable(buildThrowableMessage(exception));
@@ -398,7 +435,7 @@ public class DataMessageFactory {
     valBuilder.setCurrentTime(System.currentTimeMillis());
     valBuilder.setIsVoid(isVoid);
     if (!isVoid) {
-      valBuilder.setValue(getWrappedValue(object));
+      valBuilder.setValue(getWrappedValue(object, true));
     }
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
@@ -443,7 +480,7 @@ public class DataMessageFactory {
         msgBuilder.addStackTraceElement(ste.toString());
       }
     }
-    //fill in cause(s) -- recursively
+    //fill in cause(s) -- recursive
     if (throwable.getCause() != null) {
       msgBuilder.setCause(buildThrowableMessage(throwable.getCause()));
     }
@@ -452,29 +489,38 @@ public class DataMessageFactory {
   }
 
     /**
-   * Wrapped is the actual value if object is a primitive or if String (Strings of length > STRING_MAX_LEN are trimmed)
+   * Wrapped is the actual value if object is a primitive or if String (if trimStrings=true, strings of length > STRING_MAX_LEN are trimmed)
    * If the object isn't null, the hashCode and class are also returned
    * It always returns the identityHashCode
    * @param object
    * @return
    */
-  private static Primitives.Object getWrappedValue(Object object) {
+  private static Primitives.Object getWrappedValue(Object object, boolean trimStrings) {
     final Primitives.Object.Builder value = Primitives.Object.newBuilder();
+    if (logger.isDebugEnabled()) {
+      logger.debug("in getWrappedValue for:" + object);
+    }
 
     //1
     if (object != null) {
       if (object instanceof String) {
-        if (((String) object).length() > STRING_MAX_LEN) {
+        if (trimStrings && ((String) object).length() > STRING_MAX_LEN) {
           value.setValue(((String) object).substring(0, STRING_MAX_LEN));
-          //5
+          //7
           value.setTrimmed(true);
        } else {
          value.setValue(String.valueOf(object));
        }
-     }
-    else if (object.getClass().isPrimitive() || com.google.common.primitives.Primitives.isWrapperType(object.getClass())) {
+     } else if (object.getClass().isPrimitive() || com.google.common.primitives.Primitives.isWrapperType(object.getClass())) {
        value.setValue(String.valueOf(object));
-     }
+     } else if (object.getClass().isArray()) {
+        //5
+        value.setIsArray(object.getClass().isArray());
+        for (Object arrayElem: (Object[]) object) {
+          //wrap and all array elements -- recursive
+          value.addArrayValue(getWrappedValue(arrayElem, trimStrings));
+        }
+      }
     }
 
     //2
@@ -490,7 +536,11 @@ public class DataMessageFactory {
       value.setClass_(object.getClass().getName());
     }
 
-    return value.build();
+    Primitives.Object builtValue = value.build();
+    if (logger.isDebugEnabled()) {
+      logger.debug("Returning wrappedValue:\n"+builtValue);
+    }
+    return builtValue;
   }
 
   private static Primitives.Class getWrappedClass(Class clazz) {
@@ -509,4 +559,24 @@ public class DataMessageFactory {
     return clazzBuilder.build();
   }
 
+  private static boolean isMain(StaticPart staticPart) {
+    MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
+    int modifiers= methodSignature.getModifiers();
+
+    if ("main".equals(methodSignature.getMethod().getName()) && methodSignature.getReturnType().equals(Void.class)) {
+      Class[] paramTypes = methodSignature.getParameterTypes();
+      return (paramTypes.length==1 && paramTypes[0].equals(String[].class)
+        && Modifier.isPublic(modifiers) && Modifier.isStatic(modifiers));
+    }
+    return false;
+  }
+
+  private static boolean isMain(String methodName, Class returnType, Class[] paramTypes, int modifiers) {
+
+    if ("main".equals(methodName) && returnType.equals(Void.class)) {
+      return (paramTypes.length==1 && paramTypes[0].equals(String[].class)
+        && Modifier.isPublic(modifiers) && Modifier.isStatic(modifiers));
+    }
+    return false;
+  }
 }

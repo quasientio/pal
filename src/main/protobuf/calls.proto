@@ -1,5 +1,7 @@
 package messages.data;
 
+import "primitives.proto";
+
 option java_package = "com.ittera.cometa.distributor.messages.data";
 option java_outer_classname = "Calls";
 option optimize_for = SPEED;
@@ -29,7 +31,7 @@ message ConstructorCall {
     repeated string exceptionTypes = 8;
 
     //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    repeated int32 parameters = 9;
+    repeated Object parameter = 9;
 
     optional string senderClassName = 10;
 
@@ -76,7 +78,7 @@ message InstanceMethodCall {
     repeated string exceptionTypes = 10;
 
     //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    repeated int32 parameters = 11;
+    repeated Object parameter = 11;
 
     optional string senderClassName = 12;
 
@@ -152,7 +154,7 @@ message ClassMethodCall {
     repeated string exceptionTypes = 9;
 
     //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    repeated int32 parameters = 10;
+    repeated Object parameter = 10;
 
     optional string senderClassName = 11;
 
