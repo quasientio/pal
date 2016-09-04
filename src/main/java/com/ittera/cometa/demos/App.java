@@ -1,10 +1,6 @@
 package com.ittera.cometa.demos;
 
-/**
- * Hello world!
- *
- */
-public class App 
+public class App
 {
 
     Integer anInt=null;
@@ -57,6 +53,10 @@ public class App
         System.out.println(arg);
     }
 
+    private static void printArg(int argIdx, String arg) {
+        System.out.println(String.format("Argument #%d to main: %s", argIdx, arg));
+    }
+
     private static void testVoidStatic(String arg) {
         System.out.println(arg);
     }
@@ -65,32 +65,36 @@ public class App
         return arg.toLowerCase();
     }
 
-    public static void main( String[] args )
-    {
-       short times=1;
+    public static void main( String[] args ) {
+      if (args.length > 0) {
+          for (int i = 0; i < args.length ; i++) {
+              printArg(i, args[i]);
+          }
+      }
 
-       for (short i=0; i<times; i++) {
-         System.out.println("Hello World!");
-         App a = new App();
-         a.test();
-         a.doSomething();
-         System.out.println("X = " + a.giveMeX());
-         //string > 100 chars to test trimming
-         a.testArg("averylongsaverylongsaverylongsaverylongsaverylongsaverylongsaverylongstring");
-         a.someString=new StringBuffer("01234567890123456789012345678901234567890123456789").append("01234567890123456789012345678901234567890123456789xxx").toString();
-         doSomethingStatically();
-         System.out.println("aBool is " + a.aBool);
-         a.aBool=!a.aBool;
-         System.out.println("aBool is now " + a.aBool);
-         System.out.println("Getting someString field = " + a.someString);
-         System.out.println("a class str = " + a.aClassString);
-         System.out.println("aLong = " + a.aLong);
-         a.aLong*=2;
-         System.out.println("aLong (times 2) = " + a.aLong);
-         testVoidStatic("a otra cosa");
-         testNonVoidStatic("mariposa");
-         //test static constructor and instance constructor
-         new MyInnerClass();
-        }
+      short times=1;
+      for (short i=0; i<times; i++) {
+        System.out.println("Hello World!");
+        App a = new App();
+        a.test();
+        a.doSomething();
+        System.out.println("X = " + a.giveMeX());
+        //string > 100 chars to test trimming
+        a.testArg("averylongsaverylongsaverylongsaverylongsaverylongsaverylongsaverylongstring");
+        a.someString=new StringBuffer("01234567890123456789012345678901234567890123456789").append("01234567890123456789012345678901234567890123456789xxx").toString();
+        doSomethingStatically();
+        System.out.println("aBool is " + a.aBool);
+        a.aBool=!a.aBool;
+        System.out.println("aBool is now " + a.aBool);
+        System.out.println("Getting someString field = " + a.someString);
+        System.out.println("a class str = " + a.aClassString);
+        System.out.println("aLong = " + a.aLong);
+        a.aLong*=2;
+        System.out.println("aLong (times 2) = " + a.aLong);
+        testVoidStatic("a otra cosa");
+        testNonVoidStatic("mariposa");
+        //test static constructor and instance constructor
+        new MyInnerClass();
+      }
     }
 }

@@ -1,7 +1,9 @@
 package com.ittera.cometa.util;
 
-import com.ittera.cometa.distributor.messages.data.*;
+import com.ittera.cometa.distributor.messages.data.Wrappers;
+import com.ittera.cometa.distributor.messages.data.DataMessageFactory;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
@@ -9,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.Scanner;
 
@@ -58,13 +61,14 @@ public class AppLauncher {
     //now read in from stdin, wrap calls in messages and send them
     Scanner stdin = new Scanner(System.in);
     while(stdin.hasNextLine()) {
-      String line = stdin.nextLine();
-      String className = line.trim();
+      String[] lineParts = stdin.nextLine().trim().split(" ");
+      String className = lineParts[0];
+      String[] mainArgs = Arrays.copyOfRange(lineParts, 1, lineParts.length);
       String methodName = "main";
       int modifiers = Modifier.PUBLIC | Modifier.STATIC;
       Class returnType = Void.class;
       Class[] parameterTypes = new Class[]{String[].class};
-      Object[] parameters = new Object[]{new String[]{}};
+      Object[] parameters = new Object[]{mainArgs};
       final Wrappers.DataMessage msg = DataMessageFactory.buildClassMethodMessage(distributorId, className, methodName, modifiers, returnType, parameterTypes, parameters);
 
 
