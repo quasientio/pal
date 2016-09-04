@@ -1,3 +1,3 @@
 #!/bin/bash
 CLASSPATH=$CLASSPATH:/usr/local/lib/aspectj/lib/aspectjtools.jar
-ajc -argfile sources.lst
+ajc -1.7 -argfile sources.lst
