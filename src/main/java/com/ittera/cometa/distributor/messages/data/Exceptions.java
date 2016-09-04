@@ -4,89 +4,106 @@
 package com.ittera.cometa.distributor.messages.data;
 
 public final class Exceptions {
-  private Exceptions() {}
-  public static void registerAllExtensions(
-      com.google.protobuf.ExtensionRegistry registry) {
+  private Exceptions() {
   }
+
+  public static void registerAllExtensions(
+    com.google.protobuf.ExtensionRegistry registry) {
+  }
+
   public interface ThrowableOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:messages.data.Throwable)
-      com.google.protobuf.MessageOrBuilder {
+    // @@protoc_insertion_point(interface_extends:messages.data.Throwable)
+    com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>required string type = 1;</code>
      */
     boolean hasType();
+
     /**
      * <code>required string type = 1;</code>
      */
     java.lang.String getType();
+
     /**
      * <code>required string type = 1;</code>
      */
     com.google.protobuf.ByteString
-        getTypeBytes();
+    getTypeBytes();
 
     /**
      * <code>optional string message = 2;</code>
      */
     boolean hasMessage();
+
     /**
      * <code>optional string message = 2;</code>
      */
     java.lang.String getMessage();
+
     /**
      * <code>optional string message = 2;</code>
      */
     com.google.protobuf.ByteString
-        getMessageBytes();
+    getMessageBytes();
 
     /**
      * <code>repeated string stackTraceElement = 3;</code>
      */
     com.google.protobuf.ProtocolStringList
-        getStackTraceElementList();
+    getStackTraceElementList();
+
     /**
      * <code>repeated string stackTraceElement = 3;</code>
      */
     int getStackTraceElementCount();
+
     /**
      * <code>repeated string stackTraceElement = 3;</code>
      */
     java.lang.String getStackTraceElement(int index);
+
     /**
      * <code>repeated string stackTraceElement = 3;</code>
      */
     com.google.protobuf.ByteString
-        getStackTraceElementBytes(int index);
+    getStackTraceElementBytes(int index);
 
     /**
      * <code>optional .messages.data.Throwable cause = 4;</code>
      */
     boolean hasCause();
+
     /**
      * <code>optional .messages.data.Throwable cause = 4;</code>
      */
     com.ittera.cometa.distributor.messages.data.Exceptions.Throwable getCause();
+
     /**
      * <code>optional .messages.data.Throwable cause = 4;</code>
      */
     com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder getCauseOrBuilder();
   }
+
   /**
    * Protobuf type {@code messages.data.Throwable}
    */
   public static final class Throwable extends
-      com.google.protobuf.GeneratedMessage implements
-      // @@protoc_insertion_point(message_implements:messages.data.Throwable)
-      ThrowableOrBuilder {
+    com.google.protobuf.GeneratedMessage implements
+    // @@protoc_insertion_point(message_implements:messages.data.Throwable)
+    ThrowableOrBuilder {
     // Use Throwable.newBuilder() to construct.
     private Throwable(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private Throwable(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private Throwable(boolean noInit) {
+      this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
 
     private static final Throwable defaultInstance;
+
     public static Throwable getDefaultInstance() {
       return defaultInstance;
     }
@@ -96,19 +113,21 @@ public final class Exceptions {
     }
 
     private final com.google.protobuf.UnknownFieldSet unknownFields;
+
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
+    getUnknownFields() {
       return this.unknownFields;
     }
+
     private Throwable(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+      com.google.protobuf.CodedInputStream input,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
+        com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -119,7 +138,7 @@ public final class Exceptions {
               break;
             default: {
               if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
+                extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -164,7 +183,7 @@ public final class Exceptions {
         throw e.setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
+          e.getMessage()).setUnfinishedMessage(this);
       } finally {
         if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
           stackTraceElement_ = stackTraceElement_.getUnmodifiableView();
@@ -173,27 +192,28 @@ public final class Exceptions {
         makeExtensionsImmutable();
       }
     }
+
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return com.ittera.cometa.distributor.messages.data.Exceptions.internal_static_messages_data_Throwable_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return com.ittera.cometa.distributor.messages.data.Exceptions.internal_static_messages_data_Throwable_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.class, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder.class);
+        .ensureFieldAccessorsInitialized(
+          com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.class, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder.class);
     }
 
     public static com.google.protobuf.Parser<Throwable> PARSER =
-        new com.google.protobuf.AbstractParser<Throwable>() {
-      public Throwable parsePartialFrom(
+      new com.google.protobuf.AbstractParser<Throwable>() {
+        public Throwable parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Throwable(input, extensionRegistry);
-      }
-    };
+          return new Throwable(input, extensionRegistry);
+        }
+      };
 
     @java.lang.Override
     public com.google.protobuf.Parser<Throwable> getParserForType() {
@@ -203,12 +223,14 @@ public final class Exceptions {
     private int bitField0_;
     public static final int TYPE_FIELD_NUMBER = 1;
     private java.lang.Object type_;
+
     /**
      * <code>required string type = 1;</code>
      */
     public boolean hasType() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+
     /**
      * <code>required string type = 1;</code>
      */
@@ -217,8 +239,8 @@ public final class Exceptions {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           type_ = s;
@@ -226,16 +248,17 @@ public final class Exceptions {
         return s;
       }
     }
+
     /**
      * <code>required string type = 1;</code>
      */
     public com.google.protobuf.ByteString
-        getTypeBytes() {
+    getTypeBytes() {
       java.lang.Object ref = type_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+        com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+            (java.lang.String) ref);
         type_ = b;
         return b;
       } else {
@@ -245,12 +268,14 @@ public final class Exceptions {
 
     public static final int MESSAGE_FIELD_NUMBER = 2;
     private java.lang.Object message_;
+
     /**
      * <code>optional string message = 2;</code>
      */
     public boolean hasMessage() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+
     /**
      * <code>optional string message = 2;</code>
      */
@@ -259,8 +284,8 @@ public final class Exceptions {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           message_ = s;
@@ -268,16 +293,17 @@ public final class Exceptions {
         return s;
       }
     }
+
     /**
      * <code>optional string message = 2;</code>
      */
     public com.google.protobuf.ByteString
-        getMessageBytes() {
+    getMessageBytes() {
       java.lang.Object ref = message_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+        com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+            (java.lang.String) ref);
         message_ = b;
         return b;
       } else {
@@ -287,47 +313,54 @@ public final class Exceptions {
 
     public static final int STACKTRACEELEMENT_FIELD_NUMBER = 3;
     private com.google.protobuf.LazyStringList stackTraceElement_;
+
     /**
      * <code>repeated string stackTraceElement = 3;</code>
      */
     public com.google.protobuf.ProtocolStringList
-        getStackTraceElementList() {
+    getStackTraceElementList() {
       return stackTraceElement_;
     }
+
     /**
      * <code>repeated string stackTraceElement = 3;</code>
      */
     public int getStackTraceElementCount() {
       return stackTraceElement_.size();
     }
+
     /**
      * <code>repeated string stackTraceElement = 3;</code>
      */
     public java.lang.String getStackTraceElement(int index) {
       return stackTraceElement_.get(index);
     }
+
     /**
      * <code>repeated string stackTraceElement = 3;</code>
      */
     public com.google.protobuf.ByteString
-        getStackTraceElementBytes(int index) {
+    getStackTraceElementBytes(int index) {
       return stackTraceElement_.getByteString(index);
     }
 
     public static final int CAUSE_FIELD_NUMBER = 4;
     private com.ittera.cometa.distributor.messages.data.Exceptions.Throwable cause_;
+
     /**
      * <code>optional .messages.data.Throwable cause = 4;</code>
      */
     public boolean hasCause() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
+
     /**
      * <code>optional .messages.data.Throwable cause = 4;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Exceptions.Throwable getCause() {
       return cause_;
     }
+
     /**
      * <code>optional .messages.data.Throwable cause = 4;</code>
      */
@@ -341,7 +374,9 @@ public final class Exceptions {
       stackTraceElement_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       cause_ = com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.getDefaultInstance();
     }
+
     private byte memoizedIsInitialized = -1;
+
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -362,7 +397,7 @@ public final class Exceptions {
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
+      throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeBytes(1, getTypeBytes());
@@ -380,6 +415,7 @@ public final class Exceptions {
     }
 
     private int memoizedSerializedSize = -1;
+
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
@@ -412,95 +448,115 @@ public final class Exceptions {
     }
 
     private static final long serialVersionUID = 0L;
+
     @java.lang.Override
     protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+      throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
 
     public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+      com.google.protobuf.ByteString data)
+      throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
+
     public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+      com.google.protobuf.ByteString data,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+      throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
+
     public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+      byte[] data,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
+      throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
+
     public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-    public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
-    }
-    public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
-    }
-    public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+      java.io.InputStream input,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
 
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
+    public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseDelimitedFrom(java.io.InputStream input)
+      throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+
+    public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseDelimitedFrom(
+      java.io.InputStream input,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseFrom(
+      com.google.protobuf.CodedInputStream input)
+      throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+
+    public static com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parseFrom(
+      com.google.protobuf.CodedInputStream input,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() {
+      return Builder.create();
+    }
+
+    public Builder newBuilderForType() {
+      return newBuilder();
+    }
+
     public static Builder newBuilder(com.ittera.cometa.distributor.messages.data.Exceptions.Throwable prototype) {
       return newBuilder().mergeFrom(prototype);
     }
-    public Builder toBuilder() { return newBuilder(this); }
+
+    public Builder toBuilder() {
+      return newBuilder(this);
+    }
 
     @java.lang.Override
     protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+
     /**
      * Protobuf type {@code messages.data.Throwable}
      */
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:messages.data.Throwable)
-        com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder {
+      com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+      // @@protoc_insertion_point(builder_implements:messages.data.Throwable)
+      com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return com.ittera.cometa.distributor.messages.data.Exceptions.internal_static_messages_data_Throwable_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return com.ittera.cometa.distributor.messages.data.Exceptions.internal_static_messages_data_Throwable_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.class, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder.class);
+          .ensureFieldAccessorsInitialized(
+            com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.class, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder.class);
       }
 
       // Construct using com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.newBuilder()
@@ -509,15 +565,17 @@ public final class Exceptions {
       }
 
       private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
+
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getCauseFieldBuilder();
         }
       }
+
       private static Builder create() {
         return new Builder();
       }
@@ -544,7 +602,7 @@ public final class Exceptions {
       }
 
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return com.ittera.cometa.distributor.messages.data.Exceptions.internal_static_messages_data_Throwable_descriptor;
       }
 
@@ -592,7 +650,7 @@ public final class Exceptions {
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof com.ittera.cometa.distributor.messages.data.Exceptions.Throwable) {
-          return mergeFrom((com.ittera.cometa.distributor.messages.data.Exceptions.Throwable)other);
+          return mergeFrom((com.ittera.cometa.distributor.messages.data.Exceptions.Throwable) other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -630,12 +688,12 @@ public final class Exceptions {
 
       public final boolean isInitialized() {
         if (!hasType()) {
-          
+
           return false;
         }
         if (hasCause()) {
           if (!getCause().isInitialized()) {
-            
+
             return false;
           }
         }
@@ -643,9 +701,9 @@ public final class Exceptions {
       }
 
       public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
         com.ittera.cometa.distributor.messages.data.Exceptions.Throwable parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
@@ -659,15 +717,18 @@ public final class Exceptions {
         }
         return this;
       }
+
       private int bitField0_;
 
       private java.lang.Object type_ = "";
+
       /**
        * <code>required string type = 1;</code>
        */
       public boolean hasType() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+
       /**
        * <code>required string type = 1;</code>
        */
@@ -675,7 +736,7 @@ public final class Exceptions {
         java.lang.Object ref = type_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
+            (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             type_ = s;
@@ -685,35 +746,38 @@ public final class Exceptions {
           return (java.lang.String) ref;
         }
       }
+
       /**
        * <code>required string type = 1;</code>
        */
       public com.google.protobuf.ByteString
-          getTypeBytes() {
+      getTypeBytes() {
         java.lang.Object ref = type_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
+          com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
           type_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
+
       /**
        * <code>required string type = 1;</code>
        */
       public Builder setType(
-          java.lang.String value) {
+        java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         type_ = value;
         onChanged();
         return this;
       }
+
       /**
        * <code>required string type = 1;</code>
        */
@@ -723,27 +787,30 @@ public final class Exceptions {
         onChanged();
         return this;
       }
+
       /**
        * <code>required string type = 1;</code>
        */
       public Builder setTypeBytes(
-          com.google.protobuf.ByteString value) {
+        com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         type_ = value;
         onChanged();
         return this;
       }
 
       private java.lang.Object message_ = "";
+
       /**
        * <code>optional string message = 2;</code>
        */
       public boolean hasMessage() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+
       /**
        * <code>optional string message = 2;</code>
        */
@@ -751,7 +818,7 @@ public final class Exceptions {
         java.lang.Object ref = message_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
+            (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             message_ = s;
@@ -761,35 +828,38 @@ public final class Exceptions {
           return (java.lang.String) ref;
         }
       }
+
       /**
        * <code>optional string message = 2;</code>
        */
       public com.google.protobuf.ByteString
-          getMessageBytes() {
+      getMessageBytes() {
         java.lang.Object ref = message_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
+          com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
           message_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
+
       /**
        * <code>optional string message = 2;</code>
        */
       public Builder setMessage(
-          java.lang.String value) {
+        java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         message_ = value;
         onChanged();
         return this;
       }
+
       /**
        * <code>optional string message = 2;</code>
        */
@@ -799,90 +869,100 @@ public final class Exceptions {
         onChanged();
         return this;
       }
+
       /**
        * <code>optional string message = 2;</code>
        */
       public Builder setMessageBytes(
-          com.google.protobuf.ByteString value) {
+        com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         message_ = value;
         onChanged();
         return this;
       }
 
       private com.google.protobuf.LazyStringList stackTraceElement_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+
       private void ensureStackTraceElementIsMutable() {
         if (!((bitField0_ & 0x00000004) == 0x00000004)) {
           stackTraceElement_ = new com.google.protobuf.LazyStringArrayList(stackTraceElement_);
           bitField0_ |= 0x00000004;
-         }
+        }
       }
+
       /**
        * <code>repeated string stackTraceElement = 3;</code>
        */
       public com.google.protobuf.ProtocolStringList
-          getStackTraceElementList() {
+      getStackTraceElementList() {
         return stackTraceElement_.getUnmodifiableView();
       }
+
       /**
        * <code>repeated string stackTraceElement = 3;</code>
        */
       public int getStackTraceElementCount() {
         return stackTraceElement_.size();
       }
+
       /**
        * <code>repeated string stackTraceElement = 3;</code>
        */
       public java.lang.String getStackTraceElement(int index) {
         return stackTraceElement_.get(index);
       }
+
       /**
        * <code>repeated string stackTraceElement = 3;</code>
        */
       public com.google.protobuf.ByteString
-          getStackTraceElementBytes(int index) {
+      getStackTraceElementBytes(int index) {
         return stackTraceElement_.getByteString(index);
       }
+
       /**
        * <code>repeated string stackTraceElement = 3;</code>
        */
       public Builder setStackTraceElement(
-          int index, java.lang.String value) {
+        int index, java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureStackTraceElementIsMutable();
+          throw new NullPointerException();
+        }
+        ensureStackTraceElementIsMutable();
         stackTraceElement_.set(index, value);
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string stackTraceElement = 3;</code>
        */
       public Builder addStackTraceElement(
-          java.lang.String value) {
+        java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureStackTraceElementIsMutable();
+          throw new NullPointerException();
+        }
+        ensureStackTraceElementIsMutable();
         stackTraceElement_.add(value);
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string stackTraceElement = 3;</code>
        */
       public Builder addAllStackTraceElement(
-          java.lang.Iterable<java.lang.String> values) {
+        java.lang.Iterable<java.lang.String> values) {
         ensureStackTraceElementIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, stackTraceElement_);
+          values, stackTraceElement_);
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string stackTraceElement = 3;</code>
        */
@@ -892,15 +972,16 @@ public final class Exceptions {
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string stackTraceElement = 3;</code>
        */
       public Builder addStackTraceElementBytes(
-          com.google.protobuf.ByteString value) {
+        com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureStackTraceElementIsMutable();
+          throw new NullPointerException();
+        }
+        ensureStackTraceElementIsMutable();
         stackTraceElement_.add(value);
         onChanged();
         return this;
@@ -908,13 +989,15 @@ public final class Exceptions {
 
       private com.ittera.cometa.distributor.messages.data.Exceptions.Throwable cause_ = com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder> causeBuilder_;
+        com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder> causeBuilder_;
+
       /**
        * <code>optional .messages.data.Throwable cause = 4;</code>
        */
       public boolean hasCause() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
+
       /**
        * <code>optional .messages.data.Throwable cause = 4;</code>
        */
@@ -925,6 +1008,7 @@ public final class Exceptions {
           return causeBuilder_.getMessage();
         }
       }
+
       /**
        * <code>optional .messages.data.Throwable cause = 4;</code>
        */
@@ -941,11 +1025,12 @@ public final class Exceptions {
         bitField0_ |= 0x00000008;
         return this;
       }
+
       /**
        * <code>optional .messages.data.Throwable cause = 4;</code>
        */
       public Builder setCause(
-          com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder builderForValue) {
+        com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder builderForValue) {
         if (causeBuilder_ == null) {
           cause_ = builderForValue.build();
           onChanged();
@@ -955,13 +1040,14 @@ public final class Exceptions {
         bitField0_ |= 0x00000008;
         return this;
       }
+
       /**
        * <code>optional .messages.data.Throwable cause = 4;</code>
        */
       public Builder mergeCause(com.ittera.cometa.distributor.messages.data.Exceptions.Throwable value) {
         if (causeBuilder_ == null) {
           if (((bitField0_ & 0x00000008) == 0x00000008) &&
-              cause_ != com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.getDefaultInstance()) {
+            cause_ != com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.getDefaultInstance()) {
             cause_ =
               com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.newBuilder(cause_).mergeFrom(value).buildPartial();
           } else {
@@ -974,6 +1060,7 @@ public final class Exceptions {
         bitField0_ |= 0x00000008;
         return this;
       }
+
       /**
        * <code>optional .messages.data.Throwable cause = 4;</code>
        */
@@ -987,6 +1074,7 @@ public final class Exceptions {
         bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
+
       /**
        * <code>optional .messages.data.Throwable cause = 4;</code>
        */
@@ -995,6 +1083,7 @@ public final class Exceptions {
         onChanged();
         return getCauseFieldBuilder().getBuilder();
       }
+
       /**
        * <code>optional .messages.data.Throwable cause = 4;</code>
        */
@@ -1005,18 +1094,19 @@ public final class Exceptions {
           return cause_;
         }
       }
+
       /**
        * <code>optional .messages.data.Throwable cause = 4;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder> 
-          getCauseFieldBuilder() {
+        com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder>
+      getCauseFieldBuilder() {
         if (causeBuilder_ == null) {
           causeBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder>(
-                  getCause(),
-                  getParentForChildren(),
-                  isClean());
+            com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder>(
+            getCause(),
+            getParentForChildren(),
+            isClean());
           cause_ = null;
         }
         return causeBuilder_;
@@ -1034,13 +1124,14 @@ public final class Exceptions {
   }
 
   public interface RaisedThrowableOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:messages.data.RaisedThrowable)
-      com.google.protobuf.MessageOrBuilder {
+    // @@protoc_insertion_point(interface_extends:messages.data.RaisedThrowable)
+    com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     boolean hasDistributorId();
+
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -1048,17 +1139,18 @@ public final class Exceptions {
 
     /**
      * <code>optional int64 threadId = 2;</code>
-     *
+     * <p>
      * <pre>
-     *NOTE: The id of a terminated thread may be reused
+     * NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     boolean hasThreadId();
+
     /**
      * <code>optional int64 threadId = 2;</code>
-     *
+     * <p>
      * <pre>
-     *NOTE: The id of a terminated thread may be reused
+     * NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     long getThreadId();
@@ -1067,6 +1159,7 @@ public final class Exceptions {
      * <code>required int64 currentTime = 3;</code>
      */
     boolean hasCurrentTime();
+
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -1076,115 +1169,125 @@ public final class Exceptions {
      * <code>required string className = 4;</code>
      */
     boolean hasClassName();
+
     /**
      * <code>required string className = 4;</code>
      */
     java.lang.String getClassName();
+
     /**
      * <code>required string className = 4;</code>
      */
     com.google.protobuf.ByteString
-        getClassNameBytes();
+    getClassNameBytes();
 
     /**
      * <code>optional bool inInitializer = 5 [default = false];</code>
-     *
+     * <p>
      * <pre>
-     *for static init (&lt;clinit)
+     * for static init (&lt;clinit)
      * </pre>
      */
     boolean hasInInitializer();
+
     /**
      * <code>optional bool inInitializer = 5 [default = false];</code>
-     *
+     * <p>
      * <pre>
-     *for static init (&lt;clinit)
+     * for static init (&lt;clinit)
      * </pre>
      */
     boolean getInInitializer();
 
     /**
      * <code>optional string constructor = 6;</code>
-     *
+     * <p>
      * <pre>
-     *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+     * for constructor (makes sense only if wrapping real constructor, as name same as classname)
      * </pre>
      */
     boolean hasConstructor();
+
     /**
      * <code>optional string constructor = 6;</code>
-     *
+     * <p>
      * <pre>
-     *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+     * for constructor (makes sense only if wrapping real constructor, as name same as classname)
      * </pre>
      */
     java.lang.String getConstructor();
+
     /**
      * <code>optional string constructor = 6;</code>
-     *
+     * <p>
      * <pre>
-     *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+     * for constructor (makes sense only if wrapping real constructor, as name same as classname)
      * </pre>
      */
     com.google.protobuf.ByteString
-        getConstructorBytes();
+    getConstructorBytes();
 
     /**
      * <code>optional string method = 7;</code>
-     *
+     * <p>
      * <pre>
-     *for methods
+     * for methods
      * </pre>
      */
     boolean hasMethod();
+
     /**
      * <code>optional string method = 7;</code>
-     *
+     * <p>
      * <pre>
-     *for methods
+     * for methods
      * </pre>
      */
     java.lang.String getMethod();
+
     /**
      * <code>optional string method = 7;</code>
-     *
+     * <p>
      * <pre>
-     *for methods
+     * for methods
      * </pre>
      */
     com.google.protobuf.ByteString
-        getMethodBytes();
+    getMethodBytes();
 
     /**
      * <code>optional string field = 8;</code>
-     *
+     * <p>
      * <pre>
-     *for fields
+     * for fields
      * </pre>
      */
     boolean hasField();
+
     /**
      * <code>optional string field = 8;</code>
-     *
+     * <p>
      * <pre>
-     *for fields
+     * for fields
      * </pre>
      */
     java.lang.String getField();
+
     /**
      * <code>optional string field = 8;</code>
-     *
+     * <p>
      * <pre>
-     *for fields
+     * for fields
      * </pre>
      */
     com.google.protobuf.ByteString
-        getFieldBytes();
+    getFieldBytes();
 
     /**
      * <code>optional int32 modifiers = 9;</code>
      */
     boolean hasModifiers();
+
     /**
      * <code>optional int32 modifiers = 9;</code>
      */
@@ -1194,34 +1297,41 @@ public final class Exceptions {
      * <code>required .messages.data.Throwable throwable = 10;</code>
      */
     boolean hasThrowable();
+
     /**
      * <code>required .messages.data.Throwable throwable = 10;</code>
      */
     com.ittera.cometa.distributor.messages.data.Exceptions.Throwable getThrowable();
+
     /**
      * <code>required .messages.data.Throwable throwable = 10;</code>
      */
     com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder getThrowableOrBuilder();
   }
+
   /**
    * Protobuf type {@code messages.data.RaisedThrowable}
-   *
+   * <p>
    * <pre>
    * --- CONTEXT
    * </pre>
    */
   public static final class RaisedThrowable extends
-      com.google.protobuf.GeneratedMessage implements
-      // @@protoc_insertion_point(message_implements:messages.data.RaisedThrowable)
-      RaisedThrowableOrBuilder {
+    com.google.protobuf.GeneratedMessage implements
+    // @@protoc_insertion_point(message_implements:messages.data.RaisedThrowable)
+    RaisedThrowableOrBuilder {
     // Use RaisedThrowable.newBuilder() to construct.
     private RaisedThrowable(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private RaisedThrowable(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private RaisedThrowable(boolean noInit) {
+      this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
 
     private static final RaisedThrowable defaultInstance;
+
     public static RaisedThrowable getDefaultInstance() {
       return defaultInstance;
     }
@@ -1231,19 +1341,21 @@ public final class Exceptions {
     }
 
     private final com.google.protobuf.UnknownFieldSet unknownFields;
+
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
+    getUnknownFields() {
       return this.unknownFields;
     }
+
     private RaisedThrowable(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+      com.google.protobuf.CodedInputStream input,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
+        com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -1254,7 +1366,7 @@ public final class Exceptions {
               break;
             default: {
               if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
+                extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -1327,33 +1439,34 @@ public final class Exceptions {
         throw e.setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
+          e.getMessage()).setUnfinishedMessage(this);
       } finally {
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
+
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return com.ittera.cometa.distributor.messages.data.Exceptions.internal_static_messages_data_RaisedThrowable_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return com.ittera.cometa.distributor.messages.data.Exceptions.internal_static_messages_data_RaisedThrowable_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.class, com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.Builder.class);
+        .ensureFieldAccessorsInitialized(
+          com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.class, com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.Builder.class);
     }
 
     public static com.google.protobuf.Parser<RaisedThrowable> PARSER =
-        new com.google.protobuf.AbstractParser<RaisedThrowable>() {
-      public RaisedThrowable parsePartialFrom(
+      new com.google.protobuf.AbstractParser<RaisedThrowable>() {
+        public RaisedThrowable parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new RaisedThrowable(input, extensionRegistry);
-      }
-    };
+          return new RaisedThrowable(input, extensionRegistry);
+        }
+      };
 
     @java.lang.Override
     public com.google.protobuf.Parser<RaisedThrowable> getParserForType() {
@@ -1363,45 +1476,58 @@ public final class Exceptions {
     private int bitField0_;
     private int callTypeCase_ = 0;
     private java.lang.Object callType_;
+
     public enum CallTypeCase
-        implements com.google.protobuf.Internal.EnumLite {
+      implements com.google.protobuf.Internal.EnumLite {
       CONSTRUCTOR(6),
       METHOD(7),
       FIELD(8),
       CALLTYPE_NOT_SET(0);
       private int value = 0;
+
       private CallTypeCase(int value) {
         this.value = value;
       }
+
       public static CallTypeCase valueOf(int value) {
         switch (value) {
-          case 6: return CONSTRUCTOR;
-          case 7: return METHOD;
-          case 8: return FIELD;
-          case 0: return CALLTYPE_NOT_SET;
-          default: throw new java.lang.IllegalArgumentException(
-            "Value is undefined for this oneof enum.");
+          case 6:
+            return CONSTRUCTOR;
+          case 7:
+            return METHOD;
+          case 8:
+            return FIELD;
+          case 0:
+            return CALLTYPE_NOT_SET;
+          default:
+            throw new java.lang.IllegalArgumentException(
+              "Value is undefined for this oneof enum.");
         }
       }
+
       public int getNumber() {
         return this.value;
       }
-    };
+    }
+
+    ;
 
     public CallTypeCase
     getCallTypeCase() {
       return CallTypeCase.valueOf(
-          callTypeCase_);
+        callTypeCase_);
     }
 
     public static final int DISTRIBUTORID_FIELD_NUMBER = 1;
     private int distributorId_;
+
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     public boolean hasDistributorId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -1411,21 +1537,23 @@ public final class Exceptions {
 
     public static final int THREADID_FIELD_NUMBER = 2;
     private long threadId_;
+
     /**
      * <code>optional int64 threadId = 2;</code>
-     *
+     * <p>
      * <pre>
-     *NOTE: The id of a terminated thread may be reused
+     * NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public boolean hasThreadId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+
     /**
      * <code>optional int64 threadId = 2;</code>
-     *
+     * <p>
      * <pre>
-     *NOTE: The id of a terminated thread may be reused
+     * NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public long getThreadId() {
@@ -1434,12 +1562,14 @@ public final class Exceptions {
 
     public static final int CURRENTTIME_FIELD_NUMBER = 3;
     private long currentTime_;
+
     /**
      * <code>required int64 currentTime = 3;</code>
      */
     public boolean hasCurrentTime() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
+
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -1449,12 +1579,14 @@ public final class Exceptions {
 
     public static final int CLASSNAME_FIELD_NUMBER = 4;
     private java.lang.Object className_;
+
     /**
      * <code>required string className = 4;</code>
      */
     public boolean hasClassName() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
+
     /**
      * <code>required string className = 4;</code>
      */
@@ -1463,8 +1595,8 @@ public final class Exceptions {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           className_ = s;
@@ -1472,16 +1604,17 @@ public final class Exceptions {
         return s;
       }
     }
+
     /**
      * <code>required string className = 4;</code>
      */
     public com.google.protobuf.ByteString
-        getClassNameBytes() {
+    getClassNameBytes() {
       java.lang.Object ref = className_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+        com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+            (java.lang.String) ref);
         className_ = b;
         return b;
       } else {
@@ -1491,21 +1624,23 @@ public final class Exceptions {
 
     public static final int ININITIALIZER_FIELD_NUMBER = 5;
     private boolean inInitializer_;
+
     /**
      * <code>optional bool inInitializer = 5 [default = false];</code>
-     *
+     * <p>
      * <pre>
-     *for static init (&lt;clinit)
+     * for static init (&lt;clinit)
      * </pre>
      */
     public boolean hasInInitializer() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
+
     /**
      * <code>optional bool inInitializer = 5 [default = false];</code>
-     *
+     * <p>
      * <pre>
-     *for static init (&lt;clinit)
+     * for static init (&lt;clinit)
      * </pre>
      */
     public boolean getInInitializer() {
@@ -1513,21 +1648,23 @@ public final class Exceptions {
     }
 
     public static final int CONSTRUCTOR_FIELD_NUMBER = 6;
+
     /**
      * <code>optional string constructor = 6;</code>
-     *
+     * <p>
      * <pre>
-     *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+     * for constructor (makes sense only if wrapping real constructor, as name same as classname)
      * </pre>
      */
     public boolean hasConstructor() {
       return callTypeCase_ == 6;
     }
+
     /**
      * <code>optional string constructor = 6;</code>
-     *
+     * <p>
      * <pre>
-     *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+     * for constructor (makes sense only if wrapping real constructor, as name same as classname)
      * </pre>
      */
     public java.lang.String getConstructor() {
@@ -1538,8 +1675,8 @@ public final class Exceptions {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8() && (callTypeCase_ == 6)) {
           callType_ = s;
@@ -1547,23 +1684,24 @@ public final class Exceptions {
         return s;
       }
     }
+
     /**
      * <code>optional string constructor = 6;</code>
-     *
+     * <p>
      * <pre>
-     *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+     * for constructor (makes sense only if wrapping real constructor, as name same as classname)
      * </pre>
      */
     public com.google.protobuf.ByteString
-        getConstructorBytes() {
+    getConstructorBytes() {
       java.lang.Object ref = "";
       if (callTypeCase_ == 6) {
         ref = callType_;
       }
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+        com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+            (java.lang.String) ref);
         if (callTypeCase_ == 6) {
           callType_ = b;
         }
@@ -1574,21 +1712,23 @@ public final class Exceptions {
     }
 
     public static final int METHOD_FIELD_NUMBER = 7;
+
     /**
      * <code>optional string method = 7;</code>
-     *
+     * <p>
      * <pre>
-     *for methods
+     * for methods
      * </pre>
      */
     public boolean hasMethod() {
       return callTypeCase_ == 7;
     }
+
     /**
      * <code>optional string method = 7;</code>
-     *
+     * <p>
      * <pre>
-     *for methods
+     * for methods
      * </pre>
      */
     public java.lang.String getMethod() {
@@ -1599,8 +1739,8 @@ public final class Exceptions {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8() && (callTypeCase_ == 7)) {
           callType_ = s;
@@ -1608,23 +1748,24 @@ public final class Exceptions {
         return s;
       }
     }
+
     /**
      * <code>optional string method = 7;</code>
-     *
+     * <p>
      * <pre>
-     *for methods
+     * for methods
      * </pre>
      */
     public com.google.protobuf.ByteString
-        getMethodBytes() {
+    getMethodBytes() {
       java.lang.Object ref = "";
       if (callTypeCase_ == 7) {
         ref = callType_;
       }
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+        com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+            (java.lang.String) ref);
         if (callTypeCase_ == 7) {
           callType_ = b;
         }
@@ -1635,21 +1776,23 @@ public final class Exceptions {
     }
 
     public static final int FIELD_FIELD_NUMBER = 8;
+
     /**
      * <code>optional string field = 8;</code>
-     *
+     * <p>
      * <pre>
-     *for fields
+     * for fields
      * </pre>
      */
     public boolean hasField() {
       return callTypeCase_ == 8;
     }
+
     /**
      * <code>optional string field = 8;</code>
-     *
+     * <p>
      * <pre>
-     *for fields
+     * for fields
      * </pre>
      */
     public java.lang.String getField() {
@@ -1660,8 +1803,8 @@ public final class Exceptions {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8() && (callTypeCase_ == 8)) {
           callType_ = s;
@@ -1669,23 +1812,24 @@ public final class Exceptions {
         return s;
       }
     }
+
     /**
      * <code>optional string field = 8;</code>
-     *
+     * <p>
      * <pre>
-     *for fields
+     * for fields
      * </pre>
      */
     public com.google.protobuf.ByteString
-        getFieldBytes() {
+    getFieldBytes() {
       java.lang.Object ref = "";
       if (callTypeCase_ == 8) {
         ref = callType_;
       }
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+        com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+            (java.lang.String) ref);
         if (callTypeCase_ == 8) {
           callType_ = b;
         }
@@ -1697,12 +1841,14 @@ public final class Exceptions {
 
     public static final int MODIFIERS_FIELD_NUMBER = 9;
     private int modifiers_;
+
     /**
      * <code>optional int32 modifiers = 9;</code>
      */
     public boolean hasModifiers() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
+
     /**
      * <code>optional int32 modifiers = 9;</code>
      */
@@ -1712,18 +1858,21 @@ public final class Exceptions {
 
     public static final int THROWABLE_FIELD_NUMBER = 10;
     private com.ittera.cometa.distributor.messages.data.Exceptions.Throwable throwable_;
+
     /**
      * <code>required .messages.data.Throwable throwable = 10;</code>
      */
     public boolean hasThrowable() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
     }
+
     /**
      * <code>required .messages.data.Throwable throwable = 10;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Exceptions.Throwable getThrowable() {
       return throwable_;
     }
+
     /**
      * <code>required .messages.data.Throwable throwable = 10;</code>
      */
@@ -1740,7 +1889,9 @@ public final class Exceptions {
       modifiers_ = 0;
       throwable_ = com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.getDefaultInstance();
     }
+
     private byte memoizedIsInitialized = -1;
+
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -1767,7 +1918,7 @@ public final class Exceptions {
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
+      throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeInt32(1, distributorId_);
@@ -1803,6 +1954,7 @@ public final class Exceptions {
     }
 
     private int memoizedSerializedSize = -1;
+
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
@@ -1854,99 +2006,119 @@ public final class Exceptions {
     }
 
     private static final long serialVersionUID = 0L;
+
     @java.lang.Override
     protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+      throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
 
     public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+      com.google.protobuf.ByteString data)
+      throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
+
     public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+      com.google.protobuf.ByteString data,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+      throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
+
     public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+      byte[] data,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
+      throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
+
     public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-    public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
-    }
-    public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
-    }
-    public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+      java.io.InputStream input,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
 
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
+    public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseDelimitedFrom(java.io.InputStream input)
+      throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+
+    public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseDelimitedFrom(
+      java.io.InputStream input,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseFrom(
+      com.google.protobuf.CodedInputStream input)
+      throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+
+    public static com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parseFrom(
+      com.google.protobuf.CodedInputStream input,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() {
+      return Builder.create();
+    }
+
+    public Builder newBuilderForType() {
+      return newBuilder();
+    }
+
     public static Builder newBuilder(com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable prototype) {
       return newBuilder().mergeFrom(prototype);
     }
-    public Builder toBuilder() { return newBuilder(this); }
+
+    public Builder toBuilder() {
+      return newBuilder(this);
+    }
 
     @java.lang.Override
     protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+
     /**
      * Protobuf type {@code messages.data.RaisedThrowable}
-     *
+     * <p>
      * <pre>
      * --- CONTEXT
      * </pre>
      */
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:messages.data.RaisedThrowable)
-        com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowableOrBuilder {
+      com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+      // @@protoc_insertion_point(builder_implements:messages.data.RaisedThrowable)
+      com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowableOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return com.ittera.cometa.distributor.messages.data.Exceptions.internal_static_messages_data_RaisedThrowable_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return com.ittera.cometa.distributor.messages.data.Exceptions.internal_static_messages_data_RaisedThrowable_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.class, com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.Builder.class);
+          .ensureFieldAccessorsInitialized(
+            com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.class, com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.Builder.class);
       }
 
       // Construct using com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.newBuilder()
@@ -1955,15 +2127,17 @@ public final class Exceptions {
       }
 
       private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
+
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getThrowableFieldBuilder();
         }
       }
+
       private static Builder create() {
         return new Builder();
       }
@@ -1998,7 +2172,7 @@ public final class Exceptions {
       }
 
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return com.ittera.cometa.distributor.messages.data.Exceptions.internal_static_messages_data_RaisedThrowable_descriptor;
       }
 
@@ -2067,7 +2241,7 @@ public final class Exceptions {
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) {
-          return mergeFrom((com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable)other);
+          return mergeFrom((com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -2075,7 +2249,8 @@ public final class Exceptions {
       }
 
       public Builder mergeFrom(com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable other) {
-        if (other == com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.getDefaultInstance()) return this;
+        if (other == com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable.getDefaultInstance())
+          return this;
         if (other.hasDistributorId()) {
           setDistributorId(other.getDistributorId());
         }
@@ -2128,28 +2303,28 @@ public final class Exceptions {
 
       public final boolean isInitialized() {
         if (!hasCurrentTime()) {
-          
+
           return false;
         }
         if (!hasClassName()) {
-          
+
           return false;
         }
         if (!hasThrowable()) {
-          
+
           return false;
         }
         if (!getThrowable().isInitialized()) {
-          
+
           return false;
         }
         return true;
       }
 
       public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
         com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
@@ -2163,12 +2338,14 @@ public final class Exceptions {
         }
         return this;
       }
+
       private int callTypeCase_ = 0;
       private java.lang.Object callType_;
+
       public CallTypeCase
-          getCallTypeCase() {
+      getCallTypeCase() {
         return CallTypeCase.valueOf(
-            callTypeCase_);
+          callTypeCase_);
       }
 
       public Builder clearCallType() {
@@ -2180,19 +2357,22 @@ public final class Exceptions {
 
       private int bitField0_;
 
-      private int distributorId_ ;
+      private int distributorId_;
+
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public boolean hasDistributorId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public int getDistributorId() {
         return distributorId_;
       }
+
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -2202,6 +2382,7 @@ public final class Exceptions {
         onChanged();
         return this;
       }
+
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -2212,32 +2393,35 @@ public final class Exceptions {
         return this;
       }
 
-      private long threadId_ ;
+      private long threadId_;
+
       /**
        * <code>optional int64 threadId = 2;</code>
-       *
+       * <p>
        * <pre>
-       *NOTE: The id of a terminated thread may be reused
+       * NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public boolean hasThreadId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+
       /**
        * <code>optional int64 threadId = 2;</code>
-       *
+       * <p>
        * <pre>
-       *NOTE: The id of a terminated thread may be reused
+       * NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public long getThreadId() {
         return threadId_;
       }
+
       /**
        * <code>optional int64 threadId = 2;</code>
-       *
+       * <p>
        * <pre>
-       *NOTE: The id of a terminated thread may be reused
+       * NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder setThreadId(long value) {
@@ -2246,11 +2430,12 @@ public final class Exceptions {
         onChanged();
         return this;
       }
+
       /**
        * <code>optional int64 threadId = 2;</code>
-       *
+       * <p>
        * <pre>
-       *NOTE: The id of a terminated thread may be reused
+       * NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder clearThreadId() {
@@ -2260,19 +2445,22 @@ public final class Exceptions {
         return this;
       }
 
-      private long currentTime_ ;
+      private long currentTime_;
+
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public boolean hasCurrentTime() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
+
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public long getCurrentTime() {
         return currentTime_;
       }
+
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -2282,6 +2470,7 @@ public final class Exceptions {
         onChanged();
         return this;
       }
+
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -2293,12 +2482,14 @@ public final class Exceptions {
       }
 
       private java.lang.Object className_ = "";
+
       /**
        * <code>required string className = 4;</code>
        */
       public boolean hasClassName() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
+
       /**
        * <code>required string className = 4;</code>
        */
@@ -2306,7 +2497,7 @@ public final class Exceptions {
         java.lang.Object ref = className_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
+            (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             className_ = s;
@@ -2316,35 +2507,38 @@ public final class Exceptions {
           return (java.lang.String) ref;
         }
       }
+
       /**
        * <code>required string className = 4;</code>
        */
       public com.google.protobuf.ByteString
-          getClassNameBytes() {
+      getClassNameBytes() {
         java.lang.Object ref = className_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
+          com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
           className_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
+
       /**
        * <code>required string className = 4;</code>
        */
       public Builder setClassName(
-          java.lang.String value) {
+        java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         className_ = value;
         onChanged();
         return this;
       }
+
       /**
        * <code>required string className = 4;</code>
        */
@@ -2354,46 +2548,50 @@ public final class Exceptions {
         onChanged();
         return this;
       }
+
       /**
        * <code>required string className = 4;</code>
        */
       public Builder setClassNameBytes(
-          com.google.protobuf.ByteString value) {
+        com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         className_ = value;
         onChanged();
         return this;
       }
 
-      private boolean inInitializer_ ;
+      private boolean inInitializer_;
+
       /**
        * <code>optional bool inInitializer = 5 [default = false];</code>
-       *
+       * <p>
        * <pre>
-       *for static init (&lt;clinit)
+       * for static init (&lt;clinit)
        * </pre>
        */
       public boolean hasInInitializer() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
+
       /**
        * <code>optional bool inInitializer = 5 [default = false];</code>
-       *
+       * <p>
        * <pre>
-       *for static init (&lt;clinit)
+       * for static init (&lt;clinit)
        * </pre>
        */
       public boolean getInInitializer() {
         return inInitializer_;
       }
+
       /**
        * <code>optional bool inInitializer = 5 [default = false];</code>
-       *
+       * <p>
        * <pre>
-       *for static init (&lt;clinit)
+       * for static init (&lt;clinit)
        * </pre>
        */
       public Builder setInInitializer(boolean value) {
@@ -2402,11 +2600,12 @@ public final class Exceptions {
         onChanged();
         return this;
       }
+
       /**
        * <code>optional bool inInitializer = 5 [default = false];</code>
-       *
+       * <p>
        * <pre>
-       *for static init (&lt;clinit)
+       * for static init (&lt;clinit)
        * </pre>
        */
       public Builder clearInInitializer() {
@@ -2418,19 +2617,20 @@ public final class Exceptions {
 
       /**
        * <code>optional string constructor = 6;</code>
-       *
+       * <p>
        * <pre>
-       *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+       * for constructor (makes sense only if wrapping real constructor, as name same as classname)
        * </pre>
        */
       public boolean hasConstructor() {
         return callTypeCase_ == 6;
       }
+
       /**
        * <code>optional string constructor = 6;</code>
-       *
+       * <p>
        * <pre>
-       *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+       * for constructor (makes sense only if wrapping real constructor, as name same as classname)
        * </pre>
        */
       public java.lang.String getConstructor() {
@@ -2440,7 +2640,7 @@ public final class Exceptions {
         }
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
+            (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (callTypeCase_ == 6) {
             if (bs.isValidUtf8()) {
@@ -2452,23 +2652,24 @@ public final class Exceptions {
           return (java.lang.String) ref;
         }
       }
+
       /**
        * <code>optional string constructor = 6;</code>
-       *
+       * <p>
        * <pre>
-       *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+       * for constructor (makes sense only if wrapping real constructor, as name same as classname)
        * </pre>
        */
       public com.google.protobuf.ByteString
-          getConstructorBytes() {
+      getConstructorBytes() {
         java.lang.Object ref = "";
         if (callTypeCase_ == 6) {
           ref = callType_;
         }
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
+          com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
           if (callTypeCase_ == 6) {
             callType_ = b;
           }
@@ -2477,28 +2678,30 @@ public final class Exceptions {
           return (com.google.protobuf.ByteString) ref;
         }
       }
+
       /**
        * <code>optional string constructor = 6;</code>
-       *
+       * <p>
        * <pre>
-       *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+       * for constructor (makes sense only if wrapping real constructor, as name same as classname)
        * </pre>
        */
       public Builder setConstructor(
-          java.lang.String value) {
+        java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  callTypeCase_ = 6;
+          throw new NullPointerException();
+        }
+        callTypeCase_ = 6;
         callType_ = value;
         onChanged();
         return this;
       }
+
       /**
        * <code>optional string constructor = 6;</code>
-       *
+       * <p>
        * <pre>
-       *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+       * for constructor (makes sense only if wrapping real constructor, as name same as classname)
        * </pre>
        */
       public Builder clearConstructor() {
@@ -2509,19 +2712,20 @@ public final class Exceptions {
         }
         return this;
       }
+
       /**
        * <code>optional string constructor = 6;</code>
-       *
+       * <p>
        * <pre>
-       *for constructor (makes sense only if wrapping real constructor, as name same as classname)
+       * for constructor (makes sense only if wrapping real constructor, as name same as classname)
        * </pre>
        */
       public Builder setConstructorBytes(
-          com.google.protobuf.ByteString value) {
+        com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  callTypeCase_ = 6;
+          throw new NullPointerException();
+        }
+        callTypeCase_ = 6;
         callType_ = value;
         onChanged();
         return this;
@@ -2529,19 +2733,20 @@ public final class Exceptions {
 
       /**
        * <code>optional string method = 7;</code>
-       *
+       * <p>
        * <pre>
-       *for methods
+       * for methods
        * </pre>
        */
       public boolean hasMethod() {
         return callTypeCase_ == 7;
       }
+
       /**
        * <code>optional string method = 7;</code>
-       *
+       * <p>
        * <pre>
-       *for methods
+       * for methods
        * </pre>
        */
       public java.lang.String getMethod() {
@@ -2551,7 +2756,7 @@ public final class Exceptions {
         }
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
+            (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (callTypeCase_ == 7) {
             if (bs.isValidUtf8()) {
@@ -2563,23 +2768,24 @@ public final class Exceptions {
           return (java.lang.String) ref;
         }
       }
+
       /**
        * <code>optional string method = 7;</code>
-       *
+       * <p>
        * <pre>
-       *for methods
+       * for methods
        * </pre>
        */
       public com.google.protobuf.ByteString
-          getMethodBytes() {
+      getMethodBytes() {
         java.lang.Object ref = "";
         if (callTypeCase_ == 7) {
           ref = callType_;
         }
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
+          com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
           if (callTypeCase_ == 7) {
             callType_ = b;
           }
@@ -2588,28 +2794,30 @@ public final class Exceptions {
           return (com.google.protobuf.ByteString) ref;
         }
       }
+
       /**
        * <code>optional string method = 7;</code>
-       *
+       * <p>
        * <pre>
-       *for methods
+       * for methods
        * </pre>
        */
       public Builder setMethod(
-          java.lang.String value) {
+        java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  callTypeCase_ = 7;
+          throw new NullPointerException();
+        }
+        callTypeCase_ = 7;
         callType_ = value;
         onChanged();
         return this;
       }
+
       /**
        * <code>optional string method = 7;</code>
-       *
+       * <p>
        * <pre>
-       *for methods
+       * for methods
        * </pre>
        */
       public Builder clearMethod() {
@@ -2620,19 +2828,20 @@ public final class Exceptions {
         }
         return this;
       }
+
       /**
        * <code>optional string method = 7;</code>
-       *
+       * <p>
        * <pre>
-       *for methods
+       * for methods
        * </pre>
        */
       public Builder setMethodBytes(
-          com.google.protobuf.ByteString value) {
+        com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  callTypeCase_ = 7;
+          throw new NullPointerException();
+        }
+        callTypeCase_ = 7;
         callType_ = value;
         onChanged();
         return this;
@@ -2640,19 +2849,20 @@ public final class Exceptions {
 
       /**
        * <code>optional string field = 8;</code>
-       *
+       * <p>
        * <pre>
-       *for fields
+       * for fields
        * </pre>
        */
       public boolean hasField() {
         return callTypeCase_ == 8;
       }
+
       /**
        * <code>optional string field = 8;</code>
-       *
+       * <p>
        * <pre>
-       *for fields
+       * for fields
        * </pre>
        */
       public java.lang.String getField() {
@@ -2662,7 +2872,7 @@ public final class Exceptions {
         }
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
+            (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (callTypeCase_ == 8) {
             if (bs.isValidUtf8()) {
@@ -2674,23 +2884,24 @@ public final class Exceptions {
           return (java.lang.String) ref;
         }
       }
+
       /**
        * <code>optional string field = 8;</code>
-       *
+       * <p>
        * <pre>
-       *for fields
+       * for fields
        * </pre>
        */
       public com.google.protobuf.ByteString
-          getFieldBytes() {
+      getFieldBytes() {
         java.lang.Object ref = "";
         if (callTypeCase_ == 8) {
           ref = callType_;
         }
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
+          com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
           if (callTypeCase_ == 8) {
             callType_ = b;
           }
@@ -2699,28 +2910,30 @@ public final class Exceptions {
           return (com.google.protobuf.ByteString) ref;
         }
       }
+
       /**
        * <code>optional string field = 8;</code>
-       *
+       * <p>
        * <pre>
-       *for fields
+       * for fields
        * </pre>
        */
       public Builder setField(
-          java.lang.String value) {
+        java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  callTypeCase_ = 8;
+          throw new NullPointerException();
+        }
+        callTypeCase_ = 8;
         callType_ = value;
         onChanged();
         return this;
       }
+
       /**
        * <code>optional string field = 8;</code>
-       *
+       * <p>
        * <pre>
-       *for fields
+       * for fields
        * </pre>
        */
       public Builder clearField() {
@@ -2731,37 +2944,41 @@ public final class Exceptions {
         }
         return this;
       }
+
       /**
        * <code>optional string field = 8;</code>
-       *
+       * <p>
        * <pre>
-       *for fields
+       * for fields
        * </pre>
        */
       public Builder setFieldBytes(
-          com.google.protobuf.ByteString value) {
+        com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  callTypeCase_ = 8;
+          throw new NullPointerException();
+        }
+        callTypeCase_ = 8;
         callType_ = value;
         onChanged();
         return this;
       }
 
-      private int modifiers_ ;
+      private int modifiers_;
+
       /**
        * <code>optional int32 modifiers = 9;</code>
        */
       public boolean hasModifiers() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
+
       /**
        * <code>optional int32 modifiers = 9;</code>
        */
       public int getModifiers() {
         return modifiers_;
       }
+
       /**
        * <code>optional int32 modifiers = 9;</code>
        */
@@ -2771,6 +2988,7 @@ public final class Exceptions {
         onChanged();
         return this;
       }
+
       /**
        * <code>optional int32 modifiers = 9;</code>
        */
@@ -2783,13 +3001,15 @@ public final class Exceptions {
 
       private com.ittera.cometa.distributor.messages.data.Exceptions.Throwable throwable_ = com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder> throwableBuilder_;
+        com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder> throwableBuilder_;
+
       /**
        * <code>required .messages.data.Throwable throwable = 10;</code>
        */
       public boolean hasThrowable() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
+
       /**
        * <code>required .messages.data.Throwable throwable = 10;</code>
        */
@@ -2800,6 +3020,7 @@ public final class Exceptions {
           return throwableBuilder_.getMessage();
         }
       }
+
       /**
        * <code>required .messages.data.Throwable throwable = 10;</code>
        */
@@ -2816,11 +3037,12 @@ public final class Exceptions {
         bitField0_ |= 0x00000200;
         return this;
       }
+
       /**
        * <code>required .messages.data.Throwable throwable = 10;</code>
        */
       public Builder setThrowable(
-          com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder builderForValue) {
+        com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder builderForValue) {
         if (throwableBuilder_ == null) {
           throwable_ = builderForValue.build();
           onChanged();
@@ -2830,13 +3052,14 @@ public final class Exceptions {
         bitField0_ |= 0x00000200;
         return this;
       }
+
       /**
        * <code>required .messages.data.Throwable throwable = 10;</code>
        */
       public Builder mergeThrowable(com.ittera.cometa.distributor.messages.data.Exceptions.Throwable value) {
         if (throwableBuilder_ == null) {
           if (((bitField0_ & 0x00000200) == 0x00000200) &&
-              throwable_ != com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.getDefaultInstance()) {
+            throwable_ != com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.getDefaultInstance()) {
             throwable_ =
               com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.newBuilder(throwable_).mergeFrom(value).buildPartial();
           } else {
@@ -2849,6 +3072,7 @@ public final class Exceptions {
         bitField0_ |= 0x00000200;
         return this;
       }
+
       /**
        * <code>required .messages.data.Throwable throwable = 10;</code>
        */
@@ -2862,6 +3086,7 @@ public final class Exceptions {
         bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
+
       /**
        * <code>required .messages.data.Throwable throwable = 10;</code>
        */
@@ -2870,6 +3095,7 @@ public final class Exceptions {
         onChanged();
         return getThrowableFieldBuilder().getBuilder();
       }
+
       /**
        * <code>required .messages.data.Throwable throwable = 10;</code>
        */
@@ -2880,18 +3106,19 @@ public final class Exceptions {
           return throwable_;
         }
       }
+
       /**
        * <code>required .messages.data.Throwable throwable = 10;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder> 
-          getThrowableFieldBuilder() {
+        com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder>
+      getThrowableFieldBuilder() {
         if (throwableBuilder_ == null) {
           throwableBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder>(
-                  getThrowable(),
-                  getParentForChildren(),
-                  isClean());
+            com.ittera.cometa.distributor.messages.data.Exceptions.Throwable, com.ittera.cometa.distributor.messages.data.Exceptions.Throwable.Builder, com.ittera.cometa.distributor.messages.data.Exceptions.ThrowableOrBuilder>(
+            getThrowable(),
+            getParentForChildren(),
+            isClean());
           throwable_ = null;
         }
         return throwableBuilder_;
@@ -2911,59 +3138,61 @@ public final class Exceptions {
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_Throwable_descriptor;
   private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_messages_data_Throwable_fieldAccessorTable;
+  com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    internal_static_messages_data_Throwable_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_RaisedThrowable_descriptor;
   private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_messages_data_RaisedThrowable_fieldAccessorTable;
+  com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    internal_static_messages_data_RaisedThrowable_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
-      getDescriptor() {
+  getDescriptor() {
     return descriptor;
   }
+
   private static com.google.protobuf.Descriptors.FileDescriptor
-      descriptor;
+    descriptor;
+
   static {
     java.lang.String[] descriptorData = {
       "\n\020exceptions.proto\022\rmessages.data\"n\n\tThr" +
-      "owable\022\014\n\004type\030\001 \002(\t\022\017\n\007message\030\002 \001(\t\022\031\n" +
-      "\021stackTraceElement\030\003 \003(\t\022\'\n\005cause\030\004 \001(\0132" +
-      "\030.messages.data.Throwable\"\206\002\n\017RaisedThro" +
-      "wable\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010threadId" +
-      "\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(\003\022\021\n\tclassName" +
-      "\030\004 \002(\t\022\034\n\rinInitializer\030\005 \001(\010:\005false\022\025\n\013" +
-      "constructor\030\006 \001(\tH\000\022\020\n\006method\030\007 \001(\tH\000\022\017\n" +
-      "\005field\030\010 \001(\tH\000\022\021\n\tmodifiers\030\t \001(\005\022+\n\tthr" +
-      "owable\030\n \002(\0132\030.messages.data.ThrowableB\n",
+        "owable\022\014\n\004type\030\001 \002(\t\022\017\n\007message\030\002 \001(\t\022\031\n" +
+        "\021stackTraceElement\030\003 \003(\t\022\'\n\005cause\030\004 \001(\0132" +
+        "\030.messages.data.Throwable\"\206\002\n\017RaisedThro" +
+        "wable\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010threadId" +
+        "\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(\003\022\021\n\tclassName" +
+        "\030\004 \002(\t\022\034\n\rinInitializer\030\005 \001(\010:\005false\022\025\n\013" +
+        "constructor\030\006 \001(\tH\000\022\020\n\006method\030\007 \001(\tH\000\022\017\n" +
+        "\005field\030\010 \001(\tH\000\022\021\n\tmodifiers\030\t \001(\005\022+\n\tthr" +
+        "owable\030\n \002(\0132\030.messages.data.ThrowableB\n",
       "\n\010callTypeB;\n+com.ittera.cometa.distribu" +
-      "tor.messages.dataB\nExceptionsH\001"
+        "tor.messages.dataB\nExceptionsH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
-        new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
-          public com.google.protobuf.ExtensionRegistry assignDescriptors(
-              com.google.protobuf.Descriptors.FileDescriptor root) {
-            descriptor = root;
-            return null;
-          }
-        };
+      new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
+        public com.google.protobuf.ExtensionRegistry assignDescriptors(
+          com.google.protobuf.Descriptors.FileDescriptor root) {
+          descriptor = root;
+          return null;
+        }
+      };
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
-        new com.google.protobuf.Descriptors.FileDescriptor[] {
+        new com.google.protobuf.Descriptors.FileDescriptor[]{
         }, assigner);
     internal_static_messages_data_Throwable_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_messages_data_Throwable_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-        internal_static_messages_data_Throwable_descriptor,
-        new java.lang.String[] { "Type", "Message", "StackTraceElement", "Cause", });
+      internal_static_messages_data_Throwable_descriptor,
+      new java.lang.String[]{"Type", "Message", "StackTraceElement", "Cause",});
     internal_static_messages_data_RaisedThrowable_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_messages_data_RaisedThrowable_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-        internal_static_messages_data_RaisedThrowable_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "ClassName", "InInitializer", "Constructor", "Method", "Field", "Modifiers", "Throwable", "CallType", });
+      internal_static_messages_data_RaisedThrowable_descriptor,
+      new java.lang.String[]{"DistributorId", "ThreadId", "CurrentTime", "ClassName", "InInitializer", "Constructor", "Method", "Field", "Modifiers", "Throwable", "CallType",});
   }
 
   // @@protoc_insertion_point(outer_class_scope)

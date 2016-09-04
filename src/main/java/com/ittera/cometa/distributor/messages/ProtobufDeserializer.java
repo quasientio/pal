@@ -9,24 +9,24 @@ import java.util.Map;
 
 public class ProtobufDeserializer implements Deserializer {
 
-    @Override
-    public void configure(Map map, boolean b) {
+  @Override
+  public void configure(Map map, boolean b) {
 
+  }
+
+  @Override
+  public Object deserialize(String s, byte[] bytes) {
+    Object obj = null;
+    try {
+      obj = Wrappers.DataMessage.parseFrom(bytes);
+    } catch (InvalidProtocolBufferException e) {
+      obj = e;
     }
+    return obj;
+  }
 
-    @Override
-    public Object deserialize(String s, byte[] bytes) {
-        Object obj = null;
-        try {
-            obj = Wrappers.DataMessage.parseFrom(bytes);
-        } catch (InvalidProtocolBufferException e) {
-            obj = e;
-        }
-        return obj;
-    }
+  @Override
+  public void close() {
 
-    @Override
-    public void close() {
-
-    }
+  }
 }

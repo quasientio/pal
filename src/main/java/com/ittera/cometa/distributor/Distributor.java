@@ -40,19 +40,19 @@ public class Distributor {
   protected static int id;
 
   //static data shared by all threads - sources of contention
-  static Map<Long,BlockingQueue> threadBlockingQueueMap = new ConcurrentHashMap<Long,BlockingQueue>();
+  static Map<Long, BlockingQueue> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue>();
 
   private static Wrappers.DataMessage receiveMsgForCurrentThread() {
     long currThreadId = Thread.currentThread().getId();
     if (threadBlockingQueueMap.get(currThreadId) == null) {
-      threadBlockingQueueMap.put(currThreadId,new ArrayBlockingQueue(1));
+      threadBlockingQueueMap.put(currThreadId, new ArrayBlockingQueue(1));
     }
     Wrappers.DataMessage rcvdMsg = null;
     do {
       try {
         rcvdMsg = (Wrappers.DataMessage) threadBlockingQueueMap.get(Thread.currentThread().getId()).take();
       } catch (InterruptedException e) {
-          e.printStackTrace();
+        e.printStackTrace();
       }
     } while (rcvdMsg == null);
 
@@ -79,10 +79,10 @@ public class Distributor {
     Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 4. Load and initialize class  -  WARNING: For some reason the class is not being initialized! **/
-    Class clazz=null;
+    Class clazz = null;
     ClassNotFoundException exceptionWhileLoadingClass = null;
     try {
       clazz = Class.forName(staticPart.getSignature().getDeclaringType().getName());
@@ -109,7 +109,7 @@ public class Distributor {
     rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 8. Return or re-raise exception **/
     if (exceptionWhileLoadingClass != null) {
@@ -140,7 +140,7 @@ public class Distributor {
     Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
 
     /** 4. Invoke constructor **/
@@ -160,7 +160,7 @@ public class Distributor {
     Wrappers.DataMessage invokedMsg = null;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id,constructor,exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking);
     } else {
       invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, false);
     }
@@ -177,7 +177,7 @@ public class Distributor {
     rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 8. Return object or re-raise exception **/
     if (exceptionWhileInvoking != null) {
@@ -214,7 +214,7 @@ public class Distributor {
     Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
 
     /** 4. Invoke method **/
@@ -233,7 +233,7 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id,method,exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
       invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, true);
     }
@@ -250,7 +250,7 @@ public class Distributor {
     rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 8. Return object or re-raise exception **/
     if (exceptionWhileInvoking != null) {
@@ -284,7 +284,7 @@ public class Distributor {
     Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
 
     /** 4. Invoke method **/
@@ -303,7 +303,7 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id,method,exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
       invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, false);
     }
@@ -320,7 +320,7 @@ public class Distributor {
     rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 8. Return object or re-raise exception **/
     if (exceptionWhileInvoking != null) {
@@ -336,6 +336,7 @@ public class Distributor {
 
   /**
    * This method currently only support calling method whose value is fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
+   *
    * @param classMethodCall
    * @throws Throwable
    */
@@ -344,16 +345,16 @@ public class Distributor {
 
     Class clazz = Class.forName(classMethodCall.getClass_());
     List<Class> paramClasses = new ArrayList<>();
-    for (String paramClassStr: classMethodCall.getParameterClassesList()) {
+    for (String paramClassStr : classMethodCall.getParameterClassesList()) {
       paramClasses.add(Class.forName(paramClassStr));
     }
 
     Method method = clazz.getDeclaredMethod(classMethodCall.getName(), (Class[]) paramClasses.toArray(new Class[]{}));
 
     List<Object> args = new ArrayList<>();
-    int objIdx=0;
+    int objIdx = 0;
     for (Primitives.Object obj : classMethodCall.getParameterList()) {
-      args.add(ProtobufUtils.unwrapObject(obj,paramClasses.get(objIdx)));
+      args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
     }
     Exception exceptionWhileInvoking = null;
     method.setAccessible(true);
@@ -367,14 +368,14 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id,method,exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
       invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, true);
     }
 
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic,invokedMsg));
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -384,7 +385,7 @@ public class Distributor {
     Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 8. Return object or re-raise exception */
     /** TODO Does it make sense to re-throw an exception when the call is incoming?? */
@@ -419,7 +420,7 @@ public class Distributor {
     Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
 
     /** 4. Invoke method **/
@@ -437,14 +438,14 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id,method,exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
       invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, true);
     }
 
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic,invokedMsg));
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -454,7 +455,7 @@ public class Distributor {
     rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 8. Return object or re-raise exception **/
     if (exceptionWhileInvoking != null) {
@@ -479,7 +480,7 @@ public class Distributor {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg));
+    producer.send(new ProducerRecord(kafkaTopic, msg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -488,7 +489,7 @@ public class Distributor {
     Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
 
     /** 4. Invoke method **/
@@ -507,14 +508,14 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id,method,exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
       invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, false);
     }
 
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic,invokedMsg));
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -524,7 +525,7 @@ public class Distributor {
     rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 8. Return object or re-raise exception **/
     if (exceptionWhileInvoking != null) {
@@ -551,7 +552,7 @@ public class Distributor {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg));
+    producer.send(new ProducerRecord(kafkaTopic, msg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -560,7 +561,7 @@ public class Distributor {
     Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 4. Get Object **/
 
@@ -572,7 +573,7 @@ public class Distributor {
     try {
       fieldValue = field.get(null);
     } catch (IllegalAccessException iae) {
-        exceptionGettingObject = iae;
+      exceptionGettingObject = iae;
     }
 
     /** 5. Wrap exception if any **/
@@ -580,11 +581,11 @@ public class Distributor {
     if (exceptionGettingObject != null) {
       invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id,fieldValue, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, false);
     }
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic,invokedMsg));
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -593,7 +594,7 @@ public class Distributor {
     rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 8. Return or re-raise exception **/
     if (exceptionGettingObject != null) {
@@ -611,7 +612,7 @@ public class Distributor {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg));
+    producer.send(new ProducerRecord(kafkaTopic, msg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -620,7 +621,7 @@ public class Distributor {
     Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
 
     /** 4. Get Object **/
@@ -633,7 +634,7 @@ public class Distributor {
     try {
       fieldValue = field.get(target);
     } catch (IllegalAccessException iae) {
-        exceptionGettingObject = iae;
+      exceptionGettingObject = iae;
     }
 
     /** 5. Wrap exception if any **/
@@ -641,11 +642,11 @@ public class Distributor {
     if (exceptionGettingObject != null) {
       invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id,fieldValue, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, false);
     }
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic,invokedMsg));
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -654,7 +655,7 @@ public class Distributor {
     rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 8. Return or re-raise exception **/
     if (exceptionGettingObject != null) {
@@ -672,7 +673,7 @@ public class Distributor {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg));
+    producer.send(new ProducerRecord(kafkaTopic, msg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -681,7 +682,7 @@ public class Distributor {
     Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 4. Put Object **/
 
@@ -692,7 +693,7 @@ public class Distributor {
     try {
       field.set(null, args[0]);
     } catch (IllegalAccessException iae) {
-        exceptionSettingObject = iae;
+      exceptionSettingObject = iae;
     }
 
     /** 5. Wrap exception if any **/
@@ -704,7 +705,7 @@ public class Distributor {
     }
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic,invokedMsg));
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -713,7 +714,7 @@ public class Distributor {
     rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 8. Return or re-raise exception **/
     if (exceptionSettingObject != null) {
@@ -731,7 +732,7 @@ public class Distributor {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic,msg));
+    producer.send(new ProducerRecord(kafkaTopic, msg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -740,7 +741,7 @@ public class Distributor {
     Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 4. Put Object **/
 
@@ -763,7 +764,7 @@ public class Distributor {
     }
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic,invokedMsg));
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     if (logger.isDebugEnabled()) {
       logger.debug("Sent new message!");
     }
@@ -772,7 +773,7 @@ public class Distributor {
     rcvdMsg = receiveMsgForCurrentThread();
 
     //TODO compare
-    logger.info("Message received: "+rcvdMsg.getMsgType());
+    logger.info("Message received: " + rcvdMsg.getMsgType());
 
     /** 8. Return or re-raise exception **/
     if (exceptionSettingObject != null) {
@@ -784,6 +785,7 @@ public class Distributor {
 
   /**
    * The Distributor takes 1 only argument, which is the location of the configuration (.properties) file
+   *
    * @param args
    */
   public static void main(String[] args) {
@@ -807,20 +809,18 @@ public class Distributor {
     kafkaTopic = properties.getProperty("kafkaTopic");
 
 
-
-
     /** Configure and Initialize Kafka Producer **/
     final Properties kafkaProducerProps = new Properties();
     //common kafka properties
-    for (String propKey: properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.") && ! (propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer")) ) {
-        kafkaProducerProps.put(StringUtils.substringAfter(propKey,"kafka."),properties.getProperty(propKey));
+    for (String propKey : properties.stringPropertyNames()) {
+      if (propKey.startsWith("kafka.") && !(propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer"))) {
+        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka."), properties.getProperty(propKey));
       }
     }
     //producer properties
-    for (String propKey: properties.stringPropertyNames()) {
+    for (String propKey : properties.stringPropertyNames()) {
       if (propKey.startsWith("kafka.producer.")) {
-        kafkaProducerProps.put(StringUtils.substringAfter(propKey,"kafka.producer."),properties.getProperty(propKey));
+        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka.producer."), properties.getProperty(propKey));
       }
     }
     //other producer specific props
@@ -828,19 +828,17 @@ public class Distributor {
     producer = new KafkaProducer<>(kafkaProducerProps);
 
 
-
-
     /** Configure and Initialize Kafka Message Consumer/Dispatcher thread **/
     Properties msgDispatcherProps = new Properties();
-    for (String propKey: properties.stringPropertyNames()) {
-       if (propKey.startsWith("kafka.") && ! (propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer")) ) {
-        msgDispatcherProps.put(StringUtils.substringAfter(propKey,"kafka."),properties.getProperty(propKey));
+    for (String propKey : properties.stringPropertyNames()) {
+      if (propKey.startsWith("kafka.") && !(propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer"))) {
+        msgDispatcherProps.put(StringUtils.substringAfter(propKey, "kafka."), properties.getProperty(propKey));
       }
     }
     //consumer properties
-    for (String propKey: properties.stringPropertyNames()) {
+    for (String propKey : properties.stringPropertyNames()) {
       if (propKey.startsWith("kafka.consumer.")) {
-        msgDispatcherProps.put(StringUtils.substringAfter(propKey,"kafka.consumer."),properties.getProperty(propKey));
+        msgDispatcherProps.put(StringUtils.substringAfter(propKey, "kafka.consumer."), properties.getProperty(propKey));
       }
     }
     DataMessageDispatcher messageDispatcher = DataMessageDispatcher.getInstance(msgDispatcherProps);

@@ -43,15 +43,15 @@ public class AppLauncher {
     /** Configure and Initialize Kafka Producer **/
     final Properties kafkaProducerProps = new Properties();
     //common kafka properties
-    for (String propKey: properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.") && ! (propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer")) ) {
-        kafkaProducerProps.put(StringUtils.substringAfter(propKey,"kafka."),properties.getProperty(propKey));
+    for (String propKey : properties.stringPropertyNames()) {
+      if (propKey.startsWith("kafka.") && !(propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer"))) {
+        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka."), properties.getProperty(propKey));
       }
     }
     //producer properties
-    for (String propKey: properties.stringPropertyNames()) {
+    for (String propKey : properties.stringPropertyNames()) {
       if (propKey.startsWith("kafka.producer.")) {
-        kafkaProducerProps.put(StringUtils.substringAfter(propKey,"kafka.producer."),properties.getProperty(propKey));
+        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka.producer."), properties.getProperty(propKey));
       }
     }
     //other producer specific props
@@ -60,7 +60,7 @@ public class AppLauncher {
 
     //now read in from stdin, wrap calls in messages and send them
     Scanner stdin = new Scanner(System.in);
-    while(stdin.hasNextLine()) {
+    while (stdin.hasNextLine()) {
       String[] lineParts = stdin.nextLine().trim().split(" ");
       String className = lineParts[0];
       String[] mainArgs = Arrays.copyOfRange(lineParts, 1, lineParts.length);
@@ -73,7 +73,7 @@ public class AppLauncher {
 
       producer.send(new ProducerRecord(kafkaTopic, msg));
 
-      System.out.println("Sent message:\n"+msg.toString());
+      System.out.println("Sent message:\n" + msg.toString());
     }
   }
 }

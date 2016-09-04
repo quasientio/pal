@@ -1,44 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="warn" strict="true" monitorInterval="90">
-	<Properties>
-		<Property name="distributorLog">logs/distributor.log</Property>
-		<Property name="kafkaLog">logs/kafka.log</Property>
-	</Properties>
- 
-	<Appenders>
+    <Properties>
+        <Property name="distributorLog">logs/distributor.log</Property>
+        <Property name="kafkaLog">logs/kafka.log</Property>
+    </Properties>
 
-		<Appender type="Console" name="stdout">
-			<Layout type="PatternLayout" pattern="%m MDC%X%n"/>
-		</Appender>
+    <Appenders>
 
-		<Appender type="File" name="distributor" fileName="${distributorLog}">
-			<Layout type="PatternLayout">
-				<Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
-			</Layout>
-		</Appender>
+        <Appender type="Console" name="stdout">
+            <Layout type="PatternLayout" pattern="%m MDC%X%n"/>
+        </Appender>
 
-		<Appender type="File" name="kafka" fileName="${kafkaLog}">
-			<Layout type="PatternLayout">
-				<Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
-			</Layout>
-		</Appender>
-	</Appenders>
- 
-	<Loggers>
-		<Logger name="com.ittera.cometa.distributor" level="info" additivity="false">
-			<AppenderRef ref="distributor"/>
-		</Logger>
-		<Logger name="com.ittera.cometa.distributor.messages.data.DataMessageFactory" level="debug" additivity="false">
-			<AppenderRef ref="distributor"/>
-		</Logger>
- 
-		<Logger name="org.apache.kafka" level="info" additivity="false">
-			<AppenderRef ref="kafka"/>
-		</Logger>
- 
-		<Root level="warn">
-			<AppenderRef ref="stdout"/>
-		</Root>
-	</Loggers>
- 
+        <Appender type="File" name="distributor" fileName="${distributorLog}">
+            <Layout type="PatternLayout">
+                <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
+            </Layout>
+        </Appender>
+
+        <Appender type="File" name="kafka" fileName="${kafkaLog}">
+            <Layout type="PatternLayout">
+                <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
+            </Layout>
+        </Appender>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="com.ittera.cometa.distributor" level="debug" additivity="false">
+            <AppenderRef ref="distributor"/>
+        </Logger>
+        <Logger name="com.ittera.cometa.distributor.messages.data.DataMessageFactory" level="info" additivity="false">
+            <AppenderRef ref="distributor"/>
+        </Logger>
+
+        <Logger name="org.apache.kafka" level="info" additivity="false">
+            <AppenderRef ref="kafka"/>
+        </Logger>
+
+        <Root level="warn">
+            <AppenderRef ref="stdout"/>
+        </Root>
+    </Loggers>
+
 </Configuration>
