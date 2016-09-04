@@ -71,12 +71,9 @@ public class AppLauncher {
       Object[] parameters = new Object[]{mainArgs};
       final Wrappers.DataMessage msg = DataMessageFactory.buildClassMethodMessage(distributorId, className, methodName, modifiers, returnType, parameterTypes, parameters);
 
+      producer.send(new ProducerRecord(kafkaTopic, msg));
 
-    /** 2. Send message **/
-    //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic, msg));
-
-    System.out.println("Sent message:\n"+msg.toString());
+      System.out.println("Sent message:\n"+msg.toString());
     }
   }
 }
