@@ -1,0 +1,7 @@
+#!/bin/bash
+
+JVM_OPTS="-Xmx1024M -Xms512M -server"
+SYSTEM_PROPS=-Dlog4j.configurationFile=file://`pwd`/conf/log4j2.xml
+ARGS=conf/dist.properties
+
+java $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.distributor.Distributor $ARGS
