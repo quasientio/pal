@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="warn" strict="true">
+<Configuration status="warn" strict="true" monitorInterval="90">
 	<Properties>
 		<Property name="distributorLog">logs/distributor.log</Property>
 		<Property name="kafkaLog">logs/kafka.log</Property>
@@ -26,6 +26,9 @@
  
 	<Loggers>
 		<Logger name="com.ittera.cometa.distributor" level="info" additivity="false">
+			<AppenderRef ref="distributor"/>
+		</Logger>
+		<Logger name="com.ittera.cometa.distributor.messages.data.DataMessageFactory" level="debug" additivity="false">
 			<AppenderRef ref="distributor"/>
 		</Logger>
  
