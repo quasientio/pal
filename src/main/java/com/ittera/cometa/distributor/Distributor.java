@@ -46,13 +46,15 @@ public class Distributor {
     long currThreadId = Thread.currentThread().getId();
     if (threadBlockingQueueMap.get(currThreadId) == null) {
       threadBlockingQueueMap.put(currThreadId, new ArrayBlockingQueue(1000));
+      logger.debug("Added new blocking queue to map, with thread id="+currThreadId);
     }
     Wrappers.DataMessage rcvdMsg = null;
     do {
       try {
-        rcvdMsg = (Wrappers.DataMessage) threadBlockingQueueMap.get(Thread.currentThread().getId()).take();
+        rcvdMsg = (Wrappers.DataMessage) threadBlockingQueueMap.get(currThreadId).take();
+        logger.debug("Taken new message from blocking queue (thread id="+currThreadId+")");
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        logger.error("Interrupted while taking from blocking queue",e);
       }
     } while (rcvdMsg == null);
 
@@ -437,7 +439,7 @@ public class Distributor {
     /** 2. If class and method loaded, unwrap arguments and invoke method **/
     Exception exceptionWhileInvoking = null;
     Object returnValue = null;
-    if (exceptionWhileLoading != null) {
+    if (exceptionWhileLoading == null) {
       List<Object> args = new ArrayList<>();
       int objIdx = 0;
       for (Primitives.Object obj : instanceMethodCall.getParameterList()) {
@@ -563,6 +565,7 @@ public class Distributor {
     Exception exceptionWhileLoading = null;
     List<Class> paramClasses = new ArrayList<>();
     try {
+      logger.debug("Attempting to load (initialize) class");
       clazz = Class.forName(classMethodCall.getClass_());
       for (String paramClassStr : classMethodCall.getParameterClassesList()) {
         paramClasses.add(Class.forName(paramClassStr));
@@ -575,7 +578,7 @@ public class Distributor {
     /** 2. If class and method loaded, unwrap arguments and invoke method **/
     Exception exceptionWhileInvoking = null;
     Object returnValue = null;
-    if (exceptionWhileLoading != null) {
+    if (exceptionWhileLoading == null) {
       List<Object> args = new ArrayList<>();
       int objIdx = 0;
       for (Primitives.Object obj : classMethodCall.getParameterList()) {
@@ -583,6 +586,7 @@ public class Distributor {
       }
       method.setAccessible(true);
       try {
+        logger.debug("Invoking class method NOW!");
         returnValue = method.invoke(null, args.toArray());
       } catch (Exception e) {
         exceptionWhileInvoking = e;
@@ -607,7 +611,7 @@ public class Distributor {
     /** 4. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
+      logger.debug("Sent new message from D.incomingClassMethod!");
     }
 
     return;
@@ -956,7 +960,7 @@ public class Distributor {
    * @return
    */
   private static boolean mustWait(Wrappers.DataMessage dataMessage) {
-    return false;
+    return true;
   }
 
   /**
