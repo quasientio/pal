@@ -10,6 +10,8 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.utils.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
@@ -45,7 +47,12 @@ public class DataMessageDispatcher extends Thread {
     pollTimeout = Long.parseLong((String)props.remove("pollTimeout"));
     props.put("group.id", String.valueOf(Distributor.id));
     consumer = new KafkaConsumer<>(props);
-    consumer.subscribe(Arrays.asList(Distributor.kafkaTopic));
+    //consumer.subscribe(Arrays.asList(Distributor.kafkaTopic));
+
+    //manual assignment of partition so we can control offset seek
+    TopicPartition topicPartition = new TopicPartition(Distributor.kafkaTopic,0);
+    consumer.assign(Arrays.asList(topicPartition));
+    consumer.seekToBeginning(Arrays.asList(topicPartition));
     logger.info("DataMessageDispatcher initialized");
     executorService = Executors.newCachedThreadPool();
   }
@@ -64,6 +71,8 @@ public class DataMessageDispatcher extends Thread {
         long threadId = dataMessage.getThreadId();
         //if threadId not in our threadQueue, then push to new/random thread
         if (!Distributor.threadBlockingQueueMap.containsKey(threadId)) {
+          logger.debug("Thread queue has thread with ids"+Distributor.threadBlockingQueueMap.keySet());
+          logger.debug("No thread for incoming call, creating new one and dispatching...");
           executorService.submit(new Runnable() {
             @Override
             public void run() {
@@ -77,7 +86,11 @@ public class DataMessageDispatcher extends Thread {
               } else if (dataMessage.hasInstanceMethodCall()) {
                 Calls.InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
                 Distributor.incomingInstanceMethod(methodCall);
-              } //TODO : field op calls
+              } else {
+                //TODO : field op calls
+                logger.debug("Incoming message ignored:\n"+dataMessage);
+              }
+
             }
           });
         }
