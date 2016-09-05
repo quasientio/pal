@@ -59,7 +59,7 @@ public class AppLauncher {
     final KafkaProducer producer = new KafkaProducer<>(kafkaProducerProps);
 
     //now read in from stdin, wrap calls in messages and send them
-    Scanner stdin = new Scanner(System.in);
+    Scanner stdin = new Scanner(System.in, "UTF8");
     while (stdin.hasNextLine()) {
       String[] lineParts = stdin.nextLine().trim().split(" ");
       String className = lineParts[0];

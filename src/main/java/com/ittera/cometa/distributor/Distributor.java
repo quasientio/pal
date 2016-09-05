@@ -35,9 +35,9 @@ import org.apache.commons.lang3.StringUtils;
 public class Distributor {
   protected static final Logger logger = LogManager.getLogger(Distributor.class);
 
-  protected static KafkaProducer producer;
-  protected static String kafkaTopic;
-  protected static int id;
+  static KafkaProducer producer;
+  static String kafkaTopic;
+  static int id;
 
   //static data shared by all threads - sources of contention
   static Map<Long, BlockingQueue> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue>();
@@ -991,7 +991,7 @@ public class Distributor {
 
 
     /** Configure Distributor **/
-    Distributor.id = Integer.valueOf(properties.getProperty("id"));
+    Distributor.id = Integer.parseInt(properties.getProperty("id"));
     kafkaTopic = properties.getProperty("kafkaTopic");
 
 

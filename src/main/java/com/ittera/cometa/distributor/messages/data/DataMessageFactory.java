@@ -143,7 +143,7 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ClassMethodCall.Builder callBuilder = Calls.ClassMethodCall.newBuilder();
-    callBuilder.setDistributorId(Integer.valueOf(distributorId)); //1
+    callBuilder.setDistributorId(Integer.parseInt(distributorId)); //1
     callBuilder.setThreadId(Thread.currentThread().getId());
     callBuilder.setCurrentTime(System.currentTimeMillis()); //3
     callBuilder.setClass_(className); //4
@@ -549,10 +549,10 @@ public class DataMessageFactory {
   private static Primitives.Class getWrappedClass(Class clazz) {
     final Primitives.Class.Builder clazzBuilder = Primitives.Class.newBuilder();
 
-    //1
-    clazzBuilder.setClassname(clazz.getName());
-    //2
     if (clazz != null) {
+      //1
+      clazzBuilder.setClassname(clazz.getName());
+      //2
       clazzBuilder.setHash(clazz.hashCode());
     }
 

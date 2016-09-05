@@ -18,7 +18,7 @@ public class MethodSignature {
     this.firma = firma;
   }
 
-  public Class[] parseTiposParametros() {
+  public Class[] parseTiposParametros() throws ClassNotFoundException {
     int p1 = firma.indexOf('(');
     int p2 = firma.indexOf(')');
 
@@ -65,13 +65,7 @@ public class MethodSignature {
           break;
         case ('L'): // object
           int newpos = args.indexOf(';', pos);
-          try {
-            tipos.add(Class.forName(args.substring(pos + 1, newpos)));
-          } catch (Exception E) {
-            E.printStackTrace(System.err);
-            System.exit(1);
-          }
-
+          tipos.add(Class.forName(args.substring(pos + 1, newpos)));
           pos = newpos + 1;
           break;
         case ('['): // array
@@ -105,7 +99,7 @@ public class MethodSignature {
     return clases_parametros;
   }
 
-  private Class getArrayType() {
+  private Class getArrayType() throws ClassNotFoundException {
     switch (args.charAt(pos)) {
       case ('Z'):
         return (boolean.class);
@@ -126,14 +120,7 @@ public class MethodSignature {
       case ('L'): // object
         int newpos = args.indexOf(';', pos);
         Class tipo = null;
-
-        try {
-          tipo = Class.forName(args.substring(pos + 1, newpos));
-        } catch (Exception E) {
-          E.printStackTrace(System.err);
-          System.exit(1);
-        }
-
+        tipo = Class.forName(args.substring(pos + 1, newpos));
         pos = newpos;
         return tipo;
       default:
@@ -141,7 +128,7 @@ public class MethodSignature {
     }
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
     String unafirma = "(Ljava/lang/String;II[[Ljava/lang/Float;)V";
 
     MethodSignature m = new MethodSignature(unafirma);

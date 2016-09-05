@@ -42,7 +42,7 @@ public class DataMessageDispatcher extends Thread {
   }
 
   private DataMessageDispatcher(Properties props) {
-    pollTimeout = Long.valueOf((String) props.remove("pollTimeout"));
+    pollTimeout = Long.parseLong((String)props.remove("pollTimeout"));
     props.put("group.id", String.valueOf(Distributor.id));
     consumer = new KafkaConsumer<>(props);
     consumer.subscribe(Arrays.asList(Distributor.kafkaTopic));
