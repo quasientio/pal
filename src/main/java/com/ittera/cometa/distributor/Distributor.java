@@ -23,9 +23,9 @@ import java.util.Properties;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -44,10 +44,6 @@ public class Distributor {
 
   private static Wrappers.DataMessage receiveMsgForCurrentThread() {
     long currThreadId = Thread.currentThread().getId();
-    if (threadBlockingQueueMap.get(currThreadId) == null) {
-      threadBlockingQueueMap.put(currThreadId, new ArrayBlockingQueue(1000));
-      logger.debug("Added new blocking queue to map, with thread id="+currThreadId);
-    }
     Wrappers.DataMessage rcvdMsg = null;
     do {
       try {
@@ -61,11 +57,21 @@ public class Distributor {
     return rcvdMsg;
   }
 
+  private static void checkCreateThreadQueue() {
+    long currThreadId = Thread.currentThread().getId();
+    if (!threadBlockingQueueMap.containsKey(currThreadId)) {
+      threadBlockingQueueMap.put(currThreadId, new LinkedBlockingDeque());
+      logger.debug("Added new blocking queue to map, with thread id=" + currThreadId);
+    }
+  }
   /************************ INTERFACE ***************************/
 
   // <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
   public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
     logger.debug("in D.classConstructor: " + staticPart.getSignature());
+
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildClassInitializerMessage(id, staticPart, sender);
@@ -191,6 +197,9 @@ public class Distributor {
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.debug("in D.constructor: " + staticPart.getSignature());
 
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
+
     final ConstructorSignature constructorSignature = (ConstructorSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
@@ -268,6 +277,9 @@ public class Distributor {
   public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
     logger.debug("in D.voidInstanceMethod: " + staticPart.getSignature());
 
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
+
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
@@ -341,6 +353,9 @@ public class Distributor {
 
   public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
     logger.debug("in D.nonVoidInstanceMethod: " + staticPart.getSignature());
+
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
 
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -480,6 +495,9 @@ public class Distributor {
 
   public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.debug("in D.voidClassMethod: " + staticPart.getSignature());
+
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
 
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -621,6 +639,9 @@ public class Distributor {
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.debug("in D.nonVoidClassMethod: " + staticPart.getSignature());
 
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
+
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
@@ -700,6 +721,9 @@ public class Distributor {
   public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
     logger.debug("in D.getStatic: " + staticPart.getSignature());
 
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
+
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetStaticMessage(id, staticPart, sender);
 
@@ -763,6 +787,9 @@ public class Distributor {
 
   public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
     logger.debug("in D.getObject: " + staticPart.getSignature());
+
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetObjectMessage(id, staticPart, sender, target);
@@ -829,6 +856,9 @@ public class Distributor {
   public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
     logger.debug("in D.putStatic: " + staticPart.getSignature());
 
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
+
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildPutStaticMessage(id, staticPart, sender, args[0]);
 
@@ -891,6 +921,9 @@ public class Distributor {
 
   public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) throws IllegalAccessException {
     logger.debug("in D.putField: " + staticPart.getSignature());
+
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildPutObjectMessage(id, staticPart, sender, target, args[0]);
@@ -960,7 +993,7 @@ public class Distributor {
    * @return
    */
   private static boolean mustWait(Wrappers.DataMessage dataMessage) {
-    return true;
+    return false;
   }
 
   /**
