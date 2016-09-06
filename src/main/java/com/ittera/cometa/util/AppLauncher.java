@@ -3,12 +3,12 @@ package com.ittera.cometa.util;
 import com.ittera.cometa.distributor.messages.data.Wrappers;
 import com.ittera.cometa.distributor.messages.data.DataMessageFactory;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -19,7 +19,89 @@ import java.lang.System;
 
 import org.apache.commons.lang3.StringUtils;
 
+
 public class AppLauncher {
+
+  private final String distributorId;
+  private final String kafkaTopic;
+  private final Properties kafkaProducerProps = new Properties();
+  final KafkaProducer producer;
+
+  public AppLauncher(Properties properties) {
+
+    distributorId = properties.getProperty("id");
+    kafkaTopic = properties.getProperty("kafkaTopic");
+
+    /** Configure and Initialize Kafka Producer **/
+    //common kafka properties
+    for (String propKey : properties.stringPropertyNames()) {
+      if (propKey.startsWith("kafka.") && !(propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer"))) {
+        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka."), properties.getProperty(propKey));
+      }
+    }
+    //producer properties
+    for (String propKey : properties.stringPropertyNames()) {
+      if (propKey.startsWith("kafka.producer.")) {
+        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka.producer."), properties.getProperty(propKey));
+      }
+    }
+    //other producer specific props
+    kafkaProducerProps.put("client.id", String.valueOf(distributorId));
+    producer = new KafkaProducer<>(kafkaProducerProps);
+  }
+
+  /**
+   * Currently only supports:
+   *  - constructor calls - syntax: classname new arg...
+   *  - calls to a class' main - syntax: classname main arg...
+   *  - get static - syntax: classname get fieldname
+   *  -
+   * @param line
+   * @return
+   */
+  private Wrappers.DataMessage parseMessage(String line) {
+    String[] lineParts = line.trim().split(" ");
+
+    String className = lineParts[0];
+
+    if ("new".equals(lineParts[1])) {
+//      String[] newArgs = Arrays.copyOfRange(lineParts, 2, lineParts.length);
+      return DataMessageFactory.buildEmptyConstructorMessage(distributorId,className);
+
+    } else if ("main".equals(lineParts[1])) {
+      String[] mainArgs = Arrays.copyOfRange(lineParts, 2, lineParts.length);
+      String methodName = "main";
+      int modifiers = Modifier.PUBLIC | Modifier.STATIC;
+      Class returnType = Void.class;
+      Class[] parameterTypes = new Class[]{String[].class};
+      Object[] parameters = new Object[]{mainArgs};
+      return DataMessageFactory.buildClassMethodMessage(distributorId, className, methodName, modifiers, returnType, parameterTypes, parameters);
+
+
+    } else if ("get".equals(lineParts[1])) {
+      String fieldname = lineParts[2];
+
+      return DataMessageFactory.buildGetStaticMessage(distributorId, className, fieldname);
+
+    } else {
+      return null;
+    }
+  }
+
+  public void repl(InputStream inputStream) {
+    Scanner stream = new Scanner(inputStream, "UTF8");
+    while (stream.hasNextLine()) {
+
+      final Wrappers.DataMessage msg = parseMessage(stream.nextLine());
+      if (msg == null) {
+        continue;
+      }
+
+      producer.send(new ProducerRecord(kafkaTopic, msg));
+
+      System.out.println("Sent message:\n" + msg.toString());
+    }
+  }
 
   public static void main(String[] args) {
     if (args.length != 1) {
@@ -36,44 +118,8 @@ public class AppLauncher {
       System.exit(2);
     }
 
-    String distributorId = properties.getProperty("id");
-    String kafkaTopic = properties.getProperty("kafkaTopic");
+    AppLauncher launcher = new AppLauncher(properties);
+    launcher.repl(System.in);
 
-
-    /** Configure and Initialize Kafka Producer **/
-    final Properties kafkaProducerProps = new Properties();
-    //common kafka properties
-    for (String propKey : properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.") && !(propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer"))) {
-        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka."), properties.getProperty(propKey));
-      }
-    }
-    //producer properties
-    for (String propKey : properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.producer.")) {
-        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka.producer."), properties.getProperty(propKey));
-      }
-    }
-    //other producer specific props
-    kafkaProducerProps.put("client.id", String.valueOf(distributorId));
-    final KafkaProducer producer = new KafkaProducer<>(kafkaProducerProps);
-
-    //now read in from stdin, wrap calls in messages and send them
-    Scanner stdin = new Scanner(System.in, "UTF8");
-    while (stdin.hasNextLine()) {
-      String[] lineParts = stdin.nextLine().trim().split(" ");
-      String className = lineParts[0];
-      String[] mainArgs = Arrays.copyOfRange(lineParts, 1, lineParts.length);
-      String methodName = "main";
-      int modifiers = Modifier.PUBLIC | Modifier.STATIC;
-      Class returnType = Void.class;
-      Class[] parameterTypes = new Class[]{String[].class};
-      Object[] parameters = new Object[]{mainArgs};
-      final Wrappers.DataMessage msg = DataMessageFactory.buildClassMethodMessage(distributorId, className, methodName, modifiers, returnType, parameterTypes, parameters);
-
-      producer.send(new ProducerRecord(kafkaTopic, msg));
-
-      System.out.println("Sent message:\n" + msg.toString());
-    }
   }
 }

@@ -4,22 +4,18 @@
 package com.ittera.cometa.distributor.messages.data;
 
 public final class Fields {
-  private Fields() {
-  }
-
+  private Fields() {}
   public static void registerAllExtensions(
-    com.google.protobuf.ExtensionRegistry registry) {
+      com.google.protobuf.ExtensionRegistry registry) {
   }
-
   public interface StaticFieldGetOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:messages.data.StaticFieldGet)
-    com.google.protobuf.MessageOrBuilder {
+      // @@protoc_insertion_point(interface_extends:messages.data.StaticFieldGet)
+      com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     boolean hasDistributorId();
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -27,18 +23,17 @@ public final class Fields {
 
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     boolean hasThreadId();
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     long getThreadId();
@@ -47,7 +42,6 @@ public final class Fields {
      * <code>required int64 currentTime = 3;</code>
      */
     boolean hasCurrentTime();
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -57,64 +51,57 @@ public final class Fields {
      * <code>required string class = 4;</code>
      */
     boolean hasClass_();
-
     /**
      * <code>required string class = 4;</code>
      */
     java.lang.String getClass_();
-
     /**
      * <code>required string class = 4;</code>
      */
     com.google.protobuf.ByteString
-    getClass_Bytes();
+        getClass_Bytes();
 
     /**
      * <code>required string field = 5;</code>
      */
     boolean hasField();
-
     /**
      * <code>required string field = 5;</code>
      */
     java.lang.String getField();
-
     /**
      * <code>required string field = 5;</code>
      */
     com.google.protobuf.ByteString
-    getFieldBytes();
+        getFieldBytes();
 
     /**
-     * <code>required string fieldType = 6;</code>
+     * <code>optional string fieldType = 6;</code>
      */
     boolean hasFieldType();
-
     /**
-     * <code>required string fieldType = 6;</code>
+     * <code>optional string fieldType = 6;</code>
      */
     java.lang.String getFieldType();
-
     /**
-     * <code>required string fieldType = 6;</code>
+     * <code>optional string fieldType = 6;</code>
      */
     com.google.protobuf.ByteString
-    getFieldTypeBytes();
+        getFieldTypeBytes();
 
     /**
      * <code>optional int32 modifiers = 7;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     boolean hasModifiers();
-
     /**
      * <code>optional int32 modifiers = 7;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     int getModifiers();
@@ -123,28 +110,24 @@ public final class Fields {
      * <code>optional string senderClassName = 8;</code>
      */
     boolean hasSenderClassName();
-
     /**
      * <code>optional string senderClassName = 8;</code>
      */
     java.lang.String getSenderClassName();
-
     /**
      * <code>optional string senderClassName = 8;</code>
      */
     com.google.protobuf.ByteString
-    getSenderClassNameBytes();
+        getSenderClassNameBytes();
 
     /**
      * <code>optional .messages.data.Object sender = 9;</code>
      */
     boolean hasSender();
-
     /**
      * <code>optional .messages.data.Object sender = 9;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
-
     /**
      * <code>optional .messages.data.Object sender = 9;</code>
      */
@@ -152,37 +135,34 @@ public final class Fields {
 
     /**
      * <code>optional string sourceLocationFile = 10;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     boolean hasSourceLocationFile();
-
     /**
      * <code>optional string sourceLocationFile = 10;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     java.lang.String getSourceLocationFile();
-
     /**
      * <code>optional string sourceLocationFile = 10;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     com.google.protobuf.ByteString
-    getSourceLocationFileBytes();
+        getSourceLocationFileBytes();
 
     /**
      * <code>optional int32 sourceLocationLine = 11;</code>
      */
     boolean hasSourceLocationLine();
-
     /**
      * <code>optional int32 sourceLocationLine = 11;</code>
      */
@@ -192,42 +172,35 @@ public final class Fields {
      * <code>optional string sourceLocationType = 12;</code>
      */
     boolean hasSourceLocationType();
-
     /**
      * <code>optional string sourceLocationType = 12;</code>
      */
     java.lang.String getSourceLocationType();
-
     /**
      * <code>optional string sourceLocationType = 12;</code>
      */
     com.google.protobuf.ByteString
-    getSourceLocationTypeBytes();
+        getSourceLocationTypeBytes();
   }
-
   /**
    * Protobuf type {@code messages.data.StaticFieldGet}
-   * <p>
+   *
    * <pre>
    * --- CONTEXT
    * </pre>
    */
   public static final class StaticFieldGet extends
-    com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:messages.data.StaticFieldGet)
-    StaticFieldGetOrBuilder {
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.StaticFieldGet)
+      StaticFieldGetOrBuilder {
     // Use StaticFieldGet.newBuilder() to construct.
     private StaticFieldGet(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-
-    private StaticFieldGet(boolean noInit) {
-      this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance();
-    }
+    private StaticFieldGet(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
     private static final StaticFieldGet defaultInstance;
-
     public static StaticFieldGet getDefaultInstance() {
       return defaultInstance;
     }
@@ -237,21 +210,19 @@ public final class Fields {
     }
 
     private final com.google.protobuf.UnknownFieldSet unknownFields;
-
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+        getUnknownFields() {
       return this.unknownFields;
     }
-
     private StaticFieldGet(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -262,7 +233,7 @@ public final class Fields {
               break;
             default: {
               if (!parseUnknownField(input, unknownFields,
-                extensionRegistry, tag)) {
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -347,34 +318,33 @@ public final class Fields {
         throw e.setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
-          e.getMessage()).setUnfinishedMessage(this);
+            e.getMessage()).setUnfinishedMessage(this);
       } finally {
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
-
     public static final com.google.protobuf.Descriptors.Descriptor
-    getDescriptor() {
+        getDescriptor() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldGet_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internalGetFieldAccessorTable() {
+        internalGetFieldAccessorTable() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldGet_fieldAccessorTable
-        .ensureFieldAccessorsInitialized(
-          com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet.Builder.class);
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet.Builder.class);
     }
 
     public static com.google.protobuf.Parser<StaticFieldGet> PARSER =
-      new com.google.protobuf.AbstractParser<StaticFieldGet>() {
-        public StaticFieldGet parsePartialFrom(
+        new com.google.protobuf.AbstractParser<StaticFieldGet>() {
+      public StaticFieldGet parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new StaticFieldGet(input, extensionRegistry);
-        }
-      };
+        return new StaticFieldGet(input, extensionRegistry);
+      }
+    };
 
     @java.lang.Override
     public com.google.protobuf.Parser<StaticFieldGet> getParserForType() {
@@ -384,14 +354,12 @@ public final class Fields {
     private int bitField0_;
     public static final int DISTRIBUTORID_FIELD_NUMBER = 1;
     private int distributorId_;
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     public boolean hasDistributorId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -401,23 +369,21 @@ public final class Fields {
 
     public static final int THREADID_FIELD_NUMBER = 2;
     private long threadId_;
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public boolean hasThreadId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public long getThreadId() {
@@ -426,14 +392,12 @@ public final class Fields {
 
     public static final int CURRENTTIME_FIELD_NUMBER = 3;
     private long currentTime_;
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
     public boolean hasCurrentTime() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -443,14 +407,12 @@ public final class Fields {
 
     public static final int CLASS_FIELD_NUMBER = 4;
     private java.lang.Object class__;
-
     /**
      * <code>required string class = 4;</code>
      */
     public boolean hasClass_() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-
     /**
      * <code>required string class = 4;</code>
      */
@@ -459,8 +421,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           class__ = s;
@@ -468,17 +430,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string class = 4;</code>
      */
     public com.google.protobuf.ByteString
-    getClass_Bytes() {
+        getClass_Bytes() {
       java.lang.Object ref = class__;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         class__ = b;
         return b;
       } else {
@@ -488,14 +449,12 @@ public final class Fields {
 
     public static final int FIELD_FIELD_NUMBER = 5;
     private java.lang.Object field_;
-
     /**
      * <code>required string field = 5;</code>
      */
     public boolean hasField() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
-
     /**
      * <code>required string field = 5;</code>
      */
@@ -504,8 +463,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           field_ = s;
@@ -513,17 +472,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string field = 5;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldBytes() {
+        getFieldBytes() {
       java.lang.Object ref = field_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         field_ = b;
         return b;
       } else {
@@ -533,24 +491,22 @@ public final class Fields {
 
     public static final int FIELDTYPE_FIELD_NUMBER = 6;
     private java.lang.Object fieldType_;
-
     /**
-     * <code>required string fieldType = 6;</code>
+     * <code>optional string fieldType = 6;</code>
      */
     public boolean hasFieldType() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
-
     /**
-     * <code>required string fieldType = 6;</code>
+     * <code>optional string fieldType = 6;</code>
      */
     public java.lang.String getFieldType() {
       java.lang.Object ref = fieldType_;
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           fieldType_ = s;
@@ -558,17 +514,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
-     * <code>required string fieldType = 6;</code>
+     * <code>optional string fieldType = 6;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldTypeBytes() {
+        getFieldTypeBytes() {
       java.lang.Object ref = fieldType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         fieldType_ = b;
         return b;
       } else {
@@ -578,23 +533,21 @@ public final class Fields {
 
     public static final int MODIFIERS_FIELD_NUMBER = 7;
     private int modifiers_;
-
     /**
      * <code>optional int32 modifiers = 7;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public boolean hasModifiers() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
-
     /**
      * <code>optional int32 modifiers = 7;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public int getModifiers() {
@@ -603,14 +556,12 @@ public final class Fields {
 
     public static final int SENDERCLASSNAME_FIELD_NUMBER = 8;
     private java.lang.Object senderClassName_;
-
     /**
      * <code>optional string senderClassName = 8;</code>
      */
     public boolean hasSenderClassName() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
-
     /**
      * <code>optional string senderClassName = 8;</code>
      */
@@ -619,8 +570,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           senderClassName_ = s;
@@ -628,17 +579,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string senderClassName = 8;</code>
      */
     public com.google.protobuf.ByteString
-    getSenderClassNameBytes() {
+        getSenderClassNameBytes() {
       java.lang.Object ref = senderClassName_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         senderClassName_ = b;
         return b;
       } else {
@@ -648,21 +598,18 @@ public final class Fields {
 
     public static final int SENDER_FIELD_NUMBER = 9;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
-
     /**
      * <code>optional .messages.data.Object sender = 9;</code>
      */
     public boolean hasSender() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
-
     /**
      * <code>optional .messages.data.Object sender = 9;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
       return sender_;
     }
-
     /**
      * <code>optional .messages.data.Object sender = 9;</code>
      */
@@ -672,23 +619,21 @@ public final class Fields {
 
     public static final int SOURCELOCATIONFILE_FIELD_NUMBER = 10;
     private java.lang.Object sourceLocationFile_;
-
     /**
      * <code>optional string sourceLocationFile = 10;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public boolean hasSourceLocationFile() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
     }
-
     /**
      * <code>optional string sourceLocationFile = 10;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public java.lang.String getSourceLocationFile() {
@@ -696,8 +641,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           sourceLocationFile_ = s;
@@ -705,21 +650,20 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string sourceLocationFile = 10;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public com.google.protobuf.ByteString
-    getSourceLocationFileBytes() {
+        getSourceLocationFileBytes() {
       java.lang.Object ref = sourceLocationFile_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         sourceLocationFile_ = b;
         return b;
       } else {
@@ -729,14 +673,12 @@ public final class Fields {
 
     public static final int SOURCELOCATIONLINE_FIELD_NUMBER = 11;
     private int sourceLocationLine_;
-
     /**
      * <code>optional int32 sourceLocationLine = 11;</code>
      */
     public boolean hasSourceLocationLine() {
       return ((bitField0_ & 0x00000400) == 0x00000400);
     }
-
     /**
      * <code>optional int32 sourceLocationLine = 11;</code>
      */
@@ -746,14 +688,12 @@ public final class Fields {
 
     public static final int SOURCELOCATIONTYPE_FIELD_NUMBER = 12;
     private java.lang.Object sourceLocationType_;
-
     /**
      * <code>optional string sourceLocationType = 12;</code>
      */
     public boolean hasSourceLocationType() {
       return ((bitField0_ & 0x00000800) == 0x00000800);
     }
-
     /**
      * <code>optional string sourceLocationType = 12;</code>
      */
@@ -762,8 +702,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           sourceLocationType_ = s;
@@ -771,17 +711,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string sourceLocationType = 12;</code>
      */
     public com.google.protobuf.ByteString
-    getSourceLocationTypeBytes() {
+        getSourceLocationTypeBytes() {
       java.lang.Object ref = sourceLocationType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         sourceLocationType_ = b;
         return b;
       } else {
@@ -803,9 +742,7 @@ public final class Fields {
       sourceLocationLine_ = 0;
       sourceLocationType_ = "";
     }
-
     private byte memoizedIsInitialized = -1;
-
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -823,10 +760,6 @@ public final class Fields {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!hasFieldType()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
       if (hasSender()) {
         if (!getSender().isInitialized()) {
           memoizedIsInitialized = 0;
@@ -838,7 +771,7 @@ public final class Fields {
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-      throws java.io.IOException {
+                        throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeInt32(1, distributorId_);
@@ -880,7 +813,6 @@ public final class Fields {
     }
 
     private int memoizedSerializedSize = -1;
-
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
@@ -940,119 +872,99 @@ public final class Fields {
     }
 
     private static final long serialVersionUID = 0L;
-
     @java.lang.Override
     protected java.lang.Object writeReplace()
-      throws java.io.ObjectStreamException {
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
 
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet parseFrom(
-      com.google.protobuf.ByteString data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet parseFrom(
-      com.google.protobuf.ByteString data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet parseFrom(byte[] data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet parseFrom(
-      byte[] data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet parseFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet parseFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet parseDelimitedFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet parseDelimitedFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet parseFrom(
-      com.google.protobuf.CodedInputStream input)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet parseFrom(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
 
-    public static Builder newBuilder() {
-      return Builder.create();
-    }
-
-    public Builder newBuilderForType() {
-      return newBuilder();
-    }
-
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet prototype) {
       return newBuilder().mergeFrom(prototype);
     }
-
-    public Builder toBuilder() {
-      return newBuilder(this);
-    }
+    public Builder toBuilder() { return newBuilder(this); }
 
     @java.lang.Override
     protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-
     /**
      * Protobuf type {@code messages.data.StaticFieldGet}
-     * <p>
+     *
      * <pre>
      * --- CONTEXT
      * </pre>
      */
     public static final class Builder extends
-      com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:messages.data.StaticFieldGet)
-      com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGetOrBuilder {
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.StaticFieldGet)
+        com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGetOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-      getDescriptor() {
+          getDescriptor() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldGet_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internalGetFieldAccessorTable() {
+          internalGetFieldAccessorTable() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldGet_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-            com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet.Builder.class);
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet.Builder.class);
       }
 
       // Construct using com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet.newBuilder()
@@ -1061,17 +973,15 @@ public final class Fields {
       }
 
       private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
-
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getSenderFieldBuilder();
         }
       }
-
       private static Builder create() {
         return new Builder();
       }
@@ -1114,7 +1024,7 @@ public final class Fields {
       }
 
       public com.google.protobuf.Descriptors.Descriptor
-      getDescriptorForType() {
+          getDescriptorForType() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldGet_descriptor;
       }
 
@@ -1193,7 +1103,7 @@ public final class Fields {
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet) {
-          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet) other);
+          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet)other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -1201,8 +1111,7 @@ public final class Fields {
       }
 
       public Builder mergeFrom(com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet other) {
-        if (other == com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet.getDefaultInstance())
-          return this;
+        if (other == com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet.getDefaultInstance()) return this;
         if (other.hasDistributorId()) {
           setDistributorId(other.getDistributorId());
         }
@@ -1257,24 +1166,20 @@ public final class Fields {
 
       public final boolean isInitialized() {
         if (!hasCurrentTime()) {
-
+          
           return false;
         }
         if (!hasClass_()) {
-
+          
           return false;
         }
         if (!hasField()) {
-
-          return false;
-        }
-        if (!hasFieldType()) {
-
+          
           return false;
         }
         if (hasSender()) {
           if (!getSender().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -1282,9 +1187,9 @@ public final class Fields {
       }
 
       public Builder mergeFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
         com.ittera.cometa.distributor.messages.data.Fields.StaticFieldGet parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
@@ -1298,25 +1203,21 @@ public final class Fields {
         }
         return this;
       }
-
       private int bitField0_;
 
-      private int distributorId_;
-
+      private int distributorId_ ;
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public boolean hasDistributorId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public int getDistributorId() {
         return distributorId_;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -1326,7 +1227,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -1337,35 +1237,32 @@ public final class Fields {
         return this;
       }
 
-      private long threadId_;
-
+      private long threadId_ ;
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public boolean hasThreadId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public long getThreadId() {
         return threadId_;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder setThreadId(long value) {
@@ -1374,12 +1271,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder clearThreadId() {
@@ -1389,22 +1285,19 @@ public final class Fields {
         return this;
       }
 
-      private long currentTime_;
-
+      private long currentTime_ ;
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public boolean hasCurrentTime() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public long getCurrentTime() {
         return currentTime_;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -1414,7 +1307,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -1426,14 +1318,12 @@ public final class Fields {
       }
 
       private java.lang.Object class__ = "";
-
       /**
        * <code>required string class = 4;</code>
        */
       public boolean hasClass_() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-
       /**
        * <code>required string class = 4;</code>
        */
@@ -1441,7 +1331,7 @@ public final class Fields {
         java.lang.Object ref = class__;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             class__ = s;
@@ -1451,38 +1341,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public com.google.protobuf.ByteString
-      getClass_Bytes() {
+          getClass_Bytes() {
         java.lang.Object ref = class__;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           class__ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public Builder setClass_(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
        */
@@ -1492,30 +1379,27 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public Builder setClass_Bytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
       }
 
       private java.lang.Object field_ = "";
-
       /**
        * <code>required string field = 5;</code>
        */
       public boolean hasField() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-
       /**
        * <code>required string field = 5;</code>
        */
@@ -1523,7 +1407,7 @@ public final class Fields {
         java.lang.Object ref = field_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             field_ = s;
@@ -1533,38 +1417,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string field = 5;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldBytes() {
+          getFieldBytes() {
         java.lang.Object ref = field_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           field_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string field = 5;</code>
        */
       public Builder setField(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000010;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
         field_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 5;</code>
        */
@@ -1574,38 +1455,35 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 5;</code>
        */
       public Builder setFieldBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000010;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
         field_ = value;
         onChanged();
         return this;
       }
 
       private java.lang.Object fieldType_ = "";
-
       /**
-       * <code>required string fieldType = 6;</code>
+       * <code>optional string fieldType = 6;</code>
        */
       public boolean hasFieldType() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
-
       /**
-       * <code>required string fieldType = 6;</code>
+       * <code>optional string fieldType = 6;</code>
        */
       public java.lang.String getFieldType() {
         java.lang.Object ref = fieldType_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             fieldType_ = s;
@@ -1615,40 +1493,37 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
-       * <code>required string fieldType = 6;</code>
+       * <code>optional string fieldType = 6;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldTypeBytes() {
+          getFieldTypeBytes() {
         java.lang.Object ref = fieldType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           fieldType_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
-       * <code>required string fieldType = 6;</code>
+       * <code>optional string fieldType = 6;</code>
        */
       public Builder setFieldType(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         fieldType_ = value;
         onChanged();
         return this;
       }
-
       /**
-       * <code>required string fieldType = 6;</code>
+       * <code>optional string fieldType = 6;</code>
        */
       public Builder clearFieldType() {
         bitField0_ = (bitField0_ & ~0x00000020);
@@ -1656,50 +1531,46 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
-       * <code>required string fieldType = 6;</code>
+       * <code>optional string fieldType = 6;</code>
        */
       public Builder setFieldTypeBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         fieldType_ = value;
         onChanged();
         return this;
       }
 
-      private int modifiers_;
-
+      private int modifiers_ ;
       /**
        * <code>optional int32 modifiers = 7;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public boolean hasModifiers() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
-
       /**
        * <code>optional int32 modifiers = 7;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public int getModifiers() {
         return modifiers_;
       }
-
       /**
        * <code>optional int32 modifiers = 7;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder setModifiers(int value) {
@@ -1708,12 +1579,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 modifiers = 7;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder clearModifiers() {
@@ -1724,14 +1594,12 @@ public final class Fields {
       }
 
       private java.lang.Object senderClassName_ = "";
-
       /**
        * <code>optional string senderClassName = 8;</code>
        */
       public boolean hasSenderClassName() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
-
       /**
        * <code>optional string senderClassName = 8;</code>
        */
@@ -1739,7 +1607,7 @@ public final class Fields {
         java.lang.Object ref = senderClassName_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             senderClassName_ = s;
@@ -1749,38 +1617,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 8;</code>
        */
       public com.google.protobuf.ByteString
-      getSenderClassNameBytes() {
+          getSenderClassNameBytes() {
         java.lang.Object ref = senderClassName_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           senderClassName_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 8;</code>
        */
       public Builder setSenderClassName(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000080;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000080;
         senderClassName_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 8;</code>
        */
@@ -1790,16 +1655,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 8;</code>
        */
       public Builder setSenderClassNameBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000080;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000080;
         senderClassName_ = value;
         onChanged();
         return this;
@@ -1807,15 +1671,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
       /**
        * <code>optional .messages.data.Object sender = 9;</code>
        */
       public boolean hasSender() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
-
       /**
        * <code>optional .messages.data.Object sender = 9;</code>
        */
@@ -1826,7 +1688,6 @@ public final class Fields {
           return senderBuilder_.getMessage();
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 9;</code>
        */
@@ -1843,12 +1704,11 @@ public final class Fields {
         bitField0_ |= 0x00000100;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 9;</code>
        */
       public Builder setSender(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (senderBuilder_ == null) {
           sender_ = builderForValue.build();
           onChanged();
@@ -1858,14 +1718,13 @@ public final class Fields {
         bitField0_ |= 0x00000100;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 9;</code>
        */
       public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (senderBuilder_ == null) {
           if (((bitField0_ & 0x00000100) == 0x00000100) &&
-            sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             sender_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
           } else {
@@ -1878,7 +1737,6 @@ public final class Fields {
         bitField0_ |= 0x00000100;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 9;</code>
        */
@@ -1892,7 +1750,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 9;</code>
        */
@@ -1901,7 +1758,6 @@ public final class Fields {
         onChanged();
         return getSenderFieldBuilder().getBuilder();
       }
-
       /**
        * <code>optional .messages.data.Object sender = 9;</code>
        */
@@ -1912,49 +1768,46 @@ public final class Fields {
           return sender_;
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 9;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getSenderFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getSenderFieldBuilder() {
         if (senderBuilder_ == null) {
           senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getSender(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getSender(),
+                  getParentForChildren(),
+                  isClean());
           sender_ = null;
         }
         return senderBuilder_;
       }
 
       private java.lang.Object sourceLocationFile_ = "";
-
       /**
        * <code>optional string sourceLocationFile = 10;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public boolean hasSourceLocationFile() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
-
       /**
        * <code>optional string sourceLocationFile = 10;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public java.lang.String getSourceLocationFile() {
         java.lang.Object ref = sourceLocationFile_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             sourceLocationFile_ = s;
@@ -1964,51 +1817,48 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationFile = 10;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public com.google.protobuf.ByteString
-      getSourceLocationFileBytes() {
+          getSourceLocationFileBytes() {
         java.lang.Object ref = sourceLocationFile_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           sourceLocationFile_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationFile = 10;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder setSourceLocationFile(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000200;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000200;
         sourceLocationFile_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationFile = 10;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder clearSourceLocationFile() {
@@ -2017,41 +1867,37 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationFile = 10;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder setSourceLocationFileBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000200;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000200;
         sourceLocationFile_ = value;
         onChanged();
         return this;
       }
 
-      private int sourceLocationLine_;
-
+      private int sourceLocationLine_ ;
       /**
        * <code>optional int32 sourceLocationLine = 11;</code>
        */
       public boolean hasSourceLocationLine() {
         return ((bitField0_ & 0x00000400) == 0x00000400);
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 11;</code>
        */
       public int getSourceLocationLine() {
         return sourceLocationLine_;
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 11;</code>
        */
@@ -2061,7 +1907,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 11;</code>
        */
@@ -2073,14 +1918,12 @@ public final class Fields {
       }
 
       private java.lang.Object sourceLocationType_ = "";
-
       /**
        * <code>optional string sourceLocationType = 12;</code>
        */
       public boolean hasSourceLocationType() {
         return ((bitField0_ & 0x00000800) == 0x00000800);
       }
-
       /**
        * <code>optional string sourceLocationType = 12;</code>
        */
@@ -2088,7 +1931,7 @@ public final class Fields {
         java.lang.Object ref = sourceLocationType_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             sourceLocationType_ = s;
@@ -2098,38 +1941,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationType = 12;</code>
        */
       public com.google.protobuf.ByteString
-      getSourceLocationTypeBytes() {
+          getSourceLocationTypeBytes() {
         java.lang.Object ref = sourceLocationType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           sourceLocationType_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationType = 12;</code>
        */
       public Builder setSourceLocationType(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000800;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000800;
         sourceLocationType_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationType = 12;</code>
        */
@@ -2139,16 +1979,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationType = 12;</code>
        */
       public Builder setSourceLocationTypeBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000800;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000800;
         sourceLocationType_ = value;
         onChanged();
         return this;
@@ -2166,14 +2005,13 @@ public final class Fields {
   }
 
   public interface StaticFieldPutOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:messages.data.StaticFieldPut)
-    com.google.protobuf.MessageOrBuilder {
+      // @@protoc_insertion_point(interface_extends:messages.data.StaticFieldPut)
+      com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     boolean hasDistributorId();
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -2181,18 +2019,17 @@ public final class Fields {
 
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     boolean hasThreadId();
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     long getThreadId();
@@ -2201,7 +2038,6 @@ public final class Fields {
      * <code>required int64 currentTime = 3;</code>
      */
     boolean hasCurrentTime();
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -2211,60 +2047,52 @@ public final class Fields {
      * <code>required string class = 4;</code>
      */
     boolean hasClass_();
-
     /**
      * <code>required string class = 4;</code>
      */
     java.lang.String getClass_();
-
     /**
      * <code>required string class = 4;</code>
      */
     com.google.protobuf.ByteString
-    getClass_Bytes();
+        getClass_Bytes();
 
     /**
      * <code>required string field = 5;</code>
      */
     boolean hasField();
-
     /**
      * <code>required string field = 5;</code>
      */
     java.lang.String getField();
-
     /**
      * <code>required string field = 5;</code>
      */
     com.google.protobuf.ByteString
-    getFieldBytes();
+        getFieldBytes();
 
     /**
      * <code>required string fieldType = 6;</code>
      */
     boolean hasFieldType();
-
     /**
      * <code>required string fieldType = 6;</code>
      */
     java.lang.String getFieldType();
-
     /**
      * <code>required string fieldType = 6;</code>
      */
     com.google.protobuf.ByteString
-    getFieldTypeBytes();
+        getFieldTypeBytes();
 
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
     boolean hasValue();
-
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getValue();
-
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
@@ -2272,18 +2100,17 @@ public final class Fields {
 
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     boolean hasModifiers();
-
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     int getModifiers();
@@ -2292,28 +2119,24 @@ public final class Fields {
      * <code>optional string senderClassName = 9;</code>
      */
     boolean hasSenderClassName();
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     java.lang.String getSenderClassName();
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     com.google.protobuf.ByteString
-    getSenderClassNameBytes();
+        getSenderClassNameBytes();
 
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     boolean hasSender();
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
@@ -2321,37 +2144,34 @@ public final class Fields {
 
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     boolean hasSourceLocationFile();
-
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     java.lang.String getSourceLocationFile();
-
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     com.google.protobuf.ByteString
-    getSourceLocationFileBytes();
+        getSourceLocationFileBytes();
 
     /**
      * <code>optional int32 sourceLocationLine = 12;</code>
      */
     boolean hasSourceLocationLine();
-
     /**
      * <code>optional int32 sourceLocationLine = 12;</code>
      */
@@ -2361,42 +2181,35 @@ public final class Fields {
      * <code>optional string sourceLocationType = 13;</code>
      */
     boolean hasSourceLocationType();
-
     /**
      * <code>optional string sourceLocationType = 13;</code>
      */
     java.lang.String getSourceLocationType();
-
     /**
      * <code>optional string sourceLocationType = 13;</code>
      */
     com.google.protobuf.ByteString
-    getSourceLocationTypeBytes();
+        getSourceLocationTypeBytes();
   }
-
   /**
    * Protobuf type {@code messages.data.StaticFieldPut}
-   * <p>
+   *
    * <pre>
    * --- CONTEXT
    * </pre>
    */
   public static final class StaticFieldPut extends
-    com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:messages.data.StaticFieldPut)
-    StaticFieldPutOrBuilder {
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.StaticFieldPut)
+      StaticFieldPutOrBuilder {
     // Use StaticFieldPut.newBuilder() to construct.
     private StaticFieldPut(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-
-    private StaticFieldPut(boolean noInit) {
-      this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance();
-    }
+    private StaticFieldPut(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
     private static final StaticFieldPut defaultInstance;
-
     public static StaticFieldPut getDefaultInstance() {
       return defaultInstance;
     }
@@ -2406,21 +2219,19 @@ public final class Fields {
     }
 
     private final com.google.protobuf.UnknownFieldSet unknownFields;
-
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+        getUnknownFields() {
       return this.unknownFields;
     }
-
     private StaticFieldPut(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -2431,7 +2242,7 @@ public final class Fields {
               break;
             default: {
               if (!parseUnknownField(input, unknownFields,
-                extensionRegistry, tag)) {
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -2529,34 +2340,33 @@ public final class Fields {
         throw e.setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
-          e.getMessage()).setUnfinishedMessage(this);
+            e.getMessage()).setUnfinishedMessage(this);
       } finally {
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
-
     public static final com.google.protobuf.Descriptors.Descriptor
-    getDescriptor() {
+        getDescriptor() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPut_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internalGetFieldAccessorTable() {
+        internalGetFieldAccessorTable() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPut_fieldAccessorTable
-        .ensureFieldAccessorsInitialized(
-          com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut.Builder.class);
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut.Builder.class);
     }
 
     public static com.google.protobuf.Parser<StaticFieldPut> PARSER =
-      new com.google.protobuf.AbstractParser<StaticFieldPut>() {
-        public StaticFieldPut parsePartialFrom(
+        new com.google.protobuf.AbstractParser<StaticFieldPut>() {
+      public StaticFieldPut parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new StaticFieldPut(input, extensionRegistry);
-        }
-      };
+        return new StaticFieldPut(input, extensionRegistry);
+      }
+    };
 
     @java.lang.Override
     public com.google.protobuf.Parser<StaticFieldPut> getParserForType() {
@@ -2566,14 +2376,12 @@ public final class Fields {
     private int bitField0_;
     public static final int DISTRIBUTORID_FIELD_NUMBER = 1;
     private int distributorId_;
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     public boolean hasDistributorId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -2583,23 +2391,21 @@ public final class Fields {
 
     public static final int THREADID_FIELD_NUMBER = 2;
     private long threadId_;
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public boolean hasThreadId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public long getThreadId() {
@@ -2608,14 +2414,12 @@ public final class Fields {
 
     public static final int CURRENTTIME_FIELD_NUMBER = 3;
     private long currentTime_;
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
     public boolean hasCurrentTime() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -2625,14 +2429,12 @@ public final class Fields {
 
     public static final int CLASS_FIELD_NUMBER = 4;
     private java.lang.Object class__;
-
     /**
      * <code>required string class = 4;</code>
      */
     public boolean hasClass_() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-
     /**
      * <code>required string class = 4;</code>
      */
@@ -2641,8 +2443,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           class__ = s;
@@ -2650,17 +2452,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string class = 4;</code>
      */
     public com.google.protobuf.ByteString
-    getClass_Bytes() {
+        getClass_Bytes() {
       java.lang.Object ref = class__;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         class__ = b;
         return b;
       } else {
@@ -2670,14 +2471,12 @@ public final class Fields {
 
     public static final int FIELD_FIELD_NUMBER = 5;
     private java.lang.Object field_;
-
     /**
      * <code>required string field = 5;</code>
      */
     public boolean hasField() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
-
     /**
      * <code>required string field = 5;</code>
      */
@@ -2686,8 +2485,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           field_ = s;
@@ -2695,17 +2494,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string field = 5;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldBytes() {
+        getFieldBytes() {
       java.lang.Object ref = field_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         field_ = b;
         return b;
       } else {
@@ -2715,14 +2513,12 @@ public final class Fields {
 
     public static final int FIELDTYPE_FIELD_NUMBER = 6;
     private java.lang.Object fieldType_;
-
     /**
      * <code>required string fieldType = 6;</code>
      */
     public boolean hasFieldType() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
-
     /**
      * <code>required string fieldType = 6;</code>
      */
@@ -2731,8 +2527,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           fieldType_ = s;
@@ -2740,17 +2536,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string fieldType = 6;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldTypeBytes() {
+        getFieldTypeBytes() {
       java.lang.Object ref = fieldType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         fieldType_ = b;
         return b;
       } else {
@@ -2760,21 +2555,18 @@ public final class Fields {
 
     public static final int VALUE_FIELD_NUMBER = 7;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object value_;
-
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
     public boolean hasValue() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
-
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getValue() {
       return value_;
     }
-
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
@@ -2784,23 +2576,21 @@ public final class Fields {
 
     public static final int MODIFIERS_FIELD_NUMBER = 8;
     private int modifiers_;
-
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public boolean hasModifiers() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
-
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public int getModifiers() {
@@ -2809,14 +2599,12 @@ public final class Fields {
 
     public static final int SENDERCLASSNAME_FIELD_NUMBER = 9;
     private java.lang.Object senderClassName_;
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     public boolean hasSenderClassName() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
@@ -2825,8 +2613,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           senderClassName_ = s;
@@ -2834,17 +2622,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     public com.google.protobuf.ByteString
-    getSenderClassNameBytes() {
+        getSenderClassNameBytes() {
       java.lang.Object ref = senderClassName_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         senderClassName_ = b;
         return b;
       } else {
@@ -2854,21 +2641,18 @@ public final class Fields {
 
     public static final int SENDER_FIELD_NUMBER = 10;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     public boolean hasSender() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
     }
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
       return sender_;
     }
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
@@ -2878,23 +2662,21 @@ public final class Fields {
 
     public static final int SOURCELOCATIONFILE_FIELD_NUMBER = 11;
     private java.lang.Object sourceLocationFile_;
-
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public boolean hasSourceLocationFile() {
       return ((bitField0_ & 0x00000400) == 0x00000400);
     }
-
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public java.lang.String getSourceLocationFile() {
@@ -2902,8 +2684,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           sourceLocationFile_ = s;
@@ -2911,21 +2693,20 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public com.google.protobuf.ByteString
-    getSourceLocationFileBytes() {
+        getSourceLocationFileBytes() {
       java.lang.Object ref = sourceLocationFile_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         sourceLocationFile_ = b;
         return b;
       } else {
@@ -2935,14 +2716,12 @@ public final class Fields {
 
     public static final int SOURCELOCATIONLINE_FIELD_NUMBER = 12;
     private int sourceLocationLine_;
-
     /**
      * <code>optional int32 sourceLocationLine = 12;</code>
      */
     public boolean hasSourceLocationLine() {
       return ((bitField0_ & 0x00000800) == 0x00000800);
     }
-
     /**
      * <code>optional int32 sourceLocationLine = 12;</code>
      */
@@ -2952,14 +2731,12 @@ public final class Fields {
 
     public static final int SOURCELOCATIONTYPE_FIELD_NUMBER = 13;
     private java.lang.Object sourceLocationType_;
-
     /**
      * <code>optional string sourceLocationType = 13;</code>
      */
     public boolean hasSourceLocationType() {
       return ((bitField0_ & 0x00001000) == 0x00001000);
     }
-
     /**
      * <code>optional string sourceLocationType = 13;</code>
      */
@@ -2968,8 +2745,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           sourceLocationType_ = s;
@@ -2977,17 +2754,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string sourceLocationType = 13;</code>
      */
     public com.google.protobuf.ByteString
-    getSourceLocationTypeBytes() {
+        getSourceLocationTypeBytes() {
       java.lang.Object ref = sourceLocationType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         sourceLocationType_ = b;
         return b;
       } else {
@@ -3010,9 +2786,7 @@ public final class Fields {
       sourceLocationLine_ = 0;
       sourceLocationType_ = "";
     }
-
     private byte memoizedIsInitialized = -1;
-
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -3053,7 +2827,7 @@ public final class Fields {
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-      throws java.io.IOException {
+                        throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeInt32(1, distributorId_);
@@ -3098,7 +2872,6 @@ public final class Fields {
     }
 
     private int memoizedSerializedSize = -1;
-
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
@@ -3162,119 +2935,99 @@ public final class Fields {
     }
 
     private static final long serialVersionUID = 0L;
-
     @java.lang.Override
     protected java.lang.Object writeReplace()
-      throws java.io.ObjectStreamException {
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
 
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut parseFrom(
-      com.google.protobuf.ByteString data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut parseFrom(
-      com.google.protobuf.ByteString data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut parseFrom(byte[] data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut parseFrom(
-      byte[] data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut parseFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut parseFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut parseDelimitedFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut parseDelimitedFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut parseFrom(
-      com.google.protobuf.CodedInputStream input)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut parseFrom(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
 
-    public static Builder newBuilder() {
-      return Builder.create();
-    }
-
-    public Builder newBuilderForType() {
-      return newBuilder();
-    }
-
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut prototype) {
       return newBuilder().mergeFrom(prototype);
     }
-
-    public Builder toBuilder() {
-      return newBuilder(this);
-    }
+    public Builder toBuilder() { return newBuilder(this); }
 
     @java.lang.Override
     protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-
     /**
      * Protobuf type {@code messages.data.StaticFieldPut}
-     * <p>
+     *
      * <pre>
      * --- CONTEXT
      * </pre>
      */
     public static final class Builder extends
-      com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:messages.data.StaticFieldPut)
-      com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutOrBuilder {
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.StaticFieldPut)
+        com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-      getDescriptor() {
+          getDescriptor() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPut_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internalGetFieldAccessorTable() {
+          internalGetFieldAccessorTable() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPut_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-            com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut.Builder.class);
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut.Builder.class);
       }
 
       // Construct using com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut.newBuilder()
@@ -3283,18 +3036,16 @@ public final class Fields {
       }
 
       private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
-
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getValueFieldBuilder();
           getSenderFieldBuilder();
         }
       }
-
       private static Builder create() {
         return new Builder();
       }
@@ -3343,7 +3094,7 @@ public final class Fields {
       }
 
       public com.google.protobuf.Descriptors.Descriptor
-      getDescriptorForType() {
+          getDescriptorForType() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPut_descriptor;
       }
 
@@ -3430,7 +3181,7 @@ public final class Fields {
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut) {
-          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut) other);
+          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut)other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -3438,8 +3189,7 @@ public final class Fields {
       }
 
       public Builder mergeFrom(com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut other) {
-        if (other == com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut.getDefaultInstance())
-          return this;
+        if (other == com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut.getDefaultInstance()) return this;
         if (other.hasDistributorId()) {
           setDistributorId(other.getDistributorId());
         }
@@ -3497,32 +3247,32 @@ public final class Fields {
 
       public final boolean isInitialized() {
         if (!hasCurrentTime()) {
-
+          
           return false;
         }
         if (!hasClass_()) {
-
+          
           return false;
         }
         if (!hasField()) {
-
+          
           return false;
         }
         if (!hasFieldType()) {
-
+          
           return false;
         }
         if (!hasValue()) {
-
+          
           return false;
         }
         if (!getValue().isInitialized()) {
-
+          
           return false;
         }
         if (hasSender()) {
           if (!getSender().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -3530,9 +3280,9 @@ public final class Fields {
       }
 
       public Builder mergeFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
         com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPut parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
@@ -3546,25 +3296,21 @@ public final class Fields {
         }
         return this;
       }
-
       private int bitField0_;
 
-      private int distributorId_;
-
+      private int distributorId_ ;
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public boolean hasDistributorId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public int getDistributorId() {
         return distributorId_;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -3574,7 +3320,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -3585,35 +3330,32 @@ public final class Fields {
         return this;
       }
 
-      private long threadId_;
-
+      private long threadId_ ;
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public boolean hasThreadId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public long getThreadId() {
         return threadId_;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder setThreadId(long value) {
@@ -3622,12 +3364,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder clearThreadId() {
@@ -3637,22 +3378,19 @@ public final class Fields {
         return this;
       }
 
-      private long currentTime_;
-
+      private long currentTime_ ;
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public boolean hasCurrentTime() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public long getCurrentTime() {
         return currentTime_;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -3662,7 +3400,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -3674,14 +3411,12 @@ public final class Fields {
       }
 
       private java.lang.Object class__ = "";
-
       /**
        * <code>required string class = 4;</code>
        */
       public boolean hasClass_() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-
       /**
        * <code>required string class = 4;</code>
        */
@@ -3689,7 +3424,7 @@ public final class Fields {
         java.lang.Object ref = class__;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             class__ = s;
@@ -3699,38 +3434,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public com.google.protobuf.ByteString
-      getClass_Bytes() {
+          getClass_Bytes() {
         java.lang.Object ref = class__;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           class__ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public Builder setClass_(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
        */
@@ -3740,30 +3472,27 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public Builder setClass_Bytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
       }
 
       private java.lang.Object field_ = "";
-
       /**
        * <code>required string field = 5;</code>
        */
       public boolean hasField() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-
       /**
        * <code>required string field = 5;</code>
        */
@@ -3771,7 +3500,7 @@ public final class Fields {
         java.lang.Object ref = field_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             field_ = s;
@@ -3781,38 +3510,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string field = 5;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldBytes() {
+          getFieldBytes() {
         java.lang.Object ref = field_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           field_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string field = 5;</code>
        */
       public Builder setField(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000010;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
         field_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 5;</code>
        */
@@ -3822,30 +3548,27 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 5;</code>
        */
       public Builder setFieldBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000010;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
         field_ = value;
         onChanged();
         return this;
       }
 
       private java.lang.Object fieldType_ = "";
-
       /**
        * <code>required string fieldType = 6;</code>
        */
       public boolean hasFieldType() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
-
       /**
        * <code>required string fieldType = 6;</code>
        */
@@ -3853,7 +3576,7 @@ public final class Fields {
         java.lang.Object ref = fieldType_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             fieldType_ = s;
@@ -3863,38 +3586,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string fieldType = 6;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldTypeBytes() {
+          getFieldTypeBytes() {
         java.lang.Object ref = fieldType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           fieldType_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string fieldType = 6;</code>
        */
       public Builder setFieldType(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         fieldType_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string fieldType = 6;</code>
        */
@@ -3904,16 +3624,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string fieldType = 6;</code>
        */
       public Builder setFieldTypeBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         fieldType_ = value;
         onChanged();
         return this;
@@ -3921,15 +3640,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> valueBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> valueBuilder_;
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
       public boolean hasValue() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
@@ -3940,7 +3657,6 @@ public final class Fields {
           return valueBuilder_.getMessage();
         }
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
@@ -3957,12 +3673,11 @@ public final class Fields {
         bitField0_ |= 0x00000040;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
       public Builder setValue(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (valueBuilder_ == null) {
           value_ = builderForValue.build();
           onChanged();
@@ -3972,14 +3687,13 @@ public final class Fields {
         bitField0_ |= 0x00000040;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
       public Builder mergeValue(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (valueBuilder_ == null) {
           if (((bitField0_ & 0x00000040) == 0x00000040) &&
-            value_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              value_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             value_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(value_).mergeFrom(value).buildPartial();
           } else {
@@ -3992,7 +3706,6 @@ public final class Fields {
         bitField0_ |= 0x00000040;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
@@ -4006,7 +3719,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
@@ -4015,7 +3727,6 @@ public final class Fields {
         onChanged();
         return getValueFieldBuilder().getBuilder();
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
@@ -4026,53 +3737,49 @@ public final class Fields {
           return value_;
         }
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getValueFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getValueFieldBuilder() {
         if (valueBuilder_ == null) {
           valueBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getValue(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getValue(),
+                  getParentForChildren(),
+                  isClean());
           value_ = null;
         }
         return valueBuilder_;
       }
 
-      private int modifiers_;
-
+      private int modifiers_ ;
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public boolean hasModifiers() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
-
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public int getModifiers() {
         return modifiers_;
       }
-
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder setModifiers(int value) {
@@ -4081,12 +3788,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder clearModifiers() {
@@ -4097,14 +3803,12 @@ public final class Fields {
       }
 
       private java.lang.Object senderClassName_ = "";
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public boolean hasSenderClassName() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
@@ -4112,7 +3816,7 @@ public final class Fields {
         java.lang.Object ref = senderClassName_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             senderClassName_ = s;
@@ -4122,38 +3826,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public com.google.protobuf.ByteString
-      getSenderClassNameBytes() {
+          getSenderClassNameBytes() {
         java.lang.Object ref = senderClassName_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           senderClassName_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public Builder setSenderClassName(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000100;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000100;
         senderClassName_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
@@ -4163,16 +3864,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public Builder setSenderClassNameBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000100;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000100;
         senderClassName_ = value;
         onChanged();
         return this;
@@ -4180,15 +3880,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       public boolean hasSender() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -4199,7 +3897,6 @@ public final class Fields {
           return senderBuilder_.getMessage();
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -4216,12 +3913,11 @@ public final class Fields {
         bitField0_ |= 0x00000200;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       public Builder setSender(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (senderBuilder_ == null) {
           sender_ = builderForValue.build();
           onChanged();
@@ -4231,14 +3927,13 @@ public final class Fields {
         bitField0_ |= 0x00000200;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (senderBuilder_ == null) {
           if (((bitField0_ & 0x00000200) == 0x00000200) &&
-            sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             sender_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
           } else {
@@ -4251,7 +3946,6 @@ public final class Fields {
         bitField0_ |= 0x00000200;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -4265,7 +3959,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -4274,7 +3967,6 @@ public final class Fields {
         onChanged();
         return getSenderFieldBuilder().getBuilder();
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -4285,49 +3977,46 @@ public final class Fields {
           return sender_;
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getSenderFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getSenderFieldBuilder() {
         if (senderBuilder_ == null) {
           senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getSender(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getSender(),
+                  getParentForChildren(),
+                  isClean());
           sender_ = null;
         }
         return senderBuilder_;
       }
 
       private java.lang.Object sourceLocationFile_ = "";
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public boolean hasSourceLocationFile() {
         return ((bitField0_ & 0x00000400) == 0x00000400);
       }
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public java.lang.String getSourceLocationFile() {
         java.lang.Object ref = sourceLocationFile_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             sourceLocationFile_ = s;
@@ -4337,51 +4026,48 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public com.google.protobuf.ByteString
-      getSourceLocationFileBytes() {
+          getSourceLocationFileBytes() {
         java.lang.Object ref = sourceLocationFile_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           sourceLocationFile_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder setSourceLocationFile(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000400;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000400;
         sourceLocationFile_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder clearSourceLocationFile() {
@@ -4390,41 +4076,37 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder setSourceLocationFileBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000400;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000400;
         sourceLocationFile_ = value;
         onChanged();
         return this;
       }
 
-      private int sourceLocationLine_;
-
+      private int sourceLocationLine_ ;
       /**
        * <code>optional int32 sourceLocationLine = 12;</code>
        */
       public boolean hasSourceLocationLine() {
         return ((bitField0_ & 0x00000800) == 0x00000800);
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 12;</code>
        */
       public int getSourceLocationLine() {
         return sourceLocationLine_;
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 12;</code>
        */
@@ -4434,7 +4116,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 12;</code>
        */
@@ -4446,14 +4127,12 @@ public final class Fields {
       }
 
       private java.lang.Object sourceLocationType_ = "";
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
       public boolean hasSourceLocationType() {
         return ((bitField0_ & 0x00001000) == 0x00001000);
       }
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
@@ -4461,7 +4140,7 @@ public final class Fields {
         java.lang.Object ref = sourceLocationType_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             sourceLocationType_ = s;
@@ -4471,38 +4150,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
       public com.google.protobuf.ByteString
-      getSourceLocationTypeBytes() {
+          getSourceLocationTypeBytes() {
         java.lang.Object ref = sourceLocationType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           sourceLocationType_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
       public Builder setSourceLocationType(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00001000;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00001000;
         sourceLocationType_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
@@ -4512,16 +4188,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
       public Builder setSourceLocationTypeBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00001000;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00001000;
         sourceLocationType_ = value;
         onChanged();
         return this;
@@ -4539,14 +4214,13 @@ public final class Fields {
   }
 
   public interface StaticFieldPutDoneOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:messages.data.StaticFieldPutDone)
-    com.google.protobuf.MessageOrBuilder {
+      // @@protoc_insertion_point(interface_extends:messages.data.StaticFieldPutDone)
+      com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     boolean hasDistributorId();
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -4554,18 +4228,17 @@ public final class Fields {
 
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     boolean hasThreadId();
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     long getThreadId();
@@ -4574,7 +4247,6 @@ public final class Fields {
      * <code>required int64 currentTime = 3;</code>
      */
     boolean hasCurrentTime();
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -4582,74 +4254,66 @@ public final class Fields {
 
     /**
      * <code>required string class = 4;</code>
-     * <p>
+     *
      * <pre>
-     * TODO from here all should be replaced by reference to originator StaticFieldPut message
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
      * </pre>
      */
     boolean hasClass_();
-
     /**
      * <code>required string class = 4;</code>
-     * <p>
+     *
      * <pre>
-     * TODO from here all should be replaced by reference to originator StaticFieldPut message
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
      * </pre>
      */
     java.lang.String getClass_();
-
     /**
      * <code>required string class = 4;</code>
-     * <p>
+     *
      * <pre>
-     * TODO from here all should be replaced by reference to originator StaticFieldPut message
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
      * </pre>
      */
     com.google.protobuf.ByteString
-    getClass_Bytes();
+        getClass_Bytes();
 
     /**
      * <code>required string field = 5;</code>
      */
     boolean hasField();
-
     /**
      * <code>required string field = 5;</code>
      */
     java.lang.String getField();
-
     /**
      * <code>required string field = 5;</code>
      */
     com.google.protobuf.ByteString
-    getFieldBytes();
+        getFieldBytes();
 
     /**
      * <code>required string fieldType = 6;</code>
      */
     boolean hasFieldType();
-
     /**
      * <code>required string fieldType = 6;</code>
      */
     java.lang.String getFieldType();
-
     /**
      * <code>required string fieldType = 6;</code>
      */
     com.google.protobuf.ByteString
-    getFieldTypeBytes();
+        getFieldTypeBytes();
 
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
     boolean hasValue();
-
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getValue();
-
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
@@ -4657,18 +4321,17 @@ public final class Fields {
 
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     boolean hasModifiers();
-
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     int getModifiers();
@@ -4677,57 +4340,48 @@ public final class Fields {
      * <code>optional string senderClassName = 9;</code>
      */
     boolean hasSenderClassName();
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     java.lang.String getSenderClassName();
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     com.google.protobuf.ByteString
-    getSenderClassNameBytes();
+        getSenderClassNameBytes();
 
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     boolean hasSender();
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder();
   }
-
   /**
    * Protobuf type {@code messages.data.StaticFieldPutDone}
-   * <p>
+   *
    * <pre>
    * --- CONTEXT
    * </pre>
    */
   public static final class StaticFieldPutDone extends
-    com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:messages.data.StaticFieldPutDone)
-    StaticFieldPutDoneOrBuilder {
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.StaticFieldPutDone)
+      StaticFieldPutDoneOrBuilder {
     // Use StaticFieldPutDone.newBuilder() to construct.
     private StaticFieldPutDone(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-
-    private StaticFieldPutDone(boolean noInit) {
-      this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance();
-    }
+    private StaticFieldPutDone(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
     private static final StaticFieldPutDone defaultInstance;
-
     public static StaticFieldPutDone getDefaultInstance() {
       return defaultInstance;
     }
@@ -4737,21 +4391,19 @@ public final class Fields {
     }
 
     private final com.google.protobuf.UnknownFieldSet unknownFields;
-
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+        getUnknownFields() {
       return this.unknownFields;
     }
-
     private StaticFieldPutDone(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -4762,7 +4414,7 @@ public final class Fields {
               break;
             default: {
               if (!parseUnknownField(input, unknownFields,
-                extensionRegistry, tag)) {
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -4843,34 +4495,33 @@ public final class Fields {
         throw e.setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
-          e.getMessage()).setUnfinishedMessage(this);
+            e.getMessage()).setUnfinishedMessage(this);
       } finally {
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
-
     public static final com.google.protobuf.Descriptors.Descriptor
-    getDescriptor() {
+        getDescriptor() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPutDone_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internalGetFieldAccessorTable() {
+        internalGetFieldAccessorTable() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPutDone_fieldAccessorTable
-        .ensureFieldAccessorsInitialized(
-          com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.Builder.class);
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.Builder.class);
     }
 
     public static com.google.protobuf.Parser<StaticFieldPutDone> PARSER =
-      new com.google.protobuf.AbstractParser<StaticFieldPutDone>() {
-        public StaticFieldPutDone parsePartialFrom(
+        new com.google.protobuf.AbstractParser<StaticFieldPutDone>() {
+      public StaticFieldPutDone parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new StaticFieldPutDone(input, extensionRegistry);
-        }
-      };
+        return new StaticFieldPutDone(input, extensionRegistry);
+      }
+    };
 
     @java.lang.Override
     public com.google.protobuf.Parser<StaticFieldPutDone> getParserForType() {
@@ -4880,14 +4531,12 @@ public final class Fields {
     private int bitField0_;
     public static final int DISTRIBUTORID_FIELD_NUMBER = 1;
     private int distributorId_;
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     public boolean hasDistributorId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -4897,23 +4546,21 @@ public final class Fields {
 
     public static final int THREADID_FIELD_NUMBER = 2;
     private long threadId_;
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public boolean hasThreadId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public long getThreadId() {
@@ -4922,14 +4569,12 @@ public final class Fields {
 
     public static final int CURRENTTIME_FIELD_NUMBER = 3;
     private long currentTime_;
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
     public boolean hasCurrentTime() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -4939,23 +4584,21 @@ public final class Fields {
 
     public static final int CLASS_FIELD_NUMBER = 4;
     private java.lang.Object class__;
-
     /**
      * <code>required string class = 4;</code>
-     * <p>
+     *
      * <pre>
-     * TODO from here all should be replaced by reference to originator StaticFieldPut message
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
      * </pre>
      */
     public boolean hasClass_() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-
     /**
      * <code>required string class = 4;</code>
-     * <p>
+     *
      * <pre>
-     * TODO from here all should be replaced by reference to originator StaticFieldPut message
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
      * </pre>
      */
     public java.lang.String getClass_() {
@@ -4963,8 +4606,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           class__ = s;
@@ -4972,21 +4615,20 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string class = 4;</code>
-     * <p>
+     *
      * <pre>
-     * TODO from here all should be replaced by reference to originator StaticFieldPut message
+     *TODO from here all should be replaced by reference to originator StaticFieldPut message
      * </pre>
      */
     public com.google.protobuf.ByteString
-    getClass_Bytes() {
+        getClass_Bytes() {
       java.lang.Object ref = class__;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         class__ = b;
         return b;
       } else {
@@ -4996,14 +4638,12 @@ public final class Fields {
 
     public static final int FIELD_FIELD_NUMBER = 5;
     private java.lang.Object field_;
-
     /**
      * <code>required string field = 5;</code>
      */
     public boolean hasField() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
-
     /**
      * <code>required string field = 5;</code>
      */
@@ -5012,8 +4652,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           field_ = s;
@@ -5021,17 +4661,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string field = 5;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldBytes() {
+        getFieldBytes() {
       java.lang.Object ref = field_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         field_ = b;
         return b;
       } else {
@@ -5041,14 +4680,12 @@ public final class Fields {
 
     public static final int FIELDTYPE_FIELD_NUMBER = 6;
     private java.lang.Object fieldType_;
-
     /**
      * <code>required string fieldType = 6;</code>
      */
     public boolean hasFieldType() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
-
     /**
      * <code>required string fieldType = 6;</code>
      */
@@ -5057,8 +4694,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           fieldType_ = s;
@@ -5066,17 +4703,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string fieldType = 6;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldTypeBytes() {
+        getFieldTypeBytes() {
       java.lang.Object ref = fieldType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         fieldType_ = b;
         return b;
       } else {
@@ -5086,21 +4722,18 @@ public final class Fields {
 
     public static final int VALUE_FIELD_NUMBER = 7;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object value_;
-
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
     public boolean hasValue() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
-
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getValue() {
       return value_;
     }
-
     /**
      * <code>required .messages.data.Object value = 7;</code>
      */
@@ -5110,23 +4743,21 @@ public final class Fields {
 
     public static final int MODIFIERS_FIELD_NUMBER = 8;
     private int modifiers_;
-
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public boolean hasModifiers() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
-
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public int getModifiers() {
@@ -5135,14 +4766,12 @@ public final class Fields {
 
     public static final int SENDERCLASSNAME_FIELD_NUMBER = 9;
     private java.lang.Object senderClassName_;
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     public boolean hasSenderClassName() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
@@ -5151,8 +4780,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           senderClassName_ = s;
@@ -5160,17 +4789,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     public com.google.protobuf.ByteString
-    getSenderClassNameBytes() {
+        getSenderClassNameBytes() {
       java.lang.Object ref = senderClassName_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         senderClassName_ = b;
         return b;
       } else {
@@ -5180,21 +4808,18 @@ public final class Fields {
 
     public static final int SENDER_FIELD_NUMBER = 10;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     public boolean hasSender() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
     }
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
       return sender_;
     }
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
@@ -5214,9 +4839,7 @@ public final class Fields {
       senderClassName_ = "";
       sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
     }
-
     private byte memoizedIsInitialized = -1;
-
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -5257,7 +4880,7 @@ public final class Fields {
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-      throws java.io.IOException {
+                        throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeInt32(1, distributorId_);
@@ -5293,7 +4916,6 @@ public final class Fields {
     }
 
     private int memoizedSerializedSize = -1;
-
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
@@ -5345,119 +4967,99 @@ public final class Fields {
     }
 
     private static final long serialVersionUID = 0L;
-
     @java.lang.Override
     protected java.lang.Object writeReplace()
-      throws java.io.ObjectStreamException {
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
 
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
-      com.google.protobuf.ByteString data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
-      com.google.protobuf.ByteString data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(byte[] data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
-      byte[] data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseDelimitedFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseDelimitedFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
-      com.google.protobuf.CodedInputStream input)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parseFrom(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
 
-    public static Builder newBuilder() {
-      return Builder.create();
-    }
-
-    public Builder newBuilderForType() {
-      return newBuilder();
-    }
-
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone prototype) {
       return newBuilder().mergeFrom(prototype);
     }
-
-    public Builder toBuilder() {
-      return newBuilder(this);
-    }
+    public Builder toBuilder() { return newBuilder(this); }
 
     @java.lang.Override
     protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-
     /**
      * Protobuf type {@code messages.data.StaticFieldPutDone}
-     * <p>
+     *
      * <pre>
      * --- CONTEXT
      * </pre>
      */
     public static final class Builder extends
-      com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:messages.data.StaticFieldPutDone)
-      com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDoneOrBuilder {
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.StaticFieldPutDone)
+        com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDoneOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-      getDescriptor() {
+          getDescriptor() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPutDone_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internalGetFieldAccessorTable() {
+          internalGetFieldAccessorTable() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPutDone_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-            com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.Builder.class);
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.Builder.class);
       }
 
       // Construct using com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.newBuilder()
@@ -5466,18 +5068,16 @@ public final class Fields {
       }
 
       private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
-
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getValueFieldBuilder();
           getSenderFieldBuilder();
         }
       }
-
       private static Builder create() {
         return new Builder();
       }
@@ -5520,7 +5120,7 @@ public final class Fields {
       }
 
       public com.google.protobuf.Descriptors.Descriptor
-      getDescriptorForType() {
+          getDescriptorForType() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_StaticFieldPutDone_descriptor;
       }
 
@@ -5595,7 +5195,7 @@ public final class Fields {
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) {
-          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) other);
+          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone)other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -5603,8 +5203,7 @@ public final class Fields {
       }
 
       public Builder mergeFrom(com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone other) {
-        if (other == com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance())
-          return this;
+        if (other == com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance()) return this;
         if (other.hasDistributorId()) {
           setDistributorId(other.getDistributorId());
         }
@@ -5649,32 +5248,32 @@ public final class Fields {
 
       public final boolean isInitialized() {
         if (!hasCurrentTime()) {
-
+          
           return false;
         }
         if (!hasClass_()) {
-
+          
           return false;
         }
         if (!hasField()) {
-
+          
           return false;
         }
         if (!hasFieldType()) {
-
+          
           return false;
         }
         if (!hasValue()) {
-
+          
           return false;
         }
         if (!getValue().isInitialized()) {
-
+          
           return false;
         }
         if (hasSender()) {
           if (!getSender().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -5682,9 +5281,9 @@ public final class Fields {
       }
 
       public Builder mergeFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
         com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
@@ -5698,25 +5297,21 @@ public final class Fields {
         }
         return this;
       }
-
       private int bitField0_;
 
-      private int distributorId_;
-
+      private int distributorId_ ;
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public boolean hasDistributorId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public int getDistributorId() {
         return distributorId_;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -5726,7 +5321,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -5737,35 +5331,32 @@ public final class Fields {
         return this;
       }
 
-      private long threadId_;
-
+      private long threadId_ ;
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public boolean hasThreadId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public long getThreadId() {
         return threadId_;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder setThreadId(long value) {
@@ -5774,12 +5365,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder clearThreadId() {
@@ -5789,22 +5379,19 @@ public final class Fields {
         return this;
       }
 
-      private long currentTime_;
-
+      private long currentTime_ ;
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public boolean hasCurrentTime() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public long getCurrentTime() {
         return currentTime_;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -5814,7 +5401,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -5826,30 +5412,28 @@ public final class Fields {
       }
 
       private java.lang.Object class__ = "";
-
       /**
        * <code>required string class = 4;</code>
-       * <p>
+       *
        * <pre>
-       * TODO from here all should be replaced by reference to originator StaticFieldPut message
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
        * </pre>
        */
       public boolean hasClass_() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-
       /**
        * <code>required string class = 4;</code>
-       * <p>
+       *
        * <pre>
-       * TODO from here all should be replaced by reference to originator StaticFieldPut message
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
        * </pre>
        */
       public java.lang.String getClass_() {
         java.lang.Object ref = class__;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             class__ = s;
@@ -5859,51 +5443,48 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
-       * <p>
+       *
        * <pre>
-       * TODO from here all should be replaced by reference to originator StaticFieldPut message
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
        * </pre>
        */
       public com.google.protobuf.ByteString
-      getClass_Bytes() {
+          getClass_Bytes() {
         java.lang.Object ref = class__;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           class__ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
-       * <p>
+       *
        * <pre>
-       * TODO from here all should be replaced by reference to originator StaticFieldPut message
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
        * </pre>
        */
       public Builder setClass_(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
-       * <p>
+       *
        * <pre>
-       * TODO from here all should be replaced by reference to originator StaticFieldPut message
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
        * </pre>
        */
       public Builder clearClass_() {
@@ -5912,34 +5493,31 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
-       * <p>
+       *
        * <pre>
-       * TODO from here all should be replaced by reference to originator StaticFieldPut message
+       *TODO from here all should be replaced by reference to originator StaticFieldPut message
        * </pre>
        */
       public Builder setClass_Bytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
       }
 
       private java.lang.Object field_ = "";
-
       /**
        * <code>required string field = 5;</code>
        */
       public boolean hasField() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-
       /**
        * <code>required string field = 5;</code>
        */
@@ -5947,7 +5525,7 @@ public final class Fields {
         java.lang.Object ref = field_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             field_ = s;
@@ -5957,38 +5535,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string field = 5;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldBytes() {
+          getFieldBytes() {
         java.lang.Object ref = field_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           field_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string field = 5;</code>
        */
       public Builder setField(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000010;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
         field_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 5;</code>
        */
@@ -5998,30 +5573,27 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 5;</code>
        */
       public Builder setFieldBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000010;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
         field_ = value;
         onChanged();
         return this;
       }
 
       private java.lang.Object fieldType_ = "";
-
       /**
        * <code>required string fieldType = 6;</code>
        */
       public boolean hasFieldType() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
-
       /**
        * <code>required string fieldType = 6;</code>
        */
@@ -6029,7 +5601,7 @@ public final class Fields {
         java.lang.Object ref = fieldType_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             fieldType_ = s;
@@ -6039,38 +5611,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string fieldType = 6;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldTypeBytes() {
+          getFieldTypeBytes() {
         java.lang.Object ref = fieldType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           fieldType_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string fieldType = 6;</code>
        */
       public Builder setFieldType(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         fieldType_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string fieldType = 6;</code>
        */
@@ -6080,16 +5649,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string fieldType = 6;</code>
        */
       public Builder setFieldTypeBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         fieldType_ = value;
         onChanged();
         return this;
@@ -6097,15 +5665,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> valueBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> valueBuilder_;
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
       public boolean hasValue() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
@@ -6116,7 +5682,6 @@ public final class Fields {
           return valueBuilder_.getMessage();
         }
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
@@ -6133,12 +5698,11 @@ public final class Fields {
         bitField0_ |= 0x00000040;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
       public Builder setValue(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (valueBuilder_ == null) {
           value_ = builderForValue.build();
           onChanged();
@@ -6148,14 +5712,13 @@ public final class Fields {
         bitField0_ |= 0x00000040;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
       public Builder mergeValue(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (valueBuilder_ == null) {
           if (((bitField0_ & 0x00000040) == 0x00000040) &&
-            value_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              value_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             value_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(value_).mergeFrom(value).buildPartial();
           } else {
@@ -6168,7 +5731,6 @@ public final class Fields {
         bitField0_ |= 0x00000040;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
@@ -6182,7 +5744,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
@@ -6191,7 +5752,6 @@ public final class Fields {
         onChanged();
         return getValueFieldBuilder().getBuilder();
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
@@ -6202,53 +5762,49 @@ public final class Fields {
           return value_;
         }
       }
-
       /**
        * <code>required .messages.data.Object value = 7;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getValueFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getValueFieldBuilder() {
         if (valueBuilder_ == null) {
           valueBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getValue(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getValue(),
+                  getParentForChildren(),
+                  isClean());
           value_ = null;
         }
         return valueBuilder_;
       }
 
-      private int modifiers_;
-
+      private int modifiers_ ;
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public boolean hasModifiers() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
-
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public int getModifiers() {
         return modifiers_;
       }
-
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder setModifiers(int value) {
@@ -6257,12 +5813,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder clearModifiers() {
@@ -6273,14 +5828,12 @@ public final class Fields {
       }
 
       private java.lang.Object senderClassName_ = "";
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public boolean hasSenderClassName() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
@@ -6288,7 +5841,7 @@ public final class Fields {
         java.lang.Object ref = senderClassName_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             senderClassName_ = s;
@@ -6298,38 +5851,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public com.google.protobuf.ByteString
-      getSenderClassNameBytes() {
+          getSenderClassNameBytes() {
         java.lang.Object ref = senderClassName_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           senderClassName_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public Builder setSenderClassName(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000100;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000100;
         senderClassName_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
@@ -6339,16 +5889,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public Builder setSenderClassNameBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000100;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000100;
         senderClassName_ = value;
         onChanged();
         return this;
@@ -6356,15 +5905,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       public boolean hasSender() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -6375,7 +5922,6 @@ public final class Fields {
           return senderBuilder_.getMessage();
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -6392,12 +5938,11 @@ public final class Fields {
         bitField0_ |= 0x00000200;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       public Builder setSender(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (senderBuilder_ == null) {
           sender_ = builderForValue.build();
           onChanged();
@@ -6407,14 +5952,13 @@ public final class Fields {
         bitField0_ |= 0x00000200;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (senderBuilder_ == null) {
           if (((bitField0_ & 0x00000200) == 0x00000200) &&
-            sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             sender_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
           } else {
@@ -6427,7 +5971,6 @@ public final class Fields {
         bitField0_ |= 0x00000200;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -6441,7 +5984,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -6450,7 +5992,6 @@ public final class Fields {
         onChanged();
         return getSenderFieldBuilder().getBuilder();
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -6461,19 +6002,18 @@ public final class Fields {
           return sender_;
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getSenderFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getSenderFieldBuilder() {
         if (senderBuilder_ == null) {
           senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getSender(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getSender(),
+                  getParentForChildren(),
+                  isClean());
           sender_ = null;
         }
         return senderBuilder_;
@@ -6491,14 +6031,13 @@ public final class Fields {
   }
 
   public interface InstanceFieldGetOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:messages.data.InstanceFieldGet)
-    com.google.protobuf.MessageOrBuilder {
+      // @@protoc_insertion_point(interface_extends:messages.data.InstanceFieldGet)
+      com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     boolean hasDistributorId();
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -6506,18 +6045,17 @@ public final class Fields {
 
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     boolean hasThreadId();
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     long getThreadId();
@@ -6526,7 +6064,6 @@ public final class Fields {
      * <code>required int64 currentTime = 3;</code>
      */
     boolean hasCurrentTime();
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -6536,28 +6073,24 @@ public final class Fields {
      * <code>required string class = 4;</code>
      */
     boolean hasClass_();
-
     /**
      * <code>required string class = 4;</code>
      */
     java.lang.String getClass_();
-
     /**
      * <code>required string class = 4;</code>
      */
     com.google.protobuf.ByteString
-    getClass_Bytes();
+        getClass_Bytes();
 
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     boolean hasTarget();
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getTarget();
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
@@ -6567,48 +6100,43 @@ public final class Fields {
      * <code>required string field = 6;</code>
      */
     boolean hasField();
-
     /**
      * <code>required string field = 6;</code>
      */
     java.lang.String getField();
-
     /**
      * <code>required string field = 6;</code>
      */
     com.google.protobuf.ByteString
-    getFieldBytes();
+        getFieldBytes();
 
     /**
      * <code>required string fieldType = 7;</code>
      */
     boolean hasFieldType();
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     java.lang.String getFieldType();
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     com.google.protobuf.ByteString
-    getFieldTypeBytes();
+        getFieldTypeBytes();
 
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     boolean hasModifiers();
-
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     int getModifiers();
@@ -6617,28 +6145,24 @@ public final class Fields {
      * <code>optional string senderClassName = 9;</code>
      */
     boolean hasSenderClassName();
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     java.lang.String getSenderClassName();
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     com.google.protobuf.ByteString
-    getSenderClassNameBytes();
+        getSenderClassNameBytes();
 
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     boolean hasSender();
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
@@ -6646,37 +6170,34 @@ public final class Fields {
 
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     boolean hasSourceLocationFile();
-
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     java.lang.String getSourceLocationFile();
-
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     com.google.protobuf.ByteString
-    getSourceLocationFileBytes();
+        getSourceLocationFileBytes();
 
     /**
      * <code>optional int32 sourceLocationLine = 12;</code>
      */
     boolean hasSourceLocationLine();
-
     /**
      * <code>optional int32 sourceLocationLine = 12;</code>
      */
@@ -6686,42 +6207,35 @@ public final class Fields {
      * <code>optional string sourceLocationType = 13;</code>
      */
     boolean hasSourceLocationType();
-
     /**
      * <code>optional string sourceLocationType = 13;</code>
      */
     java.lang.String getSourceLocationType();
-
     /**
      * <code>optional string sourceLocationType = 13;</code>
      */
     com.google.protobuf.ByteString
-    getSourceLocationTypeBytes();
+        getSourceLocationTypeBytes();
   }
-
   /**
    * Protobuf type {@code messages.data.InstanceFieldGet}
-   * <p>
+   *
    * <pre>
    * --- CONTEXT
    * </pre>
    */
   public static final class InstanceFieldGet extends
-    com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:messages.data.InstanceFieldGet)
-    InstanceFieldGetOrBuilder {
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.InstanceFieldGet)
+      InstanceFieldGetOrBuilder {
     // Use InstanceFieldGet.newBuilder() to construct.
     private InstanceFieldGet(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-
-    private InstanceFieldGet(boolean noInit) {
-      this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance();
-    }
+    private InstanceFieldGet(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
     private static final InstanceFieldGet defaultInstance;
-
     public static InstanceFieldGet getDefaultInstance() {
       return defaultInstance;
     }
@@ -6731,21 +6245,19 @@ public final class Fields {
     }
 
     private final com.google.protobuf.UnknownFieldSet unknownFields;
-
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+        getUnknownFields() {
       return this.unknownFields;
     }
-
     private InstanceFieldGet(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -6756,7 +6268,7 @@ public final class Fields {
               break;
             default: {
               if (!parseUnknownField(input, unknownFields,
-                extensionRegistry, tag)) {
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -6854,34 +6366,33 @@ public final class Fields {
         throw e.setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
-          e.getMessage()).setUnfinishedMessage(this);
+            e.getMessage()).setUnfinishedMessage(this);
       } finally {
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
-
     public static final com.google.protobuf.Descriptors.Descriptor
-    getDescriptor() {
+        getDescriptor() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldGet_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internalGetFieldAccessorTable() {
+        internalGetFieldAccessorTable() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldGet_fieldAccessorTable
-        .ensureFieldAccessorsInitialized(
-          com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet.Builder.class);
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet.Builder.class);
     }
 
     public static com.google.protobuf.Parser<InstanceFieldGet> PARSER =
-      new com.google.protobuf.AbstractParser<InstanceFieldGet>() {
-        public InstanceFieldGet parsePartialFrom(
+        new com.google.protobuf.AbstractParser<InstanceFieldGet>() {
+      public InstanceFieldGet parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new InstanceFieldGet(input, extensionRegistry);
-        }
-      };
+        return new InstanceFieldGet(input, extensionRegistry);
+      }
+    };
 
     @java.lang.Override
     public com.google.protobuf.Parser<InstanceFieldGet> getParserForType() {
@@ -6891,14 +6402,12 @@ public final class Fields {
     private int bitField0_;
     public static final int DISTRIBUTORID_FIELD_NUMBER = 1;
     private int distributorId_;
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     public boolean hasDistributorId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -6908,23 +6417,21 @@ public final class Fields {
 
     public static final int THREADID_FIELD_NUMBER = 2;
     private long threadId_;
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public boolean hasThreadId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public long getThreadId() {
@@ -6933,14 +6440,12 @@ public final class Fields {
 
     public static final int CURRENTTIME_FIELD_NUMBER = 3;
     private long currentTime_;
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
     public boolean hasCurrentTime() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -6950,14 +6455,12 @@ public final class Fields {
 
     public static final int CLASS_FIELD_NUMBER = 4;
     private java.lang.Object class__;
-
     /**
      * <code>required string class = 4;</code>
      */
     public boolean hasClass_() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-
     /**
      * <code>required string class = 4;</code>
      */
@@ -6966,8 +6469,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           class__ = s;
@@ -6975,17 +6478,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string class = 4;</code>
      */
     public com.google.protobuf.ByteString
-    getClass_Bytes() {
+        getClass_Bytes() {
       java.lang.Object ref = class__;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         class__ = b;
         return b;
       } else {
@@ -6995,21 +6497,18 @@ public final class Fields {
 
     public static final int TARGET_FIELD_NUMBER = 5;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object target_;
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     public boolean hasTarget() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getTarget() {
       return target_;
     }
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
@@ -7019,14 +6518,12 @@ public final class Fields {
 
     public static final int FIELD_FIELD_NUMBER = 6;
     private java.lang.Object field_;
-
     /**
      * <code>required string field = 6;</code>
      */
     public boolean hasField() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
-
     /**
      * <code>required string field = 6;</code>
      */
@@ -7035,8 +6532,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           field_ = s;
@@ -7044,17 +6541,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string field = 6;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldBytes() {
+        getFieldBytes() {
       java.lang.Object ref = field_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         field_ = b;
         return b;
       } else {
@@ -7064,14 +6560,12 @@ public final class Fields {
 
     public static final int FIELDTYPE_FIELD_NUMBER = 7;
     private java.lang.Object fieldType_;
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     public boolean hasFieldType() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
-
     /**
      * <code>required string fieldType = 7;</code>
      */
@@ -7080,8 +6574,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           fieldType_ = s;
@@ -7089,17 +6583,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldTypeBytes() {
+        getFieldTypeBytes() {
       java.lang.Object ref = fieldType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         fieldType_ = b;
         return b;
       } else {
@@ -7109,23 +6602,21 @@ public final class Fields {
 
     public static final int MODIFIERS_FIELD_NUMBER = 8;
     private int modifiers_;
-
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public boolean hasModifiers() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
-
     /**
      * <code>optional int32 modifiers = 8;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public int getModifiers() {
@@ -7134,14 +6625,12 @@ public final class Fields {
 
     public static final int SENDERCLASSNAME_FIELD_NUMBER = 9;
     private java.lang.Object senderClassName_;
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     public boolean hasSenderClassName() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
@@ -7150,8 +6639,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           senderClassName_ = s;
@@ -7159,17 +6648,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string senderClassName = 9;</code>
      */
     public com.google.protobuf.ByteString
-    getSenderClassNameBytes() {
+        getSenderClassNameBytes() {
       java.lang.Object ref = senderClassName_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         senderClassName_ = b;
         return b;
       } else {
@@ -7179,21 +6667,18 @@ public final class Fields {
 
     public static final int SENDER_FIELD_NUMBER = 10;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     public boolean hasSender() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
     }
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
       return sender_;
     }
-
     /**
      * <code>optional .messages.data.Object sender = 10;</code>
      */
@@ -7203,23 +6688,21 @@ public final class Fields {
 
     public static final int SOURCELOCATIONFILE_FIELD_NUMBER = 11;
     private java.lang.Object sourceLocationFile_;
-
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public boolean hasSourceLocationFile() {
       return ((bitField0_ & 0x00000400) == 0x00000400);
     }
-
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public java.lang.String getSourceLocationFile() {
@@ -7227,8 +6710,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           sourceLocationFile_ = s;
@@ -7236,21 +6719,20 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string sourceLocationFile = 11;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public com.google.protobuf.ByteString
-    getSourceLocationFileBytes() {
+        getSourceLocationFileBytes() {
       java.lang.Object ref = sourceLocationFile_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         sourceLocationFile_ = b;
         return b;
       } else {
@@ -7260,14 +6742,12 @@ public final class Fields {
 
     public static final int SOURCELOCATIONLINE_FIELD_NUMBER = 12;
     private int sourceLocationLine_;
-
     /**
      * <code>optional int32 sourceLocationLine = 12;</code>
      */
     public boolean hasSourceLocationLine() {
       return ((bitField0_ & 0x00000800) == 0x00000800);
     }
-
     /**
      * <code>optional int32 sourceLocationLine = 12;</code>
      */
@@ -7277,14 +6757,12 @@ public final class Fields {
 
     public static final int SOURCELOCATIONTYPE_FIELD_NUMBER = 13;
     private java.lang.Object sourceLocationType_;
-
     /**
      * <code>optional string sourceLocationType = 13;</code>
      */
     public boolean hasSourceLocationType() {
       return ((bitField0_ & 0x00001000) == 0x00001000);
     }
-
     /**
      * <code>optional string sourceLocationType = 13;</code>
      */
@@ -7293,8 +6771,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           sourceLocationType_ = s;
@@ -7302,17 +6780,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string sourceLocationType = 13;</code>
      */
     public com.google.protobuf.ByteString
-    getSourceLocationTypeBytes() {
+        getSourceLocationTypeBytes() {
       java.lang.Object ref = sourceLocationType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         sourceLocationType_ = b;
         return b;
       } else {
@@ -7335,9 +6812,7 @@ public final class Fields {
       sourceLocationLine_ = 0;
       sourceLocationType_ = "";
     }
-
     private byte memoizedIsInitialized = -1;
-
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -7378,7 +6853,7 @@ public final class Fields {
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-      throws java.io.IOException {
+                        throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeInt32(1, distributorId_);
@@ -7423,7 +6898,6 @@ public final class Fields {
     }
 
     private int memoizedSerializedSize = -1;
-
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
@@ -7487,119 +6961,99 @@ public final class Fields {
     }
 
     private static final long serialVersionUID = 0L;
-
     @java.lang.Override
     protected java.lang.Object writeReplace()
-      throws java.io.ObjectStreamException {
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
 
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet parseFrom(
-      com.google.protobuf.ByteString data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet parseFrom(
-      com.google.protobuf.ByteString data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet parseFrom(byte[] data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet parseFrom(
-      byte[] data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet parseFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet parseFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet parseDelimitedFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet parseDelimitedFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet parseFrom(
-      com.google.protobuf.CodedInputStream input)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet parseFrom(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
 
-    public static Builder newBuilder() {
-      return Builder.create();
-    }
-
-    public Builder newBuilderForType() {
-      return newBuilder();
-    }
-
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet prototype) {
       return newBuilder().mergeFrom(prototype);
     }
-
-    public Builder toBuilder() {
-      return newBuilder(this);
-    }
+    public Builder toBuilder() { return newBuilder(this); }
 
     @java.lang.Override
     protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-
     /**
      * Protobuf type {@code messages.data.InstanceFieldGet}
-     * <p>
+     *
      * <pre>
      * --- CONTEXT
      * </pre>
      */
     public static final class Builder extends
-      com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:messages.data.InstanceFieldGet)
-      com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGetOrBuilder {
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.InstanceFieldGet)
+        com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGetOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-      getDescriptor() {
+          getDescriptor() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldGet_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internalGetFieldAccessorTable() {
+          internalGetFieldAccessorTable() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldGet_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-            com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet.Builder.class);
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet.Builder.class);
       }
 
       // Construct using com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet.newBuilder()
@@ -7608,18 +7062,16 @@ public final class Fields {
       }
 
       private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
-
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getTargetFieldBuilder();
           getSenderFieldBuilder();
         }
       }
-
       private static Builder create() {
         return new Builder();
       }
@@ -7668,7 +7120,7 @@ public final class Fields {
       }
 
       public com.google.protobuf.Descriptors.Descriptor
-      getDescriptorForType() {
+          getDescriptorForType() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldGet_descriptor;
       }
 
@@ -7755,7 +7207,7 @@ public final class Fields {
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet) {
-          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet) other);
+          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet)other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -7763,8 +7215,7 @@ public final class Fields {
       }
 
       public Builder mergeFrom(com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet other) {
-        if (other == com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet.getDefaultInstance())
-          return this;
+        if (other == com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet.getDefaultInstance()) return this;
         if (other.hasDistributorId()) {
           setDistributorId(other.getDistributorId());
         }
@@ -7822,32 +7273,32 @@ public final class Fields {
 
       public final boolean isInitialized() {
         if (!hasCurrentTime()) {
-
+          
           return false;
         }
         if (!hasClass_()) {
-
+          
           return false;
         }
         if (!hasTarget()) {
-
+          
           return false;
         }
         if (!hasField()) {
-
+          
           return false;
         }
         if (!hasFieldType()) {
-
+          
           return false;
         }
         if (!getTarget().isInitialized()) {
-
+          
           return false;
         }
         if (hasSender()) {
           if (!getSender().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -7855,9 +7306,9 @@ public final class Fields {
       }
 
       public Builder mergeFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
         com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldGet parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
@@ -7871,25 +7322,21 @@ public final class Fields {
         }
         return this;
       }
-
       private int bitField0_;
 
-      private int distributorId_;
-
+      private int distributorId_ ;
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public boolean hasDistributorId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public int getDistributorId() {
         return distributorId_;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -7899,7 +7346,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -7910,35 +7356,32 @@ public final class Fields {
         return this;
       }
 
-      private long threadId_;
-
+      private long threadId_ ;
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public boolean hasThreadId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public long getThreadId() {
         return threadId_;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder setThreadId(long value) {
@@ -7947,12 +7390,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder clearThreadId() {
@@ -7962,22 +7404,19 @@ public final class Fields {
         return this;
       }
 
-      private long currentTime_;
-
+      private long currentTime_ ;
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public boolean hasCurrentTime() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public long getCurrentTime() {
         return currentTime_;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -7987,7 +7426,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -7999,14 +7437,12 @@ public final class Fields {
       }
 
       private java.lang.Object class__ = "";
-
       /**
        * <code>required string class = 4;</code>
        */
       public boolean hasClass_() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-
       /**
        * <code>required string class = 4;</code>
        */
@@ -8014,7 +7450,7 @@ public final class Fields {
         java.lang.Object ref = class__;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             class__ = s;
@@ -8024,38 +7460,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public com.google.protobuf.ByteString
-      getClass_Bytes() {
+          getClass_Bytes() {
         java.lang.Object ref = class__;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           class__ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public Builder setClass_(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
        */
@@ -8065,16 +7498,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public Builder setClass_Bytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
@@ -8082,15 +7514,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object target_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> targetBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> targetBuilder_;
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       public boolean hasTarget() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -8101,7 +7531,6 @@ public final class Fields {
           return targetBuilder_.getMessage();
         }
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -8118,12 +7547,11 @@ public final class Fields {
         bitField0_ |= 0x00000010;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       public Builder setTarget(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (targetBuilder_ == null) {
           target_ = builderForValue.build();
           onChanged();
@@ -8133,14 +7561,13 @@ public final class Fields {
         bitField0_ |= 0x00000010;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       public Builder mergeTarget(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (targetBuilder_ == null) {
           if (((bitField0_ & 0x00000010) == 0x00000010) &&
-            target_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              target_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             target_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(target_).mergeFrom(value).buildPartial();
           } else {
@@ -8153,7 +7580,6 @@ public final class Fields {
         bitField0_ |= 0x00000010;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -8167,7 +7593,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -8176,7 +7601,6 @@ public final class Fields {
         onChanged();
         return getTargetFieldBuilder().getBuilder();
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -8187,33 +7611,30 @@ public final class Fields {
           return target_;
         }
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getTargetFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getTargetFieldBuilder() {
         if (targetBuilder_ == null) {
           targetBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getTarget(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getTarget(),
+                  getParentForChildren(),
+                  isClean());
           target_ = null;
         }
         return targetBuilder_;
       }
 
       private java.lang.Object field_ = "";
-
       /**
        * <code>required string field = 6;</code>
        */
       public boolean hasField() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
-
       /**
        * <code>required string field = 6;</code>
        */
@@ -8221,7 +7642,7 @@ public final class Fields {
         java.lang.Object ref = field_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             field_ = s;
@@ -8231,38 +7652,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string field = 6;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldBytes() {
+          getFieldBytes() {
         java.lang.Object ref = field_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           field_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string field = 6;</code>
        */
       public Builder setField(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         field_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 6;</code>
        */
@@ -8272,30 +7690,27 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 6;</code>
        */
       public Builder setFieldBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         field_ = value;
         onChanged();
         return this;
       }
 
       private java.lang.Object fieldType_ = "";
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public boolean hasFieldType() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
@@ -8303,7 +7718,7 @@ public final class Fields {
         java.lang.Object ref = fieldType_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             fieldType_ = s;
@@ -8313,38 +7728,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldTypeBytes() {
+          getFieldTypeBytes() {
         java.lang.Object ref = fieldType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           fieldType_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public Builder setFieldType(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000040;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
         fieldType_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
@@ -8354,50 +7766,46 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public Builder setFieldTypeBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000040;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
         fieldType_ = value;
         onChanged();
         return this;
       }
 
-      private int modifiers_;
-
+      private int modifiers_ ;
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public boolean hasModifiers() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
-
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public int getModifiers() {
         return modifiers_;
       }
-
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder setModifiers(int value) {
@@ -8406,12 +7814,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 modifiers = 8;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder clearModifiers() {
@@ -8422,14 +7829,12 @@ public final class Fields {
       }
 
       private java.lang.Object senderClassName_ = "";
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public boolean hasSenderClassName() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
@@ -8437,7 +7842,7 @@ public final class Fields {
         java.lang.Object ref = senderClassName_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             senderClassName_ = s;
@@ -8447,38 +7852,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public com.google.protobuf.ByteString
-      getSenderClassNameBytes() {
+          getSenderClassNameBytes() {
         java.lang.Object ref = senderClassName_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           senderClassName_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public Builder setSenderClassName(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000100;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000100;
         senderClassName_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
@@ -8488,16 +7890,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 9;</code>
        */
       public Builder setSenderClassNameBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000100;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000100;
         senderClassName_ = value;
         onChanged();
         return this;
@@ -8505,15 +7906,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       public boolean hasSender() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -8524,7 +7923,6 @@ public final class Fields {
           return senderBuilder_.getMessage();
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -8541,12 +7939,11 @@ public final class Fields {
         bitField0_ |= 0x00000200;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       public Builder setSender(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (senderBuilder_ == null) {
           sender_ = builderForValue.build();
           onChanged();
@@ -8556,14 +7953,13 @@ public final class Fields {
         bitField0_ |= 0x00000200;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (senderBuilder_ == null) {
           if (((bitField0_ & 0x00000200) == 0x00000200) &&
-            sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             sender_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
           } else {
@@ -8576,7 +7972,6 @@ public final class Fields {
         bitField0_ |= 0x00000200;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -8590,7 +7985,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -8599,7 +7993,6 @@ public final class Fields {
         onChanged();
         return getSenderFieldBuilder().getBuilder();
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
@@ -8610,49 +8003,46 @@ public final class Fields {
           return sender_;
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 10;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getSenderFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getSenderFieldBuilder() {
         if (senderBuilder_ == null) {
           senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getSender(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getSender(),
+                  getParentForChildren(),
+                  isClean());
           sender_ = null;
         }
         return senderBuilder_;
       }
 
       private java.lang.Object sourceLocationFile_ = "";
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public boolean hasSourceLocationFile() {
         return ((bitField0_ & 0x00000400) == 0x00000400);
       }
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public java.lang.String getSourceLocationFile() {
         java.lang.Object ref = sourceLocationFile_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             sourceLocationFile_ = s;
@@ -8662,51 +8052,48 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public com.google.protobuf.ByteString
-      getSourceLocationFileBytes() {
+          getSourceLocationFileBytes() {
         java.lang.Object ref = sourceLocationFile_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           sourceLocationFile_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder setSourceLocationFile(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000400;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000400;
         sourceLocationFile_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder clearSourceLocationFile() {
@@ -8715,41 +8102,37 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationFile = 11;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder setSourceLocationFileBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000400;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000400;
         sourceLocationFile_ = value;
         onChanged();
         return this;
       }
 
-      private int sourceLocationLine_;
-
+      private int sourceLocationLine_ ;
       /**
        * <code>optional int32 sourceLocationLine = 12;</code>
        */
       public boolean hasSourceLocationLine() {
         return ((bitField0_ & 0x00000800) == 0x00000800);
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 12;</code>
        */
       public int getSourceLocationLine() {
         return sourceLocationLine_;
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 12;</code>
        */
@@ -8759,7 +8142,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 12;</code>
        */
@@ -8771,14 +8153,12 @@ public final class Fields {
       }
 
       private java.lang.Object sourceLocationType_ = "";
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
       public boolean hasSourceLocationType() {
         return ((bitField0_ & 0x00001000) == 0x00001000);
       }
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
@@ -8786,7 +8166,7 @@ public final class Fields {
         java.lang.Object ref = sourceLocationType_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             sourceLocationType_ = s;
@@ -8796,38 +8176,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
       public com.google.protobuf.ByteString
-      getSourceLocationTypeBytes() {
+          getSourceLocationTypeBytes() {
         java.lang.Object ref = sourceLocationType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           sourceLocationType_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
       public Builder setSourceLocationType(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00001000;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00001000;
         sourceLocationType_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
@@ -8837,16 +8214,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationType = 13;</code>
        */
       public Builder setSourceLocationTypeBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00001000;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00001000;
         sourceLocationType_ = value;
         onChanged();
         return this;
@@ -8864,14 +8240,13 @@ public final class Fields {
   }
 
   public interface InstanceFieldPutOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:messages.data.InstanceFieldPut)
-    com.google.protobuf.MessageOrBuilder {
+      // @@protoc_insertion_point(interface_extends:messages.data.InstanceFieldPut)
+      com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     boolean hasDistributorId();
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -8879,18 +8254,17 @@ public final class Fields {
 
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     boolean hasThreadId();
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     long getThreadId();
@@ -8899,7 +8273,6 @@ public final class Fields {
      * <code>required int64 currentTime = 3;</code>
      */
     boolean hasCurrentTime();
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -8909,28 +8282,24 @@ public final class Fields {
      * <code>required string class = 4;</code>
      */
     boolean hasClass_();
-
     /**
      * <code>required string class = 4;</code>
      */
     java.lang.String getClass_();
-
     /**
      * <code>required string class = 4;</code>
      */
     com.google.protobuf.ByteString
-    getClass_Bytes();
+        getClass_Bytes();
 
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     boolean hasTarget();
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getTarget();
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
@@ -8940,44 +8309,38 @@ public final class Fields {
      * <code>required string field = 6;</code>
      */
     boolean hasField();
-
     /**
      * <code>required string field = 6;</code>
      */
     java.lang.String getField();
-
     /**
      * <code>required string field = 6;</code>
      */
     com.google.protobuf.ByteString
-    getFieldBytes();
+        getFieldBytes();
 
     /**
      * <code>required string fieldType = 7;</code>
      */
     boolean hasFieldType();
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     java.lang.String getFieldType();
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     com.google.protobuf.ByteString
-    getFieldTypeBytes();
+        getFieldTypeBytes();
 
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
     boolean hasValue();
-
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getValue();
-
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
@@ -8985,18 +8348,17 @@ public final class Fields {
 
     /**
      * <code>optional int32 modifiers = 9;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     boolean hasModifiers();
-
     /**
      * <code>optional int32 modifiers = 9;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     int getModifiers();
@@ -9005,28 +8367,24 @@ public final class Fields {
      * <code>optional string senderClassName = 10;</code>
      */
     boolean hasSenderClassName();
-
     /**
      * <code>optional string senderClassName = 10;</code>
      */
     java.lang.String getSenderClassName();
-
     /**
      * <code>optional string senderClassName = 10;</code>
      */
     com.google.protobuf.ByteString
-    getSenderClassNameBytes();
+        getSenderClassNameBytes();
 
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
     boolean hasSender();
-
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
-
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
@@ -9034,37 +8392,34 @@ public final class Fields {
 
     /**
      * <code>optional string sourceLocationFile = 12;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     boolean hasSourceLocationFile();
-
     /**
      * <code>optional string sourceLocationFile = 12;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     java.lang.String getSourceLocationFile();
-
     /**
      * <code>optional string sourceLocationFile = 12;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     com.google.protobuf.ByteString
-    getSourceLocationFileBytes();
+        getSourceLocationFileBytes();
 
     /**
      * <code>optional int32 sourceLocationLine = 13;</code>
      */
     boolean hasSourceLocationLine();
-
     /**
      * <code>optional int32 sourceLocationLine = 13;</code>
      */
@@ -9074,42 +8429,35 @@ public final class Fields {
      * <code>optional string sourceLocationType = 14;</code>
      */
     boolean hasSourceLocationType();
-
     /**
      * <code>optional string sourceLocationType = 14;</code>
      */
     java.lang.String getSourceLocationType();
-
     /**
      * <code>optional string sourceLocationType = 14;</code>
      */
     com.google.protobuf.ByteString
-    getSourceLocationTypeBytes();
+        getSourceLocationTypeBytes();
   }
-
   /**
    * Protobuf type {@code messages.data.InstanceFieldPut}
-   * <p>
+   *
    * <pre>
    * --- CONTEXT
    * </pre>
    */
   public static final class InstanceFieldPut extends
-    com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:messages.data.InstanceFieldPut)
-    InstanceFieldPutOrBuilder {
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.InstanceFieldPut)
+      InstanceFieldPutOrBuilder {
     // Use InstanceFieldPut.newBuilder() to construct.
     private InstanceFieldPut(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-
-    private InstanceFieldPut(boolean noInit) {
-      this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance();
-    }
+    private InstanceFieldPut(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
     private static final InstanceFieldPut defaultInstance;
-
     public static InstanceFieldPut getDefaultInstance() {
       return defaultInstance;
     }
@@ -9119,21 +8467,19 @@ public final class Fields {
     }
 
     private final com.google.protobuf.UnknownFieldSet unknownFields;
-
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+        getUnknownFields() {
       return this.unknownFields;
     }
-
     private InstanceFieldPut(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -9144,7 +8490,7 @@ public final class Fields {
               break;
             default: {
               if (!parseUnknownField(input, unknownFields,
-                extensionRegistry, tag)) {
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -9255,34 +8601,33 @@ public final class Fields {
         throw e.setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
-          e.getMessage()).setUnfinishedMessage(this);
+            e.getMessage()).setUnfinishedMessage(this);
       } finally {
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
-
     public static final com.google.protobuf.Descriptors.Descriptor
-    getDescriptor() {
+        getDescriptor() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPut_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internalGetFieldAccessorTable() {
+        internalGetFieldAccessorTable() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPut_fieldAccessorTable
-        .ensureFieldAccessorsInitialized(
-          com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.Builder.class);
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.Builder.class);
     }
 
     public static com.google.protobuf.Parser<InstanceFieldPut> PARSER =
-      new com.google.protobuf.AbstractParser<InstanceFieldPut>() {
-        public InstanceFieldPut parsePartialFrom(
+        new com.google.protobuf.AbstractParser<InstanceFieldPut>() {
+      public InstanceFieldPut parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new InstanceFieldPut(input, extensionRegistry);
-        }
-      };
+        return new InstanceFieldPut(input, extensionRegistry);
+      }
+    };
 
     @java.lang.Override
     public com.google.protobuf.Parser<InstanceFieldPut> getParserForType() {
@@ -9292,14 +8637,12 @@ public final class Fields {
     private int bitField0_;
     public static final int DISTRIBUTORID_FIELD_NUMBER = 1;
     private int distributorId_;
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     public boolean hasDistributorId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -9309,23 +8652,21 @@ public final class Fields {
 
     public static final int THREADID_FIELD_NUMBER = 2;
     private long threadId_;
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public boolean hasThreadId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public long getThreadId() {
@@ -9334,14 +8675,12 @@ public final class Fields {
 
     public static final int CURRENTTIME_FIELD_NUMBER = 3;
     private long currentTime_;
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
     public boolean hasCurrentTime() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -9351,14 +8690,12 @@ public final class Fields {
 
     public static final int CLASS_FIELD_NUMBER = 4;
     private java.lang.Object class__;
-
     /**
      * <code>required string class = 4;</code>
      */
     public boolean hasClass_() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-
     /**
      * <code>required string class = 4;</code>
      */
@@ -9367,8 +8704,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           class__ = s;
@@ -9376,17 +8713,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string class = 4;</code>
      */
     public com.google.protobuf.ByteString
-    getClass_Bytes() {
+        getClass_Bytes() {
       java.lang.Object ref = class__;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         class__ = b;
         return b;
       } else {
@@ -9396,21 +8732,18 @@ public final class Fields {
 
     public static final int TARGET_FIELD_NUMBER = 5;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object target_;
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     public boolean hasTarget() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getTarget() {
       return target_;
     }
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
@@ -9420,14 +8753,12 @@ public final class Fields {
 
     public static final int FIELD_FIELD_NUMBER = 6;
     private java.lang.Object field_;
-
     /**
      * <code>required string field = 6;</code>
      */
     public boolean hasField() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
-
     /**
      * <code>required string field = 6;</code>
      */
@@ -9436,8 +8767,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           field_ = s;
@@ -9445,17 +8776,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string field = 6;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldBytes() {
+        getFieldBytes() {
       java.lang.Object ref = field_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         field_ = b;
         return b;
       } else {
@@ -9465,14 +8795,12 @@ public final class Fields {
 
     public static final int FIELDTYPE_FIELD_NUMBER = 7;
     private java.lang.Object fieldType_;
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     public boolean hasFieldType() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
-
     /**
      * <code>required string fieldType = 7;</code>
      */
@@ -9481,8 +8809,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           fieldType_ = s;
@@ -9490,17 +8818,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldTypeBytes() {
+        getFieldTypeBytes() {
       java.lang.Object ref = fieldType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         fieldType_ = b;
         return b;
       } else {
@@ -9510,21 +8837,18 @@ public final class Fields {
 
     public static final int VALUE_FIELD_NUMBER = 8;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object value_;
-
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
     public boolean hasValue() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
-
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getValue() {
       return value_;
     }
-
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
@@ -9534,23 +8858,21 @@ public final class Fields {
 
     public static final int MODIFIERS_FIELD_NUMBER = 9;
     private int modifiers_;
-
     /**
      * <code>optional int32 modifiers = 9;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public boolean hasModifiers() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
-
     /**
      * <code>optional int32 modifiers = 9;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public int getModifiers() {
@@ -9559,14 +8881,12 @@ public final class Fields {
 
     public static final int SENDERCLASSNAME_FIELD_NUMBER = 10;
     private java.lang.Object senderClassName_;
-
     /**
      * <code>optional string senderClassName = 10;</code>
      */
     public boolean hasSenderClassName() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
     }
-
     /**
      * <code>optional string senderClassName = 10;</code>
      */
@@ -9575,8 +8895,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           senderClassName_ = s;
@@ -9584,17 +8904,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string senderClassName = 10;</code>
      */
     public com.google.protobuf.ByteString
-    getSenderClassNameBytes() {
+        getSenderClassNameBytes() {
       java.lang.Object ref = senderClassName_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         senderClassName_ = b;
         return b;
       } else {
@@ -9604,21 +8923,18 @@ public final class Fields {
 
     public static final int SENDER_FIELD_NUMBER = 11;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
-
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
     public boolean hasSender() {
       return ((bitField0_ & 0x00000400) == 0x00000400);
     }
-
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
       return sender_;
     }
-
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
@@ -9628,23 +8944,21 @@ public final class Fields {
 
     public static final int SOURCELOCATIONFILE_FIELD_NUMBER = 12;
     private java.lang.Object sourceLocationFile_;
-
     /**
      * <code>optional string sourceLocationFile = 12;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public boolean hasSourceLocationFile() {
       return ((bitField0_ & 0x00000800) == 0x00000800);
     }
-
     /**
      * <code>optional string sourceLocationFile = 12;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public java.lang.String getSourceLocationFile() {
@@ -9652,8 +8966,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           sourceLocationFile_ = s;
@@ -9661,21 +8975,20 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string sourceLocationFile = 12;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public com.google.protobuf.ByteString
-    getSourceLocationFileBytes() {
+        getSourceLocationFileBytes() {
       java.lang.Object ref = sourceLocationFile_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         sourceLocationFile_ = b;
         return b;
       } else {
@@ -9685,14 +8998,12 @@ public final class Fields {
 
     public static final int SOURCELOCATIONLINE_FIELD_NUMBER = 13;
     private int sourceLocationLine_;
-
     /**
      * <code>optional int32 sourceLocationLine = 13;</code>
      */
     public boolean hasSourceLocationLine() {
       return ((bitField0_ & 0x00001000) == 0x00001000);
     }
-
     /**
      * <code>optional int32 sourceLocationLine = 13;</code>
      */
@@ -9702,14 +9013,12 @@ public final class Fields {
 
     public static final int SOURCELOCATIONTYPE_FIELD_NUMBER = 14;
     private java.lang.Object sourceLocationType_;
-
     /**
      * <code>optional string sourceLocationType = 14;</code>
      */
     public boolean hasSourceLocationType() {
       return ((bitField0_ & 0x00002000) == 0x00002000);
     }
-
     /**
      * <code>optional string sourceLocationType = 14;</code>
      */
@@ -9718,8 +9027,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           sourceLocationType_ = s;
@@ -9727,17 +9036,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string sourceLocationType = 14;</code>
      */
     public com.google.protobuf.ByteString
-    getSourceLocationTypeBytes() {
+        getSourceLocationTypeBytes() {
       java.lang.Object ref = sourceLocationType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         sourceLocationType_ = b;
         return b;
       } else {
@@ -9761,9 +9069,7 @@ public final class Fields {
       sourceLocationLine_ = 0;
       sourceLocationType_ = "";
     }
-
     private byte memoizedIsInitialized = -1;
-
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -9812,7 +9118,7 @@ public final class Fields {
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-      throws java.io.IOException {
+                        throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeInt32(1, distributorId_);
@@ -9860,7 +9166,6 @@ public final class Fields {
     }
 
     private int memoizedSerializedSize = -1;
-
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
@@ -9928,119 +9233,99 @@ public final class Fields {
     }
 
     private static final long serialVersionUID = 0L;
-
     @java.lang.Override
     protected java.lang.Object writeReplace()
-      throws java.io.ObjectStreamException {
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
 
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut parseFrom(
-      com.google.protobuf.ByteString data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut parseFrom(
-      com.google.protobuf.ByteString data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut parseFrom(byte[] data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut parseFrom(
-      byte[] data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut parseFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut parseFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut parseDelimitedFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut parseDelimitedFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut parseFrom(
-      com.google.protobuf.CodedInputStream input)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut parseFrom(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
 
-    public static Builder newBuilder() {
-      return Builder.create();
-    }
-
-    public Builder newBuilderForType() {
-      return newBuilder();
-    }
-
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut prototype) {
       return newBuilder().mergeFrom(prototype);
     }
-
-    public Builder toBuilder() {
-      return newBuilder(this);
-    }
+    public Builder toBuilder() { return newBuilder(this); }
 
     @java.lang.Override
     protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-
     /**
      * Protobuf type {@code messages.data.InstanceFieldPut}
-     * <p>
+     *
      * <pre>
      * --- CONTEXT
      * </pre>
      */
     public static final class Builder extends
-      com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:messages.data.InstanceFieldPut)
-      com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutOrBuilder {
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.InstanceFieldPut)
+        com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-      getDescriptor() {
+          getDescriptor() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPut_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internalGetFieldAccessorTable() {
+          internalGetFieldAccessorTable() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPut_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-            com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.Builder.class);
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.Builder.class);
       }
 
       // Construct using com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.newBuilder()
@@ -10049,11 +9334,10 @@ public final class Fields {
       }
 
       private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
-
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getTargetFieldBuilder();
@@ -10061,7 +9345,6 @@ public final class Fields {
           getSenderFieldBuilder();
         }
       }
-
       private static Builder create() {
         return new Builder();
       }
@@ -10116,7 +9399,7 @@ public final class Fields {
       }
 
       public com.google.protobuf.Descriptors.Descriptor
-      getDescriptorForType() {
+          getDescriptorForType() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPut_descriptor;
       }
 
@@ -10211,7 +9494,7 @@ public final class Fields {
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut) {
-          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut) other);
+          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut)other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -10219,8 +9502,7 @@ public final class Fields {
       }
 
       public Builder mergeFrom(com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut other) {
-        if (other == com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.getDefaultInstance())
-          return this;
+        if (other == com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut.getDefaultInstance()) return this;
         if (other.hasDistributorId()) {
           setDistributorId(other.getDistributorId());
         }
@@ -10281,40 +9563,40 @@ public final class Fields {
 
       public final boolean isInitialized() {
         if (!hasCurrentTime()) {
-
+          
           return false;
         }
         if (!hasClass_()) {
-
+          
           return false;
         }
         if (!hasTarget()) {
-
+          
           return false;
         }
         if (!hasField()) {
-
+          
           return false;
         }
         if (!hasFieldType()) {
-
+          
           return false;
         }
         if (!hasValue()) {
-
+          
           return false;
         }
         if (!getTarget().isInitialized()) {
-
+          
           return false;
         }
         if (!getValue().isInitialized()) {
-
+          
           return false;
         }
         if (hasSender()) {
           if (!getSender().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -10322,9 +9604,9 @@ public final class Fields {
       }
 
       public Builder mergeFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
         com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
@@ -10338,25 +9620,21 @@ public final class Fields {
         }
         return this;
       }
-
       private int bitField0_;
 
-      private int distributorId_;
-
+      private int distributorId_ ;
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public boolean hasDistributorId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public int getDistributorId() {
         return distributorId_;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -10366,7 +9644,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -10377,35 +9654,32 @@ public final class Fields {
         return this;
       }
 
-      private long threadId_;
-
+      private long threadId_ ;
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public boolean hasThreadId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public long getThreadId() {
         return threadId_;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder setThreadId(long value) {
@@ -10414,12 +9688,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder clearThreadId() {
@@ -10429,22 +9702,19 @@ public final class Fields {
         return this;
       }
 
-      private long currentTime_;
-
+      private long currentTime_ ;
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public boolean hasCurrentTime() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public long getCurrentTime() {
         return currentTime_;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -10454,7 +9724,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -10466,14 +9735,12 @@ public final class Fields {
       }
 
       private java.lang.Object class__ = "";
-
       /**
        * <code>required string class = 4;</code>
        */
       public boolean hasClass_() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-
       /**
        * <code>required string class = 4;</code>
        */
@@ -10481,7 +9748,7 @@ public final class Fields {
         java.lang.Object ref = class__;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             class__ = s;
@@ -10491,38 +9758,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public com.google.protobuf.ByteString
-      getClass_Bytes() {
+          getClass_Bytes() {
         java.lang.Object ref = class__;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           class__ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public Builder setClass_(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
        */
@@ -10532,16 +9796,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public Builder setClass_Bytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
@@ -10549,15 +9812,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object target_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> targetBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> targetBuilder_;
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       public boolean hasTarget() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -10568,7 +9829,6 @@ public final class Fields {
           return targetBuilder_.getMessage();
         }
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -10585,12 +9845,11 @@ public final class Fields {
         bitField0_ |= 0x00000010;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       public Builder setTarget(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (targetBuilder_ == null) {
           target_ = builderForValue.build();
           onChanged();
@@ -10600,14 +9859,13 @@ public final class Fields {
         bitField0_ |= 0x00000010;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       public Builder mergeTarget(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (targetBuilder_ == null) {
           if (((bitField0_ & 0x00000010) == 0x00000010) &&
-            target_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              target_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             target_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(target_).mergeFrom(value).buildPartial();
           } else {
@@ -10620,7 +9878,6 @@ public final class Fields {
         bitField0_ |= 0x00000010;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -10634,7 +9891,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -10643,7 +9899,6 @@ public final class Fields {
         onChanged();
         return getTargetFieldBuilder().getBuilder();
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -10654,33 +9909,30 @@ public final class Fields {
           return target_;
         }
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getTargetFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getTargetFieldBuilder() {
         if (targetBuilder_ == null) {
           targetBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getTarget(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getTarget(),
+                  getParentForChildren(),
+                  isClean());
           target_ = null;
         }
         return targetBuilder_;
       }
 
       private java.lang.Object field_ = "";
-
       /**
        * <code>required string field = 6;</code>
        */
       public boolean hasField() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
-
       /**
        * <code>required string field = 6;</code>
        */
@@ -10688,7 +9940,7 @@ public final class Fields {
         java.lang.Object ref = field_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             field_ = s;
@@ -10698,38 +9950,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string field = 6;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldBytes() {
+          getFieldBytes() {
         java.lang.Object ref = field_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           field_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string field = 6;</code>
        */
       public Builder setField(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         field_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 6;</code>
        */
@@ -10739,30 +9988,27 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 6;</code>
        */
       public Builder setFieldBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         field_ = value;
         onChanged();
         return this;
       }
 
       private java.lang.Object fieldType_ = "";
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public boolean hasFieldType() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
@@ -10770,7 +10016,7 @@ public final class Fields {
         java.lang.Object ref = fieldType_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             fieldType_ = s;
@@ -10780,38 +10026,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldTypeBytes() {
+          getFieldTypeBytes() {
         java.lang.Object ref = fieldType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           fieldType_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public Builder setFieldType(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000040;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
         fieldType_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
@@ -10821,16 +10064,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public Builder setFieldTypeBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000040;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
         fieldType_ = value;
         onChanged();
         return this;
@@ -10838,15 +10080,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> valueBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> valueBuilder_;
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
       public boolean hasValue() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
@@ -10857,7 +10097,6 @@ public final class Fields {
           return valueBuilder_.getMessage();
         }
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
@@ -10874,12 +10113,11 @@ public final class Fields {
         bitField0_ |= 0x00000080;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
       public Builder setValue(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (valueBuilder_ == null) {
           value_ = builderForValue.build();
           onChanged();
@@ -10889,14 +10127,13 @@ public final class Fields {
         bitField0_ |= 0x00000080;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
       public Builder mergeValue(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (valueBuilder_ == null) {
           if (((bitField0_ & 0x00000080) == 0x00000080) &&
-            value_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              value_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             value_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(value_).mergeFrom(value).buildPartial();
           } else {
@@ -10909,7 +10146,6 @@ public final class Fields {
         bitField0_ |= 0x00000080;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
@@ -10923,7 +10159,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
@@ -10932,7 +10167,6 @@ public final class Fields {
         onChanged();
         return getValueFieldBuilder().getBuilder();
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
@@ -10943,53 +10177,49 @@ public final class Fields {
           return value_;
         }
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getValueFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getValueFieldBuilder() {
         if (valueBuilder_ == null) {
           valueBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getValue(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getValue(),
+                  getParentForChildren(),
+                  isClean());
           value_ = null;
         }
         return valueBuilder_;
       }
 
-      private int modifiers_;
-
+      private int modifiers_ ;
       /**
        * <code>optional int32 modifiers = 9;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public boolean hasModifiers() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
-
       /**
        * <code>optional int32 modifiers = 9;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public int getModifiers() {
         return modifiers_;
       }
-
       /**
        * <code>optional int32 modifiers = 9;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder setModifiers(int value) {
@@ -10998,12 +10228,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 modifiers = 9;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder clearModifiers() {
@@ -11014,14 +10243,12 @@ public final class Fields {
       }
 
       private java.lang.Object senderClassName_ = "";
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
       public boolean hasSenderClassName() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
@@ -11029,7 +10256,7 @@ public final class Fields {
         java.lang.Object ref = senderClassName_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             senderClassName_ = s;
@@ -11039,38 +10266,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
       public com.google.protobuf.ByteString
-      getSenderClassNameBytes() {
+          getSenderClassNameBytes() {
         java.lang.Object ref = senderClassName_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           senderClassName_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
       public Builder setSenderClassName(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000200;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000200;
         senderClassName_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
@@ -11080,16 +10304,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
       public Builder setSenderClassNameBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000200;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000200;
         senderClassName_ = value;
         onChanged();
         return this;
@@ -11097,15 +10320,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
       public boolean hasSender() {
         return ((bitField0_ & 0x00000400) == 0x00000400);
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
@@ -11116,7 +10337,6 @@ public final class Fields {
           return senderBuilder_.getMessage();
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
@@ -11133,12 +10353,11 @@ public final class Fields {
         bitField0_ |= 0x00000400;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
       public Builder setSender(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (senderBuilder_ == null) {
           sender_ = builderForValue.build();
           onChanged();
@@ -11148,14 +10367,13 @@ public final class Fields {
         bitField0_ |= 0x00000400;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
       public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (senderBuilder_ == null) {
           if (((bitField0_ & 0x00000400) == 0x00000400) &&
-            sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             sender_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
           } else {
@@ -11168,7 +10386,6 @@ public final class Fields {
         bitField0_ |= 0x00000400;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
@@ -11182,7 +10399,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000400);
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
@@ -11191,7 +10407,6 @@ public final class Fields {
         onChanged();
         return getSenderFieldBuilder().getBuilder();
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
@@ -11202,49 +10417,46 @@ public final class Fields {
           return sender_;
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getSenderFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getSenderFieldBuilder() {
         if (senderBuilder_ == null) {
           senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getSender(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getSender(),
+                  getParentForChildren(),
+                  isClean());
           sender_ = null;
         }
         return senderBuilder_;
       }
 
       private java.lang.Object sourceLocationFile_ = "";
-
       /**
        * <code>optional string sourceLocationFile = 12;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public boolean hasSourceLocationFile() {
         return ((bitField0_ & 0x00000800) == 0x00000800);
       }
-
       /**
        * <code>optional string sourceLocationFile = 12;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public java.lang.String getSourceLocationFile() {
         java.lang.Object ref = sourceLocationFile_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             sourceLocationFile_ = s;
@@ -11254,51 +10466,48 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationFile = 12;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public com.google.protobuf.ByteString
-      getSourceLocationFileBytes() {
+          getSourceLocationFileBytes() {
         java.lang.Object ref = sourceLocationFile_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           sourceLocationFile_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationFile = 12;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder setSourceLocationFile(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000800;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000800;
         sourceLocationFile_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationFile = 12;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder clearSourceLocationFile() {
@@ -11307,41 +10516,37 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationFile = 12;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder setSourceLocationFileBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000800;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000800;
         sourceLocationFile_ = value;
         onChanged();
         return this;
       }
 
-      private int sourceLocationLine_;
-
+      private int sourceLocationLine_ ;
       /**
        * <code>optional int32 sourceLocationLine = 13;</code>
        */
       public boolean hasSourceLocationLine() {
         return ((bitField0_ & 0x00001000) == 0x00001000);
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 13;</code>
        */
       public int getSourceLocationLine() {
         return sourceLocationLine_;
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 13;</code>
        */
@@ -11351,7 +10556,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 13;</code>
        */
@@ -11363,14 +10567,12 @@ public final class Fields {
       }
 
       private java.lang.Object sourceLocationType_ = "";
-
       /**
        * <code>optional string sourceLocationType = 14;</code>
        */
       public boolean hasSourceLocationType() {
         return ((bitField0_ & 0x00002000) == 0x00002000);
       }
-
       /**
        * <code>optional string sourceLocationType = 14;</code>
        */
@@ -11378,7 +10580,7 @@ public final class Fields {
         java.lang.Object ref = sourceLocationType_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             sourceLocationType_ = s;
@@ -11388,38 +10590,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationType = 14;</code>
        */
       public com.google.protobuf.ByteString
-      getSourceLocationTypeBytes() {
+          getSourceLocationTypeBytes() {
         java.lang.Object ref = sourceLocationType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           sourceLocationType_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationType = 14;</code>
        */
       public Builder setSourceLocationType(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00002000;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00002000;
         sourceLocationType_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationType = 14;</code>
        */
@@ -11429,16 +10628,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationType = 14;</code>
        */
       public Builder setSourceLocationTypeBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00002000;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00002000;
         sourceLocationType_ = value;
         onChanged();
         return this;
@@ -11456,14 +10654,13 @@ public final class Fields {
   }
 
   public interface InstanceFieldPutDoneOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:messages.data.InstanceFieldPutDone)
-    com.google.protobuf.MessageOrBuilder {
+      // @@protoc_insertion_point(interface_extends:messages.data.InstanceFieldPutDone)
+      com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     boolean hasDistributorId();
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -11471,18 +10668,17 @@ public final class Fields {
 
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     boolean hasThreadId();
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     long getThreadId();
@@ -11491,7 +10687,6 @@ public final class Fields {
      * <code>required int64 currentTime = 3;</code>
      */
     boolean hasCurrentTime();
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -11501,28 +10696,24 @@ public final class Fields {
      * <code>required string class = 4;</code>
      */
     boolean hasClass_();
-
     /**
      * <code>required string class = 4;</code>
      */
     java.lang.String getClass_();
-
     /**
      * <code>required string class = 4;</code>
      */
     com.google.protobuf.ByteString
-    getClass_Bytes();
+        getClass_Bytes();
 
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     boolean hasTarget();
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getTarget();
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
@@ -11532,44 +10723,38 @@ public final class Fields {
      * <code>required string field = 6;</code>
      */
     boolean hasField();
-
     /**
      * <code>required string field = 6;</code>
      */
     java.lang.String getField();
-
     /**
      * <code>required string field = 6;</code>
      */
     com.google.protobuf.ByteString
-    getFieldBytes();
+        getFieldBytes();
 
     /**
      * <code>required string fieldType = 7;</code>
      */
     boolean hasFieldType();
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     java.lang.String getFieldType();
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     com.google.protobuf.ByteString
-    getFieldTypeBytes();
+        getFieldTypeBytes();
 
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
     boolean hasValue();
-
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getValue();
-
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
@@ -11577,18 +10762,17 @@ public final class Fields {
 
     /**
      * <code>optional int32 modifiers = 9;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     boolean hasModifiers();
-
     /**
      * <code>optional int32 modifiers = 9;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     int getModifiers();
@@ -11597,57 +10781,48 @@ public final class Fields {
      * <code>optional string senderClassName = 10;</code>
      */
     boolean hasSenderClassName();
-
     /**
      * <code>optional string senderClassName = 10;</code>
      */
     java.lang.String getSenderClassName();
-
     /**
      * <code>optional string senderClassName = 10;</code>
      */
     com.google.protobuf.ByteString
-    getSenderClassNameBytes();
+        getSenderClassNameBytes();
 
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
     boolean hasSender();
-
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
-
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
     com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder();
   }
-
   /**
    * Protobuf type {@code messages.data.InstanceFieldPutDone}
-   * <p>
+   *
    * <pre>
    * --- CONTEXT
    * </pre>
    */
   public static final class InstanceFieldPutDone extends
-    com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:messages.data.InstanceFieldPutDone)
-    InstanceFieldPutDoneOrBuilder {
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.InstanceFieldPutDone)
+      InstanceFieldPutDoneOrBuilder {
     // Use InstanceFieldPutDone.newBuilder() to construct.
     private InstanceFieldPutDone(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-
-    private InstanceFieldPutDone(boolean noInit) {
-      this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance();
-    }
+    private InstanceFieldPutDone(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
     private static final InstanceFieldPutDone defaultInstance;
-
     public static InstanceFieldPutDone getDefaultInstance() {
       return defaultInstance;
     }
@@ -11657,21 +10832,19 @@ public final class Fields {
     }
 
     private final com.google.protobuf.UnknownFieldSet unknownFields;
-
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+        getUnknownFields() {
       return this.unknownFields;
     }
-
     private InstanceFieldPutDone(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -11682,7 +10855,7 @@ public final class Fields {
               break;
             default: {
               if (!parseUnknownField(input, unknownFields,
-                extensionRegistry, tag)) {
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -11776,34 +10949,33 @@ public final class Fields {
         throw e.setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
-          e.getMessage()).setUnfinishedMessage(this);
+            e.getMessage()).setUnfinishedMessage(this);
       } finally {
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
-
     public static final com.google.protobuf.Descriptors.Descriptor
-    getDescriptor() {
+        getDescriptor() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPutDone_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internalGetFieldAccessorTable() {
+        internalGetFieldAccessorTable() {
       return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPutDone_fieldAccessorTable
-        .ensureFieldAccessorsInitialized(
-          com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.Builder.class);
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.Builder.class);
     }
 
     public static com.google.protobuf.Parser<InstanceFieldPutDone> PARSER =
-      new com.google.protobuf.AbstractParser<InstanceFieldPutDone>() {
-        public InstanceFieldPutDone parsePartialFrom(
+        new com.google.protobuf.AbstractParser<InstanceFieldPutDone>() {
+      public InstanceFieldPutDone parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new InstanceFieldPutDone(input, extensionRegistry);
-        }
-      };
+        return new InstanceFieldPutDone(input, extensionRegistry);
+      }
+    };
 
     @java.lang.Override
     public com.google.protobuf.Parser<InstanceFieldPutDone> getParserForType() {
@@ -11813,14 +10985,12 @@ public final class Fields {
     private int bitField0_;
     public static final int DISTRIBUTORID_FIELD_NUMBER = 1;
     private int distributorId_;
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
     public boolean hasDistributorId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-
     /**
      * <code>optional int32 distributorId = 1;</code>
      */
@@ -11830,23 +11000,21 @@ public final class Fields {
 
     public static final int THREADID_FIELD_NUMBER = 2;
     private long threadId_;
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public boolean hasThreadId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-
     /**
      * <code>optional int64 threadId = 2;</code>
-     * <p>
+     *
      * <pre>
-     * NOTE: The id of a terminated thread may be reused
+     *NOTE: The id of a terminated thread may be reused
      * </pre>
      */
     public long getThreadId() {
@@ -11855,14 +11023,12 @@ public final class Fields {
 
     public static final int CURRENTTIME_FIELD_NUMBER = 3;
     private long currentTime_;
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
     public boolean hasCurrentTime() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-
     /**
      * <code>required int64 currentTime = 3;</code>
      */
@@ -11872,14 +11038,12 @@ public final class Fields {
 
     public static final int CLASS_FIELD_NUMBER = 4;
     private java.lang.Object class__;
-
     /**
      * <code>required string class = 4;</code>
      */
     public boolean hasClass_() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-
     /**
      * <code>required string class = 4;</code>
      */
@@ -11888,8 +11052,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           class__ = s;
@@ -11897,17 +11061,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string class = 4;</code>
      */
     public com.google.protobuf.ByteString
-    getClass_Bytes() {
+        getClass_Bytes() {
       java.lang.Object ref = class__;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         class__ = b;
         return b;
       } else {
@@ -11917,21 +11080,18 @@ public final class Fields {
 
     public static final int TARGET_FIELD_NUMBER = 5;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object target_;
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     public boolean hasTarget() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getTarget() {
       return target_;
     }
-
     /**
      * <code>required .messages.data.Object target = 5;</code>
      */
@@ -11941,14 +11101,12 @@ public final class Fields {
 
     public static final int FIELD_FIELD_NUMBER = 6;
     private java.lang.Object field_;
-
     /**
      * <code>required string field = 6;</code>
      */
     public boolean hasField() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
-
     /**
      * <code>required string field = 6;</code>
      */
@@ -11957,8 +11115,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           field_ = s;
@@ -11966,17 +11124,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string field = 6;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldBytes() {
+        getFieldBytes() {
       java.lang.Object ref = field_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         field_ = b;
         return b;
       } else {
@@ -11986,14 +11143,12 @@ public final class Fields {
 
     public static final int FIELDTYPE_FIELD_NUMBER = 7;
     private java.lang.Object fieldType_;
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     public boolean hasFieldType() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
-
     /**
      * <code>required string fieldType = 7;</code>
      */
@@ -12002,8 +11157,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           fieldType_ = s;
@@ -12011,17 +11166,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>required string fieldType = 7;</code>
      */
     public com.google.protobuf.ByteString
-    getFieldTypeBytes() {
+        getFieldTypeBytes() {
       java.lang.Object ref = fieldType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         fieldType_ = b;
         return b;
       } else {
@@ -12031,21 +11185,18 @@ public final class Fields {
 
     public static final int VALUE_FIELD_NUMBER = 8;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object value_;
-
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
     public boolean hasValue() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
-
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getValue() {
       return value_;
     }
-
     /**
      * <code>required .messages.data.Object value = 8;</code>
      */
@@ -12055,23 +11206,21 @@ public final class Fields {
 
     public static final int MODIFIERS_FIELD_NUMBER = 9;
     private int modifiers_;
-
     /**
      * <code>optional int32 modifiers = 9;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public boolean hasModifiers() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
-
     /**
      * <code>optional int32 modifiers = 9;</code>
-     * <p>
+     *
      * <pre>
-     * The modifiers can be decoded with the Modifier class
+     *The modifiers can be decoded with the Modifier class
      * </pre>
      */
     public int getModifiers() {
@@ -12080,14 +11229,12 @@ public final class Fields {
 
     public static final int SENDERCLASSNAME_FIELD_NUMBER = 10;
     private java.lang.Object senderClassName_;
-
     /**
      * <code>optional string senderClassName = 10;</code>
      */
     public boolean hasSenderClassName() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
     }
-
     /**
      * <code>optional string senderClassName = 10;</code>
      */
@@ -12096,8 +11243,8 @@ public final class Fields {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           senderClassName_ = s;
@@ -12105,17 +11252,16 @@ public final class Fields {
         return s;
       }
     }
-
     /**
      * <code>optional string senderClassName = 10;</code>
      */
     public com.google.protobuf.ByteString
-    getSenderClassNameBytes() {
+        getSenderClassNameBytes() {
       java.lang.Object ref = senderClassName_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         senderClassName_ = b;
         return b;
       } else {
@@ -12125,21 +11271,18 @@ public final class Fields {
 
     public static final int SENDER_FIELD_NUMBER = 11;
     private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
-
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
     public boolean hasSender() {
       return ((bitField0_ & 0x00000400) == 0x00000400);
     }
-
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
       return sender_;
     }
-
     /**
      * <code>optional .messages.data.Object sender = 11;</code>
      */
@@ -12160,9 +11303,7 @@ public final class Fields {
       senderClassName_ = "";
       sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
     }
-
     private byte memoizedIsInitialized = -1;
-
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -12211,7 +11352,7 @@ public final class Fields {
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-      throws java.io.IOException {
+                        throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeInt32(1, distributorId_);
@@ -12250,7 +11391,6 @@ public final class Fields {
     }
 
     private int memoizedSerializedSize = -1;
-
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
@@ -12306,119 +11446,99 @@ public final class Fields {
     }
 
     private static final long serialVersionUID = 0L;
-
     @java.lang.Override
     protected java.lang.Object writeReplace()
-      throws java.io.ObjectStreamException {
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
 
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
-      com.google.protobuf.ByteString data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
-      com.google.protobuf.ByteString data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(byte[] data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
-      byte[] data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseDelimitedFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseDelimitedFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
-      com.google.protobuf.CodedInputStream input)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parseFrom(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
 
-    public static Builder newBuilder() {
-      return Builder.create();
-    }
-
-    public Builder newBuilderForType() {
-      return newBuilder();
-    }
-
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone prototype) {
       return newBuilder().mergeFrom(prototype);
     }
-
-    public Builder toBuilder() {
-      return newBuilder(this);
-    }
+    public Builder toBuilder() { return newBuilder(this); }
 
     @java.lang.Override
     protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-
     /**
      * Protobuf type {@code messages.data.InstanceFieldPutDone}
-     * <p>
+     *
      * <pre>
      * --- CONTEXT
      * </pre>
      */
     public static final class Builder extends
-      com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:messages.data.InstanceFieldPutDone)
-      com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDoneOrBuilder {
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.InstanceFieldPutDone)
+        com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDoneOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-      getDescriptor() {
+          getDescriptor() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPutDone_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internalGetFieldAccessorTable() {
+          internalGetFieldAccessorTable() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPutDone_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-            com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.Builder.class);
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.class, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.Builder.class);
       }
 
       // Construct using com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.newBuilder()
@@ -12427,11 +11547,10 @@ public final class Fields {
       }
 
       private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
-
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getTargetFieldBuilder();
@@ -12439,7 +11558,6 @@ public final class Fields {
           getSenderFieldBuilder();
         }
       }
-
       private static Builder create() {
         return new Builder();
       }
@@ -12488,7 +11606,7 @@ public final class Fields {
       }
 
       public com.google.protobuf.Descriptors.Descriptor
-      getDescriptorForType() {
+          getDescriptorForType() {
         return com.ittera.cometa.distributor.messages.data.Fields.internal_static_messages_data_InstanceFieldPutDone_descriptor;
       }
 
@@ -12571,7 +11689,7 @@ public final class Fields {
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) {
-          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) other);
+          return mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone)other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -12579,8 +11697,7 @@ public final class Fields {
       }
 
       public Builder mergeFrom(com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone other) {
-        if (other == com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance())
-          return this;
+        if (other == com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance()) return this;
         if (other.hasDistributorId()) {
           setDistributorId(other.getDistributorId());
         }
@@ -12628,40 +11745,40 @@ public final class Fields {
 
       public final boolean isInitialized() {
         if (!hasCurrentTime()) {
-
+          
           return false;
         }
         if (!hasClass_()) {
-
+          
           return false;
         }
         if (!hasTarget()) {
-
+          
           return false;
         }
         if (!hasField()) {
-
+          
           return false;
         }
         if (!hasFieldType()) {
-
+          
           return false;
         }
         if (!hasValue()) {
-
+          
           return false;
         }
         if (!getTarget().isInitialized()) {
-
+          
           return false;
         }
         if (!getValue().isInitialized()) {
-
+          
           return false;
         }
         if (hasSender()) {
           if (!getSender().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -12669,9 +11786,9 @@ public final class Fields {
       }
 
       public Builder mergeFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
         com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
@@ -12685,25 +11802,21 @@ public final class Fields {
         }
         return this;
       }
-
       private int bitField0_;
 
-      private int distributorId_;
-
+      private int distributorId_ ;
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public boolean hasDistributorId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
       public int getDistributorId() {
         return distributorId_;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -12713,7 +11826,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 distributorId = 1;</code>
        */
@@ -12724,35 +11836,32 @@ public final class Fields {
         return this;
       }
 
-      private long threadId_;
-
+      private long threadId_ ;
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public boolean hasThreadId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public long getThreadId() {
         return threadId_;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder setThreadId(long value) {
@@ -12761,12 +11870,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int64 threadId = 2;</code>
-       * <p>
+       *
        * <pre>
-       * NOTE: The id of a terminated thread may be reused
+       *NOTE: The id of a terminated thread may be reused
        * </pre>
        */
       public Builder clearThreadId() {
@@ -12776,22 +11884,19 @@ public final class Fields {
         return this;
       }
 
-      private long currentTime_;
-
+      private long currentTime_ ;
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public boolean hasCurrentTime() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
       public long getCurrentTime() {
         return currentTime_;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -12801,7 +11906,6 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required int64 currentTime = 3;</code>
        */
@@ -12813,14 +11917,12 @@ public final class Fields {
       }
 
       private java.lang.Object class__ = "";
-
       /**
        * <code>required string class = 4;</code>
        */
       public boolean hasClass_() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-
       /**
        * <code>required string class = 4;</code>
        */
@@ -12828,7 +11930,7 @@ public final class Fields {
         java.lang.Object ref = class__;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             class__ = s;
@@ -12838,38 +11940,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public com.google.protobuf.ByteString
-      getClass_Bytes() {
+          getClass_Bytes() {
         java.lang.Object ref = class__;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           class__ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public Builder setClass_(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
        */
@@ -12879,16 +11978,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string class = 4;</code>
        */
       public Builder setClass_Bytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000008;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         class__ = value;
         onChanged();
         return this;
@@ -12896,15 +11994,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object target_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> targetBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> targetBuilder_;
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       public boolean hasTarget() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -12915,7 +12011,6 @@ public final class Fields {
           return targetBuilder_.getMessage();
         }
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -12932,12 +12027,11 @@ public final class Fields {
         bitField0_ |= 0x00000010;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       public Builder setTarget(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (targetBuilder_ == null) {
           target_ = builderForValue.build();
           onChanged();
@@ -12947,14 +12041,13 @@ public final class Fields {
         bitField0_ |= 0x00000010;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       public Builder mergeTarget(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (targetBuilder_ == null) {
           if (((bitField0_ & 0x00000010) == 0x00000010) &&
-            target_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              target_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             target_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(target_).mergeFrom(value).buildPartial();
           } else {
@@ -12967,7 +12060,6 @@ public final class Fields {
         bitField0_ |= 0x00000010;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -12981,7 +12073,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -12990,7 +12081,6 @@ public final class Fields {
         onChanged();
         return getTargetFieldBuilder().getBuilder();
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
@@ -13001,33 +12091,30 @@ public final class Fields {
           return target_;
         }
       }
-
       /**
        * <code>required .messages.data.Object target = 5;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getTargetFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getTargetFieldBuilder() {
         if (targetBuilder_ == null) {
           targetBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getTarget(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getTarget(),
+                  getParentForChildren(),
+                  isClean());
           target_ = null;
         }
         return targetBuilder_;
       }
 
       private java.lang.Object field_ = "";
-
       /**
        * <code>required string field = 6;</code>
        */
       public boolean hasField() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
-
       /**
        * <code>required string field = 6;</code>
        */
@@ -13035,7 +12122,7 @@ public final class Fields {
         java.lang.Object ref = field_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             field_ = s;
@@ -13045,38 +12132,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string field = 6;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldBytes() {
+          getFieldBytes() {
         java.lang.Object ref = field_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           field_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string field = 6;</code>
        */
       public Builder setField(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         field_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 6;</code>
        */
@@ -13086,30 +12170,27 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string field = 6;</code>
        */
       public Builder setFieldBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000020;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         field_ = value;
         onChanged();
         return this;
       }
 
       private java.lang.Object fieldType_ = "";
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public boolean hasFieldType() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
@@ -13117,7 +12198,7 @@ public final class Fields {
         java.lang.Object ref = fieldType_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             fieldType_ = s;
@@ -13127,38 +12208,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public com.google.protobuf.ByteString
-      getFieldTypeBytes() {
+          getFieldTypeBytes() {
         java.lang.Object ref = fieldType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           fieldType_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public Builder setFieldType(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000040;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
         fieldType_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
@@ -13168,16 +12246,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>required string fieldType = 7;</code>
        */
       public Builder setFieldTypeBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000040;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
         fieldType_ = value;
         onChanged();
         return this;
@@ -13185,15 +12262,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> valueBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> valueBuilder_;
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
       public boolean hasValue() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
@@ -13204,7 +12279,6 @@ public final class Fields {
           return valueBuilder_.getMessage();
         }
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
@@ -13221,12 +12295,11 @@ public final class Fields {
         bitField0_ |= 0x00000080;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
       public Builder setValue(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (valueBuilder_ == null) {
           value_ = builderForValue.build();
           onChanged();
@@ -13236,14 +12309,13 @@ public final class Fields {
         bitField0_ |= 0x00000080;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
       public Builder mergeValue(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (valueBuilder_ == null) {
           if (((bitField0_ & 0x00000080) == 0x00000080) &&
-            value_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              value_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             value_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(value_).mergeFrom(value).buildPartial();
           } else {
@@ -13256,7 +12328,6 @@ public final class Fields {
         bitField0_ |= 0x00000080;
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
@@ -13270,7 +12341,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
@@ -13279,7 +12349,6 @@ public final class Fields {
         onChanged();
         return getValueFieldBuilder().getBuilder();
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
@@ -13290,53 +12359,49 @@ public final class Fields {
           return value_;
         }
       }
-
       /**
        * <code>required .messages.data.Object value = 8;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getValueFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getValueFieldBuilder() {
         if (valueBuilder_ == null) {
           valueBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getValue(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getValue(),
+                  getParentForChildren(),
+                  isClean());
           value_ = null;
         }
         return valueBuilder_;
       }
 
-      private int modifiers_;
-
+      private int modifiers_ ;
       /**
        * <code>optional int32 modifiers = 9;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public boolean hasModifiers() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
-
       /**
        * <code>optional int32 modifiers = 9;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public int getModifiers() {
         return modifiers_;
       }
-
       /**
        * <code>optional int32 modifiers = 9;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder setModifiers(int value) {
@@ -13345,12 +12410,11 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 modifiers = 9;</code>
-       * <p>
+       *
        * <pre>
-       * The modifiers can be decoded with the Modifier class
+       *The modifiers can be decoded with the Modifier class
        * </pre>
        */
       public Builder clearModifiers() {
@@ -13361,14 +12425,12 @@ public final class Fields {
       }
 
       private java.lang.Object senderClassName_ = "";
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
       public boolean hasSenderClassName() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
@@ -13376,7 +12438,7 @@ public final class Fields {
         java.lang.Object ref = senderClassName_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             senderClassName_ = s;
@@ -13386,38 +12448,35 @@ public final class Fields {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
       public com.google.protobuf.ByteString
-      getSenderClassNameBytes() {
+          getSenderClassNameBytes() {
         java.lang.Object ref = senderClassName_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           senderClassName_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
       public Builder setSenderClassName(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000200;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000200;
         senderClassName_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
@@ -13427,16 +12486,15 @@ public final class Fields {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string senderClassName = 10;</code>
        */
       public Builder setSenderClassNameBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000200;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000200;
         senderClassName_ = value;
         onChanged();
         return this;
@@ -13444,15 +12502,13 @@ public final class Fields {
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
-
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
       public boolean hasSender() {
         return ((bitField0_ & 0x00000400) == 0x00000400);
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
@@ -13463,7 +12519,6 @@ public final class Fields {
           return senderBuilder_.getMessage();
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
@@ -13480,12 +12535,11 @@ public final class Fields {
         bitField0_ |= 0x00000400;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
       public Builder setSender(
-        com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
         if (senderBuilder_ == null) {
           sender_ = builderForValue.build();
           onChanged();
@@ -13495,14 +12549,13 @@ public final class Fields {
         bitField0_ |= 0x00000400;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
       public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
         if (senderBuilder_ == null) {
           if (((bitField0_ & 0x00000400) == 0x00000400) &&
-            sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
             sender_ =
               com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
           } else {
@@ -13515,7 +12568,6 @@ public final class Fields {
         bitField0_ |= 0x00000400;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
@@ -13529,7 +12581,6 @@ public final class Fields {
         bitField0_ = (bitField0_ & ~0x00000400);
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
@@ -13538,7 +12589,6 @@ public final class Fields {
         onChanged();
         return getSenderFieldBuilder().getBuilder();
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
@@ -13549,19 +12599,18 @@ public final class Fields {
           return sender_;
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 11;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>
-      getSenderFieldBuilder() {
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
+          getSenderFieldBuilder() {
         if (senderBuilder_ == null) {
           senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-            getSender(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
+                  getSender(),
+                  getParentForChildren(),
+                  isClean());
           sender_ = null;
         }
         return senderBuilder_;
@@ -13581,145 +12630,143 @@ public final class Fields {
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_StaticFieldGet_descriptor;
   private static
-  com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internal_static_messages_data_StaticFieldGet_fieldAccessorTable;
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_StaticFieldGet_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_StaticFieldPut_descriptor;
   private static
-  com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internal_static_messages_data_StaticFieldPut_fieldAccessorTable;
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_StaticFieldPut_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_StaticFieldPutDone_descriptor;
   private static
-  com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internal_static_messages_data_StaticFieldPutDone_fieldAccessorTable;
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_StaticFieldPutDone_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_InstanceFieldGet_descriptor;
   private static
-  com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internal_static_messages_data_InstanceFieldGet_fieldAccessorTable;
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_InstanceFieldGet_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_InstanceFieldPut_descriptor;
   private static
-  com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internal_static_messages_data_InstanceFieldPut_fieldAccessorTable;
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_InstanceFieldPut_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_InstanceFieldPutDone_descriptor;
   private static
-  com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internal_static_messages_data_InstanceFieldPutDone_fieldAccessorTable;
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_InstanceFieldPutDone_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
-  getDescriptor() {
+      getDescriptor() {
     return descriptor;
   }
-
   private static com.google.protobuf.Descriptors.FileDescriptor
-    descriptor;
-
+      descriptor;
   static {
     java.lang.String[] descriptorData = {
       "\n\014fields.proto\022\rmessages.data\032\020primitive" +
-        "s.proto\"\246\002\n\016StaticFieldGet\022\025\n\rdistributo" +
-        "rId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTi" +
-        "me\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022\r\n\005field\030\005 \002(\t\022\021" +
-        "\n\tfieldType\030\006 \002(\t\022\021\n\tmodifiers\030\007 \001(\005\022\027\n\017" +
-        "senderClassName\030\010 \001(\t\022%\n\006sender\030\t \001(\0132\025." +
-        "messages.data.Object\022\032\n\022sourceLocationFi" +
-        "le\030\n \001(\t\022\032\n\022sourceLocationLine\030\013 \001(\005\022\032\n\022" +
-        "sourceLocationType\030\014 \001(\t\"\314\002\n\016StaticField" +
-        "Put\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010threadId\030\002",
+      "s.proto\"\246\002\n\016StaticFieldGet\022\025\n\rdistributo" +
+      "rId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTi" +
+      "me\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022\r\n\005field\030\005 \002(\t\022\021" +
+      "\n\tfieldType\030\006 \001(\t\022\021\n\tmodifiers\030\007 \001(\005\022\027\n\017" +
+      "senderClassName\030\010 \001(\t\022%\n\006sender\030\t \001(\0132\025." +
+      "messages.data.Object\022\032\n\022sourceLocationFi" +
+      "le\030\n \001(\t\022\032\n\022sourceLocationLine\030\013 \001(\005\022\032\n\022" +
+      "sourceLocationType\030\014 \001(\t\"\314\002\n\016StaticField" +
+      "Put\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010threadId\030\002",
       " \001(\003\022\023\n\013currentTime\030\003 \002(\003\022\r\n\005class\030\004 \002(\t" +
-        "\022\r\n\005field\030\005 \002(\t\022\021\n\tfieldType\030\006 \002(\t\022$\n\005va" +
-        "lue\030\007 \002(\0132\025.messages.data.Object\022\021\n\tmodi" +
-        "fiers\030\010 \001(\005\022\027\n\017senderClassName\030\t \001(\t\022%\n\006" +
-        "sender\030\n \001(\0132\025.messages.data.Object\022\032\n\022s" +
-        "ourceLocationFile\030\013 \001(\t\022\032\n\022sourceLocatio" +
-        "nLine\030\014 \001(\005\022\032\n\022sourceLocationType\030\r \001(\t\"" +
-        "\374\001\n\022StaticFieldPutDone\022\025\n\rdistributorId\030" +
-        "\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTime\030\003" +
-        " \002(\003\022\r\n\005class\030\004 \002(\t\022\r\n\005field\030\005 \002(\t\022\021\n\tfi",
+      "\022\r\n\005field\030\005 \002(\t\022\021\n\tfieldType\030\006 \002(\t\022$\n\005va" +
+      "lue\030\007 \002(\0132\025.messages.data.Object\022\021\n\tmodi" +
+      "fiers\030\010 \001(\005\022\027\n\017senderClassName\030\t \001(\t\022%\n\006" +
+      "sender\030\n \001(\0132\025.messages.data.Object\022\032\n\022s" +
+      "ourceLocationFile\030\013 \001(\t\022\032\n\022sourceLocatio" +
+      "nLine\030\014 \001(\005\022\032\n\022sourceLocationType\030\r \001(\t\"" +
+      "\374\001\n\022StaticFieldPutDone\022\025\n\rdistributorId\030" +
+      "\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTime\030\003" +
+      " \002(\003\022\r\n\005class\030\004 \002(\t\022\r\n\005field\030\005 \002(\t\022\021\n\tfi",
       "eldType\030\006 \002(\t\022$\n\005value\030\007 \002(\0132\025.messages." +
-        "data.Object\022\021\n\tmodifiers\030\010 \001(\005\022\027\n\017sender" +
-        "ClassName\030\t \001(\t\022%\n\006sender\030\n \001(\0132\025.messag" +
-        "es.data.Object\"\317\002\n\020InstanceFieldGet\022\025\n\rd" +
-        "istributorId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013" +
-        "currentTime\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022%\n\006targ" +
-        "et\030\005 \002(\0132\025.messages.data.Object\022\r\n\005field" +
-        "\030\006 \002(\t\022\021\n\tfieldType\030\007 \002(\t\022\021\n\tmodifiers\030\010" +
-        " \001(\005\022\027\n\017senderClassName\030\t \001(\t\022%\n\006sender\030" +
-        "\n \001(\0132\025.messages.data.Object\022\032\n\022sourceLo",
+      "data.Object\022\021\n\tmodifiers\030\010 \001(\005\022\027\n\017sender" +
+      "ClassName\030\t \001(\t\022%\n\006sender\030\n \001(\0132\025.messag" +
+      "es.data.Object\"\317\002\n\020InstanceFieldGet\022\025\n\rd" +
+      "istributorId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013" +
+      "currentTime\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022%\n\006targ" +
+      "et\030\005 \002(\0132\025.messages.data.Object\022\r\n\005field" +
+      "\030\006 \002(\t\022\021\n\tfieldType\030\007 \002(\t\022\021\n\tmodifiers\030\010" +
+      " \001(\005\022\027\n\017senderClassName\030\t \001(\t\022%\n\006sender\030" +
+      "\n \001(\0132\025.messages.data.Object\022\032\n\022sourceLo",
       "cationFile\030\013 \001(\t\022\032\n\022sourceLocationLine\030\014" +
-        " \001(\005\022\032\n\022sourceLocationType\030\r \001(\t\"\365\002\n\020Ins" +
-        "tanceFieldPut\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010" +
-        "threadId\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(\003\022\r\n\005c" +
-        "lass\030\004 \002(\t\022%\n\006target\030\005 \002(\0132\025.messages.da" +
-        "ta.Object\022\r\n\005field\030\006 \002(\t\022\021\n\tfieldType\030\007 " +
-        "\002(\t\022$\n\005value\030\010 \002(\0132\025.messages.data.Objec" +
-        "t\022\021\n\tmodifiers\030\t \001(\005\022\027\n\017senderClassName\030" +
-        "\n \001(\t\022%\n\006sender\030\013 \001(\0132\025.messages.data.Ob" +
-        "ject\022\032\n\022sourceLocationFile\030\014 \001(\t\022\032\n\022sour",
+      " \001(\005\022\032\n\022sourceLocationType\030\r \001(\t\"\365\002\n\020Ins" +
+      "tanceFieldPut\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010" +
+      "threadId\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(\003\022\r\n\005c" +
+      "lass\030\004 \002(\t\022%\n\006target\030\005 \002(\0132\025.messages.da" +
+      "ta.Object\022\r\n\005field\030\006 \002(\t\022\021\n\tfieldType\030\007 " +
+      "\002(\t\022$\n\005value\030\010 \002(\0132\025.messages.data.Objec" +
+      "t\022\021\n\tmodifiers\030\t \001(\005\022\027\n\017senderClassName\030" +
+      "\n \001(\t\022%\n\006sender\030\013 \001(\0132\025.messages.data.Ob" +
+      "ject\022\032\n\022sourceLocationFile\030\014 \001(\t\022\032\n\022sour",
       "ceLocationLine\030\r \001(\005\022\032\n\022sourceLocationTy" +
-        "pe\030\016 \001(\t\"\245\002\n\024InstanceFieldPutDone\022\025\n\rdis" +
-        "tributorId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013cu" +
-        "rrentTime\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022%\n\006target" +
-        "\030\005 \002(\0132\025.messages.data.Object\022\r\n\005field\030\006" +
-        " \002(\t\022\021\n\tfieldType\030\007 \002(\t\022$\n\005value\030\010 \002(\0132\025" +
-        ".messages.data.Object\022\021\n\tmodifiers\030\t \001(\005" +
-        "\022\027\n\017senderClassName\030\n \001(\t\022%\n\006sender\030\013 \001(" +
-        "\0132\025.messages.data.ObjectB7\n+com.ittera.c" +
-        "ometa.distributor.messages.dataB\006FieldsH",
+      "pe\030\016 \001(\t\"\245\002\n\024InstanceFieldPutDone\022\025\n\rdis" +
+      "tributorId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013cu" +
+      "rrentTime\030\003 \002(\003\022\r\n\005class\030\004 \002(\t\022%\n\006target" +
+      "\030\005 \002(\0132\025.messages.data.Object\022\r\n\005field\030\006" +
+      " \002(\t\022\021\n\tfieldType\030\007 \002(\t\022$\n\005value\030\010 \002(\0132\025" +
+      ".messages.data.Object\022\021\n\tmodifiers\030\t \001(\005" +
+      "\022\027\n\017senderClassName\030\n \001(\t\022%\n\006sender\030\013 \001(" +
+      "\0132\025.messages.data.ObjectB7\n+com.ittera.c" +
+      "ometa.distributor.messages.dataB\006FieldsH",
       "\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
-      new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
-        public com.google.protobuf.ExtensionRegistry assignDescriptors(
-          com.google.protobuf.Descriptors.FileDescriptor root) {
-          descriptor = root;
-          return null;
-        }
-      };
+        new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
+          public com.google.protobuf.ExtensionRegistry assignDescriptors(
+              com.google.protobuf.Descriptors.FileDescriptor root) {
+            descriptor = root;
+            return null;
+          }
+        };
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
-        new com.google.protobuf.Descriptors.FileDescriptor[]{
+        new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.ittera.cometa.distributor.messages.data.Primitives.getDescriptor(),
         }, assigner);
     internal_static_messages_data_StaticFieldGet_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_messages_data_StaticFieldGet_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-      internal_static_messages_data_StaticFieldGet_descriptor,
-      new java.lang.String[]{"DistributorId", "ThreadId", "CurrentTime", "Class_", "Field", "FieldType", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType",});
+        internal_static_messages_data_StaticFieldGet_descriptor,
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Field", "FieldType", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
     internal_static_messages_data_StaticFieldPut_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_messages_data_StaticFieldPut_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-      internal_static_messages_data_StaticFieldPut_descriptor,
-      new java.lang.String[]{"DistributorId", "ThreadId", "CurrentTime", "Class_", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType",});
+        internal_static_messages_data_StaticFieldPut_descriptor,
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
     internal_static_messages_data_StaticFieldPutDone_descriptor =
       getDescriptor().getMessageTypes().get(2);
     internal_static_messages_data_StaticFieldPutDone_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-      internal_static_messages_data_StaticFieldPutDone_descriptor,
-      new java.lang.String[]{"DistributorId", "ThreadId", "CurrentTime", "Class_", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender",});
+        internal_static_messages_data_StaticFieldPutDone_descriptor,
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender", });
     internal_static_messages_data_InstanceFieldGet_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_messages_data_InstanceFieldGet_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-      internal_static_messages_data_InstanceFieldGet_descriptor,
-      new java.lang.String[]{"DistributorId", "ThreadId", "CurrentTime", "Class_", "Target", "Field", "FieldType", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType",});
+        internal_static_messages_data_InstanceFieldGet_descriptor,
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Target", "Field", "FieldType", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
     internal_static_messages_data_InstanceFieldPut_descriptor =
       getDescriptor().getMessageTypes().get(4);
     internal_static_messages_data_InstanceFieldPut_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-      internal_static_messages_data_InstanceFieldPut_descriptor,
-      new java.lang.String[]{"DistributorId", "ThreadId", "CurrentTime", "Class_", "Target", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType",});
+        internal_static_messages_data_InstanceFieldPut_descriptor,
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Target", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
     internal_static_messages_data_InstanceFieldPutDone_descriptor =
       getDescriptor().getMessageTypes().get(5);
     internal_static_messages_data_InstanceFieldPutDone_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-      internal_static_messages_data_InstanceFieldPutDone_descriptor,
-      new java.lang.String[]{"DistributorId", "ThreadId", "CurrentTime", "Class_", "Target", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender",});
+        internal_static_messages_data_InstanceFieldPutDone_descriptor,
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Target", "Field", "FieldType", "Value", "Modifiers", "SenderClassName", "Sender", });
     com.ittera.cometa.distributor.messages.data.Primitives.getDescriptor();
   }
 

@@ -24,7 +24,7 @@ message StaticFieldGet {
 
     required string field = 5;
 
-    required string fieldType = 6;
+    optional string fieldType = 6;
 
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 7;

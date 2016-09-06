@@ -169,7 +169,10 @@ public class Distributor {
         for (Primitives.Object obj : constructorCall.getParameterList()) {
           args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
         }
-        newObject = constructor.newInstance(args);
+        if (logger.isDebugEnabled()) {
+          logger.debug(String.format("Invoking constructor now!:%n%s%nwith %d arguments",constructor.toGenericString(),args.size()));
+        }
+        newObject = constructor.newInstance(args.toArray(new Object[args.size()]));
       } catch (Exception ite) {
         exceptionWhileInvoking = ite;
       }
@@ -718,6 +721,58 @@ public class Distributor {
 
   // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
   //@TODO field operations should also be sent as messages
+
+
+  public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet)  {
+    logger.debug("in D.incomingGetStatic: " + staticFieldGet.getClass_() + "." + staticFieldGet.getField());
+
+    /** 1. Get Object **/
+    Class clazz = null;
+    Field field = null;
+    Exception exceptionWhileLoading = null;
+    List<Class> paramClasses = new ArrayList<>();
+    try {
+      clazz = Class.forName(staticFieldGet.getClass_());
+      field = clazz.getDeclaredField(staticFieldGet.getField());
+    } catch (Exception e) {
+      exceptionWhileLoading = e;
+    }
+
+    /** 2. If class and field loaded, invoke field get **/
+    Exception exceptionWhileInvoking = null;
+    Object fieldValue = null;
+    if (exceptionWhileLoading == null) {
+      field.setAccessible(true);
+      try {
+        fieldValue = field.get(null);
+      } catch (Exception e) {
+        exceptionWhileInvoking = e;
+      }
+    }
+
+
+    /** 3. Wrap return value or exception **/
+    Wrappers.DataMessage invokedMsg = null;
+
+    if (exceptionWhileLoading != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading);
+    } else if (exceptionWhileInvoking != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking);
+    } else {
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, false);
+    }
+
+
+    /** 4. Send object/exception **/
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
+    if (logger.isDebugEnabled()) {
+      logger.debug("Sent new message!");
+    }
+
+    return;
+
+  }
+
   public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
     logger.debug("in D.getStatic: " + staticPart.getSignature());
 

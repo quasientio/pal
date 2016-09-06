@@ -17,6 +17,10 @@ public class App {
     System.out.println("aDbl after=" + aDbl);
   }
 
+  public App() {
+    System.out.println("Hi from the default constructor :)");
+  }
+
   static void doSomethingStatically() {
     System.out.println("whatever");
     aClassString = "I'm classy";

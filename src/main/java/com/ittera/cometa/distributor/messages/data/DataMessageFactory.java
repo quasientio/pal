@@ -48,6 +48,25 @@ public class DataMessageFactory {
 
     return msgBuilder.build();
   }
+  /**
+   * Only supports calls to empty constructor
+   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: AppLauncher
+   */
+  public static Wrappers.DataMessage buildEmptyConstructorMessage(String distributorId, String className) {
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
+    final Calls.ConstructorCall.Builder callBuilder = Calls.ConstructorCall.newBuilder();
+    callBuilder.setDistributorId(Integer.parseInt(distributorId)); //1
+    callBuilder.setThreadId(Thread.currentThread().getId()); //2
+    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
+    callBuilder.setName(className); //4
+
+    msgBuilder.setThreadId(Thread.currentThread().getId());
+    msgBuilder.setMsgType("Constructor");
+    msgBuilder.setConstructorCall(callBuilder);
+
+    return msgBuilder.build();
+  }
 
   public static Wrappers.DataMessage buildConstructorMessage(int distributorId, StaticPart staticPart, Object sender, Object[] args) {
 
@@ -211,6 +230,27 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
+  /**
+   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: AppLauncher
+   */
+  public static Wrappers.DataMessage buildGetStaticMessage(String distributorId, String className, String fieldName) {
+
+    /** Build protobuf message **/
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
+    final Fields.StaticFieldGet.Builder fieldBuilder = Fields.StaticFieldGet.newBuilder();
+    fieldBuilder.setDistributorId(Integer.parseInt(distributorId)); //1
+    fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
+    fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
+    fieldBuilder.setClass_(className); //4
+    fieldBuilder.setField(fieldName); //5
+
+    msgBuilder.setThreadId(Thread.currentThread().getId());
+    msgBuilder.setMsgType("Get static");
+    msgBuilder.setStaticFieldGet(fieldBuilder);
+
+    return msgBuilder.build();
+  }
 
   public static Wrappers.DataMessage buildGetStaticMessage(int distributorId, StaticPart staticPart, Object sender) {
 

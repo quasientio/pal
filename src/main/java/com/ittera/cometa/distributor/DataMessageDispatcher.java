@@ -6,12 +6,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
 import com.ittera.cometa.distributor.messages.data.Calls;
+import com.ittera.cometa.distributor.messages.data.Fields;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.utils.CollectionUtils;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
@@ -86,9 +86,13 @@ public class DataMessageDispatcher extends Thread {
               } else if (dataMessage.hasInstanceMethodCall()) {
                 Calls.InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
                 Distributor.incomingInstanceMethod(methodCall);
+              } else if (dataMessage.hasStaticFieldGet()) {
+                Fields.StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
+                Distributor.incomingGetStatic(staticFieldGetCall);
+
               } else {
                 //TODO : field op calls
-                logger.debug("Incoming message ignored:\n"+dataMessage);
+                logger.warn("Incoming message ignored - no handler:\n"+dataMessage);
               }
 
             }
