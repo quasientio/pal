@@ -21,8 +21,6 @@ import org.apache.logging.log4j.LogManager;
 public class DataMessageFactory {
   protected static final Logger logger = LogManager.getLogger(DataMessageFactory.class);
 
-  protected static final int STRING_MAX_LEN = 50;
-
   public static Wrappers.DataMessage buildClassInitializerMessage(int distributorId, StaticPart staticPart, Object sender) {
 
     /** Build protobuf message **/
@@ -31,16 +29,16 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ClInitCall.Builder callBuilder = Calls.ClInitCall.newBuilder();
-    callBuilder.setDistributorId(distributorId); //1
-    callBuilder.setThreadId(Thread.currentThread().getId()); //2
-    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    callBuilder.setName(codeSignature.getDeclaringTypeName()); //4
-    callBuilder.setModifiers(codeSignature.getModifiers()); //5
-    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //6
-    callBuilder.setSender(System.identityHashCode(sender)); //7
-    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //8
-    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //9
-    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //10
+    callBuilder.setDistributorId(distributorId);
+    callBuilder.setThreadId(Thread.currentThread().getId());
+    callBuilder.setCurrentTime(System.currentTimeMillis());
+    callBuilder.setName(codeSignature.getDeclaringTypeName());
+    callBuilder.setModifiers(codeSignature.getModifiers());
+    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
+    callBuilder.setSender(System.identityHashCode(sender));
+    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
+    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
+    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName());
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Static Constructor");
@@ -48,6 +46,7 @@ public class DataMessageFactory {
 
     return msgBuilder.build();
   }
+
   /**
    * Only supports calls to empty constructor
    * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: AppLauncher
@@ -56,10 +55,10 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ConstructorCall.Builder callBuilder = Calls.ConstructorCall.newBuilder();
-    callBuilder.setDistributorId(Integer.parseInt(distributorId)); //1
-    callBuilder.setThreadId(Thread.currentThread().getId()); //2
-    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    callBuilder.setName(className); //4
+    callBuilder.setDistributorId(Integer.parseInt(distributorId));
+    callBuilder.setThreadId(Thread.currentThread().getId());
+    callBuilder.setCurrentTime(System.currentTimeMillis());
+    callBuilder.setName(className);
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Constructor");
@@ -75,32 +74,32 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ConstructorCall.Builder callBuilder = Calls.ConstructorCall.newBuilder();
-    callBuilder.setDistributorId(distributorId); //1
-    callBuilder.setThreadId(Thread.currentThread().getId()); //2
-    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    callBuilder.setName(codeSignature.getDeclaringTypeName()); //4
-    callBuilder.setModifiers(codeSignature.getModifiers()); //5
-    //6
+    callBuilder.setDistributorId(distributorId);
+    callBuilder.setThreadId(Thread.currentThread().getId());
+    callBuilder.setCurrentTime(System.currentTimeMillis());
+    callBuilder.setName(codeSignature.getDeclaringTypeName());
+    callBuilder.setModifiers(codeSignature.getModifiers());
+
     for (String name : codeSignature.getParameterNames()) {
       callBuilder.addParameterNames(name);
     }
-    //7
+
     for (Class clazz : codeSignature.getParameterTypes()) {
       callBuilder.addParameterClasses(clazz.getName());
     }
-    //8
+
     for (Class clazz : codeSignature.getExceptionTypes()) {
       callBuilder.addExceptionTypes(clazz.getPackage().getName() + "." + clazz.getName());
     }
-    //9
+
     for (Object param : args) {
-      callBuilder.addParameter(getWrappedValue(param, true));
+      callBuilder.addParameter(getWrappedObject(param));
     }
-    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //10
-    callBuilder.setSender(System.identityHashCode(sender)); //11
-    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //12
-    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //13
-    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //14
+    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
+    callBuilder.setSender(System.identityHashCode(sender));
+    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
+    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
+    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName());
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Constructor");
@@ -118,34 +117,34 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.InstanceMethodCall.Builder callBuilder = Calls.InstanceMethodCall.newBuilder();
-    callBuilder.setDistributorId(distributorId); //1
-    callBuilder.setThreadId(Thread.currentThread().getId()); //2
-    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    callBuilder.setClass_(codeSignature.getDeclaringTypeName()); //4
-    callBuilder.setName(codeSignature.getName()); //5
-    callBuilder.setTarget(System.identityHashCode(target)); //6
-    callBuilder.setModifiers(codeSignature.getModifiers()); //7
-    //8
+    callBuilder.setDistributorId(distributorId);
+    callBuilder.setThreadId(Thread.currentThread().getId());
+    callBuilder.setCurrentTime(System.currentTimeMillis());
+    callBuilder.setClass_(codeSignature.getDeclaringTypeName());
+    callBuilder.setName(codeSignature.getName());
+    callBuilder.setTarget(getWrappedObject(target));
+    callBuilder.setModifiers(codeSignature.getModifiers());
+
     for (String name : codeSignature.getParameterNames()) {
       callBuilder.addParameterNames(name);
     }
-    //9
+
     for (Class clazz : codeSignature.getParameterTypes()) {
       callBuilder.addParameterClasses(clazz.getName());
     }
-    //10
+
     for (Class clazz : codeSignature.getExceptionTypes()) {
       callBuilder.addExceptionTypes(clazz.getPackage().getName() + "." + clazz.getName());
     }
-    //11
+
     for (Object param : args) {
-      callBuilder.addParameter(getWrappedValue(param, true));
+      callBuilder.addParameter(getWrappedObject(param));
     }
-    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //12
-    callBuilder.setSender(System.identityHashCode(sender)); //13
-    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //14
-    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //15
-    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //16
+    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
+    callBuilder.setSender(System.identityHashCode(sender));
+    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
+    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
+    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName());
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Instance method");
@@ -162,11 +161,11 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ClassMethodCall.Builder callBuilder = Calls.ClassMethodCall.newBuilder();
-    callBuilder.setDistributorId(Integer.parseInt(distributorId)); //1
+    callBuilder.setDistributorId(Integer.parseInt(distributorId));
     callBuilder.setThreadId(Thread.currentThread().getId());
-    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    callBuilder.setClass_(className); //4
-    callBuilder.setName(methodName); //5
+    callBuilder.setCurrentTime(System.currentTimeMillis());
+    callBuilder.setClass_(className);
+    callBuilder.setName(methodName);
     for (Class paramType : parameterTypes) {
       callBuilder.addParameterClasses(paramType.getName());
     }
@@ -175,7 +174,7 @@ public class DataMessageFactory {
       throw new IllegalArgumentException("Currently only calls to psvm can be wrapped by this method");
     }
     for (Object param : args) {
-      callBuilder.addParameter(getWrappedValue(param, !isMain));
+      callBuilder.addParameter(getWrappedObject(param));
     }
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
@@ -194,34 +193,33 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ClassMethodCall.Builder callBuilder = Calls.ClassMethodCall.newBuilder();
-    callBuilder.setDistributorId(distributorId); //1
-    callBuilder.setThreadId(Thread.currentThread().getId()); //2
-    callBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    callBuilder.setClass_(codeSignature.getDeclaringTypeName()); //4
-    callBuilder.setName(codeSignature.getName()); //5
-    callBuilder.setModifiers(codeSignature.getModifiers()); //6
-    //7
+    callBuilder.setDistributorId(distributorId);
+    callBuilder.setThreadId(Thread.currentThread().getId());
+    callBuilder.setCurrentTime(System.currentTimeMillis());
+    callBuilder.setClass_(codeSignature.getDeclaringTypeName());
+    callBuilder.setName(codeSignature.getName());
+    callBuilder.setModifiers(codeSignature.getModifiers());
+
     for (String name : codeSignature.getParameterNames()) {
       callBuilder.addParameterNames(name);
     }
-    //8
+
     for (Class clazz : codeSignature.getParameterTypes()) {
       callBuilder.addParameterClasses(clazz.getName());
     }
-    //9
+
     for (Class clazz : codeSignature.getExceptionTypes()) {
       callBuilder.addExceptionTypes(clazz.getPackage().getName() + "." + clazz.getName());
     }
-    //10
-    boolean methodIsMain = isMain(staticPart);
+
     for (Object param : args) {
-      callBuilder.addParameter(getWrappedValue(param, !methodIsMain));
+      callBuilder.addParameter(getWrappedObject(param));
     }
-    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //11
-    callBuilder.setSender(System.identityHashCode(sender)); //12
-    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //13
-    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //14
-    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //15
+    callBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
+    callBuilder.setSender(System.identityHashCode(sender));
+    callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
+    callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
+    callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName());
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Class method");
@@ -239,11 +237,11 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.StaticFieldGet.Builder fieldBuilder = Fields.StaticFieldGet.newBuilder();
-    fieldBuilder.setDistributorId(Integer.parseInt(distributorId)); //1
-    fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
-    fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    fieldBuilder.setClass_(className); //4
-    fieldBuilder.setField(fieldName); //5
+    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(className);
+    fieldBuilder.setField(fieldName);
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Get static");
@@ -260,18 +258,18 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.StaticFieldGet.Builder fieldBuilder = Fields.StaticFieldGet.newBuilder();
-    fieldBuilder.setDistributorId(distributorId); //1
-    fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
-    fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
-    fieldBuilder.setField(fieldSignature.getName()); //5
-    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //6
-    fieldBuilder.setModifiers(fieldSignature.getModifiers()); //7
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //8
-    fieldBuilder.setSender(getWrappedValue(sender, true)); //9
-    fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //10
-    fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //11
-    fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //12
+    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
+    fieldBuilder.setField(fieldSignature.getName());
+    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName());
+    fieldBuilder.setModifiers(fieldSignature.getModifiers());
+    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
+    fieldBuilder.setSender(getWrappedObject(sender));
+    fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
+    fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
+    fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName());
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Get static");
@@ -288,19 +286,19 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.InstanceFieldGet.Builder fieldBuilder = Fields.InstanceFieldGet.newBuilder();
-    fieldBuilder.setDistributorId(distributorId); //1
-    fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
-    fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
-    fieldBuilder.setTarget(getWrappedValue(target, true)); //5
-    fieldBuilder.setField(fieldSignature.getName()); //6
-    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //7
-    fieldBuilder.setModifiers(fieldSignature.getModifiers()); //8
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //9
-    fieldBuilder.setSender(getWrappedValue(sender, true)); //10
-    fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //11
-    fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //12
-    fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //13
+    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
+    fieldBuilder.setTarget(getWrappedObject(target));
+    fieldBuilder.setField(fieldSignature.getName());
+    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName());
+    fieldBuilder.setModifiers(fieldSignature.getModifiers());
+    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
+    fieldBuilder.setSender(getWrappedObject(sender));
+    fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
+    fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
+    fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName());
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Get field");
@@ -317,19 +315,19 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.StaticFieldPut.Builder fieldBuilder = Fields.StaticFieldPut.newBuilder();
-    fieldBuilder.setDistributorId(distributorId); //1
-    fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
-    fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
-    fieldBuilder.setField(fieldSignature.getName()); //5
-    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //6
-    fieldBuilder.setValue(getWrappedValue(arg, true)); //7
-    fieldBuilder.setModifiers(fieldSignature.getModifiers()); //8
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //9
-    fieldBuilder.setSender(getWrappedValue(sender, true)); //10
-    fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //11
-    fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //12
-    fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //13
+    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
+    fieldBuilder.setField(fieldSignature.getName());
+    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName());
+    fieldBuilder.setValue(getWrappedObject(arg));
+    fieldBuilder.setModifiers(fieldSignature.getModifiers());
+    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
+    fieldBuilder.setSender(getWrappedObject(sender));
+    fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
+    fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
+    fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName());
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Put static");
@@ -346,16 +344,16 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.StaticFieldPutDone.Builder fieldBuilder = Fields.StaticFieldPutDone.newBuilder();
-    fieldBuilder.setDistributorId(distributorId); //1
-    fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
-    fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
-    fieldBuilder.setField(fieldSignature.getName()); //5
-    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //6
-    fieldBuilder.setValue(getWrappedValue(arg, true)); //7
-    fieldBuilder.setModifiers(fieldSignature.getModifiers()); //8
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //9
-    fieldBuilder.setSender(getWrappedValue(sender, true)); //10
+    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
+    fieldBuilder.setField(fieldSignature.getName());
+    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName());
+    fieldBuilder.setValue(getWrappedObject(arg));
+    fieldBuilder.setModifiers(fieldSignature.getModifiers());
+    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
+    fieldBuilder.setSender(getWrappedObject(sender));
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Put static done");
@@ -372,20 +370,20 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.InstanceFieldPut.Builder fieldBuilder = Fields.InstanceFieldPut.newBuilder();
-    fieldBuilder.setDistributorId(distributorId); //1
-    fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
-    fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
-    fieldBuilder.setTarget(getWrappedValue(target, true)); //5
-    fieldBuilder.setField(fieldSignature.getName()); //6
-    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //7
-    fieldBuilder.setValue(getWrappedValue(arg, true)); //8
-    fieldBuilder.setModifiers(fieldSignature.getModifiers()); //9
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //10
-    fieldBuilder.setSender(getWrappedValue(sender, true)); //11
-    fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName()); //12
-    fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine()); //13
-    fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName()); //14
+    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
+    fieldBuilder.setTarget(getWrappedObject(target));
+    fieldBuilder.setField(fieldSignature.getName());
+    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName());
+    fieldBuilder.setValue(getWrappedObject(arg));
+    fieldBuilder.setModifiers(fieldSignature.getModifiers());
+    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
+    fieldBuilder.setSender(getWrappedObject(sender));
+    fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
+    fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
+    fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getCanonicalName());
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Put field");
@@ -402,17 +400,17 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.InstanceFieldPutDone.Builder fieldBuilder = Fields.InstanceFieldPutDone.newBuilder();
-    fieldBuilder.setDistributorId(distributorId); //1
-    fieldBuilder.setThreadId(Thread.currentThread().getId()); //2
-    fieldBuilder.setCurrentTime(System.currentTimeMillis()); //3
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName()); //4
-    fieldBuilder.setTarget(getWrappedValue(target, true)); //5
-    fieldBuilder.setField(fieldSignature.getName()); //6
-    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName()); //7
-    fieldBuilder.setValue(getWrappedValue(arg, true)); //8
-    fieldBuilder.setModifiers(fieldSignature.getModifiers()); //9
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName()); //10
-    fieldBuilder.setSender(getWrappedValue(sender, true)); //11
+    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
+    fieldBuilder.setTarget(getWrappedObject(target));
+    fieldBuilder.setField(fieldSignature.getName());
+    fieldBuilder.setFieldType(fieldSignature.getFieldType().getCanonicalName());
+    fieldBuilder.setValue(getWrappedObject(arg));
+    fieldBuilder.setModifiers(fieldSignature.getModifiers());
+    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
+    fieldBuilder.setSender(getWrappedObject(sender));
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Put field done");
@@ -477,7 +475,7 @@ public class DataMessageFactory {
     valBuilder.setCurrentTime(System.currentTimeMillis());
     valBuilder.setIsVoid(isVoid);
     if (!isVoid) {
-      valBuilder.setValue(getWrappedValue(object, true));
+      valBuilder.setValue(getWrappedObject(object));
     }
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
@@ -531,50 +529,40 @@ public class DataMessageFactory {
   }
 
   /**
-   * Wrapped is the actual value if object is a primitive or if String (if trimStrings=true, strings of length > STRING_MAX_LEN are trimmed)
+   * Wrapped is the actual value if object is a primitive or if String
    * If the object isn't null, the hashCode and class are also returned
    * It always returns the identityHashCode
    *
    * @param object
    * @return
    */
-  private static Primitives.Object getWrappedValue(Object object, boolean trimStrings) {
+  private static Primitives.Object getWrappedObject(Object object) {
     final Primitives.Object.Builder value = Primitives.Object.newBuilder();
     if (logger.isDebugEnabled()) {
-      logger.debug("in getWrappedValue for:" + object);
+      logger.debug("in getWrappedObject for:" + object);
     }
 
-    //1
     if (object != null) {
       if (object instanceof String) {
-        if (trimStrings && ((String) object).length() > STRING_MAX_LEN) {
-          value.setValue(((String) object).substring(0, STRING_MAX_LEN));
-          //7
-          value.setTrimmed(true);
-        } else {
-          value.setValue(String.valueOf(object));
-        }
-      } else if (object.getClass().isPrimitive() || com.google.common.primitives.Primitives.isWrapperType(object.getClass())) {
-        value.setValue(String.valueOf(object));
+        value.setValue((String) object);
       } else if (object.getClass().isArray()) {
-        //5
         value.setIsArray(object.getClass().isArray());
         for (Object arrayElem : (Object[]) object) {
           //wrap and all array elements -- recursive
-          value.addArrayValue(getWrappedValue(arrayElem, trimStrings));
+          value.addArrayValue(getWrappedObject(arrayElem));
         }
+      } else {
+        value.setValue(String.valueOf(object));
       }
     }
 
-    //2
+
     if (object != null) {
       value.setHash(object.hashCode());
     }
 
-    //3
     value.setIdentityHash(System.identityHashCode(object));
 
-    //4
     if (object != null) {
       value.setClass_(object.getClass().getName());
     }
@@ -590,13 +578,10 @@ public class DataMessageFactory {
     final Primitives.Class.Builder clazzBuilder = Primitives.Class.newBuilder();
 
     if (clazz != null) {
-      //1
       clazzBuilder.setClassname(clazz.getName());
-      //2
       clazzBuilder.setHash(clazz.hashCode());
     }
 
-    //3
     clazzBuilder.setIdentityHash(System.identityHashCode(clazz));
 
     return clazzBuilder.build();
@@ -604,14 +589,9 @@ public class DataMessageFactory {
 
   private static boolean isMain(StaticPart staticPart) {
     MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
-    int modifiers = methodSignature.getModifiers();
 
-    if ("main".equals(methodSignature.getMethod().getName()) && methodSignature.getReturnType().equals(Void.class)) {
-      Class[] paramTypes = methodSignature.getParameterTypes();
-      return (paramTypes.length == 1 && paramTypes[0].equals(String[].class)
-        && Modifier.isPublic(modifiers) && Modifier.isStatic(modifiers));
-    }
-    return false;
+    return isMain(methodSignature.getMethod().getName(), methodSignature.getReturnType(),
+      methodSignature.getParameterTypes(), methodSignature.getModifiers());
   }
 
   private static boolean isMain(String methodName, Class returnType, Class[] paramTypes, int modifiers) {

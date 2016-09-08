@@ -67,8 +67,7 @@ message InstanceMethodCall {
     required string name = 5;
 
     //target object
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    required int32 target = 6;
+    required Object target = 6;
 
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 7;

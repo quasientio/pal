@@ -2,6 +2,7 @@ package com.ittera.cometa.distributor;
 
 import com.ittera.cometa.distributor.messages.data.*;
 
+import com.ittera.cometa.distributor.messages.data.Primitives;
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.aspectj.lang.JoinPoint.StaticPart;
@@ -48,9 +49,9 @@ public class Distributor {
     do {
       try {
         rcvdMsg = (Wrappers.DataMessage) threadBlockingQueueMap.get(currThreadId).take();
-        logger.debug("Taken new message from blocking queue (thread id="+currThreadId+")");
+        logger.debug("Taken new message from blocking queue (thread id={})", currThreadId);
       } catch (InterruptedException e) {
-        logger.error("Interrupted while taking from blocking queue",e);
+        logger.error("Interrupted while taking from blocking queue", e);
       }
     } while (rcvdMsg == null);
 
@@ -61,14 +62,15 @@ public class Distributor {
     long currThreadId = Thread.currentThread().getId();
     if (!threadBlockingQueueMap.containsKey(currThreadId)) {
       threadBlockingQueueMap.put(currThreadId, new LinkedBlockingDeque());
-      logger.debug("Added new blocking queue to map, with thread id=" + currThreadId);
+      logger.debug("Added new blocking queue to map, with thread id={}", currThreadId);
     }
   }
+
   /************************ INTERFACE ***************************/
 
   // <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
   public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
-    logger.debug("in D.classConstructor: " + staticPart.getSignature());
+    logger.debug("in D.classConstructor: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -79,16 +81,14 @@ public class Distributor {
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic, msg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 4. Load and initialize class  -  WARNING: For some reason the class is not being initialized! **/
@@ -111,16 +111,14 @@ public class Distributor {
 
     /** 6. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return or re-raise exception **/
@@ -139,7 +137,7 @@ public class Distributor {
    * @throws Throwable
    */
   static void incomingConstructor(Calls.ConstructorCall constructorCall) {
-    logger.debug("in D.incomingConstructor: " + constructorCall.getName());
+    logger.debug("in D.incomingConstructor: {}", constructorCall.getName());
 
     /** 1. Unwrap message and load constructor **/
     final Class clazz;
@@ -169,9 +167,6 @@ public class Distributor {
         for (Primitives.Object obj : constructorCall.getParameterList()) {
           args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
         }
-        if (logger.isDebugEnabled()) {
-          logger.debug(String.format("Invoking constructor now!:%n%s%nwith %d arguments",constructor.toGenericString(),args.size()));
-        }
         newObject = constructor.newInstance(args.toArray(new Object[args.size()]));
       } catch (Exception ite) {
         exceptionWhileInvoking = ite;
@@ -192,13 +187,11 @@ public class Distributor {
 
     /** 4. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
   }
 
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.debug("in D.constructor: " + staticPart.getSignature());
+    logger.debug("in D.constructor: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -211,16 +204,14 @@ public class Distributor {
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic, callMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(callMsg)) {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -249,9 +240,7 @@ public class Distributor {
 
     /** 6. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
 
     if (mustWait(invokedMsg)) {
@@ -259,7 +248,7 @@ public class Distributor {
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return object or re-raise exception **/
@@ -278,7 +267,7 @@ public class Distributor {
   // <editor-fold defaultstate="collapsed" desc="METHOD CALLS">
 
   public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.debug("in D.voidInstanceMethod: " + staticPart.getSignature());
+    logger.debug("in D.voidInstanceMethod: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -292,16 +281,14 @@ public class Distributor {
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic, msg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -329,9 +316,7 @@ public class Distributor {
 
     /** 6. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
 
     if (mustWait(invokedMsg)) {
@@ -339,7 +324,7 @@ public class Distributor {
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return object or re-raise exception **/
@@ -355,7 +340,7 @@ public class Distributor {
   }
 
   public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.debug("in D.nonVoidInstanceMethod: " + staticPart.getSignature());
+    logger.debug("in D.nonVoidInstanceMethod: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -369,16 +354,14 @@ public class Distributor {
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic, msg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -406,9 +389,7 @@ public class Distributor {
 
     /** 6. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
 
     if (mustWait(invokedMsg)) {
@@ -416,7 +397,7 @@ public class Distributor {
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return object or re-raise exception **/
@@ -437,7 +418,7 @@ public class Distributor {
    * @param instanceMethodCall
    */
   static void incomingInstanceMethod(Calls.InstanceMethodCall instanceMethodCall) {
-    logger.debug("in D.incomingInstanceMethod: " + instanceMethodCall.getName());
+    logger.debug("in D.incomingInstanceMethod: {}", instanceMethodCall.getName());
 
     /** 1. Unwrap message and load method **/
     Class clazz = null;
@@ -489,15 +470,13 @@ public class Distributor {
 
     /** 4. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     return;
   }
 
   public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.debug("in D.voidClassMethod: " + staticPart.getSignature());
+    logger.debug("in D.voidClassMethod: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -511,16 +490,14 @@ public class Distributor {
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic, msg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -547,9 +524,7 @@ public class Distributor {
 
     /** 6. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
 
     if (mustWait(invokedMsg)) {
@@ -557,7 +532,7 @@ public class Distributor {
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return object or re-raise exception **/
@@ -578,7 +553,7 @@ public class Distributor {
    * @param classMethodCall
    */
   static void incomingClassMethod(Calls.ClassMethodCall classMethodCall) {
-    logger.debug("in D.incomingClassMethod: " + classMethodCall.getName());
+    logger.debug("in D.incomingClassMethod: {}", classMethodCall.getName());
 
     /** 1. Unwrap message and load method **/
     Class clazz = null;
@@ -631,16 +606,14 @@ public class Distributor {
 
     /** 4. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message from D.incomingClassMethod!");
-    }
+    logger.debug("Sent new message from D.incomingClassMethod!");
 
     return;
   }
 
 
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.debug("in D.nonVoidClassMethod: " + staticPart.getSignature());
+    logger.debug("in D.nonVoidClassMethod: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -654,16 +627,14 @@ public class Distributor {
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic, msg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -691,9 +662,7 @@ public class Distributor {
 
     /** 6. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
 
     if (mustWait(invokedMsg)) {
@@ -701,7 +670,7 @@ public class Distributor {
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return object or re-raise exception **/
@@ -723,8 +692,8 @@ public class Distributor {
   //@TODO field operations should also be sent as messages
 
 
-  public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet)  {
-    logger.debug("in D.incomingGetStatic: " + staticFieldGet.getClass_() + "." + staticFieldGet.getField());
+  public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet) {
+    logger.debug("in D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
 
     /** 1. Get Object **/
     Class clazz = null;
@@ -765,16 +734,14 @@ public class Distributor {
 
     /** 4. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     return;
 
   }
 
   public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
-    logger.debug("in D.getStatic: " + staticPart.getSignature());
+    logger.debug("in D.getStatic: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -785,16 +752,14 @@ public class Distributor {
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic, msg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 4. Get Object **/
@@ -820,16 +785,14 @@ public class Distributor {
 
     /** 6. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return or re-raise exception **/
@@ -841,7 +804,7 @@ public class Distributor {
   }
 
   public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
-    logger.debug("in D.getObject: " + staticPart.getSignature());
+    logger.debug("in D.getObject: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -852,16 +815,14 @@ public class Distributor {
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic, msg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -888,16 +849,14 @@ public class Distributor {
 
     /** 6. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return or re-raise exception **/
@@ -909,7 +868,7 @@ public class Distributor {
   }
 
   public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
-    logger.debug("in D.putStatic: " + staticPart.getSignature());
+    logger.debug("in D.putStatic: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -920,16 +879,14 @@ public class Distributor {
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic, msg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 4. Put Object **/
@@ -954,16 +911,14 @@ public class Distributor {
 
     /** 6. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(msg)) {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return or re-raise exception **/
@@ -975,7 +930,7 @@ public class Distributor {
   }
 
   public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) throws IllegalAccessException {
-    logger.debug("in D.putField: " + staticPart.getSignature());
+    logger.debug("in D.putField: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -986,16 +941,14 @@ public class Distributor {
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
     producer.send(new ProducerRecord(kafkaTopic, msg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 4. Put Object **/
@@ -1020,16 +973,14 @@ public class Distributor {
 
     /** 6. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sent new message!");
-    }
+    logger.debug("Sent new message!");
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
       //TODO compare
-      logger.info("Message received: " + rcvdMsg.getMsgType());
+      logger.info("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return or re-raise exception **/
@@ -1054,10 +1005,10 @@ public class Distributor {
   /**
    * TODO: IMPLEMENT
    *
-   * @param targetHash
+   * @param target
    * @return
    */
-  private static Object lookupTargetObject(int targetHash) {
+  private static Object lookupTargetObject(Primitives.Object target) {
     return null;
   }
 

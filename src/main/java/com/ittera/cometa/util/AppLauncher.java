@@ -52,10 +52,11 @@ public class AppLauncher {
 
   /**
    * Currently only supports:
-   *  - constructor calls - syntax: classname new arg...
-   *  - calls to a class' main - syntax: classname main arg...
-   *  - get static - syntax: classname get fieldname
-   *  -
+   * - empty constructor calls - syntax: classname new arg...
+   * - calls to a class' main - syntax: classname main arg...
+   * - get static - syntax: classname get fieldname
+   * -
+   *
    * @param line
    * @return
    */
@@ -66,7 +67,7 @@ public class AppLauncher {
 
     if ("new".equals(lineParts[1])) {
 //      String[] newArgs = Arrays.copyOfRange(lineParts, 2, lineParts.length);
-      return DataMessageFactory.buildEmptyConstructorMessage(distributorId,className);
+      return DataMessageFactory.buildEmptyConstructorMessage(distributorId, className);
 
     } else if ("main".equals(lineParts[1])) {
       String[] mainArgs = Arrays.copyOfRange(lineParts, 2, lineParts.length);
