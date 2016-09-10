@@ -66,17 +66,17 @@ public final class Values {
     boolean getIsClass();
 
     /**
-     * <code>optional .messages.data.Object value = 6;</code>
+     * <code>optional .messages.data.Object object = 6;</code>
      */
-    boolean hasValue();
+    boolean hasObject();
     /**
-     * <code>optional .messages.data.Object value = 6;</code>
+     * <code>optional .messages.data.Object object = 6;</code>
      */
-    com.ittera.cometa.distributor.messages.data.Primitives.Object getValue();
+    com.ittera.cometa.distributor.messages.data.Primitives.Object getObject();
     /**
-     * <code>optional .messages.data.Object value = 6;</code>
+     * <code>optional .messages.data.Object object = 6;</code>
      */
-    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getValueOrBuilder();
+    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getObjectOrBuilder();
 
     /**
      * <code>optional .messages.data.Class clazz = 7;</code>
@@ -175,12 +175,12 @@ public final class Values {
             case 50: {
               com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder subBuilder = null;
               if (((bitField0_ & 0x00000020) == 0x00000020)) {
-                subBuilder = value_.toBuilder();
+                subBuilder = object_.toBuilder();
               }
-              value_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry);
+              object_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry);
               if (subBuilder != null) {
-                subBuilder.mergeFrom(value_);
-                value_ = subBuilder.buildPartial();
+                subBuilder.mergeFrom(object_);
+                object_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000020;
               break;
@@ -321,25 +321,25 @@ public final class Values {
       return isClass_;
     }
 
-    public static final int VALUE_FIELD_NUMBER = 6;
-    private com.ittera.cometa.distributor.messages.data.Primitives.Object value_;
+    public static final int OBJECT_FIELD_NUMBER = 6;
+    private com.ittera.cometa.distributor.messages.data.Primitives.Object object_;
     /**
-     * <code>optional .messages.data.Object value = 6;</code>
+     * <code>optional .messages.data.Object object = 6;</code>
      */
-    public boolean hasValue() {
+    public boolean hasObject() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
-     * <code>optional .messages.data.Object value = 6;</code>
+     * <code>optional .messages.data.Object object = 6;</code>
      */
-    public com.ittera.cometa.distributor.messages.data.Primitives.Object getValue() {
-      return value_;
+    public com.ittera.cometa.distributor.messages.data.Primitives.Object getObject() {
+      return object_;
     }
     /**
-     * <code>optional .messages.data.Object value = 6;</code>
+     * <code>optional .messages.data.Object object = 6;</code>
      */
-    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getValueOrBuilder() {
-      return value_;
+    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getObjectOrBuilder() {
+      return object_;
     }
 
     public static final int CLAZZ_FIELD_NUMBER = 7;
@@ -369,7 +369,7 @@ public final class Values {
       currentTime_ = 0L;
       isVoid_ = false;
       isClass_ = false;
-      value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+      object_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       clazz_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
@@ -382,14 +382,8 @@ public final class Values {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (hasValue()) {
-        if (!getValue().isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
-      if (hasClazz()) {
-        if (!getClazz().isInitialized()) {
+      if (hasObject()) {
+        if (!getObject().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -417,7 +411,7 @@ public final class Values {
         output.writeBool(5, isClass_);
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeMessage(6, value_);
+        output.writeMessage(6, object_);
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeMessage(7, clazz_);
@@ -453,7 +447,7 @@ public final class Values {
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(6, value_);
+          .computeMessageSize(6, object_);
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
@@ -572,7 +566,7 @@ public final class Values {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getValueFieldBuilder();
+          getObjectFieldBuilder();
           getClazzFieldBuilder();
         }
       }
@@ -592,10 +586,10 @@ public final class Values {
         bitField0_ = (bitField0_ & ~0x00000008);
         isClass_ = false;
         bitField0_ = (bitField0_ & ~0x00000010);
-        if (valueBuilder_ == null) {
-          value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+        if (objectBuilder_ == null) {
+          object_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
         } else {
-          valueBuilder_.clear();
+          objectBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000020);
         if (clazzBuilder_ == null) {
@@ -655,10 +649,10 @@ public final class Values {
         if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000020;
         }
-        if (valueBuilder_ == null) {
-          result.value_ = value_;
+        if (objectBuilder_ == null) {
+          result.object_ = object_;
         } else {
-          result.value_ = valueBuilder_.build();
+          result.object_ = objectBuilder_.build();
         }
         if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
           to_bitField0_ |= 0x00000040;
@@ -699,8 +693,8 @@ public final class Values {
         if (other.hasIsClass()) {
           setIsClass(other.getIsClass());
         }
-        if (other.hasValue()) {
-          mergeValue(other.getValue());
+        if (other.hasObject()) {
+          mergeObject(other.getObject());
         }
         if (other.hasClazz()) {
           mergeClazz(other.getClazz());
@@ -714,14 +708,8 @@ public final class Values {
           
           return false;
         }
-        if (hasValue()) {
-          if (!getValue().isInitialized()) {
-            
-            return false;
-          }
-        }
-        if (hasClazz()) {
-          if (!getClazz().isInitialized()) {
+        if (hasObject()) {
+          if (!getObject().isInitialized()) {
             
             return false;
           }
@@ -924,120 +912,120 @@ public final class Values {
         return this;
       }
 
-      private com.ittera.cometa.distributor.messages.data.Primitives.Object value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+      private com.ittera.cometa.distributor.messages.data.Primitives.Object object_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> valueBuilder_;
+          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> objectBuilder_;
       /**
-       * <code>optional .messages.data.Object value = 6;</code>
+       * <code>optional .messages.data.Object object = 6;</code>
        */
-      public boolean hasValue() {
+      public boolean hasObject() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       /**
-       * <code>optional .messages.data.Object value = 6;</code>
+       * <code>optional .messages.data.Object object = 6;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Object getValue() {
-        if (valueBuilder_ == null) {
-          return value_;
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object getObject() {
+        if (objectBuilder_ == null) {
+          return object_;
         } else {
-          return valueBuilder_.getMessage();
+          return objectBuilder_.getMessage();
         }
       }
       /**
-       * <code>optional .messages.data.Object value = 6;</code>
+       * <code>optional .messages.data.Object object = 6;</code>
        */
-      public Builder setValue(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
-        if (valueBuilder_ == null) {
+      public Builder setObject(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (objectBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          value_ = value;
+          object_ = value;
           onChanged();
         } else {
-          valueBuilder_.setMessage(value);
+          objectBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000020;
         return this;
       }
       /**
-       * <code>optional .messages.data.Object value = 6;</code>
+       * <code>optional .messages.data.Object object = 6;</code>
        */
-      public Builder setValue(
+      public Builder setObject(
           com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
-        if (valueBuilder_ == null) {
-          value_ = builderForValue.build();
+        if (objectBuilder_ == null) {
+          object_ = builderForValue.build();
           onChanged();
         } else {
-          valueBuilder_.setMessage(builderForValue.build());
+          objectBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000020;
         return this;
       }
       /**
-       * <code>optional .messages.data.Object value = 6;</code>
+       * <code>optional .messages.data.Object object = 6;</code>
        */
-      public Builder mergeValue(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
-        if (valueBuilder_ == null) {
+      public Builder mergeObject(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
+        if (objectBuilder_ == null) {
           if (((bitField0_ & 0x00000020) == 0x00000020) &&
-              value_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
-            value_ =
-              com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(value_).mergeFrom(value).buildPartial();
+              object_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
+            object_ =
+              com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(object_).mergeFrom(value).buildPartial();
           } else {
-            value_ = value;
+            object_ = value;
           }
           onChanged();
         } else {
-          valueBuilder_.mergeFrom(value);
+          objectBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000020;
         return this;
       }
       /**
-       * <code>optional .messages.data.Object value = 6;</code>
+       * <code>optional .messages.data.Object object = 6;</code>
        */
-      public Builder clearValue() {
-        if (valueBuilder_ == null) {
-          value_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
+      public Builder clearObject() {
+        if (objectBuilder_ == null) {
+          object_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
           onChanged();
         } else {
-          valueBuilder_.clear();
+          objectBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       /**
-       * <code>optional .messages.data.Object value = 6;</code>
+       * <code>optional .messages.data.Object object = 6;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getValueBuilder() {
+      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getObjectBuilder() {
         bitField0_ |= 0x00000020;
         onChanged();
-        return getValueFieldBuilder().getBuilder();
+        return getObjectFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.data.Object value = 6;</code>
+       * <code>optional .messages.data.Object object = 6;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getValueOrBuilder() {
-        if (valueBuilder_ != null) {
-          return valueBuilder_.getMessageOrBuilder();
+      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getObjectOrBuilder() {
+        if (objectBuilder_ != null) {
+          return objectBuilder_.getMessageOrBuilder();
         } else {
-          return value_;
+          return object_;
         }
       }
       /**
-       * <code>optional .messages.data.Object value = 6;</code>
+       * <code>optional .messages.data.Object object = 6;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
-          getValueFieldBuilder() {
-        if (valueBuilder_ == null) {
-          valueBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+          getObjectFieldBuilder() {
+        if (objectBuilder_ == null) {
+          objectBuilder_ = new com.google.protobuf.SingleFieldBuilder<
               com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-                  getValue(),
+                  getObject(),
                   getParentForChildren(),
                   isClean());
-          value_ = null;
+          object_ = null;
         }
-        return valueBuilder_;
+        return objectBuilder_;
       }
 
       private com.ittera.cometa.distributor.messages.data.Primitives.Class clazz_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
@@ -1182,13 +1170,13 @@ public final class Values {
   static {
     java.lang.String[] descriptorData = {
       "\n\014values.proto\022\rmessages.data\032\020primitive" +
-      "s.proto\"\305\001\n\013ReturnValue\022\025\n\rdistributorId" +
+      "s.proto\"\306\001\n\013ReturnValue\022\025\n\rdistributorId" +
       "\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTime\030" +
       "\003 \002(\003\022\025\n\006isVoid\030\004 \001(\010:\005false\022\026\n\007isClass\030" +
-      "\005 \001(\010:\005false\022$\n\005value\030\006 \001(\0132\025.messages.d" +
-      "ata.Object\022#\n\005clazz\030\007 \001(\0132\024.messages.dat" +
-      "a.ClassB7\n+com.ittera.cometa.distributor" +
-      ".messages.dataB\006ValuesH\001"
+      "\005 \001(\010:\005false\022%\n\006object\030\006 \001(\0132\025.messages." +
+      "data.Object\022#\n\005clazz\030\007 \001(\0132\024.messages.da" +
+      "ta.ClassB7\n+com.ittera.cometa.distributo" +
+      "r.messages.dataB\006ValuesH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -1208,7 +1196,7 @@ public final class Values {
     internal_static_messages_data_ReturnValue_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_ReturnValue_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "IsVoid", "IsClass", "Value", "Clazz", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "IsVoid", "IsClass", "Object", "Clazz", });
     com.ittera.cometa.distributor.messages.data.Primitives.getDescriptor();
   }
 

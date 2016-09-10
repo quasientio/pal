@@ -44,13 +44,13 @@ public class DataMessageDispatcher extends Thread {
   }
 
   private DataMessageDispatcher(Properties props) {
-    pollTimeout = Long.parseLong((String)props.remove("pollTimeout"));
+    pollTimeout = Long.parseLong((String) props.remove("pollTimeout"));
     props.put("group.id", String.valueOf(Distributor.id));
     consumer = new KafkaConsumer<>(props);
     //consumer.subscribe(Arrays.asList(Distributor.kafkaTopic));
 
     //manual assignment of partition so we can control offset seek
-    TopicPartition topicPartition = new TopicPartition(Distributor.kafkaTopic,0);
+    TopicPartition topicPartition = new TopicPartition(Distributor.kafkaTopic, 0);
     consumer.assign(Arrays.asList(topicPartition));
     consumer.seekToBeginning(Arrays.asList(topicPartition));
     logger.info("DataMessageDispatcher initialized");
@@ -67,11 +67,12 @@ public class DataMessageDispatcher extends Thread {
         if (logger.isDebugEnabled()) {
           logger.debug("Processing received record:\n" + record);
         }
+
         final Wrappers.DataMessage dataMessage = (Wrappers.DataMessage) record.value();
         long threadId = dataMessage.getThreadId();
         //if threadId not in our threadQueue, then push to new/random thread
         if (!Distributor.threadBlockingQueueMap.containsKey(threadId)) {
-          logger.debug("Thread queue has thread with ids"+Distributor.threadBlockingQueueMap.keySet());
+          logger.debug("Thread queue has thread with ids" + Distributor.threadBlockingQueueMap.keySet());
           logger.debug("No thread for incoming call, creating new one and dispatching...");
           executorService.submit(new Runnable() {
             @Override
@@ -91,8 +92,8 @@ public class DataMessageDispatcher extends Thread {
                 Distributor.incomingGetStatic(staticFieldGetCall);
 
               } else {
-                //TODO : field op calls
-                logger.warn("Incoming message ignored - no handler:\n"+dataMessage);
+                //TODO : rest of field op calls
+                logger.warn("Incoming message ignored - no handler:\n" + dataMessage);
               }
 
             }

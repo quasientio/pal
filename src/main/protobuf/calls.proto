@@ -20,28 +20,24 @@ message ConstructorCall {
 
     // --- CONTEXT
 
-    //Constructor name and classname are the same
-    required string name = 4;
+    required Class class = 4;
 
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 5;
 
-    repeated string parameterNames = 6;
-    repeated string parameterClasses = 7;
-    repeated string exceptionTypes = 8;
+    repeated string parameterName = 6;
+    repeated Class exceptionType = 7;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    repeated Object parameter = 9;
+    repeated Object parameter = 8;
 
-    optional string senderClassName = 10;
+    optional Class senderClass = 9;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    optional int32 sender = 11;
+    optional Object sender = 10;
 
     //source context from where the call was made
-    optional string sourceLocationFile = 12;
-    optional int32 sourceLocationLine = 13;
-    optional string sourceLocationType = 14;
+    optional string sourceLocationFile = 11;
+    optional int32 sourceLocationLine = 12;
+    optional string sourceLocationType = 13;
 
     //TO DO:  annotations
 }
@@ -60,29 +56,29 @@ message InstanceMethodCall {
 
     // --- CONTEXT
 
-    //class name
-    required string class = 4;
+    //class
+    required Class class = 4;
 
     //method name
     required string name = 5;
 
     //target object
-    required Object target = 6;
+    oneof target {
+        Object object = 6;
+        string objectRef = 7;
+    }
 
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 7;
+    optional int32 modifiers = 8;
 
-    repeated string parameterNames = 8;
-    repeated string parameterClasses = 9;
-    repeated string exceptionTypes = 10;
+    repeated string parameterName = 9;
+    repeated Class exceptionType = 10;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
     repeated Object parameter = 11;
 
-    optional string senderClassName = 12;
+    optional Class senderClass = 12;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    optional int32 sender = 13;
+    optional Object sender = 13;
 
     //source context from where the call was made
     optional string sourceLocationFile = 14;
@@ -106,16 +102,14 @@ message ClInitCall {
 
     // --- CONTEXT
 
-    //Constructor name and classname are the same
-    required string name = 4;
+    required Class class = 4;
 
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 5;
 
-    optional string senderClassName = 6;
+    optional Class senderClass = 6;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    optional int32 sender = 7;
+    optional Object sender = 7;
 
     //source context from where the call was made
     optional string sourceLocationFile = 8;
@@ -139,8 +133,8 @@ message ClassMethodCall {
 
     // --- CONTEXT
 
-    //class name
-    required string class = 4;
+    //class
+    required Class class = 4;
 
     //method name
     required string name = 5;
@@ -148,22 +142,19 @@ message ClassMethodCall {
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 6;
 
-    repeated string parameterNames = 7;
-    repeated string parameterClasses = 8;
-    repeated string exceptionTypes = 9;
+    repeated string parameterName = 7;
+    repeated Class exceptionType = 8;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    repeated Object parameter = 10;
+    repeated Object parameter = 9;
 
-    optional string senderClassName = 11;
+    optional Class senderClass = 10;
 
-    //NOTE: for consistency we will use the Object hashCode(), using identityHashCode(Object x), instead of the overriden implementation if any.
-    optional int32 sender = 12;
+    optional Object sender = 11;
 
     //source context from where the call was made
-    optional string sourceLocationFile = 13;
-    optional int32 sourceLocationLine = 14;
-    optional string sourceLocationType = 15;
+    optional string sourceLocationFile = 12;
+    optional int32 sourceLocationLine = 13;
+    optional string sourceLocationType = 14;
 
     //TO DO:  annotations
 }

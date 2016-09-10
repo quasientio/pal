@@ -28,7 +28,7 @@ message ReturnValue {
 
     optional bool isClass = 5 [default = false];
 
-    optional Object value = 6;
+    optional Object object = 6;
 
     optional Class clazz = 7;
 }

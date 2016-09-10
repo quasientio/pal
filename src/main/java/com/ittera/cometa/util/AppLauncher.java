@@ -66,24 +66,33 @@ public class AppLauncher {
     String className = lineParts[0];
 
     if ("new".equals(lineParts[1])) {
-//      String[] newArgs = Arrays.copyOfRange(lineParts, 2, lineParts.length);
+      /** example: com.ittera.cometa.demos.App new */
       return DataMessageFactory.buildEmptyConstructorMessage(distributorId, className);
-
     } else if ("main".equals(lineParts[1])) {
+      /** example: com.ittera.cometa.demos.App main */
       String[] mainArgs = Arrays.copyOfRange(lineParts, 2, lineParts.length);
       String methodName = "main";
       int modifiers = Modifier.PUBLIC | Modifier.STATIC;
       Class returnType = Void.class;
       Class[] parameterTypes = new Class[]{String[].class};
+      String[] parameterTypesNamesArray = new String[parameterTypes.length];
+      for (int i = 0; i < parameterTypes.length; i++) {
+        parameterTypesNamesArray[i] = parameterTypes[i].getName();
+      }
       Object[] parameters = new Object[]{mainArgs};
-      return DataMessageFactory.buildClassMethodMessage(distributorId, className, methodName, modifiers, returnType, parameterTypes, parameters);
-
+      return DataMessageFactory.buildClassMethodMessage(distributorId, className, methodName, modifiers, returnType, parameterTypesNamesArray, parameters);
 
     } else if ("get".equals(lineParts[1])) {
+      /** example: com.ittera.cometa.demos.App get aClassString */
       String fieldname = lineParts[2];
 
       return DataMessageFactory.buildGetStaticMessage(distributorId, className, fieldname);
 
+    } else if ("instance".equals(lineParts[1])){
+      /** example: com.ittera.cometa.demos.App instance object-ref someInstanceMethod */
+      String objectRef = lineParts[2];
+      String methodName = lineParts[3];
+      return DataMessageFactory.buildInstanceMethodMessage(distributorId, className, methodName, objectRef, new String[]{}, new Object[]{});
     } else {
       return null;
     }

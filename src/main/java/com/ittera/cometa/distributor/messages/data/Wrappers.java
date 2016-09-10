@@ -468,7 +468,7 @@ public final class Wrappers {
       INSTANCEFIELDPUTDONE(14),
       CALLTYPE_NOT_SET(0);
       private int value = 0;
-      private CalltypeCase(int value) {
+      CalltypeCase(int value) {
         this.value = value;
       }
       public static CalltypeCase valueOf(int value) {
@@ -493,7 +493,7 @@ public final class Wrappers {
       public int getNumber() {
         return this.value;
       }
-    };
+    }
 
     public CalltypeCase
     getCalltypeCase() {

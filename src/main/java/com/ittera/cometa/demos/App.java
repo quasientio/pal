@@ -1,35 +1,30 @@
 package com.ittera.cometa.demos;
 
+import java.util.List;
+import java.util.ArrayList;
+
 public class App {
 
-  Integer anInt = null;
-  String someString = null;
-  boolean aBool = false;
-  App b = null;
+  Integer anInt;
+  String someString;
+  boolean aBool;
+  App b;
+  List anIntList;
+
   static float aFloat = 8.5f;
   static float aLong = 53382303;
-  static String aClassString = null;
-  static double aDbl = 0d;
+  static String aClassString;
+  static double aDbl;
 
   static {
     System.out.println("aDbl before=" + aDbl);
     aDbl = 5;
     System.out.println("aDbl after=" + aDbl);
-  }
-
-  public App() {
-    System.out.println("Hi from the default constructor :)");
+    aClassString = "I'm classy";
   }
 
   static void doSomethingStatically() {
     System.out.println("whatever");
-    aClassString = "I'm classy";
-  }
-
-  void doSomething() {
-    anInt = Integer.valueOf(60);
-    someString = new String("hello there");
-    b = new App();
   }
 
 
@@ -45,6 +40,21 @@ public class App {
       System.out.println("printing an int from <init> : " + anInt);
     }
   }
+
+  public App() {
+    System.out.println("Hi from the default constructor :)");
+    anIntList = new ArrayList();
+    for (int i = 0; i < 5; i++) {
+      anIntList.add(i * i);
+    }
+  }
+
+  void doSomething() {
+    anInt = Integer.valueOf(60);
+    someString = new String("hello there");
+    b = new App();
+  }
+
 
   Integer giveMeX() {
     return anInt;
@@ -92,10 +102,10 @@ public class App {
       a.aBool = !a.aBool;
       System.out.println("aBool is now " + a.aBool);
       System.out.println("Getting someString field = " + a.someString);
-      System.out.println("a class str = " + a.aClassString);
-      System.out.println("aLong = " + a.aLong);
-      a.aLong *= 2;
-      System.out.println("aLong (times 2) = " + a.aLong);
+      System.out.println("a class str = " + aClassString);
+      System.out.println("aLong = " + aLong);
+      aLong *= 2;
+      System.out.println("aLong (times 2) = " + aLong);
       testVoidStatic("a otra cosa");
       testNonVoidStatic("mariposa");
       //test static constructor and instance constructor

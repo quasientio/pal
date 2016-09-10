@@ -1,5 +1,7 @@
 package messages.data;
 
+import "primitives.proto";
+
 option java_package = "com.ittera.cometa.distributor.messages.data";
 option java_outer_classname = "Exceptions";
 option optimize_for = SPEED;
@@ -30,7 +32,7 @@ message RaisedThrowable {
 
     // --- CONTEXT
 
-    required string className = 4;
+    required Class class = 4;
 
     //for static init (<clinit)
     optional bool inInitializer = 5 [default = false];

@@ -24,6 +24,7 @@ import java.util.Properties;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -40,8 +41,16 @@ public class Distributor {
   static String kafkaTopic;
   static int id;
 
-  //static data shared by all threads - sources of contention
-  static Map<Long, BlockingQueue> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue>();
+
+  /**
+   * static data shared by all threads - sources of contention
+   */
+
+  //A map to hold a blocking message queue for each Thread
+  static final Map<Long, BlockingQueue> threadBlockingQueueMap = new ConcurrentHashMap();
+  static final Map<String, Object> objectMap = new ConcurrentHashMap<>();
+
+  //A map for all objects created by the Distributor. TODO: store as WeakReferences -> until then, no objects will get garbage cleaned!
 
   private static Wrappers.DataMessage receiveMsgForCurrentThread() {
     long currThreadId = Thread.currentThread().getId();
@@ -94,18 +103,22 @@ public class Distributor {
     /** 4. Load and initialize class  -  WARNING: For some reason the class is not being initialized! **/
     Class clazz = null;
     ClassNotFoundException exceptionWhileLoadingClass = null;
+    Long randomLong = null;
     try {
       clazz = Class.forName(staticPart.getSignature().getDeclaringType().getName());
+      randomLong = ThreadLocalRandom.current().nextLong();
       //Class.forName(codeSignature.getDeclaringTypeName(),true, Distributor.class.getClassLoader());
     } catch (ClassNotFoundException cnfe) {
       exceptionWhileLoadingClass = cnfe;
     }
 
-    /** 5. Wrap exception if any **/
+    /** 5. Store and wrap class/exception if any **/
     final Wrappers.DataMessage invokedMsg;
     if (exceptionWhileLoadingClass != null) {
       invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionWhileLoadingClass);
     } else {
+      String objKey = String.format("%d:%d", System.identityHashCode(clazz), randomLong);
+      storeObject(objKey, clazz);
       invokedMsg = DataMessageFactory.buildLoadedClassMessage(id, clazz);
     }
 
@@ -127,6 +140,7 @@ public class Distributor {
     }
 
     //Since class initialization is not working, we will return false if we want to aspectj to proceed(), indicating class isn't initialized
+    logger.debug("leavingin D.classConstructor: {}", staticPart.getSignature());
     return false;
   }
 
@@ -137,7 +151,7 @@ public class Distributor {
    * @throws Throwable
    */
   static void incomingConstructor(Calls.ConstructorCall constructorCall) {
-    logger.debug("in D.incomingConstructor: {}", constructorCall.getName());
+    logger.debug("in D.incomingConstructor: {}", constructorCall.getClass_().getName());
 
     /** 1. Unwrap message and load constructor **/
     final Class clazz;
@@ -145,9 +159,9 @@ public class Distributor {
     Constructor constructor = null;
     Exception exceptionWhileLoading = null;
     try {
-      clazz = Class.forName(constructorCall.getName());
-      for (String paramClassStr : constructorCall.getParameterClassesList()) {
-        paramClasses.add(Class.forName(paramClassStr));
+      clazz = Class.forName(constructorCall.getClass_().getName());
+      for (Primitives.Object param : constructorCall.getParameterList()) {
+        paramClasses.add(Class.forName(param.getClass_().getName()));
       }
       constructor = clazz.getDeclaredConstructor((Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
     } catch (Exception e) {
@@ -158,6 +172,8 @@ public class Distributor {
     /** 2. If class and constructor loaded, unwrap arguments and invoke constructor **/
     Exception exceptionWhileInvoking = null;
     Object newObject = null;
+    String objKey = null;
+    Long randomLong = null;
 
     if (exceptionWhileLoading == null) {
       constructor.setAccessible(true);
@@ -167,7 +183,12 @@ public class Distributor {
         for (Primitives.Object obj : constructorCall.getParameterList()) {
           args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
         }
+        //store in object map
         newObject = constructor.newInstance(args.toArray(new Object[args.size()]));
+        randomLong = ThreadLocalRandom.current().nextLong();
+        //store in object map
+        objKey = String.format("%d:%d", System.identityHashCode(newObject), randomLong);
+        storeObject(objKey, newObject);
       } catch (Exception ite) {
         exceptionWhileInvoking = ite;
       }
@@ -181,13 +202,17 @@ public class Distributor {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, objKey, false);
     }
 
 
     /** 4. Send object/exception **/
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     logger.debug("Sent new message!");
+
+
+    logger.debug("leaving D.incomingConstructor: {}", constructorCall.getClass_().getName());
+    return;
   }
 
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
@@ -222,8 +247,14 @@ public class Distributor {
     Object newObject = null;
     Exception exceptionWhileInvoking = null;
     constructor.setAccessible(true);
+    String objKey = null;
+    Long randomLong = null;
     try {
       newObject = constructor.newInstance(args);
+      randomLong = ThreadLocalRandom.current().nextLong();
+      //store in object map
+      objKey = String.format("%d:%d", System.identityHashCode(newObject), randomLong);
+      storeObject(objKey, newObject);
     } catch (Exception ite) {
       exceptionWhileInvoking = ite;
     }
@@ -234,7 +265,7 @@ public class Distributor {
     if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, objKey, false);
     }
 
 
@@ -260,6 +291,7 @@ public class Distributor {
       }
     }
 
+    logger.debug("leaving D.constructor: {}", staticPart.getSignature());
     return newObject;
   }
   // </editor-fold>
@@ -310,7 +342,7 @@ public class Distributor {
     if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, true);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true);
     }
 
 
@@ -336,6 +368,7 @@ public class Distributor {
       }
     }
 
+    logger.debug("leaving D.voidInstanceMethod: {}", staticPart.getSignature());
     return;
   }
 
@@ -383,7 +416,7 @@ public class Distributor {
     if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false);
     }
 
 
@@ -409,6 +442,7 @@ public class Distributor {
       }
     }
 
+    logger.debug("leaving D.nonVoidInstanceMethod: {}", staticPart.getSignature());
     return returnValue;
   }
 
@@ -426,9 +460,9 @@ public class Distributor {
     Exception exceptionWhileLoading = null;
     List<Class> paramClasses = new ArrayList<>();
     try {
-      clazz = Class.forName(instanceMethodCall.getClass_());
-      for (String paramClassStr : instanceMethodCall.getParameterClassesList()) {
-        paramClasses.add(Class.forName(paramClassStr));
+      clazz = Class.forName(instanceMethodCall.getClass_().getName());
+      for (Primitives.Object obj : instanceMethodCall.getParameterList()) {
+        paramClasses.add(Class.forName(obj.getClass_().getName()));
       }
       method = clazz.getDeclaredMethod(instanceMethodCall.getName(), (Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
     } catch (Exception e) {
@@ -442,11 +476,16 @@ public class Distributor {
       List<Object> args = new ArrayList<>();
       int objIdx = 0;
       for (Primitives.Object obj : instanceMethodCall.getParameterList()) {
+        //if object created by this Distributor, get it from object map
+//        if (objects.containsKey(obj.getIdentityHash())) {
+//          args.add(lookupObject(obj));
+//        } else { //else unwrap using ProtobufUtils (only primitives and Strings supported)
         args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
+//        }
       }
       method.setAccessible(true);
       try {
-        Object target = lookupTargetObject(instanceMethodCall.getTarget());
+        Object target = lookupObject(instanceMethodCall.getObjectRef());
         returnValue = method.invoke(target, args.toArray());
       } catch (Exception e) {
         exceptionWhileInvoking = e;
@@ -462,9 +501,9 @@ public class Distributor {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
       if (method.getReturnType() == Void.class) {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, true);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true);
       } else {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, false);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false);
       }
     }
 
@@ -472,6 +511,7 @@ public class Distributor {
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     logger.debug("Sent new message!");
 
+    logger.debug("leaving D.incomingInstanceMethod: {}", instanceMethodCall.getName());
     return;
   }
 
@@ -518,7 +558,7 @@ public class Distributor {
     if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, true);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true);
     }
 
 
@@ -544,6 +584,7 @@ public class Distributor {
       }
     }
 
+    logger.debug("leaving D.voidClassMethod: {}", staticPart.getSignature());
     return;
   }
 
@@ -562,9 +603,9 @@ public class Distributor {
     List<Class> paramClasses = new ArrayList<>();
     try {
       logger.debug("Attempting to load (initialize) class");
-      clazz = Class.forName(classMethodCall.getClass_());
-      for (String paramClassStr : classMethodCall.getParameterClassesList()) {
-        paramClasses.add(Class.forName(paramClassStr));
+      clazz = Class.forName(classMethodCall.getClass_().getName());
+      for (Primitives.Object obj : classMethodCall.getParameterList()) {
+        paramClasses.add(Class.forName(obj.getClass_().getName()));
       }
       method = clazz.getDeclaredMethod(classMethodCall.getName(), (Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
     } catch (Exception e) {
@@ -598,9 +639,9 @@ public class Distributor {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
       if (method.getReturnType() == Void.class) {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, true);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true);
       } else {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, false);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false);
       }
     }
 
@@ -608,6 +649,7 @@ public class Distributor {
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     logger.debug("Sent new message from D.incomingClassMethod!");
 
+    logger.debug("leaving D.incomingClassMethod: {}", classMethodCall.getName());
     return;
   }
 
@@ -656,7 +698,7 @@ public class Distributor {
     if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false);
     }
 
 
@@ -682,6 +724,7 @@ public class Distributor {
       }
     }
 
+    logger.debug("leaving D.nonVoidClassMethod: {}", staticPart.getSignature());
     return returnValue;
   }
 
@@ -699,7 +742,6 @@ public class Distributor {
     Class clazz = null;
     Field field = null;
     Exception exceptionWhileLoading = null;
-    List<Class> paramClasses = new ArrayList<>();
     try {
       clazz = Class.forName(staticFieldGet.getClass_());
       field = clazz.getDeclaredField(staticFieldGet.getField());
@@ -709,6 +751,7 @@ public class Distributor {
 
     /** 2. If class and field loaded, invoke field get **/
     Exception exceptionWhileInvoking = null;
+
     Object fieldValue = null;
     if (exceptionWhileLoading == null) {
       field.setAccessible(true);
@@ -728,7 +771,7 @@ public class Distributor {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false);
     }
 
 
@@ -736,6 +779,7 @@ public class Distributor {
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     logger.debug("Sent new message!");
 
+    logger.debug("leaving D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
     return;
 
   }
@@ -780,7 +824,7 @@ public class Distributor {
     if (exceptionGettingObject != null) {
       invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false);
     }
 
     /** 6. Send object/exception **/
@@ -800,6 +844,7 @@ public class Distributor {
       throw exceptionGettingObject;
     }
 
+    logger.debug("leaving D.getStatic: {}", staticPart.getSignature());
     return fieldValue;
   }
 
@@ -844,7 +889,7 @@ public class Distributor {
     if (exceptionGettingObject != null) {
       invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false);
     }
 
     /** 6. Send object/exception **/
@@ -864,6 +909,7 @@ public class Distributor {
       throw exceptionGettingObject;
     }
 
+    logger.debug("in D.getObject: {}", staticPart.getSignature());
     return fieldValue;
   }
 
@@ -926,6 +972,7 @@ public class Distributor {
       throw exceptionSettingObject;
     }
 
+    logger.debug("in D.putStatic: {}", staticPart.getSignature());
     return;
   }
 
@@ -987,6 +1034,9 @@ public class Distributor {
     if (exceptionSettingObject != null) {
       throw exceptionSettingObject;
     }
+
+    logger.debug("leaving D.putField: {}", staticPart.getSignature());
+    return;
   }
 
   // </editor-fold>
@@ -1005,11 +1055,15 @@ public class Distributor {
   /**
    * TODO: IMPLEMENT
    *
-   * @param target
+   * @param objectRef
    * @return
    */
-  private static Object lookupTargetObject(Primitives.Object target) {
-    return null;
+  private static Object lookupObject(String objectRef) {
+    return objectMap.get(objectRef);
+  }
+
+  private static void storeObject(String objectRef, Object object) {
+    objectMap.put(objectRef, object);
   }
 
   /**

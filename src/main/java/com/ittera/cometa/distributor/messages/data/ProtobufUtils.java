@@ -49,7 +49,7 @@ public class ProtobufUtils {
           //TODO shouldn't we recursively unwrapObject here?
           strList.add(strObj.getValue());
         }
-        return (String[]) strList.toArray(new String[]{});
+        return strList.toArray(new String[]{});
       }
       //TODO all primitive types
       else {

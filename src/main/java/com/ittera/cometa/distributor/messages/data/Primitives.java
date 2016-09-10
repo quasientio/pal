@@ -45,18 +45,17 @@ public final class Primitives {
     int getIdentityHash();
 
     /**
-     * <code>optional string class = 4;</code>
+     * <code>required .messages.data.Class class = 4;</code>
      */
     boolean hasClass_();
     /**
-     * <code>optional string class = 4;</code>
+     * <code>required .messages.data.Class class = 4;</code>
      */
-    java.lang.String getClass_();
+    com.ittera.cometa.distributor.messages.data.Primitives.Class getClass_();
     /**
-     * <code>optional string class = 4;</code>
+     * <code>required .messages.data.Class class = 4;</code>
      */
-    com.google.protobuf.ByteString
-        getClass_Bytes();
+    com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getClass_OrBuilder();
 
     /**
      * <code>optional bool isArray = 5 [default = false];</code>
@@ -92,13 +91,36 @@ public final class Primitives {
         int index);
 
     /**
-     * <code>optional bool trimmed = 7 [default = false];</code>
+     * <code>optional int64 created = 7;</code>
      */
-    boolean hasTrimmed();
+    boolean hasCreated();
     /**
-     * <code>optional bool trimmed = 7 [default = false];</code>
+     * <code>optional int64 created = 7;</code>
      */
-    boolean getTrimmed();
+    long getCreated();
+
+    /**
+     * <code>optional string ref = 8;</code>
+     */
+    boolean hasRef();
+    /**
+     * <code>optional string ref = 8;</code>
+     */
+    java.lang.String getRef();
+    /**
+     * <code>optional string ref = 8;</code>
+     */
+    com.google.protobuf.ByteString
+        getRefBytes();
+
+    /**
+     * <code>required bool isNull = 9;</code>
+     */
+    boolean hasIsNull();
+    /**
+     * <code>required bool isNull = 9;</code>
+     */
+    boolean getIsNull();
   }
   /**
    * Protobuf type {@code messages.data.Object}
@@ -169,9 +191,16 @@ public final class Primitives {
               break;
             }
             case 34: {
-              com.google.protobuf.ByteString bs = input.readBytes();
+              com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000008) == 0x00000008)) {
+                subBuilder = class__.toBuilder();
+              }
+              class__ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Class.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(class__);
+                class__ = subBuilder.buildPartial();
+              }
               bitField0_ |= 0x00000008;
-              class__ = bs;
               break;
             }
             case 40: {
@@ -189,7 +218,18 @@ public final class Primitives {
             }
             case 56: {
               bitField0_ |= 0x00000020;
-              trimmed_ = input.readBool();
+              created_ = input.readInt64();
+              break;
+            }
+            case 66: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000040;
+              ref_ = bs;
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000080;
+              isNull_ = input.readBool();
               break;
             }
           }
@@ -308,45 +348,24 @@ public final class Primitives {
     }
 
     public static final int CLASS_FIELD_NUMBER = 4;
-    private java.lang.Object class__;
+    private com.ittera.cometa.distributor.messages.data.Primitives.Class class__;
     /**
-     * <code>optional string class = 4;</code>
+     * <code>required .messages.data.Class class = 4;</code>
      */
     public boolean hasClass_() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>optional string class = 4;</code>
+     * <code>required .messages.data.Class class = 4;</code>
      */
-    public java.lang.String getClass_() {
-      java.lang.Object ref = class__;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          class__ = s;
-        }
-        return s;
-      }
+    public com.ittera.cometa.distributor.messages.data.Primitives.Class getClass_() {
+      return class__;
     }
     /**
-     * <code>optional string class = 4;</code>
+     * <code>required .messages.data.Class class = 4;</code>
      */
-    public com.google.protobuf.ByteString
-        getClass_Bytes() {
-      java.lang.Object ref = class__;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        class__ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getClass_OrBuilder() {
+      return class__;
     }
 
     public static final int ISARRAY_FIELD_NUMBER = 5;
@@ -399,29 +418,88 @@ public final class Primitives {
       return arrayValue_.get(index);
     }
 
-    public static final int TRIMMED_FIELD_NUMBER = 7;
-    private boolean trimmed_;
+    public static final int CREATED_FIELD_NUMBER = 7;
+    private long created_;
     /**
-     * <code>optional bool trimmed = 7 [default = false];</code>
+     * <code>optional int64 created = 7;</code>
      */
-    public boolean hasTrimmed() {
+    public boolean hasCreated() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
-     * <code>optional bool trimmed = 7 [default = false];</code>
+     * <code>optional int64 created = 7;</code>
      */
-    public boolean getTrimmed() {
-      return trimmed_;
+    public long getCreated() {
+      return created_;
+    }
+
+    public static final int REF_FIELD_NUMBER = 8;
+    private java.lang.Object ref_;
+    /**
+     * <code>optional string ref = 8;</code>
+     */
+    public boolean hasRef() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>optional string ref = 8;</code>
+     */
+    public java.lang.String getRef() {
+      java.lang.Object ref = ref_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          ref_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string ref = 8;</code>
+     */
+    public com.google.protobuf.ByteString
+        getRefBytes() {
+      java.lang.Object ref = ref_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        ref_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int ISNULL_FIELD_NUMBER = 9;
+    private boolean isNull_;
+    /**
+     * <code>required bool isNull = 9;</code>
+     */
+    public boolean hasIsNull() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>required bool isNull = 9;</code>
+     */
+    public boolean getIsNull() {
+      return isNull_;
     }
 
     private void initFields() {
       value_ = "";
       hash_ = 0;
       identityHash_ = 0;
-      class__ = "";
+      class__ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
       isArray_ = false;
       arrayValue_ = java.util.Collections.emptyList();
-      trimmed_ = false;
+      created_ = 0L;
+      ref_ = "";
+      isNull_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -430,6 +508,14 @@ public final class Primitives {
       if (isInitialized == 0) return false;
 
       if (!hasIdentityHash()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasClass_()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasIsNull()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -456,7 +542,7 @@ public final class Primitives {
         output.writeInt32(3, identityHash_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeBytes(4, getClass_Bytes());
+        output.writeMessage(4, class__);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeBool(5, isArray_);
@@ -465,7 +551,13 @@ public final class Primitives {
         output.writeMessage(6, arrayValue_.get(i));
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeBool(7, trimmed_);
+        output.writeInt64(7, created_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeBytes(8, getRefBytes());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeBool(9, isNull_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -490,7 +582,7 @@ public final class Primitives {
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(4, getClass_Bytes());
+          .computeMessageSize(4, class__);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
@@ -502,7 +594,15 @@ public final class Primitives {
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(7, trimmed_);
+          .computeInt64Size(7, created_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(8, getRefBytes());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(9, isNull_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -613,6 +713,7 @@ public final class Primitives {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getClass_FieldBuilder();
           getArrayValueFieldBuilder();
         }
       }
@@ -628,7 +729,11 @@ public final class Primitives {
         bitField0_ = (bitField0_ & ~0x00000002);
         identityHash_ = 0;
         bitField0_ = (bitField0_ & ~0x00000004);
-        class__ = "";
+        if (class_Builder_ == null) {
+          class__ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+        } else {
+          class_Builder_.clear();
+        }
         bitField0_ = (bitField0_ & ~0x00000008);
         isArray_ = false;
         bitField0_ = (bitField0_ & ~0x00000010);
@@ -638,8 +743,12 @@ public final class Primitives {
         } else {
           arrayValueBuilder_.clear();
         }
-        trimmed_ = false;
+        created_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000040);
+        ref_ = "";
+        bitField0_ = (bitField0_ & ~0x00000080);
+        isNull_ = false;
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
 
@@ -683,7 +792,11 @@ public final class Primitives {
         if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
           to_bitField0_ |= 0x00000008;
         }
-        result.class__ = class__;
+        if (class_Builder_ == null) {
+          result.class__ = class__;
+        } else {
+          result.class__ = class_Builder_.build();
+        }
         if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000010;
         }
@@ -700,7 +813,15 @@ public final class Primitives {
         if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
           to_bitField0_ |= 0x00000020;
         }
-        result.trimmed_ = trimmed_;
+        result.created_ = created_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.ref_ = ref_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.isNull_ = isNull_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -729,9 +850,7 @@ public final class Primitives {
           setIdentityHash(other.getIdentityHash());
         }
         if (other.hasClass_()) {
-          bitField0_ |= 0x00000008;
-          class__ = other.class__;
-          onChanged();
+          mergeClass_(other.getClass_());
         }
         if (other.hasIsArray()) {
           setIsArray(other.getIsArray());
@@ -762,8 +881,16 @@ public final class Primitives {
             }
           }
         }
-        if (other.hasTrimmed()) {
-          setTrimmed(other.getTrimmed());
+        if (other.hasCreated()) {
+          setCreated(other.getCreated());
+        }
+        if (other.hasRef()) {
+          bitField0_ |= 0x00000080;
+          ref_ = other.ref_;
+          onChanged();
+        }
+        if (other.hasIsNull()) {
+          setIsNull(other.getIsNull());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -771,6 +898,14 @@ public final class Primitives {
 
       public final boolean isInitialized() {
         if (!hasIdentityHash()) {
+          
+          return false;
+        }
+        if (!hasClass_()) {
+          
+          return false;
+        }
+        if (!hasIsNull()) {
           
           return false;
         }
@@ -942,80 +1077,120 @@ public final class Primitives {
         return this;
       }
 
-      private java.lang.Object class__ = "";
+      private com.ittera.cometa.distributor.messages.data.Primitives.Class class__ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder> class_Builder_;
       /**
-       * <code>optional string class = 4;</code>
+       * <code>required .messages.data.Class class = 4;</code>
        */
       public boolean hasClass_() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
-       * <code>optional string class = 4;</code>
+       * <code>required .messages.data.Class class = 4;</code>
        */
-      public java.lang.String getClass_() {
-        java.lang.Object ref = class__;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            class__ = s;
+      public com.ittera.cometa.distributor.messages.data.Primitives.Class getClass_() {
+        if (class_Builder_ == null) {
+          return class__;
+        } else {
+          return class_Builder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .messages.data.Class class = 4;</code>
+       */
+      public Builder setClass_(com.ittera.cometa.distributor.messages.data.Primitives.Class value) {
+        if (class_Builder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
           }
-          return s;
+          class__ = value;
+          onChanged();
         } else {
-          return (java.lang.String) ref;
+          class_Builder_.setMessage(value);
         }
+        bitField0_ |= 0x00000008;
+        return this;
       }
       /**
-       * <code>optional string class = 4;</code>
-       */
-      public com.google.protobuf.ByteString
-          getClass_Bytes() {
-        java.lang.Object ref = class__;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          class__ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string class = 4;</code>
+       * <code>required .messages.data.Class class = 4;</code>
        */
       public Builder setClass_(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
-        class__ = value;
-        onChanged();
+          com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder builderForValue) {
+        if (class_Builder_ == null) {
+          class__ = builderForValue.build();
+          onChanged();
+        } else {
+          class_Builder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000008;
         return this;
       }
       /**
-       * <code>optional string class = 4;</code>
+       * <code>required .messages.data.Class class = 4;</code>
+       */
+      public Builder mergeClass_(com.ittera.cometa.distributor.messages.data.Primitives.Class value) {
+        if (class_Builder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008) &&
+              class__ != com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance()) {
+            class__ =
+              com.ittera.cometa.distributor.messages.data.Primitives.Class.newBuilder(class__).mergeFrom(value).buildPartial();
+          } else {
+            class__ = value;
+          }
+          onChanged();
+        } else {
+          class_Builder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>required .messages.data.Class class = 4;</code>
        */
       public Builder clearClass_() {
+        if (class_Builder_ == null) {
+          class__ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+          onChanged();
+        } else {
+          class_Builder_.clear();
+        }
         bitField0_ = (bitField0_ & ~0x00000008);
-        class__ = getDefaultInstance().getClass_();
-        onChanged();
         return this;
       }
       /**
-       * <code>optional string class = 4;</code>
+       * <code>required .messages.data.Class class = 4;</code>
        */
-      public Builder setClass_Bytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
-        class__ = value;
+      public com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder getClass_Builder() {
+        bitField0_ |= 0x00000008;
         onChanged();
-        return this;
+        return getClass_FieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .messages.data.Class class = 4;</code>
+       */
+      public com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getClass_OrBuilder() {
+        if (class_Builder_ != null) {
+          return class_Builder_.getMessageOrBuilder();
+        } else {
+          return class__;
+        }
+      }
+      /**
+       * <code>required .messages.data.Class class = 4;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder> 
+          getClass_FieldBuilder() {
+        if (class_Builder_ == null) {
+          class_Builder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder>(
+                  getClass_(),
+                  getParentForChildren(),
+                  isClean());
+          class__ = null;
+        }
+        return class_Builder_;
       }
 
       private boolean isArray_ ;
@@ -1290,34 +1465,142 @@ public final class Primitives {
         return arrayValueBuilder_;
       }
 
-      private boolean trimmed_ ;
+      private long created_ ;
       /**
-       * <code>optional bool trimmed = 7 [default = false];</code>
+       * <code>optional int64 created = 7;</code>
        */
-      public boolean hasTrimmed() {
+      public boolean hasCreated() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
       /**
-       * <code>optional bool trimmed = 7 [default = false];</code>
+       * <code>optional int64 created = 7;</code>
        */
-      public boolean getTrimmed() {
-        return trimmed_;
+      public long getCreated() {
+        return created_;
       }
       /**
-       * <code>optional bool trimmed = 7 [default = false];</code>
+       * <code>optional int64 created = 7;</code>
        */
-      public Builder setTrimmed(boolean value) {
+      public Builder setCreated(long value) {
         bitField0_ |= 0x00000040;
-        trimmed_ = value;
+        created_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional bool trimmed = 7 [default = false];</code>
+       * <code>optional int64 created = 7;</code>
        */
-      public Builder clearTrimmed() {
+      public Builder clearCreated() {
         bitField0_ = (bitField0_ & ~0x00000040);
-        trimmed_ = false;
+        created_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object ref_ = "";
+      /**
+       * <code>optional string ref = 8;</code>
+       */
+      public boolean hasRef() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      /**
+       * <code>optional string ref = 8;</code>
+       */
+      public java.lang.String getRef() {
+        java.lang.Object ref = ref_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            ref_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string ref = 8;</code>
+       */
+      public com.google.protobuf.ByteString
+          getRefBytes() {
+        java.lang.Object ref = ref_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          ref_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string ref = 8;</code>
+       */
+      public Builder setRef(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000080;
+        ref_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string ref = 8;</code>
+       */
+      public Builder clearRef() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        ref_ = getDefaultInstance().getRef();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string ref = 8;</code>
+       */
+      public Builder setRefBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000080;
+        ref_ = value;
+        onChanged();
+        return this;
+      }
+
+      private boolean isNull_ ;
+      /**
+       * <code>required bool isNull = 9;</code>
+       */
+      public boolean hasIsNull() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      /**
+       * <code>required bool isNull = 9;</code>
+       */
+      public boolean getIsNull() {
+        return isNull_;
+      }
+      /**
+       * <code>required bool isNull = 9;</code>
+       */
+      public Builder setIsNull(boolean value) {
+        bitField0_ |= 0x00000100;
+        isNull_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bool isNull = 9;</code>
+       */
+      public Builder clearIsNull() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        isNull_ = false;
         onChanged();
         return this;
       }
@@ -1338,36 +1621,27 @@ public final class Primitives {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>optional string classname = 1;</code>
+     * <code>optional string name = 1;</code>
      */
-    boolean hasClassname();
+    boolean hasName();
     /**
-     * <code>optional string classname = 1;</code>
+     * <code>optional string name = 1;</code>
      */
-    java.lang.String getClassname();
+    java.lang.String getName();
     /**
-     * <code>optional string classname = 1;</code>
+     * <code>optional string name = 1;</code>
      */
     com.google.protobuf.ByteString
-        getClassnameBytes();
+        getNameBytes();
 
     /**
-     * <code>optional int32 hash = 2;</code>
+     * <code>optional bool unknown = 2 [default = false];</code>
      */
-    boolean hasHash();
+    boolean hasUnknown();
     /**
-     * <code>optional int32 hash = 2;</code>
+     * <code>optional bool unknown = 2 [default = false];</code>
      */
-    int getHash();
-
-    /**
-     * <code>required int32 identityHash = 3;</code>
-     */
-    boolean hasIdentityHash();
-    /**
-     * <code>required int32 identityHash = 3;</code>
-     */
-    int getIdentityHash();
+    boolean getUnknown();
   }
   /**
    * Protobuf type {@code messages.data.Class}
@@ -1424,17 +1698,12 @@ public final class Primitives {
             case 10: {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000001;
-              classname_ = bs;
+              name_ = bs;
               break;
             }
             case 16: {
               bitField0_ |= 0x00000002;
-              hash_ = input.readInt32();
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              identityHash_ = input.readInt32();
+              unknown_ = input.readBool();
               break;
             }
           }
@@ -1477,19 +1746,19 @@ public final class Primitives {
     }
 
     private int bitField0_;
-    public static final int CLASSNAME_FIELD_NUMBER = 1;
-    private java.lang.Object classname_;
+    public static final int NAME_FIELD_NUMBER = 1;
+    private java.lang.Object name_;
     /**
-     * <code>optional string classname = 1;</code>
+     * <code>optional string name = 1;</code>
      */
-    public boolean hasClassname() {
+    public boolean hasName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional string classname = 1;</code>
+     * <code>optional string name = 1;</code>
      */
-    public java.lang.String getClassname() {
-      java.lang.Object ref = classname_;
+    public java.lang.String getName() {
+      java.lang.Object ref = name_;
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
@@ -1497,62 +1766,46 @@ public final class Primitives {
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
-          classname_ = s;
+          name_ = s;
         }
         return s;
       }
     }
     /**
-     * <code>optional string classname = 1;</code>
+     * <code>optional string name = 1;</code>
      */
     public com.google.protobuf.ByteString
-        getClassnameBytes() {
-      java.lang.Object ref = classname_;
+        getNameBytes() {
+      java.lang.Object ref = name_;
       if (ref instanceof java.lang.String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
-        classname_ = b;
+        name_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
 
-    public static final int HASH_FIELD_NUMBER = 2;
-    private int hash_;
+    public static final int UNKNOWN_FIELD_NUMBER = 2;
+    private boolean unknown_;
     /**
-     * <code>optional int32 hash = 2;</code>
+     * <code>optional bool unknown = 2 [default = false];</code>
      */
-    public boolean hasHash() {
+    public boolean hasUnknown() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional int32 hash = 2;</code>
+     * <code>optional bool unknown = 2 [default = false];</code>
      */
-    public int getHash() {
-      return hash_;
-    }
-
-    public static final int IDENTITYHASH_FIELD_NUMBER = 3;
-    private int identityHash_;
-    /**
-     * <code>required int32 identityHash = 3;</code>
-     */
-    public boolean hasIdentityHash() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
-    }
-    /**
-     * <code>required int32 identityHash = 3;</code>
-     */
-    public int getIdentityHash() {
-      return identityHash_;
+    public boolean getUnknown() {
+      return unknown_;
     }
 
     private void initFields() {
-      classname_ = "";
-      hash_ = 0;
-      identityHash_ = 0;
+      name_ = "";
+      unknown_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1560,10 +1813,6 @@ public final class Primitives {
       if (isInitialized == 1) return true;
       if (isInitialized == 0) return false;
 
-      if (!hasIdentityHash()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -1572,13 +1821,10 @@ public final class Primitives {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeBytes(1, getClassnameBytes());
+        output.writeBytes(1, getNameBytes());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeInt32(2, hash_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeInt32(3, identityHash_);
+        output.writeBool(2, unknown_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -1591,15 +1837,11 @@ public final class Primitives {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(1, getClassnameBytes());
+          .computeBytesSize(1, getNameBytes());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(2, hash_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(3, identityHash_);
+          .computeBoolSize(2, unknown_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1718,12 +1960,10 @@ public final class Primitives {
 
       public Builder clear() {
         super.clear();
-        classname_ = "";
+        name_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
-        hash_ = 0;
+        unknown_ = false;
         bitField0_ = (bitField0_ & ~0x00000002);
-        identityHash_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -1755,15 +1995,11 @@ public final class Primitives {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        result.classname_ = classname_;
+        result.name_ = name_;
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        result.hash_ = hash_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.identityHash_ = identityHash_;
+        result.unknown_ = unknown_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1780,26 +2016,19 @@ public final class Primitives {
 
       public Builder mergeFrom(com.ittera.cometa.distributor.messages.data.Primitives.Class other) {
         if (other == com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance()) return this;
-        if (other.hasClassname()) {
+        if (other.hasName()) {
           bitField0_ |= 0x00000001;
-          classname_ = other.classname_;
+          name_ = other.name_;
           onChanged();
         }
-        if (other.hasHash()) {
-          setHash(other.getHash());
-        }
-        if (other.hasIdentityHash()) {
-          setIdentityHash(other.getIdentityHash());
+        if (other.hasUnknown()) {
+          setUnknown(other.getUnknown());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
 
       public final boolean isInitialized() {
-        if (!hasIdentityHash()) {
-          
-          return false;
-        }
         return true;
       }
 
@@ -1822,24 +2051,24 @@ public final class Primitives {
       }
       private int bitField0_;
 
-      private java.lang.Object classname_ = "";
+      private java.lang.Object name_ = "";
       /**
-       * <code>optional string classname = 1;</code>
+       * <code>optional string name = 1;</code>
        */
-      public boolean hasClassname() {
+      public boolean hasName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional string classname = 1;</code>
+       * <code>optional string name = 1;</code>
        */
-      public java.lang.String getClassname() {
-        java.lang.Object ref = classname_;
+      public java.lang.String getName() {
+        java.lang.Object ref = name_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
               (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
-            classname_ = s;
+            name_ = s;
           }
           return s;
         } else {
@@ -1847,117 +2076,85 @@ public final class Primitives {
         }
       }
       /**
-       * <code>optional string classname = 1;</code>
+       * <code>optional string name = 1;</code>
        */
       public com.google.protobuf.ByteString
-          getClassnameBytes() {
-        java.lang.Object ref = classname_;
+          getNameBytes() {
+        java.lang.Object ref = name_;
         if (ref instanceof String) {
           com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
-          classname_ = b;
+          name_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
       /**
-       * <code>optional string classname = 1;</code>
+       * <code>optional string name = 1;</code>
        */
-      public Builder setClassname(
+      public Builder setName(
           java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000001;
-        classname_ = value;
+        name_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional string classname = 1;</code>
+       * <code>optional string name = 1;</code>
        */
-      public Builder clearClassname() {
+      public Builder clearName() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        classname_ = getDefaultInstance().getClassname();
+        name_ = getDefaultInstance().getName();
         onChanged();
         return this;
       }
       /**
-       * <code>optional string classname = 1;</code>
+       * <code>optional string name = 1;</code>
        */
-      public Builder setClassnameBytes(
+      public Builder setNameBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000001;
-        classname_ = value;
+        name_ = value;
         onChanged();
         return this;
       }
 
-      private int hash_ ;
+      private boolean unknown_ ;
       /**
-       * <code>optional int32 hash = 2;</code>
+       * <code>optional bool unknown = 2 [default = false];</code>
        */
-      public boolean hasHash() {
+      public boolean hasUnknown() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional int32 hash = 2;</code>
+       * <code>optional bool unknown = 2 [default = false];</code>
        */
-      public int getHash() {
-        return hash_;
+      public boolean getUnknown() {
+        return unknown_;
       }
       /**
-       * <code>optional int32 hash = 2;</code>
+       * <code>optional bool unknown = 2 [default = false];</code>
        */
-      public Builder setHash(int value) {
+      public Builder setUnknown(boolean value) {
         bitField0_ |= 0x00000002;
-        hash_ = value;
+        unknown_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional int32 hash = 2;</code>
+       * <code>optional bool unknown = 2 [default = false];</code>
        */
-      public Builder clearHash() {
+      public Builder clearUnknown() {
         bitField0_ = (bitField0_ & ~0x00000002);
-        hash_ = 0;
-        onChanged();
-        return this;
-      }
-
-      private int identityHash_ ;
-      /**
-       * <code>required int32 identityHash = 3;</code>
-       */
-      public boolean hasIdentityHash() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
-      }
-      /**
-       * <code>required int32 identityHash = 3;</code>
-       */
-      public int getIdentityHash() {
-        return identityHash_;
-      }
-      /**
-       * <code>required int32 identityHash = 3;</code>
-       */
-      public Builder setIdentityHash(int value) {
-        bitField0_ |= 0x00000004;
-        identityHash_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>required int32 identityHash = 3;</code>
-       */
-      public Builder clearIdentityHash() {
-        bitField0_ = (bitField0_ & ~0x00000004);
-        identityHash_ = 0;
+        unknown_ = false;
         onChanged();
         return this;
       }
@@ -1992,14 +2189,15 @@ public final class Primitives {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\020primitives.proto\022\rmessages.data\"\245\001\n\006Ob" +
+      "\n\020primitives.proto\022\rmessages.data\"\321\001\n\006Ob" +
       "ject\022\r\n\005value\030\001 \001(\t\022\014\n\004hash\030\002 \001(\005\022\024\n\014ide" +
-      "ntityHash\030\003 \002(\005\022\r\n\005class\030\004 \001(\t\022\026\n\007isArra" +
-      "y\030\005 \001(\010:\005false\022)\n\narrayValue\030\006 \003(\0132\025.mes" +
-      "sages.data.Object\022\026\n\007trimmed\030\007 \001(\010:\005fals" +
-      "e\">\n\005Class\022\021\n\tclassname\030\001 \001(\t\022\014\n\004hash\030\002 " +
-      "\001(\005\022\024\n\014identityHash\030\003 \002(\005B/\n+com.ittera." +
-      "cometa.distributor.messages.dataH\001"
+      "ntityHash\030\003 \002(\005\022#\n\005class\030\004 \002(\0132\024.message" +
+      "s.data.Class\022\026\n\007isArray\030\005 \001(\010:\005false\022)\n\n" +
+      "arrayValue\030\006 \003(\0132\025.messages.data.Object\022" +
+      "\017\n\007created\030\007 \001(\003\022\013\n\003ref\030\010 \001(\t\022\016\n\006isNull\030" +
+      "\t \002(\010\"-\n\005Class\022\014\n\004name\030\001 \001(\t\022\026\n\007unknown\030" +
+      "\002 \001(\010:\005falseB/\n+com.ittera.cometa.distri" +
+      "butor.messages.dataH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -2018,13 +2216,13 @@ public final class Primitives {
     internal_static_messages_data_Object_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_Object_descriptor,
-        new java.lang.String[] { "Value", "Hash", "IdentityHash", "Class_", "IsArray", "ArrayValue", "Trimmed", });
+        new java.lang.String[] { "Value", "Hash", "IdentityHash", "Class_", "IsArray", "ArrayValue", "Created", "Ref", "IsNull", });
     internal_static_messages_data_Class_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_messages_data_Class_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_Class_descriptor,
-        new java.lang.String[] { "Classname", "Hash", "IdentityHash", });
+        new java.lang.String[] { "Name", "Unknown", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)
