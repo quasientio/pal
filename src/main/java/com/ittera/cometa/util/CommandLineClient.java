@@ -35,18 +35,14 @@ public class CommandLineClient {
     kafkaTopic = properties.getProperty("kafkaTopic");
 
     /** Configure and Initialize Kafka Producer **/
-    //common kafka properties
-    for (String propKey : properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.") && !(propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer"))) {
-        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka."), properties.getProperty(propKey));
-      }
-    }
-    //producer properties
     for (String propKey : properties.stringPropertyNames()) {
       if (propKey.startsWith("kafka.producer.")) {
         kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka.producer."), properties.getProperty(propKey));
+      } else if (propKey.startsWith("kafka.")) {
+        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka."), properties.getProperty(propKey));
       }
     }
+
     //other producer specific props
     kafkaProducerProps.put("client.id", String.valueOf(clientId));
     producer = new KafkaProducer<>(kafkaProducerProps);
