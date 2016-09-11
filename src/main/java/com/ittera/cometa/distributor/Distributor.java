@@ -79,7 +79,7 @@ public class Distributor {
 
   // <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
   public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
-    logger.debug("in D.classConstructor: {}", staticPart.getSignature());
+    logger.trace("in D.classConstructor: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -140,7 +140,7 @@ public class Distributor {
     }
 
     //Since class initialization is not working, we will return false if we want to aspectj to proceed(), indicating class isn't initialized
-    logger.debug("leavingin D.classConstructor: {}", staticPart.getSignature());
+    logger.trace("leavingin D.classConstructor: {}", staticPart.getSignature());
     return false;
   }
 
@@ -151,7 +151,7 @@ public class Distributor {
    * @throws Throwable
    */
   static void incomingConstructor(Calls.ConstructorCall constructorCall) {
-    logger.debug("in D.incomingConstructor: {}", constructorCall.getClass_().getName());
+    logger.trace("in D.incomingConstructor: {}", constructorCall.getClass_().getName());
 
     /** 1. Unwrap message and load constructor **/
     final Class clazz;
@@ -211,12 +211,12 @@ public class Distributor {
     logger.debug("Sent new message!");
 
 
-    logger.debug("leaving D.incomingConstructor: {}", constructorCall.getClass_().getName());
+    logger.trace("leaving D.incomingConstructor: {}", constructorCall.getClass_().getName());
     return;
   }
 
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.debug("in D.constructor: {}", staticPart.getSignature());
+    logger.trace("in D.constructor: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -291,7 +291,7 @@ public class Distributor {
       }
     }
 
-    logger.debug("leaving D.constructor: {}", staticPart.getSignature());
+    logger.trace("leaving D.constructor: {}", staticPart.getSignature());
     return newObject;
   }
   // </editor-fold>
@@ -299,7 +299,7 @@ public class Distributor {
   // <editor-fold defaultstate="collapsed" desc="METHOD CALLS">
 
   public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.debug("in D.voidInstanceMethod: {}", staticPart.getSignature());
+    logger.trace("in D.voidInstanceMethod: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -368,12 +368,12 @@ public class Distributor {
       }
     }
 
-    logger.debug("leaving D.voidInstanceMethod: {}", staticPart.getSignature());
+    logger.trace("leaving D.voidInstanceMethod: {}", staticPart.getSignature());
     return;
   }
 
   public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.debug("in D.nonVoidInstanceMethod: {}", staticPart.getSignature());
+    logger.trace("in D.nonVoidInstanceMethod: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -442,7 +442,7 @@ public class Distributor {
       }
     }
 
-    logger.debug("leaving D.nonVoidInstanceMethod: {}", staticPart.getSignature());
+    logger.trace("leaving D.nonVoidInstanceMethod: {}", staticPart.getSignature());
     return returnValue;
   }
 
@@ -452,7 +452,7 @@ public class Distributor {
    * @param instanceMethodCall
    */
   static void incomingInstanceMethod(Calls.InstanceMethodCall instanceMethodCall) {
-    logger.debug("in D.incomingInstanceMethod: {}", instanceMethodCall.getName());
+    logger.trace("in D.incomingInstanceMethod: {}", instanceMethodCall.getName());
 
     /** 1. Unwrap message and load method **/
     Class clazz = null;
@@ -511,12 +511,12 @@ public class Distributor {
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     logger.debug("Sent new message!");
 
-    logger.debug("leaving D.incomingInstanceMethod: {}", instanceMethodCall.getName());
+    logger.trace("leaving D.incomingInstanceMethod: {}", instanceMethodCall.getName());
     return;
   }
 
   public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.debug("in D.voidClassMethod: {}", staticPart.getSignature());
+    logger.trace("in D.voidClassMethod: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -584,12 +584,12 @@ public class Distributor {
       }
     }
 
-    logger.debug("leaving D.voidClassMethod: {}", staticPart.getSignature());
+    logger.trace("leaving D.voidClassMethod: {}", staticPart.getSignature());
     return;
   }
 
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.debug("in D.nonVoidClassMethod: {}", staticPart.getSignature());
+    logger.trace("in D.nonVoidClassMethod: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -658,7 +658,7 @@ public class Distributor {
       }
     }
 
-    logger.debug("leaving D.nonVoidClassMethod: {}", staticPart.getSignature());
+    logger.trace("leaving D.nonVoidClassMethod: {}", staticPart.getSignature());
     return returnValue;
   }
 
@@ -669,7 +669,7 @@ public class Distributor {
    * @param classMethodCall
    */
   static void incomingClassMethod(Calls.ClassMethodCall classMethodCall) {
-    logger.debug("in D.incomingClassMethod: {}", classMethodCall.getName());
+    logger.trace("in D.incomingClassMethod: {}", classMethodCall.getName());
 
     /** 1. Unwrap message and load method **/
     Class clazz = null;
@@ -724,7 +724,7 @@ public class Distributor {
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     logger.debug("Sent new message from D.incomingClassMethod!");
 
-    logger.debug("leaving D.incomingClassMethod: {}", classMethodCall.getName());
+    logger.trace("leaving D.incomingClassMethod: {}", classMethodCall.getName());
     return;
   }
 
@@ -734,7 +734,7 @@ public class Distributor {
   // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
 
   public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet) {
-    logger.debug("in D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
+    logger.trace("in D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -780,13 +780,13 @@ public class Distributor {
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     logger.debug("Sent new message!");
 
-    logger.debug("leaving D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
+    logger.trace("leaving D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
     return;
 
   }
 
   public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
-    logger.debug("in D.getStatic: {}", staticPart.getSignature());
+    logger.trace("in D.getStatic: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -845,12 +845,12 @@ public class Distributor {
       throw exceptionGettingObject;
     }
 
-    logger.debug("leaving D.getStatic: {}", staticPart.getSignature());
+    logger.trace("leaving D.getStatic: {}", staticPart.getSignature());
     return fieldValue;
   }
 
   public static void incomingGetObject(Fields.InstanceFieldGet instanceFieldGet) {
-    logger.debug("in D.incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
+    logger.trace("in D.incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -897,13 +897,13 @@ public class Distributor {
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     logger.debug("Sent new message!");
 
-    logger.debug("leaving D.incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
+    logger.trace("leaving D.incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
     return;
 
   }
 
   public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
-    logger.debug("in D.getObject: {}", staticPart.getSignature());
+    logger.trace("in D.getObject: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -963,12 +963,12 @@ public class Distributor {
       throw exceptionGettingObject;
     }
 
-    logger.debug("in D.getObject: {}", staticPart.getSignature());
+    logger.trace("in D.getObject: {}", staticPart.getSignature());
     return fieldValue;
   }
 
   public static void incomingPutStatic(Fields.StaticFieldPut staticFieldPut) {
-    logger.debug("in D.incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
+    logger.trace("in D.incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -1024,13 +1024,13 @@ public class Distributor {
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     logger.debug("Sent new message!");
 
-    logger.debug("leaving D.incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
+    logger.trace("leaving D.incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
     return;
 
   }
 
   public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
-    logger.debug("in D.putStatic: {}", staticPart.getSignature());
+    logger.trace("in D.putStatic: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -1089,12 +1089,12 @@ public class Distributor {
       throw exceptionSettingObject;
     }
 
-    logger.debug("in D.putStatic: {}", staticPart.getSignature());
+    logger.trace("in D.putStatic: {}", staticPart.getSignature());
     return;
   }
 
   public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) throws IllegalAccessException {
-    logger.debug("in D.putField: {}", staticPart.getSignature());
+    logger.trace("in D.putField: {}", staticPart.getSignature());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -1153,12 +1153,12 @@ public class Distributor {
       throw exceptionSettingObject;
     }
 
-    logger.debug("leaving D.putField: {}", staticPart.getSignature());
+    logger.trace("leaving D.putField: {}", staticPart.getSignature());
     return;
   }
 
   public static void incomingPutField(Fields.InstanceFieldPut instanceFieldPut) {
-    logger.debug("in D.incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
+    logger.trace("in D.incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
 
     /** 0. Ensure thread has a receiving message queue */
     checkCreateThreadQueue();
@@ -1223,7 +1223,7 @@ public class Distributor {
     producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
     logger.debug("Sent new message!");
 
-    logger.debug("leaving D.incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
+    logger.trace("leaving D.incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
     return;
 
   }
