@@ -9,9 +9,6 @@ import org.aspectj.lang.JoinPoint.StaticPart;
 
 import org.aspectj.runtime.reflect.FieldSignatureImpl;
 
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.KafkaProducer;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.Class;
@@ -27,7 +24,6 @@ import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingDeque;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -37,21 +33,17 @@ import org.apache.commons.lang3.StringUtils;
 public class Distributor {
   protected static final Logger logger = LogManager.getLogger(Distributor.class);
 
-  static KafkaProducer producer;
-  static String kafkaTopic;
-  static int id;
-
 
   /**
-   * static data shared by all threads - sources of contention
+   * Static data shared by all threads - sources of contention
    */
-
   //A map to hold a blocking message queue for each Thread
+  static MessageBroker broker;
+  static int id;
   static final Map<Long, BlockingQueue> threadBlockingQueueMap = new ConcurrentHashMap();
   static final Map<String, Object> objectMap = new ConcurrentHashMap<>();
 
-  //A map for all objects created by the Distributor. TODO: store as WeakReferences -> until then, no objects will get garbage cleaned!
-
+  //A map for all objects created by the Distributor. TODO: store as WeakReferences -> until then, no threads will get garbage cleaned!
   private static Wrappers.DataMessage receiveMsgForCurrentThread() {
     long currThreadId = Thread.currentThread().getId();
     Wrappers.DataMessage rcvdMsg = null;
@@ -67,13 +59,6 @@ public class Distributor {
     return rcvdMsg;
   }
 
-  private static void checkCreateThreadQueue() {
-    long currThreadId = Thread.currentThread().getId();
-    if (!threadBlockingQueueMap.containsKey(currThreadId)) {
-      threadBlockingQueueMap.put(currThreadId, new LinkedBlockingDeque());
-      logger.debug("Added new blocking queue to map, with thread id={}", currThreadId);
-    }
-  }
 
   /************************ INTERFACE ***************************/
 
@@ -81,16 +66,12 @@ public class Distributor {
   public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
     logger.trace("in D.classConstructor: {}", staticPart.getSignature());
 
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
-
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildClassInitializerMessage(id, staticPart, sender);
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic, msg));
-    logger.debug("Sent new message!");
+    broker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -123,8 +104,7 @@ public class Distributor {
     }
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
+    broker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -207,9 +187,7 @@ public class Distributor {
 
 
     /** 4. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
-
+    broker.send(invokedMsg);
 
     logger.trace("leaving D.incomingConstructor: {}", constructorCall.getClass_().getName());
     return;
@@ -218,9 +196,6 @@ public class Distributor {
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.trace("in D.constructor: {}", staticPart.getSignature());
 
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
-
     final ConstructorSignature constructorSignature = (ConstructorSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
@@ -228,8 +203,7 @@ public class Distributor {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic, callMsg));
-    logger.debug("Sent new message!");
+    broker.send(callMsg);
 
     if (mustWait(callMsg)) {
       /** 3. Receive message **/
@@ -270,9 +244,7 @@ public class Distributor {
 
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
-
+    broker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -301,9 +273,6 @@ public class Distributor {
   public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
     logger.trace("in D.voidInstanceMethod: {}", staticPart.getSignature());
 
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
-
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
@@ -312,8 +281,7 @@ public class Distributor {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic, msg));
-    logger.debug("Sent new message!");
+    broker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -347,9 +315,7 @@ public class Distributor {
 
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
-
+    broker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -375,9 +341,6 @@ public class Distributor {
   public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
     logger.trace("in D.nonVoidInstanceMethod: {}", staticPart.getSignature());
 
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
-
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
@@ -386,8 +349,7 @@ public class Distributor {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic, msg));
-    logger.debug("Sent new message!");
+    broker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -421,9 +383,7 @@ public class Distributor {
 
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
-
+    broker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -508,8 +468,7 @@ public class Distributor {
     }
 
     /** 4. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
+    broker.send(invokedMsg);
 
     logger.trace("leaving D.incomingInstanceMethod: {}", instanceMethodCall.getName());
     return;
@@ -517,9 +476,6 @@ public class Distributor {
 
   public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.trace("in D.voidClassMethod: {}", staticPart.getSignature());
-
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
 
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -529,8 +485,7 @@ public class Distributor {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic, msg));
-    logger.debug("Sent new message!");
+    broker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -563,9 +518,7 @@ public class Distributor {
 
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
-
+    broker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -591,9 +544,6 @@ public class Distributor {
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.trace("in D.nonVoidClassMethod: {}", staticPart.getSignature());
 
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
-
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
@@ -602,8 +552,7 @@ public class Distributor {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic, msg));
-    logger.debug("Sent new message!");
+    broker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -637,9 +586,7 @@ public class Distributor {
 
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
-
+    broker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -721,8 +668,7 @@ public class Distributor {
     }
 
     /** 4. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message from D.incomingClassMethod!");
+    broker.send(invokedMsg);
 
     logger.trace("leaving D.incomingClassMethod: {}", classMethodCall.getName());
     return;
@@ -735,9 +681,6 @@ public class Distributor {
 
   public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet) {
     logger.trace("in D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
-
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
 
     /** 1. Get Object **/
     Class clazz = null;
@@ -777,8 +720,7 @@ public class Distributor {
 
 
     /** 4. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
+    broker.send(invokedMsg);
 
     logger.trace("leaving D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
     return;
@@ -788,16 +730,12 @@ public class Distributor {
   public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
     logger.trace("in D.getStatic: {}", staticPart.getSignature());
 
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
-
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetStaticMessage(id, staticPart, sender);
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic, msg));
-    logger.debug("Sent new message!");
+    broker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -829,8 +767,7 @@ public class Distributor {
     }
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
+    broker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -851,9 +788,6 @@ public class Distributor {
 
   public static void incomingGetObject(Fields.InstanceFieldGet instanceFieldGet) {
     logger.trace("in D.incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
-
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
 
     /** 1. Get Object **/
     Class clazz = null;
@@ -894,8 +828,7 @@ public class Distributor {
 
 
     /** 4. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
+    broker.send(invokedMsg);
 
     logger.trace("leaving D.incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
     return;
@@ -905,16 +838,12 @@ public class Distributor {
   public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
     logger.trace("in D.getObject: {}", staticPart.getSignature());
 
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
-
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetObjectMessage(id, staticPart, sender, target);
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic, msg));
-    logger.debug("Sent new message!");
+    broker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -947,8 +876,7 @@ public class Distributor {
     }
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
+    broker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -969,9 +897,6 @@ public class Distributor {
 
   public static void incomingPutStatic(Fields.StaticFieldPut staticFieldPut) {
     logger.trace("in D.incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
-
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
 
     /** 1. Load class and field **/
     final Class clazz;
@@ -1021,8 +946,7 @@ public class Distributor {
 
 
     /** 4. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
+    broker.send(invokedMsg);
 
     logger.trace("leaving D.incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
     return;
@@ -1032,16 +956,12 @@ public class Distributor {
   public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
     logger.trace("in D.putStatic: {}", staticPart.getSignature());
 
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
-
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildPutStaticMessage(id, staticPart, sender, args[0]);
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic, msg));
-    logger.debug("Sent new message!");
+    broker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -1073,8 +993,7 @@ public class Distributor {
     }
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
+    broker.send(invokedMsg);
 
     if (mustWait(msg)) {
       /** 7. Receive object/exception **/
@@ -1096,16 +1015,12 @@ public class Distributor {
   public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) throws IllegalAccessException {
     logger.trace("in D.putField: {}", staticPart.getSignature());
 
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
-
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildPutObjectMessage(id, staticPart, sender, target, args[0]);
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    producer.send(new ProducerRecord(kafkaTopic, msg));
-    logger.debug("Sent new message!");
+    broker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -1137,8 +1052,7 @@ public class Distributor {
     }
 
     /** 6. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
+    broker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -1159,9 +1073,6 @@ public class Distributor {
 
   public static void incomingPutField(Fields.InstanceFieldPut instanceFieldPut) {
     logger.trace("in D.incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
-
-    /** 0. Ensure thread has a receiving message queue */
-    checkCreateThreadQueue();
 
     /** 1. Load class and field **/
     final Class clazz;
@@ -1220,8 +1131,7 @@ public class Distributor {
 
 
     /** 4. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message!");
+    broker.send(invokedMsg);
 
     logger.trace("leaving D.incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
     return;
@@ -1278,8 +1188,6 @@ public class Distributor {
 
     /** Configure Distributor **/
     Distributor.id = Integer.parseInt(properties.getProperty("id"));
-    kafkaTopic = properties.getProperty("kafkaTopic");
-
 
     /** Configure and Initialize Kafka Producer **/
     final Properties kafkaProducerProps = new Properties();
@@ -1297,7 +1205,8 @@ public class Distributor {
     }
     //other producer specific props
     kafkaProducerProps.put("client.id", String.valueOf(Distributor.id));
-    producer = new KafkaProducer<>(kafkaProducerProps);
+    String kafkaTopic = properties.getProperty("kafkaTopic");
+    broker = new MessageBroker(kafkaProducerProps, kafkaTopic);
 
 
     /** Configure and Initialize Kafka Message Consumer/Dispatcher thread **/

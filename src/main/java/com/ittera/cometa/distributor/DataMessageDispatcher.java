@@ -51,7 +51,7 @@ public class DataMessageDispatcher extends Thread {
     //consumer.subscribe(Arrays.asList(Distributor.kafkaTopic));
 
     //manual assignment of partition so we can control offset seek
-    TopicPartition topicPartition = new TopicPartition(Distributor.kafkaTopic, 0);
+    TopicPartition topicPartition = new TopicPartition(MessageBroker.kafkaTopic, 0);
     consumer.assign(Arrays.asList(topicPartition));
     consumer.seekToBeginning(Arrays.asList(topicPartition));
     logger.info("DataMessageDispatcher initialized");

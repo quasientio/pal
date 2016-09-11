@@ -1,0 +1,42 @@
+package com.ittera.cometa.distributor;
+
+import java.util.Properties;
+import java.util.concurrent.LinkedBlockingDeque;
+
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+
+import com.ittera.cometa.distributor.messages.data.Wrappers.DataMessage;
+
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
+public class MessageBroker {
+
+  static KafkaProducer producer;
+  static String kafkaTopic;
+
+  protected static final Logger logger = LogManager.getLogger(MessageBroker.class);
+
+  MessageBroker(Properties properties, String topic) {
+    producer = new KafkaProducer<>(properties);
+    this.kafkaTopic = topic;
+  }
+
+  static void send(DataMessage message) {
+    //first check that the thread sending this message has a receiving queue
+    checkCreateThreadQueue();
+
+    producer.send(new ProducerRecord(kafkaTopic, message));
+    logger.debug("new message sent!");
+  }
+
+  private static void checkCreateThreadQueue() {
+    long currThreadId = Thread.currentThread().getId();
+    if (!Distributor.threadBlockingQueueMap.containsKey(currThreadId)) {
+      Distributor.threadBlockingQueueMap.put(currThreadId, new LinkedBlockingDeque());
+      logger.debug("Added new blocking queue to map, with thread id={}", currThreadId);
+    }
+  }
+
+}
