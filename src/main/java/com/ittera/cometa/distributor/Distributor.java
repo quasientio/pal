@@ -588,72 +588,6 @@ public class Distributor {
     return;
   }
 
-  /**
-   * This method currently only support calling method whose value is fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
-   *
-   * @param classMethodCall
-   */
-  static void incomingClassMethod(Calls.ClassMethodCall classMethodCall) {
-    logger.debug("in D.incomingClassMethod: {}", classMethodCall.getName());
-
-    /** 1. Unwrap message and load method **/
-    Class clazz = null;
-    Method method = null;
-    Exception exceptionWhileLoading = null;
-    List<Class> paramClasses = new ArrayList<>();
-    try {
-      logger.debug("Attempting to load (initialize) class");
-      clazz = Class.forName(classMethodCall.getClass_().getName());
-      for (Primitives.Object obj : classMethodCall.getParameterList()) {
-        paramClasses.add(Class.forName(obj.getClass_().getName()));
-      }
-      method = clazz.getDeclaredMethod(classMethodCall.getName(), (Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
-    } catch (Exception e) {
-      exceptionWhileLoading = e;
-    }
-
-    /** 2. If class and method loaded, unwrap arguments and invoke method **/
-    Exception exceptionWhileInvoking = null;
-    Object returnValue = null;
-    if (exceptionWhileLoading == null) {
-      List<Object> args = new ArrayList<>();
-      int objIdx = 0;
-      for (Primitives.Object obj : classMethodCall.getParameterList()) {
-        args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
-      }
-      method.setAccessible(true);
-      try {
-        logger.debug("Invoking class method NOW!");
-        returnValue = method.invoke(null, args.toArray());
-      } catch (Exception e) {
-        exceptionWhileInvoking = e;
-      }
-    }
-
-    /** 3. Wrap return value or exception **/
-    final Wrappers.DataMessage invokedMsg;
-
-    if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileLoading);
-    } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
-    } else {
-      if (method.getReturnType() == Void.class) {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true);
-      } else {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false);
-      }
-    }
-
-    /** 4. Send object/exception **/
-    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
-    logger.debug("Sent new message from D.incomingClassMethod!");
-
-    logger.debug("leaving D.incomingClassMethod: {}", classMethodCall.getName());
-    return;
-  }
-
-
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
     logger.debug("in D.nonVoidClassMethod: {}", staticPart.getSignature());
 
@@ -729,21 +663,88 @@ public class Distributor {
   }
 
 
+  /**
+   * This method currently only support calling method whose value is fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
+   *
+   * @param classMethodCall
+   */
+  static void incomingClassMethod(Calls.ClassMethodCall classMethodCall) {
+    logger.debug("in D.incomingClassMethod: {}", classMethodCall.getName());
+
+    /** 1. Unwrap message and load method **/
+    Class clazz = null;
+    Method method = null;
+    Exception exceptionWhileLoading = null;
+    List<Class> paramClasses = new ArrayList<>();
+    try {
+      logger.debug("Attempting to load (initialize) class");
+      clazz = Class.forName(classMethodCall.getClass_().getName());
+      for (Primitives.Object obj : classMethodCall.getParameterList()) {
+        paramClasses.add(Class.forName(obj.getClass_().getName()));
+      }
+      method = clazz.getDeclaredMethod(classMethodCall.getName(), (Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
+    } catch (Exception e) {
+      exceptionWhileLoading = e;
+    }
+
+    /** 2. If class and method loaded, unwrap arguments and invoke method **/
+    Exception exceptionWhileInvoking = null;
+    Object returnValue = null;
+    if (exceptionWhileLoading == null) {
+      List<Object> args = new ArrayList<>();
+      int objIdx = 0;
+      for (Primitives.Object obj : classMethodCall.getParameterList()) {
+        args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
+      }
+      method.setAccessible(true);
+      try {
+        logger.debug("Invoking class method NOW!");
+        returnValue = method.invoke(null, args.toArray());
+      } catch (Exception e) {
+        exceptionWhileInvoking = e;
+      }
+    }
+
+    /** 3. Wrap return value or exception **/
+    final Wrappers.DataMessage invokedMsg;
+
+    if (exceptionWhileLoading != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileLoading);
+    } else if (exceptionWhileInvoking != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
+    } else {
+      if (method.getReturnType() == Void.class) {
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true);
+      } else {
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false);
+      }
+    }
+
+    /** 4. Send object/exception **/
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
+    logger.debug("Sent new message from D.incomingClassMethod!");
+
+    logger.debug("leaving D.incomingClassMethod: {}", classMethodCall.getName());
+    return;
+  }
+
+
   // </editor-fold>
 
   // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
-  //@TODO field operations should also be sent as messages
-
 
   public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet) {
     logger.debug("in D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
+
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
 
     /** 1. Get Object **/
     Class clazz = null;
     Field field = null;
     Exception exceptionWhileLoading = null;
     try {
-      clazz = Class.forName(staticFieldGet.getClass_());
+      clazz = Class.forName(staticFieldGet.getClass_().getName());
       field = clazz.getDeclaredField(staticFieldGet.getField());
     } catch (Exception e) {
       exceptionWhileLoading = e;
@@ -848,6 +849,59 @@ public class Distributor {
     return fieldValue;
   }
 
+  public static void incomingGetObject(Fields.InstanceFieldGet instanceFieldGet) {
+    logger.debug("in D.incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
+
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
+
+    /** 1. Get Object **/
+    Class clazz = null;
+    Field field = null;
+    Exception exceptionWhileLoading = null;
+    try {
+      clazz = Class.forName(instanceFieldGet.getClass_().getName());
+      field = clazz.getDeclaredField(instanceFieldGet.getField());
+    } catch (Exception e) {
+      exceptionWhileLoading = e;
+    }
+
+    /** 2. If class and field loaded, invoke field get **/
+    Exception exceptionWhileInvoking = null;
+
+    Object fieldValue = null;
+    if (exceptionWhileLoading == null) {
+      field.setAccessible(true);
+      try {
+        Object target = lookupObject(instanceFieldGet.getObjectRef());
+        fieldValue = field.get(target);
+      } catch (Exception e) {
+        exceptionWhileInvoking = e;
+      }
+    }
+
+
+    /** 3. Wrap return value or exception **/
+    Wrappers.DataMessage invokedMsg = null;
+
+    if (exceptionWhileLoading != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading);
+    } else if (exceptionWhileInvoking != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking);
+    } else {
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false);
+    }
+
+
+    /** 4. Send object/exception **/
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
+    logger.debug("Sent new message!");
+
+    logger.debug("leaving D.incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
+    return;
+
+  }
+
   public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
     logger.debug("in D.getObject: {}", staticPart.getSignature());
 
@@ -913,6 +967,68 @@ public class Distributor {
     return fieldValue;
   }
 
+  public static void incomingPutStatic(Fields.StaticFieldPut staticFieldPut) {
+    logger.debug("in D.incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
+
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
+
+    /** 1. Load class and field **/
+    final Class clazz;
+    Field field = null;
+    Exception exceptionWhileLoading = null;
+    try {
+      clazz = Class.forName(staticFieldPut.getClass_().getName());
+      field = clazz.getDeclaredField(staticFieldPut.getField());
+    } catch (Exception e) {
+      exceptionWhileLoading = e;
+    }
+
+    /** 2. If class and field loaded, unwrap value and invoke field set **/
+    //TODO unwrap or load object before and have a separate exception for this step
+
+    Exception exceptionWhileInvoking = null;
+
+    if (exceptionWhileLoading == null) {
+      field.setAccessible(true);
+      try {
+        final Object value;
+        if (staticFieldPut.hasObject()) {
+          value = ProtobufUtils.unwrapObject(staticFieldPut.getObject(), field.getType());
+          logger.debug("Unwrapped value: {}", value);
+        } else {
+          value = lookupObject(staticFieldPut.getObjectRef());
+          logger.debug("Loaded value: {}", value);
+        }
+        //invoke set
+        field.set(null, value);
+      } catch (Exception e) {
+        exceptionWhileInvoking = e;
+      }
+    }
+
+
+    /** 3. Wrap return value or exception **/
+    Wrappers.DataMessage invokedMsg = null;
+
+    if (exceptionWhileLoading != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading);
+    } else if (exceptionWhileInvoking != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking);
+    } else {
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, false);
+    }
+
+
+    /** 4. Send object/exception **/
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
+    logger.debug("Sent new message!");
+
+    logger.debug("leaving D.incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
+    return;
+
+  }
+
   public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
     logger.debug("in D.putStatic: {}", staticPart.getSignature());
 
@@ -942,6 +1058,7 @@ public class Distributor {
 
     IllegalAccessException exceptionSettingObject = null;
     try {
+      //invoke set
       field.set(null, args[0]);
     } catch (IllegalAccessException iae) {
       exceptionSettingObject = iae;
@@ -1005,6 +1122,7 @@ public class Distributor {
 
     IllegalAccessException exceptionSettingObject = null;
     try {
+      //invoke set
       field.set(target, args[0]);
     } catch (IllegalAccessException iae) {
       exceptionSettingObject = iae;
@@ -1037,6 +1155,77 @@ public class Distributor {
 
     logger.debug("leaving D.putField: {}", staticPart.getSignature());
     return;
+  }
+
+  public static void incomingPutField(Fields.InstanceFieldPut instanceFieldPut) {
+    logger.debug("in D.incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
+
+    /** 0. Ensure thread has a receiving message queue */
+    checkCreateThreadQueue();
+
+    /** 1. Load class and field **/
+    final Class clazz;
+    Field field = null;
+    Exception exceptionWhileLoading = null;
+    try {
+      clazz = Class.forName(instanceFieldPut.getClass_().getName());
+      field = clazz.getDeclaredField(instanceFieldPut.getField());
+    } catch (Exception e) {
+      exceptionWhileLoading = e;
+    }
+
+    /** 2. If class and field loaded, unwrap/load target object and value and invoke field set **/
+    //TODO unwrap or load object before and have a separate exception for this step
+
+    Exception exceptionWhileInvoking = null;
+
+    if (exceptionWhileLoading == null) {
+      field.setAccessible(true);
+      try {
+        //unwrap or load target object
+        final Object target;
+        if (instanceFieldPut.hasObject()) {
+          target = ProtobufUtils.unwrapObject(instanceFieldPut.getObject(), field.getType());
+          logger.debug("Unwrapped target: {}", target);
+        } else {
+          target = lookupObject(instanceFieldPut.getObjectRef());
+          logger.debug("Loaded target: {}", target);
+        }
+        //unwrap or load value
+        final Object value;
+        if (instanceFieldPut.hasValueObject()) {
+          value = ProtobufUtils.unwrapObject(instanceFieldPut.getValueObject(), field.getType());
+          logger.debug("Unwrapped value: {}", value);
+        } else {
+          value = lookupObject(instanceFieldPut.getValueObjectRef());
+          logger.debug("Loaded value: {}", value);
+        }
+        //invoke set
+        field.set(target, value);
+      } catch (Exception e) {
+        exceptionWhileInvoking = e;
+      }
+    }
+
+    /** 3. Wrap return value or exception **/
+    Wrappers.DataMessage invokedMsg = null;
+
+    if (exceptionWhileLoading != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading);
+    } else if (exceptionWhileInvoking != null) {
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking);
+    } else {
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, false);
+    }
+
+
+    /** 4. Send object/exception **/
+    producer.send(new ProducerRecord(kafkaTopic, invokedMsg));
+    logger.debug("Sent new message!");
+
+    logger.debug("leaving D.incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
+    return;
+
   }
 
   // </editor-fold>

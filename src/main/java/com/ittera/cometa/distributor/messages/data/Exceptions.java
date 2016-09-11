@@ -1376,7 +1376,7 @@ public final class Exceptions {
       FIELD(8),
       CALLTYPE_NOT_SET(0);
       private int value = 0;
-      CallTypeCase(int value) {
+      private CallTypeCase(int value) {
         this.value = value;
       }
       public static CallTypeCase valueOf(int value) {
@@ -1392,7 +1392,7 @@ public final class Exceptions {
       public int getNumber() {
         return this.value;
       }
-    }
+    };
 
     public CallTypeCase
     getCallTypeCase() {
@@ -2131,7 +2131,11 @@ public final class Exceptions {
           
           return false;
         }
-        return getThrowable().isInitialized();
+        if (!getThrowable().isInitialized()) {
+          
+          return false;
+        }
+        return true;
       }
 
       public Builder mergeFrom(

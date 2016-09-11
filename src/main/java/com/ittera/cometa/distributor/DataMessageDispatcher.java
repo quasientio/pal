@@ -5,17 +5,18 @@ import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
+import com.ittera.cometa.distributor.messages.data.Wrappers;
 import com.ittera.cometa.distributor.messages.data.Calls;
 import com.ittera.cometa.distributor.messages.data.Fields;
+
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 
-import org.apache.kafka.common.TopicPartition;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
-import com.ittera.cometa.distributor.messages.data.Wrappers;
 
 public class DataMessageDispatcher extends Thread {
 
@@ -90,12 +91,18 @@ public class DataMessageDispatcher extends Thread {
               } else if (dataMessage.hasStaticFieldGet()) {
                 Fields.StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
                 Distributor.incomingGetStatic(staticFieldGetCall);
-
+              } else if (dataMessage.hasInstanceFieldGet()) {
+                Fields.InstanceFieldGet instanceFieldGet = dataMessage.getInstanceFieldGet();
+                Distributor.incomingGetObject(instanceFieldGet);
+              } else if (dataMessage.hasStaticFieldPut()) {
+                Fields.StaticFieldPut staticFieldPut = dataMessage.getStaticFieldPut();
+                Distributor.incomingPutStatic(staticFieldPut);
+              } else if (dataMessage.hasInstanceFieldPut()) {
+                Fields.InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
+                Distributor.incomingPutField(instanceFieldPut);
               } else {
-                //TODO : rest of field op calls
                 logger.warn("Incoming message ignored - no handler:\n" + dataMessage);
               }
-
             }
           });
         }

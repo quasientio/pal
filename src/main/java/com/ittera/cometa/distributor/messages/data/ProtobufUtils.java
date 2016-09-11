@@ -3,6 +3,8 @@ package com.ittera.cometa.distributor.messages.data;
 import java.util.List;
 import java.util.ArrayList;
 
+import org.apache.commons.lang3.ClassUtils;
+
 public class ProtobufUtils {
 
   /**
@@ -16,7 +18,7 @@ public class ProtobufUtils {
   public static Object unwrapObject(Primitives.Object object, Class clazz) {
 
     //is primitive
-    if (clazz.isPrimitive()) {
+    if (ClassUtils.isPrimitiveOrWrapper(clazz)) {
       if (clazz == byte.class || clazz == Byte.class) {
         return Byte.valueOf(object.getValue());
       } else if (clazz == short.class || clazz == Short.class) {

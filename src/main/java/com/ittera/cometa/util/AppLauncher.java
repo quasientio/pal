@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Constructor;
+
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.Scanner;
@@ -50,16 +52,12 @@ public class AppLauncher {
     producer = new KafkaProducer<>(kafkaProducerProps);
   }
 
-  /**
-   * Currently only supports:
-   * - empty constructor calls - syntax: classname new arg...
-   * - calls to a class' main - syntax: classname main arg...
-   * - get static - syntax: classname get fieldname
-   * -
-   *
-   * @param line
-   * @return
-   */
+  private Object typeObject(String className, String value) throws Exception {
+    Class clazz = Class.forName(className);
+    Constructor constructor = clazz.getConstructor(String.class);
+    return constructor.newInstance(value);
+  }
+
   private Wrappers.DataMessage parseMessage(String line) {
     String[] lineParts = line.trim().split(" ");
 
@@ -81,17 +79,64 @@ public class AppLauncher {
       }
       Object[] parameters = new Object[]{mainArgs};
       return DataMessageFactory.buildClassMethodMessage(distributorId, className, methodName, modifiers, returnType, parameterTypesNamesArray, parameters);
-
     } else if ("get".equals(lineParts[1])) {
-      /** example: com.ittera.cometa.demos.App get aClassString */
-      String fieldname = lineParts[2];
+      if (lineParts.length == 4) {
+        /** get field - example: com.ittera.cometa.demos.App get object-ref anInstanceVar */
+        String objectRef = lineParts[2];
+        String fieldName = lineParts[3];
 
-      return DataMessageFactory.buildGetStaticMessage(distributorId, className, fieldname);
-
-    } else if ("instance".equals(lineParts[1])){
+        return DataMessageFactory.buildGetObjectMessage(distributorId, className, fieldName, objectRef);
+      }
+      /** get static - example: com.ittera.cometa.demos.App get aClassVar */
+      String fieldName = lineParts[2];
+      return DataMessageFactory.buildGetStaticMessage(distributorId, className, fieldName);
+    } else if ("set".equals(lineParts[1])) {
+      if (lineParts.length == 5) {
+        /** set instance - example: com.ittera.cometa.demos.App set object-ref anInstanceVar ref/class:value */
+        String objectRef = lineParts[2];
+        String fieldName = lineParts[3];
+        String valuePart = lineParts[4];
+        if (valuePart.startsWith("ref")) {
+          String valueOjectRef = StringUtils.substringAfter(valuePart, "ref:");
+          return DataMessageFactory.buildPutObjectMessage(distributorId, className, fieldName, objectRef, valueOjectRef);
+        } else { //we assume is primitive or string
+          String classAbbrev = StringUtils.substringBefore(valuePart, ":");
+          String valueClassName = "java.lang." + StringUtils.capitalize(classAbbrev);
+          String valueAsString = StringUtils.substringAfter(valuePart, ":");
+          final Object value;
+          try {
+            value = typeObject(valueClassName, valueAsString);
+          } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+          }
+          return DataMessageFactory.buildPutObjectMessage(distributorId, className, fieldName, objectRef, valueClassName, value);
+        }
+      }
+      /** set static - example: com.ittera.cometa.demos.App set aClassVar ref/class:value */
+      String fieldName = lineParts[2];
+      String valuePart = lineParts[3];
+      if (valuePart.startsWith("ref")) {
+        String objectRef = StringUtils.substringAfter(valuePart, "ref:");
+        return DataMessageFactory.buildPutStaticMessage(distributorId, className, fieldName, objectRef);
+      } else {  //we assume is primitive or string
+        String classAbbrev = StringUtils.substringBefore(valuePart, ":");
+        String valueClassName = "java.lang." + StringUtils.capitalize(classAbbrev);
+        String valueAsString = StringUtils.substringAfter(valuePart, ":");
+        final Object value;
+        try {
+          value = typeObject(valueClassName, valueAsString);
+        } catch (Exception ex) {
+          ex.printStackTrace();
+          return null;
+        }
+        return DataMessageFactory.buildPutStaticMessage(distributorId, className, fieldName, valueClassName, value);
+      }
+    } else if ("instance".equals(lineParts[1])) {
       /** example: com.ittera.cometa.demos.App instance object-ref someInstanceMethod */
       String objectRef = lineParts[2];
       String methodName = lineParts[3];
+
       return DataMessageFactory.buildInstanceMethodMessage(distributorId, className, methodName, objectRef, new String[]{}, new Object[]{});
     } else {
       return null;

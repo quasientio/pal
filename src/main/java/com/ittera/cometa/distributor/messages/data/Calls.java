@@ -3176,7 +3176,7 @@ public final class Calls {
       OBJECTREF(7),
       TARGET_NOT_SET(0);
       private int value = 0;
-      TargetCase(int value) {
+      private TargetCase(int value) {
         this.value = value;
       }
       public static TargetCase valueOf(int value) {
@@ -3191,7 +3191,7 @@ public final class Calls {
       public int getNumber() {
         return this.value;
       }
-    }
+    };
 
     public TargetCase
     getTargetCase() {

@@ -20,7 +20,7 @@ message StaticFieldGet {
 
     // --- CONTEXT
 
-    required string class = 4;
+    required Class class = 4;
 
     required string field = 5;
 
@@ -29,7 +29,7 @@ message StaticFieldGet {
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 7;
 
-    optional string senderClassName = 8;
+    optional Class senderClass = 8;
 
     optional Object sender = 9;
 
@@ -55,25 +55,28 @@ message StaticFieldPut {
 
     // --- CONTEXT
 
-    required string class = 4;
+    required Class class = 4;
 
     required string field = 5;
 
-    required string fieldType = 6;
+    optional string fieldType = 6;
 
-    required Object value = 7;
+    oneof value {
+        Object object = 7;
+        string objectRef = 8;
+    }
 
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 8;
+    optional int32 modifiers = 9;
 
-    optional string senderClassName = 9;
+    optional Class senderClass = 10;
 
-    optional Object sender = 10;
+    optional Object sender = 11;
 
     //source context from where the call was made
-    optional string sourceLocationFile = 11;
-    optional int32 sourceLocationLine = 12;
-    optional string sourceLocationType = 13;
+    optional string sourceLocationFile = 12;
+    optional int32 sourceLocationLine = 13;
+    optional string sourceLocationType = 14;
 
     //TODO:  annotations
 }
@@ -93,7 +96,7 @@ message StaticFieldPutDone {
     // --- CONTEXT
 
     //TODO from here all should be replaced by reference to originator StaticFieldPut message
-    required string class = 4;
+    required Class class = 4;
 
     required string field = 5;
 
@@ -104,11 +107,12 @@ message StaticFieldPutDone {
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 8;
 
-    optional string senderClassName = 9;
+    optional Class senderClass = 9;
 
     optional Object sender = 10;
 
 }
+
 message InstanceFieldGet {
     // --- CONTEXT
 
@@ -123,25 +127,29 @@ message InstanceFieldGet {
 
     // --- CONTEXT
 
-    required string class = 4;
+    required Class class = 4;
 
-    required Object target = 5;
+    //target object
+    oneof target {
+        Object object = 5;
+        string objectRef = 6;
+    }
 
-    required string field = 6;
+    required string field = 7;
 
-    required string fieldType = 7;
+    optional string fieldType = 8;
 
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 8;
+    optional int32 modifiers = 9;
 
-    optional string senderClassName = 9;
+    optional Class senderClass = 10;
 
-    optional Object sender = 10;
+    optional Object sender = 11;
 
     //source context from where the call was made
-    optional string sourceLocationFile = 11;
-    optional int32 sourceLocationLine = 12;
-    optional string sourceLocationType = 13;
+    optional string sourceLocationFile = 12;
+    optional int32 sourceLocationLine = 13;
+    optional string sourceLocationType = 14;
 
     //TODO:  annotations
 }
@@ -160,32 +168,37 @@ message InstanceFieldPut {
 
     // --- CONTEXT
 
-    required string class = 4;
+    required Class class = 4;
 
-    required Object target = 5;
+    //target object
+    oneof target {
+        Object object = 5;
+        string objectRef = 6;
+    }
 
-    required string field = 6;
+    required string field = 7;
 
-    required string fieldType = 7;
+    optional string fieldType = 8;
 
-    required Object value = 8;
-
+    oneof value {
+        Object valueObject = 9;
+        string valueObjectRef = 10;
+    }
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 9;
+    optional int32 modifiers = 11;
 
-    optional string senderClassName = 10;
+    optional Class senderClass = 12;
 
-    optional Object sender = 11;
+    optional Object sender = 13;
 
     //source context from where the call was made
-    optional string sourceLocationFile = 12;
-    optional int32 sourceLocationLine = 13;
-    optional string sourceLocationType = 14;
+    optional string sourceLocationFile = 14;
+    optional int32 sourceLocationLine = 15;
+    optional string sourceLocationType = 16;
 
     //TODO:  annotations
 
 }
-
 
 message InstanceFieldPutDone {
     // --- CONTEXT
@@ -203,20 +216,20 @@ message InstanceFieldPutDone {
 
     //TODO from here all should be replaced by reference to originator InstanceFieldPut message
 
-    required string class = 4;
+    required Class class = 4;
 
     required Object target = 5;
 
     required string field = 6;
 
-    required string fieldType = 7;
+    optional string fieldType = 7;
 
     required Object value = 8;
 
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 9;
 
-    optional string senderClassName = 10;
+    optional Class senderClass = 10;
 
     optional Object sender = 11;
 }

@@ -12,7 +12,7 @@ public class App {
   List anIntList;
 
   static float aFloat = 8.5f;
-  static float aLong = 53382303;
+  static long aLong = 53382303;
   static String aClassString;
   static double aDbl;
 

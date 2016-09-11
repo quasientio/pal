@@ -36,8 +36,8 @@ public class DataMessageFactory {
     callBuilder.setCurrentTime(System.currentTimeMillis());
     callBuilder.setClass_(getWrappedClass(codeSignature.getDeclaringTypeName()));
     callBuilder.setModifiers(codeSignature.getModifiers());
-    callBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType().getName()));
-    callBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType().getName(), null));
+    callBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+    callBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
     callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
     callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
     callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getName());
@@ -93,8 +93,8 @@ public class DataMessageFactory {
     for (int i = 0; i < args.length; i++) {
       callBuilder.addParameter(getWrappedObject(args[i], codeSignature.getParameterTypes()[i].getName(), null));
     }
-    callBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType().getName()));
-    callBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType().getName(), null));
+    callBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+    callBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
     callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
     callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
     callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getName());
@@ -106,7 +106,9 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-
+  /**
+   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: AppLauncher
+   */
   public static Wrappers.DataMessage buildInstanceMethodMessage(String distributorId, String className, String methodName, String objRef, String[] parameterTypes, Object[] args) {
 
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
@@ -162,8 +164,8 @@ public class DataMessageFactory {
       callBuilder.addParameter(getWrappedObject(args[i], codeSignature.getParameterTypes()[i].getName(), null));
     }
 
-    callBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType().getName()));
-    callBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType().getName(), null));
+    callBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+    callBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
     callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
     callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
     callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getName());
@@ -231,8 +233,8 @@ public class DataMessageFactory {
     for (int i = 0; i < args.length; i++) {
       callBuilder.addParameter(getWrappedObject(args[i], codeSignature.getParameterTypes()[i].getName(), null));
     }
-    callBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType().getName()));
-    callBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType().getName(), null));
+    callBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+    callBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
     callBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
     callBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
     callBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getName());
@@ -256,7 +258,7 @@ public class DataMessageFactory {
     fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
-    fieldBuilder.setClass_(className);
+    fieldBuilder.setClass_(getWrappedClass(className));
     fieldBuilder.setField(fieldName);
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
@@ -277,12 +279,12 @@ public class DataMessageFactory {
     fieldBuilder.setDistributorId(distributorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
+    fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringTypeName()));
     fieldBuilder.setField(fieldSignature.getName());
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getName());
     fieldBuilder.setModifiers(fieldSignature.getModifiers());
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
-    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType().getName(), null));
+    fieldBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getName());
@@ -290,6 +292,29 @@ public class DataMessageFactory {
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Get static");
     msgBuilder.setStaticFieldGet(fieldBuilder);
+
+    return msgBuilder.build();
+  }
+
+  /**
+   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: AppLauncher
+   */
+  public static Wrappers.DataMessage buildGetObjectMessage(String distributorId, String className, String fieldName, String targetObjRef) {
+
+    /** Build protobuf message **/
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
+    final Fields.InstanceFieldGet.Builder fieldBuilder = Fields.InstanceFieldGet.newBuilder();
+    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(getWrappedClass(className));
+    fieldBuilder.setObjectRef(targetObjRef);
+    fieldBuilder.setField(fieldName);
+
+    msgBuilder.setThreadId(Thread.currentThread().getId());
+    msgBuilder.setMsgType("Get field");
+    msgBuilder.setInstanceFieldGet(fieldBuilder);
 
     return msgBuilder.build();
   }
@@ -305,13 +330,13 @@ public class DataMessageFactory {
     fieldBuilder.setDistributorId(distributorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
-    fieldBuilder.setTarget(getWrappedObject(target, fieldSignature.getDeclaringTypeName(), null));
+    fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringTypeName()));
+    fieldBuilder.setObject(getWrappedObject(target, fieldSignature.getDeclaringTypeName(), null));
     fieldBuilder.setField(fieldSignature.getName());
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getName());
     fieldBuilder.setModifiers(fieldSignature.getModifiers());
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
-    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType().getName(), null));
+    fieldBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getName());
@@ -319,6 +344,53 @@ public class DataMessageFactory {
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Get field");
     msgBuilder.setInstanceFieldGet(fieldBuilder);
+
+    return msgBuilder.build();
+  }
+
+  /**
+   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: AppLauncher
+   */
+  public static Wrappers.DataMessage buildPutStaticMessage(String distributorId, String className, String fieldName, String valueClassName, Object value) {
+
+    /** Build protobuf message **/
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
+    final Fields.StaticFieldPut.Builder fieldBuilder = Fields.StaticFieldPut.newBuilder();
+    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(getWrappedClass(className));
+    fieldBuilder.setField(fieldName);
+    fieldBuilder.setObject(getWrappedObject(value, valueClassName, null));
+
+    msgBuilder.setThreadId(Thread.currentThread().getId());
+    msgBuilder.setMsgType("Put static");
+    msgBuilder.setStaticFieldPut(fieldBuilder);
+
+    return msgBuilder.build();
+  }
+
+  /**
+   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: AppLauncher
+   * Equivalent to the above, for objectRefs
+   */
+  public static Wrappers.DataMessage buildPutStaticMessage(String distributorId, String className, String fieldName, String objectRef) {
+
+    /** Build protobuf message **/
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
+    final Fields.StaticFieldPut.Builder fieldBuilder = Fields.StaticFieldPut.newBuilder();
+    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(getWrappedClass(className));
+    fieldBuilder.setField(fieldName);
+    fieldBuilder.setObjectRef(objectRef);
+
+    msgBuilder.setThreadId(Thread.currentThread().getId());
+    msgBuilder.setMsgType("Put static");
+    msgBuilder.setStaticFieldPut(fieldBuilder);
 
     return msgBuilder.build();
   }
@@ -334,13 +406,13 @@ public class DataMessageFactory {
     fieldBuilder.setDistributorId(distributorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
+    fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringType()));
     fieldBuilder.setField(fieldSignature.getName());
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getName());
-    fieldBuilder.setValue(getWrappedObject(arg, fieldSignature.getFieldType().getName(), null));
+    fieldBuilder.setObject(getWrappedObject(arg, fieldSignature.getFieldType().getName(), null));
     fieldBuilder.setModifiers(fieldSignature.getModifiers());
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
-    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType().getName(), null));
+    fieldBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getName());
@@ -363,17 +435,68 @@ public class DataMessageFactory {
     fieldBuilder.setDistributorId(distributorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
+    fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringType()));
     fieldBuilder.setField(fieldSignature.getName());
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getName());
     fieldBuilder.setValue(getWrappedObject(arg, fieldSignature.getFieldType().getName(), null));
     fieldBuilder.setModifiers(fieldSignature.getModifiers());
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
-    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType().getName(), null));
+    fieldBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Put static done");
     msgBuilder.setStaticFieldPutDone(fieldBuilder);
+
+    return msgBuilder.build();
+  }
+
+
+  /**
+   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: AppLauncher
+   * Equivalent to the above, for objectRefs
+   */
+  public static Wrappers.DataMessage buildPutObjectMessage(String distributorId, String className, String fieldName, String targetObjRef, String valueClassName, Object value) {
+
+    /** Build protobuf message **/
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
+    final Fields.InstanceFieldPut.Builder fieldBuilder = Fields.InstanceFieldPut.newBuilder();
+    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(getWrappedClass(className));
+    fieldBuilder.setObjectRef(targetObjRef);
+    fieldBuilder.setField(fieldName);
+    fieldBuilder.setValueObject(getWrappedObject(value, valueClassName, null));
+
+    msgBuilder.setThreadId(Thread.currentThread().getId());
+    msgBuilder.setMsgType("Put field");
+    msgBuilder.setInstanceFieldPut(fieldBuilder);
+
+    return msgBuilder.build();
+  }
+
+  /**
+   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: AppLauncher
+   * Equivalent to the above, for objectRefs
+   */
+  public static Wrappers.DataMessage buildPutObjectMessage(String distributorId, String className, String fieldName, String targetObjRef, String valueObjRef) {
+
+    /** Build protobuf message **/
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
+    final Fields.InstanceFieldPut.Builder fieldBuilder = Fields.InstanceFieldPut.newBuilder();
+    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(getWrappedClass(className));
+    fieldBuilder.setObjectRef(targetObjRef);
+    fieldBuilder.setField(fieldName);
+    fieldBuilder.setValueObjectRef(valueObjRef);
+
+    msgBuilder.setThreadId(Thread.currentThread().getId());
+    msgBuilder.setMsgType("Put field");
+    msgBuilder.setInstanceFieldPut(fieldBuilder);
 
     return msgBuilder.build();
   }
@@ -389,14 +512,14 @@ public class DataMessageFactory {
     fieldBuilder.setDistributorId(distributorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
-    fieldBuilder.setTarget(getWrappedObject(target, fieldSignature.getDeclaringTypeName(), null));
+    fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringType()));
+    fieldBuilder.setObject(getWrappedObject(target, fieldSignature.getDeclaringType(), null));
     fieldBuilder.setField(fieldSignature.getName());
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getName());
-    fieldBuilder.setValue(getWrappedObject(arg, fieldSignature.getFieldType().getName(), null));
+    fieldBuilder.setValueObject(getWrappedObject(arg, fieldSignature.getFieldType().getName(), null));
     fieldBuilder.setModifiers(fieldSignature.getModifiers());
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
-    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType().getName(), null));
+    fieldBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
     fieldBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
     fieldBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
     fieldBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getName());
@@ -419,14 +542,14 @@ public class DataMessageFactory {
     fieldBuilder.setDistributorId(distributorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
-    fieldBuilder.setClass_(fieldSignature.getDeclaringTypeName());
+    fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringType()));
     fieldBuilder.setTarget(getWrappedObject(target, fieldSignature.getDeclaringTypeName(), null));
     fieldBuilder.setField(fieldSignature.getName());
     fieldBuilder.setFieldType(fieldSignature.getFieldType().getName());
     fieldBuilder.setValue(getWrappedObject(arg, fieldSignature.getFieldType().getName(), null));
     fieldBuilder.setModifiers(fieldSignature.getModifiers());
-    fieldBuilder.setSenderClassName(staticPart.getSourceLocation().getWithinType().getName());
-    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType().getName(), null));
+    fieldBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+    fieldBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Put field done");
@@ -544,6 +667,11 @@ public class DataMessageFactory {
     return msgBuilder;
   }
 
+  /** WRAPPING METHODS:
+   * Two versions of these exist, as we have generally more information when messages are built from local calls (with full reflection details),
+   * than when these messaages are built for remote calls, and not all type information is available.
+   */
+
   /**
    * Wrapped is the actual value if object is a primitive, a String, or an array of these types
    * Objects created by this Distributor, are expected to be looked up in the object map by their identity hashCode.
@@ -551,29 +679,26 @@ public class DataMessageFactory {
    * @param object
    * @return
    */
-  private static Primitives.Object getWrappedObject(Object object, String className, String objectKey) {
-    final Primitives.Object.Builder value = Primitives.Object.newBuilder();
-    logger.debug("in getWrappedObject for: {}", object);
+  private static Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, String objectKey) {
 
-    //set required fields
-    value.setIdentityHash(System.identityHashCode(object));
-    value.setClass_(getWrappedClass(className));
-    value.setIsNull(object == null);
+    //set required fields (class already set at this point)
+    builder.setIdentityHash(System.identityHashCode(object));
+    builder.setIsNull(object == null);
 
     if (object != null) {
 
-      value.setHash(object.hashCode());
+      builder.setHash(object.hashCode());
 
       if (object instanceof String) {
-        value.setValue((String) object);
+        builder.setValue((String) object);
       } else if (object.getClass().isArray()) {
-        value.setIsArray(true);
+        builder.setIsArray(true);
         for (Object arrayElem : (Object[]) object) {
           //wrap and all array elements -- recursive
-          value.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass().getName(), objectKey));
+          builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(), objectKey));
         }
       } else if (ClassUtils.isPrimitiveOrWrapper(object.getClass())) {
-        value.setValue(String.valueOf(object));
+        builder.setValue(String.valueOf(object));
       } else {
         /** the object is not primitive, String or Array
          *  We set the isRef flag. We assume the object will be found in the objects map keyed with its identityHash, set below
@@ -581,15 +706,51 @@ public class DataMessageFactory {
          *  TODO: if it's of type Class, treat differently?
          **/
         if (objectKey != null) {
-          value.setRef(objectKey);
+          builder.setRef(objectKey);
         }
       }
     }
 
 
-    Primitives.Object builtValue = value.build();
+    Primitives.Object builtValue = builder.build();
     logger.debug("Returning wrappedValue:\n{}", builtValue);
     return builtValue;
+  }
+
+  /**
+   * Called when we have only a class name
+   *
+   * @param object
+   * @param className
+   * @param objectKey
+   * @return
+   */
+  private static Primitives.Object getWrappedObject(Object object, String className, String objectKey) {
+    final Primitives.Object.Builder builder = Primitives.Object.newBuilder();
+    logger.debug("in getWrappedObject (w/ className) for: {}", object);
+
+    //set required fields
+    builder.setClass_(getWrappedClass(className));
+
+    return getWrappedObjectAux(builder, object, objectKey);
+  }
+
+  /**
+   * Called when we have a full class object
+   *
+   * @param object
+   * @param clazz
+   * @param objectKey
+   * @return
+   */
+  private static Primitives.Object getWrappedObject(Object object, Class clazz, String objectKey) {
+    final Primitives.Object.Builder builder = Primitives.Object.newBuilder();
+    logger.debug("in getWrappedObject (w/ class) for: {}", object);
+
+    //set required fields
+    builder.setClass_(getWrappedClass(clazz));
+
+    return getWrappedObjectAux(builder, object, objectKey);
   }
 
   private static Primitives.Class getWrappedClass(String className) {
@@ -599,6 +760,17 @@ public class DataMessageFactory {
     } else {
       clazzBuilder.setName(className);
     }
+    return clazzBuilder.build();
+  }
+
+  private static Primitives.Class getWrappedClass(Class clazz) {
+    final Primitives.Class.Builder clazzBuilder = Primitives.Class.newBuilder();
+    if (clazz == null) {
+      clazzBuilder.setUnknown(true);
+    } else {
+      clazzBuilder.setName(clazz.getName());
+    }
+    //TODO: fill all other available Class info
     return clazzBuilder.build();
   }
 
