@@ -2,6 +2,6 @@
 WORKING_DIR=`pwd`
 JVM_OPTS="-Xmx512M -Xms512M -server"
 SYSTEM_PROPS=-Dlog4j.configurationFile=file://$WORKING_DIR/conf/log4j2.xml
-ARGS=conf/dist.properties
+ARGS=conf/cli.properties
 
-java $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.util.AppLauncher $ARGS
+java $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.util.CommandLineClient $ARGS
