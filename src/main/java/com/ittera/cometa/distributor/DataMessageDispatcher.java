@@ -71,6 +71,7 @@ public class DataMessageDispatcher extends Thread {
 
         final Wrappers.DataMessage dataMessage = (Wrappers.DataMessage) record.value();
         long threadId = dataMessage.getThreadId();
+        final long recordOffset = record.offset();
         //if threadId not in our threadQueue, then push to new/random thread
         if (!Distributor.threadBlockingQueueMap.containsKey(threadId)) {
           logger.debug("Thread queue has thread with ids" + Distributor.threadBlockingQueueMap.keySet());
@@ -81,25 +82,25 @@ public class DataMessageDispatcher extends Thread {
               //TODO call Distributor.incomingCall() which should dispatch as done here based on encapsulated type
               if (dataMessage.hasConstructorCall()) {
                 Calls.ConstructorCall constructorCall = dataMessage.getConstructorCall();
-                Distributor.incomingConstructor(constructorCall);
+                Distributor.incomingConstructor(constructorCall, recordOffset);
               } else if (dataMessage.hasClassMethodCall()) {
                 Calls.ClassMethodCall methodCall = dataMessage.getClassMethodCall();
-                Distributor.incomingClassMethod(methodCall);
+                Distributor.incomingClassMethod(methodCall, recordOffset);
               } else if (dataMessage.hasInstanceMethodCall()) {
                 Calls.InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
-                Distributor.incomingInstanceMethod(methodCall);
+                Distributor.incomingInstanceMethod(methodCall, recordOffset);
               } else if (dataMessage.hasStaticFieldGet()) {
                 Fields.StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
-                Distributor.incomingGetStatic(staticFieldGetCall);
+                Distributor.incomingGetStatic(staticFieldGetCall, recordOffset);
               } else if (dataMessage.hasInstanceFieldGet()) {
                 Fields.InstanceFieldGet instanceFieldGet = dataMessage.getInstanceFieldGet();
-                Distributor.incomingGetObject(instanceFieldGet);
+                Distributor.incomingGetObject(instanceFieldGet, recordOffset);
               } else if (dataMessage.hasStaticFieldPut()) {
                 Fields.StaticFieldPut staticFieldPut = dataMessage.getStaticFieldPut();
-                Distributor.incomingPutStatic(staticFieldPut);
+                Distributor.incomingPutStatic(staticFieldPut, recordOffset);
               } else if (dataMessage.hasInstanceFieldPut()) {
                 Fields.InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
-                Distributor.incomingPutField(instanceFieldPut);
+                Distributor.incomingPutField(instanceFieldPut, recordOffset);
               } else {
                 logger.warn("Incoming message ignored - no handler:\n" + dataMessage);
               }

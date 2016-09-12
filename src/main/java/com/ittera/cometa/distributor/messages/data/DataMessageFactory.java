@@ -558,7 +558,7 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildAccessibleObjectThrowableMessage(int distributorId, AccessibleObject accessibleObject, Exception exception) {
+  public static Wrappers.DataMessage buildAccessibleObjectThrowableMessage(int distributorId, AccessibleObject accessibleObject, Exception exception, Long followingOffset) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
@@ -578,6 +578,9 @@ public class DataMessageFactory {
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Throwable");
+    if (followingOffset != null) {
+      msgBuilder.setFollowing(followingOffset);
+    }
     msgBuilder.setRaisedThrowable(thrBuilder);
 
     return msgBuilder.build();
@@ -603,7 +606,7 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildReturnValueMessage(int distributorId, Object object, String objectKey, boolean isVoid) {
+  public static Wrappers.DataMessage buildReturnValueMessage(int distributorId, Object object, String objectKey, boolean isVoid, Long followingOffset) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
@@ -619,6 +622,9 @@ public class DataMessageFactory {
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Return value");
+    if (followingOffset != null) {
+      msgBuilder.setFollowing(followingOffset);
+    }
     msgBuilder.setReturnValue(valBuilder);
 
     return msgBuilder.build();

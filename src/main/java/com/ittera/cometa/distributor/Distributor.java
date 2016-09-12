@@ -130,7 +130,7 @@ public class Distributor {
    * @param constructorCall
    * @throws Throwable
    */
-  static void incomingConstructor(Calls.ConstructorCall constructorCall) {
+  static void incomingConstructor(Calls.ConstructorCall constructorCall, long recordOffset) {
     logger.trace("in D.incomingConstructor: {}", constructorCall.getClass_().getName());
 
     /** 1. Unwrap message and load constructor **/
@@ -178,11 +178,11 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileLoading);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, objKey, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, objKey, false, recordOffset);
     }
 
 
@@ -237,9 +237,9 @@ public class Distributor {
     Wrappers.DataMessage invokedMsg = null;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, objKey, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, objKey, false, null);
     }
 
 
@@ -308,9 +308,9 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true, null);
     }
 
 
@@ -376,9 +376,9 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false, null);
     }
 
 
@@ -411,7 +411,7 @@ public class Distributor {
    *
    * @param instanceMethodCall
    */
-  static void incomingInstanceMethod(Calls.InstanceMethodCall instanceMethodCall) {
+  static void incomingInstanceMethod(Calls.InstanceMethodCall instanceMethodCall, long recordOffset) {
     logger.trace("in D.incomingInstanceMethod: {}", instanceMethodCall.getName());
 
     /** 1. Unwrap message and load method **/
@@ -456,14 +456,14 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileLoading);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
     } else {
       if (method.getReturnType() == Void.class) {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true, recordOffset);
       } else {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false, recordOffset);
       }
     }
 
@@ -511,9 +511,9 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true, null);
     }
 
 
@@ -579,9 +579,9 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false, null);
     }
 
 
@@ -615,7 +615,7 @@ public class Distributor {
    *
    * @param classMethodCall
    */
-  static void incomingClassMethod(Calls.ClassMethodCall classMethodCall) {
+  static void incomingClassMethod(Calls.ClassMethodCall classMethodCall, long recordOffset) {
     logger.trace("in D.incomingClassMethod: {}", classMethodCall.getName());
 
     /** 1. Unwrap message and load method **/
@@ -656,14 +656,14 @@ public class Distributor {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileLoading);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
     } else {
       if (method.getReturnType() == Void.class) {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true, recordOffset);
       } else {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false, recordOffset);
       }
     }
 
@@ -679,7 +679,7 @@ public class Distributor {
 
   // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
 
-  public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet) {
+  public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet, long recordOffset) {
     logger.trace("in D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
 
     /** 1. Get Object **/
@@ -711,11 +711,11 @@ public class Distributor {
     Wrappers.DataMessage invokedMsg = null;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false, recordOffset);
     }
 
 
@@ -763,7 +763,7 @@ public class Distributor {
     if (exceptionGettingObject != null) {
       invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false, null);
     }
 
     /** 6. Send object/exception **/
@@ -786,7 +786,7 @@ public class Distributor {
     return fieldValue;
   }
 
-  public static void incomingGetObject(Fields.InstanceFieldGet instanceFieldGet) {
+  public static void incomingGetObject(Fields.InstanceFieldGet instanceFieldGet, long recordOffset) {
     logger.trace("in D.incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
 
     /** 1. Get Object **/
@@ -819,11 +819,11 @@ public class Distributor {
     Wrappers.DataMessage invokedMsg = null;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false, recordOffset);
     }
 
 
@@ -872,7 +872,7 @@ public class Distributor {
     if (exceptionGettingObject != null) {
       invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false, null);
     }
 
     /** 6. Send object/exception **/
@@ -895,7 +895,7 @@ public class Distributor {
     return fieldValue;
   }
 
-  public static void incomingPutStatic(Fields.StaticFieldPut staticFieldPut) {
+  public static void incomingPutStatic(Fields.StaticFieldPut staticFieldPut, long recordOffset) {
     logger.trace("in D.incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
 
     /** 1. Load class and field **/
@@ -937,11 +937,11 @@ public class Distributor {
     Wrappers.DataMessage invokedMsg = null;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, false, recordOffset);
     }
 
 
@@ -1071,7 +1071,7 @@ public class Distributor {
     return;
   }
 
-  public static void incomingPutField(Fields.InstanceFieldPut instanceFieldPut) {
+  public static void incomingPutField(Fields.InstanceFieldPut instanceFieldPut, long recordOffset) {
     logger.trace("in D.incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
 
     /** 1. Load class and field **/
@@ -1122,11 +1122,11 @@ public class Distributor {
     Wrappers.DataMessage invokedMsg = null;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking);
+      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, false);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, false, recordOffset);
     }
 
 
@@ -1190,6 +1190,10 @@ public class Distributor {
     Distributor.id = Integer.parseInt(properties.getProperty("id"));
 
     /** Configure and Initialize Kafka Producer **/
+    /** TODO refactor the horribly looking loading of properties
+     * We could pass them all to the Broker and Dispatcher, and let each parse their own
+     **/
+
     final Properties kafkaProducerProps = new Properties();
     //common kafka properties
     for (String propKey : properties.stringPropertyNames()) {

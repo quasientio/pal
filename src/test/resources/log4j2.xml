@@ -3,6 +3,7 @@
     <Properties>
         <Property name="distributorLog">logs/distributor.log</Property>
         <Property name="kafkaLog">logs/kafka.log</Property>
+        <Property name="testsLog">logs/tests.log</Property>
     </Properties>
 
     <Appenders>
@@ -22,18 +23,30 @@
                 <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
             </Layout>
         </Appender>
+
+        <Appender type="File" name="tests" fileName="${testsLog}">
+            <Layout type="PatternLayout">
+                <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
+            </Layout>
+        </Appender>
+
     </Appenders>
 
     <Loggers>
         <Logger name="com.ittera.cometa.distributor" level="debug" additivity="false">
             <AppenderRef ref="distributor"/>
         </Logger>
+
         <Logger name="com.ittera.cometa.distributor.messages.data.DataMessageFactory" level="info" additivity="false">
             <AppenderRef ref="distributor"/>
         </Logger>
 
         <Logger name="org.apache.kafka" level="debug" additivity="false">
             <AppenderRef ref="kafka"/>
+        </Logger>
+
+        <Logger name="tests" level="debug" additivity="false">
+            <AppenderRef ref="tests"/>
         </Logger>
 
         <Root level="warn">
