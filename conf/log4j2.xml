@@ -13,7 +13,7 @@
 
         <Appender type="File" name="distributor" fileName="${distributorLog}">
             <Layout type="PatternLayout">
-                <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
+								<Pattern>%d{HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n</Pattern>
             </Layout>
         </Appender>
 
@@ -25,10 +25,7 @@
     </Appenders>
 
     <Loggers>
-        <Logger name="com.ittera.cometa.distributor" level="debug" additivity="false">
-            <AppenderRef ref="distributor"/>
-        </Logger>
-        <Logger name="com.ittera.cometa.distributor.messages.data.DataMessageFactory" level="info" additivity="false">
+        <Logger name="com.ittera.cometa.distributor" level="trace" additivity="false">
             <AppenderRef ref="distributor"/>
         </Logger>
 

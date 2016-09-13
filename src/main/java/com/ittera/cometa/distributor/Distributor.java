@@ -460,7 +460,7 @@ public class Distributor {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
     } else {
-      if (method.getReturnType() == Void.class) {
+      if (method.getReturnType() == void.class) {
         invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true, recordOffset);
       } else {
         invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false, recordOffset);
@@ -660,7 +660,7 @@ public class Distributor {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
     } else {
-      if (method.getReturnType() == Void.class) {
+      if (method.getReturnType() == void.class) {
         invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true, recordOffset);
       } else {
         invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false, recordOffset);

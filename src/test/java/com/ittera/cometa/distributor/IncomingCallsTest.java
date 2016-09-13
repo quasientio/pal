@@ -1,15 +1,21 @@
 package com.ittera.cometa.distributor;
 
+import com.ittera.cometa.distributor.messages.data.Primitives;
+
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
 import java.lang.reflect.Modifier;
 
 import com.ittera.cometa.distributor.messages.data.DataMessageFactory;
+import com.ittera.cometa.distributor.messages.data.Wrappers.DataMessage;
 
 import static org.junit.Assert.*;
 
 import java.io.IOException;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class IncomingCallsTest extends AbstractDistributorTest {
 
   public IncomingCallsTest() throws IOException {
@@ -17,7 +23,25 @@ public class IncomingCallsTest extends AbstractDistributorTest {
   }
 
   @Test
-  public void testVoidClassMethod() {
+  public void testConstructor() {
+    String className = "com.ittera.cometa.demos.App";
+
+    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage replyMsg = sendAndReceive(requestMsg);
+
+    logger.info("Received reply message:\n{}", replyMsg);
+
+    assertNotNull(replyMsg.getReturnValue().getObject());
+    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
+
+    assertEquals(className, newObj.getClass_().getName());
+    assertTrue(newObj.hasRef());
+    logger.info("Got new objectRef: {}", newObj.getRef());
+  }
+
+  @Test
+  public void testVoidClassMethod_Main() {
+
     //test main
     /** example: com.ittera.cometa.demos.App main */
     String className = "com.ittera.cometa.demos.App";
@@ -32,7 +56,11 @@ public class IncomingCallsTest extends AbstractDistributorTest {
     }
     Object[] parameters = new Object[]{new String[]{}};
 
-    Long sentRecordOffset = send(DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, modifiers, returnType, parameterTypesNamesArray, parameters));
-    logger.info("Message was sent with offset: {}", sentRecordOffset);
+    DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, modifiers, returnType, parameterTypesNamesArray, parameters);
+    DataMessage replyMsg = sendAndReceive(requestMsg);
+    logger.info("Received reply message:\n{}", replyMsg);
+
+    assertNotNull(replyMsg.getReturnValue());
+    assertTrue(replyMsg.getReturnValue().getIsVoid());
   }
 }

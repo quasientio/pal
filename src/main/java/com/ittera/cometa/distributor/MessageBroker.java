@@ -5,6 +5,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 
 import com.ittera.cometa.distributor.messages.data.Wrappers.DataMessage;
 
@@ -39,4 +40,13 @@ public class MessageBroker {
     }
   }
 
+  private static String getRecordInfo(RecordMetadata recordMetadata) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("{\n checksum: ").append(recordMetadata.checksum()).append('\n').append(
+      " timestamp: ").append(recordMetadata.timestamp()).append('\n').append(
+      " offset: ").append(recordMetadata.offset()).append('\n').append(
+      " #bytes in value: ").append(recordMetadata.serializedValueSize()).append("\n}");
+
+    return builder.toString();
+  }
 }
