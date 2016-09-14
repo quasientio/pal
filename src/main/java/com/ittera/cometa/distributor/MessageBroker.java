@@ -49,4 +49,13 @@ public class MessageBroker {
 
     return builder.toString();
   }
+
+  static void shutdown() {
+    logger.info("Shutting down message broker");
+    if (producer != null) {
+      producer.close();
+    }
+    logger.info("Message broker shut down");
+  }
+
 }

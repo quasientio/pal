@@ -30,6 +30,8 @@ public class DataMessageDispatcher extends Thread {
 
   private KafkaConsumer<String, String> consumer;
 
+  private boolean mustShutdown;
+
   //to be called once initialized
   public static DataMessageDispatcher getInstance() {
     if (ourInstance == null) {
@@ -59,7 +61,7 @@ public class DataMessageDispatcher extends Thread {
   }
 
   public void run() {
-    while (true) {
+    while (!mustShutdown) {
       ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
       if (records.count() > 0) {
         logger.info("Records read:" + records.count());
@@ -121,5 +123,22 @@ public class DataMessageDispatcher extends Thread {
         }
       }
     }
+
+    shutdown();
   }
+
+  void requestShutdown() {
+    mustShutdown = true;
+  }
+
+  private void shutdown() {
+    //TODO: clean up, send uncommitted offset, etc.
+
+    logger.info("Shutting down message dispatcher");
+    if (consumer != null) {
+      consumer.close();
+    }
+    logger.info("Message dispatcher shut down");
+  }
+
 }

@@ -1126,6 +1126,7 @@ public class Distributor {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
     } else {
+//        invokedMsg = DataMessageFactory.buildPutObjectDoneMessage (id, String className, String fieldName, String targetObjRef, String valueObjRef, Long followingOffset){
       invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, false, recordOffset);
     }
 
@@ -1147,6 +1148,7 @@ public class Distributor {
    * @param dataMessage
    * @return
    */
+
   private static boolean mustWait(Wrappers.DataMessage dataMessage) {
     return false;
   }
@@ -1189,11 +1191,30 @@ public class Distributor {
     /** Configure Distributor **/
     Distributor.id = Integer.parseInt(properties.getProperty("id"));
 
+    /** Add shutdown hook **/
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      @Override
+      public void run() {
+        //try to gracefully close broker msg dispatcher connections
+        if (DataMessageDispatcher.getInstance() != null) {
+          DataMessageDispatcher.getInstance().requestShutdown();
+        }
+
+        //try to gracefully close broker connections
+        broker.shutdown();
+
+        try {
+          Thread.sleep(3000);
+        } catch (InterruptedException ie) {
+          logger.error("Interrupted in shutdown hook sleep", ie);
+        }
+      }
+    });
+
     /** Configure and Initialize Kafka Producer **/
     /** TODO refactor the horribly looking loading of properties
      * We could pass them all to the Broker and Dispatcher, and let each parse their own
      **/
-
     final Properties kafkaProducerProps = new Properties();
     //common kafka properties
     for (String propKey : properties.stringPropertyNames()) {

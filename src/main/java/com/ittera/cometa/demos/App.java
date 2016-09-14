@@ -5,16 +5,18 @@ import java.util.ArrayList;
 
 public class App {
 
-  Integer anInt;
-  String someString;
-  boolean aBool;
-  App b;
-  List anIntList;
+  public Integer anInt = 4;
+  public Integer aNullInt;
+  public String aNullStr;
+  public String someString = "I'm blank";
+  public boolean aBool;
+  public App anApp;
+  public List anIntList;
 
-  static float aFloat = 8.5f;
-  static long aLong = 53382303;
-  static String aClassString;
-  static double aDbl;
+  public static float aFloat = 8.5f;
+  public static long aLong = 53382303;
+  public static String aClassString;
+  public static double aDbl;
 
   static {
     System.out.println("aDbl before=" + aDbl);
@@ -52,7 +54,7 @@ public class App {
   void doSomething() {
     anInt = Integer.valueOf(60);
     someString = new String("hello there");
-    b = new App();
+    anApp = new App();
   }
 
 

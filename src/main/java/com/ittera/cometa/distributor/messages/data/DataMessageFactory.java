@@ -531,6 +531,11 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
+  public static Wrappers.DataMessage buildPutObjectDoneMessage(int distributorId, String className, String fieldName, String targetObjRef, String valueObjRef, Long followingOffset) {
+
+    return null;
+  }
+
   public static Wrappers.DataMessage buildPutObjectDoneMessage(int distributorId, StaticPart staticPart, Object sender, Object target, Object arg) {
 
     /** Build protobuf message **/

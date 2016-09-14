@@ -68,4 +68,10 @@ public class ProtobufUtils {
       throw new IllegalArgumentException("Unsupported object type:" + clazz.getName());
     }
   }
+
+
+  public static Object unwrapObject(Primitives.Object object) throws ClassNotFoundException {
+    Class objectClass = Class.forName(object.getClass_().getName());
+    return unwrapObject(object, objectClass);
+  }
 }
