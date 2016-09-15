@@ -1,15 +1,13 @@
 package com.ittera.cometa.distributor;
 
-import com.ittera.cometa.distributor.messages.data.Primitives;
+import com.ittera.cometa.distributor.messages.data.*;
 
-import com.ittera.cometa.distributor.messages.data.ProtobufUtils;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import java.lang.reflect.Modifier;
 
-import com.ittera.cometa.distributor.messages.data.DataMessageFactory;
 import com.ittera.cometa.distributor.messages.data.Wrappers.DataMessage;
 
 import static org.junit.Assert.*;
@@ -27,17 +25,26 @@ public class IncomingCallsTest extends AbstractDistributorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     logger.info("Received reply message:\n{}", replyMsg);
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertFalse(retValue.getIsVoid());
+    assertFalse(retValue.getIsClass());
+    assertTrue(retValue.hasClazz());
+    assertTrue(retValue.hasObject());
+    assertEquals(className, retValue.getClazz().getName());
 
-    assertNotNull(replyMsg.getReturnValue().getObject());
-    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
+    Primitives.Object newObj = retValue.getObject();
 
-    assertEquals(className, newObj.getClass_().getName());
+    assertFalse(newObj.getIsNull());
+    assertFalse(newObj.getIsArray());
     assertTrue(newObj.hasRef());
+    assertTrue(newObj.hasClass_());
+    assertEquals(className, newObj.getClass_().getName());
     logger.info("Got new objectRef: {}", newObj.getRef());
   }
 
   @Test
-  public void testGetInteger() throws ClassNotFoundException {
+  public void testGetInteger_notNull() throws ClassNotFoundException {
     //TODO have a native instance at hand for comparisons: the problem is that we need it in another path (not weaved) or loaded by another classloader!!
 //    App app = new App();
 
@@ -50,34 +57,67 @@ public class IncomingCallsTest extends AbstractDistributorTest {
     Primitives.Object newObj = replyMsg.getReturnValue().getObject();
 
     //test with a non null integer (value = 4)
+    Integer originalValue = 4;
     requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, "anInt", newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
     logger.info("Received reply message:\n{}", replyMsg);
-    assertNotNull(replyMsg.getReturnValue().getObject());
-    Primitives.Object retObj = replyMsg.getReturnValue().getObject();
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertFalse(retValue.getIsVoid());
+    assertFalse(retValue.getIsClass());
+    assertTrue(retValue.hasClazz());
+    assertTrue(retValue.hasObject());
+    assertEquals("java.lang.Integer", retValue.getClazz().getName());
 
-    Object rawObj = ProtobufUtils.unwrapObject(retObj);
+    Primitives.Object getObj = retValue.getObject();
+
+    assertFalse(getObj.getIsNull());
+    assertFalse(getObj.getIsArray());
+    assertFalse(getObj.hasRef());
+    assertTrue(getObj.hasClass_());
+    assertEquals("java.lang.Integer", getObj.getClass_().getName());
+
+    Object rawObj = ProtobufUtils.unwrapObject(getObj);
 
     assertTrue(rawObj instanceof Integer);
-    assertEquals(4, rawObj);
+    assertEquals(originalValue, rawObj);
+  }
+
+  @Test
+  public void testGetInteger_Null() throws ClassNotFoundException {
+    //TODO have a native instance at hand for comparisons: the problem is that we need it in another path (not weaved) or loaded by another classloader!!
+//    App app = new App();
+
+    String className = "com.ittera.cometa.demos.App";
+
+    //must call new first
+    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage replyMsg = sendAndReceive(requestMsg);
+    logger.info("Received reply message:\n{}", replyMsg);
+    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
 
     //test with a null (non-initialized) integer
     requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, "aNullInt", newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
     logger.info("Received reply message:\n{}", replyMsg);
-    assertNotNull(replyMsg.getReturnValue().getObject());
-    retObj = replyMsg.getReturnValue().getObject();
-    assertTrue(retObj.getIsNull());
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertFalse(retValue.getIsVoid());
+    assertFalse(retValue.getIsClass());
+    assertFalse(retValue.hasClazz());
+    assertTrue(retValue.hasObject());
 
-    //TODO: list all instance fields using reflection and call get for each
-//     String fieldName = "someString";
-//    String fieldName = "aBool";
-//    String fieldName = "anApp";
+    Primitives.Object getObj = retValue.getObject();
 
+    assertTrue(getObj.getIsNull());
+    assertFalse(getObj.getIsArray());
+    assertFalse(getObj.hasRef());
+    assertTrue(getObj.hasClass_());
+    assertTrue(getObj.getClass_().getUnknown());
   }
 
   @Test
-  public void testGetString() throws ClassNotFoundException {
+  public void testGetString_notNull() throws ClassNotFoundException {
 
     String className = "com.ittera.cometa.demos.App";
 
@@ -91,21 +131,59 @@ public class IncomingCallsTest extends AbstractDistributorTest {
     requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, "someString", newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
     logger.info("Received reply message:\n{}", replyMsg);
-    assertNotNull(replyMsg.getReturnValue().getObject());
-    Primitives.Object retObj = replyMsg.getReturnValue().getObject();
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertFalse(retValue.getIsVoid());
+    assertFalse(retValue.getIsClass());
+    assertTrue(retValue.hasClazz());
+    assertEquals("java.lang.String", retValue.getClazz().getName());
+    assertTrue(retValue.hasObject());
 
-    Object rawObj = ProtobufUtils.unwrapObject(retObj);
+    Primitives.Object getObj = retValue.getObject();
+
+    assertFalse(getObj.getIsNull());
+    assertFalse(getObj.getIsArray());
+    assertFalse(getObj.hasRef());
+    assertTrue(getObj.hasClass_());
+    assertFalse(getObj.getClass_().getUnknown());
+    assertEquals("java.lang.String", getObj.getClass_().getName());
+
+    Object rawObj = ProtobufUtils.unwrapObject(getObj);
 
     assertTrue(rawObj instanceof String);
     assertEquals("I'm blank", rawObj);
+
+  }
+
+  @Test
+  public void testGetString_Null() throws ClassNotFoundException {
+
+    String className = "com.ittera.cometa.demos.App";
+
+    //must call new first
+    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage replyMsg = sendAndReceive(requestMsg);
+    logger.info("Received reply message:\n{}", replyMsg);
+    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
 
     //test with a null (non-initialized) string (aNullStr)
     requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, "aNullStr", newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
     logger.info("Received reply message:\n{}", replyMsg);
-    assertNotNull(replyMsg.getReturnValue().getObject());
-    retObj = replyMsg.getReturnValue().getObject();
-    assertTrue(retObj.getIsNull());
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertFalse(retValue.getIsVoid());
+    assertFalse(retValue.getIsClass());
+    assertFalse(retValue.hasClazz());
+    assertTrue(retValue.hasObject());
+
+    Primitives.Object getObj = retValue.getObject();
+
+    assertTrue(getObj.getIsNull());
+    assertFalse(getObj.getIsArray());
+    assertFalse(getObj.hasRef());
+    assertTrue(getObj.hasClass_());
+    assertTrue(getObj.getClass_().getUnknown());
 
   }
 
@@ -134,14 +212,99 @@ public class IncomingCallsTest extends AbstractDistributorTest {
 
 
     //set integer (value = 500)
-    requestMsg = DataMessageFactory.buildPutObjectMessage(clientId, className, "anInt", newObj.getRef(), "java.lang.Integer", Integer.valueOf(500));
+    Integer newIntValue = 500;
+    requestMsg = DataMessageFactory.buildPutObjectMessage(clientId, className, "anInt", newObj.getRef(), "java.lang.Integer", newIntValue);
     replyMsg = sendAndReceive(requestMsg);
     logger.info("Received reply message:\n{}", replyMsg);
-    assertNotNull(replyMsg.getReturnValue().getObject());
-//    Primitives.Object retObj = replyMsg.getReturnValue().getObject();
+    assertTrue(replyMsg.hasInstanceFieldPutDone());
+    assertFalse(replyMsg.hasReturnValue());
+    Fields.InstanceFieldPutDone fieldPutDone = replyMsg.getInstanceFieldPutDone();
+    assertEquals(fieldPutDone.getField().getName(), "anInt");
 
+
+    //now get to test if set took place
+    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, "anInt", newObj.getRef());
+    replyMsg = sendAndReceive(requestMsg);
+    logger.info("Received reply message:\n{}", replyMsg);
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertFalse(retValue.getIsVoid());
+    assertFalse(retValue.getIsClass());
+    assertTrue(retValue.hasClazz());
+    assertEquals("java.lang.Integer", retValue.getClazz().getName());
+    assertTrue(retValue.hasObject());
+
+    Primitives.Object getObj = retValue.getObject();
+
+    assertFalse(getObj.getIsNull());
+    assertFalse(getObj.getIsArray());
+    assertFalse(getObj.hasRef());
+    assertTrue(getObj.hasClass_());
+    assertFalse(getObj.getClass_().getUnknown());
+    assertEquals("java.lang.Integer", getObj.getClass_().getName());
+
+    rawObj = ProtobufUtils.unwrapObject(getObj);
+
+    assertTrue(rawObj instanceof Integer);
+    assertEquals(newIntValue, rawObj);
   }
 
+
+  @Test
+  public void testGetStaticString_notNull() throws ClassNotFoundException {
+
+    String className = "com.ittera.cometa.demos.App";
+
+    //test with a non null String
+    String originalStrValue = "I'm classy";
+    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, "aClassString");
+    DataMessage replyMsg = sendAndReceive(requestMsg);
+    logger.info("Received reply message:\n{}", replyMsg);
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertFalse(retValue.getIsVoid());
+    assertFalse(retValue.getIsClass());
+    assertTrue(retValue.hasClazz());
+    assertTrue(retValue.hasObject());
+    assertEquals("java.lang.String", retValue.getClazz().getName());
+
+    Primitives.Object retObj = retValue.getObject();
+    assertFalse(retObj.getIsArray());
+    assertFalse(retObj.getIsNull());
+    assertFalse(retObj.hasRef());
+    assertTrue(retObj.hasClass_());
+    assertFalse(retObj.getClass_().getUnknown());
+    assertEquals("java.lang.String", retObj.getClass_().getName());
+
+    Object rawObj = ProtobufUtils.unwrapObject(retObj);
+    assertTrue(rawObj instanceof String);
+    assertEquals(originalStrValue, rawObj);
+  }
+
+  @Test
+  public void testGetStaticString_Null() throws ClassNotFoundException {
+
+    String className = "com.ittera.cometa.demos.App";
+
+    //test with a null String
+    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, "aNullStaticStr");
+    DataMessage replyMsg = sendAndReceive(requestMsg);
+    logger.info("Received reply message:\n{}", replyMsg);
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertFalse(retValue.getIsVoid());
+    assertFalse(retValue.getIsClass());
+    assertFalse(retValue.hasClazz());
+    assertNotNull(retValue.getObject());
+
+    Primitives.Object retObj = retValue.getObject();
+    assertFalse(retObj.getIsArray());
+    assertTrue(retObj.getIsNull());
+    assertFalse(retObj.hasRef());
+    assertTrue(retObj.hasClass_());
+    assertTrue(retObj.getClass_().getUnknown());
+
+  }
 
   @Test
   public void testVoidClassMethod_Main() {

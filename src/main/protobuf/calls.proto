@@ -1,6 +1,7 @@
 package messages.data;
 
 import "primitives.proto";
+import "ctxt.proto";
 
 option java_package = "com.ittera.cometa.distributor.messages.data";
 option java_outer_classname = "Calls";
@@ -30,14 +31,7 @@ message ConstructorCall {
 
     repeated Object parameter = 8;
 
-    optional Class senderClass = 9;
-
-    optional Object sender = 10;
-
-    //source context from where the call was made
-    optional string sourceLocationFile = 11;
-    optional int32 sourceLocationLine = 12;
-    optional string sourceLocationType = 13;
+    optional Context context = 9;
 
     //TO DO:  annotations
 }
@@ -76,14 +70,7 @@ message InstanceMethodCall {
 
     repeated Object parameter = 11;
 
-    optional Class senderClass = 12;
-
-    optional Object sender = 13;
-
-    //source context from where the call was made
-    optional string sourceLocationFile = 14;
-    optional int32 sourceLocationLine = 15;
-    optional string sourceLocationType = 16;
+    optional Context context = 12;
 
     //TO DO:  annotations
 }
@@ -107,14 +94,7 @@ message ClInitCall {
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 5;
 
-    optional Class senderClass = 6;
-
-    optional Object sender = 7;
-
-    //source context from where the call was made
-    optional string sourceLocationFile = 8;
-    optional int32 sourceLocationLine = 9;
-    optional string sourceLocationType = 10;
+    optional Context context = 6;
 
     //TO DO:  annotations
 }
@@ -147,14 +127,7 @@ message ClassMethodCall {
 
     repeated Object parameter = 9;
 
-    optional Class senderClass = 10;
-
-    optional Object sender = 11;
-
-    //source context from where the call was made
-    optional string sourceLocationFile = 12;
-    optional int32 sourceLocationLine = 13;
-    optional string sourceLocationType = 14;
+    optional Context context = 10;
 
     //TO DO:  annotations
 }

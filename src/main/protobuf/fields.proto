@@ -1,10 +1,16 @@
 package messages.data;
 
 import "primitives.proto";
+import "ctxt.proto";
 
 option java_package = "com.ittera.cometa.distributor.messages.data";
 option java_outer_classname = "Fields";
 option optimize_for = SPEED;
+
+message Field {
+    required string name = 1;
+    optional Class class = 2;
+}
 
 message StaticFieldGet {
     // --- CONTEXT
@@ -22,21 +28,12 @@ message StaticFieldGet {
 
     required Class class = 4;
 
-    required string field = 5;
-
-    optional string fieldType = 6;
+    required Field field = 5;
 
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 7;
+    optional int32 modifiers = 6;
 
-    optional Class senderClass = 8;
-
-    optional Object sender = 9;
-
-    //source context from where the call was made
-    optional string sourceLocationFile = 10;
-    optional int32 sourceLocationLine = 11;
-    optional string sourceLocationType = 12;
+    optional Context context = 7;
 
     //TODO:  annotations
 }
@@ -57,26 +54,17 @@ message StaticFieldPut {
 
     required Class class = 4;
 
-    required string field = 5;
-
-    optional string fieldType = 6;
+    required Field field = 5;
 
     oneof value {
-        Object object = 7;
-        string objectRef = 8;
+        Object object = 6;
+        string objectRef = 7;
     }
 
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 9;
+    optional int32 modifiers = 8;
 
-    optional Class senderClass = 10;
-
-    optional Object sender = 11;
-
-    //source context from where the call was made
-    optional string sourceLocationFile = 12;
-    optional int32 sourceLocationLine = 13;
-    optional string sourceLocationType = 14;
+    optional Context context = 9;
 
     //TODO:  annotations
 }
@@ -96,21 +84,13 @@ message StaticFieldPutDone {
     // --- CONTEXT
 
     //TODO from here all should be replaced by reference to originator StaticFieldPut message
+
+    //redundant if instanceFieldPut is set
     required Class class = 4;
 
-    required string field = 5;
+    required Field field = 5;
 
-    required string fieldType = 6;
-
-    required Object value = 7;
-
-    //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 8;
-
-    optional Class senderClass = 9;
-
-    optional Object sender = 10;
-
+    optional StaticFieldPut staticFieldPut = 6;
 }
 
 message InstanceFieldGet {
@@ -135,21 +115,12 @@ message InstanceFieldGet {
         string objectRef = 6;
     }
 
-    required string field = 7;
-
-    optional string fieldType = 8;
+    required Field field = 7;
 
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 9;
+    optional int32 modifiers = 8;
 
-    optional Class senderClass = 10;
-
-    optional Object sender = 11;
-
-    //source context from where the call was made
-    optional string sourceLocationFile = 12;
-    optional int32 sourceLocationLine = 13;
-    optional string sourceLocationType = 14;
+    optional Context context = 9;
 
     //TODO:  annotations
 }
@@ -176,25 +147,16 @@ message InstanceFieldPut {
         string objectRef = 6;
     }
 
-    required string field = 7;
-
-    optional string fieldType = 8;
+    required Field field = 7;
 
     oneof value {
-        Object valueObject = 9;
-        string valueObjectRef = 10;
+        Object valueObject = 8;
+        string valueObjectRef = 9;
     }
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 11;
+    optional int32 modifiers = 10;
 
-    optional Class senderClass = 12;
-
-    optional Object sender = 13;
-
-    //source context from where the call was made
-    optional string sourceLocationFile = 14;
-    optional int32 sourceLocationLine = 15;
-    optional string sourceLocationType = 16;
+    optional Context context = 11;
 
     //TODO:  annotations
 
@@ -216,20 +178,10 @@ message InstanceFieldPutDone {
 
     //TODO from here all should be replaced by reference to originator InstanceFieldPut message
 
+    //redundant if instanceFieldPut is set
     required Class class = 4;
 
-    required Object target = 5;
+    required Field field = 5;
 
-    required string field = 6;
-
-    optional string fieldType = 7;
-
-    required Object value = 8;
-
-    //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 9;
-
-    optional Class senderClass = 10;
-
-    optional Object sender = 11;
+    optional InstanceFieldPut instanceFieldPut = 6;
 }

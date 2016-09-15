@@ -374,28 +374,28 @@ public final class Wrappers {
             }
             case 98: {
               com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.Builder subBuilder = null;
-              if (calltypeCase_ == 12) {
-                subBuilder = ((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) calltype_).toBuilder();
+              if (returntypeCase_ == 12) {
+                subBuilder = ((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) returntype_).toBuilder();
               }
-              calltype_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.PARSER, extensionRegistry);
+              returntype_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.PARSER, extensionRegistry);
               if (subBuilder != null) {
-                subBuilder.mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) calltype_);
-                calltype_ = subBuilder.buildPartial();
+                subBuilder.mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) returntype_);
+                returntype_ = subBuilder.buildPartial();
               }
-              calltypeCase_ = 12;
+              returntypeCase_ = 12;
               break;
             }
             case 106: {
               com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.Builder subBuilder = null;
-              if (calltypeCase_ == 13) {
-                subBuilder = ((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) calltype_).toBuilder();
+              if (returntypeCase_ == 13) {
+                subBuilder = ((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) returntype_).toBuilder();
               }
-              calltype_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.PARSER, extensionRegistry);
+              returntype_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.PARSER, extensionRegistry);
               if (subBuilder != null) {
-                subBuilder.mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) calltype_);
-                calltype_ = subBuilder.buildPartial();
+                subBuilder.mergeFrom((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) returntype_);
+                returntype_ = subBuilder.buildPartial();
               }
-              calltypeCase_ = 13;
+              returntypeCase_ = 13;
               break;
             }
             case 114: {
@@ -476,8 +476,6 @@ public final class Wrappers {
       STATICFIELDPUT(9),
       INSTANCEFIELDGET(10),
       INSTANCEFIELDPUT(11),
-      STATICFIELDPUTDONE(12),
-      INSTANCEFIELDPUTDONE(13),
       CALLTYPE_NOT_SET(0);
       private int value = 0;
       private CalltypeCase(int value) {
@@ -493,8 +491,6 @@ public final class Wrappers {
           case 9: return STATICFIELDPUT;
           case 10: return INSTANCEFIELDGET;
           case 11: return INSTANCEFIELDPUT;
-          case 12: return STATICFIELDPUTDONE;
-          case 13: return INSTANCEFIELDPUTDONE;
           case 0: return CALLTYPE_NOT_SET;
           default: throw new java.lang.IllegalArgumentException(
             "Value is undefined for this oneof enum.");
@@ -515,6 +511,8 @@ public final class Wrappers {
     private java.lang.Object returntype_;
     public enum ReturntypeCase
         implements com.google.protobuf.Internal.EnumLite {
+      STATICFIELDPUTDONE(12),
+      INSTANCEFIELDPUTDONE(13),
       RAISEDTHROWABLE(14),
       RETURNVALUE(15),
       RETURNTYPE_NOT_SET(0);
@@ -524,6 +522,8 @@ public final class Wrappers {
       }
       public static ReturntypeCase valueOf(int value) {
         switch (value) {
+          case 12: return STATICFIELDPUTDONE;
+          case 13: return INSTANCEFIELDPUTDONE;
           case 14: return RAISEDTHROWABLE;
           case 15: return RETURNVALUE;
           case 0: return RETURNTYPE_NOT_SET;
@@ -827,14 +827,14 @@ public final class Wrappers {
      * <code>optional .messages.data.StaticFieldPutDone staticFieldPutDone = 12;</code>
      */
     public boolean hasStaticFieldPutDone() {
-      return calltypeCase_ == 12;
+      return returntypeCase_ == 12;
     }
     /**
      * <code>optional .messages.data.StaticFieldPutDone staticFieldPutDone = 12;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone getStaticFieldPutDone() {
-      if (calltypeCase_ == 12) {
-         return (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) calltype_;
+      if (returntypeCase_ == 12) {
+         return (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) returntype_;
       }
       return com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance();
     }
@@ -842,8 +842,8 @@ public final class Wrappers {
      * <code>optional .messages.data.StaticFieldPutDone staticFieldPutDone = 12;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDoneOrBuilder getStaticFieldPutDoneOrBuilder() {
-      if (calltypeCase_ == 12) {
-         return (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) calltype_;
+      if (returntypeCase_ == 12) {
+         return (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) returntype_;
       }
       return com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance();
     }
@@ -853,14 +853,14 @@ public final class Wrappers {
      * <code>optional .messages.data.InstanceFieldPutDone instanceFieldPutDone = 13;</code>
      */
     public boolean hasInstanceFieldPutDone() {
-      return calltypeCase_ == 13;
+      return returntypeCase_ == 13;
     }
     /**
      * <code>optional .messages.data.InstanceFieldPutDone instanceFieldPutDone = 13;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone getInstanceFieldPutDone() {
-      if (calltypeCase_ == 13) {
-         return (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) calltype_;
+      if (returntypeCase_ == 13) {
+         return (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) returntype_;
       }
       return com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance();
     }
@@ -868,8 +868,8 @@ public final class Wrappers {
      * <code>optional .messages.data.InstanceFieldPutDone instanceFieldPutDone = 13;</code>
      */
     public com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDoneOrBuilder getInstanceFieldPutDoneOrBuilder() {
-      if (calltypeCase_ == 13) {
-         return (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) calltype_;
+      if (returntypeCase_ == 13) {
+         return (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) returntype_;
       }
       return com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance();
     }
@@ -1057,11 +1057,11 @@ public final class Wrappers {
       if (calltypeCase_ == 11) {
         output.writeMessage(11, (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut) calltype_);
       }
-      if (calltypeCase_ == 12) {
-        output.writeMessage(12, (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) calltype_);
+      if (returntypeCase_ == 12) {
+        output.writeMessage(12, (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) returntype_);
       }
-      if (calltypeCase_ == 13) {
-        output.writeMessage(13, (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) calltype_);
+      if (returntypeCase_ == 13) {
+        output.writeMessage(13, (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) returntype_);
       }
       if (returntypeCase_ == 14) {
         output.writeMessage(14, (com.ittera.cometa.distributor.messages.data.Exceptions.RaisedThrowable) returntype_);
@@ -1122,13 +1122,13 @@ public final class Wrappers {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(11, (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPut) calltype_);
       }
-      if (calltypeCase_ == 12) {
+      if (returntypeCase_ == 12) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(12, (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) calltype_);
+          .computeMessageSize(12, (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) returntype_);
       }
-      if (calltypeCase_ == 13) {
+      if (returntypeCase_ == 13) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(13, (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) calltype_);
+          .computeMessageSize(13, (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) returntype_);
       }
       if (returntypeCase_ == 14) {
         size += com.google.protobuf.CodedOutputStream
@@ -1361,18 +1361,18 @@ public final class Wrappers {
             result.calltype_ = instanceFieldPutBuilder_.build();
           }
         }
-        if (calltypeCase_ == 12) {
+        if (returntypeCase_ == 12) {
           if (staticFieldPutDoneBuilder_ == null) {
-            result.calltype_ = calltype_;
+            result.returntype_ = returntype_;
           } else {
-            result.calltype_ = staticFieldPutDoneBuilder_.build();
+            result.returntype_ = staticFieldPutDoneBuilder_.build();
           }
         }
-        if (calltypeCase_ == 13) {
+        if (returntypeCase_ == 13) {
           if (instanceFieldPutDoneBuilder_ == null) {
-            result.calltype_ = calltype_;
+            result.returntype_ = returntype_;
           } else {
-            result.calltype_ = instanceFieldPutDoneBuilder_.build();
+            result.returntype_ = instanceFieldPutDoneBuilder_.build();
           }
         }
         if (returntypeCase_ == 14) {
@@ -1451,6 +1451,11 @@ public final class Wrappers {
             mergeInstanceFieldPut(other.getInstanceFieldPut());
             break;
           }
+          case CALLTYPE_NOT_SET: {
+            break;
+          }
+        }
+        switch (other.getReturntypeCase()) {
           case STATICFIELDPUTDONE: {
             mergeStaticFieldPutDone(other.getStaticFieldPutDone());
             break;
@@ -1459,11 +1464,6 @@ public final class Wrappers {
             mergeInstanceFieldPutDone(other.getInstanceFieldPutDone());
             break;
           }
-          case CALLTYPE_NOT_SET: {
-            break;
-          }
-        }
-        switch (other.getReturntypeCase()) {
           case RAISEDTHROWABLE: {
             mergeRaisedThrowable(other.getRaisedThrowable());
             break;
@@ -2839,19 +2839,19 @@ public final class Wrappers {
        * <code>optional .messages.data.StaticFieldPutDone staticFieldPutDone = 12;</code>
        */
       public boolean hasStaticFieldPutDone() {
-        return calltypeCase_ == 12;
+        return returntypeCase_ == 12;
       }
       /**
        * <code>optional .messages.data.StaticFieldPutDone staticFieldPutDone = 12;</code>
        */
       public com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone getStaticFieldPutDone() {
         if (staticFieldPutDoneBuilder_ == null) {
-          if (calltypeCase_ == 12) {
-            return (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) calltype_;
+          if (returntypeCase_ == 12) {
+            return (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) returntype_;
           }
           return com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance();
         } else {
-          if (calltypeCase_ == 12) {
+          if (returntypeCase_ == 12) {
             return staticFieldPutDoneBuilder_.getMessage();
           }
           return com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance();
@@ -2865,12 +2865,12 @@ public final class Wrappers {
           if (value == null) {
             throw new NullPointerException();
           }
-          calltype_ = value;
+          returntype_ = value;
           onChanged();
         } else {
           staticFieldPutDoneBuilder_.setMessage(value);
         }
-        calltypeCase_ = 12;
+        returntypeCase_ = 12;
         return this;
       }
       /**
@@ -2879,12 +2879,12 @@ public final class Wrappers {
       public Builder setStaticFieldPutDone(
           com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.Builder builderForValue) {
         if (staticFieldPutDoneBuilder_ == null) {
-          calltype_ = builderForValue.build();
+          returntype_ = builderForValue.build();
           onChanged();
         } else {
           staticFieldPutDoneBuilder_.setMessage(builderForValue.build());
         }
-        calltypeCase_ = 12;
+        returntypeCase_ = 12;
         return this;
       }
       /**
@@ -2892,21 +2892,21 @@ public final class Wrappers {
        */
       public Builder mergeStaticFieldPutDone(com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone value) {
         if (staticFieldPutDoneBuilder_ == null) {
-          if (calltypeCase_ == 12 &&
-              calltype_ != com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance()) {
-            calltype_ = com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.newBuilder((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) calltype_)
+          if (returntypeCase_ == 12 &&
+              returntype_ != com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance()) {
+            returntype_ = com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.newBuilder((com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) returntype_)
                 .mergeFrom(value).buildPartial();
           } else {
-            calltype_ = value;
+            returntype_ = value;
           }
           onChanged();
         } else {
-          if (calltypeCase_ == 12) {
+          if (returntypeCase_ == 12) {
             staticFieldPutDoneBuilder_.mergeFrom(value);
           }
           staticFieldPutDoneBuilder_.setMessage(value);
         }
-        calltypeCase_ = 12;
+        returntypeCase_ = 12;
         return this;
       }
       /**
@@ -2914,15 +2914,15 @@ public final class Wrappers {
        */
       public Builder clearStaticFieldPutDone() {
         if (staticFieldPutDoneBuilder_ == null) {
-          if (calltypeCase_ == 12) {
-            calltypeCase_ = 0;
-            calltype_ = null;
+          if (returntypeCase_ == 12) {
+            returntypeCase_ = 0;
+            returntype_ = null;
             onChanged();
           }
         } else {
-          if (calltypeCase_ == 12) {
-            calltypeCase_ = 0;
-            calltype_ = null;
+          if (returntypeCase_ == 12) {
+            returntypeCase_ = 0;
+            returntype_ = null;
           }
           staticFieldPutDoneBuilder_.clear();
         }
@@ -2938,11 +2938,11 @@ public final class Wrappers {
        * <code>optional .messages.data.StaticFieldPutDone staticFieldPutDone = 12;</code>
        */
       public com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDoneOrBuilder getStaticFieldPutDoneOrBuilder() {
-        if ((calltypeCase_ == 12) && (staticFieldPutDoneBuilder_ != null)) {
+        if ((returntypeCase_ == 12) && (staticFieldPutDoneBuilder_ != null)) {
           return staticFieldPutDoneBuilder_.getMessageOrBuilder();
         } else {
-          if (calltypeCase_ == 12) {
-            return (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) calltype_;
+          if (returntypeCase_ == 12) {
+            return (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) returntype_;
           }
           return com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance();
         }
@@ -2954,17 +2954,17 @@ public final class Wrappers {
           com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.Builder, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDoneOrBuilder> 
           getStaticFieldPutDoneFieldBuilder() {
         if (staticFieldPutDoneBuilder_ == null) {
-          if (!(calltypeCase_ == 12)) {
-            calltype_ = com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance();
+          if (!(returntypeCase_ == 12)) {
+            returntype_ = com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.getDefaultInstance();
           }
           staticFieldPutDoneBuilder_ = new com.google.protobuf.SingleFieldBuilder<
               com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone.Builder, com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDoneOrBuilder>(
-                  (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) calltype_,
+                  (com.ittera.cometa.distributor.messages.data.Fields.StaticFieldPutDone) returntype_,
                   getParentForChildren(),
                   isClean());
-          calltype_ = null;
+          returntype_ = null;
         }
-        calltypeCase_ = 12;
+        returntypeCase_ = 12;
         return staticFieldPutDoneBuilder_;
       }
 
@@ -2974,19 +2974,19 @@ public final class Wrappers {
        * <code>optional .messages.data.InstanceFieldPutDone instanceFieldPutDone = 13;</code>
        */
       public boolean hasInstanceFieldPutDone() {
-        return calltypeCase_ == 13;
+        return returntypeCase_ == 13;
       }
       /**
        * <code>optional .messages.data.InstanceFieldPutDone instanceFieldPutDone = 13;</code>
        */
       public com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone getInstanceFieldPutDone() {
         if (instanceFieldPutDoneBuilder_ == null) {
-          if (calltypeCase_ == 13) {
-            return (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) calltype_;
+          if (returntypeCase_ == 13) {
+            return (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) returntype_;
           }
           return com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance();
         } else {
-          if (calltypeCase_ == 13) {
+          if (returntypeCase_ == 13) {
             return instanceFieldPutDoneBuilder_.getMessage();
           }
           return com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance();
@@ -3000,12 +3000,12 @@ public final class Wrappers {
           if (value == null) {
             throw new NullPointerException();
           }
-          calltype_ = value;
+          returntype_ = value;
           onChanged();
         } else {
           instanceFieldPutDoneBuilder_.setMessage(value);
         }
-        calltypeCase_ = 13;
+        returntypeCase_ = 13;
         return this;
       }
       /**
@@ -3014,12 +3014,12 @@ public final class Wrappers {
       public Builder setInstanceFieldPutDone(
           com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.Builder builderForValue) {
         if (instanceFieldPutDoneBuilder_ == null) {
-          calltype_ = builderForValue.build();
+          returntype_ = builderForValue.build();
           onChanged();
         } else {
           instanceFieldPutDoneBuilder_.setMessage(builderForValue.build());
         }
-        calltypeCase_ = 13;
+        returntypeCase_ = 13;
         return this;
       }
       /**
@@ -3027,21 +3027,21 @@ public final class Wrappers {
        */
       public Builder mergeInstanceFieldPutDone(com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone value) {
         if (instanceFieldPutDoneBuilder_ == null) {
-          if (calltypeCase_ == 13 &&
-              calltype_ != com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance()) {
-            calltype_ = com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.newBuilder((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) calltype_)
+          if (returntypeCase_ == 13 &&
+              returntype_ != com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance()) {
+            returntype_ = com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.newBuilder((com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) returntype_)
                 .mergeFrom(value).buildPartial();
           } else {
-            calltype_ = value;
+            returntype_ = value;
           }
           onChanged();
         } else {
-          if (calltypeCase_ == 13) {
+          if (returntypeCase_ == 13) {
             instanceFieldPutDoneBuilder_.mergeFrom(value);
           }
           instanceFieldPutDoneBuilder_.setMessage(value);
         }
-        calltypeCase_ = 13;
+        returntypeCase_ = 13;
         return this;
       }
       /**
@@ -3049,15 +3049,15 @@ public final class Wrappers {
        */
       public Builder clearInstanceFieldPutDone() {
         if (instanceFieldPutDoneBuilder_ == null) {
-          if (calltypeCase_ == 13) {
-            calltypeCase_ = 0;
-            calltype_ = null;
+          if (returntypeCase_ == 13) {
+            returntypeCase_ = 0;
+            returntype_ = null;
             onChanged();
           }
         } else {
-          if (calltypeCase_ == 13) {
-            calltypeCase_ = 0;
-            calltype_ = null;
+          if (returntypeCase_ == 13) {
+            returntypeCase_ = 0;
+            returntype_ = null;
           }
           instanceFieldPutDoneBuilder_.clear();
         }
@@ -3073,11 +3073,11 @@ public final class Wrappers {
        * <code>optional .messages.data.InstanceFieldPutDone instanceFieldPutDone = 13;</code>
        */
       public com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDoneOrBuilder getInstanceFieldPutDoneOrBuilder() {
-        if ((calltypeCase_ == 13) && (instanceFieldPutDoneBuilder_ != null)) {
+        if ((returntypeCase_ == 13) && (instanceFieldPutDoneBuilder_ != null)) {
           return instanceFieldPutDoneBuilder_.getMessageOrBuilder();
         } else {
-          if (calltypeCase_ == 13) {
-            return (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) calltype_;
+          if (returntypeCase_ == 13) {
+            return (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) returntype_;
           }
           return com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance();
         }
@@ -3089,17 +3089,17 @@ public final class Wrappers {
           com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.Builder, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDoneOrBuilder> 
           getInstanceFieldPutDoneFieldBuilder() {
         if (instanceFieldPutDoneBuilder_ == null) {
-          if (!(calltypeCase_ == 13)) {
-            calltype_ = com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance();
+          if (!(returntypeCase_ == 13)) {
+            returntype_ = com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.getDefaultInstance();
           }
           instanceFieldPutDoneBuilder_ = new com.google.protobuf.SingleFieldBuilder<
               com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone.Builder, com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDoneOrBuilder>(
-                  (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) calltype_,
+                  (com.ittera.cometa.distributor.messages.data.Fields.InstanceFieldPutDone) returntype_,
                   getParentForChildren(),
                   isClean());
-          calltype_ = null;
+          returntype_ = null;
         }
-        calltypeCase_ = 13;
+        returntypeCase_ = 13;
         return instanceFieldPutDoneBuilder_;
       }
 
@@ -3415,9 +3415,9 @@ public final class Wrappers {
       "eFieldGetH\000\022;\n\020instanceFieldPut\030\013 \001(\0132\037." +
       "messages.data.InstanceFieldPutH\000\022?\n\022stat" +
       "icFieldPutDone\030\014 \001(\0132!.messages.data.Sta" +
-      "ticFieldPutDoneH\000\022C\n\024instanceFieldPutDon" +
+      "ticFieldPutDoneH\001\022C\n\024instanceFieldPutDon" +
       "e\030\r \001(\0132#.messages.data.InstanceFieldPut" +
-      "DoneH\000\0229\n\017raisedThrowable\030\016 \001(\0132\036.messag",
+      "DoneH\001\0229\n\017raisedThrowable\030\016 \001(\0132\036.messag",
       "es.data.RaisedThrowableH\001\0221\n\013returnValue" +
       "\030\017 \001(\0132\032.messages.data.ReturnValueH\001B\n\n\010" +
       "calltypeB\014\n\nreturntypeB/\n+com.ittera.com" +

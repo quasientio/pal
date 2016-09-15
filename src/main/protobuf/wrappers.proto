@@ -22,11 +22,11 @@ message DataMessage {
         StaticFieldPut staticFieldPut = 9;
         InstanceFieldGet instanceFieldGet = 10;
         InstanceFieldPut instanceFieldPut = 11;
-        StaticFieldPutDone staticFieldPutDone = 12;
-        InstanceFieldPutDone instanceFieldPutDone = 13;
     }
 
     oneof returntype {
+        StaticFieldPutDone staticFieldPutDone = 12;
+        InstanceFieldPutDone instanceFieldPutDone = 13;
         RaisedThrowable raisedThrowable = 14;
         ReturnValue returnValue = 15;
     }

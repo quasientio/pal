@@ -17,6 +17,7 @@ public class App {
   public static long aLong = 53382303;
   public static String aClassString;
   public static double aDbl;
+  public static String aNullStaticStr;
 
   static {
     System.out.println("aDbl before=" + aDbl);

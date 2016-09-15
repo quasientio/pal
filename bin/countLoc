@@ -1,3 +1,3 @@
 #!/bin/bash
 
-wc -l `find src/ -type f ! -name Wrappers.java ! -name Primitives.java ! -name Calls.java ! -name Exceptions.java ! -name Fields.java ! -name Values.java`
+wc -l `find src/ -type f ! -name Wrappers.java ! -name Primitives.java ! -name Calls.java ! -name Exceptions.java ! -name Fields.java ! -name Values.java ! -name Ctxt.java`

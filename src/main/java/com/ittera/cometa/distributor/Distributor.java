@@ -120,7 +120,7 @@ public class Distributor {
     }
 
     //Since class initialization is not working, we will return false if we want to aspectj to proceed(), indicating class isn't initialized
-    logger.trace("leavingin D.classConstructor: {}", staticPart.getSignature());
+    logger.trace("leaving D.classConstructor: {}", staticPart.getSignature());
     return false;
   }
 
@@ -688,7 +688,7 @@ public class Distributor {
     Exception exceptionWhileLoading = null;
     try {
       clazz = Class.forName(staticFieldGet.getClass_().getName());
-      field = clazz.getDeclaredField(staticFieldGet.getField());
+      field = clazz.getDeclaredField(staticFieldGet.getField().getName());
     } catch (Exception e) {
       exceptionWhileLoading = e;
     }
@@ -795,7 +795,7 @@ public class Distributor {
     Exception exceptionWhileLoading = null;
     try {
       clazz = Class.forName(instanceFieldGet.getClass_().getName());
-      field = clazz.getDeclaredField(instanceFieldGet.getField());
+      field = clazz.getDeclaredField(instanceFieldGet.getField().getName());
     } catch (Exception e) {
       exceptionWhileLoading = e;
     }
@@ -904,7 +904,7 @@ public class Distributor {
     Exception exceptionWhileLoading = null;
     try {
       clazz = Class.forName(staticFieldPut.getClass_().getName());
-      field = clazz.getDeclaredField(staticFieldPut.getField());
+      field = clazz.getDeclaredField(staticFieldPut.getField().getName());
     } catch (Exception e) {
       exceptionWhileLoading = e;
     }
@@ -1080,7 +1080,7 @@ public class Distributor {
     Exception exceptionWhileLoading = null;
     try {
       clazz = Class.forName(instanceFieldPut.getClass_().getName());
-      field = clazz.getDeclaredField(instanceFieldPut.getField());
+      field = clazz.getDeclaredField(instanceFieldPut.getField().getName());
     } catch (Exception e) {
       exceptionWhileLoading = e;
     }
@@ -1090,11 +1090,11 @@ public class Distributor {
 
     Exception exceptionWhileInvoking = null;
 
+    final Object target;
     if (exceptionWhileLoading == null) {
       field.setAccessible(true);
       try {
         //unwrap or load target object
-        final Object target;
         if (instanceFieldPut.hasObject()) {
           target = ProtobufUtils.unwrapObject(instanceFieldPut.getObject(), field.getType());
           logger.debug("Unwrapped target: {}", target);
@@ -1126,8 +1126,7 @@ public class Distributor {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-//        invokedMsg = DataMessageFactory.buildPutObjectDoneMessage (id, String className, String fieldName, String targetObjRef, String valueObjRef, Long followingOffset){
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, false, recordOffset);
+      invokedMsg = DataMessageFactory.buildPutObjectDoneMessage(id, instanceFieldPut, field.getType(), recordOffset);
     }
 
 

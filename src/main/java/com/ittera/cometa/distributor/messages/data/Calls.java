@@ -145,79 +145,17 @@ public final class Calls {
         int index);
 
     /**
-     * <code>optional .messages.data.Class senderClass = 9;</code>
+     * <code>optional .messages.data.Context context = 9;</code>
      */
-    boolean hasSenderClass();
+    boolean hasContext();
     /**
-     * <code>optional .messages.data.Class senderClass = 9;</code>
+     * <code>optional .messages.data.Context context = 9;</code>
      */
-    com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass();
+    com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext();
     /**
-     * <code>optional .messages.data.Class senderClass = 9;</code>
+     * <code>optional .messages.data.Context context = 9;</code>
      */
-    com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder();
-
-    /**
-     * <code>optional .messages.data.Object sender = 10;</code>
-     */
-    boolean hasSender();
-    /**
-     * <code>optional .messages.data.Object sender = 10;</code>
-     */
-    com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
-    /**
-     * <code>optional .messages.data.Object sender = 10;</code>
-     */
-    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder();
-
-    /**
-     * <code>optional string sourceLocationFile = 11;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    boolean hasSourceLocationFile();
-    /**
-     * <code>optional string sourceLocationFile = 11;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    java.lang.String getSourceLocationFile();
-    /**
-     * <code>optional string sourceLocationFile = 11;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    com.google.protobuf.ByteString
-        getSourceLocationFileBytes();
-
-    /**
-     * <code>optional int32 sourceLocationLine = 12;</code>
-     */
-    boolean hasSourceLocationLine();
-    /**
-     * <code>optional int32 sourceLocationLine = 12;</code>
-     */
-    int getSourceLocationLine();
-
-    /**
-     * <code>optional string sourceLocationType = 13;</code>
-     */
-    boolean hasSourceLocationType();
-    /**
-     * <code>optional string sourceLocationType = 13;</code>
-     */
-    java.lang.String getSourceLocationType();
-    /**
-     * <code>optional string sourceLocationType = 13;</code>
-     */
-    com.google.protobuf.ByteString
-        getSourceLocationTypeBytes();
+    com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder();
   }
   /**
    * Protobuf type {@code messages.data.ConstructorCall}
@@ -334,46 +272,16 @@ public final class Calls {
               break;
             }
             case 74: {
-              com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder subBuilder = null;
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder subBuilder = null;
               if (((bitField0_ & 0x00000020) == 0x00000020)) {
-                subBuilder = senderClass_.toBuilder();
+                subBuilder = context_.toBuilder();
               }
-              senderClass_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Class.PARSER, extensionRegistry);
+              context_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Ctxt.Context.PARSER, extensionRegistry);
               if (subBuilder != null) {
-                subBuilder.mergeFrom(senderClass_);
-                senderClass_ = subBuilder.buildPartial();
+                subBuilder.mergeFrom(context_);
+                context_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000020;
-              break;
-            }
-            case 82: {
-              com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000040) == 0x00000040)) {
-                subBuilder = sender_.toBuilder();
-              }
-              sender_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(sender_);
-                sender_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000040;
-              break;
-            }
-            case 90: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000080;
-              sourceLocationFile_ = bs;
-              break;
-            }
-            case 96: {
-              bitField0_ |= 0x00000100;
-              sourceLocationLine_ = input.readInt32();
-              break;
-            }
-            case 106: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000200;
-              sourceLocationType_ = bs;
               break;
             }
           }
@@ -621,157 +529,25 @@ public final class Calls {
       return parameter_.get(index);
     }
 
-    public static final int SENDERCLASS_FIELD_NUMBER = 9;
-    private com.ittera.cometa.distributor.messages.data.Primitives.Class senderClass_;
+    public static final int CONTEXT_FIELD_NUMBER = 9;
+    private com.ittera.cometa.distributor.messages.data.Ctxt.Context context_;
     /**
-     * <code>optional .messages.data.Class senderClass = 9;</code>
+     * <code>optional .messages.data.Context context = 9;</code>
      */
-    public boolean hasSenderClass() {
+    public boolean hasContext() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
-     * <code>optional .messages.data.Class senderClass = 9;</code>
+     * <code>optional .messages.data.Context context = 9;</code>
      */
-    public com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass() {
-      return senderClass_;
+    public com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext() {
+      return context_;
     }
     /**
-     * <code>optional .messages.data.Class senderClass = 9;</code>
+     * <code>optional .messages.data.Context context = 9;</code>
      */
-    public com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder() {
-      return senderClass_;
-    }
-
-    public static final int SENDER_FIELD_NUMBER = 10;
-    private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
-    /**
-     * <code>optional .messages.data.Object sender = 10;</code>
-     */
-    public boolean hasSender() {
-      return ((bitField0_ & 0x00000040) == 0x00000040);
-    }
-    /**
-     * <code>optional .messages.data.Object sender = 10;</code>
-     */
-    public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
-      return sender_;
-    }
-    /**
-     * <code>optional .messages.data.Object sender = 10;</code>
-     */
-    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
-      return sender_;
-    }
-
-    public static final int SOURCELOCATIONFILE_FIELD_NUMBER = 11;
-    private java.lang.Object sourceLocationFile_;
-    /**
-     * <code>optional string sourceLocationFile = 11;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public boolean hasSourceLocationFile() {
-      return ((bitField0_ & 0x00000080) == 0x00000080);
-    }
-    /**
-     * <code>optional string sourceLocationFile = 11;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public java.lang.String getSourceLocationFile() {
-      java.lang.Object ref = sourceLocationFile_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          sourceLocationFile_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>optional string sourceLocationFile = 11;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public com.google.protobuf.ByteString
-        getSourceLocationFileBytes() {
-      java.lang.Object ref = sourceLocationFile_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        sourceLocationFile_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
-    public static final int SOURCELOCATIONLINE_FIELD_NUMBER = 12;
-    private int sourceLocationLine_;
-    /**
-     * <code>optional int32 sourceLocationLine = 12;</code>
-     */
-    public boolean hasSourceLocationLine() {
-      return ((bitField0_ & 0x00000100) == 0x00000100);
-    }
-    /**
-     * <code>optional int32 sourceLocationLine = 12;</code>
-     */
-    public int getSourceLocationLine() {
-      return sourceLocationLine_;
-    }
-
-    public static final int SOURCELOCATIONTYPE_FIELD_NUMBER = 13;
-    private java.lang.Object sourceLocationType_;
-    /**
-     * <code>optional string sourceLocationType = 13;</code>
-     */
-    public boolean hasSourceLocationType() {
-      return ((bitField0_ & 0x00000200) == 0x00000200);
-    }
-    /**
-     * <code>optional string sourceLocationType = 13;</code>
-     */
-    public java.lang.String getSourceLocationType() {
-      java.lang.Object ref = sourceLocationType_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          sourceLocationType_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>optional string sourceLocationType = 13;</code>
-     */
-    public com.google.protobuf.ByteString
-        getSourceLocationTypeBytes() {
-      java.lang.Object ref = sourceLocationType_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        sourceLocationType_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder() {
+      return context_;
     }
 
     private void initFields() {
@@ -783,11 +559,7 @@ public final class Calls {
       parameterName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       exceptionType_ = java.util.Collections.emptyList();
       parameter_ = java.util.Collections.emptyList();
-      senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
-      sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-      sourceLocationFile_ = "";
-      sourceLocationLine_ = 0;
-      sourceLocationType_ = "";
+      context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -809,8 +581,8 @@ public final class Calls {
           return false;
         }
       }
-      if (hasSender()) {
-        if (!getSender().isInitialized()) {
+      if (hasContext()) {
+        if (!getContext().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -847,19 +619,7 @@ public final class Calls {
         output.writeMessage(8, parameter_.get(i));
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeMessage(9, senderClass_);
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        output.writeMessage(10, sender_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        output.writeBytes(11, getSourceLocationFileBytes());
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        output.writeInt32(12, sourceLocationLine_);
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        output.writeBytes(13, getSourceLocationTypeBytes());
+        output.writeMessage(9, context_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -909,23 +669,7 @@ public final class Calls {
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(9, senderClass_);
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(10, sender_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(11, getSourceLocationFileBytes());
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(12, sourceLocationLine_);
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(13, getSourceLocationTypeBytes());
+          .computeMessageSize(9, context_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1043,8 +787,7 @@ public final class Calls {
           getClass_FieldBuilder();
           getExceptionTypeFieldBuilder();
           getParameterFieldBuilder();
-          getSenderClassFieldBuilder();
-          getSenderFieldBuilder();
+          getContextFieldBuilder();
         }
       }
       private static Builder create() {
@@ -1081,24 +824,12 @@ public final class Calls {
         } else {
           parameterBuilder_.clear();
         }
-        if (senderClassBuilder_ == null) {
-          senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+        if (contextBuilder_ == null) {
+          context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
         } else {
-          senderClassBuilder_.clear();
+          contextBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000100);
-        if (senderBuilder_ == null) {
-          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-        } else {
-          senderBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000200);
-        sourceLocationFile_ = "";
-        bitField0_ = (bitField0_ & ~0x00000400);
-        sourceLocationLine_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000800);
-        sourceLocationType_ = "";
-        bitField0_ = (bitField0_ & ~0x00001000);
         return this;
       }
 
@@ -1177,31 +908,11 @@ public final class Calls {
         if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
           to_bitField0_ |= 0x00000020;
         }
-        if (senderClassBuilder_ == null) {
-          result.senderClass_ = senderClass_;
+        if (contextBuilder_ == null) {
+          result.context_ = context_;
         } else {
-          result.senderClass_ = senderClassBuilder_.build();
+          result.context_ = contextBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
-          to_bitField0_ |= 0x00000040;
-        }
-        if (senderBuilder_ == null) {
-          result.sender_ = sender_;
-        } else {
-          result.sender_ = senderBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
-          to_bitField0_ |= 0x00000080;
-        }
-        result.sourceLocationFile_ = sourceLocationFile_;
-        if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
-          to_bitField0_ |= 0x00000100;
-        }
-        result.sourceLocationLine_ = sourceLocationLine_;
-        if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
-          to_bitField0_ |= 0x00000200;
-        }
-        result.sourceLocationType_ = sourceLocationType_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1295,24 +1006,8 @@ public final class Calls {
             }
           }
         }
-        if (other.hasSenderClass()) {
-          mergeSenderClass(other.getSenderClass());
-        }
-        if (other.hasSender()) {
-          mergeSender(other.getSender());
-        }
-        if (other.hasSourceLocationFile()) {
-          bitField0_ |= 0x00000400;
-          sourceLocationFile_ = other.sourceLocationFile_;
-          onChanged();
-        }
-        if (other.hasSourceLocationLine()) {
-          setSourceLocationLine(other.getSourceLocationLine());
-        }
-        if (other.hasSourceLocationType()) {
-          bitField0_ |= 0x00001000;
-          sourceLocationType_ = other.sourceLocationType_;
-          onChanged();
+        if (other.hasContext()) {
+          mergeContext(other.getContext());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1333,8 +1028,8 @@ public final class Calls {
             return false;
           }
         }
-        if (hasSender()) {
-          if (!getSender().isInitialized()) {
+        if (hasContext()) {
+          if (!getContext().isInitialized()) {
             
             return false;
           }
@@ -2210,444 +1905,120 @@ public final class Calls {
         return parameterBuilder_;
       }
 
-      private com.ittera.cometa.distributor.messages.data.Primitives.Class senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+      private com.ittera.cometa.distributor.messages.data.Ctxt.Context context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder> senderClassBuilder_;
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder> contextBuilder_;
       /**
-       * <code>optional .messages.data.Class senderClass = 9;</code>
+       * <code>optional .messages.data.Context context = 9;</code>
        */
-      public boolean hasSenderClass() {
+      public boolean hasContext() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 9;</code>
+       * <code>optional .messages.data.Context context = 9;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass() {
-        if (senderClassBuilder_ == null) {
-          return senderClass_;
+      public com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext() {
+        if (contextBuilder_ == null) {
+          return context_;
         } else {
-          return senderClassBuilder_.getMessage();
+          return contextBuilder_.getMessage();
         }
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 9;</code>
+       * <code>optional .messages.data.Context context = 9;</code>
        */
-      public Builder setSenderClass(com.ittera.cometa.distributor.messages.data.Primitives.Class value) {
-        if (senderClassBuilder_ == null) {
+      public Builder setContext(com.ittera.cometa.distributor.messages.data.Ctxt.Context value) {
+        if (contextBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          senderClass_ = value;
+          context_ = value;
           onChanged();
         } else {
-          senderClassBuilder_.setMessage(value);
+          contextBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000100;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 9;</code>
+       * <code>optional .messages.data.Context context = 9;</code>
        */
-      public Builder setSenderClass(
-          com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder builderForValue) {
-        if (senderClassBuilder_ == null) {
-          senderClass_ = builderForValue.build();
+      public Builder setContext(
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder builderForValue) {
+        if (contextBuilder_ == null) {
+          context_ = builderForValue.build();
           onChanged();
         } else {
-          senderClassBuilder_.setMessage(builderForValue.build());
+          contextBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000100;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 9;</code>
+       * <code>optional .messages.data.Context context = 9;</code>
        */
-      public Builder mergeSenderClass(com.ittera.cometa.distributor.messages.data.Primitives.Class value) {
-        if (senderClassBuilder_ == null) {
+      public Builder mergeContext(com.ittera.cometa.distributor.messages.data.Ctxt.Context value) {
+        if (contextBuilder_ == null) {
           if (((bitField0_ & 0x00000100) == 0x00000100) &&
-              senderClass_ != com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance()) {
-            senderClass_ =
-              com.ittera.cometa.distributor.messages.data.Primitives.Class.newBuilder(senderClass_).mergeFrom(value).buildPartial();
+              context_ != com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance()) {
+            context_ =
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context.newBuilder(context_).mergeFrom(value).buildPartial();
           } else {
-            senderClass_ = value;
+            context_ = value;
           }
           onChanged();
         } else {
-          senderClassBuilder_.mergeFrom(value);
+          contextBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000100;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 9;</code>
+       * <code>optional .messages.data.Context context = 9;</code>
        */
-      public Builder clearSenderClass() {
-        if (senderClassBuilder_ == null) {
-          senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+      public Builder clearContext() {
+        if (contextBuilder_ == null) {
+          context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
           onChanged();
         } else {
-          senderClassBuilder_.clear();
+          contextBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 9;</code>
+       * <code>optional .messages.data.Context context = 9;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder getSenderClassBuilder() {
+      public com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder getContextBuilder() {
         bitField0_ |= 0x00000100;
         onChanged();
-        return getSenderClassFieldBuilder().getBuilder();
+        return getContextFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 9;</code>
+       * <code>optional .messages.data.Context context = 9;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder() {
-        if (senderClassBuilder_ != null) {
-          return senderClassBuilder_.getMessageOrBuilder();
+      public com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder() {
+        if (contextBuilder_ != null) {
+          return contextBuilder_.getMessageOrBuilder();
         } else {
-          return senderClass_;
+          return context_;
         }
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 9;</code>
+       * <code>optional .messages.data.Context context = 9;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder> 
-          getSenderClassFieldBuilder() {
-        if (senderClassBuilder_ == null) {
-          senderClassBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder>(
-                  getSenderClass(),
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder> 
+          getContextFieldBuilder() {
+        if (contextBuilder_ == null) {
+          contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder>(
+                  getContext(),
                   getParentForChildren(),
                   isClean());
-          senderClass_ = null;
+          context_ = null;
         }
-        return senderClassBuilder_;
-      }
-
-      private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-      private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
-      /**
-       * <code>optional .messages.data.Object sender = 10;</code>
-       */
-      public boolean hasSender() {
-        return ((bitField0_ & 0x00000200) == 0x00000200);
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 10;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
-        if (senderBuilder_ == null) {
-          return sender_;
-        } else {
-          return senderBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 10;</code>
-       */
-      public Builder setSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
-        if (senderBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          sender_ = value;
-          onChanged();
-        } else {
-          senderBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000200;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 10;</code>
-       */
-      public Builder setSender(
-          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
-        if (senderBuilder_ == null) {
-          sender_ = builderForValue.build();
-          onChanged();
-        } else {
-          senderBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000200;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 10;</code>
-       */
-      public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
-        if (senderBuilder_ == null) {
-          if (((bitField0_ & 0x00000200) == 0x00000200) &&
-              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
-            sender_ =
-              com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
-          } else {
-            sender_ = value;
-          }
-          onChanged();
-        } else {
-          senderBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000200;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 10;</code>
-       */
-      public Builder clearSender() {
-        if (senderBuilder_ == null) {
-          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-          onChanged();
-        } else {
-          senderBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000200);
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 10;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getSenderBuilder() {
-        bitField0_ |= 0x00000200;
-        onChanged();
-        return getSenderFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 10;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
-        if (senderBuilder_ != null) {
-          return senderBuilder_.getMessageOrBuilder();
-        } else {
-          return sender_;
-        }
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 10;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
-          getSenderFieldBuilder() {
-        if (senderBuilder_ == null) {
-          senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-                  getSender(),
-                  getParentForChildren(),
-                  isClean());
-          sender_ = null;
-        }
-        return senderBuilder_;
-      }
-
-      private java.lang.Object sourceLocationFile_ = "";
-      /**
-       * <code>optional string sourceLocationFile = 11;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public boolean hasSourceLocationFile() {
-        return ((bitField0_ & 0x00000400) == 0x00000400);
-      }
-      /**
-       * <code>optional string sourceLocationFile = 11;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public java.lang.String getSourceLocationFile() {
-        java.lang.Object ref = sourceLocationFile_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            sourceLocationFile_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationFile = 11;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public com.google.protobuf.ByteString
-          getSourceLocationFileBytes() {
-        java.lang.Object ref = sourceLocationFile_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          sourceLocationFile_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationFile = 11;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder setSourceLocationFile(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000400;
-        sourceLocationFile_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationFile = 11;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder clearSourceLocationFile() {
-        bitField0_ = (bitField0_ & ~0x00000400);
-        sourceLocationFile_ = getDefaultInstance().getSourceLocationFile();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationFile = 11;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder setSourceLocationFileBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000400;
-        sourceLocationFile_ = value;
-        onChanged();
-        return this;
-      }
-
-      private int sourceLocationLine_ ;
-      /**
-       * <code>optional int32 sourceLocationLine = 12;</code>
-       */
-      public boolean hasSourceLocationLine() {
-        return ((bitField0_ & 0x00000800) == 0x00000800);
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 12;</code>
-       */
-      public int getSourceLocationLine() {
-        return sourceLocationLine_;
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 12;</code>
-       */
-      public Builder setSourceLocationLine(int value) {
-        bitField0_ |= 0x00000800;
-        sourceLocationLine_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 12;</code>
-       */
-      public Builder clearSourceLocationLine() {
-        bitField0_ = (bitField0_ & ~0x00000800);
-        sourceLocationLine_ = 0;
-        onChanged();
-        return this;
-      }
-
-      private java.lang.Object sourceLocationType_ = "";
-      /**
-       * <code>optional string sourceLocationType = 13;</code>
-       */
-      public boolean hasSourceLocationType() {
-        return ((bitField0_ & 0x00001000) == 0x00001000);
-      }
-      /**
-       * <code>optional string sourceLocationType = 13;</code>
-       */
-      public java.lang.String getSourceLocationType() {
-        java.lang.Object ref = sourceLocationType_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            sourceLocationType_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationType = 13;</code>
-       */
-      public com.google.protobuf.ByteString
-          getSourceLocationTypeBytes() {
-        java.lang.Object ref = sourceLocationType_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          sourceLocationType_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationType = 13;</code>
-       */
-      public Builder setSourceLocationType(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00001000;
-        sourceLocationType_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationType = 13;</code>
-       */
-      public Builder clearSourceLocationType() {
-        bitField0_ = (bitField0_ & ~0x00001000);
-        sourceLocationType_ = getDefaultInstance().getSourceLocationType();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationType = 13;</code>
-       */
-      public Builder setSourceLocationTypeBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00001000;
-        sourceLocationType_ = value;
-        onChanged();
-        return this;
+        return contextBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:messages.data.ConstructorCall)
@@ -2863,79 +2234,17 @@ public final class Calls {
         int index);
 
     /**
-     * <code>optional .messages.data.Class senderClass = 12;</code>
+     * <code>optional .messages.data.Context context = 12;</code>
      */
-    boolean hasSenderClass();
+    boolean hasContext();
     /**
-     * <code>optional .messages.data.Class senderClass = 12;</code>
+     * <code>optional .messages.data.Context context = 12;</code>
      */
-    com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass();
+    com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext();
     /**
-     * <code>optional .messages.data.Class senderClass = 12;</code>
+     * <code>optional .messages.data.Context context = 12;</code>
      */
-    com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder();
-
-    /**
-     * <code>optional .messages.data.Object sender = 13;</code>
-     */
-    boolean hasSender();
-    /**
-     * <code>optional .messages.data.Object sender = 13;</code>
-     */
-    com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
-    /**
-     * <code>optional .messages.data.Object sender = 13;</code>
-     */
-    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder();
-
-    /**
-     * <code>optional string sourceLocationFile = 14;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    boolean hasSourceLocationFile();
-    /**
-     * <code>optional string sourceLocationFile = 14;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    java.lang.String getSourceLocationFile();
-    /**
-     * <code>optional string sourceLocationFile = 14;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    com.google.protobuf.ByteString
-        getSourceLocationFileBytes();
-
-    /**
-     * <code>optional int32 sourceLocationLine = 15;</code>
-     */
-    boolean hasSourceLocationLine();
-    /**
-     * <code>optional int32 sourceLocationLine = 15;</code>
-     */
-    int getSourceLocationLine();
-
-    /**
-     * <code>optional string sourceLocationType = 16;</code>
-     */
-    boolean hasSourceLocationType();
-    /**
-     * <code>optional string sourceLocationType = 16;</code>
-     */
-    java.lang.String getSourceLocationType();
-    /**
-     * <code>optional string sourceLocationType = 16;</code>
-     */
-    com.google.protobuf.ByteString
-        getSourceLocationTypeBytes();
+    com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder();
   }
   /**
    * Protobuf type {@code messages.data.InstanceMethodCall}
@@ -3077,46 +2386,16 @@ public final class Calls {
               break;
             }
             case 98: {
-              com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder subBuilder = null;
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder subBuilder = null;
               if (((bitField0_ & 0x00000100) == 0x00000100)) {
-                subBuilder = senderClass_.toBuilder();
+                subBuilder = context_.toBuilder();
               }
-              senderClass_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Class.PARSER, extensionRegistry);
+              context_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Ctxt.Context.PARSER, extensionRegistry);
               if (subBuilder != null) {
-                subBuilder.mergeFrom(senderClass_);
-                senderClass_ = subBuilder.buildPartial();
+                subBuilder.mergeFrom(context_);
+                context_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000100;
-              break;
-            }
-            case 106: {
-              com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000200) == 0x00000200)) {
-                subBuilder = sender_.toBuilder();
-              }
-              sender_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(sender_);
-                sender_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000200;
-              break;
-            }
-            case 114: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000400;
-              sourceLocationFile_ = bs;
-              break;
-            }
-            case 120: {
-              bitField0_ |= 0x00000800;
-              sourceLocationLine_ = input.readInt32();
-              break;
-            }
-            case 130: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00001000;
-              sourceLocationType_ = bs;
               break;
             }
           }
@@ -3536,157 +2815,25 @@ public final class Calls {
       return parameter_.get(index);
     }
 
-    public static final int SENDERCLASS_FIELD_NUMBER = 12;
-    private com.ittera.cometa.distributor.messages.data.Primitives.Class senderClass_;
+    public static final int CONTEXT_FIELD_NUMBER = 12;
+    private com.ittera.cometa.distributor.messages.data.Ctxt.Context context_;
     /**
-     * <code>optional .messages.data.Class senderClass = 12;</code>
+     * <code>optional .messages.data.Context context = 12;</code>
      */
-    public boolean hasSenderClass() {
+    public boolean hasContext() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
     /**
-     * <code>optional .messages.data.Class senderClass = 12;</code>
+     * <code>optional .messages.data.Context context = 12;</code>
      */
-    public com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass() {
-      return senderClass_;
+    public com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext() {
+      return context_;
     }
     /**
-     * <code>optional .messages.data.Class senderClass = 12;</code>
+     * <code>optional .messages.data.Context context = 12;</code>
      */
-    public com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder() {
-      return senderClass_;
-    }
-
-    public static final int SENDER_FIELD_NUMBER = 13;
-    private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
-    /**
-     * <code>optional .messages.data.Object sender = 13;</code>
-     */
-    public boolean hasSender() {
-      return ((bitField0_ & 0x00000200) == 0x00000200);
-    }
-    /**
-     * <code>optional .messages.data.Object sender = 13;</code>
-     */
-    public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
-      return sender_;
-    }
-    /**
-     * <code>optional .messages.data.Object sender = 13;</code>
-     */
-    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
-      return sender_;
-    }
-
-    public static final int SOURCELOCATIONFILE_FIELD_NUMBER = 14;
-    private java.lang.Object sourceLocationFile_;
-    /**
-     * <code>optional string sourceLocationFile = 14;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public boolean hasSourceLocationFile() {
-      return ((bitField0_ & 0x00000400) == 0x00000400);
-    }
-    /**
-     * <code>optional string sourceLocationFile = 14;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public java.lang.String getSourceLocationFile() {
-      java.lang.Object ref = sourceLocationFile_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          sourceLocationFile_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>optional string sourceLocationFile = 14;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public com.google.protobuf.ByteString
-        getSourceLocationFileBytes() {
-      java.lang.Object ref = sourceLocationFile_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        sourceLocationFile_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
-    public static final int SOURCELOCATIONLINE_FIELD_NUMBER = 15;
-    private int sourceLocationLine_;
-    /**
-     * <code>optional int32 sourceLocationLine = 15;</code>
-     */
-    public boolean hasSourceLocationLine() {
-      return ((bitField0_ & 0x00000800) == 0x00000800);
-    }
-    /**
-     * <code>optional int32 sourceLocationLine = 15;</code>
-     */
-    public int getSourceLocationLine() {
-      return sourceLocationLine_;
-    }
-
-    public static final int SOURCELOCATIONTYPE_FIELD_NUMBER = 16;
-    private java.lang.Object sourceLocationType_;
-    /**
-     * <code>optional string sourceLocationType = 16;</code>
-     */
-    public boolean hasSourceLocationType() {
-      return ((bitField0_ & 0x00001000) == 0x00001000);
-    }
-    /**
-     * <code>optional string sourceLocationType = 16;</code>
-     */
-    public java.lang.String getSourceLocationType() {
-      java.lang.Object ref = sourceLocationType_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          sourceLocationType_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>optional string sourceLocationType = 16;</code>
-     */
-    public com.google.protobuf.ByteString
-        getSourceLocationTypeBytes() {
-      java.lang.Object ref = sourceLocationType_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        sourceLocationType_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder() {
+      return context_;
     }
 
     private void initFields() {
@@ -3699,11 +2846,7 @@ public final class Calls {
       parameterName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       exceptionType_ = java.util.Collections.emptyList();
       parameter_ = java.util.Collections.emptyList();
-      senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
-      sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-      sourceLocationFile_ = "";
-      sourceLocationLine_ = 0;
-      sourceLocationType_ = "";
+      context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3735,8 +2878,8 @@ public final class Calls {
           return false;
         }
       }
-      if (hasSender()) {
-        if (!getSender().isInitialized()) {
+      if (hasContext()) {
+        if (!getContext().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -3782,19 +2925,7 @@ public final class Calls {
         output.writeMessage(11, parameter_.get(i));
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        output.writeMessage(12, senderClass_);
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        output.writeMessage(13, sender_);
-      }
-      if (((bitField0_ & 0x00000400) == 0x00000400)) {
-        output.writeBytes(14, getSourceLocationFileBytes());
-      }
-      if (((bitField0_ & 0x00000800) == 0x00000800)) {
-        output.writeInt32(15, sourceLocationLine_);
-      }
-      if (((bitField0_ & 0x00001000) == 0x00001000)) {
-        output.writeBytes(16, getSourceLocationTypeBytes());
+        output.writeMessage(12, context_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -3856,23 +2987,7 @@ public final class Calls {
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(12, senderClass_);
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(13, sender_);
-      }
-      if (((bitField0_ & 0x00000400) == 0x00000400)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(14, getSourceLocationFileBytes());
-      }
-      if (((bitField0_ & 0x00000800) == 0x00000800)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(15, sourceLocationLine_);
-      }
-      if (((bitField0_ & 0x00001000) == 0x00001000)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(16, getSourceLocationTypeBytes());
+          .computeMessageSize(12, context_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3990,8 +3105,7 @@ public final class Calls {
           getClass_FieldBuilder();
           getExceptionTypeFieldBuilder();
           getParameterFieldBuilder();
-          getSenderClassFieldBuilder();
-          getSenderFieldBuilder();
+          getContextFieldBuilder();
         }
       }
       private static Builder create() {
@@ -4030,24 +3144,12 @@ public final class Calls {
         } else {
           parameterBuilder_.clear();
         }
-        if (senderClassBuilder_ == null) {
-          senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+        if (contextBuilder_ == null) {
+          context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
         } else {
-          senderClassBuilder_.clear();
+          contextBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000800);
-        if (senderBuilder_ == null) {
-          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-        } else {
-          senderBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00001000);
-        sourceLocationFile_ = "";
-        bitField0_ = (bitField0_ & ~0x00002000);
-        sourceLocationLine_ = 0;
-        bitField0_ = (bitField0_ & ~0x00004000);
-        sourceLocationType_ = "";
-        bitField0_ = (bitField0_ & ~0x00008000);
         targetCase_ = 0;
         target_ = null;
         return this;
@@ -4142,31 +3244,11 @@ public final class Calls {
         if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
           to_bitField0_ |= 0x00000100;
         }
-        if (senderClassBuilder_ == null) {
-          result.senderClass_ = senderClass_;
+        if (contextBuilder_ == null) {
+          result.context_ = context_;
         } else {
-          result.senderClass_ = senderClassBuilder_.build();
+          result.context_ = contextBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
-          to_bitField0_ |= 0x00000200;
-        }
-        if (senderBuilder_ == null) {
-          result.sender_ = sender_;
-        } else {
-          result.sender_ = senderBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00002000) == 0x00002000)) {
-          to_bitField0_ |= 0x00000400;
-        }
-        result.sourceLocationFile_ = sourceLocationFile_;
-        if (((from_bitField0_ & 0x00004000) == 0x00004000)) {
-          to_bitField0_ |= 0x00000800;
-        }
-        result.sourceLocationLine_ = sourceLocationLine_;
-        if (((from_bitField0_ & 0x00008000) == 0x00008000)) {
-          to_bitField0_ |= 0x00001000;
-        }
-        result.sourceLocationType_ = sourceLocationType_;
         result.bitField0_ = to_bitField0_;
         result.targetCase_ = targetCase_;
         onBuilt();
@@ -4266,24 +3348,8 @@ public final class Calls {
             }
           }
         }
-        if (other.hasSenderClass()) {
-          mergeSenderClass(other.getSenderClass());
-        }
-        if (other.hasSender()) {
-          mergeSender(other.getSender());
-        }
-        if (other.hasSourceLocationFile()) {
-          bitField0_ |= 0x00002000;
-          sourceLocationFile_ = other.sourceLocationFile_;
-          onChanged();
-        }
-        if (other.hasSourceLocationLine()) {
-          setSourceLocationLine(other.getSourceLocationLine());
-        }
-        if (other.hasSourceLocationType()) {
-          bitField0_ |= 0x00008000;
-          sourceLocationType_ = other.sourceLocationType_;
-          onChanged();
+        if (other.hasContext()) {
+          mergeContext(other.getContext());
         }
         switch (other.getTargetCase()) {
           case OBJECT: {
@@ -4329,8 +3395,8 @@ public final class Calls {
             return false;
           }
         }
-        if (hasSender()) {
-          if (!getSender().isInitialized()) {
+        if (hasContext()) {
+          if (!getContext().isInitialized()) {
             
             return false;
           }
@@ -5579,444 +4645,120 @@ public final class Calls {
         return parameterBuilder_;
       }
 
-      private com.ittera.cometa.distributor.messages.data.Primitives.Class senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+      private com.ittera.cometa.distributor.messages.data.Ctxt.Context context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder> senderClassBuilder_;
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder> contextBuilder_;
       /**
-       * <code>optional .messages.data.Class senderClass = 12;</code>
+       * <code>optional .messages.data.Context context = 12;</code>
        */
-      public boolean hasSenderClass() {
+      public boolean hasContext() {
         return ((bitField0_ & 0x00000800) == 0x00000800);
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 12;</code>
+       * <code>optional .messages.data.Context context = 12;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass() {
-        if (senderClassBuilder_ == null) {
-          return senderClass_;
+      public com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext() {
+        if (contextBuilder_ == null) {
+          return context_;
         } else {
-          return senderClassBuilder_.getMessage();
+          return contextBuilder_.getMessage();
         }
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 12;</code>
+       * <code>optional .messages.data.Context context = 12;</code>
        */
-      public Builder setSenderClass(com.ittera.cometa.distributor.messages.data.Primitives.Class value) {
-        if (senderClassBuilder_ == null) {
+      public Builder setContext(com.ittera.cometa.distributor.messages.data.Ctxt.Context value) {
+        if (contextBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          senderClass_ = value;
+          context_ = value;
           onChanged();
         } else {
-          senderClassBuilder_.setMessage(value);
+          contextBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000800;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 12;</code>
+       * <code>optional .messages.data.Context context = 12;</code>
        */
-      public Builder setSenderClass(
-          com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder builderForValue) {
-        if (senderClassBuilder_ == null) {
-          senderClass_ = builderForValue.build();
+      public Builder setContext(
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder builderForValue) {
+        if (contextBuilder_ == null) {
+          context_ = builderForValue.build();
           onChanged();
         } else {
-          senderClassBuilder_.setMessage(builderForValue.build());
+          contextBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000800;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 12;</code>
+       * <code>optional .messages.data.Context context = 12;</code>
        */
-      public Builder mergeSenderClass(com.ittera.cometa.distributor.messages.data.Primitives.Class value) {
-        if (senderClassBuilder_ == null) {
+      public Builder mergeContext(com.ittera.cometa.distributor.messages.data.Ctxt.Context value) {
+        if (contextBuilder_ == null) {
           if (((bitField0_ & 0x00000800) == 0x00000800) &&
-              senderClass_ != com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance()) {
-            senderClass_ =
-              com.ittera.cometa.distributor.messages.data.Primitives.Class.newBuilder(senderClass_).mergeFrom(value).buildPartial();
+              context_ != com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance()) {
+            context_ =
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context.newBuilder(context_).mergeFrom(value).buildPartial();
           } else {
-            senderClass_ = value;
+            context_ = value;
           }
           onChanged();
         } else {
-          senderClassBuilder_.mergeFrom(value);
+          contextBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000800;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 12;</code>
+       * <code>optional .messages.data.Context context = 12;</code>
        */
-      public Builder clearSenderClass() {
-        if (senderClassBuilder_ == null) {
-          senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+      public Builder clearContext() {
+        if (contextBuilder_ == null) {
+          context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
           onChanged();
         } else {
-          senderClassBuilder_.clear();
+          contextBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000800);
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 12;</code>
+       * <code>optional .messages.data.Context context = 12;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder getSenderClassBuilder() {
+      public com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder getContextBuilder() {
         bitField0_ |= 0x00000800;
         onChanged();
-        return getSenderClassFieldBuilder().getBuilder();
+        return getContextFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 12;</code>
+       * <code>optional .messages.data.Context context = 12;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder() {
-        if (senderClassBuilder_ != null) {
-          return senderClassBuilder_.getMessageOrBuilder();
+      public com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder() {
+        if (contextBuilder_ != null) {
+          return contextBuilder_.getMessageOrBuilder();
         } else {
-          return senderClass_;
+          return context_;
         }
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 12;</code>
+       * <code>optional .messages.data.Context context = 12;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder> 
-          getSenderClassFieldBuilder() {
-        if (senderClassBuilder_ == null) {
-          senderClassBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder>(
-                  getSenderClass(),
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder> 
+          getContextFieldBuilder() {
+        if (contextBuilder_ == null) {
+          contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder>(
+                  getContext(),
                   getParentForChildren(),
                   isClean());
-          senderClass_ = null;
+          context_ = null;
         }
-        return senderClassBuilder_;
-      }
-
-      private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-      private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
-      /**
-       * <code>optional .messages.data.Object sender = 13;</code>
-       */
-      public boolean hasSender() {
-        return ((bitField0_ & 0x00001000) == 0x00001000);
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 13;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
-        if (senderBuilder_ == null) {
-          return sender_;
-        } else {
-          return senderBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 13;</code>
-       */
-      public Builder setSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
-        if (senderBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          sender_ = value;
-          onChanged();
-        } else {
-          senderBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00001000;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 13;</code>
-       */
-      public Builder setSender(
-          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
-        if (senderBuilder_ == null) {
-          sender_ = builderForValue.build();
-          onChanged();
-        } else {
-          senderBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00001000;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 13;</code>
-       */
-      public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
-        if (senderBuilder_ == null) {
-          if (((bitField0_ & 0x00001000) == 0x00001000) &&
-              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
-            sender_ =
-              com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
-          } else {
-            sender_ = value;
-          }
-          onChanged();
-        } else {
-          senderBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00001000;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 13;</code>
-       */
-      public Builder clearSender() {
-        if (senderBuilder_ == null) {
-          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-          onChanged();
-        } else {
-          senderBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00001000);
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 13;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getSenderBuilder() {
-        bitField0_ |= 0x00001000;
-        onChanged();
-        return getSenderFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 13;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
-        if (senderBuilder_ != null) {
-          return senderBuilder_.getMessageOrBuilder();
-        } else {
-          return sender_;
-        }
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 13;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
-          getSenderFieldBuilder() {
-        if (senderBuilder_ == null) {
-          senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-                  getSender(),
-                  getParentForChildren(),
-                  isClean());
-          sender_ = null;
-        }
-        return senderBuilder_;
-      }
-
-      private java.lang.Object sourceLocationFile_ = "";
-      /**
-       * <code>optional string sourceLocationFile = 14;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public boolean hasSourceLocationFile() {
-        return ((bitField0_ & 0x00002000) == 0x00002000);
-      }
-      /**
-       * <code>optional string sourceLocationFile = 14;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public java.lang.String getSourceLocationFile() {
-        java.lang.Object ref = sourceLocationFile_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            sourceLocationFile_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationFile = 14;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public com.google.protobuf.ByteString
-          getSourceLocationFileBytes() {
-        java.lang.Object ref = sourceLocationFile_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          sourceLocationFile_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationFile = 14;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder setSourceLocationFile(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00002000;
-        sourceLocationFile_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationFile = 14;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder clearSourceLocationFile() {
-        bitField0_ = (bitField0_ & ~0x00002000);
-        sourceLocationFile_ = getDefaultInstance().getSourceLocationFile();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationFile = 14;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder setSourceLocationFileBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00002000;
-        sourceLocationFile_ = value;
-        onChanged();
-        return this;
-      }
-
-      private int sourceLocationLine_ ;
-      /**
-       * <code>optional int32 sourceLocationLine = 15;</code>
-       */
-      public boolean hasSourceLocationLine() {
-        return ((bitField0_ & 0x00004000) == 0x00004000);
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 15;</code>
-       */
-      public int getSourceLocationLine() {
-        return sourceLocationLine_;
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 15;</code>
-       */
-      public Builder setSourceLocationLine(int value) {
-        bitField0_ |= 0x00004000;
-        sourceLocationLine_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 15;</code>
-       */
-      public Builder clearSourceLocationLine() {
-        bitField0_ = (bitField0_ & ~0x00004000);
-        sourceLocationLine_ = 0;
-        onChanged();
-        return this;
-      }
-
-      private java.lang.Object sourceLocationType_ = "";
-      /**
-       * <code>optional string sourceLocationType = 16;</code>
-       */
-      public boolean hasSourceLocationType() {
-        return ((bitField0_ & 0x00008000) == 0x00008000);
-      }
-      /**
-       * <code>optional string sourceLocationType = 16;</code>
-       */
-      public java.lang.String getSourceLocationType() {
-        java.lang.Object ref = sourceLocationType_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            sourceLocationType_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationType = 16;</code>
-       */
-      public com.google.protobuf.ByteString
-          getSourceLocationTypeBytes() {
-        java.lang.Object ref = sourceLocationType_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          sourceLocationType_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationType = 16;</code>
-       */
-      public Builder setSourceLocationType(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00008000;
-        sourceLocationType_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationType = 16;</code>
-       */
-      public Builder clearSourceLocationType() {
-        bitField0_ = (bitField0_ & ~0x00008000);
-        sourceLocationType_ = getDefaultInstance().getSourceLocationType();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationType = 16;</code>
-       */
-      public Builder setSourceLocationTypeBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00008000;
-        sourceLocationType_ = value;
-        onChanged();
-        return this;
+        return contextBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:messages.data.InstanceMethodCall)
@@ -6100,79 +4842,17 @@ public final class Calls {
     int getModifiers();
 
     /**
-     * <code>optional .messages.data.Class senderClass = 6;</code>
+     * <code>optional .messages.data.Context context = 6;</code>
      */
-    boolean hasSenderClass();
+    boolean hasContext();
     /**
-     * <code>optional .messages.data.Class senderClass = 6;</code>
+     * <code>optional .messages.data.Context context = 6;</code>
      */
-    com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass();
+    com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext();
     /**
-     * <code>optional .messages.data.Class senderClass = 6;</code>
+     * <code>optional .messages.data.Context context = 6;</code>
      */
-    com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder();
-
-    /**
-     * <code>optional .messages.data.Object sender = 7;</code>
-     */
-    boolean hasSender();
-    /**
-     * <code>optional .messages.data.Object sender = 7;</code>
-     */
-    com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
-    /**
-     * <code>optional .messages.data.Object sender = 7;</code>
-     */
-    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder();
-
-    /**
-     * <code>optional string sourceLocationFile = 8;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    boolean hasSourceLocationFile();
-    /**
-     * <code>optional string sourceLocationFile = 8;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    java.lang.String getSourceLocationFile();
-    /**
-     * <code>optional string sourceLocationFile = 8;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    com.google.protobuf.ByteString
-        getSourceLocationFileBytes();
-
-    /**
-     * <code>optional int32 sourceLocationLine = 9;</code>
-     */
-    boolean hasSourceLocationLine();
-    /**
-     * <code>optional int32 sourceLocationLine = 9;</code>
-     */
-    int getSourceLocationLine();
-
-    /**
-     * <code>optional string sourceLocationType = 10;</code>
-     */
-    boolean hasSourceLocationType();
-    /**
-     * <code>optional string sourceLocationType = 10;</code>
-     */
-    java.lang.String getSourceLocationType();
-    /**
-     * <code>optional string sourceLocationType = 10;</code>
-     */
-    com.google.protobuf.ByteString
-        getSourceLocationTypeBytes();
+    com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder();
   }
   /**
    * Protobuf type {@code messages.data.ClInitCall}
@@ -6264,46 +4944,16 @@ public final class Calls {
               break;
             }
             case 50: {
-              com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder subBuilder = null;
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder subBuilder = null;
               if (((bitField0_ & 0x00000020) == 0x00000020)) {
-                subBuilder = senderClass_.toBuilder();
+                subBuilder = context_.toBuilder();
               }
-              senderClass_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Class.PARSER, extensionRegistry);
+              context_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Ctxt.Context.PARSER, extensionRegistry);
               if (subBuilder != null) {
-                subBuilder.mergeFrom(senderClass_);
-                senderClass_ = subBuilder.buildPartial();
+                subBuilder.mergeFrom(context_);
+                context_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000020;
-              break;
-            }
-            case 58: {
-              com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000040) == 0x00000040)) {
-                subBuilder = sender_.toBuilder();
-              }
-              sender_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(sender_);
-                sender_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000040;
-              break;
-            }
-            case 66: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000080;
-              sourceLocationFile_ = bs;
-              break;
-            }
-            case 72: {
-              bitField0_ |= 0x00000100;
-              sourceLocationLine_ = input.readInt32();
-              break;
-            }
-            case 82: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000200;
-              sourceLocationType_ = bs;
               break;
             }
           }
@@ -6443,157 +5093,25 @@ public final class Calls {
       return modifiers_;
     }
 
-    public static final int SENDERCLASS_FIELD_NUMBER = 6;
-    private com.ittera.cometa.distributor.messages.data.Primitives.Class senderClass_;
+    public static final int CONTEXT_FIELD_NUMBER = 6;
+    private com.ittera.cometa.distributor.messages.data.Ctxt.Context context_;
     /**
-     * <code>optional .messages.data.Class senderClass = 6;</code>
+     * <code>optional .messages.data.Context context = 6;</code>
      */
-    public boolean hasSenderClass() {
+    public boolean hasContext() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
-     * <code>optional .messages.data.Class senderClass = 6;</code>
+     * <code>optional .messages.data.Context context = 6;</code>
      */
-    public com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass() {
-      return senderClass_;
+    public com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext() {
+      return context_;
     }
     /**
-     * <code>optional .messages.data.Class senderClass = 6;</code>
+     * <code>optional .messages.data.Context context = 6;</code>
      */
-    public com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder() {
-      return senderClass_;
-    }
-
-    public static final int SENDER_FIELD_NUMBER = 7;
-    private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
-    /**
-     * <code>optional .messages.data.Object sender = 7;</code>
-     */
-    public boolean hasSender() {
-      return ((bitField0_ & 0x00000040) == 0x00000040);
-    }
-    /**
-     * <code>optional .messages.data.Object sender = 7;</code>
-     */
-    public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
-      return sender_;
-    }
-    /**
-     * <code>optional .messages.data.Object sender = 7;</code>
-     */
-    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
-      return sender_;
-    }
-
-    public static final int SOURCELOCATIONFILE_FIELD_NUMBER = 8;
-    private java.lang.Object sourceLocationFile_;
-    /**
-     * <code>optional string sourceLocationFile = 8;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public boolean hasSourceLocationFile() {
-      return ((bitField0_ & 0x00000080) == 0x00000080);
-    }
-    /**
-     * <code>optional string sourceLocationFile = 8;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public java.lang.String getSourceLocationFile() {
-      java.lang.Object ref = sourceLocationFile_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          sourceLocationFile_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>optional string sourceLocationFile = 8;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public com.google.protobuf.ByteString
-        getSourceLocationFileBytes() {
-      java.lang.Object ref = sourceLocationFile_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        sourceLocationFile_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
-    public static final int SOURCELOCATIONLINE_FIELD_NUMBER = 9;
-    private int sourceLocationLine_;
-    /**
-     * <code>optional int32 sourceLocationLine = 9;</code>
-     */
-    public boolean hasSourceLocationLine() {
-      return ((bitField0_ & 0x00000100) == 0x00000100);
-    }
-    /**
-     * <code>optional int32 sourceLocationLine = 9;</code>
-     */
-    public int getSourceLocationLine() {
-      return sourceLocationLine_;
-    }
-
-    public static final int SOURCELOCATIONTYPE_FIELD_NUMBER = 10;
-    private java.lang.Object sourceLocationType_;
-    /**
-     * <code>optional string sourceLocationType = 10;</code>
-     */
-    public boolean hasSourceLocationType() {
-      return ((bitField0_ & 0x00000200) == 0x00000200);
-    }
-    /**
-     * <code>optional string sourceLocationType = 10;</code>
-     */
-    public java.lang.String getSourceLocationType() {
-      java.lang.Object ref = sourceLocationType_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          sourceLocationType_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>optional string sourceLocationType = 10;</code>
-     */
-    public com.google.protobuf.ByteString
-        getSourceLocationTypeBytes() {
-      java.lang.Object ref = sourceLocationType_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        sourceLocationType_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder() {
+      return context_;
     }
 
     private void initFields() {
@@ -6602,11 +5120,7 @@ public final class Calls {
       currentTime_ = 0L;
       class__ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
       modifiers_ = 0;
-      senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
-      sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-      sourceLocationFile_ = "";
-      sourceLocationLine_ = 0;
-      sourceLocationType_ = "";
+      context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -6622,8 +5136,8 @@ public final class Calls {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (hasSender()) {
-        if (!getSender().isInitialized()) {
+      if (hasContext()) {
+        if (!getContext().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -6651,19 +5165,7 @@ public final class Calls {
         output.writeInt32(5, modifiers_);
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeMessage(6, senderClass_);
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        output.writeMessage(7, sender_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        output.writeBytes(8, getSourceLocationFileBytes());
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        output.writeInt32(9, sourceLocationLine_);
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        output.writeBytes(10, getSourceLocationTypeBytes());
+        output.writeMessage(6, context_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -6696,23 +5198,7 @@ public final class Calls {
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(6, senderClass_);
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(7, sender_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(8, getSourceLocationFileBytes());
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(9, sourceLocationLine_);
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(10, getSourceLocationTypeBytes());
+          .computeMessageSize(6, context_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -6828,8 +5314,7 @@ public final class Calls {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getClass_FieldBuilder();
-          getSenderClassFieldBuilder();
-          getSenderFieldBuilder();
+          getContextFieldBuilder();
         }
       }
       private static Builder create() {
@@ -6852,24 +5337,12 @@ public final class Calls {
         bitField0_ = (bitField0_ & ~0x00000008);
         modifiers_ = 0;
         bitField0_ = (bitField0_ & ~0x00000010);
-        if (senderClassBuilder_ == null) {
-          senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+        if (contextBuilder_ == null) {
+          context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
         } else {
-          senderClassBuilder_.clear();
+          contextBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000020);
-        if (senderBuilder_ == null) {
-          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-        } else {
-          senderBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000040);
-        sourceLocationFile_ = "";
-        bitField0_ = (bitField0_ & ~0x00000080);
-        sourceLocationLine_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000100);
-        sourceLocationType_ = "";
-        bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
 
@@ -6925,31 +5398,11 @@ public final class Calls {
         if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000020;
         }
-        if (senderClassBuilder_ == null) {
-          result.senderClass_ = senderClass_;
+        if (contextBuilder_ == null) {
+          result.context_ = context_;
         } else {
-          result.senderClass_ = senderClassBuilder_.build();
+          result.context_ = contextBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
-          to_bitField0_ |= 0x00000040;
-        }
-        if (senderBuilder_ == null) {
-          result.sender_ = sender_;
-        } else {
-          result.sender_ = senderBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
-          to_bitField0_ |= 0x00000080;
-        }
-        result.sourceLocationFile_ = sourceLocationFile_;
-        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
-          to_bitField0_ |= 0x00000100;
-        }
-        result.sourceLocationLine_ = sourceLocationLine_;
-        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
-          to_bitField0_ |= 0x00000200;
-        }
-        result.sourceLocationType_ = sourceLocationType_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -6981,24 +5434,8 @@ public final class Calls {
         if (other.hasModifiers()) {
           setModifiers(other.getModifiers());
         }
-        if (other.hasSenderClass()) {
-          mergeSenderClass(other.getSenderClass());
-        }
-        if (other.hasSender()) {
-          mergeSender(other.getSender());
-        }
-        if (other.hasSourceLocationFile()) {
-          bitField0_ |= 0x00000080;
-          sourceLocationFile_ = other.sourceLocationFile_;
-          onChanged();
-        }
-        if (other.hasSourceLocationLine()) {
-          setSourceLocationLine(other.getSourceLocationLine());
-        }
-        if (other.hasSourceLocationType()) {
-          bitField0_ |= 0x00000200;
-          sourceLocationType_ = other.sourceLocationType_;
-          onChanged();
+        if (other.hasContext()) {
+          mergeContext(other.getContext());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -7013,8 +5450,8 @@ public final class Calls {
           
           return false;
         }
-        if (hasSender()) {
-          if (!getSender().isInitialized()) {
+        if (hasContext()) {
+          if (!getContext().isInitialized()) {
             
             return false;
           }
@@ -7317,444 +5754,120 @@ public final class Calls {
         return this;
       }
 
-      private com.ittera.cometa.distributor.messages.data.Primitives.Class senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+      private com.ittera.cometa.distributor.messages.data.Ctxt.Context context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder> senderClassBuilder_;
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder> contextBuilder_;
       /**
-       * <code>optional .messages.data.Class senderClass = 6;</code>
+       * <code>optional .messages.data.Context context = 6;</code>
        */
-      public boolean hasSenderClass() {
+      public boolean hasContext() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 6;</code>
+       * <code>optional .messages.data.Context context = 6;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass() {
-        if (senderClassBuilder_ == null) {
-          return senderClass_;
+      public com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext() {
+        if (contextBuilder_ == null) {
+          return context_;
         } else {
-          return senderClassBuilder_.getMessage();
+          return contextBuilder_.getMessage();
         }
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 6;</code>
+       * <code>optional .messages.data.Context context = 6;</code>
        */
-      public Builder setSenderClass(com.ittera.cometa.distributor.messages.data.Primitives.Class value) {
-        if (senderClassBuilder_ == null) {
+      public Builder setContext(com.ittera.cometa.distributor.messages.data.Ctxt.Context value) {
+        if (contextBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          senderClass_ = value;
+          context_ = value;
           onChanged();
         } else {
-          senderClassBuilder_.setMessage(value);
+          contextBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000020;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 6;</code>
+       * <code>optional .messages.data.Context context = 6;</code>
        */
-      public Builder setSenderClass(
-          com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder builderForValue) {
-        if (senderClassBuilder_ == null) {
-          senderClass_ = builderForValue.build();
+      public Builder setContext(
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder builderForValue) {
+        if (contextBuilder_ == null) {
+          context_ = builderForValue.build();
           onChanged();
         } else {
-          senderClassBuilder_.setMessage(builderForValue.build());
+          contextBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000020;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 6;</code>
+       * <code>optional .messages.data.Context context = 6;</code>
        */
-      public Builder mergeSenderClass(com.ittera.cometa.distributor.messages.data.Primitives.Class value) {
-        if (senderClassBuilder_ == null) {
+      public Builder mergeContext(com.ittera.cometa.distributor.messages.data.Ctxt.Context value) {
+        if (contextBuilder_ == null) {
           if (((bitField0_ & 0x00000020) == 0x00000020) &&
-              senderClass_ != com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance()) {
-            senderClass_ =
-              com.ittera.cometa.distributor.messages.data.Primitives.Class.newBuilder(senderClass_).mergeFrom(value).buildPartial();
+              context_ != com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance()) {
+            context_ =
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context.newBuilder(context_).mergeFrom(value).buildPartial();
           } else {
-            senderClass_ = value;
+            context_ = value;
           }
           onChanged();
         } else {
-          senderClassBuilder_.mergeFrom(value);
+          contextBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000020;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 6;</code>
+       * <code>optional .messages.data.Context context = 6;</code>
        */
-      public Builder clearSenderClass() {
-        if (senderClassBuilder_ == null) {
-          senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+      public Builder clearContext() {
+        if (contextBuilder_ == null) {
+          context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
           onChanged();
         } else {
-          senderClassBuilder_.clear();
+          contextBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 6;</code>
+       * <code>optional .messages.data.Context context = 6;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder getSenderClassBuilder() {
+      public com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder getContextBuilder() {
         bitField0_ |= 0x00000020;
         onChanged();
-        return getSenderClassFieldBuilder().getBuilder();
+        return getContextFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 6;</code>
+       * <code>optional .messages.data.Context context = 6;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder() {
-        if (senderClassBuilder_ != null) {
-          return senderClassBuilder_.getMessageOrBuilder();
+      public com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder() {
+        if (contextBuilder_ != null) {
+          return contextBuilder_.getMessageOrBuilder();
         } else {
-          return senderClass_;
+          return context_;
         }
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 6;</code>
+       * <code>optional .messages.data.Context context = 6;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder> 
-          getSenderClassFieldBuilder() {
-        if (senderClassBuilder_ == null) {
-          senderClassBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder>(
-                  getSenderClass(),
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder> 
+          getContextFieldBuilder() {
+        if (contextBuilder_ == null) {
+          contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder>(
+                  getContext(),
                   getParentForChildren(),
                   isClean());
-          senderClass_ = null;
+          context_ = null;
         }
-        return senderClassBuilder_;
-      }
-
-      private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-      private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
-      /**
-       * <code>optional .messages.data.Object sender = 7;</code>
-       */
-      public boolean hasSender() {
-        return ((bitField0_ & 0x00000040) == 0x00000040);
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 7;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
-        if (senderBuilder_ == null) {
-          return sender_;
-        } else {
-          return senderBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 7;</code>
-       */
-      public Builder setSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
-        if (senderBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          sender_ = value;
-          onChanged();
-        } else {
-          senderBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000040;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 7;</code>
-       */
-      public Builder setSender(
-          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
-        if (senderBuilder_ == null) {
-          sender_ = builderForValue.build();
-          onChanged();
-        } else {
-          senderBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000040;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 7;</code>
-       */
-      public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
-        if (senderBuilder_ == null) {
-          if (((bitField0_ & 0x00000040) == 0x00000040) &&
-              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
-            sender_ =
-              com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
-          } else {
-            sender_ = value;
-          }
-          onChanged();
-        } else {
-          senderBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000040;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 7;</code>
-       */
-      public Builder clearSender() {
-        if (senderBuilder_ == null) {
-          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-          onChanged();
-        } else {
-          senderBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000040);
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 7;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getSenderBuilder() {
-        bitField0_ |= 0x00000040;
-        onChanged();
-        return getSenderFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 7;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
-        if (senderBuilder_ != null) {
-          return senderBuilder_.getMessageOrBuilder();
-        } else {
-          return sender_;
-        }
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 7;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
-          getSenderFieldBuilder() {
-        if (senderBuilder_ == null) {
-          senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-                  getSender(),
-                  getParentForChildren(),
-                  isClean());
-          sender_ = null;
-        }
-        return senderBuilder_;
-      }
-
-      private java.lang.Object sourceLocationFile_ = "";
-      /**
-       * <code>optional string sourceLocationFile = 8;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public boolean hasSourceLocationFile() {
-        return ((bitField0_ & 0x00000080) == 0x00000080);
-      }
-      /**
-       * <code>optional string sourceLocationFile = 8;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public java.lang.String getSourceLocationFile() {
-        java.lang.Object ref = sourceLocationFile_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            sourceLocationFile_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationFile = 8;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public com.google.protobuf.ByteString
-          getSourceLocationFileBytes() {
-        java.lang.Object ref = sourceLocationFile_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          sourceLocationFile_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationFile = 8;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder setSourceLocationFile(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000080;
-        sourceLocationFile_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationFile = 8;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder clearSourceLocationFile() {
-        bitField0_ = (bitField0_ & ~0x00000080);
-        sourceLocationFile_ = getDefaultInstance().getSourceLocationFile();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationFile = 8;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder setSourceLocationFileBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000080;
-        sourceLocationFile_ = value;
-        onChanged();
-        return this;
-      }
-
-      private int sourceLocationLine_ ;
-      /**
-       * <code>optional int32 sourceLocationLine = 9;</code>
-       */
-      public boolean hasSourceLocationLine() {
-        return ((bitField0_ & 0x00000100) == 0x00000100);
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 9;</code>
-       */
-      public int getSourceLocationLine() {
-        return sourceLocationLine_;
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 9;</code>
-       */
-      public Builder setSourceLocationLine(int value) {
-        bitField0_ |= 0x00000100;
-        sourceLocationLine_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 9;</code>
-       */
-      public Builder clearSourceLocationLine() {
-        bitField0_ = (bitField0_ & ~0x00000100);
-        sourceLocationLine_ = 0;
-        onChanged();
-        return this;
-      }
-
-      private java.lang.Object sourceLocationType_ = "";
-      /**
-       * <code>optional string sourceLocationType = 10;</code>
-       */
-      public boolean hasSourceLocationType() {
-        return ((bitField0_ & 0x00000200) == 0x00000200);
-      }
-      /**
-       * <code>optional string sourceLocationType = 10;</code>
-       */
-      public java.lang.String getSourceLocationType() {
-        java.lang.Object ref = sourceLocationType_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            sourceLocationType_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationType = 10;</code>
-       */
-      public com.google.protobuf.ByteString
-          getSourceLocationTypeBytes() {
-        java.lang.Object ref = sourceLocationType_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          sourceLocationType_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationType = 10;</code>
-       */
-      public Builder setSourceLocationType(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000200;
-        sourceLocationType_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationType = 10;</code>
-       */
-      public Builder clearSourceLocationType() {
-        bitField0_ = (bitField0_ & ~0x00000200);
-        sourceLocationType_ = getDefaultInstance().getSourceLocationType();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationType = 10;</code>
-       */
-      public Builder setSourceLocationTypeBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000200;
-        sourceLocationType_ = value;
-        onChanged();
-        return this;
+        return contextBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:messages.data.ClInitCall)
@@ -7943,79 +6056,17 @@ public final class Calls {
         int index);
 
     /**
-     * <code>optional .messages.data.Class senderClass = 10;</code>
+     * <code>optional .messages.data.Context context = 10;</code>
      */
-    boolean hasSenderClass();
+    boolean hasContext();
     /**
-     * <code>optional .messages.data.Class senderClass = 10;</code>
+     * <code>optional .messages.data.Context context = 10;</code>
      */
-    com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass();
+    com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext();
     /**
-     * <code>optional .messages.data.Class senderClass = 10;</code>
+     * <code>optional .messages.data.Context context = 10;</code>
      */
-    com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder();
-
-    /**
-     * <code>optional .messages.data.Object sender = 11;</code>
-     */
-    boolean hasSender();
-    /**
-     * <code>optional .messages.data.Object sender = 11;</code>
-     */
-    com.ittera.cometa.distributor.messages.data.Primitives.Object getSender();
-    /**
-     * <code>optional .messages.data.Object sender = 11;</code>
-     */
-    com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder();
-
-    /**
-     * <code>optional string sourceLocationFile = 12;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    boolean hasSourceLocationFile();
-    /**
-     * <code>optional string sourceLocationFile = 12;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    java.lang.String getSourceLocationFile();
-    /**
-     * <code>optional string sourceLocationFile = 12;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    com.google.protobuf.ByteString
-        getSourceLocationFileBytes();
-
-    /**
-     * <code>optional int32 sourceLocationLine = 13;</code>
-     */
-    boolean hasSourceLocationLine();
-    /**
-     * <code>optional int32 sourceLocationLine = 13;</code>
-     */
-    int getSourceLocationLine();
-
-    /**
-     * <code>optional string sourceLocationType = 14;</code>
-     */
-    boolean hasSourceLocationType();
-    /**
-     * <code>optional string sourceLocationType = 14;</code>
-     */
-    java.lang.String getSourceLocationType();
-    /**
-     * <code>optional string sourceLocationType = 14;</code>
-     */
-    com.google.protobuf.ByteString
-        getSourceLocationTypeBytes();
+    com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder();
   }
   /**
    * Protobuf type {@code messages.data.ClassMethodCall}
@@ -8138,46 +6189,16 @@ public final class Calls {
               break;
             }
             case 82: {
-              com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder subBuilder = null;
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder subBuilder = null;
               if (((bitField0_ & 0x00000040) == 0x00000040)) {
-                subBuilder = senderClass_.toBuilder();
+                subBuilder = context_.toBuilder();
               }
-              senderClass_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Class.PARSER, extensionRegistry);
+              context_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Ctxt.Context.PARSER, extensionRegistry);
               if (subBuilder != null) {
-                subBuilder.mergeFrom(senderClass_);
-                senderClass_ = subBuilder.buildPartial();
+                subBuilder.mergeFrom(context_);
+                context_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000040;
-              break;
-            }
-            case 90: {
-              com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000080) == 0x00000080)) {
-                subBuilder = sender_.toBuilder();
-              }
-              sender_ = input.readMessage(com.ittera.cometa.distributor.messages.data.Primitives.Object.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(sender_);
-                sender_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000080;
-              break;
-            }
-            case 98: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000100;
-              sourceLocationFile_ = bs;
-              break;
-            }
-            case 104: {
-              bitField0_ |= 0x00000200;
-              sourceLocationLine_ = input.readInt32();
-              break;
-            }
-            case 114: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000400;
-              sourceLocationType_ = bs;
               break;
             }
           }
@@ -8491,157 +6512,25 @@ public final class Calls {
       return parameter_.get(index);
     }
 
-    public static final int SENDERCLASS_FIELD_NUMBER = 10;
-    private com.ittera.cometa.distributor.messages.data.Primitives.Class senderClass_;
+    public static final int CONTEXT_FIELD_NUMBER = 10;
+    private com.ittera.cometa.distributor.messages.data.Ctxt.Context context_;
     /**
-     * <code>optional .messages.data.Class senderClass = 10;</code>
+     * <code>optional .messages.data.Context context = 10;</code>
      */
-    public boolean hasSenderClass() {
+    public boolean hasContext() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
     /**
-     * <code>optional .messages.data.Class senderClass = 10;</code>
+     * <code>optional .messages.data.Context context = 10;</code>
      */
-    public com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass() {
-      return senderClass_;
+    public com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext() {
+      return context_;
     }
     /**
-     * <code>optional .messages.data.Class senderClass = 10;</code>
+     * <code>optional .messages.data.Context context = 10;</code>
      */
-    public com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder() {
-      return senderClass_;
-    }
-
-    public static final int SENDER_FIELD_NUMBER = 11;
-    private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_;
-    /**
-     * <code>optional .messages.data.Object sender = 11;</code>
-     */
-    public boolean hasSender() {
-      return ((bitField0_ & 0x00000080) == 0x00000080);
-    }
-    /**
-     * <code>optional .messages.data.Object sender = 11;</code>
-     */
-    public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
-      return sender_;
-    }
-    /**
-     * <code>optional .messages.data.Object sender = 11;</code>
-     */
-    public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
-      return sender_;
-    }
-
-    public static final int SOURCELOCATIONFILE_FIELD_NUMBER = 12;
-    private java.lang.Object sourceLocationFile_;
-    /**
-     * <code>optional string sourceLocationFile = 12;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public boolean hasSourceLocationFile() {
-      return ((bitField0_ & 0x00000100) == 0x00000100);
-    }
-    /**
-     * <code>optional string sourceLocationFile = 12;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public java.lang.String getSourceLocationFile() {
-      java.lang.Object ref = sourceLocationFile_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          sourceLocationFile_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>optional string sourceLocationFile = 12;</code>
-     *
-     * <pre>
-     *source context from where the call was made
-     * </pre>
-     */
-    public com.google.protobuf.ByteString
-        getSourceLocationFileBytes() {
-      java.lang.Object ref = sourceLocationFile_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        sourceLocationFile_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
-    public static final int SOURCELOCATIONLINE_FIELD_NUMBER = 13;
-    private int sourceLocationLine_;
-    /**
-     * <code>optional int32 sourceLocationLine = 13;</code>
-     */
-    public boolean hasSourceLocationLine() {
-      return ((bitField0_ & 0x00000200) == 0x00000200);
-    }
-    /**
-     * <code>optional int32 sourceLocationLine = 13;</code>
-     */
-    public int getSourceLocationLine() {
-      return sourceLocationLine_;
-    }
-
-    public static final int SOURCELOCATIONTYPE_FIELD_NUMBER = 14;
-    private java.lang.Object sourceLocationType_;
-    /**
-     * <code>optional string sourceLocationType = 14;</code>
-     */
-    public boolean hasSourceLocationType() {
-      return ((bitField0_ & 0x00000400) == 0x00000400);
-    }
-    /**
-     * <code>optional string sourceLocationType = 14;</code>
-     */
-    public java.lang.String getSourceLocationType() {
-      java.lang.Object ref = sourceLocationType_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          sourceLocationType_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>optional string sourceLocationType = 14;</code>
-     */
-    public com.google.protobuf.ByteString
-        getSourceLocationTypeBytes() {
-      java.lang.Object ref = sourceLocationType_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        sourceLocationType_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder() {
+      return context_;
     }
 
     private void initFields() {
@@ -8654,11 +6543,7 @@ public final class Calls {
       parameterName_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       exceptionType_ = java.util.Collections.emptyList();
       parameter_ = java.util.Collections.emptyList();
-      senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
-      sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-      sourceLocationFile_ = "";
-      sourceLocationLine_ = 0;
-      sourceLocationType_ = "";
+      context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -8684,8 +6569,8 @@ public final class Calls {
           return false;
         }
       }
-      if (hasSender()) {
-        if (!getSender().isInitialized()) {
+      if (hasContext()) {
+        if (!getContext().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -8725,19 +6610,7 @@ public final class Calls {
         output.writeMessage(9, parameter_.get(i));
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        output.writeMessage(10, senderClass_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        output.writeMessage(11, sender_);
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        output.writeBytes(12, getSourceLocationFileBytes());
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        output.writeInt32(13, sourceLocationLine_);
-      }
-      if (((bitField0_ & 0x00000400) == 0x00000400)) {
-        output.writeBytes(14, getSourceLocationTypeBytes());
+        output.writeMessage(10, context_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -8791,23 +6664,7 @@ public final class Calls {
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(10, senderClass_);
-      }
-      if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(11, sender_);
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(12, getSourceLocationFileBytes());
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(13, sourceLocationLine_);
-      }
-      if (((bitField0_ & 0x00000400) == 0x00000400)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(14, getSourceLocationTypeBytes());
+          .computeMessageSize(10, context_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -8925,8 +6782,7 @@ public final class Calls {
           getClass_FieldBuilder();
           getExceptionTypeFieldBuilder();
           getParameterFieldBuilder();
-          getSenderClassFieldBuilder();
-          getSenderFieldBuilder();
+          getContextFieldBuilder();
         }
       }
       private static Builder create() {
@@ -8965,24 +6821,12 @@ public final class Calls {
         } else {
           parameterBuilder_.clear();
         }
-        if (senderClassBuilder_ == null) {
-          senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+        if (contextBuilder_ == null) {
+          context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
         } else {
-          senderClassBuilder_.clear();
+          contextBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000200);
-        if (senderBuilder_ == null) {
-          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-        } else {
-          senderBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000400);
-        sourceLocationFile_ = "";
-        bitField0_ = (bitField0_ & ~0x00000800);
-        sourceLocationLine_ = 0;
-        bitField0_ = (bitField0_ & ~0x00001000);
-        sourceLocationType_ = "";
-        bitField0_ = (bitField0_ & ~0x00002000);
         return this;
       }
 
@@ -9065,31 +6909,11 @@ public final class Calls {
         if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
           to_bitField0_ |= 0x00000040;
         }
-        if (senderClassBuilder_ == null) {
-          result.senderClass_ = senderClass_;
+        if (contextBuilder_ == null) {
+          result.context_ = context_;
         } else {
-          result.senderClass_ = senderClassBuilder_.build();
+          result.context_ = contextBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
-          to_bitField0_ |= 0x00000080;
-        }
-        if (senderBuilder_ == null) {
-          result.sender_ = sender_;
-        } else {
-          result.sender_ = senderBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
-          to_bitField0_ |= 0x00000100;
-        }
-        result.sourceLocationFile_ = sourceLocationFile_;
-        if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
-          to_bitField0_ |= 0x00000200;
-        }
-        result.sourceLocationLine_ = sourceLocationLine_;
-        if (((from_bitField0_ & 0x00002000) == 0x00002000)) {
-          to_bitField0_ |= 0x00000400;
-        }
-        result.sourceLocationType_ = sourceLocationType_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -9188,24 +7012,8 @@ public final class Calls {
             }
           }
         }
-        if (other.hasSenderClass()) {
-          mergeSenderClass(other.getSenderClass());
-        }
-        if (other.hasSender()) {
-          mergeSender(other.getSender());
-        }
-        if (other.hasSourceLocationFile()) {
-          bitField0_ |= 0x00000800;
-          sourceLocationFile_ = other.sourceLocationFile_;
-          onChanged();
-        }
-        if (other.hasSourceLocationLine()) {
-          setSourceLocationLine(other.getSourceLocationLine());
-        }
-        if (other.hasSourceLocationType()) {
-          bitField0_ |= 0x00002000;
-          sourceLocationType_ = other.sourceLocationType_;
-          onChanged();
+        if (other.hasContext()) {
+          mergeContext(other.getContext());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -9230,8 +7038,8 @@ public final class Calls {
             return false;
           }
         }
-        if (hasSender()) {
-          if (!getSender().isInitialized()) {
+        if (hasContext()) {
+          if (!getContext().isInitialized()) {
             
             return false;
           }
@@ -10243,444 +8051,120 @@ public final class Calls {
         return parameterBuilder_;
       }
 
-      private com.ittera.cometa.distributor.messages.data.Primitives.Class senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+      private com.ittera.cometa.distributor.messages.data.Ctxt.Context context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder> senderClassBuilder_;
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder> contextBuilder_;
       /**
-       * <code>optional .messages.data.Class senderClass = 10;</code>
+       * <code>optional .messages.data.Context context = 10;</code>
        */
-      public boolean hasSenderClass() {
+      public boolean hasContext() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 10;</code>
+       * <code>optional .messages.data.Context context = 10;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Class getSenderClass() {
-        if (senderClassBuilder_ == null) {
-          return senderClass_;
+      public com.ittera.cometa.distributor.messages.data.Ctxt.Context getContext() {
+        if (contextBuilder_ == null) {
+          return context_;
         } else {
-          return senderClassBuilder_.getMessage();
+          return contextBuilder_.getMessage();
         }
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 10;</code>
+       * <code>optional .messages.data.Context context = 10;</code>
        */
-      public Builder setSenderClass(com.ittera.cometa.distributor.messages.data.Primitives.Class value) {
-        if (senderClassBuilder_ == null) {
+      public Builder setContext(com.ittera.cometa.distributor.messages.data.Ctxt.Context value) {
+        if (contextBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          senderClass_ = value;
+          context_ = value;
           onChanged();
         } else {
-          senderClassBuilder_.setMessage(value);
+          contextBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000200;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 10;</code>
+       * <code>optional .messages.data.Context context = 10;</code>
        */
-      public Builder setSenderClass(
-          com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder builderForValue) {
-        if (senderClassBuilder_ == null) {
-          senderClass_ = builderForValue.build();
+      public Builder setContext(
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder builderForValue) {
+        if (contextBuilder_ == null) {
+          context_ = builderForValue.build();
           onChanged();
         } else {
-          senderClassBuilder_.setMessage(builderForValue.build());
+          contextBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000200;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 10;</code>
+       * <code>optional .messages.data.Context context = 10;</code>
        */
-      public Builder mergeSenderClass(com.ittera.cometa.distributor.messages.data.Primitives.Class value) {
-        if (senderClassBuilder_ == null) {
+      public Builder mergeContext(com.ittera.cometa.distributor.messages.data.Ctxt.Context value) {
+        if (contextBuilder_ == null) {
           if (((bitField0_ & 0x00000200) == 0x00000200) &&
-              senderClass_ != com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance()) {
-            senderClass_ =
-              com.ittera.cometa.distributor.messages.data.Primitives.Class.newBuilder(senderClass_).mergeFrom(value).buildPartial();
+              context_ != com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance()) {
+            context_ =
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context.newBuilder(context_).mergeFrom(value).buildPartial();
           } else {
-            senderClass_ = value;
+            context_ = value;
           }
           onChanged();
         } else {
-          senderClassBuilder_.mergeFrom(value);
+          contextBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000200;
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 10;</code>
+       * <code>optional .messages.data.Context context = 10;</code>
        */
-      public Builder clearSenderClass() {
-        if (senderClassBuilder_ == null) {
-          senderClass_ = com.ittera.cometa.distributor.messages.data.Primitives.Class.getDefaultInstance();
+      public Builder clearContext() {
+        if (contextBuilder_ == null) {
+          context_ = com.ittera.cometa.distributor.messages.data.Ctxt.Context.getDefaultInstance();
           onChanged();
         } else {
-          senderClassBuilder_.clear();
+          contextBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 10;</code>
+       * <code>optional .messages.data.Context context = 10;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder getSenderClassBuilder() {
+      public com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder getContextBuilder() {
         bitField0_ |= 0x00000200;
         onChanged();
-        return getSenderClassFieldBuilder().getBuilder();
+        return getContextFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 10;</code>
+       * <code>optional .messages.data.Context context = 10;</code>
        */
-      public com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder getSenderClassOrBuilder() {
-        if (senderClassBuilder_ != null) {
-          return senderClassBuilder_.getMessageOrBuilder();
+      public com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder getContextOrBuilder() {
+        if (contextBuilder_ != null) {
+          return contextBuilder_.getMessageOrBuilder();
         } else {
-          return senderClass_;
+          return context_;
         }
       }
       /**
-       * <code>optional .messages.data.Class senderClass = 10;</code>
+       * <code>optional .messages.data.Context context = 10;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder> 
-          getSenderClassFieldBuilder() {
-        if (senderClassBuilder_ == null) {
-          senderClassBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              com.ittera.cometa.distributor.messages.data.Primitives.Class, com.ittera.cometa.distributor.messages.data.Primitives.Class.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ClassOrBuilder>(
-                  getSenderClass(),
+          com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder> 
+          getContextFieldBuilder() {
+        if (contextBuilder_ == null) {
+          contextBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              com.ittera.cometa.distributor.messages.data.Ctxt.Context, com.ittera.cometa.distributor.messages.data.Ctxt.Context.Builder, com.ittera.cometa.distributor.messages.data.Ctxt.ContextOrBuilder>(
+                  getContext(),
                   getParentForChildren(),
                   isClean());
-          senderClass_ = null;
+          context_ = null;
         }
-        return senderClassBuilder_;
-      }
-
-      private com.ittera.cometa.distributor.messages.data.Primitives.Object sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-      private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
-      /**
-       * <code>optional .messages.data.Object sender = 11;</code>
-       */
-      public boolean hasSender() {
-        return ((bitField0_ & 0x00000400) == 0x00000400);
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 11;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Object getSender() {
-        if (senderBuilder_ == null) {
-          return sender_;
-        } else {
-          return senderBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 11;</code>
-       */
-      public Builder setSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
-        if (senderBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          sender_ = value;
-          onChanged();
-        } else {
-          senderBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000400;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 11;</code>
-       */
-      public Builder setSender(
-          com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder builderForValue) {
-        if (senderBuilder_ == null) {
-          sender_ = builderForValue.build();
-          onChanged();
-        } else {
-          senderBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000400;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 11;</code>
-       */
-      public Builder mergeSender(com.ittera.cometa.distributor.messages.data.Primitives.Object value) {
-        if (senderBuilder_ == null) {
-          if (((bitField0_ & 0x00000400) == 0x00000400) &&
-              sender_ != com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance()) {
-            sender_ =
-              com.ittera.cometa.distributor.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
-          } else {
-            sender_ = value;
-          }
-          onChanged();
-        } else {
-          senderBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000400;
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 11;</code>
-       */
-      public Builder clearSender() {
-        if (senderBuilder_ == null) {
-          sender_ = com.ittera.cometa.distributor.messages.data.Primitives.Object.getDefaultInstance();
-          onChanged();
-        } else {
-          senderBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000400);
-        return this;
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 11;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder getSenderBuilder() {
-        bitField0_ |= 0x00000400;
-        onChanged();
-        return getSenderFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 11;</code>
-       */
-      public com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder getSenderOrBuilder() {
-        if (senderBuilder_ != null) {
-          return senderBuilder_.getMessageOrBuilder();
-        } else {
-          return sender_;
-        }
-      }
-      /**
-       * <code>optional .messages.data.Object sender = 11;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilder<
-          com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder> 
-          getSenderFieldBuilder() {
-        if (senderBuilder_ == null) {
-          senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              com.ittera.cometa.distributor.messages.data.Primitives.Object, com.ittera.cometa.distributor.messages.data.Primitives.Object.Builder, com.ittera.cometa.distributor.messages.data.Primitives.ObjectOrBuilder>(
-                  getSender(),
-                  getParentForChildren(),
-                  isClean());
-          sender_ = null;
-        }
-        return senderBuilder_;
-      }
-
-      private java.lang.Object sourceLocationFile_ = "";
-      /**
-       * <code>optional string sourceLocationFile = 12;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public boolean hasSourceLocationFile() {
-        return ((bitField0_ & 0x00000800) == 0x00000800);
-      }
-      /**
-       * <code>optional string sourceLocationFile = 12;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public java.lang.String getSourceLocationFile() {
-        java.lang.Object ref = sourceLocationFile_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            sourceLocationFile_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationFile = 12;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public com.google.protobuf.ByteString
-          getSourceLocationFileBytes() {
-        java.lang.Object ref = sourceLocationFile_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          sourceLocationFile_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationFile = 12;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder setSourceLocationFile(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000800;
-        sourceLocationFile_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationFile = 12;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder clearSourceLocationFile() {
-        bitField0_ = (bitField0_ & ~0x00000800);
-        sourceLocationFile_ = getDefaultInstance().getSourceLocationFile();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationFile = 12;</code>
-       *
-       * <pre>
-       *source context from where the call was made
-       * </pre>
-       */
-      public Builder setSourceLocationFileBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000800;
-        sourceLocationFile_ = value;
-        onChanged();
-        return this;
-      }
-
-      private int sourceLocationLine_ ;
-      /**
-       * <code>optional int32 sourceLocationLine = 13;</code>
-       */
-      public boolean hasSourceLocationLine() {
-        return ((bitField0_ & 0x00001000) == 0x00001000);
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 13;</code>
-       */
-      public int getSourceLocationLine() {
-        return sourceLocationLine_;
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 13;</code>
-       */
-      public Builder setSourceLocationLine(int value) {
-        bitField0_ |= 0x00001000;
-        sourceLocationLine_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional int32 sourceLocationLine = 13;</code>
-       */
-      public Builder clearSourceLocationLine() {
-        bitField0_ = (bitField0_ & ~0x00001000);
-        sourceLocationLine_ = 0;
-        onChanged();
-        return this;
-      }
-
-      private java.lang.Object sourceLocationType_ = "";
-      /**
-       * <code>optional string sourceLocationType = 14;</code>
-       */
-      public boolean hasSourceLocationType() {
-        return ((bitField0_ & 0x00002000) == 0x00002000);
-      }
-      /**
-       * <code>optional string sourceLocationType = 14;</code>
-       */
-      public java.lang.String getSourceLocationType() {
-        java.lang.Object ref = sourceLocationType_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            sourceLocationType_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationType = 14;</code>
-       */
-      public com.google.protobuf.ByteString
-          getSourceLocationTypeBytes() {
-        java.lang.Object ref = sourceLocationType_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          sourceLocationType_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string sourceLocationType = 14;</code>
-       */
-      public Builder setSourceLocationType(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00002000;
-        sourceLocationType_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationType = 14;</code>
-       */
-      public Builder clearSourceLocationType() {
-        bitField0_ = (bitField0_ & ~0x00002000);
-        sourceLocationType_ = getDefaultInstance().getSourceLocationType();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string sourceLocationType = 14;</code>
-       */
-      public Builder setSourceLocationTypeBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00002000;
-        sourceLocationType_ = value;
-        onChanged();
-        return this;
+        return contextBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:messages.data.ClassMethodCall)
@@ -10724,49 +8208,37 @@ public final class Calls {
   static {
     java.lang.String[] descriptorData = {
       "\n\013calls.proto\022\rmessages.data\032\020primitives" +
-      ".proto\"\233\003\n\017ConstructorCall\022\025\n\rdistributo" +
-      "rId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTi" +
-      "me\030\003 \002(\003\022#\n\005class\030\004 \002(\0132\024.messages.data." +
-      "Class\022\021\n\tmodifiers\030\005 \001(\005\022\025\n\rparameterNam" +
-      "e\030\006 \003(\t\022+\n\rexceptionType\030\007 \003(\0132\024.message" +
-      "s.data.Class\022(\n\tparameter\030\010 \003(\0132\025.messag" +
-      "es.data.Object\022)\n\013senderClass\030\t \001(\0132\024.me" +
-      "ssages.data.Class\022%\n\006sender\030\n \001(\0132\025.mess" +
-      "ages.data.Object\022\032\n\022sourceLocationFile\030\013",
-      " \001(\t\022\032\n\022sourceLocationLine\030\014 \001(\005\022\032\n\022sour" +
-      "ceLocationType\030\r \001(\t\"\364\003\n\022InstanceMethodC" +
-      "all\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010threadId\030\002" +
-      " \001(\003\022\023\n\013currentTime\030\003 \002(\003\022#\n\005class\030\004 \002(\013" +
-      "2\024.messages.data.Class\022\014\n\004name\030\005 \002(\t\022\'\n\006" +
-      "object\030\006 \001(\0132\025.messages.data.ObjectH\000\022\023\n" +
-      "\tobjectRef\030\007 \001(\tH\000\022\021\n\tmodifiers\030\010 \001(\005\022\025\n" +
-      "\rparameterName\030\t \003(\t\022+\n\rexceptionType\030\n " +
-      "\003(\0132\024.messages.data.Class\022(\n\tparameter\030\013" +
-      " \003(\0132\025.messages.data.Object\022)\n\013senderCla",
-      "ss\030\014 \001(\0132\024.messages.data.Class\022%\n\006sender" +
-      "\030\r \001(\0132\025.messages.data.Object\022\032\n\022sourceL" +
-      "ocationFile\030\016 \001(\t\022\032\n\022sourceLocationLine\030" +
-      "\017 \001(\005\022\032\n\022sourceLocationType\030\020 \001(\tB\010\n\006tar" +
-      "get\"\250\002\n\nClInitCall\022\025\n\rdistributorId\030\001 \001(" +
-      "\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(\003" +
-      "\022#\n\005class\030\004 \002(\0132\024.messages.data.Class\022\021\n" +
-      "\tmodifiers\030\005 \001(\005\022)\n\013senderClass\030\006 \001(\0132\024." +
-      "messages.data.Class\022%\n\006sender\030\007 \001(\0132\025.me" +
-      "ssages.data.Object\022\032\n\022sourceLocationFile",
-      "\030\010 \001(\t\022\032\n\022sourceLocationLine\030\t \001(\005\022\032\n\022so" +
-      "urceLocationType\030\n \001(\t\"\251\003\n\017ClassMethodCa" +
-      "ll\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010threadId\030\002 " +
-      "\001(\003\022\023\n\013currentTime\030\003 \002(\003\022#\n\005class\030\004 \002(\0132" +
-      "\024.messages.data.Class\022\014\n\004name\030\005 \002(\t\022\021\n\tm" +
-      "odifiers\030\006 \001(\005\022\025\n\rparameterName\030\007 \003(\t\022+\n" +
-      "\rexceptionType\030\010 \003(\0132\024.messages.data.Cla" +
-      "ss\022(\n\tparameter\030\t \003(\0132\025.messages.data.Ob" +
-      "ject\022)\n\013senderClass\030\n \001(\0132\024.messages.dat" +
-      "a.Class\022%\n\006sender\030\013 \001(\0132\025.messages.data.",
-      "Object\022\032\n\022sourceLocationFile\030\014 \001(\t\022\032\n\022so" +
-      "urceLocationLine\030\r \001(\005\022\032\n\022sourceLocation" +
-      "Type\030\016 \001(\tB6\n+com.ittera.cometa.distribu" +
-      "tor.messages.dataB\005CallsH\001"
+      ".proto\032\nctxt.proto\"\236\002\n\017ConstructorCall\022\025" +
+      "\n\rdistributorId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003\022" +
+      "\023\n\013currentTime\030\003 \002(\003\022#\n\005class\030\004 \002(\0132\024.me" +
+      "ssages.data.Class\022\021\n\tmodifiers\030\005 \001(\005\022\025\n\r" +
+      "parameterName\030\006 \003(\t\022+\n\rexceptionType\030\007 \003" +
+      "(\0132\024.messages.data.Class\022(\n\tparameter\030\010 " +
+      "\003(\0132\025.messages.data.Object\022\'\n\007context\030\t " +
+      "\001(\0132\026.messages.data.Context\"\367\002\n\022Instance" +
+      "MethodCall\022\025\n\rdistributorId\030\001 \001(\005\022\020\n\010thr",
+      "eadId\030\002 \001(\003\022\023\n\013currentTime\030\003 \002(\003\022#\n\005clas" +
+      "s\030\004 \002(\0132\024.messages.data.Class\022\014\n\004name\030\005 " +
+      "\002(\t\022\'\n\006object\030\006 \001(\0132\025.messages.data.Obje" +
+      "ctH\000\022\023\n\tobjectRef\030\007 \001(\tH\000\022\021\n\tmodifiers\030\010" +
+      " \001(\005\022\025\n\rparameterName\030\t \003(\t\022+\n\rexception" +
+      "Type\030\n \003(\0132\024.messages.data.Class\022(\n\tpara" +
+      "meter\030\013 \003(\0132\025.messages.data.Object\022\'\n\007co" +
+      "ntext\030\014 \001(\0132\026.messages.data.ContextB\010\n\006t" +
+      "arget\"\253\001\n\nClInitCall\022\025\n\rdistributorId\030\001 " +
+      "\001(\005\022\020\n\010threadId\030\002 \001(\003\022\023\n\013currentTime\030\003 \002",
+      "(\003\022#\n\005class\030\004 \002(\0132\024.messages.data.Class\022" +
+      "\021\n\tmodifiers\030\005 \001(\005\022\'\n\007context\030\006 \001(\0132\026.me" +
+      "ssages.data.Context\"\254\002\n\017ClassMethodCall\022" +
+      "\025\n\rdistributorId\030\001 \001(\005\022\020\n\010threadId\030\002 \001(\003" +
+      "\022\023\n\013currentTime\030\003 \002(\003\022#\n\005class\030\004 \002(\0132\024.m" +
+      "essages.data.Class\022\014\n\004name\030\005 \002(\t\022\021\n\tmodi" +
+      "fiers\030\006 \001(\005\022\025\n\rparameterName\030\007 \003(\t\022+\n\rex" +
+      "ceptionType\030\010 \003(\0132\024.messages.data.Class\022" +
+      "(\n\tparameter\030\t \003(\0132\025.messages.data.Objec" +
+      "t\022\'\n\007context\030\n \001(\0132\026.messages.data.Conte",
+      "xtB6\n+com.ittera.cometa.distributor.mess" +
+      "ages.dataB\005CallsH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -10780,32 +8252,34 @@ public final class Calls {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.ittera.cometa.distributor.messages.data.Primitives.getDescriptor(),
+          com.ittera.cometa.distributor.messages.data.Ctxt.getDescriptor(),
         }, assigner);
     internal_static_messages_data_ConstructorCall_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_messages_data_ConstructorCall_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_ConstructorCall_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Modifiers", "ParameterName", "ExceptionType", "Parameter", "SenderClass", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Modifiers", "ParameterName", "ExceptionType", "Parameter", "Context", });
     internal_static_messages_data_InstanceMethodCall_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_messages_data_InstanceMethodCall_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_InstanceMethodCall_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Object", "ObjectRef", "Modifiers", "ParameterName", "ExceptionType", "Parameter", "SenderClass", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", "Target", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Object", "ObjectRef", "Modifiers", "ParameterName", "ExceptionType", "Parameter", "Context", "Target", });
     internal_static_messages_data_ClInitCall_descriptor =
       getDescriptor().getMessageTypes().get(2);
     internal_static_messages_data_ClInitCall_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_ClInitCall_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Modifiers", "SenderClass", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Modifiers", "Context", });
     internal_static_messages_data_ClassMethodCall_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_messages_data_ClassMethodCall_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_messages_data_ClassMethodCall_descriptor,
-        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Modifiers", "ParameterName", "ExceptionType", "Parameter", "SenderClass", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
+        new java.lang.String[] { "DistributorId", "ThreadId", "CurrentTime", "Class_", "Name", "Modifiers", "ParameterName", "ExceptionType", "Parameter", "Context", });
     com.ittera.cometa.distributor.messages.data.Primitives.getDescriptor();
+    com.ittera.cometa.distributor.messages.data.Ctxt.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)
