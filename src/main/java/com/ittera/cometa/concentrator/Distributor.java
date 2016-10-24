@@ -1,8 +1,8 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.distributor.messages.data.*;
+import com.ittera.cometa.concentrator.messages.data.*;
 
-import com.ittera.cometa.distributor.messages.data.Primitives;
+import com.ittera.cometa.concentrator.messages.data.Primitives;
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.aspectj.lang.JoinPoint.StaticPart;

@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.concentrator;
 
 import java.util.Properties;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -7,7 +7,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
-import com.ittera.cometa.distributor.messages.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;

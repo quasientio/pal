@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.concentrator;
 
 import junit.framework.TestCase;
 

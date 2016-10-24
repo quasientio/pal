@@ -1,13 +1,13 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.concentrator;
 
 import java.util.Properties;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
-import com.ittera.cometa.distributor.messages.data.Wrappers;
-import com.ittera.cometa.distributor.messages.data.Calls;
-import com.ittera.cometa.distributor.messages.data.Fields;
+import com.ittera.cometa.concentrator.messages.data.Wrappers;
+import com.ittera.cometa.concentrator.messages.data.Calls;
+import com.ittera.cometa.concentrator.messages.data.Fields;
 
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;

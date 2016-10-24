@@ -1,6 +1,6 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.distributor.messages.data.*;
+import com.ittera.cometa.concentrator.messages.data.*;
 
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -8,11 +8,9 @@ import org.junit.runners.MethodSorters;
 
 import java.lang.reflect.Modifier;
 
-import com.ittera.cometa.distributor.messages.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
 
 import static org.junit.Assert.*;
-
-import java.io.IOException;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class IncomingCallsTest extends AbstractDistributorTest {

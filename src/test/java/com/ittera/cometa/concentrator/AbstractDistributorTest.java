@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.concentrator;
 
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -20,7 +20,7 @@ import java.util.concurrent.Future;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.ittera.cometa.distributor.messages.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 

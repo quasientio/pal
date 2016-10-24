@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor.messages.data.serde;
+package com.ittera.cometa.concentrator.messages.data.serde;
 
 import org.apache.kafka.common.serialization.Serializer;
 
@@ -13,7 +13,7 @@ public class ProtobufSerializer implements Serializer {
 
   @Override
   public byte[] serialize(String s, Object o) {
-    return ((com.ittera.cometa.distributor.messages.data.Wrappers.DataMessage) o).toByteArray();
+    return ((com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage) o).toByteArray();
   }
 
   @Override

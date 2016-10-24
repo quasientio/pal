@@ -1,8 +1,6 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.concentrator;
 
-import junit.framework.Test;
 import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
 import java.util.Random;
 

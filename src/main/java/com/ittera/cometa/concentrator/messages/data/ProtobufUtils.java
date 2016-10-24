@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor.messages.data;
+package com.ittera.cometa.concentrator.messages.data;
 
 import java.util.List;
 import java.util.ArrayList;

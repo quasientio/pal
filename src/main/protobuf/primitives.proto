@@ -1,6 +1,6 @@
 package messages.data;
 
-option java_package = "com.ittera.cometa.distributor.messages.data";
+option java_package = "com.ittera.cometa.concentrator.messages.data";
 option optimize_for = SPEED;
 
 /* The Object is either a ref (ref!=null), or can be reconstructed.

@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor.messages.data;
+package com.ittera.cometa.concentrator.messages.data;
 
 import org.aspectj.runtime.reflect.FieldSignatureImpl;
 import org.aspectj.lang.reflect.ConstructorSignature;

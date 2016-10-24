@@ -1,7 +1,7 @@
 package com.ittera.cometa.util;
 
-import com.ittera.cometa.distributor.messages.data.Wrappers;
-import com.ittera.cometa.distributor.messages.data.DataMessageFactory;
+import com.ittera.cometa.concentrator.messages.data.Wrappers;
+import com.ittera.cometa.concentrator.messages.data.DataMessageFactory;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;

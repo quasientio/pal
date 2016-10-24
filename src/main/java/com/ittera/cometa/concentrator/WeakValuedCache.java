@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor;
+package com.ittera.cometa.concentrator;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
