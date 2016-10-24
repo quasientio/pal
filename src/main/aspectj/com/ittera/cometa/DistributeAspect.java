@@ -10,7 +10,7 @@ import org.aspectj.lang.reflect.FieldSignature;
 
 import com.ittera.cometa.concentrator.Concentrator;
 
-aspect DistributeAspect {
+aspect ConcentrateAspect {
 	//if false, no output at all
 	private static final boolean verbose=false;
 
@@ -28,7 +28,7 @@ aspect DistributeAspect {
 
 	/** POINTCUT DEFINITIONS **/
 
-	pointcut allClasses(): !within(DistributeAspect);
+	pointcut allClasses(): !within(ConcentrateAspect);
 
 	pointcut voidInstanceMethods(): allClasses() && call(!static void *(..));
 
