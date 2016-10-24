@@ -1,4 +1,4 @@
-package com.ittera.cometa.distributor.messages;
+package com.ittera.cometa.distributor.messages.data.serde;
 
 import org.apache.kafka.common.serialization.Serializer;
 
