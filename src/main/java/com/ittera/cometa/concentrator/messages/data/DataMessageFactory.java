@@ -23,7 +23,7 @@ import org.apache.logging.log4j.LogManager;
 public class DataMessageFactory {
   protected static final Logger logger = LogManager.getLogger(DataMessageFactory.class);
 
-  public static Wrappers.DataMessage buildClassInitializerMessage(int distributorId, StaticPart staticPart, Object sender) {
+  public static Wrappers.DataMessage buildClassInitializerMessage(int concentratorId, StaticPart staticPart, Object sender) {
 
     /** Build protobuf message **/
     final InitializerSignature codeSignature = (InitializerSignature) staticPart.getSignature();
@@ -31,7 +31,7 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ClInitCall.Builder callBuilder = Calls.ClInitCall.newBuilder();
-    callBuilder.setDistributorId(distributorId);
+    callBuilder.setConcentratorId(concentratorId);
     callBuilder.setThreadId(Thread.currentThread().getId());
     callBuilder.setCurrentTime(System.currentTimeMillis());
     callBuilder.setClass_(getWrappedClass(codeSignature.getDeclaringTypeName()));
@@ -49,11 +49,11 @@ public class DataMessageFactory {
    * Only supports calls to empty constructor
    * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
    */
-  public static Wrappers.DataMessage buildEmptyConstructorMessage(String distributorId, String className) {
+  public static Wrappers.DataMessage buildEmptyConstructorMessage(String concentratorId, String className) {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ConstructorCall.Builder callBuilder = Calls.ConstructorCall.newBuilder();
-    callBuilder.setDistributorId(Integer.parseInt(distributorId));
+    callBuilder.setConcentratorId(Integer.parseInt(concentratorId));
     callBuilder.setThreadId(Thread.currentThread().getId());
     callBuilder.setCurrentTime(System.currentTimeMillis());
     callBuilder.setClass_(getWrappedClass(className));
@@ -65,14 +65,14 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildConstructorMessage(int distributorId, StaticPart staticPart, Object sender, Object[] args) {
+  public static Wrappers.DataMessage buildConstructorMessage(int concentratorId, StaticPart staticPart, Object sender, Object[] args) {
 
     /** Build protobuf message **/
     final ConstructorSignature codeSignature = (ConstructorSignature) staticPart.getSignature();
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ConstructorCall.Builder callBuilder = Calls.ConstructorCall.newBuilder();
-    callBuilder.setDistributorId(distributorId);
+    callBuilder.setConcentratorId(concentratorId);
     callBuilder.setThreadId(Thread.currentThread().getId());
     callBuilder.setCurrentTime(System.currentTimeMillis());
     callBuilder.setClass_(getWrappedClass(codeSignature.getDeclaringTypeName()));
@@ -101,12 +101,12 @@ public class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
    */
-  public static Wrappers.DataMessage buildInstanceMethodMessage(String distributorId, String className, String methodName, String objRef, String[] parameterTypes, Object[] args) {
+  public static Wrappers.DataMessage buildInstanceMethodMessage(String concentratorId, String className, String methodName, String objRef, String[] parameterTypes, Object[] args) {
 
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.InstanceMethodCall.Builder callBuilder = Calls.InstanceMethodCall.newBuilder();
-    callBuilder.setDistributorId(Integer.parseInt(distributorId));
+    callBuilder.setConcentratorId(Integer.parseInt(concentratorId));
     callBuilder.setThreadId(Thread.currentThread().getId());
     callBuilder.setCurrentTime(System.currentTimeMillis());
     callBuilder.setClass_(getWrappedClass(className));
@@ -128,7 +128,7 @@ public class DataMessageFactory {
   }
 
 
-  public static Wrappers.DataMessage buildInstanceMethodMessage(int distributorId, StaticPart staticPart, Object sender, Object target, Object[] args) {
+  public static Wrappers.DataMessage buildInstanceMethodMessage(int concentratorId, StaticPart staticPart, Object sender, Object target, Object[] args) {
 
     /** Build protobuf message **/
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
@@ -136,7 +136,7 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.InstanceMethodCall.Builder callBuilder = Calls.InstanceMethodCall.newBuilder();
-    callBuilder.setDistributorId(distributorId);
+    callBuilder.setConcentratorId(concentratorId);
     callBuilder.setThreadId(Thread.currentThread().getId());
     callBuilder.setCurrentTime(System.currentTimeMillis());
     callBuilder.setClass_(getWrappedClass(codeSignature.getDeclaringTypeName()));
@@ -169,11 +169,11 @@ public class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
    */
-  public static Wrappers.DataMessage buildClassMethodMessage(String distributorId, String className, String methodName, int modifiers, Class returnType, String[] parameterTypes, Object[] args) {
+  public static Wrappers.DataMessage buildClassMethodMessage(String concentratorId, String className, String methodName, int modifiers, Class returnType, String[] parameterTypes, Object[] args) {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ClassMethodCall.Builder callBuilder = Calls.ClassMethodCall.newBuilder();
-    callBuilder.setDistributorId(Integer.parseInt(distributorId));
+    callBuilder.setConcentratorId(Integer.parseInt(concentratorId));
     callBuilder.setThreadId(Thread.currentThread().getId());
     callBuilder.setCurrentTime(System.currentTimeMillis());
     callBuilder.setClass_(getWrappedClass(className));
@@ -195,7 +195,7 @@ public class DataMessageFactory {
 
   }
 
-  public static Wrappers.DataMessage buildClassMethodMessage(int distributorId, StaticPart staticPart, Object sender, Object[] args) {
+  public static Wrappers.DataMessage buildClassMethodMessage(int concentratorId, StaticPart staticPart, Object sender, Object[] args) {
 
     /** Build protobuf message **/
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
@@ -203,7 +203,7 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ClassMethodCall.Builder callBuilder = Calls.ClassMethodCall.newBuilder();
-    callBuilder.setDistributorId(distributorId);
+    callBuilder.setConcentratorId(concentratorId);
     callBuilder.setThreadId(Thread.currentThread().getId());
     callBuilder.setCurrentTime(System.currentTimeMillis());
     callBuilder.setClass_(getWrappedClass(codeSignature.getDeclaringTypeName()));
@@ -233,13 +233,13 @@ public class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
    */
-  public static Wrappers.DataMessage buildGetStaticMessage(String distributorId, String className, String fieldName) {
+  public static Wrappers.DataMessage buildGetStaticMessage(String concentratorId, String className, String fieldName) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.StaticFieldGet.Builder fieldBuilder = Fields.StaticFieldGet.newBuilder();
-    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setConcentratorId(Integer.parseInt(concentratorId));
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(className));
@@ -251,7 +251,7 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildGetStaticMessage(int distributorId, StaticPart staticPart, Object sender) {
+  public static Wrappers.DataMessage buildGetStaticMessage(int concentratorId, StaticPart staticPart, Object sender) {
 
     /** Build protobuf message **/
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
@@ -259,7 +259,7 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.StaticFieldGet.Builder fieldBuilder = Fields.StaticFieldGet.newBuilder();
-    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setConcentratorId(concentratorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringTypeName()));
@@ -277,13 +277,13 @@ public class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
    */
-  public static Wrappers.DataMessage buildGetObjectMessage(String distributorId, String className, String fieldName, String targetObjRef) {
+  public static Wrappers.DataMessage buildGetObjectMessage(String concentratorId, String className, String fieldName, String targetObjRef) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.InstanceFieldGet.Builder fieldBuilder = Fields.InstanceFieldGet.newBuilder();
-    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setConcentratorId(Integer.parseInt(concentratorId));
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(className));
@@ -297,7 +297,7 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildGetObjectMessage(int distributorId, StaticPart staticPart, Object sender, Object target) {
+  public static Wrappers.DataMessage buildGetObjectMessage(int concentratorId, StaticPart staticPart, Object sender, Object target) {
 
     /** Build protobuf message **/
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
@@ -305,7 +305,7 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.InstanceFieldGet.Builder fieldBuilder = Fields.InstanceFieldGet.newBuilder();
-    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setConcentratorId(concentratorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringTypeName()));
@@ -324,13 +324,13 @@ public class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
    */
-  public static Wrappers.DataMessage buildPutStaticMessage(String distributorId, String className, String fieldName, String valueClassName, Object value) {
+  public static Wrappers.DataMessage buildPutStaticMessage(String concentratorId, String className, String fieldName, String valueClassName, Object value) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.StaticFieldPut.Builder fieldBuilder = Fields.StaticFieldPut.newBuilder();
-    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setConcentratorId(Integer.parseInt(concentratorId));
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(className));
@@ -348,13 +348,13 @@ public class DataMessageFactory {
    * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
    * Equivalent to the above, for objectRefs
    */
-  public static Wrappers.DataMessage buildPutStaticMessage(String distributorId, String className, String fieldName, String objectRef) {
+  public static Wrappers.DataMessage buildPutStaticMessage(String concentratorId, String className, String fieldName, String objectRef) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.StaticFieldPut.Builder fieldBuilder = Fields.StaticFieldPut.newBuilder();
-    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setConcentratorId(Integer.parseInt(concentratorId));
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(className));
@@ -368,7 +368,7 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildPutStaticMessage(int distributorId, StaticPart staticPart, Object sender, Object arg) {
+  public static Wrappers.DataMessage buildPutStaticMessage(int concentratorId, StaticPart staticPart, Object sender, Object arg) {
 
     /** Build protobuf message **/
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
@@ -376,7 +376,7 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.StaticFieldPut.Builder fieldBuilder = Fields.StaticFieldPut.newBuilder();
-    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setConcentratorId(concentratorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringType()));
@@ -392,7 +392,7 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildPutStaticDoneMessage(int distributorId, StaticPart staticPart, Object sender, Object arg) {
+  public static Wrappers.DataMessage buildPutStaticDoneMessage(int concentratorId, StaticPart staticPart, Object sender, Object arg) {
 
     /** Build protobuf message **/
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
@@ -400,7 +400,7 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.StaticFieldPutDone.Builder fieldBuilder = Fields.StaticFieldPutDone.newBuilder();
-    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setConcentratorId(concentratorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setField(getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName()));
@@ -419,13 +419,13 @@ public class DataMessageFactory {
    * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
    * Equivalent to the above, for objectRefs
    */
-  public static Wrappers.DataMessage buildPutObjectMessage(String distributorId, String className, String fieldName, String targetObjRef, String valueClassName, Object value) {
+  public static Wrappers.DataMessage buildPutObjectMessage(String concentratorId, String className, String fieldName, String targetObjRef, String valueClassName, Object value) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.InstanceFieldPut.Builder fieldBuilder = Fields.InstanceFieldPut.newBuilder();
-    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setConcentratorId(Integer.parseInt(concentratorId));
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(className));
@@ -444,13 +444,13 @@ public class DataMessageFactory {
    * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
    * Equivalent to the above, for objectRefs
    */
-  public static Wrappers.DataMessage buildPutObjectMessage(String distributorId, String className, String fieldName, String targetObjRef, String valueObjRef) {
+  public static Wrappers.DataMessage buildPutObjectMessage(String concentratorId, String className, String fieldName, String targetObjRef, String valueObjRef) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.InstanceFieldPut.Builder fieldBuilder = Fields.InstanceFieldPut.newBuilder();
-    fieldBuilder.setDistributorId(Integer.parseInt(distributorId));
+    fieldBuilder.setConcentratorId(Integer.parseInt(concentratorId));
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(className));
@@ -465,7 +465,7 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildPutObjectMessage(int distributorId, StaticPart staticPart, Object sender, Object target, Object arg) {
+  public static Wrappers.DataMessage buildPutObjectMessage(int concentratorId, StaticPart staticPart, Object sender, Object target, Object arg) {
 
     /** Build protobuf message **/
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
@@ -473,7 +473,7 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.InstanceFieldPut.Builder fieldBuilder = Fields.InstanceFieldPut.newBuilder();
-    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setConcentratorId(concentratorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringType()));
@@ -490,14 +490,14 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildPutObjectDoneMessage(int distributorId, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, Long followingOffset) {
+  public static Wrappers.DataMessage buildPutObjectDoneMessage(int concentratorId, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, Long followingOffset) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
     final Object target;
 
     final Fields.InstanceFieldPutDone.Builder fieldBuilder = Fields.InstanceFieldPutDone.newBuilder();
-    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setConcentratorId(concentratorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(instanceFieldPut.getClass_().getName()));
@@ -517,7 +517,7 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildPutObjectDoneMessage(int distributorId, StaticPart staticPart, Object sender, Object target, Object arg) {
+  public static Wrappers.DataMessage buildPutObjectDoneMessage(int concentratorId, StaticPart staticPart, Object sender, Object target, Object arg) {
 
     /** Build protobuf message **/
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
@@ -525,7 +525,7 @@ public class DataMessageFactory {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Fields.InstanceFieldPutDone.Builder fieldBuilder = Fields.InstanceFieldPutDone.newBuilder();
-    fieldBuilder.setDistributorId(distributorId);
+    fieldBuilder.setConcentratorId(concentratorId);
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringType()));
@@ -537,12 +537,12 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildAccessibleObjectThrowableMessage(int distributorId, AccessibleObject accessibleObject, Exception exception, Long followingOffset) {
+  public static Wrappers.DataMessage buildAccessibleObjectThrowableMessage(int concentratorId, AccessibleObject accessibleObject, Exception exception, Long followingOffset) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
     final Exceptions.RaisedThrowable.Builder thrBuilder = Exceptions.RaisedThrowable.newBuilder();
-    thrBuilder.setDistributorId(distributorId);
+    thrBuilder.setConcentratorId(concentratorId);
     thrBuilder.setThreadId(Thread.currentThread().getId());
     thrBuilder.setCurrentTime(System.currentTimeMillis());
     thrBuilder.setClass_(getWrappedClass(exception.getClass().getName()));
@@ -565,12 +565,12 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildInitializerThrowableMessage(int distributorId, StaticPart staticPart, Exception exception) {
+  public static Wrappers.DataMessage buildInitializerThrowableMessage(int concentratorId, StaticPart staticPart, Exception exception) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
     final Exceptions.RaisedThrowable.Builder thrBuilder = Exceptions.RaisedThrowable.newBuilder();
-    thrBuilder.setDistributorId(distributorId);
+    thrBuilder.setConcentratorId(concentratorId);
     thrBuilder.setThreadId(Thread.currentThread().getId());
     thrBuilder.setCurrentTime(System.currentTimeMillis());
     thrBuilder.setInInitializer(true);
@@ -585,13 +585,13 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildReturnValueMessage(int distributorId, Object object, String objectKey, boolean isVoid, Long followingOffset) {
+  public static Wrappers.DataMessage buildReturnValueMessage(int concentratorId, Object object, String objectKey, boolean isVoid, Long followingOffset) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Values.ReturnValue.Builder valBuilder = Values.ReturnValue.newBuilder();
-    valBuilder.setDistributorId(distributorId);
+    valBuilder.setConcentratorId(concentratorId);
     valBuilder.setThreadId(Thread.currentThread().getId());
     valBuilder.setCurrentTime(System.currentTimeMillis());
     valBuilder.setIsVoid(isVoid);
@@ -612,13 +612,13 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildLoadedClassMessage(int distributorId, Class clazz) {
+  public static Wrappers.DataMessage buildLoadedClassMessage(int concentratorId, Class clazz) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Values.ReturnValue.Builder valBuilder = Values.ReturnValue.newBuilder();
-    valBuilder.setDistributorId(distributorId);
+    valBuilder.setConcentratorId(concentratorId);
     valBuilder.setThreadId(Thread.currentThread().getId());
     valBuilder.setCurrentTime(System.currentTimeMillis());
     valBuilder.setIsClass(true);

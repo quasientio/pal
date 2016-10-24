@@ -1,3 +1,3 @@
 #!/bin/bash
 
-pkill -f java.*distributor.Distributor
+pkill -f java.*concentrator.Concentrator

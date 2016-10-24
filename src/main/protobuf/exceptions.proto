@@ -17,7 +17,7 @@ message Throwable {
 message RaisedThrowable {
     // --- CONTEXT
 
-    optional int32 distributorId = 1;
+    optional int32 concentratorId = 1;
 
     //NOTE: The id of a terminated thread may be reused
     optional int64 threadId = 2;

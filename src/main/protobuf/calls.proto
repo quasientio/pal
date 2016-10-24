@@ -10,7 +10,7 @@ option optimize_for = SPEED;
 message ConstructorCall {
     // --- CONTEXT
 
-    optional int32 distributorId = 1;
+    optional int32 concentratorId = 1;
 
     //NOTE: The id of a terminated thread may be reused
     optional int64 threadId = 2;
@@ -39,7 +39,7 @@ message ConstructorCall {
 message InstanceMethodCall {
     // --- CONTEXT
 
-    optional int32 distributorId = 1;
+    optional int32 concentratorId = 1;
 
     //NOTE: The id of a terminated thread may be reused
     optional int64 threadId = 2;
@@ -78,7 +78,7 @@ message InstanceMethodCall {
 message ClInitCall {
     // --- CONTEXT
 
-    optional int32 distributorId = 1;
+    optional int32 concentratorId = 1;
 
     //NOTE: The id of a terminated thread may be reused
     optional int64 threadId = 2;
@@ -102,7 +102,7 @@ message ClInitCall {
 message ClassMethodCall {
     // --- CONTEXT
 
-    optional int32 distributorId = 1;
+    optional int32 concentratorId = 1;
 
     //NOTE: The id of a terminated thread may be reused
     optional int64 threadId = 2;

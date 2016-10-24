@@ -4,38 +4,32 @@
 package com.ittera.cometa.concentrator.messages.data;
 
 public final class Primitives {
-  private Primitives() {
-  }
-
+  private Primitives() {}
   public static void registerAllExtensions(
-    com.google.protobuf.ExtensionRegistry registry) {
+      com.google.protobuf.ExtensionRegistry registry) {
   }
-
   public interface ObjectOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:messages.data.Object)
-    com.google.protobuf.MessageOrBuilder {
+      // @@protoc_insertion_point(interface_extends:messages.data.Object)
+      com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>optional string value = 1;</code>
      */
     boolean hasValue();
-
     /**
      * <code>optional string value = 1;</code>
      */
     java.lang.String getValue();
-
     /**
      * <code>optional string value = 1;</code>
      */
     com.google.protobuf.ByteString
-    getValueBytes();
+        getValueBytes();
 
     /**
      * <code>optional int32 hash = 2;</code>
      */
     boolean hasHash();
-
     /**
      * <code>optional int32 hash = 2;</code>
      */
@@ -45,7 +39,6 @@ public final class Primitives {
      * <code>required int32 identityHash = 3;</code>
      */
     boolean hasIdentityHash();
-
     /**
      * <code>required int32 identityHash = 3;</code>
      */
@@ -55,12 +48,10 @@ public final class Primitives {
      * <code>required .messages.data.Class class = 4;</code>
      */
     boolean hasClass_();
-
     /**
      * <code>required .messages.data.Class class = 4;</code>
      */
     com.ittera.cometa.concentrator.messages.data.Primitives.Class getClass_();
-
     /**
      * <code>required .messages.data.Class class = 4;</code>
      */
@@ -70,7 +61,6 @@ public final class Primitives {
      * <code>optional bool isArray = 5 [default = false];</code>
      */
     boolean hasIsArray();
-
     /**
      * <code>optional bool isArray = 5 [default = false];</code>
      */
@@ -79,36 +69,31 @@ public final class Primitives {
     /**
      * <code>repeated .messages.data.Object arrayValue = 6;</code>
      */
-    java.util.List<com.ittera.cometa.concentrator.messages.data.Primitives.Object>
-    getArrayValueList();
-
+    java.util.List<com.ittera.cometa.concentrator.messages.data.Primitives.Object> 
+        getArrayValueList();
     /**
      * <code>repeated .messages.data.Object arrayValue = 6;</code>
      */
     com.ittera.cometa.concentrator.messages.data.Primitives.Object getArrayValue(int index);
-
     /**
      * <code>repeated .messages.data.Object arrayValue = 6;</code>
      */
     int getArrayValueCount();
-
     /**
      * <code>repeated .messages.data.Object arrayValue = 6;</code>
      */
-    java.util.List<? extends com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder>
-    getArrayValueOrBuilderList();
-
+    java.util.List<? extends com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder> 
+        getArrayValueOrBuilderList();
     /**
      * <code>repeated .messages.data.Object arrayValue = 6;</code>
      */
     com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder getArrayValueOrBuilder(
-      int index);
+        int index);
 
     /**
      * <code>optional int64 created = 7;</code>
      */
     boolean hasCreated();
-
     /**
      * <code>optional int64 created = 7;</code>
      */
@@ -118,48 +103,40 @@ public final class Primitives {
      * <code>optional string ref = 8;</code>
      */
     boolean hasRef();
-
     /**
      * <code>optional string ref = 8;</code>
      */
     java.lang.String getRef();
-
     /**
      * <code>optional string ref = 8;</code>
      */
     com.google.protobuf.ByteString
-    getRefBytes();
+        getRefBytes();
 
     /**
      * <code>required bool isNull = 9;</code>
      */
     boolean hasIsNull();
-
     /**
      * <code>required bool isNull = 9;</code>
      */
     boolean getIsNull();
   }
-
   /**
    * Protobuf type {@code messages.data.Object}
    */
   public static final class Object extends
-    com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:messages.data.Object)
-    ObjectOrBuilder {
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.Object)
+      ObjectOrBuilder {
     // Use Object.newBuilder() to construct.
     private Object(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-
-    private Object(boolean noInit) {
-      this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance();
-    }
+    private Object(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
     private static final Object defaultInstance;
-
     public static Object getDefaultInstance() {
       return defaultInstance;
     }
@@ -169,21 +146,19 @@ public final class Primitives {
     }
 
     private final com.google.protobuf.UnknownFieldSet unknownFields;
-
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+        getUnknownFields() {
       return this.unknownFields;
     }
-
     private Object(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -194,7 +169,7 @@ public final class Primitives {
               break;
             default: {
               if (!parseUnknownField(input, unknownFields,
-                extensionRegistry, tag)) {
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -263,7 +238,7 @@ public final class Primitives {
         throw e.setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
-          e.getMessage()).setUnfinishedMessage(this);
+            e.getMessage()).setUnfinishedMessage(this);
       } finally {
         if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
           arrayValue_ = java.util.Collections.unmodifiableList(arrayValue_);
@@ -272,28 +247,27 @@ public final class Primitives {
         makeExtensionsImmutable();
       }
     }
-
     public static final com.google.protobuf.Descriptors.Descriptor
-    getDescriptor() {
+        getDescriptor() {
       return com.ittera.cometa.concentrator.messages.data.Primitives.internal_static_messages_data_Object_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internalGetFieldAccessorTable() {
+        internalGetFieldAccessorTable() {
       return com.ittera.cometa.concentrator.messages.data.Primitives.internal_static_messages_data_Object_fieldAccessorTable
-        .ensureFieldAccessorsInitialized(
-          com.ittera.cometa.concentrator.messages.data.Primitives.Object.class, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder.class);
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.concentrator.messages.data.Primitives.Object.class, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder.class);
     }
 
     public static com.google.protobuf.Parser<Object> PARSER =
-      new com.google.protobuf.AbstractParser<Object>() {
-        public Object parsePartialFrom(
+        new com.google.protobuf.AbstractParser<Object>() {
+      public Object parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new Object(input, extensionRegistry);
-        }
-      };
+        return new Object(input, extensionRegistry);
+      }
+    };
 
     @java.lang.Override
     public com.google.protobuf.Parser<Object> getParserForType() {
@@ -303,14 +277,12 @@ public final class Primitives {
     private int bitField0_;
     public static final int VALUE_FIELD_NUMBER = 1;
     private java.lang.Object value_;
-
     /**
      * <code>optional string value = 1;</code>
      */
     public boolean hasValue() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-
     /**
      * <code>optional string value = 1;</code>
      */
@@ -319,8 +291,8 @@ public final class Primitives {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           value_ = s;
@@ -328,17 +300,16 @@ public final class Primitives {
         return s;
       }
     }
-
     /**
      * <code>optional string value = 1;</code>
      */
     public com.google.protobuf.ByteString
-    getValueBytes() {
+        getValueBytes() {
       java.lang.Object ref = value_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         value_ = b;
         return b;
       } else {
@@ -348,14 +319,12 @@ public final class Primitives {
 
     public static final int HASH_FIELD_NUMBER = 2;
     private int hash_;
-
     /**
      * <code>optional int32 hash = 2;</code>
      */
     public boolean hasHash() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-
     /**
      * <code>optional int32 hash = 2;</code>
      */
@@ -365,14 +334,12 @@ public final class Primitives {
 
     public static final int IDENTITYHASH_FIELD_NUMBER = 3;
     private int identityHash_;
-
     /**
      * <code>required int32 identityHash = 3;</code>
      */
     public boolean hasIdentityHash() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-
     /**
      * <code>required int32 identityHash = 3;</code>
      */
@@ -382,21 +349,18 @@ public final class Primitives {
 
     public static final int CLASS_FIELD_NUMBER = 4;
     private com.ittera.cometa.concentrator.messages.data.Primitives.Class class__;
-
     /**
      * <code>required .messages.data.Class class = 4;</code>
      */
     public boolean hasClass_() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-
     /**
      * <code>required .messages.data.Class class = 4;</code>
      */
     public com.ittera.cometa.concentrator.messages.data.Primitives.Class getClass_() {
       return class__;
     }
-
     /**
      * <code>required .messages.data.Class class = 4;</code>
      */
@@ -406,14 +370,12 @@ public final class Primitives {
 
     public static final int ISARRAY_FIELD_NUMBER = 5;
     private boolean isArray_;
-
     /**
      * <code>optional bool isArray = 5 [default = false];</code>
      */
     public boolean hasIsArray() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
-
     /**
      * <code>optional bool isArray = 5 [default = false];</code>
      */
@@ -423,54 +385,47 @@ public final class Primitives {
 
     public static final int ARRAYVALUE_FIELD_NUMBER = 6;
     private java.util.List<com.ittera.cometa.concentrator.messages.data.Primitives.Object> arrayValue_;
-
     /**
      * <code>repeated .messages.data.Object arrayValue = 6;</code>
      */
     public java.util.List<com.ittera.cometa.concentrator.messages.data.Primitives.Object> getArrayValueList() {
       return arrayValue_;
     }
-
     /**
      * <code>repeated .messages.data.Object arrayValue = 6;</code>
      */
-    public java.util.List<? extends com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder>
-    getArrayValueOrBuilderList() {
+    public java.util.List<? extends com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder> 
+        getArrayValueOrBuilderList() {
       return arrayValue_;
     }
-
     /**
      * <code>repeated .messages.data.Object arrayValue = 6;</code>
      */
     public int getArrayValueCount() {
       return arrayValue_.size();
     }
-
     /**
      * <code>repeated .messages.data.Object arrayValue = 6;</code>
      */
     public com.ittera.cometa.concentrator.messages.data.Primitives.Object getArrayValue(int index) {
       return arrayValue_.get(index);
     }
-
     /**
      * <code>repeated .messages.data.Object arrayValue = 6;</code>
      */
     public com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder getArrayValueOrBuilder(
-      int index) {
+        int index) {
       return arrayValue_.get(index);
     }
 
     public static final int CREATED_FIELD_NUMBER = 7;
     private long created_;
-
     /**
      * <code>optional int64 created = 7;</code>
      */
     public boolean hasCreated() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
-
     /**
      * <code>optional int64 created = 7;</code>
      */
@@ -480,14 +435,12 @@ public final class Primitives {
 
     public static final int REF_FIELD_NUMBER = 8;
     private java.lang.Object ref_;
-
     /**
      * <code>optional string ref = 8;</code>
      */
     public boolean hasRef() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
-
     /**
      * <code>optional string ref = 8;</code>
      */
@@ -496,8 +449,8 @@ public final class Primitives {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           ref_ = s;
@@ -505,17 +458,16 @@ public final class Primitives {
         return s;
       }
     }
-
     /**
      * <code>optional string ref = 8;</code>
      */
     public com.google.protobuf.ByteString
-    getRefBytes() {
+        getRefBytes() {
       java.lang.Object ref = ref_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         ref_ = b;
         return b;
       } else {
@@ -525,14 +477,12 @@ public final class Primitives {
 
     public static final int ISNULL_FIELD_NUMBER = 9;
     private boolean isNull_;
-
     /**
      * <code>required bool isNull = 9;</code>
      */
     public boolean hasIsNull() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
-
     /**
      * <code>required bool isNull = 9;</code>
      */
@@ -551,9 +501,7 @@ public final class Primitives {
       ref_ = "";
       isNull_ = false;
     }
-
     private byte memoizedIsInitialized = -1;
-
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -582,7 +530,7 @@ public final class Primitives {
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-      throws java.io.IOException {
+                        throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeBytes(1, getValueBytes());
@@ -615,7 +563,6 @@ public final class Primitives {
     }
 
     private int memoizedSerializedSize = -1;
-
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
@@ -663,115 +610,95 @@ public final class Primitives {
     }
 
     private static final long serialVersionUID = 0L;
-
     @java.lang.Override
     protected java.lang.Object writeReplace()
-      throws java.io.ObjectStreamException {
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
 
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Object parseFrom(
-      com.google.protobuf.ByteString data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Object parseFrom(
-      com.google.protobuf.ByteString data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Object parseFrom(byte[] data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Object parseFrom(
-      byte[] data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Object parseFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Object parseFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Object parseDelimitedFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Object parseDelimitedFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Object parseFrom(
-      com.google.protobuf.CodedInputStream input)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Object parseFrom(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
 
-    public static Builder newBuilder() {
-      return Builder.create();
-    }
-
-    public Builder newBuilderForType() {
-      return newBuilder();
-    }
-
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(com.ittera.cometa.concentrator.messages.data.Primitives.Object prototype) {
       return newBuilder().mergeFrom(prototype);
     }
-
-    public Builder toBuilder() {
-      return newBuilder(this);
-    }
+    public Builder toBuilder() { return newBuilder(this); }
 
     @java.lang.Override
     protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-
     /**
      * Protobuf type {@code messages.data.Object}
      */
     public static final class Builder extends
-      com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:messages.data.Object)
-      com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder {
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.Object)
+        com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-      getDescriptor() {
+          getDescriptor() {
         return com.ittera.cometa.concentrator.messages.data.Primitives.internal_static_messages_data_Object_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internalGetFieldAccessorTable() {
+          internalGetFieldAccessorTable() {
         return com.ittera.cometa.concentrator.messages.data.Primitives.internal_static_messages_data_Object_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-            com.ittera.cometa.concentrator.messages.data.Primitives.Object.class, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder.class);
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.concentrator.messages.data.Primitives.Object.class, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder.class);
       }
 
       // Construct using com.ittera.cometa.concentrator.messages.data.Primitives.Object.newBuilder()
@@ -780,18 +707,16 @@ public final class Primitives {
       }
 
       private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
-
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getClass_FieldBuilder();
           getArrayValueFieldBuilder();
         }
       }
-
       private static Builder create() {
         return new Builder();
       }
@@ -832,7 +757,7 @@ public final class Primitives {
       }
 
       public com.google.protobuf.Descriptors.Descriptor
-      getDescriptorForType() {
+          getDescriptorForType() {
         return com.ittera.cometa.concentrator.messages.data.Primitives.internal_static_messages_data_Object_descriptor;
       }
 
@@ -904,7 +829,7 @@ public final class Primitives {
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof com.ittera.cometa.concentrator.messages.data.Primitives.Object) {
-          return mergeFrom((com.ittera.cometa.concentrator.messages.data.Primitives.Object) other);
+          return mergeFrom((com.ittera.cometa.concentrator.messages.data.Primitives.Object)other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -948,9 +873,9 @@ public final class Primitives {
               arrayValueBuilder_ = null;
               arrayValue_ = other.arrayValue_;
               bitField0_ = (bitField0_ & ~0x00000020);
-              arrayValueBuilder_ =
+              arrayValueBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                  getArrayValueFieldBuilder() : null;
+                   getArrayValueFieldBuilder() : null;
             } else {
               arrayValueBuilder_.addAllMessages(other.arrayValue_);
             }
@@ -973,20 +898,20 @@ public final class Primitives {
 
       public final boolean isInitialized() {
         if (!hasIdentityHash()) {
-
+          
           return false;
         }
         if (!hasClass_()) {
-
+          
           return false;
         }
         if (!hasIsNull()) {
-
+          
           return false;
         }
         for (int i = 0; i < getArrayValueCount(); i++) {
           if (!getArrayValue(i).isInitialized()) {
-
+            
             return false;
           }
         }
@@ -994,9 +919,9 @@ public final class Primitives {
       }
 
       public Builder mergeFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
         com.ittera.cometa.concentrator.messages.data.Primitives.Object parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
@@ -1010,18 +935,15 @@ public final class Primitives {
         }
         return this;
       }
-
       private int bitField0_;
 
       private java.lang.Object value_ = "";
-
       /**
        * <code>optional string value = 1;</code>
        */
       public boolean hasValue() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-
       /**
        * <code>optional string value = 1;</code>
        */
@@ -1029,7 +951,7 @@ public final class Primitives {
         java.lang.Object ref = value_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             value_ = s;
@@ -1039,38 +961,35 @@ public final class Primitives {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string value = 1;</code>
        */
       public com.google.protobuf.ByteString
-      getValueBytes() {
+          getValueBytes() {
         java.lang.Object ref = value_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           value_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string value = 1;</code>
        */
       public Builder setValue(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000001;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
         value_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string value = 1;</code>
        */
@@ -1080,37 +999,33 @@ public final class Primitives {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string value = 1;</code>
        */
       public Builder setValueBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000001;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
         value_ = value;
         onChanged();
         return this;
       }
 
-      private int hash_;
-
+      private int hash_ ;
       /**
        * <code>optional int32 hash = 2;</code>
        */
       public boolean hasHash() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-
       /**
        * <code>optional int32 hash = 2;</code>
        */
       public int getHash() {
         return hash_;
       }
-
       /**
        * <code>optional int32 hash = 2;</code>
        */
@@ -1120,7 +1035,6 @@ public final class Primitives {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 hash = 2;</code>
        */
@@ -1131,22 +1045,19 @@ public final class Primitives {
         return this;
       }
 
-      private int identityHash_;
-
+      private int identityHash_ ;
       /**
        * <code>required int32 identityHash = 3;</code>
        */
       public boolean hasIdentityHash() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-
       /**
        * <code>required int32 identityHash = 3;</code>
        */
       public int getIdentityHash() {
         return identityHash_;
       }
-
       /**
        * <code>required int32 identityHash = 3;</code>
        */
@@ -1156,7 +1067,6 @@ public final class Primitives {
         onChanged();
         return this;
       }
-
       /**
        * <code>required int32 identityHash = 3;</code>
        */
@@ -1169,15 +1079,13 @@ public final class Primitives {
 
       private com.ittera.cometa.concentrator.messages.data.Primitives.Class class__ = com.ittera.cometa.concentrator.messages.data.Primitives.Class.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder> class_Builder_;
-
+          com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder> class_Builder_;
       /**
        * <code>required .messages.data.Class class = 4;</code>
        */
       public boolean hasClass_() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-
       /**
        * <code>required .messages.data.Class class = 4;</code>
        */
@@ -1188,7 +1096,6 @@ public final class Primitives {
           return class_Builder_.getMessage();
         }
       }
-
       /**
        * <code>required .messages.data.Class class = 4;</code>
        */
@@ -1205,12 +1112,11 @@ public final class Primitives {
         bitField0_ |= 0x00000008;
         return this;
       }
-
       /**
        * <code>required .messages.data.Class class = 4;</code>
        */
       public Builder setClass_(
-        com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder builderForValue) {
+          com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder builderForValue) {
         if (class_Builder_ == null) {
           class__ = builderForValue.build();
           onChanged();
@@ -1220,14 +1126,13 @@ public final class Primitives {
         bitField0_ |= 0x00000008;
         return this;
       }
-
       /**
        * <code>required .messages.data.Class class = 4;</code>
        */
       public Builder mergeClass_(com.ittera.cometa.concentrator.messages.data.Primitives.Class value) {
         if (class_Builder_ == null) {
           if (((bitField0_ & 0x00000008) == 0x00000008) &&
-            class__ != com.ittera.cometa.concentrator.messages.data.Primitives.Class.getDefaultInstance()) {
+              class__ != com.ittera.cometa.concentrator.messages.data.Primitives.Class.getDefaultInstance()) {
             class__ =
               com.ittera.cometa.concentrator.messages.data.Primitives.Class.newBuilder(class__).mergeFrom(value).buildPartial();
           } else {
@@ -1240,7 +1145,6 @@ public final class Primitives {
         bitField0_ |= 0x00000008;
         return this;
       }
-
       /**
        * <code>required .messages.data.Class class = 4;</code>
        */
@@ -1254,7 +1158,6 @@ public final class Primitives {
         bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
-
       /**
        * <code>required .messages.data.Class class = 4;</code>
        */
@@ -1263,7 +1166,6 @@ public final class Primitives {
         onChanged();
         return getClass_FieldBuilder().getBuilder();
       }
-
       /**
        * <code>required .messages.data.Class class = 4;</code>
        */
@@ -1274,40 +1176,36 @@ public final class Primitives {
           return class__;
         }
       }
-
       /**
        * <code>required .messages.data.Class class = 4;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder>
-      getClass_FieldBuilder() {
+          com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder> 
+          getClass_FieldBuilder() {
         if (class_Builder_ == null) {
           class_Builder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder>(
-            getClass_(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder>(
+                  getClass_(),
+                  getParentForChildren(),
+                  isClean());
           class__ = null;
         }
         return class_Builder_;
       }
 
-      private boolean isArray_;
-
+      private boolean isArray_ ;
       /**
        * <code>optional bool isArray = 5 [default = false];</code>
        */
       public boolean hasIsArray() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-
       /**
        * <code>optional bool isArray = 5 [default = false];</code>
        */
       public boolean getIsArray() {
         return isArray_;
       }
-
       /**
        * <code>optional bool isArray = 5 [default = false];</code>
        */
@@ -1317,7 +1215,6 @@ public final class Primitives {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional bool isArray = 5 [default = false];</code>
        */
@@ -1330,16 +1227,15 @@ public final class Primitives {
 
       private java.util.List<com.ittera.cometa.concentrator.messages.data.Primitives.Object> arrayValue_ =
         java.util.Collections.emptyList();
-
       private void ensureArrayValueIsMutable() {
         if (!((bitField0_ & 0x00000020) == 0x00000020)) {
           arrayValue_ = new java.util.ArrayList<com.ittera.cometa.concentrator.messages.data.Primitives.Object>(arrayValue_);
           bitField0_ |= 0x00000020;
-        }
+         }
       }
 
       private com.google.protobuf.RepeatedFieldBuilder<
-        com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder> arrayValueBuilder_;
+          com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder> arrayValueBuilder_;
 
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
@@ -1351,7 +1247,6 @@ public final class Primitives {
           return arrayValueBuilder_.getMessageList();
         }
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
@@ -1362,7 +1257,6 @@ public final class Primitives {
           return arrayValueBuilder_.getCount();
         }
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
@@ -1373,12 +1267,11 @@ public final class Primitives {
           return arrayValueBuilder_.getMessage(index);
         }
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
       public Builder setArrayValue(
-        int index, com.ittera.cometa.concentrator.messages.data.Primitives.Object value) {
+          int index, com.ittera.cometa.concentrator.messages.data.Primitives.Object value) {
         if (arrayValueBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1391,12 +1284,11 @@ public final class Primitives {
         }
         return this;
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
       public Builder setArrayValue(
-        int index, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder builderForValue) {
+          int index, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder builderForValue) {
         if (arrayValueBuilder_ == null) {
           ensureArrayValueIsMutable();
           arrayValue_.set(index, builderForValue.build());
@@ -1406,7 +1298,6 @@ public final class Primitives {
         }
         return this;
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
@@ -1423,12 +1314,11 @@ public final class Primitives {
         }
         return this;
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
       public Builder addArrayValue(
-        int index, com.ittera.cometa.concentrator.messages.data.Primitives.Object value) {
+          int index, com.ittera.cometa.concentrator.messages.data.Primitives.Object value) {
         if (arrayValueBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1441,12 +1331,11 @@ public final class Primitives {
         }
         return this;
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
       public Builder addArrayValue(
-        com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder builderForValue) {
         if (arrayValueBuilder_ == null) {
           ensureArrayValueIsMutable();
           arrayValue_.add(builderForValue.build());
@@ -1456,12 +1345,11 @@ public final class Primitives {
         }
         return this;
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
       public Builder addArrayValue(
-        int index, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder builderForValue) {
+          int index, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder builderForValue) {
         if (arrayValueBuilder_ == null) {
           ensureArrayValueIsMutable();
           arrayValue_.add(index, builderForValue.build());
@@ -1471,23 +1359,21 @@ public final class Primitives {
         }
         return this;
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
       public Builder addAllArrayValue(
-        java.lang.Iterable<? extends com.ittera.cometa.concentrator.messages.data.Primitives.Object> values) {
+          java.lang.Iterable<? extends com.ittera.cometa.concentrator.messages.data.Primitives.Object> values) {
         if (arrayValueBuilder_ == null) {
           ensureArrayValueIsMutable();
           com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, arrayValue_);
+              values, arrayValue_);
           onChanged();
         } else {
           arrayValueBuilder_.addAllMessages(values);
         }
         return this;
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
@@ -1501,7 +1387,6 @@ public final class Primitives {
         }
         return this;
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
@@ -1515,95 +1400,84 @@ public final class Primitives {
         }
         return this;
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
       public com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder getArrayValueBuilder(
-        int index) {
+          int index) {
         return getArrayValueFieldBuilder().getBuilder(index);
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
       public com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder getArrayValueOrBuilder(
-        int index) {
+          int index) {
         if (arrayValueBuilder_ == null) {
-          return arrayValue_.get(index);
-        } else {
+          return arrayValue_.get(index);  } else {
           return arrayValueBuilder_.getMessageOrBuilder(index);
         }
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
-      public java.util.List<? extends com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder>
-      getArrayValueOrBuilderList() {
+      public java.util.List<? extends com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder> 
+           getArrayValueOrBuilderList() {
         if (arrayValueBuilder_ != null) {
           return arrayValueBuilder_.getMessageOrBuilderList();
         } else {
           return java.util.Collections.unmodifiableList(arrayValue_);
         }
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
       public com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder addArrayValueBuilder() {
         return getArrayValueFieldBuilder().addBuilder(
-          com.ittera.cometa.concentrator.messages.data.Primitives.Object.getDefaultInstance());
+            com.ittera.cometa.concentrator.messages.data.Primitives.Object.getDefaultInstance());
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
       public com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder addArrayValueBuilder(
-        int index) {
+          int index) {
         return getArrayValueFieldBuilder().addBuilder(
-          index, com.ittera.cometa.concentrator.messages.data.Primitives.Object.getDefaultInstance());
+            index, com.ittera.cometa.concentrator.messages.data.Primitives.Object.getDefaultInstance());
       }
-
       /**
        * <code>repeated .messages.data.Object arrayValue = 6;</code>
        */
-      public java.util.List<com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder>
-      getArrayValueBuilderList() {
+      public java.util.List<com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder> 
+           getArrayValueBuilderList() {
         return getArrayValueFieldBuilder().getBuilderList();
       }
-
       private com.google.protobuf.RepeatedFieldBuilder<
-        com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder>
-      getArrayValueFieldBuilder() {
+          com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder> 
+          getArrayValueFieldBuilder() {
         if (arrayValueBuilder_ == null) {
           arrayValueBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder>(
-            arrayValue_,
-            ((bitField0_ & 0x00000020) == 0x00000020),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder>(
+                  arrayValue_,
+                  ((bitField0_ & 0x00000020) == 0x00000020),
+                  getParentForChildren(),
+                  isClean());
           arrayValue_ = null;
         }
         return arrayValueBuilder_;
       }
 
-      private long created_;
-
+      private long created_ ;
       /**
        * <code>optional int64 created = 7;</code>
        */
       public boolean hasCreated() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
-
       /**
        * <code>optional int64 created = 7;</code>
        */
       public long getCreated() {
         return created_;
       }
-
       /**
        * <code>optional int64 created = 7;</code>
        */
@@ -1613,7 +1487,6 @@ public final class Primitives {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int64 created = 7;</code>
        */
@@ -1625,14 +1498,12 @@ public final class Primitives {
       }
 
       private java.lang.Object ref_ = "";
-
       /**
        * <code>optional string ref = 8;</code>
        */
       public boolean hasRef() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
-
       /**
        * <code>optional string ref = 8;</code>
        */
@@ -1640,7 +1511,7 @@ public final class Primitives {
         java.lang.Object ref = ref_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             ref_ = s;
@@ -1650,38 +1521,35 @@ public final class Primitives {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string ref = 8;</code>
        */
       public com.google.protobuf.ByteString
-      getRefBytes() {
+          getRefBytes() {
         java.lang.Object ref = ref_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           ref_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string ref = 8;</code>
        */
       public Builder setRef(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000080;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000080;
         ref_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string ref = 8;</code>
        */
@@ -1691,37 +1559,33 @@ public final class Primitives {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string ref = 8;</code>
        */
       public Builder setRefBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000080;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000080;
         ref_ = value;
         onChanged();
         return this;
       }
 
-      private boolean isNull_;
-
+      private boolean isNull_ ;
       /**
        * <code>required bool isNull = 9;</code>
        */
       public boolean hasIsNull() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
-
       /**
        * <code>required bool isNull = 9;</code>
        */
       public boolean getIsNull() {
         return isNull_;
       }
-
       /**
        * <code>required bool isNull = 9;</code>
        */
@@ -1731,7 +1595,6 @@ public final class Primitives {
         onChanged();
         return this;
       }
-
       /**
        * <code>required bool isNull = 9;</code>
        */
@@ -1754,55 +1617,47 @@ public final class Primitives {
   }
 
   public interface ClassOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:messages.data.Class)
-    com.google.protobuf.MessageOrBuilder {
+      // @@protoc_insertion_point(interface_extends:messages.data.Class)
+      com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>optional string name = 1;</code>
      */
     boolean hasName();
-
     /**
      * <code>optional string name = 1;</code>
      */
     java.lang.String getName();
-
     /**
      * <code>optional string name = 1;</code>
      */
     com.google.protobuf.ByteString
-    getNameBytes();
+        getNameBytes();
 
     /**
      * <code>optional bool unknown = 2 [default = false];</code>
      */
     boolean hasUnknown();
-
     /**
      * <code>optional bool unknown = 2 [default = false];</code>
      */
     boolean getUnknown();
   }
-
   /**
    * Protobuf type {@code messages.data.Class}
    */
   public static final class Class extends
-    com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:messages.data.Class)
-    ClassOrBuilder {
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.Class)
+      ClassOrBuilder {
     // Use Class.newBuilder() to construct.
     private Class(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-
-    private Class(boolean noInit) {
-      this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance();
-    }
+    private Class(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
     private static final Class defaultInstance;
-
     public static Class getDefaultInstance() {
       return defaultInstance;
     }
@@ -1812,21 +1667,19 @@ public final class Primitives {
     }
 
     private final com.google.protobuf.UnknownFieldSet unknownFields;
-
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+        getUnknownFields() {
       return this.unknownFields;
     }
-
     private Class(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -1837,7 +1690,7 @@ public final class Primitives {
               break;
             default: {
               if (!parseUnknownField(input, unknownFields,
-                extensionRegistry, tag)) {
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -1859,34 +1712,33 @@ public final class Primitives {
         throw e.setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
-          e.getMessage()).setUnfinishedMessage(this);
+            e.getMessage()).setUnfinishedMessage(this);
       } finally {
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
-
     public static final com.google.protobuf.Descriptors.Descriptor
-    getDescriptor() {
+        getDescriptor() {
       return com.ittera.cometa.concentrator.messages.data.Primitives.internal_static_messages_data_Class_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internalGetFieldAccessorTable() {
+        internalGetFieldAccessorTable() {
       return com.ittera.cometa.concentrator.messages.data.Primitives.internal_static_messages_data_Class_fieldAccessorTable
-        .ensureFieldAccessorsInitialized(
-          com.ittera.cometa.concentrator.messages.data.Primitives.Class.class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder.class);
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.concentrator.messages.data.Primitives.Class.class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder.class);
     }
 
     public static com.google.protobuf.Parser<Class> PARSER =
-      new com.google.protobuf.AbstractParser<Class>() {
-        public Class parsePartialFrom(
+        new com.google.protobuf.AbstractParser<Class>() {
+      public Class parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new Class(input, extensionRegistry);
-        }
-      };
+        return new Class(input, extensionRegistry);
+      }
+    };
 
     @java.lang.Override
     public com.google.protobuf.Parser<Class> getParserForType() {
@@ -1896,14 +1748,12 @@ public final class Primitives {
     private int bitField0_;
     public static final int NAME_FIELD_NUMBER = 1;
     private java.lang.Object name_;
-
     /**
      * <code>optional string name = 1;</code>
      */
     public boolean hasName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-
     /**
      * <code>optional string name = 1;</code>
      */
@@ -1912,8 +1762,8 @@ public final class Primitives {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           name_ = s;
@@ -1921,17 +1771,16 @@ public final class Primitives {
         return s;
       }
     }
-
     /**
      * <code>optional string name = 1;</code>
      */
     public com.google.protobuf.ByteString
-    getNameBytes() {
+        getNameBytes() {
       java.lang.Object ref = name_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         name_ = b;
         return b;
       } else {
@@ -1941,14 +1790,12 @@ public final class Primitives {
 
     public static final int UNKNOWN_FIELD_NUMBER = 2;
     private boolean unknown_;
-
     /**
      * <code>optional bool unknown = 2 [default = false];</code>
      */
     public boolean hasUnknown() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-
     /**
      * <code>optional bool unknown = 2 [default = false];</code>
      */
@@ -1960,9 +1807,7 @@ public final class Primitives {
       name_ = "";
       unknown_ = false;
     }
-
     private byte memoizedIsInitialized = -1;
-
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -1973,7 +1818,7 @@ public final class Primitives {
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-      throws java.io.IOException {
+                        throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeBytes(1, getNameBytes());
@@ -1985,7 +1830,6 @@ public final class Primitives {
     }
 
     private int memoizedSerializedSize = -1;
-
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
@@ -2005,115 +1849,95 @@ public final class Primitives {
     }
 
     private static final long serialVersionUID = 0L;
-
     @java.lang.Override
     protected java.lang.Object writeReplace()
-      throws java.io.ObjectStreamException {
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
 
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Class parseFrom(
-      com.google.protobuf.ByteString data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Class parseFrom(
-      com.google.protobuf.ByteString data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Class parseFrom(byte[] data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Class parseFrom(
-      byte[] data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Class parseFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Class parseFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Class parseDelimitedFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Class parseDelimitedFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Class parseFrom(
-      com.google.protobuf.CodedInputStream input)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Primitives.Class parseFrom(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
 
-    public static Builder newBuilder() {
-      return Builder.create();
-    }
-
-    public Builder newBuilderForType() {
-      return newBuilder();
-    }
-
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(com.ittera.cometa.concentrator.messages.data.Primitives.Class prototype) {
       return newBuilder().mergeFrom(prototype);
     }
-
-    public Builder toBuilder() {
-      return newBuilder(this);
-    }
+    public Builder toBuilder() { return newBuilder(this); }
 
     @java.lang.Override
     protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-
     /**
      * Protobuf type {@code messages.data.Class}
      */
     public static final class Builder extends
-      com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:messages.data.Class)
-      com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder {
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.Class)
+        com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-      getDescriptor() {
+          getDescriptor() {
         return com.ittera.cometa.concentrator.messages.data.Primitives.internal_static_messages_data_Class_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internalGetFieldAccessorTable() {
+          internalGetFieldAccessorTable() {
         return com.ittera.cometa.concentrator.messages.data.Primitives.internal_static_messages_data_Class_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-            com.ittera.cometa.concentrator.messages.data.Primitives.Class.class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder.class);
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.concentrator.messages.data.Primitives.Class.class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder.class);
       }
 
       // Construct using com.ittera.cometa.concentrator.messages.data.Primitives.Class.newBuilder()
@@ -2122,16 +1946,14 @@ public final class Primitives {
       }
 
       private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
-
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
         }
       }
-
       private static Builder create() {
         return new Builder();
       }
@@ -2150,7 +1972,7 @@ public final class Primitives {
       }
 
       public com.google.protobuf.Descriptors.Descriptor
-      getDescriptorForType() {
+          getDescriptorForType() {
         return com.ittera.cometa.concentrator.messages.data.Primitives.internal_static_messages_data_Class_descriptor;
       }
 
@@ -2185,7 +2007,7 @@ public final class Primitives {
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof com.ittera.cometa.concentrator.messages.data.Primitives.Class) {
-          return mergeFrom((com.ittera.cometa.concentrator.messages.data.Primitives.Class) other);
+          return mergeFrom((com.ittera.cometa.concentrator.messages.data.Primitives.Class)other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -2211,9 +2033,9 @@ public final class Primitives {
       }
 
       public Builder mergeFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
         com.ittera.cometa.concentrator.messages.data.Primitives.Class parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
@@ -2227,18 +2049,15 @@ public final class Primitives {
         }
         return this;
       }
-
       private int bitField0_;
 
       private java.lang.Object name_ = "";
-
       /**
        * <code>optional string name = 1;</code>
        */
       public boolean hasName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-
       /**
        * <code>optional string name = 1;</code>
        */
@@ -2246,7 +2065,7 @@ public final class Primitives {
         java.lang.Object ref = name_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             name_ = s;
@@ -2256,38 +2075,35 @@ public final class Primitives {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string name = 1;</code>
        */
       public com.google.protobuf.ByteString
-      getNameBytes() {
+          getNameBytes() {
         java.lang.Object ref = name_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           name_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string name = 1;</code>
        */
       public Builder setName(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000001;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
         name_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string name = 1;</code>
        */
@@ -2297,37 +2113,33 @@ public final class Primitives {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string name = 1;</code>
        */
       public Builder setNameBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000001;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
         name_ = value;
         onChanged();
         return this;
       }
 
-      private boolean unknown_;
-
+      private boolean unknown_ ;
       /**
        * <code>optional bool unknown = 2 [default = false];</code>
        */
       public boolean hasUnknown() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-
       /**
        * <code>optional bool unknown = 2 [default = false];</code>
        */
       public boolean getUnknown() {
         return unknown_;
       }
-
       /**
        * <code>optional bool unknown = 2 [default = false];</code>
        */
@@ -2337,7 +2149,6 @@ public final class Primitives {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional bool unknown = 2 [default = false];</code>
        */
@@ -2362,58 +2173,56 @@ public final class Primitives {
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_Object_descriptor;
   private static
-  com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internal_static_messages_data_Object_fieldAccessorTable;
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_Object_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_Class_descriptor;
   private static
-  com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internal_static_messages_data_Class_fieldAccessorTable;
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_Class_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
-  getDescriptor() {
+      getDescriptor() {
     return descriptor;
   }
-
   private static com.google.protobuf.Descriptors.FileDescriptor
-    descriptor;
-
+      descriptor;
   static {
     java.lang.String[] descriptorData = {
       "\n\020primitives.proto\022\rmessages.data\"\321\001\n\006Ob" +
-        "ject\022\r\n\005value\030\001 \001(\t\022\014\n\004hash\030\002 \001(\005\022\024\n\014ide" +
-        "ntityHash\030\003 \002(\005\022#\n\005class\030\004 \002(\0132\024.message" +
-        "s.data.Class\022\026\n\007isArray\030\005 \001(\010:\005false\022)\n\n" +
-        "arrayValue\030\006 \003(\0132\025.messages.data.Object\022" +
-        "\017\n\007created\030\007 \001(\003\022\013\n\003ref\030\010 \001(\t\022\016\n\006isNull\030" +
-        "\t \002(\010\"-\n\005Class\022\014\n\004name\030\001 \001(\t\022\026\n\007unknown\030" +
-        "\002 \001(\010:\005falseB/\n+com.ittera.cometa.distri" +
-        "butor.messages.dataH\001"
+      "ject\022\r\n\005value\030\001 \001(\t\022\014\n\004hash\030\002 \001(\005\022\024\n\014ide" +
+      "ntityHash\030\003 \002(\005\022#\n\005class\030\004 \002(\0132\024.message" +
+      "s.data.Class\022\026\n\007isArray\030\005 \001(\010:\005false\022)\n\n" +
+      "arrayValue\030\006 \003(\0132\025.messages.data.Object\022" +
+      "\017\n\007created\030\007 \001(\003\022\013\n\003ref\030\010 \001(\t\022\016\n\006isNull\030" +
+      "\t \002(\010\"-\n\005Class\022\014\n\004name\030\001 \001(\t\022\026\n\007unknown\030" +
+      "\002 \001(\010:\005falseB0\n,com.ittera.cometa.concen" +
+      "trator.messages.dataH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
-      new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
-        public com.google.protobuf.ExtensionRegistry assignDescriptors(
-          com.google.protobuf.Descriptors.FileDescriptor root) {
-          descriptor = root;
-          return null;
-        }
-      };
+        new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
+          public com.google.protobuf.ExtensionRegistry assignDescriptors(
+              com.google.protobuf.Descriptors.FileDescriptor root) {
+            descriptor = root;
+            return null;
+          }
+        };
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
-        new com.google.protobuf.Descriptors.FileDescriptor[]{
+        new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
     internal_static_messages_data_Object_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_messages_data_Object_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-      internal_static_messages_data_Object_descriptor,
-      new java.lang.String[]{"Value", "Hash", "IdentityHash", "Class_", "IsArray", "ArrayValue", "Created", "Ref", "IsNull",});
+        internal_static_messages_data_Object_descriptor,
+        new java.lang.String[] { "Value", "Hash", "IdentityHash", "Class_", "IsArray", "ArrayValue", "Created", "Ref", "IsNull", });
     internal_static_messages_data_Class_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_messages_data_Class_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-      internal_static_messages_data_Class_descriptor,
-      new java.lang.String[]{"Name", "Unknown",});
+        internal_static_messages_data_Class_descriptor,
+        new java.lang.String[] { "Name", "Unknown", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

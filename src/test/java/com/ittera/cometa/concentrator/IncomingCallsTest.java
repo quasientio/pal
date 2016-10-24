@@ -13,7 +13,7 @@ import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
 import static org.junit.Assert.*;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class IncomingCallsTest extends AbstractDistributorTest {
+public class IncomingCallsTest extends AbstractConcentratorTest {
 
   @Test
   public void testConstructor() {

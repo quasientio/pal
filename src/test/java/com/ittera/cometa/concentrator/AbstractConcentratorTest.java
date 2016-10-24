@@ -25,7 +25,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 
-public abstract class AbstractDistributorTest {
+public abstract class AbstractConcentratorTest {
 
   protected final static Logger logger = LogManager.getLogger("tests");
 
@@ -45,7 +45,7 @@ public abstract class AbstractDistributorTest {
   public static void initialize() throws IOException {
     //load properties
     final Properties properties = new Properties();
-    try (final InputStream stream = AbstractDistributorTest.class.getResourceAsStream("/tests.properties")) {
+    try (final InputStream stream = AbstractConcentratorTest.class.getResourceAsStream("/tests.properties")) {
       properties.load(stream);
     }
 

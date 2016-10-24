@@ -4,27 +4,22 @@
 package com.ittera.cometa.concentrator.messages.data;
 
 public final class Ctxt {
-  private Ctxt() {
-  }
-
+  private Ctxt() {}
   public static void registerAllExtensions(
-    com.google.protobuf.ExtensionRegistry registry) {
+      com.google.protobuf.ExtensionRegistry registry) {
   }
-
   public interface ContextOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:messages.data.Context)
-    com.google.protobuf.MessageOrBuilder {
+      // @@protoc_insertion_point(interface_extends:messages.data.Context)
+      com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>optional .messages.data.Class senderClass = 1;</code>
      */
     boolean hasSenderClass();
-
     /**
      * <code>optional .messages.data.Class senderClass = 1;</code>
      */
     com.ittera.cometa.concentrator.messages.data.Primitives.Class getSenderClass();
-
     /**
      * <code>optional .messages.data.Class senderClass = 1;</code>
      */
@@ -34,12 +29,10 @@ public final class Ctxt {
      * <code>optional .messages.data.Object sender = 2;</code>
      */
     boolean hasSender();
-
     /**
      * <code>optional .messages.data.Object sender = 2;</code>
      */
     com.ittera.cometa.concentrator.messages.data.Primitives.Object getSender();
-
     /**
      * <code>optional .messages.data.Object sender = 2;</code>
      */
@@ -47,37 +40,34 @@ public final class Ctxt {
 
     /**
      * <code>optional string sourceLocationFile = 3;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     boolean hasSourceLocationFile();
-
     /**
      * <code>optional string sourceLocationFile = 3;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     java.lang.String getSourceLocationFile();
-
     /**
      * <code>optional string sourceLocationFile = 3;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     com.google.protobuf.ByteString
-    getSourceLocationFileBytes();
+        getSourceLocationFileBytes();
 
     /**
      * <code>optional int32 sourceLocationLine = 4;</code>
      */
     boolean hasSourceLocationLine();
-
     /**
      * <code>optional int32 sourceLocationLine = 4;</code>
      */
@@ -87,38 +77,31 @@ public final class Ctxt {
      * <code>optional string sourceLocationType = 5;</code>
      */
     boolean hasSourceLocationType();
-
     /**
      * <code>optional string sourceLocationType = 5;</code>
      */
     java.lang.String getSourceLocationType();
-
     /**
      * <code>optional string sourceLocationType = 5;</code>
      */
     com.google.protobuf.ByteString
-    getSourceLocationTypeBytes();
+        getSourceLocationTypeBytes();
   }
-
   /**
    * Protobuf type {@code messages.data.Context}
    */
   public static final class Context extends
-    com.google.protobuf.GeneratedMessage implements
-    // @@protoc_insertion_point(message_implements:messages.data.Context)
-    ContextOrBuilder {
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:messages.data.Context)
+      ContextOrBuilder {
     // Use Context.newBuilder() to construct.
     private Context(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-
-    private Context(boolean noInit) {
-      this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance();
-    }
+    private Context(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
     private static final Context defaultInstance;
-
     public static Context getDefaultInstance() {
       return defaultInstance;
     }
@@ -128,21 +111,19 @@ public final class Ctxt {
     }
 
     private final com.google.protobuf.UnknownFieldSet unknownFields;
-
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+        getUnknownFields() {
       return this.unknownFields;
     }
-
     private Context(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -153,7 +134,7 @@ public final class Ctxt {
               break;
             default: {
               if (!parseUnknownField(input, unknownFields,
-                extensionRegistry, tag)) {
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -207,34 +188,33 @@ public final class Ctxt {
         throw e.setUnfinishedMessage(this);
       } catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
-          e.getMessage()).setUnfinishedMessage(this);
+            e.getMessage()).setUnfinishedMessage(this);
       } finally {
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
-
     public static final com.google.protobuf.Descriptors.Descriptor
-    getDescriptor() {
+        getDescriptor() {
       return com.ittera.cometa.concentrator.messages.data.Ctxt.internal_static_messages_data_Context_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internalGetFieldAccessorTable() {
+        internalGetFieldAccessorTable() {
       return com.ittera.cometa.concentrator.messages.data.Ctxt.internal_static_messages_data_Context_fieldAccessorTable
-        .ensureFieldAccessorsInitialized(
-          com.ittera.cometa.concentrator.messages.data.Ctxt.Context.class, com.ittera.cometa.concentrator.messages.data.Ctxt.Context.Builder.class);
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.concentrator.messages.data.Ctxt.Context.class, com.ittera.cometa.concentrator.messages.data.Ctxt.Context.Builder.class);
     }
 
     public static com.google.protobuf.Parser<Context> PARSER =
-      new com.google.protobuf.AbstractParser<Context>() {
-        public Context parsePartialFrom(
+        new com.google.protobuf.AbstractParser<Context>() {
+      public Context parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new Context(input, extensionRegistry);
-        }
-      };
+        return new Context(input, extensionRegistry);
+      }
+    };
 
     @java.lang.Override
     public com.google.protobuf.Parser<Context> getParserForType() {
@@ -244,21 +224,18 @@ public final class Ctxt {
     private int bitField0_;
     public static final int SENDERCLASS_FIELD_NUMBER = 1;
     private com.ittera.cometa.concentrator.messages.data.Primitives.Class senderClass_;
-
     /**
      * <code>optional .messages.data.Class senderClass = 1;</code>
      */
     public boolean hasSenderClass() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-
     /**
      * <code>optional .messages.data.Class senderClass = 1;</code>
      */
     public com.ittera.cometa.concentrator.messages.data.Primitives.Class getSenderClass() {
       return senderClass_;
     }
-
     /**
      * <code>optional .messages.data.Class senderClass = 1;</code>
      */
@@ -268,21 +245,18 @@ public final class Ctxt {
 
     public static final int SENDER_FIELD_NUMBER = 2;
     private com.ittera.cometa.concentrator.messages.data.Primitives.Object sender_;
-
     /**
      * <code>optional .messages.data.Object sender = 2;</code>
      */
     public boolean hasSender() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-
     /**
      * <code>optional .messages.data.Object sender = 2;</code>
      */
     public com.ittera.cometa.concentrator.messages.data.Primitives.Object getSender() {
       return sender_;
     }
-
     /**
      * <code>optional .messages.data.Object sender = 2;</code>
      */
@@ -292,23 +266,21 @@ public final class Ctxt {
 
     public static final int SOURCELOCATIONFILE_FIELD_NUMBER = 3;
     private java.lang.Object sourceLocationFile_;
-
     /**
      * <code>optional string sourceLocationFile = 3;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public boolean hasSourceLocationFile() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-
     /**
      * <code>optional string sourceLocationFile = 3;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public java.lang.String getSourceLocationFile() {
@@ -316,8 +288,8 @@ public final class Ctxt {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           sourceLocationFile_ = s;
@@ -325,21 +297,20 @@ public final class Ctxt {
         return s;
       }
     }
-
     /**
      * <code>optional string sourceLocationFile = 3;</code>
-     * <p>
+     *
      * <pre>
-     * source context from where the call was made
+     *source context from where the call was made
      * </pre>
      */
     public com.google.protobuf.ByteString
-    getSourceLocationFileBytes() {
+        getSourceLocationFileBytes() {
       java.lang.Object ref = sourceLocationFile_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         sourceLocationFile_ = b;
         return b;
       } else {
@@ -349,14 +320,12 @@ public final class Ctxt {
 
     public static final int SOURCELOCATIONLINE_FIELD_NUMBER = 4;
     private int sourceLocationLine_;
-
     /**
      * <code>optional int32 sourceLocationLine = 4;</code>
      */
     public boolean hasSourceLocationLine() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-
     /**
      * <code>optional int32 sourceLocationLine = 4;</code>
      */
@@ -366,14 +335,12 @@ public final class Ctxt {
 
     public static final int SOURCELOCATIONTYPE_FIELD_NUMBER = 5;
     private java.lang.Object sourceLocationType_;
-
     /**
      * <code>optional string sourceLocationType = 5;</code>
      */
     public boolean hasSourceLocationType() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
-
     /**
      * <code>optional string sourceLocationType = 5;</code>
      */
@@ -382,8 +349,8 @@ public final class Ctxt {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs =
-          (com.google.protobuf.ByteString) ref;
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
           sourceLocationType_ = s;
@@ -391,17 +358,16 @@ public final class Ctxt {
         return s;
       }
     }
-
     /**
      * <code>optional string sourceLocationType = 5;</code>
      */
     public com.google.protobuf.ByteString
-    getSourceLocationTypeBytes() {
+        getSourceLocationTypeBytes() {
       java.lang.Object ref = sourceLocationType_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b =
-          com.google.protobuf.ByteString.copyFromUtf8(
-            (java.lang.String) ref);
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         sourceLocationType_ = b;
         return b;
       } else {
@@ -416,9 +382,7 @@ public final class Ctxt {
       sourceLocationLine_ = 0;
       sourceLocationType_ = "";
     }
-
     private byte memoizedIsInitialized = -1;
-
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -435,7 +399,7 @@ public final class Ctxt {
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-      throws java.io.IOException {
+                        throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeMessage(1, senderClass_);
@@ -456,7 +420,6 @@ public final class Ctxt {
     }
 
     private int memoizedSerializedSize = -1;
-
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
@@ -488,115 +451,95 @@ public final class Ctxt {
     }
 
     private static final long serialVersionUID = 0L;
-
     @java.lang.Override
     protected java.lang.Object writeReplace()
-      throws java.io.ObjectStreamException {
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
 
     public static com.ittera.cometa.concentrator.messages.data.Ctxt.Context parseFrom(
-      com.google.protobuf.ByteString data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Ctxt.Context parseFrom(
-      com.google.protobuf.ByteString data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Ctxt.Context parseFrom(byte[] data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Ctxt.Context parseFrom(
-      byte[] data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Ctxt.Context parseFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Ctxt.Context parseFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Ctxt.Context parseDelimitedFrom(java.io.InputStream input)
-      throws java.io.IOException {
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Ctxt.Context parseDelimitedFrom(
-      java.io.InputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Ctxt.Context parseFrom(
-      com.google.protobuf.CodedInputStream input)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-
     public static com.ittera.cometa.concentrator.messages.data.Ctxt.Context parseFrom(
-      com.google.protobuf.CodedInputStream input,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
 
-    public static Builder newBuilder() {
-      return Builder.create();
-    }
-
-    public Builder newBuilderForType() {
-      return newBuilder();
-    }
-
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(com.ittera.cometa.concentrator.messages.data.Ctxt.Context prototype) {
       return newBuilder().mergeFrom(prototype);
     }
-
-    public Builder toBuilder() {
-      return newBuilder(this);
-    }
+    public Builder toBuilder() { return newBuilder(this); }
 
     @java.lang.Override
     protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
-
     /**
      * Protobuf type {@code messages.data.Context}
      */
     public static final class Builder extends
-      com.google.protobuf.GeneratedMessage.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:messages.data.Context)
-      com.ittera.cometa.concentrator.messages.data.Ctxt.ContextOrBuilder {
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:messages.data.Context)
+        com.ittera.cometa.concentrator.messages.data.Ctxt.ContextOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-      getDescriptor() {
+          getDescriptor() {
         return com.ittera.cometa.concentrator.messages.data.Ctxt.internal_static_messages_data_Context_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internalGetFieldAccessorTable() {
+          internalGetFieldAccessorTable() {
         return com.ittera.cometa.concentrator.messages.data.Ctxt.internal_static_messages_data_Context_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-            com.ittera.cometa.concentrator.messages.data.Ctxt.Context.class, com.ittera.cometa.concentrator.messages.data.Ctxt.Context.Builder.class);
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.concentrator.messages.data.Ctxt.Context.class, com.ittera.cometa.concentrator.messages.data.Ctxt.Context.Builder.class);
       }
 
       // Construct using com.ittera.cometa.concentrator.messages.data.Ctxt.Context.newBuilder()
@@ -605,18 +548,16 @@ public final class Ctxt {
       }
 
       private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
-
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getSenderClassFieldBuilder();
           getSenderFieldBuilder();
         }
       }
-
       private static Builder create() {
         return new Builder();
       }
@@ -649,7 +590,7 @@ public final class Ctxt {
       }
 
       public com.google.protobuf.Descriptors.Descriptor
-      getDescriptorForType() {
+          getDescriptorForType() {
         return com.ittera.cometa.concentrator.messages.data.Ctxt.internal_static_messages_data_Context_descriptor;
       }
 
@@ -704,7 +645,7 @@ public final class Ctxt {
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof com.ittera.cometa.concentrator.messages.data.Ctxt.Context) {
-          return mergeFrom((com.ittera.cometa.concentrator.messages.data.Ctxt.Context) other);
+          return mergeFrom((com.ittera.cometa.concentrator.messages.data.Ctxt.Context)other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -739,7 +680,7 @@ public final class Ctxt {
       public final boolean isInitialized() {
         if (hasSender()) {
           if (!getSender().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -747,9 +688,9 @@ public final class Ctxt {
       }
 
       public Builder mergeFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
         com.ittera.cometa.concentrator.messages.data.Ctxt.Context parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
@@ -763,20 +704,17 @@ public final class Ctxt {
         }
         return this;
       }
-
       private int bitField0_;
 
       private com.ittera.cometa.concentrator.messages.data.Primitives.Class senderClass_ = com.ittera.cometa.concentrator.messages.data.Primitives.Class.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder> senderClassBuilder_;
-
+          com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder> senderClassBuilder_;
       /**
        * <code>optional .messages.data.Class senderClass = 1;</code>
        */
       public boolean hasSenderClass() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-
       /**
        * <code>optional .messages.data.Class senderClass = 1;</code>
        */
@@ -787,7 +725,6 @@ public final class Ctxt {
           return senderClassBuilder_.getMessage();
         }
       }
-
       /**
        * <code>optional .messages.data.Class senderClass = 1;</code>
        */
@@ -804,12 +741,11 @@ public final class Ctxt {
         bitField0_ |= 0x00000001;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Class senderClass = 1;</code>
        */
       public Builder setSenderClass(
-        com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder builderForValue) {
+          com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder builderForValue) {
         if (senderClassBuilder_ == null) {
           senderClass_ = builderForValue.build();
           onChanged();
@@ -819,14 +755,13 @@ public final class Ctxt {
         bitField0_ |= 0x00000001;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Class senderClass = 1;</code>
        */
       public Builder mergeSenderClass(com.ittera.cometa.concentrator.messages.data.Primitives.Class value) {
         if (senderClassBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
-            senderClass_ != com.ittera.cometa.concentrator.messages.data.Primitives.Class.getDefaultInstance()) {
+              senderClass_ != com.ittera.cometa.concentrator.messages.data.Primitives.Class.getDefaultInstance()) {
             senderClass_ =
               com.ittera.cometa.concentrator.messages.data.Primitives.Class.newBuilder(senderClass_).mergeFrom(value).buildPartial();
           } else {
@@ -839,7 +774,6 @@ public final class Ctxt {
         bitField0_ |= 0x00000001;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Class senderClass = 1;</code>
        */
@@ -853,7 +787,6 @@ public final class Ctxt {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-
       /**
        * <code>optional .messages.data.Class senderClass = 1;</code>
        */
@@ -862,7 +795,6 @@ public final class Ctxt {
         onChanged();
         return getSenderClassFieldBuilder().getBuilder();
       }
-
       /**
        * <code>optional .messages.data.Class senderClass = 1;</code>
        */
@@ -873,19 +805,18 @@ public final class Ctxt {
           return senderClass_;
         }
       }
-
       /**
        * <code>optional .messages.data.Class senderClass = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder>
-      getSenderClassFieldBuilder() {
+          com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder> 
+          getSenderClassFieldBuilder() {
         if (senderClassBuilder_ == null) {
           senderClassBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder>(
-            getSenderClass(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.concentrator.messages.data.Primitives.Class, com.ittera.cometa.concentrator.messages.data.Primitives.Class.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ClassOrBuilder>(
+                  getSenderClass(),
+                  getParentForChildren(),
+                  isClean());
           senderClass_ = null;
         }
         return senderClassBuilder_;
@@ -893,15 +824,13 @@ public final class Ctxt {
 
       private com.ittera.cometa.concentrator.messages.data.Primitives.Object sender_ = com.ittera.cometa.concentrator.messages.data.Primitives.Object.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
-
+          com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder> senderBuilder_;
       /**
        * <code>optional .messages.data.Object sender = 2;</code>
        */
       public boolean hasSender() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-
       /**
        * <code>optional .messages.data.Object sender = 2;</code>
        */
@@ -912,7 +841,6 @@ public final class Ctxt {
           return senderBuilder_.getMessage();
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 2;</code>
        */
@@ -929,12 +857,11 @@ public final class Ctxt {
         bitField0_ |= 0x00000002;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 2;</code>
        */
       public Builder setSender(
-        com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder builderForValue) {
+          com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder builderForValue) {
         if (senderBuilder_ == null) {
           sender_ = builderForValue.build();
           onChanged();
@@ -944,14 +871,13 @@ public final class Ctxt {
         bitField0_ |= 0x00000002;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 2;</code>
        */
       public Builder mergeSender(com.ittera.cometa.concentrator.messages.data.Primitives.Object value) {
         if (senderBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-            sender_ != com.ittera.cometa.concentrator.messages.data.Primitives.Object.getDefaultInstance()) {
+              sender_ != com.ittera.cometa.concentrator.messages.data.Primitives.Object.getDefaultInstance()) {
             sender_ =
               com.ittera.cometa.concentrator.messages.data.Primitives.Object.newBuilder(sender_).mergeFrom(value).buildPartial();
           } else {
@@ -964,7 +890,6 @@ public final class Ctxt {
         bitField0_ |= 0x00000002;
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 2;</code>
        */
@@ -978,7 +903,6 @@ public final class Ctxt {
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
-
       /**
        * <code>optional .messages.data.Object sender = 2;</code>
        */
@@ -987,7 +911,6 @@ public final class Ctxt {
         onChanged();
         return getSenderFieldBuilder().getBuilder();
       }
-
       /**
        * <code>optional .messages.data.Object sender = 2;</code>
        */
@@ -998,49 +921,46 @@ public final class Ctxt {
           return sender_;
         }
       }
-
       /**
        * <code>optional .messages.data.Object sender = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-        com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder>
-      getSenderFieldBuilder() {
+          com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder> 
+          getSenderFieldBuilder() {
         if (senderBuilder_ == null) {
           senderBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder>(
-            getSender(),
-            getParentForChildren(),
-            isClean());
+              com.ittera.cometa.concentrator.messages.data.Primitives.Object, com.ittera.cometa.concentrator.messages.data.Primitives.Object.Builder, com.ittera.cometa.concentrator.messages.data.Primitives.ObjectOrBuilder>(
+                  getSender(),
+                  getParentForChildren(),
+                  isClean());
           sender_ = null;
         }
         return senderBuilder_;
       }
 
       private java.lang.Object sourceLocationFile_ = "";
-
       /**
        * <code>optional string sourceLocationFile = 3;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public boolean hasSourceLocationFile() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-
       /**
        * <code>optional string sourceLocationFile = 3;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public java.lang.String getSourceLocationFile() {
         java.lang.Object ref = sourceLocationFile_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             sourceLocationFile_ = s;
@@ -1050,51 +970,48 @@ public final class Ctxt {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationFile = 3;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public com.google.protobuf.ByteString
-      getSourceLocationFileBytes() {
+          getSourceLocationFileBytes() {
         java.lang.Object ref = sourceLocationFile_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           sourceLocationFile_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationFile = 3;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder setSourceLocationFile(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000004;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
         sourceLocationFile_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationFile = 3;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder clearSourceLocationFile() {
@@ -1103,41 +1020,37 @@ public final class Ctxt {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationFile = 3;</code>
-       * <p>
+       *
        * <pre>
-       * source context from where the call was made
+       *source context from where the call was made
        * </pre>
        */
       public Builder setSourceLocationFileBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000004;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
         sourceLocationFile_ = value;
         onChanged();
         return this;
       }
 
-      private int sourceLocationLine_;
-
+      private int sourceLocationLine_ ;
       /**
        * <code>optional int32 sourceLocationLine = 4;</code>
        */
       public boolean hasSourceLocationLine() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 4;</code>
        */
       public int getSourceLocationLine() {
         return sourceLocationLine_;
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 4;</code>
        */
@@ -1147,7 +1060,6 @@ public final class Ctxt {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional int32 sourceLocationLine = 4;</code>
        */
@@ -1159,14 +1071,12 @@ public final class Ctxt {
       }
 
       private java.lang.Object sourceLocationType_ = "";
-
       /**
        * <code>optional string sourceLocationType = 5;</code>
        */
       public boolean hasSourceLocationType() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-
       /**
        * <code>optional string sourceLocationType = 5;</code>
        */
@@ -1174,7 +1084,7 @@ public final class Ctxt {
         java.lang.Object ref = sourceLocationType_;
         if (!(ref instanceof java.lang.String)) {
           com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
+              (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
             sourceLocationType_ = s;
@@ -1184,38 +1094,35 @@ public final class Ctxt {
           return (java.lang.String) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationType = 5;</code>
        */
       public com.google.protobuf.ByteString
-      getSourceLocationTypeBytes() {
+          getSourceLocationTypeBytes() {
         java.lang.Object ref = sourceLocationType_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b =
-            com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           sourceLocationType_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
-
       /**
        * <code>optional string sourceLocationType = 5;</code>
        */
       public Builder setSourceLocationType(
-        java.lang.String value) {
+          java.lang.String value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000010;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
         sourceLocationType_ = value;
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationType = 5;</code>
        */
@@ -1225,16 +1132,15 @@ public final class Ctxt {
         onChanged();
         return this;
       }
-
       /**
        * <code>optional string sourceLocationType = 5;</code>
        */
       public Builder setSourceLocationTypeBytes(
-        com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000010;
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
         sourceLocationType_ = value;
         onChanged();
         return this;
@@ -1254,46 +1160,44 @@ public final class Ctxt {
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_messages_data_Context_descriptor;
   private static
-  com.google.protobuf.GeneratedMessage.FieldAccessorTable
-    internal_static_messages_data_Context_fieldAccessorTable;
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_messages_data_Context_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
-  getDescriptor() {
+      getDescriptor() {
     return descriptor;
   }
-
   private static com.google.protobuf.Descriptors.FileDescriptor
-    descriptor;
-
+      descriptor;
   static {
     java.lang.String[] descriptorData = {
       "\n\nctxt.proto\022\rmessages.data\032\020primitives." +
-        "proto\"\257\001\n\007Context\022)\n\013senderClass\030\001 \001(\0132\024" +
-        ".messages.data.Class\022%\n\006sender\030\002 \001(\0132\025.m" +
-        "essages.data.Object\022\032\n\022sourceLocationFil" +
-        "e\030\003 \001(\t\022\032\n\022sourceLocationLine\030\004 \001(\005\022\032\n\022s" +
-        "ourceLocationType\030\005 \001(\tB5\n+com.ittera.co" +
-        "meta.concentrator.messages.dataB\004CtxtH\001"
+      "proto\"\257\001\n\007Context\022)\n\013senderClass\030\001 \001(\0132\024" +
+      ".messages.data.Class\022%\n\006sender\030\002 \001(\0132\025.m" +
+      "essages.data.Object\022\032\n\022sourceLocationFil" +
+      "e\030\003 \001(\t\022\032\n\022sourceLocationLine\030\004 \001(\005\022\032\n\022s" +
+      "ourceLocationType\030\005 \001(\tB6\n,com.ittera.co" +
+      "meta.concentrator.messages.dataB\004CtxtH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
-      new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
-        public com.google.protobuf.ExtensionRegistry assignDescriptors(
-          com.google.protobuf.Descriptors.FileDescriptor root) {
-          descriptor = root;
-          return null;
-        }
-      };
+        new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
+          public com.google.protobuf.ExtensionRegistry assignDescriptors(
+              com.google.protobuf.Descriptors.FileDescriptor root) {
+            descriptor = root;
+            return null;
+          }
+        };
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
-        new com.google.protobuf.Descriptors.FileDescriptor[]{
+        new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.ittera.cometa.concentrator.messages.data.Primitives.getDescriptor(),
         }, assigner);
     internal_static_messages_data_Context_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_messages_data_Context_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-      internal_static_messages_data_Context_descriptor,
-      new java.lang.String[]{"SenderClass", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType",});
+        internal_static_messages_data_Context_descriptor,
+        new java.lang.String[] { "SenderClass", "Sender", "SourceLocationFile", "SourceLocationLine", "SourceLocationType", });
     com.ittera.cometa.concentrator.messages.data.Primitives.getDescriptor();
   }
 
