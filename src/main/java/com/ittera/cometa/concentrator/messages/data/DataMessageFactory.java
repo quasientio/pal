@@ -18,7 +18,7 @@ import org.apache.logging.log4j.LogManager;
 
 /**
  * Methods of this class receive aspectj objects (i.e. StaticPart) as arguments as convenience.
- * TO DO: Unwrapp the necessary arguments in the caller (Distributor) to make this class agnostic
+ * TO DO: Unwrapp the necessary arguments in the caller (Concentrator) to make this class agnostic
  */
 public class DataMessageFactory {
   protected static final Logger logger = LogManager.getLogger(DataMessageFactory.class);
@@ -662,7 +662,7 @@ public class DataMessageFactory {
 
   /**
    * Wrapped is the actual value if object is a primitive, a String, or an array of these types
-   * Objects created by this Distributor, are expected to be looked up in the object map by their identity hashCode.
+   * Objects created by this Concentrator, are expected to be looked up in the object map by their identity hashCode.
    *
    * @param object
    * @return
@@ -690,7 +690,7 @@ public class DataMessageFactory {
       } else {
         /** the object is not primitive, String or Array
          *  We set the isRef flag. We assume the object will be found in the objects map keyed with its identityHash, set below
-         *  TODO: when object not created by this Distributor, full (deep) serialization/deserialization will be required
+         *  TODO: when object not created by this Concentrator, full (deep) serialization/deserialization will be required
          *  TODO: if it's of type Class, treat differently?
          **/
         if (objectKey != null) {

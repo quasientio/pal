@@ -22,7 +22,7 @@ message StaticFieldGet {
 
     required int64 currentTime = 3;
 
-    //TODO:  IP or hostname for this Distributor
+    //TODO:  IP or hostname for this Concentrator
 
     // --- CONTEXT
 
@@ -48,7 +48,7 @@ message StaticFieldPut {
 
     required int64 currentTime = 3;
 
-    //TODO:  IP or hostname for this Distributor
+    //TODO:  IP or hostname for this Concentrator
 
     // --- CONTEXT
 
@@ -79,7 +79,7 @@ message StaticFieldPutDone {
 
     required int64 currentTime = 3;
 
-    //TODO:  IP or hostname for this Distributor
+    //TODO:  IP or hostname for this Concentrator
 
     // --- CONTEXT
 
@@ -103,7 +103,7 @@ message InstanceFieldGet {
 
     required int64 currentTime = 3;
 
-    //TODO:  IP or hostname for this Distributor
+    //TODO:  IP or hostname for this Concentrator
 
     // --- CONTEXT
 
@@ -135,7 +135,7 @@ message InstanceFieldPut {
 
     required int64 currentTime = 3;
 
-    //TODO:  IP or hostname for this Distributor
+    //TODO:  IP or hostname for this Concentrator
 
     // --- CONTEXT
 
@@ -172,7 +172,7 @@ message InstanceFieldPutDone {
 
     required int64 currentTime = 3;
 
-    //TODO:  IP or hostname for this Distributor
+    //TODO:  IP or hostname for this Concentrator
 
     // --- CONTEXT
 

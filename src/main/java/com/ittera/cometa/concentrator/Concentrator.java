@@ -30,8 +30,8 @@ import org.apache.logging.log4j.LogManager;
 
 import org.apache.commons.lang3.StringUtils;
 
-public class Distributor {
-  protected static final Logger logger = LogManager.getLogger(Distributor.class);
+public class Concentrator {
+  protected static final Logger logger = LogManager.getLogger(Concentrator.class);
 
 
   /**
@@ -43,7 +43,7 @@ public class Distributor {
   static final Map<Long, BlockingQueue> threadBlockingQueueMap = new ConcurrentHashMap();
   static final Map<String, Object> objectMap = new ConcurrentHashMap<>();
 
-  //A map for all objects created by the Distributor. TODO: store as WeakReferences -> until then, no threads will get garbage cleaned!
+  //A map for all objects created by the Concentrator. TODO: store as WeakReferences -> until then, no threads will get garbage cleaned!
   private static Wrappers.DataMessage receiveMsgForCurrentThread() {
     long currThreadId = Thread.currentThread().getId();
     Wrappers.DataMessage rcvdMsg = null;
@@ -88,7 +88,7 @@ public class Distributor {
     try {
       clazz = Class.forName(staticPart.getSignature().getDeclaringType().getName());
       randomLong = ThreadLocalRandom.current().nextLong();
-      //Class.forName(codeSignature.getDeclaringTypeName(),true, Distributor.class.getClassLoader());
+      //Class.forName(codeSignature.getDeclaringTypeName(),true, Concentrator.class.getClassLoader());
     } catch (ClassNotFoundException cnfe) {
       exceptionWhileLoadingClass = cnfe;
     }
@@ -436,7 +436,7 @@ public class Distributor {
       List<Object> args = new ArrayList<>();
       int objIdx = 0;
       for (Primitives.Object obj : instanceMethodCall.getParameterList()) {
-        //if object created by this Distributor, get it from object map
+        //if object created by this Concentrator, get it from object map
 //        if (objects.containsKey(obj.getIdentityHash())) {
 //          args.add(lookupObject(obj));
 //        } else { //else unwrap using ProtobufUtils (only primitives and Strings supported)
@@ -1167,7 +1167,7 @@ public class Distributor {
   }
 
   /**
-   * The Distributor takes 1 only argument, which is the location of the configuration (.properties) file
+   * The Concentrator takes 1 only argument, which is the location of the configuration (.properties) file
    *
    * @param args
    */
@@ -1187,8 +1187,8 @@ public class Distributor {
     }
 
 
-    /** Configure Distributor **/
-    Distributor.id = Integer.parseInt(properties.getProperty("id"));
+    /** Configure Concentrator **/
+    Concentrator.id = Integer.parseInt(properties.getProperty("id"));
 
     /** Add shutdown hook **/
     Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -1228,7 +1228,7 @@ public class Distributor {
       }
     }
     //other producer specific props
-    kafkaProducerProps.put("client.id", String.valueOf(Distributor.id));
+    kafkaProducerProps.put("client.id", String.valueOf(Concentrator.id));
     String kafkaTopic = properties.getProperty("kafkaTopic");
     broker = new MessageBroker(kafkaProducerProps, kafkaTopic);
 

@@ -17,7 +17,7 @@ message ConstructorCall {
 
     required int64 currentTime = 3;
 
-    //TO DO:  IP or hostname for this Distributor
+    //TO DO:  IP or hostname for this Concentrator
 
     // --- CONTEXT
 
@@ -46,7 +46,7 @@ message InstanceMethodCall {
 
     required int64 currentTime = 3;
 
-    //TO DO:  IP or hostname for this Distributor
+    //TO DO:  IP or hostname for this Concentrator
 
     // --- CONTEXT
 
@@ -85,7 +85,7 @@ message ClInitCall {
 
     required int64 currentTime = 3;
 
-    //TO DO:  IP or hostname for this Distributor
+    //TO DO:  IP or hostname for this Concentrator
 
     // --- CONTEXT
 
@@ -109,7 +109,7 @@ message ClassMethodCall {
 
     required int64 currentTime = 3;
 
-    //TO DO:  IP or hostname for this Distributor
+    //TO DO:  IP or hostname for this Concentrator
 
     // --- CONTEXT
 

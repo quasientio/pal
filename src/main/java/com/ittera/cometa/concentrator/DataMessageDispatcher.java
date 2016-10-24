@@ -48,9 +48,9 @@ public class DataMessageDispatcher extends Thread {
 
   private DataMessageDispatcher(Properties props) {
     pollTimeout = Long.parseLong((String) props.remove("pollTimeout"));
-    props.put("group.id", String.valueOf(Distributor.id));
+    props.put("group.id", String.valueOf(Concentrator.id));
     consumer = new KafkaConsumer<>(props);
-    //consumer.subscribe(Arrays.asList(Distributor.kafkaTopic));
+    //consumer.subscribe(Arrays.asList(Concentrator.kafkaTopic));
 
     //manual assignment of partition so we can control offset seek
     TopicPartition topicPartition = new TopicPartition(MessageBroker.kafkaTopic, 0);
@@ -75,34 +75,34 @@ public class DataMessageDispatcher extends Thread {
         long threadId = dataMessage.getThreadId();
         final long recordOffset = record.offset();
         //if threadId not in our threadQueue, then push to new/random thread
-        if (!Distributor.threadBlockingQueueMap.containsKey(threadId)) {
-          logger.debug("Thread queue has thread with ids" + Distributor.threadBlockingQueueMap.keySet());
+        if (!Concentrator.threadBlockingQueueMap.containsKey(threadId)) {
+          logger.debug("Thread queue has thread with ids" + Concentrator.threadBlockingQueueMap.keySet());
           logger.debug("No thread for incoming call, creating new one and dispatching...");
           executorService.submit(new Runnable() {
             @Override
             public void run() {
-              //TODO call Distributor.incomingCall() which should dispatch as done here based on encapsulated type
+              //TODO call Concentrator.incomingCall() which should dispatch as done here based on encapsulated type
               if (dataMessage.hasConstructorCall()) {
                 Calls.ConstructorCall constructorCall = dataMessage.getConstructorCall();
-                Distributor.incomingConstructor(constructorCall, recordOffset);
+                Concentrator.incomingConstructor(constructorCall, recordOffset);
               } else if (dataMessage.hasClassMethodCall()) {
                 Calls.ClassMethodCall methodCall = dataMessage.getClassMethodCall();
-                Distributor.incomingClassMethod(methodCall, recordOffset);
+                Concentrator.incomingClassMethod(methodCall, recordOffset);
               } else if (dataMessage.hasInstanceMethodCall()) {
                 Calls.InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
-                Distributor.incomingInstanceMethod(methodCall, recordOffset);
+                Concentrator.incomingInstanceMethod(methodCall, recordOffset);
               } else if (dataMessage.hasStaticFieldGet()) {
                 Fields.StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
-                Distributor.incomingGetStatic(staticFieldGetCall, recordOffset);
+                Concentrator.incomingGetStatic(staticFieldGetCall, recordOffset);
               } else if (dataMessage.hasInstanceFieldGet()) {
                 Fields.InstanceFieldGet instanceFieldGet = dataMessage.getInstanceFieldGet();
-                Distributor.incomingGetObject(instanceFieldGet, recordOffset);
+                Concentrator.incomingGetObject(instanceFieldGet, recordOffset);
               } else if (dataMessage.hasStaticFieldPut()) {
                 Fields.StaticFieldPut staticFieldPut = dataMessage.getStaticFieldPut();
-                Distributor.incomingPutStatic(staticFieldPut, recordOffset);
+                Concentrator.incomingPutStatic(staticFieldPut, recordOffset);
               } else if (dataMessage.hasInstanceFieldPut()) {
                 Fields.InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
-                Distributor.incomingPutField(instanceFieldPut, recordOffset);
+                Concentrator.incomingPutField(instanceFieldPut, recordOffset);
               } else {
                 logger.warn("Incoming message ignored - no handler:\n" + dataMessage);
               }
@@ -114,7 +114,7 @@ public class DataMessageDispatcher extends Thread {
         else {
           try {
             //push to queue of the Destination thread
-            Distributor.threadBlockingQueueMap.get(threadId).put(dataMessage);
+            Concentrator.threadBlockingQueueMap.get(threadId).put(dataMessage);
             logger.info("Pushed message to thread queue");
           } catch (InterruptedException e) {
             logger.error("Interrupted while putting message in queue");

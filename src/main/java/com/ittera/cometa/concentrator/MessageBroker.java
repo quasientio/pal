@@ -34,8 +34,8 @@ public class MessageBroker {
 
   private static void checkCreateThreadQueue() {
     long currThreadId = Thread.currentThread().getId();
-    if (!Distributor.threadBlockingQueueMap.containsKey(currThreadId)) {
-      Distributor.threadBlockingQueueMap.put(currThreadId, new LinkedBlockingDeque());
+    if (!Concentrator.threadBlockingQueueMap.containsKey(currThreadId)) {
+      Concentrator.threadBlockingQueueMap.put(currThreadId, new LinkedBlockingDeque());
       logger.debug("Added new blocking queue to map, with thread id={}", currThreadId);
     }
   }

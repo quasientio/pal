@@ -14,7 +14,7 @@ aspect DistributeAspect{
 //if false, no output at all
 private static final boolean verbose=false;
 
-  //Exception softening of calls to Distributor
+  //Exception softening of calls to Concentrator
   declare soft:ClassNotFoundException:call(boolean Distributor.classConstructor(..));
   declare soft:Throwable:call(Object Distributor.constructor(..));
   declare soft:Throwable:call(void Distributor.voidInstanceMethod(..));

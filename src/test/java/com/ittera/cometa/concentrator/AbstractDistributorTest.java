@@ -79,7 +79,7 @@ public abstract class AbstractDistributorTest {
     kafkaConsumerProps.put("group.id", properties.getProperty("id"));
     consumer = new KafkaConsumer<>(kafkaConsumerProps);
     logger.debug("Kafka consumer initialized: {}", consumer);
-    //consumer.subscribe(Arrays.asList(Distributor.kafkaTopic));
+    //consumer.subscribe(Arrays.asList(Concentrator.kafkaTopic));
 
     //manual assignment of partition so we can control offset seek
     topicPartition = new TopicPartition(kafkaTopic, 0);

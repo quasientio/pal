@@ -24,7 +24,7 @@ message RaisedThrowable {
 
     required int64 currentTime = 3;
 
-    //TO DO:  IP or hostname for this Distributor
+    //TO DO:  IP or hostname for this Concentrator
 
     //TO DO: Reference ID or hash to the constructor or method message that caused it
 
