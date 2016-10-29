@@ -34,7 +34,7 @@ message RaisedThrowable {
 
     required Class class = 4;
 
-    //for static init (<clinit)
+    //for static init (<clinit>)
     optional bool inInitializer = 5 [default = false];
 
     oneof callType {
