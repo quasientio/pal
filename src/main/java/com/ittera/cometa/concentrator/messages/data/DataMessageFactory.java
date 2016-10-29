@@ -392,6 +392,37 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
+  /**
+   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * Equivalent to the above, for objectRefs
+   */
+  public static Wrappers.DataMessage buildPutStaticDoneMessage(int concentratorId, Fields.StaticFieldPut staticFieldPut, Class fieldType, Long followingOffset) {
+
+    /** Build protobuf message **/
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
+    final Fields.StaticFieldPutDone.Builder fieldBuilder = Fields.StaticFieldPutDone.newBuilder();
+    fieldBuilder.setConcentratorId(concentratorId);
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(getWrappedClass(staticFieldPut.getClass_().getName()));
+    fieldBuilder.setStaticFieldPut(staticFieldPut);
+    if (staticFieldPut.getField().hasClass_()) {
+      fieldBuilder.setField(staticFieldPut.getField());
+    } else {
+      fieldBuilder.setField(getWrappedField(fieldType, staticFieldPut.getField().getName()));
+    }
+    msgBuilder.setThreadId(Thread.currentThread().getId());
+    msgBuilder.setMsgType("Put static done");
+    if (followingOffset != null) {
+      msgBuilder.setFollowing(followingOffset);
+    }
+    msgBuilder.setStaticFieldPutDone(fieldBuilder);
+
+    return msgBuilder.build();
+  }
+
+
   public static Wrappers.DataMessage buildPutStaticDoneMessage(int concentratorId, StaticPart staticPart, Object sender, Object arg) {
 
     /** Build protobuf message **/

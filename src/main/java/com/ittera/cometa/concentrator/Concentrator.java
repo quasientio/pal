@@ -941,7 +941,7 @@ public class Concentrator {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, false, recordOffset);
+      invokedMsg = DataMessageFactory.buildPutStaticDoneMessage(id, staticFieldPut, field.getType(), recordOffset);
     }
 
 

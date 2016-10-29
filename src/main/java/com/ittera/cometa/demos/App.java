@@ -18,6 +18,7 @@ public class App {
   public static String aClassString;
   public static double aDbl;
   public static String aNullStaticStr;
+  static int aStaticInteger = 3000;
 
   static {
     System.out.println("aDbl before=" + aDbl);
