@@ -35,7 +35,6 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
 
     DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, modifiers, returnType, parameterTypesNamesArray, parameters);
     DataMessage replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
 
     assertNotNull(replyMsg.getReturnValue());
     assertTrue(replyMsg.getReturnValue().getIsVoid());

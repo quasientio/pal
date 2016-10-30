@@ -3,6 +3,11 @@ package com.ittera.cometa.demos;
 import java.util.List;
 import java.util.ArrayList;
 
+/**
+ * NOTE THAT UNIT TESTS in com.ittera.cometa.concentrator.messages.incoming are dependant on this class and
+ * some tests have hard-coded some of the values in this class, so corresponding tests must be KEPT IN SYNC
+ * when applying changes here.
+ */
 public class App {
 
   public Integer anInt = 4;

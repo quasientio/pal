@@ -15,29 +15,29 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.demos.App";
 
   @Test
-  public void testGetInteger_notNull() throws ClassNotFoundException {
+  public void testGetIntegerNotNull() throws ClassNotFoundException {
     //TODO have a native instance at hand for comparisons: the problem is that we need it in another path (not weaved) or loaded by another classloader!!
 //    App app = new App();
 
+    String fieldName = "anInt";
+    String fieldClassName = "java.lang.Integer";
+    Integer originalValue = 4;
 
     //must call new first
     DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     Primitives.Object newObj = replyMsg.getReturnValue().getObject();
 
     //test with a non null integer (value = 4)
-    Integer originalValue = 4;
-    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, "anInt", newObj.getRef());
+    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertFalse(retValue.getIsVoid());
     assertFalse(retValue.getIsClass());
     assertTrue(retValue.hasClazz());
     assertTrue(retValue.hasObject());
-    assertEquals("java.lang.Integer", retValue.getClazz().getName());
+    assertEquals(fieldClassName, retValue.getClazz().getName());
 
     Primitives.Object getObj = retValue.getObject();
 
@@ -45,7 +45,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     assertFalse(getObj.getIsArray());
     assertFalse(getObj.hasRef());
     assertTrue(getObj.hasClass_());
-    assertEquals("java.lang.Integer", getObj.getClass_().getName());
+    assertEquals(fieldClassName, getObj.getClass_().getName());
 
     Object rawObj = ProtobufUtils.unwrapObject(getObj);
 
@@ -54,19 +54,20 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void testGetInteger_Null() throws ClassNotFoundException {
+  public void testGetIntegerNull() throws ClassNotFoundException {
     //TODO have a native instance at hand for comparisons: the problem is that we need it in another path (not weaved) or loaded by another classloader!!
+
+    String fieldName = "aNullInt";
+    String fieldClassName = "java.lang.Integer";
 
     //must call new first
     DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     Primitives.Object newObj = replyMsg.getReturnValue().getObject();
 
     //test with a null (non-initialized) integer
-    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, "aNullInt", newObj.getRef());
+    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertFalse(retValue.getIsVoid());
@@ -84,24 +85,26 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void testGetString_notNull() throws ClassNotFoundException {
+  public void testGetStringNotNull() throws ClassNotFoundException {
+
+    String fieldName = "someString";
+    String fieldClassName = "java.lang.String";
+    String originalValue = "I'm blank";
 
     //must call new first
     DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     Primitives.Object newObj = replyMsg.getReturnValue().getObject();
 
     //test with a non null String (someString = "I'm blank")
-    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, "someString", newObj.getRef());
+    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertFalse(retValue.getIsVoid());
     assertFalse(retValue.getIsClass());
     assertTrue(retValue.hasClazz());
-    assertEquals("java.lang.String", retValue.getClazz().getName());
+    assertEquals(fieldClassName, retValue.getClazz().getName());
     assertTrue(retValue.hasObject());
 
     Primitives.Object getObj = retValue.getObject();
@@ -111,28 +114,29 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     assertFalse(getObj.hasRef());
     assertTrue(getObj.hasClass_());
     assertFalse(getObj.getClass_().getUnknown());
-    assertEquals("java.lang.String", getObj.getClass_().getName());
+    assertEquals(fieldClassName, getObj.getClass_().getName());
 
     Object rawObj = ProtobufUtils.unwrapObject(getObj);
 
     assertTrue(rawObj instanceof String);
-    assertEquals("I'm blank", rawObj);
+    assertEquals(originalValue, rawObj);
 
   }
 
   @Test
-  public void testGetString_Null() throws ClassNotFoundException {
+  public void testGetStringNull() throws ClassNotFoundException {
+
+    String fieldName = "aNullStr";
+    String fieldClassName = "java.lang.String";
 
     //must call new first
     DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     Primitives.Object newObj = replyMsg.getReturnValue().getObject();
 
     //test with a null (non-initialized) string (aNullStr)
-    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, "aNullStr", newObj.getRef());
+    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertFalse(retValue.getIsVoid());

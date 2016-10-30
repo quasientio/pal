@@ -17,15 +17,15 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.demos.App";
 
   @Test
-  public void testPutStaticInteger_notNull() throws ClassNotFoundException {
+  public void testPutStaticIntegerNotNull() throws ClassNotFoundException {
 
     String fieldName = "aStaticInteger";
-
+    String fieldClassName = "java.lang.Integer";
     Integer originalValue = 3000;
+    Integer newValue = 3200;
 
     DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     Primitives.Object retObj = retValue.getObject();
 
@@ -34,10 +34,8 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     assertEquals(originalValue, rawObj);
 
     //set a new value
-    Integer newIntValue = 3200;
-    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, "java.lang.Integer", newIntValue);
+    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, fieldClassName, newValue);
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasStaticFieldPutDone());
     assertFalse(replyMsg.hasReturnValue());
     Fields.StaticFieldPutDone staticFieldPutDone = replyMsg.getStaticFieldPutDone();
@@ -47,14 +45,13 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     //test that the field has now the new value
     requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
     retValue = replyMsg.getReturnValue();
     assertFalse(retValue.getIsVoid());
     assertFalse(retValue.getIsClass());
     assertTrue(retValue.hasClazz());
     assertTrue(retValue.hasObject());
-    assertEquals("java.lang.Integer", retValue.getClazz().getName());
+    assertEquals(fieldClassName, retValue.getClazz().getName());
 
     retObj = retValue.getObject();
     assertFalse(retObj.getIsArray());
@@ -62,20 +59,19 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     assertFalse(retObj.hasRef());
     assertTrue(retObj.hasClass_());
     assertFalse(retObj.getClass_().getUnknown());
-    assertEquals("java.lang.Integer", retObj.getClass_().getName());
+    assertEquals(fieldClassName, retObj.getClass_().getName());
 
     rawObj = ProtobufUtils.unwrapObject(retObj);
     assertTrue(rawObj instanceof Integer);
-    assertEquals(newIntValue, rawObj);
+    assertEquals(newValue, rawObj);
 
     //end of test
 
     //now revert changed value to original (otherwise other tests may fail after a 1st run)
 
     //set a new value
-    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, "java.lang.Integer", originalValue);
+    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, fieldClassName, originalValue);
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasStaticFieldPutDone());
     assertFalse(replyMsg.hasReturnValue());
     staticFieldPutDone = replyMsg.getStaticFieldPutDone();
@@ -83,27 +79,26 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void testPutStaticString_notNull() throws ClassNotFoundException {
+  public void testPutStaticStringNotNull() throws ClassNotFoundException {
 
     //test with a non null String
     String fieldName = "aClassString";
-    String originalStrValue = "I'm classy";
+    String fieldClassName = "java.lang.String";
+    String originalValue = "I'm classy";
+    String newValue = "New dummy str";
 
     DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     Primitives.Object retObj = retValue.getObject();
 
     Object rawObj = ProtobufUtils.unwrapObject(retObj);
     assertTrue(rawObj instanceof String);
-    assertEquals(originalStrValue, rawObj);
+    assertEquals(originalValue, rawObj);
 
     //set a new value
-    String newStrValue = "New dummy str";
-    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, "java.lang.String", newStrValue);
+    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, fieldClassName, newValue);
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasStaticFieldPutDone());
     assertFalse(replyMsg.hasReturnValue());
     Fields.StaticFieldPutDone staticFieldPutDone = replyMsg.getStaticFieldPutDone();
@@ -113,14 +108,13 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     //test that the field has now the new value
     requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
     retValue = replyMsg.getReturnValue();
     assertFalse(retValue.getIsVoid());
     assertFalse(retValue.getIsClass());
     assertTrue(retValue.hasClazz());
     assertTrue(retValue.hasObject());
-    assertEquals("java.lang.String", retValue.getClazz().getName());
+    assertEquals(fieldClassName, retValue.getClazz().getName());
 
     retObj = retValue.getObject();
     assertFalse(retObj.getIsArray());
@@ -128,20 +122,19 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     assertFalse(retObj.hasRef());
     assertTrue(retObj.hasClass_());
     assertFalse(retObj.getClass_().getUnknown());
-    assertEquals("java.lang.String", retObj.getClass_().getName());
+    assertEquals(fieldClassName, retObj.getClass_().getName());
 
     rawObj = ProtobufUtils.unwrapObject(retObj);
     assertTrue(rawObj instanceof String);
-    assertEquals(newStrValue, rawObj);
+    assertEquals(newValue, rawObj);
 
     //end of test
 
     //now revert changed value to original (otherwise other tests may fail after a 1st run)
 
     //set a new value
-    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, "java.lang.String", originalStrValue);
+    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, fieldClassName, originalValue);
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasStaticFieldPutDone());
     assertFalse(replyMsg.hasReturnValue());
     staticFieldPutDone = replyMsg.getStaticFieldPutDone();

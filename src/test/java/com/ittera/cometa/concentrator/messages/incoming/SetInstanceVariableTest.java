@@ -18,18 +18,18 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
   public void testPutInteger() throws ClassNotFoundException {
 
     String fieldName = "anInt";
+    String fieldClassName = "java.lang.Integer";
+    Integer originalValue = 4;
+    Integer newValue = 500;
 
     //must call new first
     DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     Primitives.Object newObj = replyMsg.getReturnValue().getObject();
 
     //test with a non null integer (value = 4)
-    Integer originalValue = 4;
     requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertNotNull(replyMsg.getReturnValue().getObject());
     Primitives.Object retObj = replyMsg.getReturnValue().getObject();
 
@@ -38,12 +38,9 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     assertTrue(rawObj instanceof Integer);
     assertEquals(originalValue, rawObj);
 
-
     //set integer (value = 500)
-    Integer newIntValue = 500;
-    requestMsg = DataMessageFactory.buildPutObjectMessage(clientId, className, fieldName, newObj.getRef(), "java.lang.Integer", newIntValue);
+    requestMsg = DataMessageFactory.buildPutObjectMessage(clientId, className, fieldName, newObj.getRef(), fieldClassName, newValue);
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasInstanceFieldPutDone());
     assertFalse(replyMsg.hasReturnValue());
     Fields.InstanceFieldPutDone fieldPutDone = replyMsg.getInstanceFieldPutDone();
@@ -53,13 +50,12 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     //now get to test if set took place
     requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertFalse(retValue.getIsVoid());
     assertFalse(retValue.getIsClass());
     assertTrue(retValue.hasClazz());
-    assertEquals("java.lang.Integer", retValue.getClazz().getName());
+    assertEquals(fieldClassName, retValue.getClazz().getName());
     assertTrue(retValue.hasObject());
 
     Primitives.Object getObj = retValue.getObject();
@@ -69,12 +65,12 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     assertFalse(getObj.hasRef());
     assertTrue(getObj.hasClass_());
     assertFalse(getObj.getClass_().getUnknown());
-    assertEquals("java.lang.Integer", getObj.getClass_().getName());
+    assertEquals(fieldClassName, getObj.getClass_().getName());
 
     rawObj = ProtobufUtils.unwrapObject(getObj);
 
     assertTrue(rawObj instanceof Integer);
-    assertEquals(newIntValue, rawObj);
+    assertEquals(newValue, rawObj);
   }
 
 }

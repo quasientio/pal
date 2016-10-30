@@ -15,20 +15,22 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.demos.App";
 
   @Test
-  public void testGetStaticString_notNull() throws ClassNotFoundException {
+  public void testGetStaticStringNotNull() throws ClassNotFoundException {
+
+    String fieldName = "aClassString";
+    String fieldClassName = "java.lang.String";
+    String originalValue = "I'm classy";
 
     //test with a non null String
-    String originalStrValue = "I'm classy";
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, "aClassString");
+    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertFalse(retValue.getIsVoid());
     assertFalse(retValue.getIsClass());
     assertTrue(retValue.hasClazz());
     assertTrue(retValue.hasObject());
-    assertEquals("java.lang.String", retValue.getClazz().getName());
+    assertEquals(fieldClassName, retValue.getClazz().getName());
 
     Primitives.Object retObj = retValue.getObject();
     assertFalse(retObj.getIsArray());
@@ -36,20 +38,22 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
     assertFalse(retObj.hasRef());
     assertTrue(retObj.hasClass_());
     assertFalse(retObj.getClass_().getUnknown());
-    assertEquals("java.lang.String", retObj.getClass_().getName());
+    assertEquals(fieldClassName, retObj.getClass_().getName());
 
     Object rawObj = ProtobufUtils.unwrapObject(retObj);
     assertTrue(rawObj instanceof String);
-    assertEquals(originalStrValue, rawObj);
+    assertEquals(originalValue, rawObj);
   }
 
   @Test
-  public void testGetStaticString_Null() throws ClassNotFoundException {
+  public void testGetStaticStringNull() throws ClassNotFoundException {
+
+    String fieldName = "aNullStaticStr";
+    String fieldClassName = "java.lang.String";
 
     //test with a null String
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, "aNullStaticStr");
+    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertFalse(retValue.getIsVoid());
