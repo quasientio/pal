@@ -36,7 +36,7 @@ public class WeakValuedCache<K, V> {
             keys.remove(ref);
             WeakReference val = values.remove(key);
             logger.info("Key {} and corresponding value cleaned up.", key);
-            System.out.println("Ref cleaned up for value:" + val.get());
+            logger.info("Ref cleaned up for value:" + val.get());
           }
         } catch (InterruptedException e) {
         }

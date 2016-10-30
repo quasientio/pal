@@ -2,7 +2,12 @@ package com.ittera.cometa.concentrator;
 
 import junit.framework.TestCase;
 
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
 public class SandboxTests extends TestCase {
+
+  protected final static Logger logger = LogManager.getLogger("tests");
 
   public void testParamTypesToString() {
     String[] args = new String[]{"arg1", "arg2"};
@@ -16,7 +21,7 @@ public class SandboxTests extends TestCase {
     Integer anInteger = 2;
     Object[] array = new Object[]{anInt, anInteger};
     for (int i = 0; i < array.length; i++) {
-      System.out.println("type of " + array[i] + " : " + array[i].getClass().getName() + " isPrimitive ? -> " + array[i].getClass().isPrimitive());
+      logger.info("type of " + array[i] + " : " + array[i].getClass().getName() + " isPrimitive ? -> " + array[i].getClass().isPrimitive());
     }
   }
 }
