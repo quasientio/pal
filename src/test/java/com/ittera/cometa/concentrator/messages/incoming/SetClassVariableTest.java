@@ -12,7 +12,7 @@ import java.lang.reflect.Modifier;
 import static org.junit.Assert.*;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class SetStaticTest extends AbstractConcentratorTest {
+public class SetClassVariableTest extends AbstractConcentratorTest {
 
   protected final String className = "com.ittera.cometa.demos.App";
 

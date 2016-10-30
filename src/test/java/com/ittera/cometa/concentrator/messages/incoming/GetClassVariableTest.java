@@ -10,7 +10,7 @@ import org.junit.runners.MethodSorters;
 import static org.junit.Assert.*;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class GetStaticTest extends AbstractConcentratorTest {
+public class GetClassVariableTest extends AbstractConcentratorTest {
 
   protected final String className = "com.ittera.cometa.demos.App";
 
