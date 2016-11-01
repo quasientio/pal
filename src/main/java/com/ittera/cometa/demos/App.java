@@ -21,6 +21,9 @@ public class App {
   public static float aFloat = 8.5f;
   public static long aLong = 53382303;
   public static String aClassString;
+  private static Integer aPrivateClassInt = 39328;
+  protected static Boolean aProtectedBool;
+  static boolean aPackageVisibleBool = true;
   public static double aDbl;
   public static String aNullStaticStr;
   static int aStaticInteger = 3000;

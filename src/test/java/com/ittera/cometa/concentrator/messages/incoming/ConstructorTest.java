@@ -10,6 +10,11 @@ import org.junit.runners.MethodSorters;
 
 import static org.junit.Assert.*;
 
+/**
+ * Coverage:
+ * ---------
+ * - public no args
+ */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ConstructorTest extends AbstractConcentratorTest {
 

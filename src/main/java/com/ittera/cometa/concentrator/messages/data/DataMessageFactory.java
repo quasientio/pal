@@ -18,7 +18,7 @@ import org.apache.logging.log4j.LogManager;
 
 /**
  * Methods of this class receive aspectj objects (i.e. StaticPart) as arguments as convenience.
- * TO DO: Unwrapp the necessary arguments in the caller (Concentrator) to make this class agnostic
+ * TODO: Unwrapp the necessary arguments in the caller (Concentrator) to make this class agnostic
  */
 public class DataMessageFactory {
   protected static final Logger logger = LogManager.getLogger(DataMessageFactory.class);
@@ -616,7 +616,7 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildReturnValueMessage(int concentratorId, Object object, String objectKey, boolean isVoid, Long followingOffset) {
+  public static Wrappers.DataMessage buildReturnValueMessage(int concentratorId, Object object, Class type, String objectKey, boolean isVoid, Long followingOffset) {
 
     /** Build protobuf message **/
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
@@ -626,11 +626,9 @@ public class DataMessageFactory {
     valBuilder.setThreadId(Thread.currentThread().getId());
     valBuilder.setCurrentTime(System.currentTimeMillis());
     valBuilder.setIsVoid(isVoid);
-    if (object != null) {
-      valBuilder.setClazz(getWrappedClass(object.getClass()));
-    }
+    valBuilder.setClazz(getWrappedClass(type));
     if (!isVoid) {
-      valBuilder.setObject(getWrappedObject(object, object == null ? null : object.getClass().getName(), objectKey));
+      valBuilder.setObject(getWrappedObject(object, type, objectKey));
     }
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
@@ -688,7 +686,7 @@ public class DataMessageFactory {
 
   /** WRAPPING METHODS:
    * Two versions of these exist, as we have generally more information when messages are built from local calls (with full reflection details),
-   * than when these messaages are built for remote calls, and not all type information is available.
+   * than when these messaages are built for remote calls, and not all context and type information is available.
    */
 
   /**

@@ -13,6 +13,11 @@ import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
 
 import static org.junit.Assert.*;
 
+/**
+ * Coverage:
+ * ---------
+ * - "main" - public with args (String[])
+ */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class VoidClassMethodTest extends AbstractConcentratorTest {
 

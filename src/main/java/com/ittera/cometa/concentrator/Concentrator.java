@@ -134,7 +134,7 @@ public class Concentrator {
     logger.trace("in D.incomingConstructor: {}", constructorCall.getClass_().getName());
 
     /** 1. Unwrap message and load constructor **/
-    final Class clazz;
+    Class clazz = null;
     final List<Class> paramClasses = new ArrayList<>();
     Constructor constructor = null;
     Exception exceptionWhileLoading = null;
@@ -182,7 +182,7 @@ public class Concentrator {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, objKey, false, recordOffset);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, clazz, objKey, false, recordOffset);
     }
 
 
@@ -239,7 +239,7 @@ public class Concentrator {
     if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, objKey, false, null);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, constructor.getClass(), objKey, false, null);
     }
 
 
@@ -310,7 +310,7 @@ public class Concentrator {
     if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true, null);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, method.getReturnType(), null, true, null);
     }
 
 
@@ -378,7 +378,7 @@ public class Concentrator {
     if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false, null);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, method.getReturnType(), "TO DO", false, null);
     }
 
 
@@ -461,9 +461,9 @@ public class Concentrator {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
     } else {
       if (method.getReturnType() == void.class) {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true, recordOffset);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, method.getReturnType(), null, true, recordOffset);
       } else {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false, recordOffset);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, method.getReturnType(), "TO DO", false, recordOffset);
       }
     }
 
@@ -513,7 +513,7 @@ public class Concentrator {
     if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true, null);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, method.getReturnType(), null, true, null);
     }
 
 
@@ -581,7 +581,7 @@ public class Concentrator {
     if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false, null);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, method.getReturnType(), "TO DO", false, null);
     }
 
 
@@ -661,9 +661,9 @@ public class Concentrator {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
     } else {
       if (method.getReturnType() == void.class) {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, null, true, recordOffset);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, method.getReturnType(), null, true, recordOffset);
       } else {
-        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, "TO DO", false, recordOffset);
+        invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, method.getReturnType(), "TO DO", false, recordOffset);
       }
     }
 
@@ -689,6 +689,7 @@ public class Concentrator {
     try {
       clazz = Class.forName(staticFieldGet.getClass_().getName());
       field = clazz.getDeclaredField(staticFieldGet.getField().getName());
+      logger.debug("field {} is of type {}", field.getName(), field.getType());
     } catch (Exception e) {
       exceptionWhileLoading = e;
     }
@@ -715,7 +716,7 @@ public class Concentrator {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false, recordOffset);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, field.getType(), "TO DO", false, recordOffset);
     }
 
 
@@ -763,7 +764,7 @@ public class Concentrator {
     if (exceptionGettingObject != null) {
       invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false, null);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, field.getType(), "TO DO", false, null);
     }
 
     /** 6. Send object/exception **/
@@ -823,7 +824,7 @@ public class Concentrator {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false, recordOffset);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, field.getType(), "TO DO", false, recordOffset);
     }
 
 
@@ -872,7 +873,7 @@ public class Concentrator {
     if (exceptionGettingObject != null) {
       invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, "TO DO", false, null);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, field.getType(), "TO DO", false, null);
     }
 
     /** 6. Send object/exception **/

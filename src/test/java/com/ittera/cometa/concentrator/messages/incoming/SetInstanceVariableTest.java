@@ -9,6 +9,11 @@ import org.junit.runners.MethodSorters;
 
 import static org.junit.Assert.*;
 
+/**
+ * Coverage:
+ * ---------
+ * - public integer with non-null value
+ */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SetInstanceVariableTest extends AbstractConcentratorTest {
 

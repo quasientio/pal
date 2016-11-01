@@ -9,6 +9,14 @@ import org.junit.runners.MethodSorters;
 
 import static org.junit.Assert.*;
 
+/**
+ * Coverage:
+ * ---------
+ * - public integer with non-null value
+ * - public integer with null value
+ * - public string with non-null value
+ * - public string with null value
+ */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class GetInstanceVariableTest extends AbstractConcentratorTest {
 
@@ -72,7 +80,8 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertFalse(retValue.getIsVoid());
     assertFalse(retValue.getIsClass());
-    assertFalse(retValue.hasClazz());
+    assertTrue(retValue.hasClazz());
+    assertEquals(fieldClassName, retValue.getClazz().getName());
     assertTrue(retValue.hasObject());
 
     Primitives.Object getObj = retValue.getObject();
@@ -81,7 +90,8 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     assertFalse(getObj.getIsArray());
     assertFalse(getObj.hasRef());
     assertTrue(getObj.hasClass_());
-    assertTrue(getObj.getClass_().getUnknown());
+    assertFalse(getObj.getClass_().getUnknown());
+    assertEquals(fieldClassName, getObj.getClass_().getName());
   }
 
   @Test
@@ -141,7 +151,8 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertFalse(retValue.getIsVoid());
     assertFalse(retValue.getIsClass());
-    assertFalse(retValue.hasClazz());
+    assertTrue(retValue.hasClazz());
+    assertEquals(fieldClassName, retValue.getClazz().getName());
     assertTrue(retValue.hasObject());
 
     Primitives.Object getObj = retValue.getObject();
@@ -150,7 +161,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     assertFalse(getObj.getIsArray());
     assertFalse(getObj.hasRef());
     assertTrue(getObj.hasClass_());
-    assertTrue(getObj.getClass_().getUnknown());
+    assertEquals(fieldClassName, getObj.getClass_().getName());
 
   }
 

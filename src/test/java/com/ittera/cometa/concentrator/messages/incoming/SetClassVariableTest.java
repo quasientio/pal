@@ -11,6 +11,12 @@ import java.lang.reflect.Modifier;
 
 import static org.junit.Assert.*;
 
+/**
+ * Coverage:
+ * ---------
+ * - package int with non-null value
+ * - public string with non-null value
+ */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SetClassVariableTest extends AbstractConcentratorTest {
 
@@ -20,7 +26,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
   public void testPutStaticIntegerNotNull() throws ClassNotFoundException {
 
     String fieldName = "aStaticInteger";
-    String fieldClassName = "java.lang.Integer";
+    String fieldClassName = "int";
     Integer originalValue = 3000;
     Integer newValue = 3200;
 
@@ -69,7 +75,6 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
 
     //now revert changed value to original (otherwise other tests may fail after a 1st run)
 
-    //set a new value
     requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, fieldClassName, originalValue);
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasStaticFieldPutDone());

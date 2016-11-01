@@ -1,11 +1,25 @@
 package com.ittera.cometa.concentrator.messages.data;
 
 import java.util.List;
+import java.util.Map;
 import java.util.ArrayList;
 
 import org.apache.commons.lang3.ClassUtils;
 
+import com.google.common.collect.ImmutableMap;
+
 public class ProtobufUtils {
+
+  private static final Map<String, Class> shortPrimitiveNameToClass = ImmutableMap.<String, Class>builder()
+    .put("byte", byte.class)
+    .put("short", short.class)
+    .put("int", int.class)
+    .put("long", long.class)
+    .put("float", float.class)
+    .put("double", double.class)
+    .put("char", char.class)
+    .put("boolean", boolean.class)
+    .build();
 
   /**
    * Returns objects in objectList as Object array with each object typed as its type in classList
@@ -71,7 +85,13 @@ public class ProtobufUtils {
 
 
   public static Object unwrapObject(Primitives.Object object) throws ClassNotFoundException {
-    Class objectClass = Class.forName(object.getClass_().getName());
+    final String objClassName = object.getClass_().getName();
+    final Class objectClass;
+    if (shortPrimitiveNameToClass.containsKey(objClassName)) {
+      objectClass = shortPrimitiveNameToClass.get(objClassName);
+    } else {
+      objectClass = Class.forName(objClassName);
+    }
     return unwrapObject(object, objectClass);
   }
 }

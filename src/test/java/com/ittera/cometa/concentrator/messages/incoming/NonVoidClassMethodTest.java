@@ -12,6 +12,10 @@ import java.lang.reflect.Modifier;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Coverage:
+ * ---------
+ */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class NonVoidClassMethodTest extends AbstractConcentratorTest {
 
