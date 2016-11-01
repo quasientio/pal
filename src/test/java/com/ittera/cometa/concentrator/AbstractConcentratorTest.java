@@ -21,9 +21,13 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.data.Values.ReturnValue;
+import com.ittera.cometa.concentrator.messages.data.Primitives;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import static org.junit.Assert.*;
 
 public abstract class AbstractConcentratorTest {
 
@@ -134,6 +138,39 @@ public abstract class AbstractConcentratorTest {
       " #bytes in value: ").append(recordMetadata.serializedValueSize()).append("\n}");
 
     return builder.toString();
+  }
+
+  /**
+   * Helper method for subclasses
+   * This method is also useful as it encapsulates details of the protobuf serialization
+   *
+   * @param returnValue
+   * @param fieldClassName
+   * @return
+   */
+  private void isObjectOfRightType(ReturnValue returnValue, String fieldClassName, boolean isNull) {
+    assertFalse(returnValue.getIsVoid());
+    assertFalse(returnValue.getIsClass());
+    assertTrue(returnValue.hasClazz());
+    assertEquals(fieldClassName, returnValue.getClazz().getName());
+    assertTrue(returnValue.hasObject());
+
+    Primitives.Object retObj = returnValue.getObject();
+    assertFalse(retObj.getIsArray());
+    assertEquals(isNull, retObj.getIsNull());
+    assertFalse(retObj.hasRef());
+    assertTrue(retObj.hasClass_());
+    assertFalse(retObj.getClass_().getUnknown());
+    assertEquals(fieldClassName, retObj.getClass_().getName());
+
+  }
+
+  protected void valueIsObjectOfRightType(ReturnValue returnValue, String fieldClassName) {
+    isObjectOfRightType(returnValue, fieldClassName, false);
+  }
+
+  protected void valueIsNullObjectOfRightType(ReturnValue returnValue, String fieldClassName) {
+    isObjectOfRightType(returnValue, fieldClassName, true);
   }
 
   @AfterClass

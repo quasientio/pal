@@ -11,12 +11,14 @@ import java.util.ArrayList;
 public class App {
 
   public Integer anInt = 4;
-  public Integer aNullInt;
+  private Integer aNullInt;
   public String aNullStr;
-  public String someString = "I'm blank";
-  public boolean aBool;
+  protected String someString = "I'm blank";
+  public boolean aBool = true;
   public App anApp;
   public List anIntList;
+  Boolean aNullBool;
+  private final short someShort = 233;
 
   public static float aFloat = 8.5f;
   public static long aLong = 53382303;

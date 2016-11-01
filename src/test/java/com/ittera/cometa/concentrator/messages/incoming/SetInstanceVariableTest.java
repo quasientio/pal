@@ -13,6 +13,13 @@ import static org.junit.Assert.*;
  * Coverage:
  * ---------
  * - public integer with non-null value
+ * <p>
+ * TODO:
+ * - null value
+ * - private, protected, package-visible
+ * - primitives
+ * - arrays
+ * - objectrefs
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SetInstanceVariableTest extends AbstractConcentratorTest {
@@ -57,23 +64,9 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertFalse(retValue.getIsVoid());
-    assertFalse(retValue.getIsClass());
-    assertTrue(retValue.hasClazz());
-    assertEquals(fieldClassName, retValue.getClazz().getName());
-    assertTrue(retValue.hasObject());
+    valueIsObjectOfRightType(retValue, fieldClassName);
 
-    Primitives.Object getObj = retValue.getObject();
-
-    assertFalse(getObj.getIsNull());
-    assertFalse(getObj.getIsArray());
-    assertFalse(getObj.hasRef());
-    assertTrue(getObj.hasClass_());
-    assertFalse(getObj.getClass_().getUnknown());
-    assertEquals(fieldClassName, getObj.getClass_().getName());
-
-    rawObj = ProtobufUtils.unwrapObject(getObj);
-
+    rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer);
     assertEquals(newValue, rawObj);
   }
