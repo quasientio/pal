@@ -10,6 +10,10 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Array;
+
+import java.util.Arrays;
+import java.util.Iterator;
 
 import org.apache.commons.lang3.ClassUtils;
 
@@ -243,7 +247,7 @@ public class DataMessageFactory {
     fieldBuilder.setThreadId(Thread.currentThread().getId());
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(className));
-    fieldBuilder.setField(getWrappedField((String) null, fieldName));
+    fieldBuilder.setField(getWrappedField(className, fieldName));
     msgBuilder.setThreadId(Thread.currentThread().getId());
     msgBuilder.setMsgType("Get static");
     msgBuilder.setStaticFieldGet(fieldBuilder);
@@ -381,7 +385,7 @@ public class DataMessageFactory {
     fieldBuilder.setCurrentTime(System.currentTimeMillis());
     fieldBuilder.setClass_(getWrappedClass(fieldSignature.getDeclaringType()));
     fieldBuilder.setField(getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName()));
-    fieldBuilder.setObject(getWrappedObject(arg, fieldSignature.getFieldType().getName(), null));
+    fieldBuilder.setObject(getWrappedObject(arg, fieldSignature.getFieldType(), null));
     fieldBuilder.setModifiers(fieldSignature.getModifiers());
     fieldBuilder.setContext(getWrappedContext(staticPart, sender));
 
@@ -696,11 +700,16 @@ public class DataMessageFactory {
    * @param object
    * @return
    */
-  private static Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, String objectKey) {
+  private static Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, Class clazz, String objectKey) {
+    logger.trace("entering with object: {}", object);
 
     //set required fields (class already set at this point)
     builder.setIdentityHash(System.identityHashCode(object));
     builder.setIsNull(object == null);
+
+    if (clazz != null && clazz.isArray()) {
+      builder.setIsArray(true);
+    }
 
     if (object != null) {
 
@@ -710,7 +719,12 @@ public class DataMessageFactory {
         builder.setValue((String) object);
       } else if (object.getClass().isArray()) {
         builder.setIsArray(true);
-        for (Object arrayElem : (Object[]) object) {
+        //TODO only handles 1-dimensional arrays ?? Check out Arrays.deepToString
+
+        int length = Array.getLength(object);
+        //NOTE: we iterate using reflection (Array) because the array type is unknown
+        for (int i = 0; i < length; i++) {
+          Object arrayElem = Array.get(object, i);
           //wrap and all array elements -- recursive
           builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(), objectKey));
         }
@@ -730,7 +744,7 @@ public class DataMessageFactory {
 
 
     Primitives.Object builtValue = builder.build();
-    logger.debug("Returning wrappedValue:\n{}", builtValue);
+    logger.trace("returning wrappedValue:\n{}", builtValue);
     return builtValue;
   }
 
@@ -744,12 +758,12 @@ public class DataMessageFactory {
    */
   private static Primitives.Object getWrappedObject(Object object, String className, String objectKey) {
     final Primitives.Object.Builder builder = Primitives.Object.newBuilder();
-    logger.debug("in getWrappedObject (w/ className) for: {}", object);
+    logger.debug("entering (w/ className) for: {}", object);
 
     //set required fields
     builder.setClass_(getWrappedClass(className));
 
-    return getWrappedObjectAux(builder, object, objectKey);
+    return getWrappedObjectAux(builder, object, null, objectKey);
   }
 
   /**
@@ -762,12 +776,12 @@ public class DataMessageFactory {
    */
   private static Primitives.Object getWrappedObject(Object object, Class clazz, String objectKey) {
     final Primitives.Object.Builder builder = Primitives.Object.newBuilder();
-    logger.debug("in getWrappedObject (w/ class) for: {}", object);
+    logger.debug("entering (w/ class {}) for: {}", clazz.getName(), object);
 
     //set required fields
     builder.setClass_(getWrappedClass(clazz));
 
-    return getWrappedObjectAux(builder, object, objectKey);
+    return getWrappedObjectAux(builder, object, clazz, objectKey);
   }
 
   private static Primitives.Class getWrappedClass(String className) {

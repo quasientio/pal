@@ -64,7 +64,7 @@ public class Concentrator {
 
   // <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
   public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
-    logger.trace("in D.classConstructor: {}", staticPart.getSignature());
+    logger.trace("in classConstructor: {}", staticPart.getSignature());
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildClassInitializerMessage(id, staticPart, sender);
@@ -120,7 +120,7 @@ public class Concentrator {
     }
 
     //Since class initialization is not working, we will return false if we want to aspectj to proceed(), indicating class isn't initialized
-    logger.trace("leaving D.classConstructor: {}", staticPart.getSignature());
+    logger.trace("leaving classConstructor: {}", staticPart.getSignature());
     return false;
   }
 
@@ -131,7 +131,7 @@ public class Concentrator {
    * @throws Throwable
    */
   static void incomingConstructor(Calls.ConstructorCall constructorCall, long recordOffset) {
-    logger.trace("in D.incomingConstructor: {}", constructorCall.getClass_().getName());
+    logger.trace("in incomingConstructor: {}", constructorCall.getClass_().getName());
 
     /** 1. Unwrap message and load constructor **/
     Class clazz = null;
@@ -189,12 +189,12 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving D.incomingConstructor: {}", constructorCall.getClass_().getName());
+    logger.trace("leaving incomingConstructor: {}", constructorCall.getClass_().getName());
     return;
   }
 
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.trace("in D.constructor: {}", staticPart.getSignature());
+    logger.trace("in constructor: {}", staticPart.getSignature());
 
     final ConstructorSignature constructorSignature = (ConstructorSignature) staticPart.getSignature();
 
@@ -263,7 +263,7 @@ public class Concentrator {
       }
     }
 
-    logger.trace("leaving D.constructor: {}", staticPart.getSignature());
+    logger.trace("leaving constructor: {}", staticPart.getSignature());
     return newObject;
   }
   // </editor-fold>
@@ -271,7 +271,7 @@ public class Concentrator {
   // <editor-fold defaultstate="collapsed" desc="METHOD CALLS">
 
   public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.trace("in D.voidInstanceMethod: {}", staticPart.getSignature());
+    logger.trace("in voidInstanceMethod: {}", staticPart.getSignature());
 
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -334,12 +334,12 @@ public class Concentrator {
       }
     }
 
-    logger.trace("leaving D.voidInstanceMethod: {}", staticPart.getSignature());
+    logger.trace("leaving voidInstanceMethod: {}", staticPart.getSignature());
     return;
   }
 
   public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.trace("in D.nonVoidInstanceMethod: {}", staticPart.getSignature());
+    logger.trace("in nonVoidInstanceMethod: {}", staticPart.getSignature());
 
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -402,7 +402,7 @@ public class Concentrator {
       }
     }
 
-    logger.trace("leaving D.nonVoidInstanceMethod: {}", staticPart.getSignature());
+    logger.trace("leaving nonVoidInstanceMethod: {}", staticPart.getSignature());
     return returnValue;
   }
 
@@ -412,7 +412,7 @@ public class Concentrator {
    * @param instanceMethodCall
    */
   static void incomingInstanceMethod(Calls.InstanceMethodCall instanceMethodCall, long recordOffset) {
-    logger.trace("in D.incomingInstanceMethod: {}", instanceMethodCall.getName());
+    logger.trace("in incomingInstanceMethod: {}", instanceMethodCall.getName());
 
     /** 1. Unwrap message and load method **/
     Class clazz = null;
@@ -470,12 +470,12 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving D.incomingInstanceMethod: {}", instanceMethodCall.getName());
+    logger.trace("leaving incomingInstanceMethod: {}", instanceMethodCall.getName());
     return;
   }
 
   public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.trace("in D.voidClassMethod: {}", staticPart.getSignature());
+    logger.trace("in voidClassMethod: {}", staticPart.getSignature());
 
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -537,12 +537,12 @@ public class Concentrator {
       }
     }
 
-    logger.trace("leaving D.voidClassMethod: {}", staticPart.getSignature());
+    logger.trace("leaving voidClassMethod: {}", staticPart.getSignature());
     return;
   }
 
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.trace("in D.nonVoidClassMethod: {}", staticPart.getSignature());
+    logger.trace("in nonVoidClassMethod: {}", staticPart.getSignature());
 
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -605,7 +605,7 @@ public class Concentrator {
       }
     }
 
-    logger.trace("leaving D.nonVoidClassMethod: {}", staticPart.getSignature());
+    logger.trace("leaving nonVoidClassMethod: {}", staticPart.getSignature());
     return returnValue;
   }
 
@@ -616,7 +616,7 @@ public class Concentrator {
    * @param classMethodCall
    */
   static void incomingClassMethod(Calls.ClassMethodCall classMethodCall, long recordOffset) {
-    logger.trace("in D.incomingClassMethod: {}", classMethodCall.getName());
+    logger.trace("in incomingClassMethod: {}", classMethodCall.getName());
 
     /** 1. Unwrap message and load method **/
     Class clazz = null;
@@ -670,7 +670,7 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving D.incomingClassMethod: {}", classMethodCall.getName());
+    logger.trace("leaving incomingClassMethod: {}", classMethodCall.getName());
     return;
   }
 
@@ -680,7 +680,7 @@ public class Concentrator {
   // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
 
   public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet, long recordOffset) {
-    logger.trace("in D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
+    logger.trace("in incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
 
     /** 1. Get Object **/
     Class clazz = null;
@@ -723,13 +723,13 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving D.incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
+    logger.trace("leaving incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
     return;
 
   }
 
   public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
-    logger.trace("in D.getStatic: {}", staticPart.getSignature());
+    logger.trace("in getStatic: {}", staticPart.getSignature());
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetStaticMessage(id, staticPart, sender);
@@ -783,12 +783,12 @@ public class Concentrator {
       throw exceptionGettingObject;
     }
 
-    logger.trace("leaving D.getStatic: {}", staticPart.getSignature());
+    logger.trace("leaving getStatic: {}", staticPart.getSignature());
     return fieldValue;
   }
 
   public static void incomingGetObject(Fields.InstanceFieldGet instanceFieldGet, long recordOffset) {
-    logger.trace("in D.incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
+    logger.trace("in incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
 
     /** 1. Get Object **/
     Class clazz = null;
@@ -831,13 +831,13 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving D.incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
+    logger.trace("leaving incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
     return;
 
   }
 
   public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
-    logger.trace("in D.getObject: {}", staticPart.getSignature());
+    logger.trace("in getObject: {}", staticPart.getSignature());
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetObjectMessage(id, staticPart, sender, target);
@@ -892,12 +892,12 @@ public class Concentrator {
       throw exceptionGettingObject;
     }
 
-    logger.trace("in D.getObject: {}", staticPart.getSignature());
+    logger.trace("in getObject: {}", staticPart.getSignature());
     return fieldValue;
   }
 
   public static void incomingPutStatic(Fields.StaticFieldPut staticFieldPut, long recordOffset) {
-    logger.trace("in D.incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
+    logger.trace("in incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
 
     /** 1. Load class and field **/
     final Class clazz;
@@ -949,13 +949,13 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving D.incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
+    logger.trace("leaving incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
     return;
 
   }
 
   public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
-    logger.trace("in D.putStatic: {}", staticPart.getSignature());
+    logger.trace("in putStatic: {}", staticPart.getSignature());
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildPutStaticMessage(id, staticPart, sender, args[0]);
@@ -1009,12 +1009,12 @@ public class Concentrator {
       throw exceptionSettingObject;
     }
 
-    logger.trace("in D.putStatic: {}", staticPart.getSignature());
+    logger.trace("leaving putStatic: {}", staticPart.getSignature());
     return;
   }
 
   public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) throws IllegalAccessException {
-    logger.trace("in D.putField: {}", staticPart.getSignature());
+    logger.trace("in putField: {}", staticPart.getSignature());
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildPutObjectMessage(id, staticPart, sender, target, args[0]);
@@ -1068,12 +1068,12 @@ public class Concentrator {
       throw exceptionSettingObject;
     }
 
-    logger.trace("leaving D.putField: {}", staticPart.getSignature());
+    logger.trace("leaving putField: {}", staticPart.getSignature());
     return;
   }
 
   public static void incomingPutField(Fields.InstanceFieldPut instanceFieldPut, long recordOffset) {
-    logger.trace("in D.incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
+    logger.trace("in incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
 
     /** 1. Load class and field **/
     final Class clazz;
@@ -1134,7 +1134,7 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving D.incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
+    logger.trace("leaving incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
     return;
 
   }

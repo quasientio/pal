@@ -19,9 +19,10 @@ import static org.junit.Assert.*;
  * - package-visible boolean (primitive) with non-null value (=true)
  * <p>
  * TODO:
- * Arrays
  * objectrefs
  * rest of primitive types (?)
+ * <p>
+ * Arrays are tested separately in GetClassArrayVariableTest.java
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class GetClassVariableTest extends AbstractConcentratorTest {
@@ -39,7 +40,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfRightType(retValue, fieldClassName);
 
     Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String);
@@ -56,7 +57,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsNullObjectOfRightType(retValue, fieldClassName);
+    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
   }
 
   @Test
@@ -70,7 +71,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfRightType(retValue, fieldClassName);
 
     Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer);
@@ -87,7 +88,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsNullObjectOfRightType(retValue, fieldClassName);
+    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
   }
 
   @Test
@@ -101,11 +102,12 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfRightType(retValue, fieldClassName);
 
     Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Boolean);
     assertEquals(originalValue, rawObj);
   }
+
 
 }

@@ -7,8 +7,6 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import java.lang.reflect.Modifier;
-
 import static org.junit.Assert.*;
 
 /**
@@ -59,7 +57,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     retValue = replyMsg.getReturnValue();
-    valueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfRightType(retValue, fieldClassName);
 
     rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer);
@@ -108,7 +106,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     retValue = replyMsg.getReturnValue();
-    valueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfRightType(retValue, fieldClassName);
 
     rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String);

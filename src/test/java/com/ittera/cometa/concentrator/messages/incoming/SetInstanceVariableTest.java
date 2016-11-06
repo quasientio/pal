@@ -64,7 +64,7 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfRightType(retValue, fieldClassName);
 
     rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer);

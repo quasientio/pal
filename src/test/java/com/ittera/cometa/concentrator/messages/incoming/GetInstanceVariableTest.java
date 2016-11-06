@@ -48,7 +48,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfRightType(retValue, fieldClassName);
 
     Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer);
@@ -70,7 +70,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsNullObjectOfRightType(retValue, fieldClassName);
+    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
   }
 
   @Test
@@ -89,7 +89,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfRightType(retValue, fieldClassName);
 
     Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String);
@@ -112,7 +112,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsNullObjectOfRightType(retValue, fieldClassName);
+    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
   }
 
   @Test
@@ -130,7 +130,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsNullObjectOfRightType(retValue, fieldClassName);
+    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
   }
 
   @Test
@@ -149,7 +149,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfRightType(retValue, fieldClassName);
 
     Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Boolean);
@@ -172,7 +172,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    valueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfRightType(retValue, fieldClassName);
 
     Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Short);

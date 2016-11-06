@@ -104,7 +104,7 @@ public class DataMessageDispatcher extends Thread {
                 Fields.InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
                 Concentrator.incomingPutField(instanceFieldPut, recordOffset);
               } else {
-                logger.warn("Incoming message ignored - no handler:\n" + dataMessage);
+                logger.warn("Incoming message with offset {} ignored - no handler:\n{}", recordOffset, dataMessage);
               }
             }
           });
@@ -115,7 +115,7 @@ public class DataMessageDispatcher extends Thread {
           try {
             //push to queue of the Destination thread
             Concentrator.threadBlockingQueueMap.get(threadId).put(dataMessage);
-            logger.info("Pushed message to thread queue");
+            logger.info("Pushed message with offset {} to thread queue", recordOffset);
           } catch (InterruptedException e) {
             logger.error("Interrupted while putting message in queue");
             //TODO: should we do something about it?

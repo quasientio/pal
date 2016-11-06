@@ -148,7 +148,7 @@ public abstract class AbstractConcentratorTest {
    * @param fieldClassName
    * @return
    */
-  private void isObjectOfRightType(ReturnValue returnValue, String fieldClassName, boolean isNull) {
+  private void isObjectOfRightType(ReturnValue returnValue, String fieldClassName, boolean isNull, boolean isArray) {
     assertFalse(returnValue.getIsVoid());
     assertFalse(returnValue.getIsClass());
     assertTrue(returnValue.hasClazz());
@@ -156,7 +156,7 @@ public abstract class AbstractConcentratorTest {
     assertTrue(returnValue.hasObject());
 
     Primitives.Object retObj = returnValue.getObject();
-    assertFalse(retObj.getIsArray());
+    assertEquals(isArray, retObj.getIsArray());
     assertEquals(isNull, retObj.getIsNull());
     assertFalse(retObj.hasRef());
     assertTrue(retObj.hasClass_());
@@ -165,12 +165,20 @@ public abstract class AbstractConcentratorTest {
 
   }
 
-  protected void valueIsObjectOfRightType(ReturnValue returnValue, String fieldClassName) {
-    isObjectOfRightType(returnValue, fieldClassName, false);
+  protected void assertValueIsObjectOfRightType(ReturnValue returnValue, String fieldClassName) {
+    isObjectOfRightType(returnValue, fieldClassName, false, false);
   }
 
-  protected void valueIsNullObjectOfRightType(ReturnValue returnValue, String fieldClassName) {
-    isObjectOfRightType(returnValue, fieldClassName, true);
+  protected void assertValueIsArrayOfRightType(ReturnValue returnValue, String fieldClassName) {
+    isObjectOfRightType(returnValue, fieldClassName, false, true);
+  }
+
+  protected void assertValueIsNullObjectOfRightType(ReturnValue returnValue, String fieldClassName) {
+    isObjectOfRightType(returnValue, fieldClassName, true, false);
+  }
+
+  protected void assertValueIsNullArrayOfRightType(ReturnValue returnValue, String fieldClassName) {
+    isObjectOfRightType(returnValue, fieldClassName, true, true);
   }
 
   @AfterClass

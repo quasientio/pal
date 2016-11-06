@@ -13,7 +13,7 @@
 
         <Appender type="File" name="concentrator" fileName="${concentratorLog}">
             <Layout type="PatternLayout">
-                <Pattern>%d{HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n</Pattern>
+                <Pattern>%d{HH:mm:ss.SSS} %-5level [%15.15t] %class{36} %L %M - %msg%xEx%n</Pattern>
             </Layout>
         </Appender>
 
