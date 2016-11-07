@@ -12,17 +12,9 @@ import static org.junit.Assert.*;
 /**
  * Coverage:
  * ---------
- * - public static string with non-null value
- * - public static string with null value
- * - private static Integer with non-null value
- * - protected static Boolean with null value
- * - package-visible boolean (primitive) with non-null value (=true)
+ * This class should only test access to static (i.e. class) variables.
  * <p>
- * TODO:
- * objectrefs
- * rest of primitive types (?)
- * <p>
- * Arrays are tested separately in GetClassArrayVariableTest.java
+ * Regardless of their type and visibility.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class GetClassVariableTest extends AbstractConcentratorTest {
