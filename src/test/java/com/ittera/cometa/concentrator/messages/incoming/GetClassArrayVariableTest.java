@@ -26,7 +26,7 @@ import static org.junit.Assert.assertTrue;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class GetClassArrayVariableTest extends AbstractConcentratorTest {
 
-  protected final String className = "com.ittera.cometa.demos.App";
+  protected final String className = "com.ittera.cometa.demos.ArrayVars";
 
   @Test
   public void getStaticPrivate_booleanArrayNull() throws ClassNotFoundException {
