@@ -2,8 +2,7 @@ package com.ittera.cometa.concentrator;
 
 import java.util.Properties;
 import java.util.Arrays;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.*;
 
 import com.ittera.cometa.concentrator.messages.data.Wrappers;
 import com.ittera.cometa.concentrator.messages.data.Calls;
@@ -32,7 +31,7 @@ public class DataMessageDispatcher extends Thread {
 
   private boolean mustShutdown;
 
-  //to be called once initialized
+  //singleton accessor to be called once initialized
   public static DataMessageDispatcher getInstance() {
     if (ourInstance == null) {
       throw new IllegalStateException("DataMessageDispatcher has not been initialized from properties");
@@ -42,7 +41,9 @@ public class DataMessageDispatcher extends Thread {
 
   //singleton accessor for initial construction
   public static DataMessageDispatcher getInstance(Properties properties) {
-    ourInstance = new DataMessageDispatcher(properties);
+    if (ourInstance == null) {
+      ourInstance = new DataMessageDispatcher(properties);
+    }
     return ourInstance;
   }
 
@@ -57,7 +58,9 @@ public class DataMessageDispatcher extends Thread {
     consumer.assign(Arrays.asList(topicPartition));
     consumer.seekToBeginning(Arrays.asList(topicPartition));
     logger.info("DataMessageDispatcher initialized");
-    executorService = Executors.newCachedThreadPool();
+
+    //get Executor service
+    executorService = Executor.getInstance();
   }
 
   public void run() {
