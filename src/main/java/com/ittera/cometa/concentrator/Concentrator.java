@@ -21,6 +21,7 @@ import java.util.Properties;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,7 +65,7 @@ public class Concentrator {
 
   // <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
   public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
-    logger.trace("in classConstructor: {}", staticPart.getSignature());
+    logger.traceEntry("with staticPart: {}, sender: {}", staticPart.getSignature(), sender);
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildClassInitializerMessage(id, staticPart, sender);
@@ -120,8 +121,9 @@ public class Concentrator {
     }
 
     //Since class initialization is not working, we will return false if we want to aspectj to proceed(), indicating class isn't initialized
-    logger.trace("leaving classConstructor: {}", staticPart.getSignature());
-    return false;
+    boolean returnValue = false;
+    logger.traceExit("with return bool: {}", returnValue);
+    return returnValue;
   }
 
   /**
@@ -131,7 +133,7 @@ public class Concentrator {
    * @throws Throwable
    */
   static void incomingConstructor(Calls.ConstructorCall constructorCall, long recordOffset) {
-    logger.trace("in incomingConstructor: {}", constructorCall.getClass_().getName());
+    logger.traceEntry("with constructorCall: {}, recordOffset", constructorCall, recordOffset);
 
     /** 1. Unwrap message and load constructor **/
     Class clazz = null;
@@ -161,9 +163,8 @@ public class Concentrator {
         List<Object> args = new ArrayList<>();
         int objIdx = 0;
         for (Primitives.Object obj : constructorCall.getParameterList()) {
-          args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
+          args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx++)));
         }
-        //store in object map
         newObject = constructor.newInstance(args.toArray(new Object[args.size()]));
         randomLong = ThreadLocalRandom.current().nextLong();
         //store in object map
@@ -189,12 +190,12 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving incomingConstructor: {}", constructorCall.getClass_().getName());
+    logger.traceExit();
     return;
   }
 
   public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.trace("in constructor: {}", staticPart.getSignature());
+    logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
 
     final ConstructorSignature constructorSignature = (ConstructorSignature) staticPart.getSignature();
 
@@ -263,7 +264,7 @@ public class Concentrator {
       }
     }
 
-    logger.trace("leaving constructor: {}", staticPart.getSignature());
+    logger.traceExit("with new object: {}", newObject);
     return newObject;
   }
   // </editor-fold>
@@ -271,7 +272,7 @@ public class Concentrator {
   // <editor-fold defaultstate="collapsed" desc="METHOD CALLS">
 
   public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.trace("in voidInstanceMethod: {}", staticPart.getSignature());
+    logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
 
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -334,12 +335,12 @@ public class Concentrator {
       }
     }
 
-    logger.trace("leaving voidInstanceMethod: {}", staticPart.getSignature());
+    logger.traceExit();
     return;
   }
 
   public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.trace("in nonVoidInstanceMethod: {}", staticPart.getSignature());
+    logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
 
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -402,7 +403,7 @@ public class Concentrator {
       }
     }
 
-    logger.trace("leaving nonVoidInstanceMethod: {}", staticPart.getSignature());
+    logger.traceExit("with return value: {}", returnValue);
     return returnValue;
   }
 
@@ -412,7 +413,7 @@ public class Concentrator {
    * @param instanceMethodCall
    */
   static void incomingInstanceMethod(Calls.InstanceMethodCall instanceMethodCall, long recordOffset) {
-    logger.trace("in incomingInstanceMethod: {}", instanceMethodCall.getName());
+    logger.traceEntry("with instanceMethodCall: {}, recordOffset: {}", instanceMethodCall, recordOffset);
 
     /** 1. Unwrap message and load method **/
     Class clazz = null;
@@ -440,7 +441,7 @@ public class Concentrator {
 //        if (objects.containsKey(obj.getIdentityHash())) {
 //          args.add(lookupObject(obj));
 //        } else { //else unwrap using ProtobufUtils (only primitives and Strings supported)
-        args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
+        args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx++)));
 //        }
       }
       method.setAccessible(true);
@@ -470,12 +471,12 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving incomingInstanceMethod: {}", instanceMethodCall.getName());
+    logger.traceExit();
     return;
   }
 
   public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.trace("in voidClassMethod: {}", staticPart.getSignature());
+    logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
 
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -537,12 +538,12 @@ public class Concentrator {
       }
     }
 
-    logger.trace("leaving voidClassMethod: {}", staticPart.getSignature());
+    logger.traceExit();
     return;
   }
 
   public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.trace("in nonVoidClassMethod: {}", staticPart.getSignature());
+    logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
 
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -605,7 +606,7 @@ public class Concentrator {
       }
     }
 
-    logger.trace("leaving nonVoidClassMethod: {}", staticPart.getSignature());
+    logger.traceExit("with return value: {}", returnValue);
     return returnValue;
   }
 
@@ -616,7 +617,7 @@ public class Concentrator {
    * @param classMethodCall
    */
   static void incomingClassMethod(Calls.ClassMethodCall classMethodCall, long recordOffset) {
-    logger.trace("in incomingClassMethod: {}", classMethodCall.getName());
+    logger.traceEntry("with classMethodCall: {}, recordOffset: {}", classMethodCall, recordOffset);
 
     /** 1. Unwrap message and load method **/
     Class clazz = null;
@@ -641,7 +642,7 @@ public class Concentrator {
       List<Object> args = new ArrayList<>();
       int objIdx = 0;
       for (Primitives.Object obj : classMethodCall.getParameterList()) {
-        args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx)));
+        args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx++)));
       }
       method.setAccessible(true);
       try {
@@ -670,7 +671,7 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving incomingClassMethod: {}", classMethodCall.getName());
+    logger.traceExit();
     return;
   }
 
@@ -680,7 +681,7 @@ public class Concentrator {
   // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
 
   public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet, long recordOffset) {
-    logger.trace("in incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
+    logger.traceEntry("with staticFieldGet: {}, recordOffset: {}", staticFieldGet, recordOffset);
 
     /** 1. Get Object **/
     Class clazz = null;
@@ -723,13 +724,13 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving incomingGetStatic: {}.{}", staticFieldGet.getClass_(), staticFieldGet.getField());
+    logger.traceExit();
     return;
 
   }
 
   public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
-    logger.trace("in getStatic: {}", staticPart.getSignature());
+    logger.traceEntry("with staticPart: {}, sender: {}", staticPart.getSignature(), sender);
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetStaticMessage(id, staticPart, sender);
@@ -783,12 +784,12 @@ public class Concentrator {
       throw exceptionGettingObject;
     }
 
-    logger.trace("leaving getStatic: {}", staticPart.getSignature());
+    logger.traceExit("with fieldValue: {}", fieldValue);
     return fieldValue;
   }
 
   public static void incomingGetObject(Fields.InstanceFieldGet instanceFieldGet, long recordOffset) {
-    logger.trace("in incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
+    logger.traceEntry("with instanceFieldGet: {}, recordOffset: {}", instanceFieldGet, recordOffset);
 
     /** 1. Get Object **/
     Class clazz = null;
@@ -831,13 +832,13 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving incomingGetObject: {}.{}", instanceFieldGet.getClass_(), instanceFieldGet.getField());
+    logger.traceExit();
     return;
 
   }
 
   public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
-    logger.trace("in getObject: {}", staticPart.getSignature());
+    logger.traceEntry("with staticPart: {}, sender: {}, target: {}", staticPart.getSignature(), sender, target);
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildGetObjectMessage(id, staticPart, sender, target);
@@ -892,12 +893,12 @@ public class Concentrator {
       throw exceptionGettingObject;
     }
 
-    logger.trace("in getObject: {}", staticPart.getSignature());
+    logger.traceExit("with fieldValue: {}", fieldValue);
     return fieldValue;
   }
 
   public static void incomingPutStatic(Fields.StaticFieldPut staticFieldPut, long recordOffset) {
-    logger.trace("in incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
+    logger.traceEntry("with staticFieldPut: {}, recordOffset", staticFieldPut, recordOffset);
 
     /** 1. Load class and field **/
     final Class clazz;
@@ -949,13 +950,13 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving incomingPutStatic: {}.{}", staticFieldPut.getClass_(), staticFieldPut.getField());
+    logger.traceExit();
     return;
 
   }
 
   public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
-    logger.trace("in putStatic: {}", staticPart.getSignature());
+    logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildPutStaticMessage(id, staticPart, sender, args[0]);
@@ -1009,12 +1010,12 @@ public class Concentrator {
       throw exceptionSettingObject;
     }
 
-    logger.trace("leaving putStatic: {}", staticPart.getSignature());
+    logger.traceExit();
     return;
   }
 
   public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) throws IllegalAccessException {
-    logger.trace("in putField: {}", staticPart.getSignature());
+    logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
 
     /** 1. Wrap message **/
     final Wrappers.DataMessage msg = DataMessageFactory.buildPutObjectMessage(id, staticPart, sender, target, args[0]);
@@ -1068,12 +1069,12 @@ public class Concentrator {
       throw exceptionSettingObject;
     }
 
-    logger.trace("leaving putField: {}", staticPart.getSignature());
+    logger.traceExit();
     return;
   }
 
   public static void incomingPutField(Fields.InstanceFieldPut instanceFieldPut, long recordOffset) {
-    logger.trace("in incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
+    logger.traceEntry("with instanceFieldPut: {}, recordOffset: {}", instanceFieldPut, recordOffset);
 
     /** 1. Load class and field **/
     final Class clazz;
@@ -1134,7 +1135,7 @@ public class Concentrator {
     /** 4. Send object/exception **/
     broker.send(invokedMsg);
 
-    logger.trace("leaving incomingPutField: {}.{}", instanceFieldPut.getClass_(), instanceFieldPut.getField());
+    logger.traceExit();
     return;
 
   }
@@ -1160,11 +1161,16 @@ public class Concentrator {
    * @return
    */
   private static Object lookupObject(String objectRef) {
-    return objectMap.get(objectRef);
+    logger.traceEntry("with objectRef: {}", objectRef);
+    Object object = objectMap.get(objectRef);
+    logger.traceExit("with object: {}", object);
+    return object;
   }
 
   private static void storeObject(String objectRef, Object object) {
+    logger.traceEntry("with objectRef: {}, object: {}", objectRef, object);
     objectMap.put(objectRef, object);
+    logger.traceExit();
   }
 
   /**
@@ -1214,6 +1220,7 @@ public class Concentrator {
     /** Configure and Initialize Kafka Producer **/
     /** TODO refactor the horribly looking loading of properties
      * We could pass them all to the Broker and Dispatcher, and let each parse their own
+     * or use different properties files/sections
      **/
     final Properties kafkaProducerProps = new Properties();
     //common kafka properties
@@ -1232,6 +1239,17 @@ public class Concentrator {
     kafkaProducerProps.put("client.id", String.valueOf(Concentrator.id));
     String kafkaTopic = properties.getProperty("kafkaTopic");
     broker = new MessageBroker(kafkaProducerProps, kafkaTopic);
+
+
+    /** Configure and Initialize Executor Service **/
+    Properties execServiceProps = new Properties();
+    for (String propKey : properties.stringPropertyNames()) {
+      if (propKey.startsWith("exec.")) {
+        execServiceProps.put(StringUtils.substringAfter(propKey, "exec."), properties.getProperty(propKey));
+      }
+    }
+    //initialize
+    Executor.getInstance(execServiceProps);
 
 
     /** Configure and Initialize Kafka Message Consumer/Dispatcher thread **/

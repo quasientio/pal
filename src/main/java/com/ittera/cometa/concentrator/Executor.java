@@ -51,6 +51,7 @@ public class Executor extends ThreadPoolExecutor {
       int maximumPoolSize = Integer.parseInt((String) properties.getProperty("maximumPoolSize", defaultMaximumPoolSize));
       long keepAliveSeconds = Long.parseLong((String) properties.getProperty("keepAliveSeconds", defaultKeepAliveSeconds));
       instance = new Executor(corePoolSize, maximumPoolSize, keepAliveSeconds);
+      logger.info("Initialized Executor with corePoolSize={}, maximumPoolSize={}, keepAliveSeconds={}", corePoolSize, maximumPoolSize, keepAliveSeconds);
     }
 
     return instance;

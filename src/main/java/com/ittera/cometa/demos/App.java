@@ -67,6 +67,12 @@ public class App {
     }
   }
 
+  public App(String msg, Integer times) {
+    for (int i = 0; i < times; i++) {
+      System.out.println(String.format("Printing a msg for the %dth time: %s", i, msg));
+    }
+  }
+
   void doSomething() {
     anInt = Integer.valueOf(60);
     someString = new String("hello there");

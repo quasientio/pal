@@ -69,6 +69,26 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
+  public static Wrappers.DataMessage buildNonEmptyConstructorMessage(String concentratorId, String className, String[] parameterTypes, Object[] args) {
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
+    final Calls.ConstructorCall.Builder callBuilder = Calls.ConstructorCall.newBuilder();
+    callBuilder.setConcentratorId(Integer.parseInt(concentratorId));
+    callBuilder.setThreadId(Thread.currentThread().getId());
+    callBuilder.setCurrentTime(System.currentTimeMillis());
+    callBuilder.setClass_(getWrappedClass(className));
+
+    for (int i = 0; i < args.length; i++) {
+      callBuilder.addParameter(getWrappedObject(args[i], parameterTypes[i], null));
+    }
+
+    msgBuilder.setThreadId(Thread.currentThread().getId());
+    msgBuilder.setMsgType("Constructor");
+    msgBuilder.setConstructorCall(callBuilder);
+
+    return msgBuilder.build();
+  }
+
   public static Wrappers.DataMessage buildConstructorMessage(int concentratorId, StaticPart staticPart, Object sender, Object[] args) {
 
     /** Build protobuf message **/
