@@ -20,7 +20,7 @@ import static org.junit.Assert.*;
  * - public with args
  * - null as arg
  * - objectref as arg
- * - array as arg
+ * - private with array as arg
  * <p>
  * TODO
  * - varargs
@@ -37,23 +37,8 @@ public class ConstructorTest extends AbstractConcentratorTest {
     DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertFalse(retValue.getIsVoid());
-    assertFalse(retValue.getIsClass());
-    assertTrue(retValue.hasClazz());
-    assertTrue(retValue.hasObject());
-    assertEquals(className, retValue.getClazz().getName());
-
-    Primitives.Object newObj = retValue.getObject();
-
-    assertFalse(newObj.getIsNull());
-    assertFalse(newObj.getIsArray());
-    assertTrue(newObj.hasRef());
-    assertTrue(newObj.hasClass_());
-    assertEquals(className, newObj.getClass_().getName());
-    logger.info("Got new objectRef: {}", newObj.getRef());
+    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
   }
 
   @Test
@@ -70,23 +55,8 @@ public class ConstructorTest extends AbstractConcentratorTest {
     DataMessage requestMsg = DataMessageFactory.buildNonEmptyConstructorMessage(clientId, className, parameterTypesNamesArray, args, argRefs);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertFalse(retValue.getIsVoid());
-    assertFalse(retValue.getIsClass());
-    assertTrue(retValue.hasClazz());
-    assertTrue(retValue.hasObject());
-    assertEquals(className, retValue.getClazz().getName());
-
-    Primitives.Object newObj = retValue.getObject();
-
-    assertFalse(newObj.getIsNull());
-    assertFalse(newObj.getIsArray());
-    assertTrue(newObj.hasRef());
-    assertTrue(newObj.hasClass_());
-    assertEquals(className, newObj.getClass_().getName());
-    logger.info("Got new objectRef: {}", newObj.getRef());
+    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
   }
 
   @Test
@@ -103,27 +73,12 @@ public class ConstructorTest extends AbstractConcentratorTest {
     DataMessage requestMsg = DataMessageFactory.buildNonEmptyConstructorMessage(clientId, className, parameterTypesNamesArray, args, argRefs);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertFalse(retValue.getIsVoid());
-    assertFalse(retValue.getIsClass());
-    assertTrue(retValue.hasClazz());
-    assertTrue(retValue.hasObject());
-    assertEquals(className, retValue.getClazz().getName());
-
-    Primitives.Object newObj = retValue.getObject();
-
-    assertFalse(newObj.getIsNull());
-    assertFalse(newObj.getIsArray());
-    assertTrue(newObj.hasRef());
-    assertTrue(newObj.hasClass_());
-    assertEquals(className, newObj.getClass_().getName());
-    logger.info("Got new objectRef: {}", newObj.getRef());
+    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
   }
 
   @Test
-  public void publicNonEmptyConstructorArrayArg() {
+  public void privateNonEmptyConstructorArrayArg() {
 
     Object[] args = {new String[]{"Aa", "Bb", "Cc"}};
     String[] argRefs = {null};
@@ -136,23 +91,8 @@ public class ConstructorTest extends AbstractConcentratorTest {
     DataMessage requestMsg = DataMessageFactory.buildNonEmptyConstructorMessage(clientId, className, parameterTypesNamesArray, args, argRefs);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertFalse(retValue.getIsVoid());
-    assertFalse(retValue.getIsClass());
-    assertTrue(retValue.hasClazz());
-    assertTrue(retValue.hasObject());
-    assertEquals(className, retValue.getClazz().getName());
-
-    Primitives.Object newObj = retValue.getObject();
-
-    assertFalse(newObj.getIsNull());
-    assertFalse(newObj.getIsArray());
-    assertTrue(newObj.hasRef());
-    assertTrue(newObj.hasClass_());
-    assertEquals(className, newObj.getClass_().getName());
-    logger.info("Got new objectRef: {}", newObj.getRef());
+    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
   }
 
   @Test
@@ -162,25 +102,10 @@ public class ConstructorTest extends AbstractConcentratorTest {
     DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
+    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertFalse(retValue.getIsVoid());
-    assertFalse(retValue.getIsClass());
-    assertTrue(retValue.hasClazz());
-    assertTrue(retValue.hasObject());
-    assertEquals(className, retValue.getClazz().getName());
-
-    Primitives.Object newObj = retValue.getObject();
-
-    assertFalse(newObj.getIsNull());
-    assertFalse(newObj.getIsArray());
-    assertTrue(newObj.hasRef());
-    assertTrue(newObj.hasClass_());
-    assertEquals(className, newObj.getClass_().getName());
-    logger.info("Got new objectRef: {}", newObj.getRef());
-
-    String newAppRef = newObj.getRef();
+    String newAppRef = retValue.getObject().getRef();
 
     //2. Construct an App calling the constructor that takes another App as arg
 
@@ -195,24 +120,8 @@ public class ConstructorTest extends AbstractConcentratorTest {
     requestMsg = DataMessageFactory.buildNonEmptyConstructorMessage(clientId, className, parameterTypesNamesArray, args, argRefs);
     replyMsg = sendAndReceive(requestMsg);
 
-    logger.info("Received reply message:\n{}", replyMsg);
     assertTrue(replyMsg.hasReturnValue());
-    retValue = replyMsg.getReturnValue();
-    assertFalse(retValue.getIsVoid());
-    assertFalse(retValue.getIsClass());
-    assertTrue(retValue.hasClazz());
-    assertTrue(retValue.hasObject());
-    assertEquals(className, retValue.getClazz().getName());
-
-    newObj = retValue.getObject();
-
-    assertFalse(newObj.getIsNull());
-    assertFalse(newObj.getIsArray());
-    assertTrue(newObj.hasRef());
-    assertTrue(newObj.hasClass_());
-    assertEquals(className, newObj.getClass_().getName());
-    logger.info("Got new objectRef: {}", newObj.getRef());
-
+    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
   }
 
 }

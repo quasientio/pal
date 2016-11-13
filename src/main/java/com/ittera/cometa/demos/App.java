@@ -71,7 +71,7 @@ public class App {
     this.aNullInt = anInt;
   }
 
-  public App(String[] aStringArrayParam) {
+  private App(String[] aStringArrayParam) {
     for (int i = 0; i < aStringArrayParam.length; i++) {
       System.out.println(String.format("Parameter #%d : %s", i, aStringArrayParam[i]));
     }

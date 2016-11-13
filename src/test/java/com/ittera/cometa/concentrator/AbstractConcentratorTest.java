@@ -148,7 +148,7 @@ public abstract class AbstractConcentratorTest {
    * @param fieldClassName
    * @return
    */
-  private void isObjectOfRightType(ReturnValue returnValue, String fieldClassName, boolean isNull, boolean isArray) {
+  private void isObjectOfRightType(ReturnValue returnValue, String fieldClassName, boolean isObjRef, boolean isNull, boolean isArray) {
     assertFalse(returnValue.getIsVoid());
     assertFalse(returnValue.getIsClass());
     assertTrue(returnValue.hasClazz());
@@ -158,7 +158,7 @@ public abstract class AbstractConcentratorTest {
     Primitives.Object retObj = returnValue.getObject();
     assertEquals(isArray, retObj.getIsArray());
     assertEquals(isNull, retObj.getIsNull());
-    assertFalse(retObj.hasRef());
+    assertEquals(isObjRef, retObj.hasRef());
     assertTrue(retObj.hasClass_());
     assertFalse(retObj.getClass_().getUnknown());
     assertEquals(fieldClassName, retObj.getClass_().getName());
@@ -166,19 +166,23 @@ public abstract class AbstractConcentratorTest {
   }
 
   protected void assertValueIsObjectOfRightType(ReturnValue returnValue, String fieldClassName) {
-    isObjectOfRightType(returnValue, fieldClassName, false, false);
+    isObjectOfRightType(returnValue, fieldClassName, false, false, false);
+  }
+
+  protected void assertValueIsObjectRefOfRightType(ReturnValue returnValue, String fieldClassName) {
+    isObjectOfRightType(returnValue, fieldClassName, true, false, false);
   }
 
   protected void assertValueIsArrayOfRightType(ReturnValue returnValue, String fieldClassName) {
-    isObjectOfRightType(returnValue, fieldClassName, false, true);
+    isObjectOfRightType(returnValue, fieldClassName, false, false, true);
   }
 
   protected void assertValueIsNullObjectOfRightType(ReturnValue returnValue, String fieldClassName) {
-    isObjectOfRightType(returnValue, fieldClassName, true, false);
+    isObjectOfRightType(returnValue, fieldClassName, false, true, false);
   }
 
   protected void assertValueIsNullArrayOfRightType(ReturnValue returnValue, String fieldClassName) {
-    isObjectOfRightType(returnValue, fieldClassName, true, true);
+    isObjectOfRightType(returnValue, fieldClassName, false, true, true);
   }
 
   @AfterClass
