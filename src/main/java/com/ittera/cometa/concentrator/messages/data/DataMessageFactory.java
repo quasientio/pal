@@ -12,9 +12,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Array;
 
-import java.util.Arrays;
-import java.util.Iterator;
-
 import org.apache.commons.lang3.ClassUtils;
 
 import org.apache.logging.log4j.Logger;
@@ -69,7 +66,17 @@ public class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static Wrappers.DataMessage buildNonEmptyConstructorMessage(String concentratorId, String className, String[] parameterTypes, Object[] args) {
+  /**
+   * Args must be set either in args or argObjRefs. If null in both, value is assumed to be null.
+   *
+   * @param concentratorId
+   * @param className
+   * @param parameterTypes
+   * @param args           Should be of same length as parameterTypes. For Strings, primitives and wrappers.
+   * @param argObjRefs     Should be of same length as parameterTypes. For objectrefs.
+   * @return
+   */
+  public static Wrappers.DataMessage buildNonEmptyConstructorMessage(String concentratorId, String className, String[] parameterTypes, Object[] args, String[] argObjRefs) {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ConstructorCall.Builder callBuilder = Calls.ConstructorCall.newBuilder();
@@ -78,8 +85,17 @@ public class DataMessageFactory {
     callBuilder.setCurrentTime(System.currentTimeMillis());
     callBuilder.setClass_(getWrappedClass(className));
 
-    for (int i = 0; i < args.length; i++) {
-      callBuilder.addParameter(getWrappedObject(args[i], parameterTypes[i], null));
+    for (int i = 0; i < parameterTypes.length; i++) {
+      if (argObjRefs[i] != null) {
+        //parameter is an objectref
+        callBuilder.addParameter(getWrappedObject(null, parameterTypes[i], argObjRefs[i]));
+      } else if (args[i] != null) {
+        //parameter is string, primitive or wrapper
+        callBuilder.addParameter(getWrappedObject(args[i], parameterTypes[i], null));
+      } else {
+        //parameter is null
+        callBuilder.addParameter(getWrappedObject(null, parameterTypes[i], null));
+      }
     }
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
@@ -87,6 +103,8 @@ public class DataMessageFactory {
     msgBuilder.setConstructorCall(callBuilder);
 
     return msgBuilder.build();
+
+
   }
 
   public static Wrappers.DataMessage buildConstructorMessage(int concentratorId, StaticPart staticPart, Object sender, Object[] args) {
@@ -721,20 +739,24 @@ public class DataMessageFactory {
    * @return
    */
   private static Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, Class clazz, String objectKey) {
-    logger.trace("entering with object: {}", object);
+    logger.traceEntry("with object: {}, class: {}, objectKey: {}", object, clazz, objectKey);
+
+    //value is null if both object and objectKey are null
+    builder.setIsNull(objectKey == null && object == null);
 
     //set required fields (class already set at this point)
     builder.setIdentityHash(System.identityHashCode(object));
-    builder.setIsNull(object == null);
 
     if (clazz != null && clazz.isArray()) {
       builder.setIsArray(true);
     }
 
+    if (objectKey != null) {
+      builder.setRef(objectKey);
+    }
+
     if (object != null) {
-
       builder.setHash(object.hashCode());
-
       if (object instanceof String) {
         builder.setValue((String) object);
       } else if (object.getClass().isArray()) {
@@ -756,12 +778,8 @@ public class DataMessageFactory {
          *  TODO: when object not created by this Concentrator, full (deep) serialization/deserialization will be required
          *  TODO: if it's of type Class, treat differently?
          **/
-        if (objectKey != null) {
-          builder.setRef(objectKey);
-        }
       }
     }
-
 
     Primitives.Object builtValue = builder.build();
     logger.trace("returning wrappedValue:\n{}", builtValue);
@@ -845,7 +863,9 @@ public class DataMessageFactory {
     Ctxt.Context.Builder ctxtBuilder = Ctxt.Context.newBuilder();
 
     ctxtBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
-    ctxtBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
+    if (sender != null) {
+      ctxtBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
+    }
     ctxtBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
     ctxtBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
     ctxtBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getName());

@@ -41,11 +41,6 @@ public class App {
     aClassString = "I'm classy";
   }
 
-  static void doSomethingStatically() {
-    System.out.println("whatever");
-  }
-
-
   public static class MyInnerClass {
     static int anInt;
 
@@ -59,11 +54,26 @@ public class App {
     }
   }
 
+  //CONSTRUCTORS
   public App() {
     System.out.println("Hi from the default constructor :)");
     anIntList = new ArrayList();
     for (int i = 0; i < 5; i++) {
       anIntList.add(i * i);
+    }
+  }
+
+  public App(App anotherApp) {
+    this.anApp = anotherApp;
+  }
+
+  public App(Integer anInt) {
+    this.aNullInt = anInt;
+  }
+
+  public App(String[] aStringArrayParam) {
+    for (int i = 0; i < aStringArrayParam.length; i++) {
+      System.out.println(String.format("Parameter #%d : %s", i, aStringArrayParam[i]));
     }
   }
 
@@ -73,6 +83,7 @@ public class App {
     }
   }
 
+  //METHODS
   void doSomething() {
     anInt = Integer.valueOf(60);
     someString = new String("hello there");
@@ -94,6 +105,10 @@ public class App {
 
   private static void printArg(int argIdx, String arg) {
     System.out.println(String.format("Argument #%d to main: %s", argIdx, arg));
+  }
+
+  static void doSomethingStatically() {
+    System.out.println("whatever");
   }
 
   private static void testVoidStatic(String arg) {

@@ -1,8 +1,6 @@
 package com.ittera.cometa.concentrator.messages.data;
 
-import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 
 import org.apache.commons.lang3.ClassUtils;
 
