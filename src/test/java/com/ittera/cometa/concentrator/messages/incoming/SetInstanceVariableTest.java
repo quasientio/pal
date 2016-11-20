@@ -13,9 +13,10 @@ import static org.junit.Assert.*;
  * Coverage:
  * ---------
  * - public integer with non-null value
+ * - public integer with non-null value set null
+ * - null value
  * <p>
  * TODO:
- * - null value
  * - private, protected, package-visible
  * - primitives
  * - arrays
@@ -39,7 +40,7 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     Primitives.Object newObj = replyMsg.getReturnValue().getObject();
 
-    //test with a non null integer (value = 4)
+    //test with a non null integer
     requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
     assertNotNull(replyMsg.getReturnValue().getObject());
@@ -50,7 +51,7 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     assertTrue(rawObj instanceof Integer);
     assertEquals(originalValue, rawObj);
 
-    //set integer (value = 500)
+    //set integer
     requestMsg = DataMessageFactory.buildPutObjectMessage(clientId, className, fieldName, newObj.getRef(), fieldClassName, newValue);
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasInstanceFieldPutDone());
@@ -71,4 +72,47 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     assertEquals(newValue, rawObj);
   }
 
+  @Test
+  public void testPutIntegerSetNull() throws ClassNotFoundException {
+
+    String fieldName = "anotherInt";
+    String fieldClassName = "java.lang.Integer";
+    Integer originalValue = 1;
+    Integer newValue = null;
+
+    //must call new first
+    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage replyMsg = sendAndReceive(requestMsg);
+    Primitives.Object fieldObj = replyMsg.getReturnValue().getObject();
+
+    //test with a non null integer
+    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, fieldObj.getRef());
+    replyMsg = sendAndReceive(requestMsg);
+    assertNotNull(replyMsg.getReturnValue().getObject());
+    Primitives.Object retObj = replyMsg.getReturnValue().getObject();
+
+    Object rawObj = ProtobufUtils.unwrapObject(retObj);
+
+    assertTrue(rawObj instanceof Integer);
+    assertEquals(originalValue, rawObj);
+
+    //set integer to null
+    requestMsg = DataMessageFactory.buildPutObjectMessage(clientId, className, fieldName, fieldObj.getRef(), fieldClassName, newValue);
+    replyMsg = sendAndReceive(requestMsg);
+    assertTrue(replyMsg.hasInstanceFieldPutDone());
+    assertFalse(replyMsg.hasReturnValue());
+    Fields.InstanceFieldPutDone fieldPutDone = replyMsg.getInstanceFieldPutDone();
+    assertEquals(fieldPutDone.getField().getName(), fieldName);
+
+
+    //now get to test if set took place
+    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, fieldObj.getRef());
+    replyMsg = sendAndReceive(requestMsg);
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
+
+    rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    assertEquals(newValue, rawObj);
+  }
 }

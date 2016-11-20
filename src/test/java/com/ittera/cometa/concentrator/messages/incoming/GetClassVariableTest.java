@@ -13,8 +13,18 @@ import static org.junit.Assert.*;
  * Coverage:
  * ---------
  * This class should only test access to static (i.e. class) variables.
+ * - public String with non-null value
+ * - public String with null value
+ * - private Integer with non-null value
+ * - protected Boolean with null value
+ * - package-visible boolean with non-null value
  * <p>
  * Regardless of their type and visibility.
+ * <p>
+ * TODO
+ * arrays
+ * objectrefs
+ * rest of primitive types (?)
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class GetClassVariableTest extends AbstractConcentratorTest {

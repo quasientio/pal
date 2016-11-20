@@ -6,7 +6,12 @@ import org.apache.commons.lang3.ClassUtils;
 
 import com.google.common.collect.ImmutableMap;
 
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
 public class ProtobufUtils {
+
+  protected static final Logger logger = LogManager.getLogger(ProtobufUtils.class);
 
   private static final Map<String, Class> shortPrimitiveNameToClass = ImmutableMap.<String, Class>builder()
     .put("byte", byte.class)
@@ -28,6 +33,11 @@ public class ProtobufUtils {
    * @return
    */
   public static Object unwrapObject(Primitives.Object object, Class clazz) {
+    logger.traceEntry("with object:\n{}, clazz:\n{}", object, clazz);
+
+    if (object.getIsNull()) {
+      return null;
+    }
 
     //is primitive
     if (ClassUtils.isPrimitiveOrWrapper(clazz)) {

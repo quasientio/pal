@@ -141,7 +141,7 @@ public abstract class AbstractConcentratorTest {
   }
 
   /**
-   * Helper method for subclasses
+   * Helper assertion methods
    * This method is also useful as it encapsulates details of the protobuf serialization
    *
    * @param returnValue

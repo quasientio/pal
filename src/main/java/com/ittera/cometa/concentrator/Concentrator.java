@@ -1071,7 +1071,7 @@ public class Concentrator {
   }
 
   public static void incomingPutField(Fields.InstanceFieldPut instanceFieldPut, long recordOffset) {
-    logger.traceEntry("with instanceFieldPut: {}, recordOffset: {}", instanceFieldPut, recordOffset);
+    logger.traceEntry("with instanceFieldPut:\n {}, recordOffset: {}", instanceFieldPut, recordOffset);
 
     /** 1. Load class and field **/
     final Class clazz;

@@ -12,7 +12,7 @@ import static org.junit.Assert.*;
 /**
  * Coverage:
  * ---------
- * - package int with non-null value
+ * - package-visible int with non-null value
  * - public string with non-null value
  * <p>
  * TODO:

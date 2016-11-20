@@ -517,6 +517,31 @@ public class DataMessageFactory {
    * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
    * Equivalent to the above, for objectRefs
    */
+  public static Wrappers.DataMessage buildPutObjecSetNulltMessage(String concentratorId, String className, String fieldName, String targetObjRef) {
+
+    /** Build protobuf message **/
+    final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
+
+    final Fields.InstanceFieldPut.Builder fieldBuilder = Fields.InstanceFieldPut.newBuilder();
+    fieldBuilder.setConcentratorId(Integer.parseInt(concentratorId));
+    fieldBuilder.setThreadId(Thread.currentThread().getId());
+    fieldBuilder.setCurrentTime(System.currentTimeMillis());
+    fieldBuilder.setClass_(getWrappedClass(className));
+    fieldBuilder.setObjectRef(targetObjRef);
+    fieldBuilder.setField(getWrappedField((String) null, fieldName));
+    fieldBuilder.setValueObject(getWrappedObject(null, (Class) null, null));
+
+    msgBuilder.setThreadId(Thread.currentThread().getId());
+    msgBuilder.setMsgType("Put field");
+    msgBuilder.setInstanceFieldPut(fieldBuilder);
+
+    return msgBuilder.build();
+  }
+
+  /**
+   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * Equivalent to the above, for objectRefs
+   */
   public static Wrappers.DataMessage buildPutObjectMessage(String concentratorId, String className, String fieldName, String targetObjRef, String valueObjRef) {
 
     /** Build protobuf message **/
@@ -782,7 +807,7 @@ public class DataMessageFactory {
     }
 
     Primitives.Object builtValue = builder.build();
-    logger.trace("returning wrappedValue:\n{}", builtValue);
+    logger.traceExit("with wrappedValue: {}", builtValue);
     return builtValue;
   }
 

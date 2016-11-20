@@ -11,6 +11,7 @@ import java.util.ArrayList;
 public class App {
 
   public Integer anInt = 4;
+  Integer anotherInt = 1;
   private Integer aNullInt;
   public String aNullStr;
   protected String someString = "I'm blank";

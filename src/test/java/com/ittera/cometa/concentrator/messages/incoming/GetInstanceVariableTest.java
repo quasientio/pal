@@ -12,7 +12,7 @@ import static org.junit.Assert.*;
 /**
  * Coverage:
  * ---------
- * This class should only test access to static (i.e. class) variables.
+ * This class should only test access to instance variables.
  * <p>
  * Regardless of their type and visibility.
  * <p>
