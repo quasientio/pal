@@ -4,7 +4,7 @@ import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 
-import com.ittera.cometa.demos.App;
+import com.ittera.cometa.apps.App;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -24,7 +24,7 @@ import static org.junit.Assert.*;
  */
 public class ConstructorTest extends AbstractConcentratorTest {
 
-  protected final String className = "com.ittera.cometa.demos.App";
+  protected final String className = "com.ittera.cometa.apps.App";
 
   @Test
   public void publicEmptyConstructor() {

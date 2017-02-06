@@ -25,7 +25,7 @@ import static org.junit.Assert.*;
 
 public class NonVoidClassMethodTest extends AbstractConcentratorTest {
 
-  protected final String className = "com.ittera.cometa.demos.App";
+  protected final String className = "com.ittera.cometa.apps.App";
 
   @Test
   public void privateWithArg() throws ClassNotFoundException {
