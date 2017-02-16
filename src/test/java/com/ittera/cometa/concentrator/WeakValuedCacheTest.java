@@ -1,14 +1,14 @@
 package com.ittera.cometa.concentrator;
 
-import junit.framework.TestCase;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+
+import org.junit.Test;
 
 import java.util.Random;
 
 
-public class WeakValuedCacheTest extends TestCase {
+public class WeakValuedCacheTest {
 
   protected final static Logger logger = LogManager.getLogger("tests");
 
@@ -28,6 +28,7 @@ public class WeakValuedCacheTest extends TestCase {
     }
   }
 
+  @Test
   public void testCaching() throws InterruptedException {
     objectCache = new WeakValuedCache<>();
 
