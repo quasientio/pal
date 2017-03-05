@@ -1,0 +1,5 @@
+/backup*
+
+target/
+logs/
+.idea/
