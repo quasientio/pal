@@ -5,12 +5,9 @@ import com.ittera.cometa.concentrator.messages.data.DataMessageFactory;
 import com.ittera.cometa.concentrator.messages.data.ProtobufUtils;
 import com.ittera.cometa.concentrator.messages.data.Values;
 import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
  * Coverage:
@@ -23,7 +20,6 @@ import static org.junit.Assert.assertTrue;
  * TODO: introduce null values in 3rd test
  */
 
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class GetArrayVariableTest extends AbstractConcentratorTest {
 
   protected final String className = "com.ittera.cometa.demos.ArrayVars";
