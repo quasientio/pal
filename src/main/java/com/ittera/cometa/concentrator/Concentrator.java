@@ -3,6 +3,7 @@ package com.ittera.cometa.concentrator;
 import com.ittera.cometa.concentrator.messages.data.*;
 
 import com.ittera.cometa.concentrator.messages.data.Primitives;
+import com.ittera.cometa.util.ReflectionHelper;
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.aspectj.lang.JoinPoint.StaticPart;
@@ -420,7 +421,7 @@ public class Concentrator {
   static void incomingInstanceMethod(Calls.InstanceMethodCall instanceMethodCall, long recordOffset) {
     logger.traceEntry("with instanceMethodCall: {}, recordOffset: {}", instanceMethodCall, recordOffset);
 
-    /** 1. Unwrap message and load method **/
+    /** 1. Unwrap message and load class **/
     Class clazz = null;
     Method method = null;
     Exception exceptionWhileLoading = null;
@@ -428,14 +429,17 @@ public class Concentrator {
     try {
       clazz = Class.forName(instanceMethodCall.getClass_().getName());
       for (Primitives.Object obj : instanceMethodCall.getParameterList()) {
-        paramClasses.add(Class.forName(obj.getClass_().getName()));
+        Class paramClass = ProtobufUtils.getClassForPrimitive(obj.getClass_().getName());
+        if (paramClass == null) {
+          paramClass = Class.forName(obj.getClass_().getName());
+        }
+        paramClasses.add(paramClass);
       }
-      method = clazz.getDeclaredMethod(instanceMethodCall.getName(), (Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
     } catch (Exception e) {
       exceptionWhileLoading = e;
     }
 
-    /** 2. If class and method loaded, unwrap arguments and invoke method **/
+    /** 2. If class loaded, unwrap/retrieve arguments and invoke method **/
     Exception exceptionWhileInvoking = null;
     Object returnValue = null;
     if (exceptionWhileLoading == null) {
@@ -449,14 +453,20 @@ public class Concentrator {
         args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx++)));
 //        }
       }
-      method.setAccessible(true);
       try {
         Object target = lookupObject(instanceMethodCall.getObjectRef());
+        method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getName());
+        if (method == null) {
+          //TODO perhaps this should be thrown by ReflectionHelper instead of returning null
+          throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", instanceMethodCall.getName(), clazz.getName()));
+        }
+        method.setAccessible(true);
         returnValue = method.invoke(target, args.toArray());
       } catch (Exception e) {
         exceptionWhileInvoking = e;
       }
     }
+
 
     /** 3. Wrap return value or exception **/
     final Wrappers.DataMessage invokedMsg;
@@ -620,7 +630,7 @@ public class Concentrator {
   static void incomingClassMethod(Calls.ClassMethodCall classMethodCall, long recordOffset) {
     logger.traceEntry("with classMethodCall: {}, recordOffset: {}", classMethodCall, recordOffset);
 
-    /** 1. Unwrap message and load method **/
+    /** 1. Unwrap message and load class **/
     Class clazz = null;
     Method method = null;
     Exception exceptionWhileLoading = null;
@@ -629,25 +639,35 @@ public class Concentrator {
       logger.debug("Attempting to load (initialize) class");
       clazz = Class.forName(classMethodCall.getClass_().getName());
       for (Primitives.Object obj : classMethodCall.getParameterList()) {
-        paramClasses.add(Class.forName(obj.getClass_().getName()));
+        Class paramClass = ProtobufUtils.getClassForPrimitive(obj.getClass_().getName());
+        if (paramClass == null) {
+          paramClass = Class.forName(obj.getClass_().getName());
+        }
+        paramClasses.add(paramClass);
       }
-      method = clazz.getDeclaredMethod(classMethodCall.getName(), (Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
     } catch (Exception e) {
       exceptionWhileLoading = e;
     }
 
-    /** 2. If class and method loaded, unwrap arguments and invoke method **/
+    /** 2. If class loaded, unwrap/retrieve arguments and invoke method **/
     Exception exceptionWhileInvoking = null;
     Object returnValue = null;
     if (exceptionWhileLoading == null) {
       List<Object> args = new ArrayList<>();
       int objIdx = 0;
       for (Primitives.Object obj : classMethodCall.getParameterList()) {
-        args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx++)));
+        if (obj.hasRef()) {
+          args.add(lookupObject(obj.getRef()));
+        } else {
+          args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx++)));
+        }
       }
-      method.setAccessible(true);
       try {
-        logger.debug("Invoking class method NOW!");
+        method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), classMethodCall.getName());
+        if (method == null) {
+          throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", classMethodCall.getName(), clazz.getName()));
+        }
+        method.setAccessible(true);
         returnValue = method.invoke(null, args.toArray());
       } catch (Exception e) {
         exceptionWhileInvoking = e;

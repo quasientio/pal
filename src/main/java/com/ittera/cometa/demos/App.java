@@ -105,7 +105,7 @@ public class App {
   }
 
   private static void printArg(int argIdx, String arg) {
-    System.out.println(String.format("Argument #%d to main: %s", argIdx, arg));
+    System.out.println(String.format("Argument #%d to printArg: %s", argIdx, arg));
   }
 
   static void doSomethingStatically() {
@@ -114,6 +114,16 @@ public class App {
 
   private static void testVoidStatic(String arg) {
     System.out.println(arg);
+  }
+
+  public static void sumUpList(ArrayList<Integer> listOfInts) {
+    int sum = 0;
+    if (listOfInts!=null) {
+      for (int i = 0; i < listOfInts.size(); i++) {
+        sum += (Integer) listOfInts.get(i);
+      }
+    }
+    System.out.println(String.format("The sum of ints = %d", sum));
   }
 
   private static String testNonVoidStatic(String arg) {

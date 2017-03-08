@@ -145,14 +145,14 @@ public abstract class AbstractConcentratorTest {
    * This method is also useful as it encapsulates details of the protobuf serialization
    *
    * @param returnValue
-   * @param fieldClassName
+   * @param className
    * @return
    */
-  private void isObjectOfRightType(ReturnValue returnValue, String fieldClassName, boolean isObjRef, boolean isNull, boolean isArray) {
+  private void isObjectOfRightType(ReturnValue returnValue, String className, boolean isObjRef, boolean isNull, boolean isArray) {
     assertFalse(returnValue.getIsVoid());
     assertFalse(returnValue.getIsClass());
     assertTrue(returnValue.hasClazz());
-    assertEquals(fieldClassName, returnValue.getClazz().getName());
+    assertEquals(className, returnValue.getClazz().getName());
     assertTrue(returnValue.hasObject());
 
     Primitives.Object retObj = returnValue.getObject();
@@ -161,28 +161,28 @@ public abstract class AbstractConcentratorTest {
     assertEquals(isObjRef, retObj.hasRef());
     assertTrue(retObj.hasClass_());
     assertFalse(retObj.getClass_().getUnknown());
-    assertEquals(fieldClassName, retObj.getClass_().getName());
+    assertEquals(className, retObj.getClass_().getName());
 
   }
 
-  protected void assertValueIsObjectOfRightType(ReturnValue returnValue, String fieldClassName) {
-    isObjectOfRightType(returnValue, fieldClassName, false, false, false);
+  protected void assertValueIsObjectOfRightType(ReturnValue returnValue, String className) {
+    isObjectOfRightType(returnValue, className, false, false, false);
   }
 
-  protected void assertValueIsObjectRefOfRightType(ReturnValue returnValue, String fieldClassName) {
-    isObjectOfRightType(returnValue, fieldClassName, true, false, false);
+  protected void assertValueIsObjectRefOfRightType(ReturnValue returnValue, String className) {
+    isObjectOfRightType(returnValue, className, true, false, false);
   }
 
-  protected void assertValueIsArrayOfRightType(ReturnValue returnValue, String fieldClassName) {
-    isObjectOfRightType(returnValue, fieldClassName, false, false, true);
+  protected void assertValueIsArrayOfRightType(ReturnValue returnValue, String className) {
+    isObjectOfRightType(returnValue, className, false, false, true);
   }
 
-  protected void assertValueIsNullObjectOfRightType(ReturnValue returnValue, String fieldClassName) {
-    isObjectOfRightType(returnValue, fieldClassName, false, true, false);
+  protected void assertValueIsNullObjectOfRightType(ReturnValue returnValue, String className) {
+    isObjectOfRightType(returnValue, className, false, true, false);
   }
 
-  protected void assertValueIsNullArrayOfRightType(ReturnValue returnValue, String fieldClassName) {
-    isObjectOfRightType(returnValue, fieldClassName, false, true, true);
+  protected void assertValueIsNullArrayOfRightType(ReturnValue returnValue, String className) {
+    isObjectOfRightType(returnValue, className, false, true, true);
   }
 
   @AfterClass

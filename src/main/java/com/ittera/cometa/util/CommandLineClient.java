@@ -66,15 +66,13 @@ public class CommandLineClient {
       /** example: com.ittera.cometa.demos.App main */
       String[] mainArgs = Arrays.copyOfRange(lineParts, 2, lineParts.length);
       String methodName = "main";
-      int modifiers = Modifier.PUBLIC | Modifier.STATIC;
-      Class returnType = Void.class;
       Class[] parameterTypes = new Class[]{String[].class};
       String[] parameterTypesNamesArray = new String[parameterTypes.length];
       for (int i = 0; i < parameterTypes.length; i++) {
         parameterTypesNamesArray[i] = parameterTypes[i].getName();
       }
       Object[] parameters = new Object[]{mainArgs};
-      return DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, modifiers, returnType, parameterTypesNamesArray, parameters);
+      return DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypesNamesArray.length]);
     } else if ("get".equals(lineParts[1])) {
       if (lineParts.length == 4) {
         /** get field - example: com.ittera.cometa.demos.App get object-ref anInstanceVar */

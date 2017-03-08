@@ -37,6 +37,11 @@
             <AppenderRef ref="concentrator"/>
         </Logger>
 
+        <!-- Let's send logging of cometa.util package to the concentrator log -->
+        <Logger name="com.ittera.cometa.util" level="trace" additivity="false">
+            <AppenderRef ref="concentrator"/>
+        </Logger>
+
         <Logger name="com.ittera.cometa.concentrator.messages.data.DataMessageFactory" level="info" additivity="false">
             <AppenderRef ref="concentrator"/>
         </Logger>

@@ -29,6 +29,11 @@
             <AppenderRef ref="concentrator"/>
         </Logger>
 
+        <!-- Let's send logging of cometa.util package to the concentrator log -->
+        <Logger name="com.ittera.cometa.util" level="trace" additivity="false">
+            <AppenderRef ref="concentrator"/>
+        </Logger>
+
         <Logger name="org.apache.kafka" level="debug" additivity="false">
             <AppenderRef ref="kafka"/>
         </Logger>

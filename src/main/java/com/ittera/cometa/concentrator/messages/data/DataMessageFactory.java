@@ -48,7 +48,7 @@ public class DataMessageFactory {
 
   /**
    * Only supports calls to empty constructor
-   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    */
   public static Wrappers.DataMessage buildEmptyConstructorMessage(String concentratorId, String className) {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
@@ -141,7 +141,7 @@ public class DataMessageFactory {
   }
 
   /**
-   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    */
   public static Wrappers.DataMessage buildInstanceMethodMessage(String concentratorId, String className, String methodName, String objRef, String[] parameterTypes, Object[] args) {
 
@@ -209,9 +209,9 @@ public class DataMessageFactory {
 
 
   /**
-   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    */
-  public static Wrappers.DataMessage buildClassMethodMessage(String concentratorId, String className, String methodName, int modifiers, Class returnType, String[] parameterTypes, Object[] args) {
+  public static Wrappers.DataMessage buildClassMethodMessage(String concentratorId, String className, String methodName, String[] parameterTypes, Object[] args, String[] argObjRefs) {
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
     final Calls.ClassMethodCall.Builder callBuilder = Calls.ClassMethodCall.newBuilder();
@@ -221,12 +221,17 @@ public class DataMessageFactory {
     callBuilder.setClass_(getWrappedClass(className));
     callBuilder.setName(methodName);
 
-    boolean isMain = isMain(methodName, returnType, parameterTypes, modifiers);
-    if (!isMain) {
-      throw new IllegalArgumentException("Currently only calls to psvm can be wrapped by this method");
-    }
-    for (int i = 0; i < args.length; i++) {
-      callBuilder.addParameter(getWrappedObject(args[i], parameterTypes[i], null));
+    for (int i = 0; i < parameterTypes.length; i++) {
+      if (argObjRefs[i] != null) {
+        //parameter is an objectref
+        callBuilder.addParameter(getWrappedObject(null, parameterTypes[i], argObjRefs[i]));
+      } else if (args[i] != null) {
+        //parameter is string, primitive or wrapper
+        callBuilder.addParameter(getWrappedObject(args[i], parameterTypes[i], null));
+      } else {
+        //parameter is null
+        callBuilder.addParameter(getWrappedObject(null, parameterTypes[i], null));
+      }
     }
 
     msgBuilder.setThreadId(Thread.currentThread().getId());
@@ -273,7 +278,7 @@ public class DataMessageFactory {
   }
 
   /**
-   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    */
   public static Wrappers.DataMessage buildGetStaticMessage(String concentratorId, String className, String fieldName) {
 
@@ -317,7 +322,7 @@ public class DataMessageFactory {
   }
 
   /**
-   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    */
   public static Wrappers.DataMessage buildGetObjectMessage(String concentratorId, String className, String fieldName, String targetObjRef) {
 
@@ -364,7 +369,7 @@ public class DataMessageFactory {
   }
 
   /**
-   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    */
   public static Wrappers.DataMessage buildPutStaticMessage(String concentratorId, String className, String fieldName, String valueClassName, Object value) {
 
@@ -387,7 +392,7 @@ public class DataMessageFactory {
   }
 
   /**
-   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    * Equivalent to the above, for objectRefs
    */
   public static Wrappers.DataMessage buildPutStaticMessage(String concentratorId, String className, String fieldName, String objectRef) {
@@ -435,7 +440,7 @@ public class DataMessageFactory {
   }
 
   /**
-   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    * Equivalent to the above, for objectRefs
    */
   public static Wrappers.DataMessage buildPutStaticDoneMessage(int concentratorId, Fields.StaticFieldPut staticFieldPut, Class fieldType, Long followingOffset) {
@@ -489,7 +494,7 @@ public class DataMessageFactory {
 
 
   /**
-   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    * Equivalent to the above, for objectRefs
    */
   public static Wrappers.DataMessage buildPutObjectMessage(String concentratorId, String className, String fieldName, String targetObjRef, String valueClassName, Object value) {
@@ -514,7 +519,7 @@ public class DataMessageFactory {
   }
 
   /**
-   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    * Equivalent to the above, for objectRefs
    */
   public static Wrappers.DataMessage buildPutObjecSetNulltMessage(String concentratorId, String className, String fieldName, String targetObjRef) {
@@ -539,7 +544,7 @@ public class DataMessageFactory {
   }
 
   /**
-   * This method is to be called when no joinpoint context is available (calling class hasn't been weaved). Example of caller: CommandLineClient
+   * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    * Equivalent to the above, for objectRefs
    */
   public static Wrappers.DataMessage buildPutObjectMessage(String concentratorId, String className, String fieldName, String targetObjRef, String valueObjRef) {
