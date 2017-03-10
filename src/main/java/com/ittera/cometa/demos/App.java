@@ -30,6 +30,7 @@ public class App {
   public static double aDbl;
   public static String aNullStaticStr;
   static int aStaticInteger = 3000;
+  private static App aNestedApp;
 
   private static String[] aNullStringArray;
   private static String[] anEmptyStringArray = {};
@@ -40,6 +41,7 @@ public class App {
     aDbl = 5;
     System.out.println("aDbl after=" + aDbl);
     aClassString = "I'm classy";
+    aNestedApp = new App();
   }
 
   public static class MyInnerClass {
@@ -117,18 +119,57 @@ public class App {
   }
 
   public static void sumUpList(ArrayList<Integer> listOfInts) {
+    System.out.println(String.format("The sum of ints = %d", nonVoidSumUpList(listOfInts)));
+  }
+
+  public static Integer nonVoidSumUpList(ArrayList<Integer> listOfInts) {
     int sum = 0;
     if (listOfInts!=null) {
       for (int i = 0; i < listOfInts.size(); i++) {
-        sum += (Integer) listOfInts.get(i);
+        sum += listOfInts.get(i);
       }
     }
-    System.out.println(String.format("The sum of ints = %d", sum));
+    return sum;
   }
 
   private static String testNonVoidStatic(String arg) {
     return arg.toLowerCase();
   }
+
+  protected static Integer highFive() {
+    return 5;
+  }
+
+  public static Object giveMeANull() {
+    return null;
+  }
+
+  public static Long[] giveMeAnEmptyLongArray() {
+    return new Long[0];
+  }
+
+  public static Boolean[] giveMeANullBoolArray() {
+    return (Boolean[]) null;
+  }
+
+  static char[] toCharArray(String whateverString) {
+    return whateverString.toCharArray();
+  }
+
+  static App fetchMeAnApp() {
+    return aNestedApp;
+  }
+
+  static App[] fetchMeAnAppArray() {
+    int arraySize = 19;
+    App[] apps = new App[arraySize];
+    for (int i = 0; i < 19 ; i++) {
+        apps[i]  = new App();
+    }
+
+    return apps;
+  }
+
 
   public static void main(String[] args) {
     if (args.length > 0) {

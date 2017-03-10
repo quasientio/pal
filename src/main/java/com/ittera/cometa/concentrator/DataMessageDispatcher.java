@@ -80,7 +80,7 @@ public class DataMessageDispatcher extends Thread {
         //if threadId not in our threadQueue, then push to new/random thread
         if (!Concentrator.threadBlockingQueueMap.containsKey(threadId)) {
           logger.debug("Thread queue has thread with ids" + Concentrator.threadBlockingQueueMap.keySet());
-          logger.debug("No thread for incoming call, creating new one and dispatching...");
+          logger.debug("No thread for incoming call, dispatching to thread pool...");
           executorService.submit(new Runnable() {
             @Override
             public void run() {

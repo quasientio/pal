@@ -29,7 +29,7 @@ public class MessageBroker {
     checkCreateThreadQueue();
 
     producer.send(new ProducerRecord(kafkaTopic, message));
-    logger.debug("new message sent!");
+    logger.debug("new message sent:\n {}", message);
   }
 
   private static void checkCreateThreadQueue() {

@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator;
 
+import com.google.common.collect.HashBiMap;
 import com.ittera.cometa.concentrator.messages.data.*;
 
 import com.ittera.cometa.concentrator.messages.data.Primitives;
@@ -31,6 +32,9 @@ import org.apache.logging.log4j.LogManager;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.common.collect.Maps;
+import com.google.common.collect.BiMap;
+
 public class Concentrator {
   protected static final Logger logger = LogManager.getLogger(Concentrator.class);
 
@@ -42,9 +46,13 @@ public class Concentrator {
   static MessageBroker broker;
   static int id;
   static final Map<Long, BlockingQueue> threadBlockingQueueMap = new ConcurrentHashMap();
-  static final Map<String, Object> objectMap = new ConcurrentHashMap<>();
 
-  //A map for all objects created by the Concentrator. TODO: store as WeakReferences -> until then, no threads will get garbage cleaned!
+  //A map for all objects created by the Concentrator.
+  // TODO: store as WeakReferences -> until then, no threads will get garbage cleaned!
+  private static final BiMap<String,Object> objectBiMap = HashBiMap.create();
+  static final BiMap<String,Object> syncdObjectMap = Maps.synchronizedBiMap(objectBiMap);
+
+
   private static Wrappers.DataMessage receiveMsgForCurrentThread() {
     long currThreadId = Thread.currentThread().getId();
     Wrappers.DataMessage rcvdMsg = null;
@@ -78,29 +86,26 @@ public class Concentrator {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 4. Load and initialize class  -  WARNING: For some reason the class is not being initialized! **/
     Class clazz = null;
     ClassNotFoundException exceptionWhileLoadingClass = null;
-    Long randomLong = null;
     try {
       clazz = Class.forName(staticPart.getSignature().getDeclaringType().getName());
-      randomLong = ThreadLocalRandom.current().nextLong();
       //Class.forName(codeSignature.getDeclaringTypeName(),true, Concentrator.class.getClassLoader());
     } catch (ClassNotFoundException cnfe) {
       exceptionWhileLoadingClass = cnfe;
     }
 
     /** 5. Store and wrap class/exception if any **/
+    String objKey = null;
     final Wrappers.DataMessage invokedMsg;
     if (exceptionWhileLoadingClass != null) {
       invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionWhileLoadingClass);
     } else {
-      String objKey = String.format("%d:%d", System.identityHashCode(clazz), randomLong);
-      storeObject(objKey, clazz);
+      objKey = storeObject(clazz);
       invokedMsg = DataMessageFactory.buildLoadedClassMessage(id, clazz);
     }
 
@@ -111,8 +116,7 @@ public class Concentrator {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return or re-raise exception **/
@@ -155,7 +159,6 @@ public class Concentrator {
     Exception exceptionWhileInvoking = null;
     Object newObject = null;
     String objKey = null;
-    Long randomLong = null;
 
     if (exceptionWhileLoading == null) {
       constructor.setAccessible(true);
@@ -172,10 +175,8 @@ public class Concentrator {
           }
         }
         newObject = constructor.newInstance(args.toArray(new Object[args.size()]));
-        randomLong = ThreadLocalRandom.current().nextLong();
         //store in object map
-        objKey = String.format("%d:%d", System.identityHashCode(newObject), randomLong);
-        storeObject(objKey, newObject);
+        objKey = storeObject(newObject);
       } catch (Exception ite) {
         exceptionWhileInvoking = ite;
       }
@@ -216,8 +217,7 @@ public class Concentrator {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -229,13 +229,10 @@ public class Concentrator {
     Exception exceptionWhileInvoking = null;
     constructor.setAccessible(true);
     String objKey = null;
-    Long randomLong = null;
     try {
       newObject = constructor.newInstance(args);
-      randomLong = ThreadLocalRandom.current().nextLong();
       //store in object map
-      objKey = String.format("%d:%d", System.identityHashCode(newObject), randomLong);
-      storeObject(objKey, newObject);
+      objKey = storeObject(newObject);
     } catch (Exception ite) {
       exceptionWhileInvoking = ite;
     }
@@ -257,8 +254,7 @@ public class Concentrator {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return object or re-raise exception **/
@@ -294,8 +290,7 @@ public class Concentrator {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -328,8 +323,7 @@ public class Concentrator {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return object or re-raise exception **/
@@ -362,8 +356,7 @@ public class Concentrator {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -396,8 +389,7 @@ public class Concentrator {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return object or re-raise exception **/
@@ -503,8 +495,7 @@ public class Concentrator {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -536,8 +527,7 @@ public class Concentrator {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return object or re-raise exception **/
@@ -570,8 +560,7 @@ public class Concentrator {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -604,8 +593,7 @@ public class Concentrator {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return object or re-raise exception **/
@@ -653,6 +641,7 @@ public class Concentrator {
     Exception exceptionWhileInvoking = null;
     Object returnValue = null;
     if (exceptionWhileLoading == null) {
+      logger.debug("Unwrapping parameters");
       List<Object> args = new ArrayList<>();
       int objIdx = 0;
       for (Primitives.Object obj : classMethodCall.getParameterList()) {
@@ -668,6 +657,7 @@ public class Concentrator {
           throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", classMethodCall.getName(), clazz.getName()));
         }
         method.setAccessible(true);
+        logger.debug("Let's invoke it!");
         returnValue = method.invoke(null, args.toArray());
       } catch (Exception e) {
         exceptionWhileInvoking = e;
@@ -682,7 +672,8 @@ public class Concentrator {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, method.getReturnType() == void.class ? Void.class : returnValue, method.getReturnType(), null, true, recordOffset);
+      boolean isVoid = method.getReturnType() == void.class;
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, isVoid ? Void.class : returnValue, method.getReturnType(), lookupObjectRef(returnValue), isVoid, recordOffset);
     }
 
     /** 4. Send object/exception **/
@@ -760,8 +751,7 @@ public class Concentrator {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 4. Get Object **/
@@ -792,8 +782,7 @@ public class Concentrator {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return or re-raise exception **/
@@ -868,8 +857,7 @@ public class Concentrator {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
 
@@ -901,8 +889,7 @@ public class Concentrator {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return or re-raise exception **/
@@ -986,8 +973,7 @@ public class Concentrator {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 4. Put Object **/
@@ -1018,8 +1004,7 @@ public class Concentrator {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return or re-raise exception **/
@@ -1045,8 +1030,7 @@ public class Concentrator {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 4. Put Object **/
@@ -1077,8 +1061,7 @@ public class Concentrator {
       /** 7. Receive object/exception **/
       Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
 
-      //TODO compare
-      logger.info("Message received: {}", rcvdMsg.getMsgType());
+      logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
     /** 8. Return or re-raise exception **/
@@ -1159,18 +1142,19 @@ public class Concentrator {
 
   // </editor-fold>
 
+  // <editor-fold defaultstate="collapsed" desc="OBJECT STORE">
 
   /**
-   * TODO: IMPLEMENT
-   *
-   * @param dataMessage
+   * Attention: Don't call twice for the same object. Instead, use a BiMap to get back the ref.
+   * Called twice on the same object, will return different refs, as it's created using a random long
+   * @param object
    * @return
    */
-
-  private static boolean mustWait(Wrappers.DataMessage dataMessage) {
-    return false;
+  private static String generateObjectRef(Object object) {
+    final Long randomLong = ThreadLocalRandom.current().nextLong();
+    final int identHash = System.identityHashCode(object);
+    return String.format("%d:%d", identHash, randomLong);
   }
-
   /**
    * TODO: IMPLEMENT
    *
@@ -1179,17 +1163,31 @@ public class Concentrator {
    */
   private static Object lookupObject(String objectRef) {
     logger.traceEntry("with objectRef: {}", objectRef);
-    Object object = objectMap.get(objectRef);
+    Object object = syncdObjectMap.get(objectRef);
     logger.traceExit("with object: {}", object);
     return object;
   }
 
-  private static void storeObject(String objectRef, Object object) {
-    logger.traceEntry("with objectRef: {}, object: {}", objectRef, object);
-    objectMap.put(objectRef, object);
-    logger.traceExit();
+  private static String storeObject(Object object) {
+    logger.traceEntry("with object: {}", object);
+    String objectRef = generateObjectRef(object);
+    syncdObjectMap.put(objectRef, object);
+    logger.traceExit("with objectRef: {}", objectRef);
+    return objectRef;
   }
 
+  private static String lookupObjectRef(Object object) {
+    logger.traceEntry("with object: {}", object);
+    String objectRef = syncdObjectMap.inverse().get(object);
+    logger.traceExit("with objectRef: {}", objectRef);
+    return objectRef;
+  }
+
+  // </editor-fold>
+
+  private static boolean mustWait(Wrappers.DataMessage dataMessage) {
+    return true;
+  }
   /**
    * The Concentrator takes 1 only argument, which is the location of the configuration (.properties) file
    *
@@ -1236,6 +1234,7 @@ public class Concentrator {
 
     /** Configure and Initialize Kafka Producer **/
     /** TODO refactor the horribly looking loading of properties
+     * TODO use injection to wire up the services dependencies
      * We could pass them all to the Broker and Dispatcher, and let each parse their own
      * or use different properties files/sections
      **/
