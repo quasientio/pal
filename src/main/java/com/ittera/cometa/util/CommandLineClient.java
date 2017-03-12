@@ -131,7 +131,7 @@ public class CommandLineClient {
       String objectRef = lineParts[2];
       String methodName = lineParts[3];
 
-      return DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName, objectRef, new String[]{}, new Object[]{});
+      return DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName, objectRef, new String[0], new Object[0], new String[0]);
     } else {
       return null;
     }

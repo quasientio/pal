@@ -164,14 +164,14 @@ public class Concentrator {
       constructor.setAccessible(true);
       try {
         List<Object> args = new ArrayList<>();
-        int objIdx = 0;
-        for (Primitives.Object obj : constructorCall.getParameterList()) {
+        for (int i = 0; i < constructorCall.getParameterCount() ; i++) {
+          Primitives.Object obj = constructorCall.getParameter(i);
           if (obj.getIsNull()) {
             args.add(null);
           } else if (obj.hasRef()) {
             args.add(lookupObject(obj.getRef()));
           } else {
-            args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx++)));
+            args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(i)));
           }
         }
         newObject = constructor.newInstance(args.toArray(new Object[args.size()]));
@@ -436,14 +436,15 @@ public class Concentrator {
     Object returnValue = null;
     if (exceptionWhileLoading == null) {
       List<Object> args = new ArrayList<>();
-      int objIdx = 0;
-      for (Primitives.Object obj : instanceMethodCall.getParameterList()) {
-        //if object created by this Concentrator, get it from object map
-//        if (objects.containsKey(obj.getIdentityHash())) {
-//          args.add(lookupObject(obj));
-//        } else { //else unwrap using ProtobufUtils (only primitives and Strings supported)
-        args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx++)));
-//        }
+      for (int i = 0; i < instanceMethodCall.getParameterCount() ; i++) {
+        Primitives.Object obj = instanceMethodCall.getParameter(i);
+        if (obj.getIsNull()) {
+          args.add(null);
+         } else if (obj.hasRef()) {
+          args.add(lookupObject(obj.getRef()));
+         } else {
+           args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(i)));
+         }
       }
       try {
         Object target = lookupObject(instanceMethodCall.getObjectRef());
@@ -468,7 +469,8 @@ public class Concentrator {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, method.getReturnType() == void.class ? Void.class : returnValue, method.getReturnType(), null, true, recordOffset);
+      boolean isVoid = method.getReturnType() == void.class;
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, isVoid ? Void.class : returnValue, method.getReturnType(), lookupObjectRef(returnValue), isVoid, recordOffset);
     }
 
     /** 4. Send object/exception **/
@@ -643,12 +645,14 @@ public class Concentrator {
     if (exceptionWhileLoading == null) {
       logger.debug("Unwrapping parameters");
       List<Object> args = new ArrayList<>();
-      int objIdx = 0;
-      for (Primitives.Object obj : classMethodCall.getParameterList()) {
-        if (obj.hasRef()) {
+      for (int i = 0; i < classMethodCall.getParameterCount() ; i++) {
+        Primitives.Object obj = classMethodCall.getParameter(i);
+        if (obj.getIsNull()) {
+          args.add(null);
+        } else if (obj.hasRef()) {
           args.add(lookupObject(obj.getRef()));
         } else {
-          args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(objIdx++)));
+          args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(i)));
         }
       }
       try {

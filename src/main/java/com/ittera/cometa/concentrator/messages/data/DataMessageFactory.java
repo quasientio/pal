@@ -143,7 +143,7 @@ public class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available. Example of caller: CommandLineClient
    */
-  public static Wrappers.DataMessage buildInstanceMethodMessage(String concentratorId, String className, String methodName, String objRef, String[] parameterTypes, Object[] args) {
+  public static Wrappers.DataMessage buildInstanceMethodMessage(String concentratorId, String className, String methodName, String objRef, String[] parameterTypes, Object[] args, String[] argObjRefs) {
 
     final Wrappers.DataMessage.Builder msgBuilder = Wrappers.DataMessage.newBuilder();
 
@@ -154,11 +154,18 @@ public class DataMessageFactory {
     callBuilder.setClass_(getWrappedClass(className));
     callBuilder.setName(methodName);
     callBuilder.setObjectRef(objRef);
-    //TO DO if it's primitive/String/Class ??
-//    callBuilder.setTarget(getWrappedObject(target, className, null));
 
-    for (int i = 0; i < args.length; i++) {
-      callBuilder.addParameter(getWrappedObject(args[i], parameterTypes[i], null));
+    for (int i = 0; i < parameterTypes.length; i++) {
+      if (argObjRefs[i] != null) {
+        //parameter is an objectref
+        callBuilder.addParameter(getWrappedObject(null, parameterTypes[i], argObjRefs[i]));
+      } else if (args[i] != null) {
+        //parameter is string, primitive or wrapper
+        callBuilder.addParameter(getWrappedObject(args[i], parameterTypes[i], null));
+      } else {
+        //parameter is null
+        callBuilder.addParameter(getWrappedObject(null, parameterTypes[i], null));
+      }
     }
 
     msgBuilder.setThreadId(Thread.currentThread().getId());

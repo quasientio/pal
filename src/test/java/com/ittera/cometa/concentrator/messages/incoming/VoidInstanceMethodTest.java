@@ -11,7 +11,7 @@ import static org.junit.Assert.*;
  * Coverage:
  * ---------
  *
- * - FAILING package visible with no args
+ * - package visible with no args
  * - private with 1 (primitive) arg
  * - protected no args
  *
@@ -24,7 +24,7 @@ public class VoidInstanceMethodTest extends AbstractConcentratorTest {
 
   protected final String className = "com.ittera.cometa.demos.App";
 
-//  @Test TODO (fails now because of way of storing objects)
+  @Test
   public void packageVisibleNoArgs() throws ClassNotFoundException {
 
     String methodName = "doSomething";
@@ -38,7 +38,7 @@ public class VoidInstanceMethodTest extends AbstractConcentratorTest {
     Primitives.Object myApp = replyMsg.getReturnValue().getObject();
 
     //now call the method
-    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters);
+    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -62,7 +62,7 @@ public class VoidInstanceMethodTest extends AbstractConcentratorTest {
     Primitives.Object myApp = replyMsg.getReturnValue().getObject();
 
     //now call the method
-    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters);
+    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -85,7 +85,7 @@ public class VoidInstanceMethodTest extends AbstractConcentratorTest {
     Primitives.Object myApp = replyMsg.getReturnValue().getObject();
 
     //now call the method
-    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters);
+    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());

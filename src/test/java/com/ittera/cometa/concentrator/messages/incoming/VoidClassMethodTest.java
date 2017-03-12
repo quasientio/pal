@@ -107,7 +107,7 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
     //add some int's
     int[] someInts = {39,5,58,32,70, 42};
     for (int i = 0; i < someInts.length; i++) {
-      requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, "java.util.ArrayList", "add", listObjRef, new String[]{"java.lang.Integer"}, new Object[]{someInts[i]});
+      requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, "java.util.ArrayList", "add", listObjRef, new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[someInts.length]);
       replyMsg = sendAndReceive(requestMsg);
       //TODO we should check if this call worked, unless we do a check at the end of the static method call (see TODO in this class' javadoc)
     }

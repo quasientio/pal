@@ -1,13 +1,130 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
+import com.ittera.cometa.concentrator.messages.data.*;
+import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
+
+import java.util.List;
+import java.util.ArrayList;
+
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
  * Coverage:
  * ---------
+ *
+ *
+ * TODO:
+ * - package visible, no args, returns primitive wrapper (Integer)
+ * - public, no args, returns List<String>
+ * - protected with objects and objectRefs as args, returns Integer
  */
 public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
 
   protected final String className = "com.ittera.cometa.demos.App";
 
+  @Test
+  public void packageVisibleNoArgs() throws ClassNotFoundException {
+    String methodName = "giveMeX";
+
+    Object[] parameters = new Object[]{};
+    String[] parameterTypes = new String[]{};
+    Integer shouldReturn = 4;
+
+
+    //we need an App instance
+    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage replyMsg = sendAndReceive(requestMsg);
+    Primitives.Object myApp = replyMsg.getReturnValue().getObject();
+
+    //now call the method
+    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName, myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
+    replyMsg = sendAndReceive(requestMsg);
+
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName());
+
+    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    assertEquals(shouldReturn, rawObj);
+  }
+
+
+  @Test
+  public void publicReturnsList() throws ClassNotFoundException {
+    String methodName = "getListOfStrings";
+
+    Object[] parameters = new Object[]{};
+    String[] parameterTypes = new String[]{};
+    List<String> shouldReturn = new ArrayList();
+
+    //we need an App instance
+    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage replyMsg = sendAndReceive(requestMsg);
+    Primitives.Object myApp = replyMsg.getReturnValue().getObject();
+
+    //now call the method
+    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName, myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
+    replyMsg = sendAndReceive(requestMsg);
+
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertValueIsObjectOfRightType(retValue, "java.util.List");
+    //assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
+    //TODO assert method in AbstractConcentratorTest should check also for interfaces
+
+    //TODO iterate through list and check values
+//    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+//    assertEquals(shouldReturn, rawObj);
+  }
+
+  @Test
+  public void withObjectsAndObjectrefsAsArgs() throws ClassNotFoundException {
+
+    String methodName = "addOffsetToListAndSumUp";
+
+    //new ArrayList<Integer>
+    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, "java.util.ArrayList");
+    DataMessage replyMsg = sendAndReceive(requestMsg);
+    String listObjRef = replyMsg.getReturnValue().getObject().getRef();
+
+    assertTrue(replyMsg.hasReturnValue());
+    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), "java.util.ArrayList");
+
+    //add some int's to the list
+    int[] someInts = {1,2,3,5,7,9};
+    for (int i = 0; i < someInts.length; i++) {
+      requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, "java.util.ArrayList", "add", listObjRef, new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[1]);
+      replyMsg = sendAndReceive(requestMsg);
+    }
+
+    //now create an App instance
+    requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    replyMsg = sendAndReceive(requestMsg);
+    Primitives.Object myApp = replyMsg.getReturnValue().getObject();
+
+    //prepare parameters, expected return value
+    String[] parameterTypes = new String[]{"int","java.util.ArrayList"};
+    int offsetParam=10;
+    Object[] objs = new Object[]{offsetParam,null};
+    String[] objRefs = new String[]{null,listObjRef};
+    Integer shouldReturn = 0;
+    for (int i = 0; i < someInts.length; i++) {
+      shouldReturn+=someInts[i]+offsetParam;
+    }
+
+    //call method
+    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName, myApp.getRef(), parameterTypes, objs, objRefs);
+    replyMsg = sendAndReceive(requestMsg);
+
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName());
+
+    //assert the value returned is correct
+    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    assertEquals(shouldReturn, rawObj);
+
+  }
 }

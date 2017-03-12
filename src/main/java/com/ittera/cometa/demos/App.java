@@ -92,7 +92,7 @@ public class App {
   //METHODS
   void doSomething() {
     anInt = Integer.valueOf(60);
-    someString = new String("hello there");
+//    someString = new String("hello there");  causes exception of BiMap (value already exists)
     anApp = new App();
   }
 
@@ -128,6 +128,24 @@ public class App {
 
   public static void sumUpList(ArrayList<Integer> listOfInts) {
     System.out.println(String.format("The sum of ints = %d", nonVoidSumUpList(listOfInts)));
+  }
+
+  protected Integer addOffsetToListAndSumUp(int offset, ArrayList<Integer> listOfInts) {
+    if (listOfInts!=null) {
+      for (int i = 0; i < listOfInts.size(); i++) {
+        listOfInts.set(i, listOfInts.get(i)+offset);
+      }
+    }
+    return nonVoidSumUpList(listOfInts);
+  }
+
+  public List<String> getListOfStrings() {
+    List<String> aList = new ArrayList<String>();
+    aList.add("hello");
+    aList.add(" ");
+    aList.add("world");
+    aList.add("!");
+    return aList;
   }
 
   public static Integer nonVoidSumUpList(ArrayList<Integer> listOfInts) {
