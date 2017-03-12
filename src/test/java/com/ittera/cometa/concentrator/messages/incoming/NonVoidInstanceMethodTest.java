@@ -13,12 +13,12 @@ import static org.junit.Assert.*;
 /**
  * Coverage:
  * ---------
- *
- *
- * TODO:
  * - package visible, no args, returns primitive wrapper (Integer)
  * - public, no args, returns List<String>
  * - protected with objects and objectRefs as args, returns Integer
+ *
+ * TODO:
+ * - arrays
  */
 public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
 
