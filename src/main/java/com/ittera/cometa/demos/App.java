@@ -2,6 +2,9 @@ package com.ittera.cometa.demos;
 
 import java.util.List;
 import java.util.ArrayList;
+import org.apache.commons.lang3.time.FastDateFormat;
+import org.apache.commons.lang3.time.DatePrinter;
+
 
 /**
  * NOTE THAT UNIT TESTS in com.ittera.cometa.concentrator.messages.incoming are dependant on this class and
@@ -102,6 +105,11 @@ public class App {
     System.out.println("un test");
   }
 
+  protected void printDate() {
+    DatePrinter datePrinter = FastDateFormat.getInstance("yyyy-MM-dd");
+    System.out.println(datePrinter.format(System.currentTimeMillis()));
+  }
+
   private void testArg(String arg) {
     System.out.println(arg);
   }
@@ -163,7 +171,7 @@ public class App {
   static App[] fetchMeAnAppArray() {
     int arraySize = 19;
     App[] apps = new App[arraySize];
-    for (int i = 0; i < 19 ; i++) {
+    for (int i = 0; i < arraySize ; i++) {
         apps[i]  = new App();
     }
 

@@ -32,6 +32,7 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
     DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
+    assertTrue(replyMsg.hasReturnValue());
     assertNotNull(replyMsg.getReturnValue());
     assertTrue(replyMsg.getReturnValue().getIsVoid());
   }
@@ -47,6 +48,7 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
     DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
+    assertTrue(replyMsg.hasReturnValue());
     assertNotNull(replyMsg.getReturnValue());
     assertTrue(replyMsg.getReturnValue().getIsVoid());
   }
@@ -62,6 +64,7 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
     DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
+    assertTrue(replyMsg.hasReturnValue());
     assertNotNull(replyMsg.getReturnValue());
     assertTrue(replyMsg.getReturnValue().getIsVoid());
   }
@@ -83,6 +86,7 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
     DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
+    assertTrue(replyMsg.hasReturnValue());
     assertNotNull(replyMsg.getReturnValue());
     assertTrue(replyMsg.getReturnValue().getIsVoid());
   }
@@ -115,6 +119,7 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
     requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, new Object[parameterTypes.length], objRefs);
     replyMsg = sendAndReceive(requestMsg);
 
+    assertTrue(replyMsg.hasReturnValue());
     assertNotNull(replyMsg.getReturnValue());
     assertTrue(replyMsg.getReturnValue().getIsVoid());
   }
