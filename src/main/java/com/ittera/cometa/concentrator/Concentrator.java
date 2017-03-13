@@ -1,6 +1,5 @@
 package com.ittera.cometa.concentrator;
 
-import com.google.common.collect.HashBiMap;
 import com.ittera.cometa.concentrator.messages.data.*;
 
 import com.ittera.cometa.concentrator.messages.data.Primitives;
@@ -23,7 +22,6 @@ import java.util.Properties;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,9 +29,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import org.apache.commons.lang3.StringUtils;
-
-import com.google.common.collect.Maps;
-import com.google.common.collect.BiMap;
 
 public class Concentrator {
   protected static final Logger logger = LogManager.getLogger(Concentrator.class);
@@ -47,10 +42,6 @@ public class Concentrator {
   static int id;
   static final Map<Long, BlockingQueue> threadBlockingQueueMap = new ConcurrentHashMap();
 
-  //A map for all objects created by the Concentrator.
-  // TODO: store as WeakReferences -> until then, no threads will get garbage cleaned!
-  private static final BiMap<String,Object> objectBiMap = HashBiMap.create();
-  static final BiMap<String,Object> syncdObjectMap = Maps.synchronizedBiMap(objectBiMap);
 
 
   private static Wrappers.DataMessage receiveMsgForCurrentThread() {
@@ -105,7 +96,7 @@ public class Concentrator {
     if (exceptionWhileLoadingClass != null) {
       invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionWhileLoadingClass);
     } else {
-      objKey = storeObject(clazz);
+      objKey = ObjectStore.storeObject(clazz);
       invokedMsg = DataMessageFactory.buildLoadedClassMessage(id, clazz);
     }
 
@@ -169,14 +160,14 @@ public class Concentrator {
           if (obj.getIsNull()) {
             args.add(null);
           } else if (obj.hasRef()) {
-            args.add(lookupObject(obj.getRef()));
+            args.add(ObjectStore.lookupObject(obj.getRef()));
           } else {
             args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(i)));
           }
         }
         newObject = constructor.newInstance(args.toArray(new Object[args.size()]));
         //store in object map
-        objKey = storeObject(newObject);
+        objKey = ObjectStore.storeObject(newObject);
       } catch (Exception ite) {
         exceptionWhileInvoking = ite;
       }
@@ -232,7 +223,7 @@ public class Concentrator {
     try {
       newObject = constructor.newInstance(args);
       //store in object map
-      objKey = storeObject(newObject);
+      objKey = ObjectStore.storeObject(newObject);
     } catch (Exception ite) {
       exceptionWhileInvoking = ite;
     }
@@ -441,13 +432,13 @@ public class Concentrator {
         if (obj.getIsNull()) {
           args.add(null);
          } else if (obj.hasRef()) {
-          args.add(lookupObject(obj.getRef()));
+          args.add(ObjectStore.lookupObject(obj.getRef()));
          } else {
            args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(i)));
          }
       }
       try {
-        Object target = lookupObject(instanceMethodCall.getObjectRef());
+        Object target = ObjectStore.lookupObject(instanceMethodCall.getObjectRef());
         method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getName());
         if (method == null) {
           //TODO perhaps this should be thrown by ReflectionHelper instead of returning null
@@ -470,7 +461,8 @@ public class Concentrator {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
     } else {
       boolean isVoid = method.getReturnType() == void.class;
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, isVoid ? Void.class : returnValue, method.getReturnType(), lookupObjectRef(returnValue), isVoid, recordOffset);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, isVoid ? Void.class : returnValue, method.getReturnType(),
+        returnValue == null ? null :ObjectStore.lookupObjectRef(returnValue), isVoid, recordOffset);
     }
 
     /** 4. Send object/exception **/
@@ -650,7 +642,7 @@ public class Concentrator {
         if (obj.getIsNull()) {
           args.add(null);
         } else if (obj.hasRef()) {
-          args.add(lookupObject(obj.getRef()));
+          args.add(ObjectStore.lookupObject(obj.getRef()));
         } else {
           args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(i)));
         }
@@ -661,7 +653,6 @@ public class Concentrator {
           throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", classMethodCall.getName(), clazz.getName()));
         }
         method.setAccessible(true);
-        logger.debug("Let's invoke it!");
         returnValue = method.invoke(null, args.toArray());
       } catch (Exception e) {
         exceptionWhileInvoking = e;
@@ -677,7 +668,8 @@ public class Concentrator {
       invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
     } else {
       boolean isVoid = method.getReturnType() == void.class;
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, isVoid ? Void.class : returnValue, method.getReturnType(), lookupObjectRef(returnValue), isVoid, recordOffset);
+      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, isVoid ? Void.class : returnValue, method.getReturnType(),
+        returnValue == null ? null :ObjectStore.lookupObjectRef(returnValue), isVoid, recordOffset);
     }
 
     /** 4. Send object/exception **/
@@ -819,7 +811,7 @@ public class Concentrator {
     if (exceptionWhileLoading == null) {
       field.setAccessible(true);
       try {
-        Object target = lookupObject(instanceFieldGet.getObjectRef());
+        Object target = ObjectStore.lookupObject(instanceFieldGet.getObjectRef());
         fieldValue = field.get(target);
       } catch (Exception e) {
         exceptionWhileInvoking = e;
@@ -932,7 +924,7 @@ public class Concentrator {
           value = ProtobufUtils.unwrapObject(staticFieldPut.getObject(), field.getType());
           logger.debug("Unwrapped value: {}", value);
         } else {
-          value = lookupObject(staticFieldPut.getObjectRef());
+          value = ObjectStore.lookupObject(staticFieldPut.getObjectRef());
           logger.debug("Loaded value: {}", value);
         }
         //invoke set
@@ -1105,7 +1097,7 @@ public class Concentrator {
           target = ProtobufUtils.unwrapObject(instanceFieldPut.getObject(), field.getType());
           logger.debug("Unwrapped target: {}", target);
         } else {
-          target = lookupObject(instanceFieldPut.getObjectRef());
+          target = ObjectStore.lookupObject(instanceFieldPut.getObjectRef());
           logger.debug("Loaded target: {}", target);
         }
         //unwrap or load value
@@ -1114,7 +1106,7 @@ public class Concentrator {
           value = ProtobufUtils.unwrapObject(instanceFieldPut.getValueObject(), field.getType());
           logger.debug("Unwrapped value: {}", value);
         } else {
-          value = lookupObject(instanceFieldPut.getValueObjectRef());
+          value = ObjectStore.lookupObject(instanceFieldPut.getValueObjectRef());
           logger.debug("Loaded value: {}", value);
         }
         //invoke set
@@ -1142,49 +1134,6 @@ public class Concentrator {
     logger.traceExit();
     return;
 
-  }
-
-  // </editor-fold>
-
-  // <editor-fold defaultstate="collapsed" desc="OBJECT STORE">
-
-  /**
-   * Attention: Don't call twice for the same object. Instead, use a BiMap to get back the ref.
-   * Called twice on the same object, will return different refs, as it's created using a random long
-   * @param object
-   * @return
-   */
-  private static String generateObjectRef(Object object) {
-    final Long randomLong = ThreadLocalRandom.current().nextLong();
-    final int identHash = System.identityHashCode(object);
-    return String.format("%d:%d", identHash, randomLong);
-  }
-  /**
-   * TODO: IMPLEMENT
-   *
-   * @param objectRef
-   * @return
-   */
-  private static Object lookupObject(String objectRef) {
-    logger.traceEntry("with objectRef: {}", objectRef);
-    Object object = syncdObjectMap.get(objectRef);
-    logger.traceExit("with object: {}", object);
-    return object;
-  }
-
-  private static String storeObject(Object object) {
-    logger.traceEntry("with object: {}", object);
-    String objectRef = generateObjectRef(object);
-    syncdObjectMap.put(objectRef, object);
-    logger.traceExit("with objectRef: {}", objectRef);
-    return objectRef;
-  }
-
-  private static String lookupObjectRef(Object object) {
-    logger.traceEntry("with object: {}", object);
-    String objectRef = syncdObjectMap.inverse().get(object);
-    logger.traceExit("with objectRef: {}", objectRef);
-    return objectRef;
   }
 
   // </editor-fold>

@@ -70,8 +70,8 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, "java.util.List");
-    //assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
+    assertValueIsObjectRefOfRightType(retValue, "java.util.List");
+    //assertValueIsObjectRefOfRightType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
     //TODO assert method in AbstractConcentratorTest should check also for interfaces
 
     //TODO iterate through list and check values
