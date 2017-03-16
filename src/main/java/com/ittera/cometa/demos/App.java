@@ -1,5 +1,6 @@
 package com.ittera.cometa.demos;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 import org.apache.commons.lang3.time.FastDateFormat;
@@ -148,6 +149,11 @@ public class App {
     return aList;
   }
 
+  public List<String> getListOfStringsShorthand() {
+    List<String> aList = Arrays.asList("hello"," ","world","!");
+    return aList;
+  }
+
   public static Integer nonVoidSumUpList(ArrayList<Integer> listOfInts) {
     int sum = 0;
     if (listOfInts!=null) {
@@ -187,7 +193,7 @@ public class App {
   }
 
   static App[] fetchMeAnAppArray() {
-    int arraySize = 19;
+    int arraySize = 8;
     App[] apps = new App[arraySize];
     for (int i = 0; i < arraySize ; i++) {
         apps[i]  = new App();

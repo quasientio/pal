@@ -1,45 +1,42 @@
 package com.ittera.cometa.concentrator;
 
-import java.util.concurrent.ThreadFactory;
-
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-/**
- * Created by libre on 11/12/16.
- */
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class ExecThreadFactory implements ThreadFactory {
 
   protected static final Logger logger = LogManager.getLogger(Executor.class);
 
-  private int threadCounter = 0;
-  private static final String threadGroupName = "Executor Thread Group";
-  private static final String threadBaseName = "Executor Thread";
-  private ThreadGroup threadGroup;
-  private static final int threadGroupMaxPriority = Thread.NORM_PRIORITY;
-  private static final int threadPriority = Thread.NORM_PRIORITY;
-  private static final boolean threadGroupIsDaemon = false;
-  private static final boolean threadIsDaemon = false;
+  private final ThreadGroup threadGroup;
+  private final AtomicInteger threadCounter = new AtomicInteger(0);
+  private static final String THREAD_GROUP_NAME = "Executor Thread Group";
+  private static final String THREAD_BASE_NAME = "Executor Thread";
+  private static final int THREAD_GROUP_MAX_PRIORITY = Thread.NORM_PRIORITY;
+  private static final int THREAD_PRIORITY = Thread.NORM_PRIORITY;
+  private static final boolean THREAD_GROUP_IS_DAEMON = false;
+  private static final boolean THREAD_IS_DAEMON = false;
 
   public ExecThreadFactory() {
     threadGroup = new ThreadGroup("Executor Thread Group");
-    threadGroup.setDaemon(threadGroupIsDaemon);
-    threadGroup.setMaxPriority(threadGroupMaxPriority);
-    logger.info("Created new thread group with name: {}, daemon: {}, maxPriority: {}", threadGroupName, threadGroupIsDaemon, threadGroupMaxPriority);
+    threadGroup.setDaemon(THREAD_GROUP_IS_DAEMON);
+    threadGroup.setMaxPriority(THREAD_GROUP_MAX_PRIORITY);
+    logger.info("Created new thread group with name: {}, daemon: {}, maxPriority: {}", THREAD_GROUP_NAME, THREAD_GROUP_IS_DAEMON, THREAD_GROUP_MAX_PRIORITY);
   }
 
   @Override
-  public Thread newThread(Runnable runnable) {
+  public Thread newThread(Runnable r) {
     logger.traceEntry();
-    String newThreadName = threadBaseName + " " + threadCounter;
-    Thread thread = new Thread(threadGroup, runnable, newThreadName);
-    thread.setPriority(threadPriority);
-    thread.setDaemon(threadIsDaemon);
+    final String newThreadName = THREAD_BASE_NAME + ' ' + threadCounter.getAndIncrement();
+    final Thread thread = new Thread(threadGroup, r, newThreadName);
+    thread.setPriority(THREAD_PRIORITY);
+    thread.setDaemon(THREAD_IS_DAEMON);
     logger.info("Created new executor thread with name: {}", newThreadName);
     logger.traceExit();
     return thread;
   }
-
 
   public ThreadGroup getThreadGroup() {
     return threadGroup;

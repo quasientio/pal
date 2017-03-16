@@ -202,7 +202,7 @@ public class ObjectStoreTest {
 
   //</editor-fold>
 
-   //<editor-fold desc="containsObjectRef">
+  //<editor-fold desc="containsObjectRef">
 
   @Test
   public void containsObjectRef_nullObjectRef_nullPointerException() throws Exception {

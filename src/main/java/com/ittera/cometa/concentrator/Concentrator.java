@@ -38,11 +38,8 @@ public class Concentrator {
    * Static data shared by all threads - sources of contention
    */
   //A map to hold a blocking message queue for each Thread
-  static MessageBroker broker;
   static int id;
-  static final Map<Long, BlockingQueue> threadBlockingQueueMap = new ConcurrentHashMap();
-
-
+  static final Map<Long, BlockingQueue<Wrappers.DataMessage>> threadBlockingQueueMap = new ConcurrentHashMap();
 
   private static Wrappers.DataMessage receiveMsgForCurrentThread() {
     long currThreadId = Thread.currentThread().getId();
@@ -71,7 +68,7 @@ public class Concentrator {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    broker.send(msg);
+    MessageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -101,7 +98,7 @@ public class Concentrator {
     }
 
     /** 6. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -186,7 +183,7 @@ public class Concentrator {
 
 
     /** 4. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -202,7 +199,7 @@ public class Concentrator {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    broker.send(callMsg);
+    MessageBroker.send(callMsg);
 
     if (mustWait(callMsg)) {
       /** 3. Receive message **/
@@ -239,7 +236,7 @@ public class Concentrator {
 
 
     /** 6. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -275,7 +272,7 @@ public class Concentrator {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    broker.send(msg);
+    MessageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -308,7 +305,7 @@ public class Concentrator {
 
 
     /** 6. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -341,7 +338,7 @@ public class Concentrator {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    broker.send(msg);
+    MessageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -374,7 +371,7 @@ public class Concentrator {
 
 
     /** 6. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -466,7 +463,7 @@ public class Concentrator {
     }
 
     /** 4. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -483,7 +480,7 @@ public class Concentrator {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    broker.send(msg);
+    MessageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -515,7 +512,7 @@ public class Concentrator {
 
 
     /** 6. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -548,7 +545,7 @@ public class Concentrator {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    broker.send(msg);
+    MessageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -581,7 +578,7 @@ public class Concentrator {
 
 
     /** 6. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -673,7 +670,7 @@ public class Concentrator {
     }
 
     /** 4. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -726,7 +723,7 @@ public class Concentrator {
 
 
     /** 4. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -741,7 +738,7 @@ public class Concentrator {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    broker.send(msg);
+    MessageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -772,7 +769,7 @@ public class Concentrator {
     }
 
     /** 6. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -832,7 +829,7 @@ public class Concentrator {
 
 
     /** 4. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -847,7 +844,7 @@ public class Concentrator {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    broker.send(msg);
+    MessageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -879,7 +876,7 @@ public class Concentrator {
     }
 
     /** 6. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -948,7 +945,7 @@ public class Concentrator {
 
 
     /** 4. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -963,7 +960,7 @@ public class Concentrator {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    broker.send(msg);
+    MessageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -994,7 +991,7 @@ public class Concentrator {
     }
 
     /** 6. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     if (mustWait(msg)) {
       /** 7. Receive object/exception **/
@@ -1020,7 +1017,7 @@ public class Concentrator {
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    broker.send(msg);
+    MessageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
@@ -1051,7 +1048,7 @@ public class Concentrator {
     }
 
     /** 6. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
@@ -1129,7 +1126,7 @@ public class Concentrator {
 
 
     /** 4. Send object/exception **/
-    broker.send(invokedMsg);
+    MessageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -1169,13 +1166,13 @@ public class Concentrator {
     Runtime.getRuntime().addShutdownHook(new Thread() {
       @Override
       public void run() {
-        //try to gracefully close broker msg dispatcher connections
+        //try to gracefully close MessageBroker msg dispatcher connections
         if (DataMessageDispatcher.getInstance() != null) {
           DataMessageDispatcher.getInstance().requestShutdown();
         }
 
-        //try to gracefully close broker connections
-        broker.shutdown();
+        //try to gracefully close MessageBroker connections
+        MessageBroker.shutdown();
 
         try {
           Thread.sleep(3000);
@@ -1207,7 +1204,7 @@ public class Concentrator {
     //other producer specific props
     kafkaProducerProps.put("client.id", String.valueOf(Concentrator.id));
     String kafkaTopic = properties.getProperty("kafkaTopic");
-    broker = new MessageBroker(kafkaProducerProps, kafkaTopic);
+    MessageBroker.init(kafkaProducerProps, kafkaTopic);
 
 
     /** Configure and Initialize Executor Service **/

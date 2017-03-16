@@ -52,7 +52,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
 
 
   @Test
-  public void publicReturnsList() throws ClassNotFoundException {
+  public void publicReturnsListAsRef() throws ClassNotFoundException {
     String methodName = "getListOfStrings";
 
     Object[] parameters = new Object[]{};
@@ -71,6 +71,35 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsObjectRefOfRightType(retValue, "java.util.List");
+    //assertValueIsObjectRefOfRightType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
+    //TODO assert method in AbstractConcentratorTest should check also for interfaces
+
+    //TODO iterate through list and check values
+//    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+//    assertEquals(shouldReturn, rawObj);
+  }
+
+  /** Very similar to above test, but return value here is not a ref! */
+  @Test
+  public void publicReturnsListNotRef() throws ClassNotFoundException {
+    String methodName = "getListOfStringsShorthand";
+
+    Object[] parameters = new Object[]{};
+    String[] parameterTypes = new String[]{};
+    List<String> shouldReturn = new ArrayList();
+
+    //we need an App instance
+    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage replyMsg = sendAndReceive(requestMsg);
+    Primitives.Object myApp = replyMsg.getReturnValue().getObject();
+
+    //now call the method
+    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName, myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
+    replyMsg = sendAndReceive(requestMsg);
+
+    assertTrue(replyMsg.hasReturnValue());
+    Values.ReturnValue retValue = replyMsg.getReturnValue();
+    assertValueIsObjectOfRightType(retValue, "java.util.List");
     //assertValueIsObjectRefOfRightType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
     //TODO assert method in AbstractConcentratorTest should check also for interfaces
 

@@ -1,12 +1,17 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.concentrator.messages.data.Wrappers;
+import com.ittera.cometa.concentrator.messages.data.Calls.ConstructorCall;
+import com.ittera.cometa.concentrator.messages.data.Calls.ClassMethodCall;
+import com.ittera.cometa.concentrator.messages.data.Calls.InstanceMethodCall;
+import com.ittera.cometa.concentrator.messages.data.Fields.StaticFieldGet;
+import com.ittera.cometa.concentrator.messages.data.Fields.StaticFieldPut;
+import com.ittera.cometa.concentrator.messages.data.Fields.InstanceFieldGet;
+import com.ittera.cometa.concentrator.messages.data.Fields.InstanceFieldPut;
+
 import java.util.Properties;
 import java.util.Arrays;
-import java.util.concurrent.*;
-
-import com.ittera.cometa.concentrator.messages.data.Wrappers;
-import com.ittera.cometa.concentrator.messages.data.Calls;
-import com.ittera.cometa.concentrator.messages.data.Fields;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -22,39 +27,39 @@ public class DataMessageDispatcher extends Thread {
   protected static final Logger logger = LogManager.getLogger(DataMessageDispatcher.class);
 
   private static long pollTimeout;
-
   private static ExecutorService executorService;
-
-  private static DataMessageDispatcher ourInstance;
-
+  private static DataMessageDispatcher INSTANCE;
   private KafkaConsumer<String, String> consumer;
-
-  private boolean mustShutdown;
+  private volatile boolean mustShutdown;
+  private final static Object initLock = new Object();
 
   //singleton accessor to be called once initialized
   public static DataMessageDispatcher getInstance() {
-    if (ourInstance == null) {
+    if (INSTANCE == null) {
       throw new IllegalStateException("DataMessageDispatcher has not been initialized from properties");
     }
-    return ourInstance;
+    return INSTANCE;
   }
 
   //singleton accessor for initial construction
   public static DataMessageDispatcher getInstance(Properties properties) {
-    if (ourInstance == null) {
-      ourInstance = new DataMessageDispatcher(properties);
+    synchronized (initLock) {
+      if (INSTANCE == null) {
+        INSTANCE = new DataMessageDispatcher(properties);
+      }
     }
-    return ourInstance;
+    return INSTANCE;
   }
 
   private DataMessageDispatcher(Properties props) {
+    super();
     pollTimeout = Long.parseLong((String) props.remove("pollTimeout"));
     props.put("group.id", String.valueOf(Concentrator.id));
     consumer = new KafkaConsumer<>(props);
     //consumer.subscribe(Arrays.asList(Concentrator.kafkaTopic));
 
     //manual assignment of partition so we can control offset seek
-    TopicPartition topicPartition = new TopicPartition(MessageBroker.kafkaTopic, 0);
+    final TopicPartition topicPartition = new TopicPartition(MessageBroker.kafkaTopic, 0);
     consumer.assign(Arrays.asList(topicPartition));
     consumer.seekToBeginning(Arrays.asList(topicPartition));
     logger.info("DataMessageDispatcher initialized");
@@ -63,19 +68,19 @@ public class DataMessageDispatcher extends Thread {
     executorService = Executor.getInstance();
   }
 
-  public void run() {
+  public final void run() {
     while (!mustShutdown) {
-      ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+      final ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
       if (records.count() > 0) {
-        logger.info("Records read:" + records.count());
+        logger.info("Records read: {}", records.count());
       }
       for (ConsumerRecord record : records) {
         if (logger.isDebugEnabled()) {
-          logger.debug("Processing received record:\n" + record);
+          logger.debug("Processing received record:\n {}", record);
         }
 
         final Wrappers.DataMessage dataMessage = (Wrappers.DataMessage) record.value();
-        long threadId = dataMessage.getThreadId();
+        final long threadId = dataMessage.getThreadId();
         final long recordOffset = record.offset();
         //if threadId not in our threadQueue, then push to new/random thread
         if (!Concentrator.threadBlockingQueueMap.containsKey(threadId)) {
@@ -86,25 +91,25 @@ public class DataMessageDispatcher extends Thread {
             public void run() {
               //TODO call Concentrator.incomingCall() which should dispatch as done here based on encapsulated type
               if (dataMessage.hasConstructorCall()) {
-                Calls.ConstructorCall constructorCall = dataMessage.getConstructorCall();
+                final ConstructorCall constructorCall = dataMessage.getConstructorCall();
                 Concentrator.incomingConstructor(constructorCall, recordOffset);
               } else if (dataMessage.hasClassMethodCall()) {
-                Calls.ClassMethodCall methodCall = dataMessage.getClassMethodCall();
+                final ClassMethodCall methodCall = dataMessage.getClassMethodCall();
                 Concentrator.incomingClassMethod(methodCall, recordOffset);
               } else if (dataMessage.hasInstanceMethodCall()) {
-                Calls.InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
+                final InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
                 Concentrator.incomingInstanceMethod(methodCall, recordOffset);
               } else if (dataMessage.hasStaticFieldGet()) {
-                Fields.StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
+                final StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
                 Concentrator.incomingGetStatic(staticFieldGetCall, recordOffset);
               } else if (dataMessage.hasInstanceFieldGet()) {
-                Fields.InstanceFieldGet instanceFieldGet = dataMessage.getInstanceFieldGet();
+                final InstanceFieldGet instanceFieldGet = dataMessage.getInstanceFieldGet();
                 Concentrator.incomingGetObject(instanceFieldGet, recordOffset);
               } else if (dataMessage.hasStaticFieldPut()) {
-                Fields.StaticFieldPut staticFieldPut = dataMessage.getStaticFieldPut();
+                final StaticFieldPut staticFieldPut = dataMessage.getStaticFieldPut();
                 Concentrator.incomingPutStatic(staticFieldPut, recordOffset);
               } else if (dataMessage.hasInstanceFieldPut()) {
-                Fields.InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
+                final InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
                 Concentrator.incomingPutField(instanceFieldPut, recordOffset);
               } else {
                 logger.warn("Incoming message with offset {} ignored - no handler:\n{}", recordOffset, dataMessage);
@@ -120,8 +125,8 @@ public class DataMessageDispatcher extends Thread {
             Concentrator.threadBlockingQueueMap.get(threadId).put(dataMessage);
             logger.info("Pushed message with offset {} to thread queue", recordOffset);
           } catch (InterruptedException e) {
-            logger.error("Interrupted while putting message in queue");
-            //TODO: should we do something about it?
+            logger.error("Interrupted while putting message in queue", e);
+            //TODO: should/can we do something about it?
           }
         }
       }
@@ -130,7 +135,7 @@ public class DataMessageDispatcher extends Thread {
     shutdown();
   }
 
-  void requestShutdown() {
+  final void requestShutdown() {
     mustShutdown = true;
   }
 
