@@ -1,13 +1,13 @@
-package com.ittera.cometa.concentrator.messages.data.serde;
+package com.ittera.cometa.concentrator.messages.protobuf;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.kafka.common.serialization.Deserializer;
 
-import com.ittera.cometa.concentrator.messages.data.Wrappers;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
 
 import java.util.Map;
 
-public class ProtobufDeserializer implements Deserializer {
+public class KafkaDeserializer implements Deserializer {
 
   @Override
   public void configure(Map map, boolean b) {

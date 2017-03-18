@@ -1,6 +1,7 @@
-package messages.data;
+syntax = "proto2";
+package messages.protobuf.data;
 
-option java_package = "com.ittera.cometa.concentrator.messages.data";
+option java_package = "com.ittera.cometa.concentrator.messages.protobuf.data";
 option optimize_for = SPEED;
 
 /* The Object is either a ref (ref!=null), or can be reconstructed.

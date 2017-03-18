@@ -1,13 +1,13 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.messages.data.Wrappers;
-import com.ittera.cometa.concentrator.messages.data.Calls.ConstructorCall;
-import com.ittera.cometa.concentrator.messages.data.Calls.ClassMethodCall;
-import com.ittera.cometa.concentrator.messages.data.Calls.InstanceMethodCall;
-import com.ittera.cometa.concentrator.messages.data.Fields.StaticFieldGet;
-import com.ittera.cometa.concentrator.messages.data.Fields.StaticFieldPut;
-import com.ittera.cometa.concentrator.messages.data.Fields.InstanceFieldGet;
-import com.ittera.cometa.concentrator.messages.data.Fields.InstanceFieldPut;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut;
 
 import java.util.Properties;
 import java.util.Arrays;

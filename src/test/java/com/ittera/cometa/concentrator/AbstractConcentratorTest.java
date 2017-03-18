@@ -20,9 +20,9 @@ import java.util.concurrent.Future;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
-import com.ittera.cometa.concentrator.messages.data.Values.ReturnValue;
-import com.ittera.cometa.concentrator.messages.data.Primitives;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;

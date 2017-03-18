@@ -1,8 +1,11 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.data.*;
-import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
+import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -46,7 +49,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName());
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
   }
 
@@ -75,7 +78,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     //TODO assert method in AbstractConcentratorTest should check also for interfaces
 
     //TODO iterate through list and check values
-//    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+//    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
 //    assertEquals(shouldReturn, rawObj);
   }
 
@@ -104,7 +107,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     //TODO assert method in AbstractConcentratorTest should check also for interfaces
 
     //TODO iterate through list and check values
-//    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+//    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
 //    assertEquals(shouldReturn, rawObj);
   }
 
@@ -152,7 +155,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName());
 
     //assert the value returned is correct
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
 
   }

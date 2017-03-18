@@ -1,17 +1,19 @@
-package com.ittera.cometa.concentrator.messages.data;
+package com.ittera.cometa.concentrator.messages.protobuf;
 
 import java.util.Map;
 
-import org.apache.commons.lang3.ClassUtils;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
 
 import com.google.common.collect.ImmutableMap;
+
+import org.apache.commons.lang3.ClassUtils;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
-public class ProtobufUtils {
+public class Unwrapper {
 
-  protected static final Logger logger = LogManager.getLogger(ProtobufUtils.class);
+  protected static final Logger logger = LogManager.getLogger(Unwrapper.class);
 
   private static final Map<String, Class> shortPrimitiveNameToClass = ImmutableMap.<String, Class>builder()
     .put("byte", byte.class)

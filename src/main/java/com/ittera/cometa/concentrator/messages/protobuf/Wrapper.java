@@ -1,7 +1,9 @@
-package com.ittera.cometa.concentrator.messages.data;
+package com.ittera.cometa.concentrator.messages.protobuf;
 
-import com.ittera.cometa.concentrator.messages.data.Fields.Field;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.Field;
 
+import com.ittera.cometa.concentrator.messages.protobuf.data.Ctxt;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
 import org.aspectj.lang.JoinPoint.StaticPart;
 
 import java.lang.reflect.Array;
@@ -16,11 +18,11 @@ import org.apache.logging.log4j.LogManager;
  * Two versions of these exist, as we have generally more information when messages are built from local calls (with full reflection details),
  * than when these messaages are built for remote calls, and not all context and type information is available.
  */
-public final class DataMessageWrapper {
+final class Wrapper {
 
-  private static final Logger logger = LogManager.getLogger(DataMessageWrapper.class);
+  private static final Logger logger = LogManager.getLogger(Wrapper.class);
 
-  private DataMessageWrapper() {
+  private Wrapper() {
     //avoid instantiation
   }
 

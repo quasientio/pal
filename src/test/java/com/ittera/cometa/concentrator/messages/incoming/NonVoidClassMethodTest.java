@@ -1,8 +1,10 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.data.*;
-import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
+import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -43,7 +45,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsObjectOfRightType(retValue, param.getClass().getName());
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
   }
 
@@ -63,7 +65,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName());
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
   }
 
@@ -104,7 +106,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName());
 
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
   }
 
@@ -125,7 +127,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsNullObjectOfRightType(retValue, "java.lang.Object");
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
   }
 
@@ -146,7 +148,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, shouldReturn.getClass().getName());
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertArrayEquals(shouldReturn, (char[]) rawObj);
   }
 
@@ -167,7 +169,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, shouldReturn.getClass().getName());
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertArrayEquals(shouldReturn, (Long[]) rawObj);
   }
 
@@ -187,7 +189,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsNullArrayOfRightType(retValue, "[Ljava.lang.Boolean;");
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertArrayEquals(shouldReturn, (Boolean[]) rawObj);
   }
 
@@ -231,7 +233,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     retValue = replyMsg.getReturnValue();
     assertValueIsObjectOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer);
     assertEquals(originalValue, rawObj);
   }

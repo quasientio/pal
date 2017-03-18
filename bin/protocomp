@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WORKING_DIR=/home/libre/code/cometa/aj-impl/trunk
+WORKING_DIR=/home/libre/code/cometa/aj-impl
 SRC_DIR=$WORKING_DIR/src/main/protobuf
 DST_DIR=$WORKING_DIR/src/main/java
 

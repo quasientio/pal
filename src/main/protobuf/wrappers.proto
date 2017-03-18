@@ -1,33 +1,34 @@
-package messages.data;
+syntax = "proto2";
+package messages.protobuf.data;
 
 import "calls.proto";
 import "fields.proto";
 import "exceptions.proto";
 import "values.proto";
 
-option java_package = "com.ittera.cometa.concentrator.messages.data";
+option java_package = "com.ittera.cometa.concentrator.messages.protobuf.data";
 option optimize_for = SPEED;
 
 message DataMessage {
-    required string msgType = 1;
-    required int64 threadId = 2 [default = -1];
-    optional int64 following = 3;
+    //TO DO:  IP or hostname for this Concentrator
+    required int32 concentratorId = 1 [default = -1];
+    required string msgType = 2;
+    required int64 threadId = 3 [default = -1];
+    required int64 currentTime = 4;
+    optional int64 following = 5;
 
-    oneof calltype {
-        ConstructorCall constructorCall = 4;
-        InstanceMethodCall instanceMethodCall = 5;
-        ClassMethodCall classMethodCall = 6;
-        ClInitCall clinitCall = 7;
-        StaticFieldGet staticFieldGet = 8;
-        StaticFieldPut staticFieldPut = 9;
-        InstanceFieldGet instanceFieldGet = 10;
-        InstanceFieldPut instanceFieldPut = 11;
-    }
-
-    oneof returntype {
-        StaticFieldPutDone staticFieldPutDone = 12;
-        InstanceFieldPutDone instanceFieldPutDone = 13;
-        RaisedThrowable raisedThrowable = 14;
-        ReturnValue returnValue = 15;
+    oneof content {
+        ConstructorCall constructorCall = 6;
+        InstanceMethodCall instanceMethodCall = 7;
+        ClassMethodCall classMethodCall = 8;
+        ClInitCall clinitCall = 9;
+        StaticFieldGet staticFieldGet = 10;
+        StaticFieldPut staticFieldPut = 11;
+        InstanceFieldGet instanceFieldGet = 12;
+        InstanceFieldPut instanceFieldPut = 13;
+        StaticFieldPutDone staticFieldPutDone = 14;
+        InstanceFieldPutDone instanceFieldPutDone = 15;
+        RaisedThrowable raisedThrowable = 16;
+        ReturnValue returnValue = 17;
     }
 }

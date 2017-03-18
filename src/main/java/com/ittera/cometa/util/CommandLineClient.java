@@ -1,7 +1,7 @@
 package com.ittera.cometa.util;
 
-import com.ittera.cometa.concentrator.messages.data.Wrappers;
-import com.ittera.cometa.concentrator.messages.data.DataMessageFactory;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
+import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -10,7 +10,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import java.lang.reflect.Modifier;
 import java.lang.reflect.Constructor;
 
 import java.util.Arrays;

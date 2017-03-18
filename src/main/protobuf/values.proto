@@ -1,35 +1,19 @@
-package messages.data;
+syntax = "proto2";
+package messages.protobuf.data;
 
 import "primitives.proto";
 
-option java_package = "com.ittera.cometa.concentrator.messages.data";
+option java_package = "com.ittera.cometa.concentrator.messages.protobuf.data";
 option java_outer_classname = "Values";
 option optimize_for = SPEED;
 
 message ReturnValue {
-    // --- CONTEXT
+    optional bool isVoid = 1 [default = false];
 
-    optional int32 concentratorId = 1;
+    optional bool isClass = 2 [default = false];
 
-    //NOTE: The id of a terminated thread may be reused
-    optional int64 threadId = 2;
+    optional Object object = 3;
 
-    required int64 currentTime = 3;
-
-    //TO DO:  IP or hostname for this Concentrator
-
-    //TO DO: Reference ID or hash to the constructor or method message that caused it
-
-    //TO DO: more context, i.e. args, etc.
-
-    // --- CONTEXT
-
-    optional bool isVoid = 4 [default = false];
-
-    optional bool isClass = 5 [default = false];
-
-    optional Object object = 6;
-
-    optional Class clazz = 7;
+    optional Class clazz = 4;
 }
 

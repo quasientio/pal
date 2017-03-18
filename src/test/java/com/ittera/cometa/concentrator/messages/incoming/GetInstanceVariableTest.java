@@ -1,8 +1,11 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.data.*;
-import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
+import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -51,7 +54,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsObjectOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer);
     assertEquals(originalValue, rawObj);
   }
@@ -92,7 +95,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsObjectOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String);
     assertEquals(originalValue, rawObj);
 
@@ -152,7 +155,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsObjectOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Boolean);
     assertEquals(originalValue, rawObj);
   }
@@ -175,7 +178,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsObjectOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Short);
     assertEquals(originalValue, rawObj);
   }

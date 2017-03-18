@@ -1,10 +1,11 @@
-package com.ittera.cometa.concentrator.messages.data.serde;
+package com.ittera.cometa.concentrator.messages.protobuf;
 
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
 import org.apache.kafka.common.serialization.Serializer;
 
 import java.util.Map;
 
-public class ProtobufSerializer implements Serializer {
+public class KafkaSerializer implements Serializer {
 
   @Override
   public void configure(Map map, boolean b) {
@@ -13,7 +14,7 @@ public class ProtobufSerializer implements Serializer {
 
   @Override
   public byte[] serialize(String s, Object o) {
-    return ((com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage) o).toByteArray();
+    return ((Wrappers.DataMessage) o).toByteArray();
   }
 
   @Override

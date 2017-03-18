@@ -1,8 +1,11 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.messages.data.*;
-
-import com.ittera.cometa.concentrator.messages.data.Primitives;
+import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
+import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Fields;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Calls;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.util.ReflectionHelper;
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -159,7 +162,7 @@ public class Concentrator {
           } else if (obj.hasRef()) {
             args.add(ObjectStore.lookupObject(obj.getRef()));
           } else {
-            args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(i)));
+            args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
           }
         }
         newObject = constructor.newInstance(args.toArray(new Object[args.size()]));
@@ -409,7 +412,7 @@ public class Concentrator {
     try {
       clazz = Class.forName(instanceMethodCall.getClass_().getName());
       for (Primitives.Object obj : instanceMethodCall.getParameterList()) {
-        Class paramClass = ProtobufUtils.getClassForPrimitive(obj.getClass_().getName());
+        Class paramClass = Unwrapper.getClassForPrimitive(obj.getClass_().getName());
         if (paramClass == null) {
           paramClass = Class.forName(obj.getClass_().getName());
         }
@@ -431,7 +434,7 @@ public class Concentrator {
          } else if (obj.hasRef()) {
           args.add(ObjectStore.lookupObject(obj.getRef()));
          } else {
-           args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(i)));
+           args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
          }
       }
       try {
@@ -618,7 +621,7 @@ public class Concentrator {
       logger.debug("Attempting to load (initialize) class");
       clazz = Class.forName(classMethodCall.getClass_().getName());
       for (Primitives.Object obj : classMethodCall.getParameterList()) {
-        Class paramClass = ProtobufUtils.getClassForPrimitive(obj.getClass_().getName());
+        Class paramClass = Unwrapper.getClassForPrimitive(obj.getClass_().getName());
         if (paramClass == null) {
           paramClass = Class.forName(obj.getClass_().getName());
         }
@@ -641,7 +644,7 @@ public class Concentrator {
         } else if (obj.hasRef()) {
           args.add(ObjectStore.lookupObject(obj.getRef()));
         } else {
-          args.add(ProtobufUtils.unwrapObject(obj, paramClasses.get(i)));
+          args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
         }
       }
       try {
@@ -918,7 +921,7 @@ public class Concentrator {
       try {
         final Object value;
         if (staticFieldPut.hasObject()) {
-          value = ProtobufUtils.unwrapObject(staticFieldPut.getObject(), field.getType());
+          value = Unwrapper.unwrapObject(staticFieldPut.getObject(), field.getType());
           logger.debug("Unwrapped value: {}", value);
         } else {
           value = ObjectStore.lookupObject(staticFieldPut.getObjectRef());
@@ -1091,7 +1094,7 @@ public class Concentrator {
       try {
         //unwrap or load target object
         if (instanceFieldPut.hasObject()) {
-          target = ProtobufUtils.unwrapObject(instanceFieldPut.getObject(), field.getType());
+          target = Unwrapper.unwrapObject(instanceFieldPut.getObject(), field.getType());
           logger.debug("Unwrapped target: {}", target);
         } else {
           target = ObjectStore.lookupObject(instanceFieldPut.getObjectRef());
@@ -1100,7 +1103,7 @@ public class Concentrator {
         //unwrap or load value
         final Object value;
         if (instanceFieldPut.hasValueObject()) {
-          value = ProtobufUtils.unwrapObject(instanceFieldPut.getValueObject(), field.getType());
+          value = Unwrapper.unwrapObject(instanceFieldPut.getValueObject(), field.getType());
           logger.debug("Unwrapped value: {}", value);
         } else {
           value = ObjectStore.lookupObject(instanceFieldPut.getValueObjectRef());

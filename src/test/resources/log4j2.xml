@@ -42,7 +42,7 @@
             <AppenderRef ref="concentrator"/>
         </Logger>
 
-        <Logger name="com.ittera.cometa.concentrator.messages.data.DataMessageFactory" level="info" additivity="false">
+        <Logger name="com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory" level="info" additivity="false">
             <AppenderRef ref="concentrator"/>
         </Logger>
 

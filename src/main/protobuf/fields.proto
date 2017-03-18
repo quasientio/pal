@@ -1,9 +1,10 @@
-package messages.data;
+syntax = "proto2";
+package messages.protobuf.data;
 
 import "primitives.proto";
 import "ctxt.proto";
 
-option java_package = "com.ittera.cometa.concentrator.messages.data";
+option java_package = "com.ittera.cometa.concentrator.messages.protobuf.data";
 option java_outer_classname = "Fields";
 option optimize_for = SPEED;
 
@@ -13,175 +14,102 @@ message Field {
 }
 
 message StaticFieldGet {
-    // --- CONTEXT
 
-    optional int32 concentratorId = 1;
+    required Class class = 1;
 
-    //NOTE: The id of a terminated thread may be reused
-    optional int64 threadId = 2;
-
-    required int64 currentTime = 3;
-
-    //TODO:  IP or hostname for this Concentrator
-
-    // --- CONTEXT
-
-    required Class class = 4;
-
-    required Field field = 5;
+    required Field field = 2;
 
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 6;
+    optional int32 modifiers = 3;
 
-    optional Context context = 7;
+    optional Context context = 4;
 
     //TODO:  annotations
 }
 
 message StaticFieldPut {
-    // --- CONTEXT
 
-    optional int32 concentratorId = 1;
+    required Class class = 1;
 
-    //NOTE: The id of a terminated thread may be reused
-    optional int64 threadId = 2;
-
-    required int64 currentTime = 3;
-
-    //TODO:  IP or hostname for this Concentrator
-
-    // --- CONTEXT
-
-    required Class class = 4;
-
-    required Field field = 5;
+    required Field field = 2;
 
     oneof value {
-        Object object = 6;
-        string objectRef = 7;
+        Object object = 3;
+        string objectRef = 4;
     }
 
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 8;
+    optional int32 modifiers = 5;
 
-    optional Context context = 9;
+    optional Context context = 6;
 
     //TODO:  annotations
 }
 
 message StaticFieldPutDone {
-    // --- CONTEXT
-
-    optional int32 concentratorId = 1;
-
-    //NOTE: The id of a terminated thread may be reused
-    optional int64 threadId = 2;
-
-    required int64 currentTime = 3;
-
-    //TODO:  IP or hostname for this Concentrator
-
-    // --- CONTEXT
-
     //TODO from here all should be replaced by reference to originator StaticFieldPut message
 
     //redundant if instanceFieldPut is set
-    required Class class = 4;
+    required Class class = 1;
 
-    required Field field = 5;
+    required Field field = 2;
 
-    optional StaticFieldPut staticFieldPut = 6;
+    optional StaticFieldPut staticFieldPut = 3;
 }
 
 message InstanceFieldGet {
-    // --- CONTEXT
 
-    optional int32 concentratorId = 1;
-
-    //NOTE: The id of a terminated thread may be reused
-    optional int64 threadId = 2;
-
-    required int64 currentTime = 3;
-
-    //TODO:  IP or hostname for this Concentrator
-
-    // --- CONTEXT
-
-    required Class class = 4;
+    required Class class = 1;
 
     //target object
     oneof target {
-        Object object = 5;
-        string objectRef = 6;
+        Object object = 2;
+        string objectRef = 3;
     }
 
-    required Field field = 7;
+    required Field field = 4;
 
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 8;
+    optional int32 modifiers = 5;
 
-    optional Context context = 9;
+    optional Context context = 6;
 
     //TODO:  annotations
 }
 
 message InstanceFieldPut {
-    // --- CONTEXT
 
-    optional int32 concentratorId = 1;
-
-    //NOTE: The id of a terminated thread may be reused
-    optional int64 threadId = 2;
-
-    required int64 currentTime = 3;
-
-    //TODO:  IP or hostname for this Concentrator
-
-    // --- CONTEXT
-
-    required Class class = 4;
+    required Class class = 1;
 
     //target object
     oneof target {
-        Object object = 5;
-        string objectRef = 6;
+        Object object = 2;
+        string objectRef = 3;
     }
 
-    required Field field = 7;
+    required Field field = 4;
 
     oneof value {
-        Object valueObject = 8;
-        string valueObjectRef = 9;
+        Object valueObject = 5;
+        string valueObjectRef = 6;
     }
     //The modifiers can be decoded with the Modifier class
-    optional int32 modifiers = 10;
+    optional int32 modifiers = 7;
 
-    optional Context context = 11;
+    optional Context context = 8;
 
     //TODO:  annotations
 
 }
 
 message InstanceFieldPutDone {
-    // --- CONTEXT
-
-    optional int32 concentratorId = 1;
-
-    //NOTE: The id of a terminated thread may be reused
-    optional int64 threadId = 2;
-
-    required int64 currentTime = 3;
-
-    //TODO:  IP or hostname for this Concentrator
-
-    // --- CONTEXT
 
     //TODO from here all should be replaced by reference to originator InstanceFieldPut message
 
     //redundant if instanceFieldPut is set
-    required Class class = 4;
+    required Class class = 1;
 
-    required Field field = 5;
+    required Field field = 2;
 
-    optional InstanceFieldPut instanceFieldPut = 6;
+    optional InstanceFieldPut instanceFieldPut = 3;
 }

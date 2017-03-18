@@ -1,10 +1,10 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.data.DataMessageFactory;
-import com.ittera.cometa.concentrator.messages.data.ProtobufUtils;
-import com.ittera.cometa.concentrator.messages.data.Values;
-import com.ittera.cometa.concentrator.messages.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
+import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -49,7 +49,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof boolean[]);
     assertEquals(actualArray.length, ((boolean[]) rawObj).length);
   }
@@ -66,7 +66,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof boolean[]);
     assertEquals(actualArray.length, ((boolean[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -98,7 +98,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof byte[]);
     assertEquals(actualArray.length, ((byte[]) rawObj).length);
   }
@@ -115,7 +115,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof byte[]);
     assertEquals(actualArray.length, ((byte[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -147,7 +147,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof short[]);
     assertEquals(actualArray.length, ((short[]) rawObj).length);
   }
@@ -164,7 +164,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof short[]);
     assertEquals(actualArray.length, ((short[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -196,7 +196,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof char[]);
     assertEquals(actualArray.length, ((char[]) rawObj).length);
   }
@@ -213,7 +213,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof char[]);
     assertEquals(actualArray.length, ((char[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -245,7 +245,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof int[]);
     assertEquals(actualArray.length, ((int[]) rawObj).length);
   }
@@ -262,7 +262,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof int[]);
     assertEquals(actualArray.length, ((int[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -294,7 +294,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof long[]);
     assertEquals(actualArray.length, ((long[]) rawObj).length);
   }
@@ -311,7 +311,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof long[]);
     assertEquals(actualArray.length, ((long[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -343,7 +343,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof float[]);
     assertEquals(actualArray.length, ((float[]) rawObj).length);
   }
@@ -360,7 +360,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof float[]);
     assertEquals(actualArray.length, ((float[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -392,7 +392,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof double[]);
     assertEquals(actualArray.length, ((double[]) rawObj).length);
   }
@@ -409,7 +409,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof double[]);
     assertEquals(actualArray.length, ((double[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -443,7 +443,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Boolean[]);
     assertEquals(actualArray.length, ((Boolean[]) rawObj).length);
   }
@@ -460,7 +460,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Boolean[]);
     assertEquals(actualArray.length, ((Boolean[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -492,7 +492,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Byte[]);
     assertEquals(actualArray.length, ((Byte[]) rawObj).length);
   }
@@ -509,7 +509,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Byte[]);
     assertEquals(actualArray.length, ((Byte[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -541,7 +541,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Short[]);
     assertEquals(actualArray.length, ((Short[]) rawObj).length);
   }
@@ -558,7 +558,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Short[]);
     assertEquals(actualArray.length, ((Short[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -590,7 +590,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Character[]);
     assertEquals(actualArray.length, ((Character[]) rawObj).length);
   }
@@ -607,7 +607,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Character[]);
     assertEquals(actualArray.length, ((Character[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -639,7 +639,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer[]);
     assertEquals(actualArray.length, ((Integer[]) rawObj).length);
   }
@@ -656,7 +656,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer[]);
     assertEquals(actualArray.length, ((Integer[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -688,7 +688,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Long[]);
     assertEquals(actualArray.length, ((Long[]) rawObj).length);
   }
@@ -705,7 +705,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Long[]);
     assertEquals(actualArray.length, ((Long[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -737,7 +737,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Float[]);
     assertEquals(actualArray.length, ((Float[]) rawObj).length);
   }
@@ -754,7 +754,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Float[]);
     assertEquals(actualArray.length, ((Float[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -786,7 +786,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Double[]);
     assertEquals(actualArray.length, ((Double[]) rawObj).length);
   }
@@ -803,7 +803,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Double[]);
     assertEquals(actualArray.length, ((Double[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
@@ -835,7 +835,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String[]);
     assertEquals(actualArray.length, ((String[]) rawObj).length);
   }
@@ -852,7 +852,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsArrayOfRightType(retValue, fieldClassName);
 
-    Object rawObj = ProtobufUtils.unwrapObject(retValue.getObject());
+    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String[]);
     assertEquals(actualArray.length, ((String[]) rawObj).length);
     for (int i = 0; i < actualArray.length; i++) {
