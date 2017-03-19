@@ -1,7 +1,6 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -30,7 +29,7 @@ public class ConstructorTest extends AbstractConcentratorTest {
   @Test
   public void publicEmptyConstructor() {
 
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -48,7 +47,7 @@ public class ConstructorTest extends AbstractConcentratorTest {
       parameterTypesNamesArray[i] = parameterTypes[i].getName();
     }
 
-    DataMessage requestMsg = DataMessageFactory.buildNonEmptyConstructorMessage(clientId, className, parameterTypesNamesArray, args, argRefs);
+    DataMessage requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -66,7 +65,7 @@ public class ConstructorTest extends AbstractConcentratorTest {
       parameterTypesNamesArray[i] = parameterTypes[i].getName();
     }
 
-    DataMessage requestMsg = DataMessageFactory.buildNonEmptyConstructorMessage(clientId, className, parameterTypesNamesArray, args, argRefs);
+    DataMessage requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -84,7 +83,7 @@ public class ConstructorTest extends AbstractConcentratorTest {
       parameterTypesNamesArray[i] = parameterTypes[i].getName();
     }
 
-    DataMessage requestMsg = DataMessageFactory.buildNonEmptyConstructorMessage(clientId, className, parameterTypesNamesArray, args, argRefs);
+    DataMessage requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -95,7 +94,7 @@ public class ConstructorTest extends AbstractConcentratorTest {
   public void publicConstructorObjectrefArg() {
 
     //1. Construct an App calling no-args constructor
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -113,7 +112,7 @@ public class ConstructorTest extends AbstractConcentratorTest {
       parameterTypesNamesArray[i] = parameterTypes[i].getName();
     }
 
-    requestMsg = DataMessageFactory.buildNonEmptyConstructorMessage(clientId, className, parameterTypesNamesArray, args, argRefs);
+    requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());

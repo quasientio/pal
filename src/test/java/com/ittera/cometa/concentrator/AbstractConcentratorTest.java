@@ -1,5 +1,12 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
+import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
+
+
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -20,10 +27,6 @@ import java.util.concurrent.Future;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -35,6 +38,9 @@ public abstract class AbstractConcentratorTest {
 
   protected static String clientId;
   private static String kafkaTopic;
+
+  protected static DataMessageBuilder dataMessageBuilder;
+
   //producer
   private static final Properties kafkaProducerProps = new Properties();
   private static KafkaProducer producer;
@@ -89,6 +95,9 @@ public abstract class AbstractConcentratorTest {
     topicPartition = new TopicPartition(kafkaTopic, 0);
     consumer.assign(Arrays.asList(topicPartition));
 //    consumer.seekToBeginning(Arrays.asList(topicPartition));
+
+    //init msg builder
+    dataMessageBuilder = new ProtobufDataMessageBuilder();
 
   }
 

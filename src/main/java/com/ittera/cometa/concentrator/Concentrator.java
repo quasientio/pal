@@ -1,20 +1,26 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
+import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Fields;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Calls;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.util.ReflectionHelper;
+
+import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
+import com.ittera.cometa.concentrator.messages.DataMessageDispatcher;
+
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.aspectj.lang.JoinPoint.StaticPart;
-
 import org.aspectj.runtime.reflect.FieldSignatureImpl;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+
 import java.lang.Class;
 import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
@@ -25,40 +31,34 @@ import java.util.Properties;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.inject.name.Names;
+import com.google.inject.*;
+
 public class Concentrator {
+
   protected static final Logger logger = LogManager.getLogger(Concentrator.class);
 
-
   /**
-   * Static data shared by all threads - sources of contention
+   * Static data (singletons) shared by all threads - sources of contention
    */
-  //A map to hold a blocking message queue for each Thread
-  static int id;
-  static final Map<Long, BlockingQueue<Wrappers.DataMessage>> threadBlockingQueueMap = new ConcurrentHashMap();
+  private static int id;
 
-  private static Wrappers.DataMessage receiveMsgForCurrentThread() {
-    long currThreadId = Thread.currentThread().getId();
-    Wrappers.DataMessage rcvdMsg = null;
-    do {
-      try {
-        rcvdMsg = (Wrappers.DataMessage) threadBlockingQueueMap.get(currThreadId).take();
-        logger.debug("Taken new message from blocking queue (thread id={})", currThreadId);
-      } catch (InterruptedException e) {
-        logger.error("Interrupted while taking from blocking queue", e);
-      }
-    } while (rcvdMsg == null);
+  private static DataMessageBuilder dataMessageBuilder;
 
-    return rcvdMsg;
-  }
+  private static MessageBroker messageBroker;
 
+  private static DataMessageDispatcher dataMessageDispatcher;
+
+  private static Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue<DataMessage>>();
 
   /************************ INTERFACE ***************************/
 
@@ -67,15 +67,15 @@ public class Concentrator {
     logger.traceEntry("with staticPart: {}, sender: {}", staticPart.getSignature(), sender);
 
     /** 1. Wrap message **/
-    final Wrappers.DataMessage msg = DataMessageFactory.buildClassInitializerMessage(id, staticPart, sender);
+    final Wrappers.DataMessage msg = dataMessageBuilder.buildClassInitializer(id, staticPart, sender);
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    MessageBroker.send(msg);
+    messageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -94,18 +94,18 @@ public class Concentrator {
     String objKey = null;
     final Wrappers.DataMessage invokedMsg;
     if (exceptionWhileLoadingClass != null) {
-      invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionWhileLoadingClass);
+      invokedMsg = dataMessageBuilder.buildInitializerThrowable(id, staticPart, exceptionWhileLoadingClass);
     } else {
       objKey = ObjectStore.storeObject(clazz);
-      invokedMsg = DataMessageFactory.buildLoadedClassMessage(id, clazz);
+      invokedMsg = dataMessageBuilder.buildLoadedClass(id, clazz);
     }
 
     /** 6. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -155,7 +155,7 @@ public class Concentrator {
       constructor.setAccessible(true);
       try {
         List<Object> args = new ArrayList<>();
-        for (int i = 0; i < constructorCall.getParameterCount() ; i++) {
+        for (int i = 0; i < constructorCall.getParameterCount(); i++) {
           Primitives.Object obj = constructorCall.getParameter(i);
           if (obj.getIsNull()) {
             args.add(null);
@@ -177,16 +177,16 @@ public class Concentrator {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileLoading, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, constructor, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, constructor, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, clazz, objKey, false, recordOffset);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, newObject, clazz, objKey, false, recordOffset);
     }
 
 
     /** 4. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -198,15 +198,15 @@ public class Concentrator {
     final ConstructorSignature constructorSignature = (ConstructorSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
-    final Wrappers.DataMessage callMsg = DataMessageFactory.buildConstructorMessage(id, staticPart, sender, args);
+    final Wrappers.DataMessage callMsg = dataMessageBuilder.buildConstructor(id, staticPart, sender, args);
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    MessageBroker.send(callMsg);
+    messageBroker.send(callMsg);
 
     if (mustWait(callMsg)) {
       /** 3. Receive message **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -232,18 +232,18 @@ public class Concentrator {
     Wrappers.DataMessage invokedMsg = null;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, constructor, exceptionWhileInvoking, null);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, constructor, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, newObject, constructor.getClass(), objKey, false, null);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, newObject, constructor.getClass(), objKey, false, null);
     }
 
 
     /** 6. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -270,16 +270,16 @@ public class Concentrator {
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
-    final Wrappers.DataMessage msg = DataMessageFactory.buildInstanceMethodMessage(id, staticPart, sender, target, args);
+    final Wrappers.DataMessage msg = dataMessageBuilder.buildInstanceMethod(id, staticPart, sender, target, args);
 
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    MessageBroker.send(msg);
+    messageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -301,18 +301,18 @@ public class Concentrator {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, method.getReturnType(), null, true, null);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, Void.class, method.getReturnType(), null, true, null);
     }
 
 
     /** 6. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -336,16 +336,16 @@ public class Concentrator {
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
-    final Wrappers.DataMessage msg = DataMessageFactory.buildInstanceMethodMessage(id, staticPart, sender, target, args);
+    final Wrappers.DataMessage msg = dataMessageBuilder.buildInstanceMethod(id, staticPart, sender, target, args);
 
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    MessageBroker.send(msg);
+    messageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -367,18 +367,18 @@ public class Concentrator {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, method.getReturnType(), null, false, null);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, false, null);
     }
 
 
     /** 6. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -427,15 +427,15 @@ public class Concentrator {
     Object returnValue = null;
     if (exceptionWhileLoading == null) {
       List<Object> args = new ArrayList<>();
-      for (int i = 0; i < instanceMethodCall.getParameterCount() ; i++) {
+      for (int i = 0; i < instanceMethodCall.getParameterCount(); i++) {
         Primitives.Object obj = instanceMethodCall.getParameter(i);
         if (obj.getIsNull()) {
           args.add(null);
-         } else if (obj.hasRef()) {
+        } else if (obj.hasRef()) {
           args.add(ObjectStore.lookupObject(obj.getRef()));
-         } else {
-           args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
-         }
+        } else {
+          args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
+        }
       }
       try {
         Object target = ObjectStore.lookupObject(instanceMethodCall.getObjectRef());
@@ -456,17 +456,17 @@ public class Concentrator {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileLoading, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, recordOffset);
     } else {
       boolean isVoid = method.getReturnType() == void.class;
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, isVoid ? Void.class : returnValue, method.getReturnType(),
-        returnValue == null ? null :ObjectStore.lookupObjectRef(returnValue), isVoid, recordOffset);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, isVoid ? Void.class : returnValue, method.getReturnType(),
+        returnValue == null ? null : ObjectStore.lookupObjectRef(returnValue), isVoid, recordOffset);
     }
 
     /** 4. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -478,16 +478,16 @@ public class Concentrator {
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
-    final Wrappers.DataMessage msg = DataMessageFactory.buildClassMethodMessage(id, staticPart, sender, args);
+    final Wrappers.DataMessage msg = dataMessageBuilder.buildClassMethod(id, staticPart, sender, args);
 
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    MessageBroker.send(msg);
+    messageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -508,18 +508,18 @@ public class Concentrator {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, Void.class, method.getReturnType(), null, true, null);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, Void.class, method.getReturnType(), null, true, null);
     }
 
 
     /** 6. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -543,16 +543,16 @@ public class Concentrator {
     final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
     /** 1. Wrap message **/
-    final Wrappers.DataMessage msg = DataMessageFactory.buildClassMethodMessage(id, staticPart, sender, args);
+    final Wrappers.DataMessage msg = dataMessageBuilder.buildClassMethod(id, staticPart, sender, args);
 
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    MessageBroker.send(msg);
+    messageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -574,18 +574,18 @@ public class Concentrator {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, null);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, returnValue, method.getReturnType(), null, false, null);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, false, null);
     }
 
 
     /** 6. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -637,7 +637,7 @@ public class Concentrator {
     if (exceptionWhileLoading == null) {
       logger.debug("Unwrapping parameters");
       List<Object> args = new ArrayList<>();
-      for (int i = 0; i < classMethodCall.getParameterCount() ; i++) {
+      for (int i = 0; i < classMethodCall.getParameterCount(); i++) {
         Primitives.Object obj = classMethodCall.getParameter(i);
         if (obj.getIsNull()) {
           args.add(null);
@@ -663,17 +663,17 @@ public class Concentrator {
     final Wrappers.DataMessage invokedMsg;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileLoading, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, method, exceptionWhileInvoking, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, recordOffset);
     } else {
       boolean isVoid = method.getReturnType() == void.class;
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, isVoid ? Void.class : returnValue, method.getReturnType(),
-        returnValue == null ? null :ObjectStore.lookupObjectRef(returnValue), isVoid, recordOffset);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, isVoid ? Void.class : returnValue, method.getReturnType(),
+        returnValue == null ? null : ObjectStore.lookupObjectRef(returnValue), isVoid, recordOffset);
     }
 
     /** 4. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -717,16 +717,16 @@ public class Concentrator {
     Wrappers.DataMessage invokedMsg = null;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, field.getType(), null, false, recordOffset);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, recordOffset);
     }
 
 
     /** 4. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -737,15 +737,15 @@ public class Concentrator {
     logger.traceEntry("with staticPart: {}, sender: {}", staticPart.getSignature(), sender);
 
     /** 1. Wrap message **/
-    final Wrappers.DataMessage msg = DataMessageFactory.buildGetStaticMessage(id, staticPart, sender);
+    final Wrappers.DataMessage msg = dataMessageBuilder.buildGetStatic(id, staticPart, sender);
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    MessageBroker.send(msg);
+    messageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -766,17 +766,17 @@ public class Concentrator {
     /** 5. Wrap exception if any **/
     Wrappers.DataMessage invokedMsg = null;
     if (exceptionGettingObject != null) {
-      invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
+      invokedMsg = dataMessageBuilder.buildInitializerThrowable(id, staticPart, exceptionGettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, field.getType(), null, false, null);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, null);
     }
 
     /** 6. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -823,16 +823,16 @@ public class Concentrator {
     Wrappers.DataMessage invokedMsg = null;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, field.getType(), null, false, recordOffset);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, recordOffset);
     }
 
 
     /** 4. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -843,15 +843,15 @@ public class Concentrator {
     logger.traceEntry("with staticPart: {}, sender: {}, target: {}", staticPart.getSignature(), sender, target);
 
     /** 1. Wrap message **/
-    final Wrappers.DataMessage msg = DataMessageFactory.buildGetObjectMessage(id, staticPart, sender, target);
+    final Wrappers.DataMessage msg = dataMessageBuilder.buildGetObject(id, staticPart, sender, target);
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    MessageBroker.send(msg);
+    messageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -873,17 +873,17 @@ public class Concentrator {
     /** 5. Wrap exception if any **/
     Wrappers.DataMessage invokedMsg = null;
     if (exceptionGettingObject != null) {
-      invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionGettingObject);
+      invokedMsg = dataMessageBuilder.buildInitializerThrowable(id, staticPart, exceptionGettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildReturnValueMessage(id, fieldValue, field.getType(), null, false, null);
+      invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, null);
     }
 
     /** 6. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -939,16 +939,16 @@ public class Concentrator {
     Wrappers.DataMessage invokedMsg = null;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildPutStaticDoneMessage(id, staticFieldPut, field.getType(), recordOffset);
+      invokedMsg = dataMessageBuilder.buildPutStaticDone(id, staticFieldPut, field.getType(), recordOffset);
     }
 
 
     /** 4. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -959,15 +959,15 @@ public class Concentrator {
     logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
 
     /** 1. Wrap message **/
-    final Wrappers.DataMessage msg = DataMessageFactory.buildPutStaticMessage(id, staticPart, sender, args[0]);
+    final Wrappers.DataMessage msg = dataMessageBuilder.buildPutStatic(id, staticPart, sender, args[0]);
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    MessageBroker.send(msg);
+    messageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -988,17 +988,17 @@ public class Concentrator {
     /** 5. Wrap exception if any **/
     Wrappers.DataMessage invokedMsg = null;
     if (exceptionSettingObject != null) {
-      invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionSettingObject);
+      invokedMsg = dataMessageBuilder.buildInitializerThrowable(id, staticPart, exceptionSettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildPutStaticDoneMessage(id, staticPart, sender, args[0]);
+      invokedMsg = dataMessageBuilder.buildPutStaticDone(id, staticPart, sender, args[0]);
     }
 
     /** 6. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     if (mustWait(msg)) {
       /** 7. Receive object/exception **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -1016,15 +1016,15 @@ public class Concentrator {
     logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
 
     /** 1. Wrap message **/
-    final Wrappers.DataMessage msg = DataMessageFactory.buildPutObjectMessage(id, staticPart, sender, target, args[0]);
+    final Wrappers.DataMessage msg = dataMessageBuilder.buildPutObject(id, staticPart, sender, target, args[0]);
 
     /** 2. Send message **/
     //ATTENTION: this send is asynchronous. Must call get later.
-    MessageBroker.send(msg);
+    messageBroker.send(msg);
 
     if (mustWait(msg)) {
       /** 3. Receive message **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -1045,17 +1045,17 @@ public class Concentrator {
     /** 5. Wrap exception if any **/
     Wrappers.DataMessage invokedMsg = null;
     if (exceptionSettingObject != null) {
-      invokedMsg = DataMessageFactory.buildInitializerThrowableMessage(id, staticPart, exceptionSettingObject);
+      invokedMsg = dataMessageBuilder.buildInitializerThrowable(id, staticPart, exceptionSettingObject);
     } else {
-      invokedMsg = DataMessageFactory.buildPutObjectDoneMessage(id, staticPart, sender, target, args[0]);
+      invokedMsg = dataMessageBuilder.buildPutObjectDone(id, staticPart, sender, target, args[0]);
     }
 
     /** 6. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     if (mustWait(invokedMsg)) {
       /** 7. Receive object/exception **/
-      Wrappers.DataMessage rcvdMsg = receiveMsgForCurrentThread();
+      Wrappers.DataMessage rcvdMsg = messageBroker.receiveMsgForCurrentThread();
 
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
@@ -1120,16 +1120,16 @@ public class Concentrator {
     Wrappers.DataMessage invokedMsg = null;
 
     if (exceptionWhileLoading != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileLoading, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileLoading, recordOffset);
     } else if (exceptionWhileInvoking != null) {
-      invokedMsg = DataMessageFactory.buildAccessibleObjectThrowableMessage(id, field, exceptionWhileInvoking, recordOffset);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = DataMessageFactory.buildPutObjectDoneMessage(id, instanceFieldPut, field.getType(), recordOffset);
+      invokedMsg = dataMessageBuilder.buildPutObjectDone(id, instanceFieldPut, field.getType(), recordOffset);
     }
 
 
     /** 4. Send object/exception **/
-    MessageBroker.send(invokedMsg);
+    messageBroker.send(invokedMsg);
 
     logger.traceExit();
     return;
@@ -1141,41 +1141,68 @@ public class Concentrator {
   private static boolean mustWait(Wrappers.DataMessage dataMessage) {
     return true;
   }
+
   /**
    * The Concentrator takes 1 only argument, which is the location of the configuration (.properties) file
    *
    * @param args
    */
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     if (args.length != 1) {
       System.err.println("Please provide the path to a configuration file");
       System.exit(1);
     }
 
-    Properties properties = new Properties();
-    try {
-      properties.load(new FileInputStream(args[0]));
-    } catch (IOException e) {
-      System.err.println("Please provide a valid path to the configuration file");
-      e.printStackTrace();
-      System.exit(2);
-    }
+    final Properties properties = new Properties();
+    AbstractModule module = new AbstractModule() {
+      @Override
+      protected void configure() {
+        try {
+          properties.load(new FileInputStream(args[0]));
+        } catch (IOException e) {
+          logger.error("Could not load properties", e);
+          System.err.println("Please provide a valid path to the configuration file");
+          e.printStackTrace();
+          System.exit(2);
+        }
 
+        Concentrator.id = Integer.parseInt(properties.getProperty("id"));
 
-    /** Configure Concentrator **/
-    Concentrator.id = Integer.parseInt(properties.getProperty("id"));
+        Names.bindProperties(binder(), properties);
+        //bind inmplementations
+        bind(MessageBroker.class).to(KafkaMessageBroker.class).in(Scopes.SINGLETON);
+        bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class).in(Scopes.SINGLETON);
+        bind(DataMessageDispatcher.class).to(KafkaDataMessageDispatcher.class).in(Scopes.SINGLETON);
+        bind(ExecutorService.class).to(Executor.class).in(Scopes.SINGLETON);
+      }
+
+      @Provides
+      Map<Long, BlockingQueue<DataMessage>> returnThreadBlockingQueueMap() {
+        return Concentrator.threadBlockingQueueMap;
+      }
+
+    };
+
+    Injector injector = Guice.createInjector(module);
+
+    //Concentrator (static) fields are set here, not injected
+    messageBroker = injector.getInstance(MessageBroker.class);
+    dataMessageDispatcher = injector.getInstance(DataMessageDispatcher.class);
+    dataMessageBuilder = injector.getInstance(DataMessageBuilder.class);
 
     /** Add shutdown hook **/
     Runtime.getRuntime().addShutdownHook(new Thread() {
       @Override
       public void run() {
-        //try to gracefully close MessageBroker msg dispatcher connections
-        if (DataMessageDispatcher.getInstance() != null) {
-          DataMessageDispatcher.getInstance().requestShutdown();
+        //try to gracefully close messageBroker msg dispatcher connections
+        if (dataMessageDispatcher != null) {
+          dataMessageDispatcher.requestShutdown();
         }
 
-        //try to gracefully close MessageBroker connections
-        MessageBroker.shutdown();
+        //try to gracefully close messageBroker connections
+        if (messageBroker != null) {
+          messageBroker.shutdown();
+        }
 
         try {
           Thread.sleep(3000);
@@ -1185,57 +1212,8 @@ public class Concentrator {
       }
     });
 
-    /** Configure and Initialize Kafka Producer **/
-    /** TODO refactor the horribly looking loading of properties
-     * TODO use injection to wire up the services dependencies
-     * We could pass them all to the Broker and Dispatcher, and let each parse their own
-     * or use different properties files/sections
-     **/
-    final Properties kafkaProducerProps = new Properties();
-    //common kafka properties
-    for (String propKey : properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.") && !(propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer"))) {
-        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka."), properties.getProperty(propKey));
-      }
-    }
-    //producer properties
-    for (String propKey : properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.producer.")) {
-        kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka.producer."), properties.getProperty(propKey));
-      }
-    }
-    //other producer specific props
-    kafkaProducerProps.put("client.id", String.valueOf(Concentrator.id));
-    String kafkaTopic = properties.getProperty("kafkaTopic");
-    MessageBroker.init(kafkaProducerProps, kafkaTopic);
-
-
-    /** Configure and Initialize Executor Service **/
-    Properties execServiceProps = new Properties();
-    for (String propKey : properties.stringPropertyNames()) {
-      if (propKey.startsWith("exec.")) {
-        execServiceProps.put(StringUtils.substringAfter(propKey, "exec."), properties.getProperty(propKey));
-      }
-    }
-    //initialize
-    Executor.getInstance(execServiceProps);
-
-
-    /** Configure and Initialize Kafka Message Consumer/Dispatcher thread **/
-    Properties msgDispatcherProps = new Properties();
-    for (String propKey : properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.") && !(propKey.startsWith("kafka.consumer") || propKey.startsWith("kafka.producer"))) {
-        msgDispatcherProps.put(StringUtils.substringAfter(propKey, "kafka."), properties.getProperty(propKey));
-      }
-    }
-    //consumer properties
-    for (String propKey : properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.consumer.")) {
-        msgDispatcherProps.put(StringUtils.substringAfter(propKey, "kafka.consumer."), properties.getProperty(propKey));
-      }
-    }
-    DataMessageDispatcher messageDispatcher = DataMessageDispatcher.getInstance(msgDispatcherProps);
-    messageDispatcher.start();
-
+    //Start dispatching incoming messages
+    DataMessageDispatcher dataMessageDispatcher = injector.getInstance(DataMessageDispatcher.class);
+    dataMessageDispatcher.run();
   }
 }

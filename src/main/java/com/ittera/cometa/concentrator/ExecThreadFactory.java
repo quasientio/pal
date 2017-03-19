@@ -23,7 +23,7 @@ public class ExecThreadFactory implements ThreadFactory {
     threadGroup = new ThreadGroup("Executor Thread Group");
     threadGroup.setDaemon(THREAD_GROUP_IS_DAEMON);
     threadGroup.setMaxPriority(THREAD_GROUP_MAX_PRIORITY);
-    logger.info("Created new thread group with name: {}, daemon: {}, maxPriority: {}", THREAD_GROUP_NAME, THREAD_GROUP_IS_DAEMON, THREAD_GROUP_MAX_PRIORITY);
+    logger.info("Initialized thread factory with thread group name: {}, daemon: {}, maxPriority: {}", THREAD_GROUP_NAME, THREAD_GROUP_IS_DAEMON, THREAD_GROUP_MAX_PRIORITY);
   }
 
   @Override
@@ -33,7 +33,7 @@ public class ExecThreadFactory implements ThreadFactory {
     final Thread thread = new Thread(threadGroup, r, newThreadName);
     thread.setPriority(THREAD_PRIORITY);
     thread.setDaemon(THREAD_IS_DAEMON);
-    logger.info("Created new executor thread with name: {}", newThreadName);
+    logger.info("Created new executor thread with name: '{}' and id: {}", newThreadName, thread.getId());
     logger.traceExit();
     return thread;
   }

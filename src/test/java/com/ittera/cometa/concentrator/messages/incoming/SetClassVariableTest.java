@@ -1,7 +1,6 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
 import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Fields;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
@@ -35,7 +34,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     Integer originalValue = 3000;
     Integer newValue = 3200;
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     Values.ReturnValue retValue = replyMsg.getReturnValue();
 
@@ -44,7 +43,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     assertEquals(originalValue, rawObj);
 
     //set a new value
-    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, fieldClassName, newValue);
+    requestMsg = dataMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, newValue);
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasStaticFieldPutDone());
     assertFalse(replyMsg.hasReturnValue());
@@ -53,7 +52,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
 
 
     //test that the field has now the new value
-    requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     retValue = replyMsg.getReturnValue();
@@ -67,7 +66,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
 
     //now revert changed value to original (otherwise other tests may fail after a 1st run)
 
-    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, fieldClassName, originalValue);
+    requestMsg = dataMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, originalValue);
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasStaticFieldPutDone());
     assertFalse(replyMsg.hasReturnValue());
@@ -84,7 +83,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     String originalValue = "I'm classy";
     String newValue = "New dummy str";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     Values.ReturnValue retValue = replyMsg.getReturnValue();
 
@@ -93,7 +92,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     assertEquals(originalValue, rawObj);
 
     //set a new value
-    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, fieldClassName, newValue);
+    requestMsg = dataMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, newValue);
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasStaticFieldPutDone());
     assertFalse(replyMsg.hasReturnValue());
@@ -102,7 +101,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
 
 
     //test that the field has now the new value
-    requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     retValue = replyMsg.getReturnValue();
@@ -117,7 +116,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
     //now revert changed value to original (otherwise other tests may fail after a 1st run)
 
     //set a new value
-    requestMsg = DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, fieldClassName, originalValue);
+    requestMsg = dataMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, originalValue);
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasStaticFieldPutDone());
     assertFalse(replyMsg.hasReturnValue());

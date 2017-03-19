@@ -8,10 +8,12 @@ LOG4J_PATH=$MVN_REPO/org/apache/logging/log4j/log4j-core/2.6.2/log4j-core-2.6.2.
 ASPECTJ_PATH=$MVN_REPO/org/aspectj/aspectjrt/1.8.9/aspectjrt-1.8.9.jar
 PROTOBUF_PATH=$MVN_REPO/com/google/protobuf/protobuf-java/3.2.0/protobuf-java-3.2.0.jar
 GUAVA_PATH=$MVN_REPO/com/google/guava/guava/19.0/guava-19.0.jar
+GUICE_PATH=$MVN_REPO/com/google/inject/guice/4.1.0/guice-4.1.0-no_aop.jar
+JAVAX_INJECT_PATH=$MVN_REPO/javax/inject/javax.inject/1/javax.inject-1.jar
 COMMONS_PATH=$MVN_REPO/org/apache/commons/commons-lang3/3.4/commons-lang3-3.4.jar
 COMPILED_CLASSES=$WORKING_DIR/target/classes
 
-CLASSPATH=$COMPILED_CLASSES:$ASPECTJ_PATH:$GUAVA_PATH:$PROTOBUF_PATH:$KAFKA_PATH:$SLF4J_PATH:$LOG4J_PATH:$COMMONS_PATH:$CONF_PATH
+CLASSPATH=$COMPILED_CLASSES:$ASPECTJ_PATH:$GUAVA_PATH:$GUICE_PATH:$JAVAX_INJECT_PATH:$PROTOBUF_PATH:$KAFKA_PATH:$SLF4J_PATH:$LOG4J_PATH:$COMMONS_PATH:$CONF_PATH
 export CLASSPATH
 export PATH=$WORKING_DIR/bin:$PATH
 export KAFKA_HOME='/usr/local/lib/kafka'

@@ -1,7 +1,6 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
 import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
@@ -30,7 +29,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNull_booleanArray";
     String fieldClassName = "[Z";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -43,7 +42,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Z";
     boolean[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -60,7 +59,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Z";
     boolean[] actualArray = {false, false, true};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -79,7 +78,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNull_byteArray";
     String fieldClassName = "[B";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -92,7 +91,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[B";
     byte[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -109,7 +108,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[B";
     byte[] actualArray = {0, 1, 2, 3, 4, 5, 6};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -128,7 +127,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNull_shortArray";
     String fieldClassName = "[S";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -141,7 +140,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[S";
     short[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -158,7 +157,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[S";
     short[] actualArray = {-200, -100, 0, 100, 200, 300, 400, 500, 600};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -177,7 +176,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNull_charArray";
     String fieldClassName = "[C";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -190,7 +189,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[C";
     char[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -207,7 +206,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[C";
     char[] actualArray = {'a', 'r', 'r', 'a', 'y'};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -226,7 +225,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNull_intArray";
     String fieldClassName = "[I";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -239,7 +238,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[I";
     int[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -256,7 +255,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[I";
     int[] actualArray = {2333, -2, 0, 892, 9381};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -275,7 +274,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNull_longArray";
     String fieldClassName = "[J";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -288,7 +287,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[J";
     long[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -305,7 +304,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[J";
     long[] actualArray = {23230233L, -8929381L, 0L};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -324,7 +323,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNull_floatArray";
     String fieldClassName = "[F";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -337,7 +336,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[F";
     float[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -354,7 +353,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[F";
     float[] actualArray = {23.3f, 0f, -763.03f, 892.938f};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -373,7 +372,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNull_doubleArray";
     String fieldClassName = "[D";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -386,7 +385,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[D";
     double[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -403,7 +402,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[D";
     double[] actualArray = {383239.3d, 0d, -239923.4038d};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -424,7 +423,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNullBooleanArray";
     String fieldClassName = "[Ljava.lang.Boolean;";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -437,7 +436,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Boolean;";
     Boolean[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -454,7 +453,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Boolean;";
     Boolean[] actualArray = {false, false, true};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -473,7 +472,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNullByteArray";
     String fieldClassName = "[Ljava.lang.Byte;";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -486,7 +485,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Byte;";
     byte[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -503,7 +502,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Byte;";
     Byte[] actualArray = {0, 1, 2, 3, 4, 5, 6};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -522,7 +521,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNullShortArray";
     String fieldClassName = "[Ljava.lang.Short;";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -535,7 +534,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Short;";
     Short[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -552,7 +551,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Short;";
     Short[] actualArray = {-200, -100, 0, 100, 200, 300, 400, 500, 600};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -571,7 +570,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNullCharArray";
     String fieldClassName = "[Ljava.lang.Character;";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -584,7 +583,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Character;";
     Character[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -601,7 +600,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Character;";
     Character[] actualArray = {'a', 'r', 'r', 'a', 'y'};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -620,7 +619,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNullIntArray";
     String fieldClassName = "[Ljava.lang.Integer;";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -633,7 +632,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Integer;";
     Integer[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -650,7 +649,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Integer;";
     Integer[] actualArray = {2333, -2, 0, 892, 9381};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -669,7 +668,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNullLongArray";
     String fieldClassName = "[Ljava.lang.Long;";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -682,7 +681,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Long;";
     Long[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -699,7 +698,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Long;";
     Long[] actualArray = {23230233L, -8929381L, 0L};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -718,7 +717,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNullFloatArray";
     String fieldClassName = "[Ljava.lang.Float;";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -731,7 +730,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Float;";
     Float[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -748,7 +747,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Float;";
     Float[] actualArray = {23.3f, 0f, -763.03f, 892.938f};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -767,7 +766,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNullDoubleArray";
     String fieldClassName = "[Ljava.lang.Double;";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -780,7 +779,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Double;";
     Double[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -797,7 +796,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.Double;";
     Double[] actualArray = {383239.3d, 0d, -239923.4038d};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -816,7 +815,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNullStringArray";
     String fieldClassName = "[Ljava.lang.String;";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -829,7 +828,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.String;";
     String[] actualArray = {};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -846,7 +845,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "[Ljava.lang.String;";
     String[] actualArray = {"hello", "world", "!"};
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();

@@ -1,7 +1,6 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
 import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
@@ -37,12 +36,12 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
 
 
     //we need an App instance
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     Primitives.Object myApp = replyMsg.getReturnValue().getObject();
 
     //now call the method
-    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName, myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
+    requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -63,12 +62,12 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     List<String> shouldReturn = new ArrayList();
 
     //we need an App instance
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     Primitives.Object myApp = replyMsg.getReturnValue().getObject();
 
     //now call the method
-    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName, myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
+    requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -92,12 +91,12 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     List<String> shouldReturn = new ArrayList();
 
     //we need an App instance
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     Primitives.Object myApp = replyMsg.getReturnValue().getObject();
 
     //now call the method
-    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName, myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
+    requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -117,7 +116,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     String methodName = "addOffsetToListAndSumUp";
 
     //new ArrayList<Integer>
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, "java.util.ArrayList");
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, "java.util.ArrayList");
     DataMessage replyMsg = sendAndReceive(requestMsg);
     String listObjRef = replyMsg.getReturnValue().getObject().getRef();
 
@@ -127,12 +126,12 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     //add some int's to the list
     int[] someInts = {1,2,3,5,7,9};
     for (int i = 0; i < someInts.length; i++) {
-      requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, "java.util.ArrayList", "add", listObjRef, new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[1]);
+      requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, "java.util.ArrayList", "add", listObjRef, new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[1]);
       replyMsg = sendAndReceive(requestMsg);
     }
 
     //now create an App instance
-    requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     replyMsg = sendAndReceive(requestMsg);
     Primitives.Object myApp = replyMsg.getReturnValue().getObject();
 
@@ -147,7 +146,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     }
 
     //call method
-    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName, myApp.getRef(), parameterTypes, objs, objRefs);
+    requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, myApp.getRef(), parameterTypes, objs, objRefs);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());

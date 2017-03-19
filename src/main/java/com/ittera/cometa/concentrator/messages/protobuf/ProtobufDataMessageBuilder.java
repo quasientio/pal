@@ -7,6 +7,7 @@ import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessag
 import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.*;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.*;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Values.*;
+import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
 
 import org.aspectj.runtime.reflect.FieldSignatureImpl;
 import org.aspectj.lang.reflect.CodeSignature;
@@ -27,11 +28,12 @@ import com.google.protobuf.Message;
 /**
  * Methods of this class receive aspectj objects (i.e. StaticPart) as arguments as convenience.
  */
-public final class DataMessageFactory {
-  protected static final Logger logger = LogManager.getLogger(DataMessageFactory.class);
+public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
-  private DataMessageFactory() {
-    //avoid instantiation
+  protected static final Logger logger = LogManager.getLogger(ProtobufDataMessageBuilder.class);
+
+  public ProtobufDataMessageBuilder() {
+    logger.info("Initialized message builder");
   }
 
   //<editor-fold desc="Private Auxiliary methods">
@@ -117,7 +119,7 @@ public final class DataMessageFactory {
   //</editor-fold>
 
   //<editor-fold desc="Class initialization messages">
-  public static DataMessage buildClassInitializerMessage(int concentratorId, StaticPart staticPart, Object sender) {
+  public DataMessage buildClassInitializer(int concentratorId, StaticPart staticPart, Object sender) {
 
     final InitializerSignature codeSignature = (InitializerSignature) staticPart.getSignature();
 
@@ -130,7 +132,7 @@ public final class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static DataMessage buildLoadedClassMessage(int concentratorId, Class clazz) {
+  public DataMessage buildLoadedClass(int concentratorId, Class clazz) {
 
     final DataMessage.Builder msgBuilder = newWrapperBuilder("Return class", concentratorId)
       .setReturnValue(ReturnValue.newBuilder()
@@ -169,7 +171,7 @@ public final class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available.
    */
-  public static DataMessage buildEmptyConstructorMessage(String concentratorId, String className) {
+  public DataMessage buildEmptyConstructor(String concentratorId, String className) {
 
     return buildConstructorMessage(Integer.valueOf(concentratorId), className, null, null, null, null, null);
   }
@@ -184,12 +186,12 @@ public final class DataMessageFactory {
    * @param argObjRefs     Should be of same length as parameterTypes. For objectrefs.
    * @return
    */
-  public static DataMessage buildNonEmptyConstructorMessage(String concentratorId, String className, String[] parameterTypes, Object[] args, String[] argObjRefs) {
+  public DataMessage buildNonEmptyConstructor(String concentratorId, String className, String[] parameterTypes, Object[] args, String[] argObjRefs) {
 
     return buildConstructorMessage(Integer.valueOf(concentratorId), className, null, null, parameterTypes, args, argObjRefs);
   }
 
-  public static DataMessage buildConstructorMessage(int concentratorId, StaticPart staticPart, Object sender, Object[] args) {
+  public DataMessage buildConstructor(int concentratorId, StaticPart staticPart, Object sender, Object[] args) {
 
     return buildConstructorMessage(concentratorId, null, staticPart, sender, null, args, null);
   }
@@ -200,7 +202,7 @@ public final class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available.
    */
-  public static DataMessage buildInstanceMethodMessage(String concentratorId, String className, String methodName, String objRef, String[] parameterTypes, Object[] args, String[] argObjRefs) {
+  public DataMessage buildInstanceMethod(String concentratorId, String className, String methodName, String objRef, String[] parameterTypes, Object[] args, String[] argObjRefs) {
 
     final InstanceMethodCall.Builder callBuilder = InstanceMethodCall.newBuilder();
     addParameters(callBuilder, parameterTypes, args, argObjRefs);
@@ -215,7 +217,7 @@ public final class DataMessageFactory {
   }
 
 
-  public static DataMessage buildInstanceMethodMessage(int concentratorId, StaticPart staticPart, Object sender, Object target, Object[] args) {
+  public DataMessage buildInstanceMethod(int concentratorId, StaticPart staticPart, Object sender, Object target, Object[] args) {
 
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
 
@@ -239,7 +241,7 @@ public final class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available.
    */
-  public static DataMessage buildClassMethodMessage(String concentratorId, String className, String methodName, String[] parameterTypes, Object[] args, String[] argObjRefs) {
+  public DataMessage buildClassMethod(String concentratorId, String className, String methodName, String[] parameterTypes, Object[] args, String[] argObjRefs) {
 
     final ClassMethodCall.Builder callBuilder = ClassMethodCall.newBuilder();
     addParameters(callBuilder, parameterTypes, args, argObjRefs);
@@ -253,7 +255,7 @@ public final class DataMessageFactory {
 
   }
 
-  public static DataMessage buildClassMethodMessage(int concentratorId, StaticPart staticPart, Object sender, Object[] args) {
+  public DataMessage buildClassMethod(int concentratorId, StaticPart staticPart, Object sender, Object[] args) {
 
     final MethodSignature codeSignature = (MethodSignature) staticPart.getSignature();
 
@@ -276,7 +278,7 @@ public final class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available.
    */
-  public static DataMessage buildGetStaticMessage(String concentratorId, String className, String fieldName) {
+  public DataMessage buildGetStatic(String concentratorId, String className, String fieldName) {
 
     final DataMessage.Builder msgBuilder = newWrapperBuilder("Get static", Integer.valueOf(concentratorId))
       .setStaticFieldGet(StaticFieldGet.newBuilder()
@@ -286,7 +288,7 @@ public final class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static DataMessage buildGetStaticMessage(int concentratorId, StaticPart staticPart, Object sender) {
+  public DataMessage buildGetStatic(int concentratorId, StaticPart staticPart, Object sender) {
 
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
 
@@ -306,7 +308,7 @@ public final class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available.
    */
-  public static DataMessage buildGetObjectMessage(String concentratorId, String className, String fieldName, String targetObjRef) {
+  public DataMessage buildGetObject(String concentratorId, String className, String fieldName, String targetObjRef) {
 
     final DataMessage.Builder msgBuilder = newWrapperBuilder("Get field", Integer.valueOf(concentratorId))
       .setInstanceFieldGet(InstanceFieldGet.newBuilder()
@@ -317,7 +319,7 @@ public final class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static DataMessage buildGetObjectMessage(int concentratorId, StaticPart staticPart, Object sender, Object target) {
+  public DataMessage buildGetObject(int concentratorId, StaticPart staticPart, Object sender, Object target) {
 
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
 
@@ -338,7 +340,7 @@ public final class DataMessageFactory {
   /**
    * This method is to be called when no joinpoint context is available.
    */
-  public static DataMessage buildPutStaticMessage(String concentratorId, String className, String fieldName, String valueClassName, Object value) {
+  public DataMessage buildPutStatic(String concentratorId, String className, String fieldName, String valueClassName, Object value) {
 
     final DataMessage.Builder msgBuilder = newWrapperBuilder("Put static", Integer.valueOf(concentratorId))
       .setStaticFieldPut(StaticFieldPut.newBuilder()
@@ -353,7 +355,7 @@ public final class DataMessageFactory {
    * This method is to be called when no joinpoint context is available.
    * Equivalent to the above, for objectRefs
    */
-  public static DataMessage buildPutStaticMessage(String concentratorId, String className, String fieldName, String objectRef) {
+  public DataMessage buildPutStatic(String concentratorId, String className, String fieldName, String objectRef) {
 
     final DataMessage.Builder msgBuilder = newWrapperBuilder("Put static", Integer.valueOf(concentratorId))
       .setStaticFieldPut(StaticFieldPut.newBuilder()
@@ -364,7 +366,7 @@ public final class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static DataMessage buildPutStaticMessage(int concentratorId, StaticPart staticPart, Object sender, Object arg) {
+  public DataMessage buildPutStatic(int concentratorId, StaticPart staticPart, Object sender, Object arg) {
 
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
 
@@ -383,7 +385,7 @@ public final class DataMessageFactory {
    * This method is to be called when no joinpoint context is available.
    * Equivalent to the above, for objectRefs
    */
-  public static DataMessage buildPutStaticDoneMessage(int concentratorId, Fields.StaticFieldPut staticFieldPut, Class fieldType, Long followingOffset) {
+  public DataMessage buildPutStaticDone(int concentratorId, Fields.StaticFieldPut staticFieldPut, Class fieldType, Long followingOffset) {
 
     final StaticFieldPutDone.Builder fieldBuilder = StaticFieldPutDone.newBuilder();
     if (staticFieldPut.getField().hasClass_()) {
@@ -401,7 +403,7 @@ public final class DataMessageFactory {
   }
 
 
-  public static DataMessage buildPutStaticDoneMessage(int concentratorId, StaticPart staticPart, Object sender, Object arg) {
+  public DataMessage buildPutStaticDone(int concentratorId, StaticPart staticPart, Object sender, Object arg) {
 
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
 
@@ -420,7 +422,7 @@ public final class DataMessageFactory {
    * This method is to be called when no joinpoint context is available.
    * Equivalent to the above, for objectRefs
    */
-  public static DataMessage buildPutObjectMessage(String concentratorId, String className, String fieldName, String targetObjRef, String valueClassName, Object value) {
+  public DataMessage buildPutObject(String concentratorId, String className, String fieldName, String targetObjRef, String valueClassName, Object value) {
 
     final DataMessage.Builder msgBuilder = newWrapperBuilder("Put field", Integer.valueOf(concentratorId), null)
       .setInstanceFieldPut(InstanceFieldPut.newBuilder()
@@ -436,7 +438,7 @@ public final class DataMessageFactory {
    * This method is to be called when no joinpoint context is available.
    * Equivalent to the above, for objectRefs
    */
-  public static DataMessage buildPutObjectMessage(String concentratorId, String className, String fieldName, String targetObjRef, String valueObjRef) {
+  public DataMessage buildPutObject(String concentratorId, String className, String fieldName, String targetObjRef, String valueObjRef) {
 
     final DataMessage.Builder msgBuilder = newWrapperBuilder("Put field", Integer.valueOf(concentratorId))
       .setInstanceFieldPut(InstanceFieldPut.newBuilder()
@@ -448,7 +450,7 @@ public final class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static DataMessage buildPutObjectMessage(int concentratorId, StaticPart staticPart, Object sender, Object target, Object arg) {
+  public DataMessage buildPutObject(int concentratorId, StaticPart staticPart, Object sender, Object target, Object arg) {
 
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
 
@@ -464,7 +466,7 @@ public final class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static DataMessage buildPutObjectDoneMessage(int concentratorId, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, Long followingOffset) {
+  public DataMessage buildPutObjectDone(int concentratorId, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, Long followingOffset) {
 
     final Fields.InstanceFieldPutDone.Builder fieldBuilder = InstanceFieldPutDone.newBuilder();
     if (instanceFieldPut.getField().hasClass_()) {
@@ -481,7 +483,7 @@ public final class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static DataMessage buildPutObjectDoneMessage(int concentratorId, StaticPart staticPart, Object sender, Object target, Object arg) {
+  public DataMessage buildPutObjectDone(int concentratorId, StaticPart staticPart, Object sender, Object target, Object arg) {
 
     final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
 
@@ -495,7 +497,7 @@ public final class DataMessageFactory {
   //</editor-fold>
 
   //<editor-fold desc="Throwable messages">
-  public static DataMessage buildAccessibleObjectThrowableMessage(int concentratorId, AccessibleObject accessibleObject, Exception exception, Long followingOffset) {
+  public DataMessage buildAccessibleObjectThrowable(int concentratorId, AccessibleObject accessibleObject, Exception exception, Long followingOffset) {
 
     final Exceptions.RaisedThrowable.Builder thrBuilder = Exceptions.RaisedThrowable.newBuilder();
     if (accessibleObject instanceof Constructor) {
@@ -516,7 +518,7 @@ public final class DataMessageFactory {
     return msgBuilder.build();
   }
 
-  public static DataMessage buildInitializerThrowableMessage(int concentratorId, StaticPart staticPart, Exception exception) {
+  public DataMessage buildInitializerThrowable(int concentratorId, StaticPart staticPart, Exception exception) {
 
     final DataMessage.Builder msgBuilder = newWrapperBuilder("Throwable", concentratorId)
       .setRaisedThrowable(Exceptions.RaisedThrowable.newBuilder()
@@ -556,7 +558,7 @@ public final class DataMessageFactory {
   //</editor-fold>
 
   //<editor-fold desc="Return value messages">
-  public static DataMessage buildReturnValueMessage(int concentratorId, Object object, Class type, String objectKey, boolean isVoid, Long followingOffset) {
+  public DataMessage buildReturnValue(int concentratorId, Object object, Class type, String objectKey, boolean isVoid, Long followingOffset) {
 
     final ReturnValue.Builder contentBuilder = Values.ReturnValue.newBuilder();
     if (!isVoid) {

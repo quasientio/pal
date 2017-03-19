@@ -1,7 +1,6 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
 import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
@@ -37,7 +36,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "java.lang.String";
     String originalValue = "I'm classy";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -54,7 +53,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
     String fieldName = "aNullStaticStr";
     String fieldClassName = "java.lang.String";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -68,7 +67,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "java.lang.Integer";
     Integer originalValue = 39328;
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -85,7 +84,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
     String fieldName = "aProtectedBool";
     String fieldClassName = "java.lang.Boolean";
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -99,7 +98,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
     String fieldClassName = "boolean";
     boolean originalValue = true;
 
-    DataMessage requestMsg = DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();

@@ -29,9 +29,10 @@ public class Unwrapper {
   public static Class getClassForPrimitive(String primitiveType) {
     return shortPrimitiveNameToClass.get(primitiveType);
   }
+
   /**
    * Returns objects in objectList as Object array with each object typed as its type in classList
-   * This method undoes the wrapping of objects done in DataMessageFactory.getWrappedValue()
+   * This method undoes the wrapping of objects done in ProtobufDataMessageBuilder.getWrappedValue()
    *
    * @param object
    * @param clazz

@@ -1,7 +1,6 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -34,12 +33,12 @@ public class VoidInstanceMethodTest extends AbstractConcentratorTest {
     String[] parameterTypes = new String[]{};
 
     //we need an App instance
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     Primitives.Object myApp = replyMsg.getReturnValue().getObject();
 
     //now call the method
-    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
+    requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -58,12 +57,12 @@ public class VoidInstanceMethodTest extends AbstractConcentratorTest {
     String[] parameterTypes = new String[]{param.getClass().getName()};
 
     //we need an App instance
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     Primitives.Object myApp = replyMsg.getReturnValue().getObject();
 
     //now call the method
-    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
+    requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -81,12 +80,12 @@ public class VoidInstanceMethodTest extends AbstractConcentratorTest {
     String[] parameterTypes = new String[]{};
 
     //we need an App instance
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     Primitives.Object myApp = replyMsg.getReturnValue().getObject();
 
     //now call the method
-    requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
+    requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());

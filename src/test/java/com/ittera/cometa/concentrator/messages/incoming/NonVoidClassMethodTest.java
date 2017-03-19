@@ -1,7 +1,6 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
 import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
@@ -38,7 +37,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     String[] parameterTypes = new String[]{param.getClass().getName()};
     String shouldReturn = param.toLowerCase();
 
-    DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -58,7 +57,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     Object[] parameters = new Object[]{};
     Integer shouldReturn = 5;
 
-    DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -75,7 +74,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     String methodName = "nonVoidSumUpList";
 
     //new ArrayList<Integer>
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, "java.util.ArrayList");
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, "java.util.ArrayList");
     DataMessage replyMsg = sendAndReceive(requestMsg);
     String listObjRef = replyMsg.getReturnValue().getObject().getRef();
 
@@ -85,7 +84,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     //add some int's
     int[] someInts = {39,5,58,32,70, 42};
     for (int i = 0; i < someInts.length; i++) {
-      requestMsg = DataMessageFactory.buildInstanceMethodMessage(clientId, "java.util.ArrayList", "add", listObjRef, new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[someInts.length]);
+      requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, "java.util.ArrayList", "add", listObjRef, new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[someInts.length]);
       replyMsg = sendAndReceive(requestMsg);
     }
 
@@ -98,7 +97,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
      }
     Integer shouldReturn = Integer.valueOf(sum);
 
-    requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, new Object[parameterTypes.length], objRefs);
+    requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, new Object[parameterTypes.length], objRefs);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -120,7 +119,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     Object[] parameters = new Object[]{};
     Object shouldReturn = null;
 
-    DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -141,7 +140,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     Object[] parameters = new Object[]{param};
     char[] shouldReturn = param.toCharArray();
 
-    DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -162,7 +161,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     Object[] parameters = new Object[]{};
     Long[] shouldReturn = new Long[]{};
 
-    DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -182,7 +181,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     Object[] parameters = new Object[]{};
     Boolean[] shouldReturn = (Boolean[]) null ;
 
-    DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -201,7 +200,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     String[] parameterTypes = new String[]{};
     Object[] parameters = new Object[]{};
 
-    DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -211,7 +210,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     //with a 2nd call we should get the same App instance objectRef, let's make sure
     String appRef = retValue.getObject().getRef();
 
-    requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+    requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
@@ -227,7 +226,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     String fieldClassName = "java.lang.Integer";
     Integer originalValue = 4;
 
-    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, appRef);
+    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, appRef);
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     retValue = replyMsg.getReturnValue();
@@ -246,7 +245,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     String[] parameterTypes = new String[]{};
     Object[] parameters = new Object[]{};
 
-    DataMessage requestMsg = DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
     DataMessage replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());

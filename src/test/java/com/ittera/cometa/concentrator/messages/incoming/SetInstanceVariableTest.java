@@ -1,7 +1,6 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
 import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Fields;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
@@ -37,12 +36,12 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     Integer newValue = 500;
 
     //must call new first
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     Primitives.Object newObj = replyMsg.getReturnValue().getObject();
 
     //test with a non null integer
-    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, newObj.getRef());
+    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
     assertNotNull(replyMsg.getReturnValue().getObject());
     Primitives.Object retObj = replyMsg.getReturnValue().getObject();
@@ -53,7 +52,7 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     assertEquals(originalValue, rawObj);
 
     //set integer
-    requestMsg = DataMessageFactory.buildPutObjectMessage(clientId, className, fieldName, newObj.getRef(), fieldClassName, newValue);
+    requestMsg = dataMessageBuilder.buildPutObject(clientId, className, fieldName, newObj.getRef(), fieldClassName, newValue);
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasInstanceFieldPutDone());
     assertFalse(replyMsg.hasReturnValue());
@@ -62,7 +61,7 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
 
 
     //now get to test if set took place
-    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, newObj.getRef());
+    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, newObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
@@ -82,12 +81,12 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     Integer newValue = null;
 
     //must call new first
-    DataMessage requestMsg = DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
     Primitives.Object fieldObj = replyMsg.getReturnValue().getObject();
 
     //test with a non null integer
-    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, fieldObj.getRef());
+    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, fieldObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
     assertNotNull(replyMsg.getReturnValue().getObject());
     Primitives.Object retObj = replyMsg.getReturnValue().getObject();
@@ -98,7 +97,7 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
     assertEquals(originalValue, rawObj);
 
     //set integer to null
-    requestMsg = DataMessageFactory.buildPutObjectMessage(clientId, className, fieldName, fieldObj.getRef(), fieldClassName, newValue);
+    requestMsg = dataMessageBuilder.buildPutObject(clientId, className, fieldName, fieldObj.getRef(), fieldClassName, newValue);
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasInstanceFieldPutDone());
     assertFalse(replyMsg.hasReturnValue());
@@ -107,7 +106,7 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
 
 
     //now get to test if set took place
-    requestMsg = DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, fieldObj.getRef());
+    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, fieldObj.getRef());
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();

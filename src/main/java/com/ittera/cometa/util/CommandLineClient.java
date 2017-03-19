@@ -1,7 +1,7 @@
 package com.ittera.cometa.util;
 
+import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.concentrator.messages.protobuf.DataMessageFactory;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -20,6 +20,7 @@ import java.lang.System;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.inject.Inject;
 
 public class CommandLineClient {
 
@@ -27,6 +28,9 @@ public class CommandLineClient {
   private final String kafkaTopic;
   private final Properties kafkaProducerProps = new Properties();
   final KafkaProducer producer;
+
+  @Inject
+  private static DataMessageBuilder dataMessageBuilder;
 
   public CommandLineClient(Properties properties) {
 
@@ -60,7 +64,7 @@ public class CommandLineClient {
 
     if ("new".equals(lineParts[1])) {
       /** example: com.ittera.cometa.demos.App new */
-      return DataMessageFactory.buildEmptyConstructorMessage(clientId, className);
+      return dataMessageBuilder.buildEmptyConstructor(clientId, className);
     } else if ("main".equals(lineParts[1])) {
       /** example: com.ittera.cometa.demos.App main */
       String[] mainArgs = Arrays.copyOfRange(lineParts, 2, lineParts.length);
@@ -71,18 +75,18 @@ public class CommandLineClient {
         parameterTypesNamesArray[i] = parameterTypes[i].getName();
       }
       Object[] parameters = new Object[]{mainArgs};
-      return DataMessageFactory.buildClassMethodMessage(clientId, className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypesNamesArray.length]);
+      return dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypesNamesArray.length]);
     } else if ("get".equals(lineParts[1])) {
       if (lineParts.length == 4) {
         /** get field - example: com.ittera.cometa.demos.App get object-ref anInstanceVar */
         String objectRef = lineParts[2];
         String fieldName = lineParts[3];
 
-        return DataMessageFactory.buildGetObjectMessage(clientId, className, fieldName, objectRef);
+        return dataMessageBuilder.buildGetObject(clientId, className, fieldName, objectRef);
       }
       /** get static - example: com.ittera.cometa.demos.App get aClassVar */
       String fieldName = lineParts[2];
-      return DataMessageFactory.buildGetStaticMessage(clientId, className, fieldName);
+      return dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
     } else if ("set".equals(lineParts[1])) {
       if (lineParts.length == 5) {
         /** set instance - example: com.ittera.cometa.demos.App set object-ref anInstanceVar ref/class:value */
@@ -91,7 +95,7 @@ public class CommandLineClient {
         String valuePart = lineParts[4];
         if (valuePart.startsWith("ref")) {
           String valueOjectRef = StringUtils.substringAfter(valuePart, "ref:");
-          return DataMessageFactory.buildPutObjectMessage(clientId, className, fieldName, objectRef, valueOjectRef);
+          return dataMessageBuilder.buildPutObject(clientId, className, fieldName, objectRef, valueOjectRef);
         } else { //we assume is primitive or string
           String classAbbrev = StringUtils.substringBefore(valuePart, ":");
           String valueClassName = "java.lang." + StringUtils.capitalize(classAbbrev);
@@ -103,7 +107,7 @@ public class CommandLineClient {
             ex.printStackTrace();
             return null;
           }
-          return DataMessageFactory.buildPutObjectMessage(clientId, className, fieldName, objectRef, valueClassName, value);
+          return dataMessageBuilder.buildPutObject(clientId, className, fieldName, objectRef, valueClassName, value);
         }
       }
       /** set static - example: com.ittera.cometa.demos.App set aClassVar ref/class:value */
@@ -111,7 +115,7 @@ public class CommandLineClient {
       String valuePart = lineParts[3];
       if (valuePart.startsWith("ref")) {
         String objectRef = StringUtils.substringAfter(valuePart, "ref:");
-        return DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, objectRef);
+        return dataMessageBuilder.buildPutStatic(clientId, className, fieldName, objectRef);
       } else {  //we assume is primitive or string
         String classAbbrev = StringUtils.substringBefore(valuePart, ":");
         String valueClassName = "java.lang." + StringUtils.capitalize(classAbbrev);
@@ -123,14 +127,14 @@ public class CommandLineClient {
           ex.printStackTrace();
           return null;
         }
-        return DataMessageFactory.buildPutStaticMessage(clientId, className, fieldName, valueClassName, value);
+        return dataMessageBuilder.buildPutStatic(clientId, className, fieldName, valueClassName, value);
       }
     } else if ("instance".equals(lineParts[1])) {
       /** example: com.ittera.cometa.demos.App instance object-ref someInstanceMethod */
       String objectRef = lineParts[2];
       String methodName = lineParts[3];
 
-      return DataMessageFactory.buildInstanceMethodMessage(clientId, className, methodName, objectRef, new String[0], new Object[0], new String[0]);
+      return dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, objectRef, new String[0], new Object[0], new String[0]);
     } else {
       return null;
     }

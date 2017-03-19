@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall;
@@ -9,9 +10,13 @@ import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldP
 import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut;
 
+import com.ittera.cometa.concentrator.messages.DataMessageDispatcher;
+
 import java.util.Properties;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.BlockingQueue;
 
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -21,51 +26,55 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
+import com.google.inject.name.Named;
+import com.google.inject.Inject;
 
-public class DataMessageDispatcher extends Thread {
+public class KafkaDataMessageDispatcher extends Thread implements DataMessageDispatcher {
 
-  protected static final Logger logger = LogManager.getLogger(DataMessageDispatcher.class);
+  protected static final Logger logger = LogManager.getLogger(KafkaDataMessageDispatcher.class);
 
-  private static long pollTimeout;
+  private long pollTimeout;
   private static ExecutorService executorService;
-  private static DataMessageDispatcher INSTANCE;
   private KafkaConsumer<String, String> consumer;
   private volatile boolean mustShutdown;
-  private final static Object initLock = new Object();
 
-  //singleton accessor to be called once initialized
-  public static DataMessageDispatcher getInstance() {
-    if (INSTANCE == null) {
-      throw new IllegalStateException("DataMessageDispatcher has not been initialized from properties");
-    }
-    return INSTANCE;
-  }
+  private Properties properties = new Properties();
+  private volatile Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap;
+  private String kafkaTopic;
 
-  //singleton accessor for initial construction
-  public static DataMessageDispatcher getInstance(Properties properties) {
-    synchronized (initLock) {
-      if (INSTANCE == null) {
-        INSTANCE = new DataMessageDispatcher(properties);
-      }
-    }
-    return INSTANCE;
-  }
-
-  private DataMessageDispatcher(Properties props) {
-    super();
-    pollTimeout = Long.parseLong((String) props.remove("pollTimeout"));
-    props.put("group.id", String.valueOf(Concentrator.id));
-    consumer = new KafkaConsumer<>(props);
-    //consumer.subscribe(Arrays.asList(Concentrator.kafkaTopic));
+  @Inject
+  public KafkaDataMessageDispatcher(@Named("bootstrap.servers") String bootstrapServers,
+                                    @Named("key.deserializer") String keyDeserializer,
+                                    @Named("value.deserializer") String valueDeserializer,
+                                    @Named("enable.auto.commit") String autoCommit,
+                                    @Named("auto.commit.interval.ms") String autoCommitInterval,
+                                    @Named("auto.offset.reset") String autoOffsetReset,
+                                    @Named("session.timeout.ms") String sessionTimeout,
+                                    @Named("id") String concentratorId,
+                                    Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap,
+                                    ExecutorService executorService,
+                                    @Named("pollTimeout") String pollTimeout,
+                                    @Named("kafkaTopic") String kafkaTopic) {
+    this.threadBlockingQueueMap = threadBlockingQueueMap;
+    this.kafkaTopic = kafkaTopic;
+    this.pollTimeout = Long.parseLong(pollTimeout);
+    this.executorService = executorService;
+    //create Kafka consumer
+    properties.put("group.id", concentratorId);
+    properties.put("bootstrap.servers", bootstrapServers);
+    properties.put("key.deserializer", keyDeserializer);
+    properties.put("value.deserializer", valueDeserializer);
+    properties.put("enable.auto.commit", autoCommit);
+    properties.put("auto.commit.interval.ms", autoCommitInterval);
+    properties.put("auto.offset.reset", autoOffsetReset);
+    properties.put("session.timeout.ms", sessionTimeout);
+    consumer = new KafkaConsumer<>(properties);
 
     //manual assignment of partition so we can control offset seek
-    final TopicPartition topicPartition = new TopicPartition(MessageBroker.kafkaTopic, 0);
+    final TopicPartition topicPartition = new TopicPartition(kafkaTopic, 0);
     consumer.assign(Arrays.asList(topicPartition));
     consumer.seekToBeginning(Arrays.asList(topicPartition));
-    logger.info("DataMessageDispatcher initialized");
-
-    //get Executor service
-    executorService = Executor.getInstance();
+    logger.info("Initialized dispatcher, with topic '{}' and properties: {}", kafkaTopic, properties.stringPropertyNames());
   }
 
   public final void run() {
@@ -83,8 +92,8 @@ public class DataMessageDispatcher extends Thread {
         final long threadId = dataMessage.getThreadId();
         final long recordOffset = record.offset();
         //if threadId not in our threadQueue, then push to new/random thread
-        if (!Concentrator.threadBlockingQueueMap.containsKey(threadId)) {
-          logger.debug("Thread queue has thread with ids" + Concentrator.threadBlockingQueueMap.keySet());
+        if (!threadBlockingQueueMap.containsKey(threadId)) {
+          logger.debug("Thread queue has thread with ids" + threadBlockingQueueMap.keySet());
           logger.debug("No thread for incoming call, dispatching to thread pool...");
           executorService.submit(new Runnable() {
             @Override
@@ -122,7 +131,7 @@ public class DataMessageDispatcher extends Thread {
         else {
           try {
             //push to queue of the Destination thread
-            Concentrator.threadBlockingQueueMap.get(threadId).put(dataMessage);
+            threadBlockingQueueMap.get(threadId).put(dataMessage);
             logger.info("Pushed message with offset {} to thread queue", recordOffset);
           } catch (InterruptedException e) {
             logger.error("Interrupted while putting message in queue", e);
@@ -135,7 +144,7 @@ public class DataMessageDispatcher extends Thread {
     shutdown();
   }
 
-  final void requestShutdown() {
+  public void requestShutdown() {
     mustShutdown = true;
   }
 
