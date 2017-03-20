@@ -16,16 +16,18 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.inject.name.Named;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
 /**
  * TODO: This class should NOT depend on protobuf
  */
+@Singleton
 public final class KafkaMessageBroker implements MessageBroker {
 
-  private Properties properties = new Properties();
+  private final Properties properties = new Properties();
   private final KafkaProducer producer;
   private final String kafkaTopic;
-  private volatile Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap;
+  private final Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap;
 
   protected static final Logger logger = LogManager.getLogger(KafkaMessageBroker.class);
 
@@ -41,8 +43,14 @@ public final class KafkaMessageBroker implements MessageBroker {
     properties.put("bootstrap.servers", bootstrapServers);
     properties.put("key.serializer", keySerializer);
     properties.put("value.serializer", valueSerializer);
-    producer = new KafkaProducer<>(properties);
-    logger.info("Initialized message broker, with topic '{}' and properties: {}", kafkaTopic, properties.stringPropertyNames());
+    this.producer = new KafkaProducer<>(properties);
+    if (logger.isInfoEnabled()) {
+      StringBuffer propsStr = new StringBuffer(50);
+      for (String propKey : properties.stringPropertyNames()) {
+        propsStr.append(propKey).append('=').append(properties.getProperty(propKey)).append(", ");
+      }
+      logger.info("Initialized message broker, with topic '{}' and properties: [{}]", kafkaTopic, propsStr.toString());
+    }
   }
 
   public void send(DataMessage message) {

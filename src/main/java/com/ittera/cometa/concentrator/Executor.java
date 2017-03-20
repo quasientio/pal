@@ -12,12 +12,12 @@ import org.apache.logging.log4j.LogManager;
 
 import com.google.inject.name.Named;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
+@Singleton
 public class Executor extends ThreadPoolExecutor {
 
   protected static final Logger logger = LogManager.getLogger(Executor.class);
-
-  private static ThreadPoolExecutor instance;
 
   @Inject
   public Executor(@Named("corePoolSize") String corePoolSize,

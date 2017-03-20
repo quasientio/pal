@@ -52,13 +52,16 @@ public class Concentrator {
    */
   private static int id;
 
+  @Inject
   private static DataMessageBuilder dataMessageBuilder;
 
+  @Inject
   private static MessageBroker messageBroker;
 
+  @Inject
   private static DataMessageDispatcher dataMessageDispatcher;
 
-  private static Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue<DataMessage>>();
+  private static final Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue<DataMessage>>();
 
   /************************ INTERFACE ***************************/
 
@@ -1170,10 +1173,12 @@ public class Concentrator {
 
         Names.bindProperties(binder(), properties);
         //bind inmplementations
-        bind(MessageBroker.class).to(KafkaMessageBroker.class).in(Scopes.SINGLETON);
-        bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class).in(Scopes.SINGLETON);
-        bind(DataMessageDispatcher.class).to(KafkaDataMessageDispatcher.class).in(Scopes.SINGLETON);
-        bind(ExecutorService.class).to(Executor.class).in(Scopes.SINGLETON);
+        bind(MessageBroker.class).to(KafkaMessageBroker.class);
+        bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class);
+        bind(DataMessageDispatcher.class).to(KafkaDataMessageDispatcher.class);
+        bind(ExecutorService.class).to(Executor.class);
+        //fields to be injected in Concentrator are static
+        requestStaticInjection(Concentrator.class);
       }
 
       @Provides
@@ -1184,11 +1189,6 @@ public class Concentrator {
     };
 
     Injector injector = Guice.createInjector(module);
-
-    //Concentrator (static) fields are set here, not injected
-    messageBroker = injector.getInstance(MessageBroker.class);
-    dataMessageDispatcher = injector.getInstance(DataMessageDispatcher.class);
-    dataMessageBuilder = injector.getInstance(DataMessageBuilder.class);
 
     /** Add shutdown hook **/
     Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -1213,7 +1213,6 @@ public class Concentrator {
     });
 
     //Start dispatching incoming messages
-    DataMessageDispatcher dataMessageDispatcher = injector.getInstance(DataMessageDispatcher.class);
     dataMessageDispatcher.run();
   }
 }

@@ -15,6 +15,7 @@ import com.ittera.cometa.concentrator.messages.DataMessageDispatcher;
 import java.util.Properties;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.BlockingQueue;
 
@@ -28,19 +29,20 @@ import org.apache.logging.log4j.LogManager;
 
 import com.google.inject.name.Named;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
+@Singleton
 public class KafkaDataMessageDispatcher extends Thread implements DataMessageDispatcher {
 
   protected static final Logger logger = LogManager.getLogger(KafkaDataMessageDispatcher.class);
 
-  private long pollTimeout;
-  private static ExecutorService executorService;
-  private KafkaConsumer<String, String> consumer;
-  private volatile boolean mustShutdown;
-
-  private Properties properties = new Properties();
-  private volatile Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap;
-  private String kafkaTopic;
+  private final long pollTimeout;
+  private final ExecutorService executorService;
+  private final KafkaConsumer<String, String> consumer;
+  private volatile boolean mustShutdown = false;
+  private final Properties properties = new Properties();
+  private final Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap;
+  private final String kafkaTopic;
 
   @Inject
   public KafkaDataMessageDispatcher(@Named("bootstrap.servers") String bootstrapServers,
@@ -68,13 +70,19 @@ public class KafkaDataMessageDispatcher extends Thread implements DataMessageDis
     properties.put("auto.commit.interval.ms", autoCommitInterval);
     properties.put("auto.offset.reset", autoOffsetReset);
     properties.put("session.timeout.ms", sessionTimeout);
-    consumer = new KafkaConsumer<>(properties);
+    this.consumer = new KafkaConsumer<>(properties);
 
     //manual assignment of partition so we can control offset seek
-    final TopicPartition topicPartition = new TopicPartition(kafkaTopic, 0);
-    consumer.assign(Arrays.asList(topicPartition));
-    consumer.seekToBeginning(Arrays.asList(topicPartition));
-    logger.info("Initialized dispatcher, with topic '{}' and properties: {}", kafkaTopic, properties.stringPropertyNames());
+    final List<TopicPartition> topicPartitionList = Arrays.asList(new TopicPartition(kafkaTopic, 0));
+    consumer.assign(topicPartitionList);
+    consumer.seekToBeginning(topicPartitionList);
+    if (logger.isInfoEnabled()) {
+      StringBuffer propsStr = new StringBuffer(50);
+      for (String propKey : properties.stringPropertyNames()) {
+        propsStr.append(propKey).append('=').append(properties.getProperty(propKey)).append(", ");
+      }
+      logger.info("Initialized dispatcher, with topic '{}' and properties: [{}]", kafkaTopic, propsStr.toString());
+    }
   }
 
   public final void run() {
