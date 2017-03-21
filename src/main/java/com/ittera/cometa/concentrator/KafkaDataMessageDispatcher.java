@@ -18,11 +18,15 @@ import java.util.Map;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -32,17 +36,20 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 @Singleton
-public class KafkaDataMessageDispatcher extends Thread implements DataMessageDispatcher {
+public class KafkaDataMessageDispatcher implements DataMessageDispatcher {
 
   protected static final Logger logger = LogManager.getLogger(KafkaDataMessageDispatcher.class);
 
+  private static final Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue<DataMessage>>();
+
   private final long pollTimeout;
   private final ExecutorService executorService;
-  private final KafkaConsumer<String, String> consumer;
-  private volatile boolean mustShutdown = false;
-  private final Properties properties = new Properties();
-  private final Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap;
   private final String kafkaTopic;
+  private final KafkaConsumer<String, String> consumer;
+  private final KafkaProducer producer;
+  private volatile boolean mustShutdown = false;
+  private final Properties consumerProperties = new Properties();
+  private final Properties producerProperties = new Properties();
 
   @Inject
   public KafkaDataMessageDispatcher(@Named("bootstrap.servers") String bootstrapServers,
@@ -52,25 +59,30 @@ public class KafkaDataMessageDispatcher extends Thread implements DataMessageDis
                                     @Named("auto.commit.interval.ms") String autoCommitInterval,
                                     @Named("auto.offset.reset") String autoOffsetReset,
                                     @Named("session.timeout.ms") String sessionTimeout,
+                                    @Named("key.serializer") String keySerializer,
+                                    @Named("value.serializer") String valueSerializer,
                                     @Named("id") String concentratorId,
-                                    Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap,
                                     ExecutorService executorService,
                                     @Named("pollTimeout") String pollTimeout,
                                     @Named("kafkaTopic") String kafkaTopic) {
-    this.threadBlockingQueueMap = threadBlockingQueueMap;
     this.kafkaTopic = kafkaTopic;
     this.pollTimeout = Long.parseLong(pollTimeout);
     this.executorService = executorService;
     //create Kafka consumer
-    properties.put("group.id", concentratorId);
-    properties.put("bootstrap.servers", bootstrapServers);
-    properties.put("key.deserializer", keyDeserializer);
-    properties.put("value.deserializer", valueDeserializer);
-    properties.put("enable.auto.commit", autoCommit);
-    properties.put("auto.commit.interval.ms", autoCommitInterval);
-    properties.put("auto.offset.reset", autoOffsetReset);
-    properties.put("session.timeout.ms", sessionTimeout);
-    this.consumer = new KafkaConsumer<>(properties);
+    consumerProperties.put("group.id", concentratorId);
+    consumerProperties.put("bootstrap.servers", bootstrapServers);
+    consumerProperties.put("key.deserializer", keyDeserializer);
+    consumerProperties.put("value.deserializer", valueDeserializer);
+    consumerProperties.put("enable.auto.commit", autoCommit);
+    consumerProperties.put("auto.commit.interval.ms", autoCommitInterval);
+    consumerProperties.put("auto.offset.reset", autoOffsetReset);
+    consumerProperties.put("session.timeout.ms", sessionTimeout);
+    this.consumer = new KafkaConsumer<>(consumerProperties);
+
+    producerProperties.put("key.serializer", keySerializer);
+    producerProperties.put("value.serializer", valueSerializer);
+    producerProperties.put("bootstrap.servers", bootstrapServers);
+    this.producer = new KafkaProducer<>(producerProperties);
 
     //manual assignment of partition so we can control offset seek
     final List<TopicPartition> topicPartitionList = Arrays.asList(new TopicPartition(kafkaTopic, 0));
@@ -78,10 +90,13 @@ public class KafkaDataMessageDispatcher extends Thread implements DataMessageDis
     consumer.seekToBeginning(topicPartitionList);
     if (logger.isInfoEnabled()) {
       StringBuffer propsStr = new StringBuffer(50);
-      for (String propKey : properties.stringPropertyNames()) {
-        propsStr.append(propKey).append('=').append(properties.getProperty(propKey)).append(", ");
+      Properties allProperties = new Properties();
+      allProperties.putAll(consumerProperties);
+      allProperties.putAll(producerProperties);
+      for (String propKey : allProperties.stringPropertyNames()) {
+        propsStr.append(propKey).append('=').append(allProperties.getProperty(propKey)).append(", ");
       }
-      logger.info("Initialized dispatcher, with topic '{}' and properties: [{}]", kafkaTopic, propsStr.toString());
+      logger.info("Initialized dispatcher for concentrator with id '{}', topic '{}' and properties: [{}]", concentratorId, kafkaTopic, propsStr.toString());
     }
   }
 
@@ -163,7 +178,40 @@ public class KafkaDataMessageDispatcher extends Thread implements DataMessageDis
     if (consumer != null) {
       consumer.close();
     }
+    if (producer != null) {
+      producer.close();
+    }
     logger.info("Message dispatcher shut down");
   }
 
+  public void send(DataMessage message) {
+    //first check that the thread sending this message has a receiving queue
+    createThreadQueueIfNeeded();
+
+    producer.send(new ProducerRecord(kafkaTopic, message));
+    logger.debug("new message sent:\n {}", message);
+  }
+
+  private void createThreadQueueIfNeeded() {
+    final long currThreadId = Thread.currentThread().getId();
+    if (!threadBlockingQueueMap.containsKey(currThreadId)) {
+      threadBlockingQueueMap.put(currThreadId, new LinkedBlockingDeque());
+      logger.debug("Added new blocking queue to map, with thread id={}", currThreadId);
+    }
+  }
+
+  public DataMessage receiveMsgForCurrentThread() {
+    long currThreadId = Thread.currentThread().getId();
+    DataMessage rcvdMsg = null;
+    do {
+      try {
+        rcvdMsg = (DataMessage) threadBlockingQueueMap.get(currThreadId).take();
+        logger.debug("Taken new message from blocking queue (thread id={})", currThreadId);
+      } catch (InterruptedException e) {
+        logger.error("Interrupted while taking from blocking queue", e);
+      }
+    } while (rcvdMsg == null);
+
+    return rcvdMsg;
+  }
 }
