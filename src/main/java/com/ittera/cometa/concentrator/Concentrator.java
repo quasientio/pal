@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator;
 
+import com.google.common.util.concurrent.Service;
 import com.ittera.cometa.concentrator.messages.DataMessageDispatcher;
 import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
@@ -25,8 +26,13 @@ import java.lang.reflect.InvocationTargetException;
 
 import java.util.Properties;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.ArrayList;
+
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -34,6 +40,9 @@ import org.apache.logging.log4j.LogManager;
 
 import com.google.inject.name.Names;
 import com.google.inject.*;
+
+import com.google.common.util.concurrent.ServiceManager;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class Concentrator {
 
@@ -1171,24 +1180,45 @@ public class Concentrator {
 
     Injector injector = Guice.createInjector(module);
 
+
+    final Set<Service> services = new HashSet<Service>();
+    services.add((Service) injector.getInstance(DataMessageDispatcher.class));
+    final ServiceManager manager = new ServiceManager(services);
+
+    manager.addListener(new ServiceManager.Listener() {
+                          public void stopped() {
+                            logger.info("Service manager stopped.");
+                          }
+
+                          public void healthy() {
+                            // Services have been initialized and are healthy, start accepting requests...
+                            logger.info("Service manager is healthy.");
+                            dataMessageDispatcher.acceptConnections(true);
+                          }
+
+                          public void failure(Service service) {
+                            // Something failed, at this point we could log it, notify a load balancer, or take
+                            // some other action.  For now we will just exit.
+                            logger.error("Service manager failed. Exiting ...", service.failureCause());
+                            System.exit(1);
+                          }
+                        },
+      MoreExecutors.directExecutor());
+
     /** Add shutdown hook **/
     Runtime.getRuntime().addShutdownHook(new Thread() {
       @Override
       public void run() {
-        //try to gracefully close dataMessageDispatcher msg dispatcher connections
-        if (dataMessageDispatcher != null) {
-          dataMessageDispatcher.requestShutdown();
-        }
-
         try {
-          Thread.sleep(3000);
-        } catch (InterruptedException ie) {
-          logger.error("Interrupted in shutdown hook sleep", ie);
+          manager.stopAsync().awaitStopped(5, TimeUnit.SECONDS);
+        } catch (TimeoutException ie) {
+          logger.error("Timeout exception in shutdown hook", ie);
         }
       }
     });
 
-    //Start dispatching incoming messages
-    dataMessageDispatcher.run();
+    //start services
+    manager.startAsync();
+
   }
 }
