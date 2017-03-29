@@ -11,19 +11,19 @@ import com.google.inject.Singleton;
 @Singleton
 public class ExecThreadFactory implements ThreadFactory {
 
-  protected static final Logger logger = LogManager.getLogger(ExtendedExecutor.class);
+  protected static final Logger logger = LogManager.getLogger(ExecThreadFactory.class);
 
   private final ThreadGroup threadGroup;
   private final AtomicInteger threadCounter = new AtomicInteger(0);
-  private static final String THREAD_GROUP_NAME = "ExtendedExecutor Thread Group";
-  private static final String THREAD_BASE_NAME = "ExtendedExecutor Thread";
+  private static final String THREAD_GROUP_NAME = "Executor Thread Group";
+  private static final String THREAD_BASE_NAME = "Executor Thread";
   private static final int THREAD_GROUP_MAX_PRIORITY = Thread.NORM_PRIORITY;
   private static final int THREAD_PRIORITY = Thread.NORM_PRIORITY;
   private static final boolean THREAD_GROUP_IS_DAEMON = false;
   private static final boolean THREAD_IS_DAEMON = false;
 
   public ExecThreadFactory() {
-    threadGroup = new ThreadGroup("ExtendedExecutor Thread Group");
+    threadGroup = new ThreadGroup("Executor Thread Group");
     threadGroup.setDaemon(THREAD_GROUP_IS_DAEMON);
     threadGroup.setMaxPriority(THREAD_GROUP_MAX_PRIORITY);
     logger.info("Initialized thread factory with thread group name: {}, daemon: {}, maxPriority: {}", THREAD_GROUP_NAME, THREAD_GROUP_IS_DAEMON, THREAD_GROUP_MAX_PRIORITY);
