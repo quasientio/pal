@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator;
+package com.ittera.cometa.concentrator.exec;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -6,9 +6,12 @@ import org.apache.logging.log4j.Logger;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.inject.Singleton;
+
+@Singleton
 public class ExecThreadFactory implements ThreadFactory {
 
-  protected static final Logger logger = LogManager.getLogger(Executor.class);
+  protected static final Logger logger = LogManager.getLogger(ExecThreadFactory.class);
 
   private final ThreadGroup threadGroup;
   private final AtomicInteger threadCounter = new AtomicInteger(0);

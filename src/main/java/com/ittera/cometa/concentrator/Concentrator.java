@@ -1,5 +1,9 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.concentrator.exec.ExecThreadFactory;
+import com.ittera.cometa.concentrator.exec.ExecutionService;
+import com.ittera.cometa.concentrator.exec.ExecutionThreadService;
+import com.ittera.cometa.concentrator.exec.ExtendedExecutor;
 import com.ittera.cometa.concentrator.messages.DataMessageDispatcher;
 import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
@@ -26,17 +30,24 @@ import java.lang.reflect.InvocationTargetException;
 
 import java.util.Properties;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.ArrayList;
-import java.util.concurrent.ExecutorService;
 
-import org.apache.commons.lang3.ClassUtils;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.ThreadFactory;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
-
 import com.google.inject.name.Names;
 import com.google.inject.*;
+
+import com.google.common.util.concurrent.Service;
+import com.google.common.util.concurrent.ServiceManager;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class Concentrator {
 
@@ -1289,10 +1300,12 @@ public class Concentrator {
         Concentrator.id = Integer.parseInt(properties.getProperty("id"));
 
         Names.bindProperties(binder(), properties);
-        //bind inmplementations
+        //bind implementations
+        bind(ThreadFactory.class).to(ExecThreadFactory.class);
         bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class);
         bind(DataMessageDispatcher.class).to(KafkaDataMessageDispatcher.class);
-        bind(ExecutorService.class).to(Executor.class);
+        bind(ExecutorService.class).to(ExtendedExecutor.class);
+        bind(ExecutionService.class).to(ExecutionThreadService.class);
         //fields to be injected in Concentrator are static
         requestStaticInjection(Concentrator.class);
       }
@@ -1300,24 +1313,46 @@ public class Concentrator {
 
     Injector injector = Guice.createInjector(module);
 
+
+    final Set<Service> services = new HashSet<Service>();
+    services.add((Service) injector.getInstance(DataMessageDispatcher.class));
+    services.add((Service) injector.getInstance(ExecutionThreadService.class));
+    final ServiceManager manager = new ServiceManager(services);
+
+    manager.addListener(new ServiceManager.Listener() {
+                          public void stopped() {
+                            logger.info("Service manager stopped.");
+                          }
+
+                          public void healthy() {
+                            // Services have been initialized and are healthy, start accepting requests...
+                            logger.info("Service manager is healthy.");
+                            dataMessageDispatcher.acceptConnections(true);
+                          }
+
+                          public void failure(Service service) {
+                            // Something failed, at this point we could log it, notify a load balancer, or take
+                            // some other action.  For now we will just exit.
+                            logger.fatal("Service manager failed. Exiting ...", service.failureCause());
+                            System.exit(1);
+                          }
+                        },
+      MoreExecutors.directExecutor());
+
     /** Add shutdown hook **/
     Runtime.getRuntime().addShutdownHook(new Thread() {
       @Override
       public void run() {
-        //try to gracefully close dataMessageDispatcher msg dispatcher connections
-        if (dataMessageDispatcher != null) {
-          dataMessageDispatcher.requestShutdown();
-        }
-
         try {
-          Thread.sleep(3000);
-        } catch (InterruptedException ie) {
-          logger.error("Interrupted in shutdown hook sleep", ie);
+          manager.stopAsync().awaitStopped(5, TimeUnit.SECONDS);
+        } catch (TimeoutException ie) {
+          logger.error("Timeout exception in shutdown hook", ie);
         }
       }
     });
 
-    //Start dispatching incoming messages
-    dataMessageDispatcher.run();
+    //start services
+    manager.startAsync();
+
   }
 }

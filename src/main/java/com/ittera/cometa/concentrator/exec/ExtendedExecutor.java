@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator;
+package com.ittera.cometa.concentrator.exec;
 
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -15,14 +15,14 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 @Singleton
-public class Executor extends ThreadPoolExecutor {
+public class ExtendedExecutor extends ThreadPoolExecutor {
 
-  protected static final Logger logger = LogManager.getLogger(Executor.class);
+  protected static final Logger logger = LogManager.getLogger(ExtendedExecutor.class);
 
   @Inject
-  public Executor(@Named("corePoolSize") String corePoolSize,
-                  @Named("maximumPoolSize") String maximumPoolSize,
-                  @Named("keepAliveSeconds") String keepAliveSeconds) {
+  public ExtendedExecutor(@Named("corePoolSize") String corePoolSize,
+                          @Named("maximumPoolSize") String maximumPoolSize,
+                          @Named("keepAliveSeconds") String keepAliveSeconds) {
 
     super(Integer.valueOf(corePoolSize), Integer.valueOf(maximumPoolSize), Integer.valueOf(keepAliveSeconds),
       TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), new ExecThreadFactory());

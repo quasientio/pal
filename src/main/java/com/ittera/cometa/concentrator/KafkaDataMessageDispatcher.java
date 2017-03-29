@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.concentrator.exec.ExecutionService;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall;
@@ -16,7 +17,6 @@ import java.util.Properties;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -35,19 +35,21 @@ import com.google.inject.name.Named;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
+import com.google.common.util.concurrent.AbstractExecutionThreadService;
+
 @Singleton
-public class KafkaDataMessageDispatcher implements DataMessageDispatcher {
+public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService implements DataMessageDispatcher {
 
   protected static final Logger logger = LogManager.getLogger(KafkaDataMessageDispatcher.class);
 
   private static final Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue<DataMessage>>();
 
   private final long pollTimeout;
-  private final ExecutorService executorService;
+  private final ExecutionService executionService;
   private final String kafkaTopic;
-  private final KafkaConsumer<String, String> consumer;
-  private final KafkaProducer producer;
-  private volatile boolean mustShutdown = false;
+  private KafkaConsumer<String, String> consumer;
+  private KafkaProducer producer;
+  private volatile boolean acceptingConnections = false;
   private final Properties consumerProperties = new Properties();
   private final Properties producerProperties = new Properties();
 
@@ -62,12 +64,12 @@ public class KafkaDataMessageDispatcher implements DataMessageDispatcher {
                                     @Named("key.serializer") String keySerializer,
                                     @Named("value.serializer") String valueSerializer,
                                     @Named("id") String concentratorId,
-                                    ExecutorService executorService,
+                                    ExecutionService executionService,
                                     @Named("pollTimeout") String pollTimeout,
                                     @Named("kafkaTopic") String kafkaTopic) {
     this.kafkaTopic = kafkaTopic;
     this.pollTimeout = Long.parseLong(pollTimeout);
-    this.executorService = executorService;
+    this.executionService = executionService;
     //create Kafka consumer
     consumerProperties.put("group.id", concentratorId);
     consumerProperties.put("bootstrap.servers", bootstrapServers);
@@ -77,17 +79,11 @@ public class KafkaDataMessageDispatcher implements DataMessageDispatcher {
     consumerProperties.put("auto.commit.interval.ms", autoCommitInterval);
     consumerProperties.put("auto.offset.reset", autoOffsetReset);
     consumerProperties.put("session.timeout.ms", sessionTimeout);
-    this.consumer = new KafkaConsumer<>(consumerProperties);
 
     producerProperties.put("key.serializer", keySerializer);
     producerProperties.put("value.serializer", valueSerializer);
     producerProperties.put("bootstrap.servers", bootstrapServers);
-    this.producer = new KafkaProducer<>(producerProperties);
 
-    //manual assignment of partition so we can control offset seek
-    final List<TopicPartition> topicPartitionList = Arrays.asList(new TopicPartition(kafkaTopic, 0));
-    consumer.assign(topicPartitionList);
-    consumer.seekToBeginning(topicPartitionList);
     if (logger.isInfoEnabled()) {
       StringBuffer propsStr = new StringBuffer(50);
       Properties allProperties = new Properties();
@@ -100,9 +96,36 @@ public class KafkaDataMessageDispatcher implements DataMessageDispatcher {
     }
   }
 
+  protected void openConnections() {
+    this.producer = new KafkaProducer<>(producerProperties);
+
+    this.consumer = new KafkaConsumer<>(consumerProperties);
+    //manual assignment of partition so we can control offset seek
+    final List<TopicPartition> topicPartitionList = Arrays.asList(new TopicPartition(kafkaTopic, 0));
+    consumer.assign(topicPartitionList);
+    consumer.seekToBeginning(topicPartitionList);
+
+    logger.info("Initialized kafka consumer and producer");
+  }
+
+  @Override
   public final void run() {
-    while (!mustShutdown) {
-      final ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+    while (isRunning()) {
+      if (!acceptingConnections) {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException e) {
+          logger.error("Interrupted in sleep", e);
+        } finally {
+          continue;
+        }
+
+      }
+
+      final ConsumerRecords<String, String> records;
+      synchronized (consumer) {
+        records = consumer.poll(pollTimeout);
+      }
       if (records.count() > 0) {
         logger.info("Records read: {}", records.count());
       }
@@ -116,9 +139,11 @@ public class KafkaDataMessageDispatcher implements DataMessageDispatcher {
         final long recordOffset = record.offset();
         //if threadId not in our threadQueue, then push to new/random thread
         if (!threadBlockingQueueMap.containsKey(threadId)) {
-          logger.debug("Thread queue has thread with ids" + threadBlockingQueueMap.keySet());
-          logger.debug("No thread for incoming call, dispatching to thread pool...");
-          executorService.submit(new Runnable() {
+          if (logger.isDebugEnabled()) {
+            logger.debug("Thread queue has thread with ids: {}", threadBlockingQueueMap.keySet());
+            logger.debug("No thread for incoming call, dispatching to thread pool...");
+          }
+          executionService.submit(new Runnable() {
             @Override
             public void run() {
               //TODO call Concentrator.incomingCall() which should dispatch as done here based on encapsulated type
@@ -163,32 +188,52 @@ public class KafkaDataMessageDispatcher implements DataMessageDispatcher {
         }
       }
     }
-
-    shutdown();
   }
 
-  public void requestShutdown() {
-    mustShutdown = true;
+  @Override
+  protected void startUp() throws Exception {
+    openConnections();
   }
 
-  private void shutdown() {
+  @Override
+  protected void shutDown() throws Exception {
     //TODO: clean up, send uncommitted offset, etc.
+    acceptingConnections = false;
 
-    logger.info("Shutting down message dispatcher");
     if (consumer != null) {
-      consumer.close();
+      synchronized (consumer) {
+        consumer.close();
+        logger.info("Closed kafka consumer");
+      }
     }
     if (producer != null) {
-      producer.close();
+      synchronized (producer) {
+        producer.close();
+        logger.info("Closed kafka producer");
+      }
     }
     logger.info("Message dispatcher shut down");
   }
 
+  /**
+   * TODO Should not send anything here, just queue it.
+   *
+   * @param message
+   */
+  @Override
   public void send(DataMessage message) {
+    //ignore if service not running
+    if (!isRunning()) {
+      throw new IllegalStateException("Service not running");
+    }
+
     //first check that the thread sending this message has a receiving queue
     createThreadQueueIfNeeded();
 
-    producer.send(new ProducerRecord(kafkaTopic, message));
+    ProducerRecord newRecord = new ProducerRecord(kafkaTopic, message);
+    synchronized (producer) {
+      producer.send(newRecord);
+    }
     logger.debug("new message sent:\n {}", message);
   }
 
@@ -200,7 +245,13 @@ public class KafkaDataMessageDispatcher implements DataMessageDispatcher {
     }
   }
 
+  @Override
   public DataMessage receiveMsgForCurrentThread() {
+    //ignore if service not running
+    if (!isRunning()) {
+      throw new IllegalStateException("Service not running");
+    }
+
     long currThreadId = Thread.currentThread().getId();
     DataMessage rcvdMsg = null;
     do {
@@ -213,5 +264,10 @@ public class KafkaDataMessageDispatcher implements DataMessageDispatcher {
     } while (rcvdMsg == null);
 
     return rcvdMsg;
+  }
+
+  @Override
+  public void acceptConnections(boolean acceptConnections) {
+    this.acceptingConnections = acceptConnections;
   }
 }
