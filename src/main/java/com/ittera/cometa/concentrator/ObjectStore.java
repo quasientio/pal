@@ -89,6 +89,11 @@ public final class ObjectStore {
     }
     String objectRef = generateObjectRef(object);
     final IdentifiableObject wrappedObject = new IdentifiableObject(object);
+    if (syncdObjectMap.containsValue(wrappedObject)) {
+      objectRef = syncdObjectMap.inverse().get(wrappedObject);
+      logger.traceExit("with (pre-existing) objectRef: {}", objectRef);
+      return objectRef;
+    }
     syncdObjectMap.put(objectRef, wrappedObject);
     logger.traceExit("with objectRef: {}", objectRef);
     return objectRef;

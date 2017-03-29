@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 /**
@@ -18,7 +19,7 @@ import static org.junit.Assert.*;
  * - package visible, no args, returns primitive wrapper (Integer)
  * - public, no args, returns List<String>
  * - protected with objects and objectRefs as args, returns Integer
- *
+ * <p>
  * TODO:
  * - arrays
  */
@@ -81,9 +82,11 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
 //    assertEquals(shouldReturn, rawObj);
   }
 
-  /** Very similar to above test, but return value here is not a ref! */
+  /**
+   * Very similar to above test, but return value here is not a ref!
+   */
   @Test
-  public void publicReturnsListNotRef() throws ClassNotFoundException {
+  public void publicReturnsNativelyInitListAsRef() throws ClassNotFoundException {
     String methodName = "getListOfStringsShorthand";
 
     Object[] parameters = new Object[]{};
@@ -101,7 +104,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, "java.util.List");
+    assertValueIsObjectRefOfRightType(retValue, "java.util.List");
     //assertValueIsObjectRefOfRightType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
     //TODO assert method in AbstractConcentratorTest should check also for interfaces
 
@@ -124,7 +127,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), "java.util.ArrayList");
 
     //add some int's to the list
-    int[] someInts = {1,2,3,5,7,9};
+    int[] someInts = {1, 2, 3, 5, 7, 9};
     for (int i = 0; i < someInts.length; i++) {
       requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, "java.util.ArrayList", "add", listObjRef, new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[1]);
       replyMsg = sendAndReceive(requestMsg);
@@ -136,13 +139,13 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
     Primitives.Object myApp = replyMsg.getReturnValue().getObject();
 
     //prepare parameters, expected return value
-    String[] parameterTypes = new String[]{"int","java.util.ArrayList"};
-    int offsetParam=10;
-    Object[] objs = new Object[]{offsetParam,null};
-    String[] objRefs = new String[]{null,listObjRef};
+    String[] parameterTypes = new String[]{"int", "java.util.ArrayList"};
+    int offsetParam = 10;
+    Object[] objs = new Object[]{offsetParam, null};
+    String[] objRefs = new String[]{null, listObjRef};
     Integer shouldReturn = 0;
     for (int i = 0; i < someInts.length; i++) {
-      shouldReturn+=someInts[i]+offsetParam;
+      shouldReturn += someInts[i] + offsetParam;
     }
 
     //call method

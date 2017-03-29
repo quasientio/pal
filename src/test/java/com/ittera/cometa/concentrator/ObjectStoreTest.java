@@ -11,15 +11,15 @@ import static org.junit.Assert.*;
 
 /**
  * Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior
- *
+ * <p>
  * TODO containsValue(object)
  * TODO containsKey(objectRef)
  * TODO remove(key)
- *
  */
 public class ObjectStoreTest {
 
-  @Before public void clearStore() {
+  @Before
+  public void clearStore() {
     ObjectStore.clear();
   }
 
@@ -43,16 +43,11 @@ public class ObjectStoreTest {
   }
 
   @Test
-  public void storeObject_sameObjectTwice_illegalArgumentException() throws Exception {
+  public void storeObject_sameObjectTwice_getExistingRef() throws Exception {
 
     ArrayList<Integer> listOfInts = new ArrayList();
     String firstObjRef = ObjectStore.storeObject(listOfInts);
-    try {
-      String secondObjRef = ObjectStore.storeObject(listOfInts);
-      fail(String.format("Storing same object again should throw an IllegalArgumentException. First objRef=%s Second objRef=%s",firstObjRef,secondObjRef));
-    } catch (IllegalArgumentException iae) {
-      //expected
-    }
+    assertEquals(firstObjRef, ObjectStore.storeObject(listOfInts));
   }
 
   @Test

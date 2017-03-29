@@ -182,8 +182,12 @@ public abstract class AbstractConcentratorTest {
     isObjectOfRightType(returnValue, className, true, false, false);
   }
 
-  protected void assertValueIsArrayOfRightType(ReturnValue returnValue, String className) {
+  protected void assertValueIsWrappedArrayOfRightType(ReturnValue returnValue, String className) {
     isObjectOfRightType(returnValue, className, false, false, true);
+  }
+
+  protected void assertValueIsArrayOfRightType(ReturnValue returnValue, String className) {
+    isObjectOfRightType(returnValue, className, true, false, true);
   }
 
   protected void assertValueIsNullObjectOfRightType(ReturnValue returnValue, String className) {
