@@ -1,6 +1,9 @@
 package com.ittera.cometa.concentrator;
 
-import com.google.common.util.concurrent.Service;
+import com.ittera.cometa.concentrator.exec.ExecThreadFactory;
+import com.ittera.cometa.concentrator.exec.ExecutionService;
+import com.ittera.cometa.concentrator.exec.ExecutionThreadService;
+import com.ittera.cometa.concentrator.exec.ExtendedExecutor;
 import com.ittera.cometa.concentrator.messages.DataMessageDispatcher;
 import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
@@ -34,16 +37,15 @@ import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import org.apache.commons.lang3.ClassUtils;
+import java.util.concurrent.ThreadFactory;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
-
 import com.google.inject.name.Names;
 import com.google.inject.*;
 
+import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -1298,10 +1300,12 @@ public class Concentrator {
         Concentrator.id = Integer.parseInt(properties.getProperty("id"));
 
         Names.bindProperties(binder(), properties);
-        //bind inmplementations
+        //bind implementations
+        bind(ThreadFactory.class).to(ExecThreadFactory.class);
         bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class);
         bind(DataMessageDispatcher.class).to(KafkaDataMessageDispatcher.class);
-        bind(ExecutorService.class).to(Executor.class);
+        bind(ExecutorService.class).to(ExtendedExecutor.class);
+        bind(ExecutionService.class).to(ExecutionThreadService.class);
         //fields to be injected in Concentrator are static
         requestStaticInjection(Concentrator.class);
       }
@@ -1312,6 +1316,7 @@ public class Concentrator {
 
     final Set<Service> services = new HashSet<Service>();
     services.add((Service) injector.getInstance(DataMessageDispatcher.class));
+    services.add((Service) injector.getInstance(ExecutionThreadService.class));
     final ServiceManager manager = new ServiceManager(services);
 
     manager.addListener(new ServiceManager.Listener() {
@@ -1328,7 +1333,7 @@ public class Concentrator {
                           public void failure(Service service) {
                             // Something failed, at this point we could log it, notify a load balancer, or take
                             // some other action.  For now we will just exit.
-                            logger.error("Service manager failed. Exiting ...", service.failureCause());
+                            logger.fatal("Service manager failed. Exiting ...", service.failureCause());
                             System.exit(1);
                           }
                         },

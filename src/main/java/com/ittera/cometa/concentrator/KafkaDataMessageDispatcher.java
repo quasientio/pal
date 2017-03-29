@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.concentrator.exec.ExecutionService;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall;
@@ -16,7 +17,6 @@ import java.util.Properties;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -45,7 +45,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
   private static final Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue<DataMessage>>();
 
   private final long pollTimeout;
-  private final ExecutorService executorService;
+  private final ExecutionService executionService;
   private final String kafkaTopic;
   private KafkaConsumer<String, String> consumer;
   private KafkaProducer producer;
@@ -64,12 +64,12 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
                                     @Named("key.serializer") String keySerializer,
                                     @Named("value.serializer") String valueSerializer,
                                     @Named("id") String concentratorId,
-                                    ExecutorService executorService,
+                                    ExecutionService executionService,
                                     @Named("pollTimeout") String pollTimeout,
                                     @Named("kafkaTopic") String kafkaTopic) {
     this.kafkaTopic = kafkaTopic;
     this.pollTimeout = Long.parseLong(pollTimeout);
-    this.executorService = executorService;
+    this.executionService = executionService;
     //create Kafka consumer
     consumerProperties.put("group.id", concentratorId);
     consumerProperties.put("bootstrap.servers", bootstrapServers);
@@ -143,7 +143,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
             logger.debug("Thread queue has thread with ids: {}", threadBlockingQueueMap.keySet());
             logger.debug("No thread for incoming call, dispatching to thread pool...");
           }
-          executorService.submit(new Runnable() {
+          executionService.submit(new Runnable() {
             @Override
             public void run() {
               //TODO call Concentrator.incomingCall() which should dispatch as done here based on encapsulated type
@@ -217,6 +217,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
 
   /**
    * TODO Should not send anything here, just queue it.
+   *
    * @param message
    */
   @Override
@@ -246,7 +247,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
 
   @Override
   public DataMessage receiveMsgForCurrentThread() {
-     //ignore if service not running
+    //ignore if service not running
     if (!isRunning()) {
       throw new IllegalStateException("Service not running");
     }
