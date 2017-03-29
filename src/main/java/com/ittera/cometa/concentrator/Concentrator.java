@@ -3,6 +3,7 @@ package com.ittera.cometa.concentrator;
 import com.ittera.cometa.concentrator.messages.DataMessageDispatcher;
 import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
+import com.ittera.cometa.concentrator.messages.protobuf.Wrapper;
 import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Fields;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
@@ -27,6 +28,8 @@ import java.util.Properties;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
+
+import org.apache.commons.lang3.ClassUtils;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -79,15 +82,15 @@ public class Concentrator {
       //Class.forName(codeSignature.getDeclaringTypeName(),true, Concentrator.class.getClassLoader());
     } catch (ClassNotFoundException cnfe) {
       exceptionWhileLoadingClass = cnfe;
+      logger.error("Caught and assigned to exceptionWhileLoadingClass", cnfe);
     }
 
-    /** 5. Store and wrap class/exception if any **/
+    /** 5. Wrap class/exception if any **/
     String objKey = null;
     final Wrappers.DataMessage invokedMsg;
     if (exceptionWhileLoadingClass != null) {
       invokedMsg = dataMessageBuilder.buildInitializerThrowable(id, staticPart, exceptionWhileLoadingClass);
     } else {
-      objKey = ObjectStore.storeObject(clazz);
       invokedMsg = dataMessageBuilder.buildLoadedClass(id, clazz);
     }
 
@@ -113,8 +116,6 @@ public class Concentrator {
   }
 
   /**
-   * This method currently only support calling constructor whose arg(s) value(s) are fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
-   *
    * @param constructorCall
    * @throws Throwable
    */
@@ -134,6 +135,7 @@ public class Concentrator {
       constructor = clazz.getDeclaredConstructor((Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
     } catch (Exception e) {
       exceptionWhileLoading = e;
+      logger.error("Caught and assigned to exceptionWhileLoading", e);
     }
 
 
@@ -157,12 +159,13 @@ public class Concentrator {
           }
         }
         newObject = constructor.newInstance(args.toArray(new Object[args.size()]));
-        //store in object map
-        objKey = ObjectStore.storeObject(newObject);
       } catch (Exception ite) {
         exceptionWhileInvoking = ite;
+        logger.error("Caught and assigned to exceptionWhileInvoking", ite);
       }
     }
+    //store in object map
+    objKey = ObjectStore.storeObject(newObject);
 
     /** 3. Wrap new object or exception **/
     final Wrappers.DataMessage invokedMsg;
@@ -172,7 +175,11 @@ public class Concentrator {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, constructor, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, newObject, clazz, objKey, false, recordOffset);
+      if (Wrapper.isWrappable(newObject)) {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, newObject, clazz, null, false, recordOffset);
+      } else {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, clazz, objKey, false, recordOffset);
+      }
     }
 
 
@@ -213,11 +220,13 @@ public class Concentrator {
     String objKey = null;
     try {
       newObject = constructor.newInstance(args);
-      //store in object map
-      objKey = ObjectStore.storeObject(newObject);
     } catch (Exception ite) {
       exceptionWhileInvoking = ite;
+      logger.error("Caught and assigned to exceptionWhileInvoking", ite);
     }
+
+    //store in object map
+    objKey = ObjectStore.storeObject(newObject);
 
     /** 5. Wrap new object or exception **/
     Wrappers.DataMessage invokedMsg = null;
@@ -225,9 +234,12 @@ public class Concentrator {
     if (exceptionWhileInvoking != null) {
       invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, constructor, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, newObject, constructor.getClass(), objKey, false, null);
+      if (Wrapper.isWrappable(newObject)) {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, newObject, constructor.getClass(), null, false, null);
+      } else {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, constructor.getClass(), objKey, false, null);
+      }
     }
-
 
     /** 6. Send object/exception **/
     dataMessageDispatcher.send(invokedMsg);
@@ -286,6 +298,7 @@ public class Concentrator {
       method.invoke(target, args);
     } catch (Exception e) {
       exceptionWhileInvoking = e;
+      logger.error("Caught and assigned to exceptionWhileInvoking", e);
     }
 
     /** 5. Wrap new object or exception **/
@@ -348,10 +361,17 @@ public class Concentrator {
     Object returnValue = null;
     Exception exceptionWhileInvoking = null;
     method.setAccessible(true);
+    String objKey = null;
     try {
       returnValue = method.invoke(target, args);
     } catch (Exception e) {
       exceptionWhileInvoking = e;
+      logger.error("Caught and assigned to exceptionWhileInvoking", e);
+    }
+
+    //store in object map
+    if (returnValue != null) {
+      objKey = ObjectStore.storeObject(returnValue);
     }
 
     /** 5. Wrap new object or exception **/
@@ -360,7 +380,11 @@ public class Concentrator {
     if (exceptionWhileInvoking != null) {
       invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, false, null);
+      if (Wrapper.isWrappable(returnValue)) {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, false, null);
+      } else {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, method.getReturnType(), objKey, false, null);
+      }
     }
 
 
@@ -411,11 +435,13 @@ public class Concentrator {
       }
     } catch (Exception e) {
       exceptionWhileLoading = e;
+      logger.error("Caught and assigned to exceptionWhileLoading", e);
     }
 
     /** 2. If class loaded, unwrap/retrieve arguments and invoke method **/
     Exception exceptionWhileInvoking = null;
     Object returnValue = null;
+    String objKey = null;
     if (exceptionWhileLoading == null) {
       List<Object> args = new ArrayList<>();
       for (int i = 0; i < instanceMethodCall.getParameterCount(); i++) {
@@ -429,7 +455,18 @@ public class Concentrator {
         }
       }
       try {
-        Object target = ObjectStore.lookupObject(instanceMethodCall.getObjectRef());
+        Object target = null;
+        if (instanceMethodCall.hasObject()) {
+          Class objClass = Class.forName(instanceMethodCall.getClass_().getName());
+          target = Unwrapper.unwrapObject(instanceMethodCall.getObject(), objClass);
+          logger.debug("Unwrapped target: {}", target);
+        } else {
+          target = ObjectStore.lookupObject(instanceMethodCall.getObjectRef());
+          logger.debug("Loaded target: {}", target);
+        }
+        if (target == null) {
+          throw new RuntimeException("Invoking a method on null object will yield a NPE!");
+        }
         method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getName());
         if (method == null) {
           //TODO perhaps this should be thrown by ReflectionHelper instead of returning null
@@ -439,9 +476,18 @@ public class Concentrator {
         returnValue = method.invoke(target, args.toArray());
       } catch (Exception e) {
         exceptionWhileInvoking = e;
+        logger.error("Caught and assigned to exceptionWhileInvoking", e);
       }
     }
 
+    //store in object map
+    final boolean isVoid = method.getReturnType() == void.class;
+    if (returnValue != null && !isVoid) {
+      objKey = ObjectStore.storeObject(returnValue);
+    }
+    if (isVoid) {
+      returnValue = Void.class;
+    }
 
     /** 3. Wrap return value or exception **/
     final Wrappers.DataMessage invokedMsg;
@@ -451,9 +497,11 @@ public class Concentrator {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, recordOffset);
     } else {
-      boolean isVoid = method.getReturnType() == void.class;
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, isVoid ? Void.class : returnValue, method.getReturnType(),
-        returnValue == null ? null : ObjectStore.lookupObjectRef(returnValue), isVoid, recordOffset);
+      if (Wrapper.isWrappable(returnValue)) {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, isVoid, recordOffset);
+      } else {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, method.getReturnType(), objKey, isVoid, recordOffset);
+      }
     }
 
     /** 4. Send object/exception **/
@@ -493,6 +541,7 @@ public class Concentrator {
       method.invoke(null, args);
     } catch (Exception e) {
       exceptionWhileInvoking = e;
+      logger.error("Caught and assigned to exceptionWhileInvoking", e);
     }
 
     /** 5. Wrap new object or exception **/
@@ -553,12 +602,19 @@ public class Concentrator {
 
     Method method = methodSignature.getMethod();
     Object returnValue = null;
+    String objKey = null;
     Exception exceptionWhileInvoking = null;
     method.setAccessible(true);
     try {
       returnValue = method.invoke(null, args);
     } catch (Exception e) {
       exceptionWhileInvoking = e;
+      logger.error("Caught and assigned to exceptionWhileInvoking", e);
+    }
+
+    //store in object map
+    if (returnValue != null) {
+      objKey = ObjectStore.storeObject(returnValue);
     }
 
     /** 5. Wrap new object or exception **/
@@ -567,7 +623,11 @@ public class Concentrator {
     if (exceptionWhileInvoking != null) {
       invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, null);
     } else {
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, false, null);
+      if (Wrapper.isWrappable(returnValue)) {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, false, null);
+      } else {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, method.getReturnType(), objKey, false, null);
+      }
     }
 
 
@@ -620,11 +680,13 @@ public class Concentrator {
       }
     } catch (Exception e) {
       exceptionWhileLoading = e;
+      logger.error("Caught and assigned to exceptionWhileLoading", e);
     }
 
     /** 2. If class loaded, unwrap/retrieve arguments and invoke method **/
     Exception exceptionWhileInvoking = null;
     Object returnValue = null;
+    String objKey = null;
     if (exceptionWhileLoading == null) {
       logger.debug("Unwrapping parameters");
       List<Object> args = new ArrayList<>();
@@ -647,7 +709,17 @@ public class Concentrator {
         returnValue = method.invoke(null, args.toArray());
       } catch (Exception e) {
         exceptionWhileInvoking = e;
+        logger.error("Caught and assigned to exceptionWhileInvoking", e);
       }
+    }
+
+    //store in object map
+    final boolean isVoid = method.getReturnType() == void.class;
+    if (returnValue != null && !isVoid) {
+      objKey = ObjectStore.storeObject(returnValue);
+    }
+    if (isVoid) {
+      returnValue = Void.class;
     }
 
     /** 3. Wrap return value or exception **/
@@ -658,9 +730,11 @@ public class Concentrator {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, recordOffset);
     } else {
-      boolean isVoid = method.getReturnType() == void.class;
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, isVoid ? Void.class : returnValue, method.getReturnType(),
-        returnValue == null ? null : ObjectStore.lookupObjectRef(returnValue), isVoid, recordOffset);
+      if (Wrapper.isWrappable(returnValue)) {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, isVoid, recordOffset);
+      } else {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, method.getReturnType(), objKey, isVoid, recordOffset);
+      }
     }
 
     /** 4. Send object/exception **/
@@ -688,11 +762,13 @@ public class Concentrator {
       logger.debug("field {} is of type {}", field.getName(), field.getType());
     } catch (Exception e) {
       exceptionWhileLoading = e;
+      logger.error("Caught and assigned to exceptionWhileLoading", e);
     }
 
     /** 2. If class and field loaded, invoke field get **/
     Exception exceptionWhileInvoking = null;
 
+    String objKey = null;
     Object fieldValue = null;
     if (exceptionWhileLoading == null) {
       field.setAccessible(true);
@@ -700,9 +776,13 @@ public class Concentrator {
         fieldValue = field.get(null);
       } catch (Exception e) {
         exceptionWhileInvoking = e;
+        logger.error("Caught and assigned to exceptionWhileInvoking", e);
       }
     }
-
+    //store in object map
+    if (fieldValue != null) {
+      objKey = ObjectStore.storeObject(fieldValue);
+    }
 
     /** 3. Wrap return value or exception **/
     Wrappers.DataMessage invokedMsg = null;
@@ -712,7 +792,11 @@ public class Concentrator {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, recordOffset);
+      if (Wrapper.isWrappable(fieldValue)) {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, recordOffset);
+      } else {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, field.getType(), objKey, false, recordOffset);
+      }
     }
 
 
@@ -748,18 +832,28 @@ public class Concentrator {
 
     IllegalAccessException exceptionGettingObject = null;
     Object fieldValue = null;
+    String objKey = null;
     try {
       fieldValue = field.get(null);
     } catch (IllegalAccessException iae) {
       exceptionGettingObject = iae;
+      logger.error("Caught and assigned to exceptionGettingObject", iae);
+    }
+    //store in object map
+    if (fieldValue != null) {
+      objKey = ObjectStore.storeObject(fieldValue);
     }
 
     /** 5. Wrap exception if any **/
     Wrappers.DataMessage invokedMsg = null;
     if (exceptionGettingObject != null) {
-      invokedMsg = dataMessageBuilder.buildInitializerThrowable(id, staticPart, exceptionGettingObject);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionGettingObject, null);
     } else {
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, null);
+      if (Wrapper.isWrappable(fieldValue)) {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, null);
+      } else {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, field.getType(), objKey, false, null);
+      }
     }
 
     /** 6. Send object/exception **/
@@ -793,22 +887,39 @@ public class Concentrator {
       field = clazz.getDeclaredField(instanceFieldGet.getField().getName());
     } catch (Exception e) {
       exceptionWhileLoading = e;
+      logger.error("Caught and assigned to exceptionWhileLoading", e);
     }
 
     /** 2. If class and field loaded, invoke field get **/
     Exception exceptionWhileInvoking = null;
 
     Object fieldValue = null;
+    String objKey = null;
     if (exceptionWhileLoading == null) {
       field.setAccessible(true);
       try {
-        Object target = ObjectStore.lookupObject(instanceFieldGet.getObjectRef());
+        Object target = null;
+        if (instanceFieldGet.hasObject()) {
+          Class objClass = Class.forName(instanceFieldGet.getClass_().getName());
+          target = Unwrapper.unwrapObject(instanceFieldGet.getObject(), objClass);
+          logger.debug("Unwrapped target: {}", target);
+        } else {
+          target = ObjectStore.lookupObject(instanceFieldGet.getObjectRef());
+          logger.debug("Loaded target: {}", target);
+        }
+        if (target == null) {
+          throw new RuntimeException("Accessing a field on null object will yield a NPE!");
+        }
         fieldValue = field.get(target);
       } catch (Exception e) {
         exceptionWhileInvoking = e;
+        logger.error("Caught and assigned to exceptionWhileInvoking", e);
       }
     }
-
+    //store in object map
+    if (fieldValue != null) {
+      objKey = ObjectStore.storeObject(fieldValue);
+    }
 
     /** 3. Wrap return value or exception **/
     Wrappers.DataMessage invokedMsg = null;
@@ -818,9 +929,12 @@ public class Concentrator {
     } else if (exceptionWhileInvoking != null) {
       invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileInvoking, recordOffset);
     } else {
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, recordOffset);
+      if (Wrapper.isWrappable(fieldValue)) {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, recordOffset);
+      } else {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, field.getType(), objKey, false, recordOffset);
+      }
     }
-
 
     /** 4. Send object/exception **/
     dataMessageDispatcher.send(invokedMsg);
@@ -843,7 +957,6 @@ public class Concentrator {
     if (mustWait(msg)) {
       /** 3. Receive message **/
       Wrappers.DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
       logger.debug("Message received: {}", rcvdMsg.getMsgType());
     }
 
@@ -855,18 +968,28 @@ public class Concentrator {
 
     IllegalAccessException exceptionGettingObject = null;
     Object fieldValue = null;
+    String objKey = null;
     try {
       fieldValue = field.get(target);
     } catch (IllegalAccessException iae) {
       exceptionGettingObject = iae;
+      logger.error("Caught and assigned to exceptionGettingObject", iae);
+    }
+    //store in object map
+    if (fieldValue != null) {
+      objKey = ObjectStore.storeObject(fieldValue);
     }
 
     /** 5. Wrap exception if any **/
     Wrappers.DataMessage invokedMsg = null;
     if (exceptionGettingObject != null) {
-      invokedMsg = dataMessageBuilder.buildInitializerThrowable(id, staticPart, exceptionGettingObject);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionGettingObject, null);
     } else {
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, null);
+      if (Wrapper.isWrappable(fieldValue)) {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, null);
+      } else {
+        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, field.getType(), objKey, false, null);
+      }
     }
 
     /** 6. Send object/exception **/
@@ -900,6 +1023,7 @@ public class Concentrator {
       field = clazz.getDeclaredField(staticFieldPut.getField().getName());
     } catch (Exception e) {
       exceptionWhileLoading = e;
+      logger.error("Caught and assigned to exceptionWhileLoading", e);
     }
 
     /** 2. If class and field loaded, unwrap value and invoke field set **/
@@ -922,6 +1046,7 @@ public class Concentrator {
         field.set(null, value);
       } catch (Exception e) {
         exceptionWhileInvoking = e;
+        logger.error("Caught and assigned to exceptionWhileInvoking", e);
       }
     }
 
@@ -974,12 +1099,13 @@ public class Concentrator {
       field.set(null, args[0]);
     } catch (IllegalAccessException iae) {
       exceptionSettingObject = iae;
+      logger.error("Caught and assigned to exceptionSettingObject", iae);
     }
 
     /** 5. Wrap exception if any **/
     Wrappers.DataMessage invokedMsg = null;
     if (exceptionSettingObject != null) {
-      invokedMsg = dataMessageBuilder.buildInitializerThrowable(id, staticPart, exceptionSettingObject);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionSettingObject, null);
     } else {
       invokedMsg = dataMessageBuilder.buildPutStaticDone(id, staticPart, sender, args[0]);
     }
@@ -1031,12 +1157,13 @@ public class Concentrator {
       field.set(target, args[0]);
     } catch (IllegalAccessException iae) {
       exceptionSettingObject = iae;
+      logger.error("Caught and assigned to exceptionSettingObject", iae);
     }
 
     /** 5. Wrap exception if any **/
     Wrappers.DataMessage invokedMsg = null;
     if (exceptionSettingObject != null) {
-      invokedMsg = dataMessageBuilder.buildInitializerThrowable(id, staticPart, exceptionSettingObject);
+      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionSettingObject, null);
     } else {
       invokedMsg = dataMessageBuilder.buildPutObjectDone(id, staticPart, sender, target, args[0]);
     }
@@ -1072,6 +1199,7 @@ public class Concentrator {
       field = clazz.getDeclaredField(instanceFieldPut.getField().getName());
     } catch (Exception e) {
       exceptionWhileLoading = e;
+      logger.error("Caught and assigned to exceptionWhileLoading", e);
     }
 
     /** 2. If class and field loaded, unwrap/load target object and value and invoke field set **/
@@ -1104,6 +1232,7 @@ public class Concentrator {
         field.set(target, value);
       } catch (Exception e) {
         exceptionWhileInvoking = e;
+        logger.error("Caught and assigned to exceptionWhileInvoking", e);
       }
     }
 

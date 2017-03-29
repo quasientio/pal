@@ -18,7 +18,7 @@ import org.apache.logging.log4j.LogManager;
  * Two versions of these exist, as we have generally more information when messages are built from local calls (with full reflection details),
  * than when these messaages are built for remote calls, and not all context and type information is available.
  */
-final class Wrapper {
+public final class Wrapper {
 
   private static final Logger logger = LogManager.getLogger(Wrapper.class);
 
@@ -36,6 +36,9 @@ final class Wrapper {
   private static Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, Class clazz, String objectKey) {
     logger.traceEntry("with object: {}, class: {}, objectKey: {}", object, clazz, objectKey);
 
+    if (object != null && objectKey != null) {
+      throw new IllegalArgumentException("Both object and objectKey can't have values");
+    }
     //value is null if both object and objectKey are null
     builder.setIsNull((objectKey == null) && (object == null));
 
@@ -79,6 +82,20 @@ final class Wrapper {
     final Primitives.Object builtValue = builder.build();
     logger.traceExit("with wrappedValue: {}", builtValue);
     return builtValue;
+  }
+
+  /**
+   * @param object
+   * @return True if object is either null, a String/primitive/wrapper, or an array of Strings/primitives/wrappers.
+   */
+  public static boolean isWrappable(Object object) {
+    return
+      object == null ||
+        object == Void.class ||
+        ClassUtils.isPrimitiveOrWrapper(object.getClass()) ||
+        String.class.equals(object.getClass()) ||
+        (object.getClass().isArray() && ClassUtils.isPrimitiveOrWrapper(object.getClass().getComponentType())) ||
+        (object.getClass().isArray() && String.class.equals(object.getClass().getComponentType()));
   }
 
   /**

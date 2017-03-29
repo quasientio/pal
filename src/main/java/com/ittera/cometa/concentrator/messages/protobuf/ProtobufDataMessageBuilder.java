@@ -19,6 +19,7 @@ import org.aspectj.lang.JoinPoint.StaticPart;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -509,6 +510,9 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
     } else if (accessibleObject instanceof Method) {
       thrBuilder.setMethod(((Method) accessibleObject).getName());
       thrBuilder.setModifiers(((Method) accessibleObject).getModifiers());
+    } else if (accessibleObject instanceof Field) {
+      thrBuilder.setField(((Field) accessibleObject).getName());
+      thrBuilder.setModifiers(((Field) accessibleObject).getModifiers());
     } else {
       throw new UnsupportedOperationException(String.format("Unsupported accessibleObject type: %s", accessibleObject.getClass().getName()));
     }

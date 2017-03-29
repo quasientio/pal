@@ -49,6 +49,7 @@ public final class ReflectionHelper {
         }
       }
       if (matches) {
+        logger.debug("Found method with signature: {}", method.getParameterTypes());
         return method;
       }
     }
