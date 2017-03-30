@@ -64,6 +64,8 @@ public class Concentrator {
   @Inject
   private static DataMessageDispatcher dataMessageDispatcher;
 
+  @Inject
+  private static ObjectService objectService;
 
   /************************ INTERFACE ***************************/
 
@@ -164,7 +166,7 @@ public class Concentrator {
           if (obj.getIsNull()) {
             args.add(null);
           } else if (obj.hasRef()) {
-            args.add(ObjectStore.lookupObject(obj.getRef()));
+            args.add(objectService.lookupObject(obj.getRef()));
           } else {
             args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
           }
@@ -177,7 +179,7 @@ public class Concentrator {
     }
     //store in object map
     if (newObject != null) {
-      objKey = ObjectStore.storeObject(newObject);
+      objKey = objectService.storeObject(newObject);
     }
 
     /** 3. Wrap new object or exception **/
@@ -240,7 +242,7 @@ public class Concentrator {
 
     //store in object map
     if (newObject != null) {
-      objKey = ObjectStore.storeObject(newObject);
+      objKey = objectService.storeObject(newObject);
     }
 
     /** 5. Wrap new object or exception **/
@@ -386,7 +388,7 @@ public class Concentrator {
 
     //store in object map
     if (returnValue != null) {
-      objKey = ObjectStore.storeObject(returnValue);
+      objKey = objectService.storeObject(returnValue);
     }
 
     /** 5. Wrap new object or exception **/
@@ -464,7 +466,7 @@ public class Concentrator {
         if (obj.getIsNull()) {
           args.add(null);
         } else if (obj.hasRef()) {
-          args.add(ObjectStore.lookupObject(obj.getRef()));
+          args.add(objectService.lookupObject(obj.getRef()));
         } else {
           args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
         }
@@ -476,7 +478,7 @@ public class Concentrator {
           target = Unwrapper.unwrapObject(instanceMethodCall.getObject(), objClass);
           logger.debug("Unwrapped target: {}", target);
         } else {
-          target = ObjectStore.lookupObject(instanceMethodCall.getObjectRef());
+          target = objectService.lookupObject(instanceMethodCall.getObjectRef());
           logger.debug("Loaded target: {}", target);
         }
         if (target == null) {
@@ -498,7 +500,7 @@ public class Concentrator {
     //store in object map
     final boolean isVoid = method.getReturnType() == void.class;
     if (returnValue != null && !isVoid) {
-      objKey = ObjectStore.storeObject(returnValue);
+      objKey = objectService.storeObject(returnValue);
     }
     if (isVoid) {
       returnValue = Void.class;
@@ -629,7 +631,7 @@ public class Concentrator {
 
     //store in object map
     if (returnValue != null) {
-      objKey = ObjectStore.storeObject(returnValue);
+      objKey = objectService.storeObject(returnValue);
     }
 
     /** 5. Wrap new object or exception **/
@@ -710,7 +712,7 @@ public class Concentrator {
         if (obj.getIsNull()) {
           args.add(null);
         } else if (obj.hasRef()) {
-          args.add(ObjectStore.lookupObject(obj.getRef()));
+          args.add(objectService.lookupObject(obj.getRef()));
         } else {
           args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
         }
@@ -731,7 +733,7 @@ public class Concentrator {
     //store in object map
     final boolean isVoid = method.getReturnType() == void.class;
     if (returnValue != null && !isVoid) {
-      objKey = ObjectStore.storeObject(returnValue);
+      objKey = objectService.storeObject(returnValue);
     }
     if (isVoid) {
       returnValue = Void.class;
@@ -796,7 +798,7 @@ public class Concentrator {
     }
     //store in object map
     if (fieldValue != null) {
-      objKey = ObjectStore.storeObject(fieldValue);
+      objKey = objectService.storeObject(fieldValue);
     }
 
     /** 3. Wrap return value or exception **/
@@ -856,7 +858,7 @@ public class Concentrator {
     }
     //store in object map
     if (fieldValue != null) {
-      objKey = ObjectStore.storeObject(fieldValue);
+      objKey = objectService.storeObject(fieldValue);
     }
 
     /** 5. Wrap exception if any **/
@@ -919,7 +921,7 @@ public class Concentrator {
           target = Unwrapper.unwrapObject(instanceFieldGet.getObject(), objClass);
           logger.debug("Unwrapped target: {}", target);
         } else {
-          target = ObjectStore.lookupObject(instanceFieldGet.getObjectRef());
+          target = objectService.lookupObject(instanceFieldGet.getObjectRef());
           logger.debug("Loaded target: {}", target);
         }
         if (target == null) {
@@ -933,7 +935,7 @@ public class Concentrator {
     }
     //store in object map
     if (fieldValue != null) {
-      objKey = ObjectStore.storeObject(fieldValue);
+      objKey = objectService.storeObject(fieldValue);
     }
 
     /** 3. Wrap return value or exception **/
@@ -992,7 +994,7 @@ public class Concentrator {
     }
     //store in object map
     if (fieldValue != null) {
-      objKey = ObjectStore.storeObject(fieldValue);
+      objKey = objectService.storeObject(fieldValue);
     }
 
     /** 5. Wrap exception if any **/
@@ -1054,7 +1056,7 @@ public class Concentrator {
           value = Unwrapper.unwrapObject(staticFieldPut.getObject(), field.getType());
           logger.debug("Unwrapped value: {}", value);
         } else {
-          value = ObjectStore.lookupObject(staticFieldPut.getObjectRef());
+          value = objectService.lookupObject(staticFieldPut.getObjectRef());
           logger.debug("Loaded value: {}", value);
         }
         //invoke set
@@ -1231,7 +1233,7 @@ public class Concentrator {
           target = Unwrapper.unwrapObject(instanceFieldPut.getObject(), field.getType());
           logger.debug("Unwrapped target: {}", target);
         } else {
-          target = ObjectStore.lookupObject(instanceFieldPut.getObjectRef());
+          target = objectService.lookupObject(instanceFieldPut.getObjectRef());
           logger.debug("Loaded target: {}", target);
         }
         //unwrap or load value
@@ -1240,7 +1242,7 @@ public class Concentrator {
           value = Unwrapper.unwrapObject(instanceFieldPut.getValueObject(), field.getType());
           logger.debug("Unwrapped value: {}", value);
         } else {
-          value = ObjectStore.lookupObject(instanceFieldPut.getValueObjectRef());
+          value = objectService.lookupObject(instanceFieldPut.getValueObjectRef());
           logger.debug("Loaded value: {}", value);
         }
         //invoke set
@@ -1305,6 +1307,7 @@ public class Concentrator {
 
         Names.bindProperties(binder(), properties);
         //bind implementations
+        bind(ObjectService.class).to(BiMapObjectService.class);
         bind(ThreadFactory.class).to(ExecThreadFactory.class);
         bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class);
         bind(DataMessageDispatcher.class).to(KafkaDataMessageDispatcher.class);
@@ -1321,6 +1324,7 @@ public class Concentrator {
     final Set<Service> services = new HashSet<Service>();
     services.add((Service) injector.getInstance(DataMessageDispatcher.class));
     services.add((Service) injector.getInstance(ExecutionThreadService.class));
+    services.add((Service) injector.getInstance(ObjectService.class));
     final ServiceManager manager = new ServiceManager(services);
 
     manager.addListener(new ServiceManager.Listener() {
