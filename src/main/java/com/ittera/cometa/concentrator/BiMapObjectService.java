@@ -9,9 +9,12 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.inject.Singleton;
+
+import com.google.common.util.concurrent.AbstractIdleService;
 
 /**
- * ObjectStore is a ObjectRef -> Object map used for storing references to objects instantiated locally.
+ * BiMapObjectService is a ObjectRef -> Object map used for storing references to objects instantiated locally.
  * It is implemented using Guava's BiMap
  * <p>
  * Contract:
@@ -30,16 +33,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  * TODO: store objects as WeakReferences -> until then, no objects will get garbage cleaned!
  * TODO: replace trace enter and exit stmts (see issue #5)
  */
-public final class ObjectStore {
+@Singleton
+public final class BiMapObjectService extends AbstractIdleService implements ObjectService {
 
-  private static final Logger logger = LogManager.getLogger(ObjectStore.class);
+  private static final Logger logger = LogManager.getLogger(BiMapObjectService.class);
 
   //A map for all objects created by the Concentrator.
-  private static final BiMap<String, ObjectStore.IdentifiableObject> objectBiMap = HashBiMap.create();
-  private static final BiMap<String, ObjectStore.IdentifiableObject> syncdObjectMap = Maps.synchronizedBiMap(objectBiMap);
+  private static final BiMap<String, BiMapObjectService.IdentifiableObject> objectBiMap = HashBiMap.create();
+  private static final BiMap<String, BiMapObjectService.IdentifiableObject> syncdObjectMap = Maps.synchronizedBiMap(objectBiMap);
 
   //for concurrency
-  private static final Object lock = new Object();
   private static final AtomicInteger objectSequence = new AtomicInteger(0);
 
   //Wrapper class, used both for storing objects in the BiMap, and looking them up.
@@ -66,8 +69,16 @@ public final class ObjectStore {
     }
   }
 
-  private ObjectStore() {
-    //avoid instantiation
+  @Override
+  protected void startUp() throws Exception {
+    //TODO initialize internal queues, etc.
+
+  }
+
+  @Override
+  protected void shutDown() throws Exception {
+    //TODO call the executor's shutdown() or shutdownNow()
+
   }
 
   /**
@@ -76,14 +87,17 @@ public final class ObjectStore {
    * @param object
    * @return
    */
-  private static String generateObjectRef(Object object) {
+  private String generateObjectRef(Object object) {
     final Long currentTimeMillis = System.currentTimeMillis();
     final int identHash = System.identityHashCode(object);
     return String.format("%d:%d:%d", objectSequence.incrementAndGet(), currentTimeMillis, identHash);
   }
 
-  public static String storeObject(Object object) {
+  public String storeObject(Object object) {
     logger.traceEntry("with object: {}", object);
+    if (!isRunning()) {
+      throw new IllegalStateException("Service not running");
+    }
     if (object == null) {
       throw new NullPointerException("object cannot be null");
     }
@@ -99,8 +113,11 @@ public final class ObjectStore {
     return objectRef;
   }
 
-  public static Object lookupObject(String objectRef) {
+  public Object lookupObject(String objectRef) {
     logger.traceEntry("with objectRef: {}", objectRef);
+    if (!isRunning()) {
+      throw new IllegalStateException("Service not running");
+    }
     if (objectRef == null) {
       throw new NullPointerException("objectRef cannot be null");
     }
@@ -113,8 +130,11 @@ public final class ObjectStore {
     return object;
   }
 
-  public static String lookupObjectRef(Object object) {
+  public String lookupObjectRef(Object object) {
     logger.traceEntry("with object: {}", object);
+    if (!isRunning()) {
+      throw new IllegalStateException("Service not running");
+    }
     if (object == null) {
       throw new NullPointerException("object cannot be null");
     }
@@ -123,20 +143,32 @@ public final class ObjectStore {
     return objectRef;
   }
 
-  public static void clear() {
+  public void clear() {
+    if (!isRunning()) {
+      throw new IllegalStateException("Service not running");
+    }
     syncdObjectMap.clear();
   }
 
-  public static int size() {
+  public int size() {
+    if (!isRunning()) {
+      throw new IllegalStateException("Service not running");
+    }
     return syncdObjectMap.size();
   }
 
-  public static boolean isEmpty() {
+  public boolean isEmpty() {
+    if (!isRunning()) {
+      throw new IllegalStateException("Service not running");
+    }
     return size() == 0;
   }
 
-  public static boolean containsValue(Object object) {
+  public boolean containsValue(Object object) {
     logger.traceEntry("with object: {}", object);
+    if (!isRunning()) {
+      throw new IllegalStateException("Service not running");
+    }
     if (object == null) {
       throw new NullPointerException("object cannot be null");
     }
@@ -145,8 +177,11 @@ public final class ObjectStore {
     return containsValue;
   }
 
-  public static boolean containsObjectRef(String objectRef) {
+  public boolean containsObjectRef(String objectRef) {
     logger.traceEntry("with objectRef: {}", objectRef);
+    if (!isRunning()) {
+      throw new IllegalStateException("Service not running");
+    }
     if (objectRef == null) {
       throw new NullPointerException("objectRef cannot be null");
     }
@@ -155,8 +190,11 @@ public final class ObjectStore {
     return containsObjectRef;
   }
 
-  public static Object remove(String objectRef) {
+  public Object remove(String objectRef) {
     logger.traceEntry("with objectRef: {}", objectRef);
+    if (!isRunning()) {
+      throw new IllegalStateException("Service not running");
+    }
     if (objectRef == null) {
       throw new NullPointerException("objectRef cannot be null");
     }

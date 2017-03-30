@@ -1,13 +1,15 @@
 package com.ittera.cometa.concentrator;
 
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
+import com.google.common.util.concurrent.Service;
+import com.google.common.util.concurrent.ServiceManager;
 
 /**
  * Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior
@@ -16,18 +18,30 @@ import static org.junit.Assert.*;
  * TODO containsKey(objectRef)
  * TODO remove(key)
  */
-public class ObjectStoreTest {
+public class ObjectServiceTest {
+
+  private static ObjectService objectService;
+
+  @BeforeClass
+  public static void initService() {
+    objectService = new BiMapObjectService();
+    final ServiceManager manager = new ServiceManager(Arrays.asList((Service) objectService));
+
+    //start services
+    manager.startAsync();
+  }
+
 
   @Before
   public void clearStore() {
-    ObjectStore.clear();
+    objectService.clear();
   }
 
   //<editor-fold desc="storeObject">
   @Test
   public void storeObject_nullObject_nullPointerException() throws Exception {
     try {
-      ObjectStore.storeObject(null);
+      objectService.storeObject(null);
       fail("Trying to store null should throw a NullPointerException");
     } catch (NullPointerException npe) {
       //expected
@@ -37,7 +51,7 @@ public class ObjectStoreTest {
   @Test
   public void storeObject_newObject_objectRef() throws Exception {
 
-    String objRef = ObjectStore.storeObject(new ArrayList());
+    String objRef = objectService.storeObject(new ArrayList());
 
     assertNotNull(objRef);
   }
@@ -46,28 +60,28 @@ public class ObjectStoreTest {
   public void storeObject_sameObjectTwice_getExistingRef() throws Exception {
 
     ArrayList<Integer> listOfInts = new ArrayList();
-    String firstObjRef = ObjectStore.storeObject(listOfInts);
-    assertEquals(firstObjRef, ObjectStore.storeObject(listOfInts));
+    String firstObjRef = objectService.storeObject(listOfInts);
+    assertEquals(firstObjRef, objectService.storeObject(listOfInts));
   }
 
   @Test
   public void storeObject_differentObjsStored_sizeAsExpected() throws Exception {
 
-    ObjectStore.storeObject(new ArrayList());
-    ObjectStore.storeObject(Integer.valueOf(34182));
-    ObjectStore.storeObject(new String("some chars"));
+    objectService.storeObject(new ArrayList());
+    objectService.storeObject(Integer.valueOf(34182));
+    objectService.storeObject(new String("some chars"));
 
-    int objectsStored = ObjectStore.size();
+    int objectsStored = objectService.size();
     assertEquals(3, objectsStored);
   }
 
   @Test
   public void storeObject_equalButNotSameObjectStored_noException() throws Exception {
 
-    ObjectStore.storeObject(new ArrayList());
-    ObjectStore.storeObject(new ArrayList());
+    objectService.storeObject(new ArrayList());
+    objectService.storeObject(new ArrayList());
 
-    assertEquals(2, ObjectStore.size());
+    assertEquals(2, objectService.size());
   }
   //</editor-fold>
 
@@ -75,7 +89,7 @@ public class ObjectStoreTest {
   @Test
   public void lookupObject_nullObjectRefParam_nullPointerException() throws Exception {
     try {
-      ObjectStore.lookupObject(null);
+      objectService.lookupObject(null);
       fail("Trying to look up a null objectRef should throw a NullPointerException");
     } catch (NullPointerException npe) {
       //expected
@@ -86,15 +100,15 @@ public class ObjectStoreTest {
   public void lookupObject_objectIsStored_object() throws Exception {
 
     ArrayList<Integer> listOfInts = new ArrayList();
-    String objRef = ObjectStore.storeObject(listOfInts);
+    String objRef = objectService.storeObject(listOfInts);
 
-    assertEquals(listOfInts, ObjectStore.lookupObject(objRef));
+    assertEquals(listOfInts, objectService.lookupObject(objRef));
   }
 
   @Test
   public void lookupObject_madeUpObjectRef_null() throws Exception {
 
-    assertNull(ObjectStore.lookupObject("23:not_real:objectref"));
+    assertNull(objectService.lookupObject("23:not_real:objectref"));
   }
   //</editor-fold>
 
@@ -103,15 +117,15 @@ public class ObjectStoreTest {
   public void lookupObjectRef_objectIsStored_objectRef() throws Exception {
 
     ArrayList<Integer> listOfInts = new ArrayList();
-    String objRef = ObjectStore.storeObject(listOfInts);
+    String objRef = objectService.storeObject(listOfInts);
 
-    assertEquals(objRef, ObjectStore.lookupObjectRef(listOfInts));
+    assertEquals(objRef, objectService.lookupObjectRef(listOfInts));
   }
 
   @Test
   public void lookupObjectRef_objectIsNull_nullPointerException() throws Exception {
     try {
-      ObjectStore.lookupObjectRef(null);
+      objectService.lookupObjectRef(null);
       fail("Trying to look up a null object should throw a NullPointerException");
     } catch (NullPointerException npe) {
       //expected
@@ -122,7 +136,7 @@ public class ObjectStoreTest {
   public void lookupObjectRef_objectNotStored_null() throws Exception {
 
     ArrayList<Integer> listOfInts = new ArrayList();
-    assertNull(ObjectStore.lookupObjectRef(listOfInts));
+    assertNull(objectService.lookupObjectRef(listOfInts));
   }
 
   //</editor-fold>
@@ -132,16 +146,16 @@ public class ObjectStoreTest {
   @Test
   public void size_noObjectsStored_sizeIsZero() throws Exception {
 
-    assertEquals(0, ObjectStore.size());
+    assertEquals(0, objectService.size());
   }
 
   @Test
   public void size_someObjectsStored_numberOfObjects() throws Exception {
 
-    ObjectStore.storeObject(new ArrayList());
-    ObjectStore.storeObject(new HashMap());
+    objectService.storeObject(new ArrayList());
+    objectService.storeObject(new HashMap());
 
-    assertEquals(2, ObjectStore.size());
+    assertEquals(2, objectService.size());
   }
   //</editor-fold>
 
@@ -150,11 +164,11 @@ public class ObjectStoreTest {
   public void clear_objectsStored_sizeIsZero() throws Exception {
 
     //store objects
-    ObjectStore.storeObject(new ArrayList());
-    ObjectStore.storeObject(new HashMap());
+    objectService.storeObject(new ArrayList());
+    objectService.storeObject(new HashMap());
 
-    ObjectStore.clear();
-    assertEquals(0, ObjectStore.size());
+    objectService.clear();
+    assertEquals(0, objectService.size());
   }
   //</editor-fold>
 
@@ -162,14 +176,14 @@ public class ObjectStoreTest {
   @Test
   public void isEmpty_noObjectsStored_true() throws Exception {
 
-    assertTrue(ObjectStore.isEmpty());
+    assertTrue(objectService.isEmpty());
   }
 
   @Test
   public void isEmpty_someObjectsStored_false() throws Exception {
 
-    ObjectStore.storeObject(new ArrayList());
-    assertFalse(ObjectStore.isEmpty());
+    objectService.storeObject(new ArrayList());
+    assertFalse(objectService.isEmpty());
   }
   //</editor-fold>
 
@@ -179,7 +193,7 @@ public class ObjectStoreTest {
   @Test
   public void containsValue_nullObject_nullPointerException() throws Exception {
     try {
-      ObjectStore.containsValue(null);
+      objectService.containsValue(null);
       fail("Checking for a null value should throw a NullPointerException");
     } catch (NullPointerException npe) {
       //expected
@@ -190,9 +204,9 @@ public class ObjectStoreTest {
   public void containsValue_storedObject_true() throws Exception {
 
     ArrayList<Integer> listOfInts = new ArrayList();
-    ObjectStore.storeObject(listOfInts);
+    objectService.storeObject(listOfInts);
 
-    assertTrue(ObjectStore.containsValue(listOfInts));
+    assertTrue(objectService.containsValue(listOfInts));
   }
 
   //</editor-fold>
@@ -202,7 +216,7 @@ public class ObjectStoreTest {
   @Test
   public void containsObjectRef_nullObjectRef_nullPointerException() throws Exception {
     try {
-      ObjectStore.containsObjectRef(null);
+      objectService.containsObjectRef(null);
       fail("Checking for a null key should throw a NullPointerException");
     } catch (NullPointerException npe) {
       //expected
@@ -212,15 +226,15 @@ public class ObjectStoreTest {
   @Test
   public void containsObjectRef_ofStoredObject_true() throws Exception {
 
-    String objectRef = ObjectStore.storeObject(new ArrayList());
+    String objectRef = objectService.storeObject(new ArrayList());
 
-    assertTrue(ObjectStore.containsObjectRef(objectRef));
+    assertTrue(objectService.containsObjectRef(objectRef));
   }
 
   @Test
   public void containsObjectRef_fakeObjectRef_false() throws Exception {
 
-    assertFalse(ObjectStore.containsObjectRef("23:SomeFakeObjRef:209237"));
+    assertFalse(objectService.containsObjectRef("23:SomeFakeObjRef:209237"));
   }
 
   //</editor-fold>
@@ -230,7 +244,7 @@ public class ObjectStoreTest {
   @Test
   public void remove_nullObjectRef_nullPointerException() throws Exception {
     try {
-      ObjectStore.remove(null);
+      objectService.remove(null);
       fail("Removing value for a null key should throw a NullPointerException");
     } catch (NullPointerException npe) {
       //expected
@@ -239,18 +253,18 @@ public class ObjectStoreTest {
 
   @Test
   public void remove_fakeObjectRef_null() throws Exception {
-    assertNull(ObjectStore.remove("23:SomeFakeObjRef:209237"));
+    assertNull(objectService.remove("23:SomeFakeObjRef:209237"));
   }
 
   @Test
   public void remove_storedObjectRef_intObject() throws Exception {
 
     Integer anInt = Integer.valueOf(34182);
-    String objectRef = ObjectStore.storeObject(anInt);
+    String objectRef = objectService.storeObject(anInt);
 
-    assertEquals(1, ObjectStore.size());
-    assertEquals(anInt, ObjectStore.remove(objectRef));
-    assertEquals(0, ObjectStore.size());
+    assertEquals(1, objectService.size());
+    assertEquals(anInt, objectService.remove(objectRef));
+    assertEquals(0, objectService.size());
 
   }
 
@@ -258,21 +272,21 @@ public class ObjectStoreTest {
   public void remove_storedObjectRef_stringObject() throws Exception {
 
     String aString = new String("just a string");
-    String objectRef = ObjectStore.storeObject(aString);
+    String objectRef = objectService.storeObject(aString);
 
-    assertEquals(aString, ObjectStore.remove(objectRef));
-    assertTrue(ObjectStore.isEmpty());
+    assertEquals(aString, objectService.remove(objectRef));
+    assertTrue(objectService.isEmpty());
   }
 
   @Test
   public void remove_alreadyRemoved_null() throws Exception {
 
     String aString = new String("just a string");
-    String objectRef = ObjectStore.storeObject(aString);
+    String objectRef = objectService.storeObject(aString);
 
-    assertEquals(aString, ObjectStore.remove(objectRef));
-    assertNull(ObjectStore.remove(objectRef));
-    assertTrue(ObjectStore.isEmpty());
+    assertEquals(aString, objectService.remove(objectRef));
+    assertNull(objectService.remove(objectRef));
+    assertTrue(objectService.isEmpty());
   }
 
 
