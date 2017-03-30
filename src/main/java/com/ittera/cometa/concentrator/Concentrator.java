@@ -176,7 +176,9 @@ public class Concentrator {
       }
     }
     //store in object map
-    objKey = ObjectStore.storeObject(newObject);
+    if (newObject != null) {
+      objKey = ObjectStore.storeObject(newObject);
+    }
 
     /** 3. Wrap new object or exception **/
     final Wrappers.DataMessage invokedMsg;
@@ -237,7 +239,9 @@ public class Concentrator {
     }
 
     //store in object map
-    objKey = ObjectStore.storeObject(newObject);
+    if (newObject != null) {
+      objKey = ObjectStore.storeObject(newObject);
+    }
 
     /** 5. Wrap new object or exception **/
     Wrappers.DataMessage invokedMsg = null;
