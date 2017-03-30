@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -47,6 +49,10 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
   private final long pollTimeout;
   private final ExecutionService executionService;
   private final String kafkaTopic;
+  private final AtomicLong totalReadBlockingQueueNanos = new AtomicLong(0);
+  private final AtomicLong totalPollingNanos = new AtomicLong(0);
+  private final AtomicInteger totalReadCalls = new AtomicInteger(0);
+  private final AtomicInteger totalPolls = new AtomicInteger(0);
   private KafkaConsumer<String, String> consumer;
   private KafkaProducer producer;
   private volatile boolean acceptingConnections = false;
@@ -122,9 +128,17 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
 
       }
 
+      if (logger.isDebugEnabled()) {
+        printDebugStats();
+      }
+
       final ConsumerRecords<String, String> records;
+      final long t0;
       synchronized (consumer) {
+        t0 = System.nanoTime();
         records = consumer.poll(pollTimeout);
+        totalPollingNanos.getAndAdd(System.nanoTime() - t0);
+        totalPolls.getAndIncrement();
       }
       if (records.count() > 0) {
         logger.info("Records read: {}", records.count());
@@ -197,6 +211,10 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
 
   @Override
   protected void shutDown() throws Exception {
+
+    //print some statistics
+    printDebugStats();
+
     //TODO: clean up, send uncommitted offset, etc.
     acceptingConnections = false;
 
@@ -213,6 +231,13 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
       }
     }
     logger.info("Message dispatcher shut down");
+  }
+
+  protected void printDebugStats() {
+    logger.debug("Total polling nanoseconds: {}", totalPollingNanos.get());
+    logger.debug("Total # polls: {}", totalPolls.get());
+    logger.debug("Total # queue reads: {}", totalReadCalls.get());
+    logger.debug("Total waiting time reading from queue in nanoseconds: {}", totalReadBlockingQueueNanos.get());
   }
 
   /**
@@ -252,14 +277,18 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
       throw new IllegalStateException("Service not running");
     }
 
-    long currThreadId = Thread.currentThread().getId();
+    final long currThreadId = Thread.currentThread().getId();
     DataMessage rcvdMsg = null;
     do {
       try {
+        final long t0 = System.nanoTime();
         rcvdMsg = (DataMessage) threadBlockingQueueMap.get(currThreadId).take();
+        totalReadBlockingQueueNanos.getAndAdd(System.nanoTime() - t0);
         logger.debug("Taken new message from blocking queue (thread id={})", currThreadId);
       } catch (InterruptedException e) {
         logger.error("Interrupted while taking from blocking queue", e);
+      } finally {
+        totalReadCalls.getAndIncrement();
       }
     } while (rcvdMsg == null);
 
