@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -45,6 +46,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
   protected static final Logger logger = LogManager.getLogger(KafkaDataMessageDispatcher.class);
 
   private static final Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue<DataMessage>>();
+  private static final BlockingQueue<DataMessage> outgoingMessages = new LinkedBlockingQueue<DataMessage>();
 
   private final long pollTimeout;
   private final ExecutionService executionService;
@@ -53,11 +55,33 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
   private final AtomicLong totalPollingNanos = new AtomicLong(0);
   private final AtomicInteger totalReadCalls = new AtomicInteger(0);
   private final AtomicInteger totalPolls = new AtomicInteger(0);
+  private final AtomicInteger messagesQueuedToSend = new AtomicInteger(0);
+  private final AtomicInteger messagesSent = new AtomicInteger(0);
+  private final AtomicInteger messagesRcvd = new AtomicInteger(0);
   private KafkaConsumer<String, String> consumer;
   private KafkaProducer producer;
   private volatile boolean acceptingConnections = false;
   private final Properties consumerProperties = new Properties();
   private final Properties producerProperties = new Properties();
+
+  class KafkaSenderThread extends Thread {
+    public void run() {
+      try {
+        while (isRunning()) {
+          sendToKafka(outgoingMessages.take());
+        }
+      } catch (InterruptedException ex) {
+        logger.error("Interrupted while consuming outgoing messages", ex);
+      }
+    }
+
+    void sendToKafka(DataMessage message) {
+      ProducerRecord newRecord = new ProducerRecord(kafkaTopic, message);
+      producer.send(newRecord);
+      messagesSent.getAndIncrement();
+      logger.debug("new message sent:\n {}", message);
+    }
+  }
 
   @Inject
   public KafkaDataMessageDispatcher(@Named("bootstrap.servers") String bootstrapServers,
@@ -116,6 +140,11 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
 
   @Override
   public final void run() {
+
+    Thread senderThread = new KafkaSenderThread();
+    senderThread.start();
+
+
     while (isRunning()) {
       if (!acceptingConnections) {
         try {
@@ -148,6 +177,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
           logger.debug("Processing received record:\n {}", record);
         }
 
+        messagesRcvd.getAndIncrement();
         final Wrappers.DataMessage dataMessage = (Wrappers.DataMessage) record.value();
         final long threadId = dataMessage.getThreadId();
         final long recordOffset = record.offset();
@@ -234,15 +264,18 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
   }
 
   protected void printDebugStats() {
-    logger.debug("Total polling nanoseconds: {}", totalPollingNanos.get());
-    logger.debug("Total # polls: {}", totalPolls.get());
-    logger.debug("Total # queue reads: {}", totalReadCalls.get());
+    logger.debug("--------STATS--------");
+    logger.debug("# of messages queued to send: {}", messagesQueuedToSend.get());
+    logger.debug("# of messages sent to k-log: {}", messagesSent.get());
+    logger.debug("# of messages received from k-log: {}", messagesRcvd.get());
+    logger.debug("# polling nanoseconds: {}", totalPollingNanos.get());
+    logger.debug("# polls: {}", totalPolls.get());
+    logger.debug("# queue reads: {}", totalReadCalls.get());
     logger.debug("Total waiting time reading from queue in nanoseconds: {}", totalReadBlockingQueueNanos.get());
+    logger.debug("-----END OF STATS-----");
   }
 
   /**
-   * TODO Should not send anything here, just queue it.
-   *
    * @param message
    */
   @Override
@@ -255,11 +288,17 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
     //first check that the thread sending this message has a receiving queue
     createThreadQueueIfNeeded();
 
-    ProducerRecord newRecord = new ProducerRecord(kafkaTopic, message);
-    synchronized (producer) {
-      producer.send(newRecord);
-    }
-    logger.debug("new message sent:\n {}", message);
+    boolean sent = false;
+    do {
+      try {
+        outgoingMessages.put(message);
+        messagesQueuedToSend.getAndIncrement();
+        logger.debug("new message queued for sending:\n {}", message);
+        sent = true;
+      } catch (InterruptedException e) {
+        logger.error("Interrupted putting message in outgoing queue. Will try again...", e);
+      }
+    } while (!sent);
   }
 
   private void createThreadQueueIfNeeded() {
