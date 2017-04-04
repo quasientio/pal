@@ -15,20 +15,21 @@ message DataMessage {
     required string msgType = 2;
     required int64 threadId = 3 [default = -1];
     required int64 currentTime = 4;
-    optional int64 following = 5;
+    optional int64 threadSeq = 5;
+    optional int64 following = 6;
 
     oneof content {
-        ConstructorCall constructorCall = 6;
-        InstanceMethodCall instanceMethodCall = 7;
-        ClassMethodCall classMethodCall = 8;
-        ClInitCall clinitCall = 9;
-        StaticFieldGet staticFieldGet = 10;
-        StaticFieldPut staticFieldPut = 11;
-        InstanceFieldGet instanceFieldGet = 12;
-        InstanceFieldPut instanceFieldPut = 13;
-        StaticFieldPutDone staticFieldPutDone = 14;
-        InstanceFieldPutDone instanceFieldPutDone = 15;
-        RaisedThrowable raisedThrowable = 16;
-        ReturnValue returnValue = 17;
+        ConstructorCall constructorCall = 7;
+        InstanceMethodCall instanceMethodCall = 8;
+        ClassMethodCall classMethodCall = 9;
+        ClInitCall clinitCall = 10;
+        StaticFieldGet staticFieldGet = 11;
+        StaticFieldPut staticFieldPut = 12;
+        InstanceFieldGet instanceFieldGet = 13;
+        InstanceFieldPut instanceFieldPut = 14;
+        StaticFieldPutDone staticFieldPutDone = 15;
+        InstanceFieldPutDone instanceFieldPutDone = 16;
+        RaisedThrowable raisedThrowable = 17;
+        ReturnValue returnValue = 18;
     }
 }
