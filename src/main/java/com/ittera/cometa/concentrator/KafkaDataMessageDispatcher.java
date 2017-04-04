@@ -1,17 +1,8 @@
 package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.concentrator.exec.ExecutionService;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut;
-
 import com.ittera.cometa.concentrator.messages.DataMessageDispatcher;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.Properties;
 import java.util.Arrays;
@@ -46,11 +37,12 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
   protected static final Logger logger = LogManager.getLogger(KafkaDataMessageDispatcher.class);
 
   private static final Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue<DataMessage>>();
-  private static final BlockingQueue<DataMessage> outgoingMessages = new LinkedBlockingQueue<DataMessage>();
+  private static final BlockingQueue<DataMessage> outgoingMessages = new LinkedBlockingQueue<>();
 
-  private final long pollTimeout;
   private final ExecutionService executionService;
-  private final String kafkaTopic;
+  private volatile boolean acceptingConnections = false;
+
+  // counters
   private final AtomicLong totalReadBlockingQueueNanos = new AtomicLong(0);
   private final AtomicLong totalPollingNanos = new AtomicLong(0);
   private final AtomicInteger totalReadCalls = new AtomicInteger(0);
@@ -58,13 +50,17 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
   private final AtomicInteger messagesQueuedToSend = new AtomicInteger(0);
   private final AtomicInteger messagesSent = new AtomicInteger(0);
   private final AtomicInteger messagesRcvd = new AtomicInteger(0);
+
+  // kafka stuff
+  private final long pollTimeout;
+  private final String kafkaTopic;
   private KafkaConsumer<String, String> consumer;
   private KafkaProducer producer;
-  private volatile boolean acceptingConnections = false;
   private final Properties consumerProperties = new Properties();
   private final Properties producerProperties = new Properties();
 
-  class KafkaSenderThread extends Thread {
+
+  private class KafkaSenderThread extends Thread {
     public void run() {
       try {
         while (isRunning()) {
@@ -82,6 +78,14 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
       logger.debug("new message sent:\n {}", message);
     }
   }
+
+  private static final ThreadLocal<BlockingQueue<DataMessage>> threadMessageQueue = new ThreadLocal<BlockingQueue<DataMessage>>() {
+    @Override
+    protected BlockingQueue<DataMessage> initialValue() {
+     return new LinkedBlockingDeque<>();
+    }
+
+  };
 
   @Inject
   public KafkaDataMessageDispatcher(@Named("bootstrap.servers") String bootstrapServers,
@@ -144,6 +148,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
     Thread senderThread = new KafkaSenderThread();
     senderThread.start();
 
+    long iterations = 0;
 
     while (isRunning()) {
       if (!acceptingConnections) {
@@ -154,10 +159,10 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
         } finally {
           continue;
         }
-
       }
 
-      if (logger.isDebugEnabled()) {
+      //print stats every 100 iterations
+      if ((++iterations % 100 == 0) && logger.isDebugEnabled()) {
         printDebugStats();
       }
 
@@ -178,7 +183,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
         }
 
         messagesRcvd.getAndIncrement();
-        final Wrappers.DataMessage dataMessage = (Wrappers.DataMessage) record.value();
+        final DataMessage dataMessage = (DataMessage) record.value();
         final long threadId = dataMessage.getThreadId();
         final long recordOffset = record.offset();
         //if threadId not in our threadQueue, then push to new/random thread
@@ -190,37 +195,10 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
           executionService.submit(new Runnable() {
             @Override
             public void run() {
-              //TODO call Concentrator.incomingCall() which should dispatch as done here based on encapsulated type
-              if (dataMessage.hasConstructorCall()) {
-                final ConstructorCall constructorCall = dataMessage.getConstructorCall();
-                Concentrator.incomingConstructor(constructorCall, recordOffset);
-              } else if (dataMessage.hasClassMethodCall()) {
-                final ClassMethodCall methodCall = dataMessage.getClassMethodCall();
-                Concentrator.incomingClassMethod(methodCall, recordOffset);
-              } else if (dataMessage.hasInstanceMethodCall()) {
-                final InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
-                Concentrator.incomingInstanceMethod(methodCall, recordOffset);
-              } else if (dataMessage.hasStaticFieldGet()) {
-                final StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
-                Concentrator.incomingGetStatic(staticFieldGetCall, recordOffset);
-              } else if (dataMessage.hasInstanceFieldGet()) {
-                final InstanceFieldGet instanceFieldGet = dataMessage.getInstanceFieldGet();
-                Concentrator.incomingGetObject(instanceFieldGet, recordOffset);
-              } else if (dataMessage.hasStaticFieldPut()) {
-                final StaticFieldPut staticFieldPut = dataMessage.getStaticFieldPut();
-                Concentrator.incomingPutStatic(staticFieldPut, recordOffset);
-              } else if (dataMessage.hasInstanceFieldPut()) {
-                final InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
-                Concentrator.incomingPutField(instanceFieldPut, recordOffset);
-              } else {
-                logger.warn("Incoming message with offset {} ignored - no handler:\n{}", recordOffset, dataMessage);
-              }
+              Concentrator.incomingCall(dataMessage, recordOffset);
             }
           });
-        }
-
-        //else, push to queue of this thread
-        else {
+        } else {
           try {
             //push to queue of the Destination thread
             threadBlockingQueueMap.get(threadId).put(dataMessage);
