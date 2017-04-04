@@ -21,6 +21,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
@@ -35,6 +37,14 @@ import com.google.inject.Singleton;
 public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
   protected static final Logger logger = LogManager.getLogger(ProtobufDataMessageBuilder.class);
+
+  private static final ThreadLocal<AtomicLong> threadSequence = new ThreadLocal<AtomicLong>() {
+    @Override
+    protected AtomicLong initialValue() {
+     return new AtomicLong(0);
+    }
+
+  };
 
   public ProtobufDataMessageBuilder() {
     logger.info("Initialized message builder");
@@ -107,6 +117,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
       .setConcentratorId(concentratorId)
       .setMsgType(msgType)
       .setThreadId(Thread.currentThread().getId())
+      .setThreadSeq(threadSequence.get().incrementAndGet())
       .setCurrentTime(System.currentTimeMillis());
 
     if (followingOffset != null) {
