@@ -11,25 +11,26 @@ option optimize_for = SPEED;
 
 message DataMessage {
     //TO DO:  IP or hostname for this Concentrator
-    required int32 concentratorId = 1 [default = -1];
-    required string msgType = 2;
-    required int64 threadId = 3 [default = -1];
-    required int64 currentTime = 4;
-    optional int64 threadSeq = 5;
-    optional int64 following = 6;
+    required string concentratorUuid = 1;
+    required string messageUuid = 2;
+    required string msgType = 3;
+    required int64 threadId = 4 [default = -1];
+    required int64 currentTime = 5;
+    optional int64 threadSeq = 6;
+    optional int64 following = 7;
 
     oneof content {
-        ConstructorCall constructorCall = 7;
-        InstanceMethodCall instanceMethodCall = 8;
-        ClassMethodCall classMethodCall = 9;
-        ClInitCall clinitCall = 10;
-        StaticFieldGet staticFieldGet = 11;
-        StaticFieldPut staticFieldPut = 12;
-        InstanceFieldGet instanceFieldGet = 13;
-        InstanceFieldPut instanceFieldPut = 14;
-        StaticFieldPutDone staticFieldPutDone = 15;
-        InstanceFieldPutDone instanceFieldPutDone = 16;
-        RaisedThrowable raisedThrowable = 17;
-        ReturnValue returnValue = 18;
+        ConstructorCall constructorCall = 8;
+        InstanceMethodCall instanceMethodCall = 9;
+        ClassMethodCall classMethodCall = 10;
+        ClInitCall clinitCall = 11;
+        StaticFieldGet staticFieldGet = 12;
+        StaticFieldPut staticFieldPut = 13;
+        InstanceFieldGet instanceFieldGet = 14;
+        InstanceFieldPut instanceFieldPut = 15;
+        StaticFieldPutDone staticFieldPutDone = 16;
+        InstanceFieldPutDone instanceFieldPutDone = 17;
+        RaisedThrowable raisedThrowable = 18;
+        ReturnValue returnValue = 19;
     }
 }

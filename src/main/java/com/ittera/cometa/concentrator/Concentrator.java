@@ -35,11 +35,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
 
-import java.util.Properties;
-import java.util.List;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.ArrayList;
+import java.util.*;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -58,1345 +54,1344 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 public class Concentrator {
 
-  protected static final Logger logger = LogManager.getLogger(Concentrator.class);
-
-  /**
-   * Static data (singletons) shared by all threads - sources of contention
-   */
-  private static int id;
-
-  @Inject
-  private static DataMessageBuilder dataMessageBuilder;
-
-  @Inject
-  private static DataMessageDispatcher dataMessageDispatcher;
-
-  @Inject
-  private static ObjectService objectService;
-
-  /************************ INTERFACE ***************************/
-
-  //TODO: this method further ties this class to Protobuf, must decouple
-  static void incomingCall(DataMessage dataMessage, long recordOffset) {
-      if (dataMessage.hasConstructorCall()) {
-        final ConstructorCall constructorCall = dataMessage.getConstructorCall();
-        incomingConstructor(constructorCall, recordOffset);
-      } else if (dataMessage.hasClassMethodCall()) {
-        final ClassMethodCall methodCall = dataMessage.getClassMethodCall();
-        incomingClassMethod(methodCall, recordOffset);
-      } else if (dataMessage.hasInstanceMethodCall()) {
-        final InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
-        incomingInstanceMethod(methodCall, recordOffset);
-      } else if (dataMessage.hasStaticFieldGet()) {
-        final StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
-        incomingGetStatic(staticFieldGetCall, recordOffset);
-      } else if (dataMessage.hasInstanceFieldGet()) {
-        final InstanceFieldGet instanceFieldGet = dataMessage.getInstanceFieldGet();
-        incomingGetObject(instanceFieldGet, recordOffset);
-      } else if (dataMessage.hasStaticFieldPut()) {
-        final StaticFieldPut staticFieldPut = dataMessage.getStaticFieldPut();
-        incomingPutStatic(staticFieldPut, recordOffset);
-      } else if (dataMessage.hasInstanceFieldPut()) {
-        final InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
-        incomingPutField(instanceFieldPut, recordOffset);
-      } else {
-        logger.warn("Incoming message with offset {} ignored - no handler:\n{}", recordOffset, dataMessage);
-      }
-  }
-
-
-  // <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
-  public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
-    logger.traceEntry("with staticPart: {}, sender: {}", staticPart.getSignature(), sender);
-
-    /** 1. Wrap message **/
-    final DataMessage msg = dataMessageBuilder.buildClassInitializer(id, staticPart, sender);
-
-    /** 2. Send message **/
-    //ATTENTION: this send is asynchronous. Must call get later.
-    dataMessageDispatcher.send(msg);
-
-    if (mustWait(msg)) {
-      /** 3. Receive message **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 4. Load and initialize class  -  WARNING: For some reason the class is not being initialized! **/
-    Class clazz = null;
-    ClassNotFoundException exceptionWhileLoadingClass = null;
-    try {
-      clazz = Class.forName(staticPart.getSignature().getDeclaringType().getName());
-      //Class.forName(codeSignature.getDeclaringTypeName(),true, Concentrator.class.getClassLoader());
-    } catch (ClassNotFoundException cnfe) {
-      exceptionWhileLoadingClass = cnfe;
-      logger.error("Caught and assigned to exceptionWhileLoadingClass", cnfe);
-    }
-
-    /** 5. Wrap class/exception if any **/
-    String objKey = null;
-    final DataMessage invokedMsg;
-    if (exceptionWhileLoadingClass != null) {
-      invokedMsg = dataMessageBuilder.buildInitializerThrowable(id, staticPart, exceptionWhileLoadingClass);
-    } else {
-      invokedMsg = dataMessageBuilder.buildLoadedClass(id, clazz);
-    }
-
-    /** 6. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    if (mustWait(invokedMsg)) {
-      /** 7. Receive object/exception **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 8. Return or re-raise exception **/
-    if (exceptionWhileLoadingClass != null) {
-      throw exceptionWhileLoadingClass;
-    }
-
-    //Since class initialization is not working, we will return false if we want to aspectj to proceed(), indicating class isn't initialized
-    boolean returnValue = false;
-    logger.traceExit("with return bool: {}", returnValue);
-    return returnValue;
-  }
-
-  /**
-   * @param constructorCall
-   * @throws Throwable
-   */
-  static void incomingConstructor(ConstructorCall constructorCall, long recordOffset) {
-    logger.traceEntry("with constructorCall: {}, recordOffset", constructorCall, recordOffset);
-
-    /** 1. Unwrap message and load constructor **/
-    Class clazz = null;
-    final List<Class> paramClasses = new ArrayList<>();
-    Constructor constructor = null;
-    Exception exceptionWhileLoading = null;
-    try {
-      clazz = Class.forName(constructorCall.getClass_().getName());
-      for (Primitives.Object param : constructorCall.getParameterList()) {
-        paramClasses.add(Class.forName(param.getClass_().getName()));
-      }
-      constructor = clazz.getDeclaredConstructor((Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
-    } catch (Exception e) {
-      exceptionWhileLoading = e;
-      logger.error("Caught and assigned to exceptionWhileLoading", e);
-    }
-
-
-    /** 2. If class and constructor loaded, unwrap arguments and invoke constructor **/
-    Exception exceptionWhileInvoking = null;
-    Object newObject = null;
-    String objKey = null;
-
-    if (exceptionWhileLoading == null) {
-      constructor.setAccessible(true);
-      try {
-        List<Object> args = new ArrayList<>();
-        for (int i = 0; i < constructorCall.getParameterCount(); i++) {
-          Primitives.Object obj = constructorCall.getParameter(i);
-          if (obj.getIsNull()) {
-            args.add(null);
-          } else if (obj.hasRef()) {
-            args.add(objectService.lookupObject(obj.getRef()));
-          } else {
-            args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
-          }
-        }
-        newObject = constructor.newInstance(args.toArray(new Object[args.size()]));
-      } catch (Exception ite) {
-        exceptionWhileInvoking = ite;
-        logger.error("Caught and assigned to exceptionWhileInvoking", ite);
-      }
-    }
-    //store in object map
-    if (newObject != null) {
-      objKey = objectService.storeObject(newObject);
-    }
-
-    /** 3. Wrap new object or exception **/
-    final DataMessage invokedMsg;
-
-    if (exceptionWhileLoading != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, constructor, exceptionWhileLoading, recordOffset);
-    } else if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, constructor, exceptionWhileInvoking, recordOffset);
-    } else {
-      if (Wrapper.isWrappable(newObject)) {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, newObject, clazz, null, false, recordOffset);
-      } else {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, clazz, objKey, false, recordOffset);
-      }
-    }
-
-
-    /** 4. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    logger.traceExit();
-    return;
-  }
-
-  public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
-
-    final ConstructorSignature constructorSignature = (ConstructorSignature) staticPart.getSignature();
-
-    /** 1. Wrap message **/
-    final DataMessage callMsg = dataMessageBuilder.buildConstructor(id, staticPart, sender, args);
-
-    /** 2. Send message **/
-    //ATTENTION: this send is asynchronous. Must call get later.
-    dataMessageDispatcher.send(callMsg);
-
-    if (mustWait(callMsg)) {
-      /** 3. Receive message **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-
-    /** 4. Invoke constructor **/
-
-    Constructor constructor = constructorSignature.getConstructor();
-
-    Object newObject = null;
-    Exception exceptionWhileInvoking = null;
-    constructor.setAccessible(true);
-    String objKey = null;
-    try {
-      newObject = constructor.newInstance(args);
-    } catch (Exception ite) {
-      exceptionWhileInvoking = ite;
-      logger.error("Caught and assigned to exceptionWhileInvoking", ite);
-    }
-
-    //store in object map
-    if (newObject != null) {
-      objKey = objectService.storeObject(newObject);
-    }
-
-    /** 5. Wrap new object or exception **/
-    DataMessage invokedMsg = null;
-
-    if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, constructor, exceptionWhileInvoking, null);
-    } else {
-      if (Wrapper.isWrappable(newObject)) {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, newObject, constructor.getClass(), null, false, null);
-      } else {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, constructor.getClass(), objKey, false, null);
-      }
-    }
-
-    /** 6. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    if (mustWait(invokedMsg)) {
-      /** 7. Receive object/exception **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 8. Return object or re-raise exception **/
-    if (exceptionWhileInvoking != null) {
-      if (exceptionWhileInvoking instanceof InvocationTargetException) {
-        throw exceptionWhileInvoking.getCause();
-      } else {
-        throw exceptionWhileInvoking;
-      }
-    }
-
-    logger.traceExit("with new object: {}", newObject);
-    return newObject;
-  }
-  // </editor-fold>
-
-  // <editor-fold defaultstate="collapsed" desc="METHOD CALLS">
-
-  public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
-
-    final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
-
-    /** 1. Wrap message **/
-    final DataMessage msg = dataMessageBuilder.buildInstanceMethod(id, staticPart, sender, target, args);
-
-
-    /** 2. Send message **/
-    //ATTENTION: this send is asynchronous. Must call get later.
-    dataMessageDispatcher.send(msg);
-
-    if (mustWait(msg)) {
-      /** 3. Receive message **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-
-    /** 4. Invoke method **/
-
-    Method method = methodSignature.getMethod();
-
-    Exception exceptionWhileInvoking = null;
-    method.setAccessible(true);
-    try {
-      method.invoke(target, args);
-    } catch (Exception e) {
-      exceptionWhileInvoking = e;
-      logger.error("Caught and assigned to exceptionWhileInvoking", e);
-    }
-
-    /** 5. Wrap new object or exception **/
-    final DataMessage invokedMsg;
-
-    if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, null);
-    } else {
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, Void.class, method.getReturnType(), null, true, null);
-    }
-
-
-    /** 6. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    if (mustWait(invokedMsg)) {
-      /** 7. Receive object/exception **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 8. Return object or re-raise exception **/
-    if (exceptionWhileInvoking != null) {
-      if (exceptionWhileInvoking instanceof InvocationTargetException) {
-        throw exceptionWhileInvoking.getCause();
-      } else {
-        throw exceptionWhileInvoking;
-      }
-    }
-
-    logger.traceExit();
-    return;
-  }
-
-  public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-    logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
-
-    final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
-
-    /** 1. Wrap message **/
-    final DataMessage msg = dataMessageBuilder.buildInstanceMethod(id, staticPart, sender, target, args);
-
-
-    /** 2. Send message **/
-    //ATTENTION: this send is asynchronous. Must call get later.
-    dataMessageDispatcher.send(msg);
-
-    if (mustWait(msg)) {
-      /** 3. Receive message **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-
-    /** 4. Invoke method **/
-
-    Method method = methodSignature.getMethod();
-    Object returnValue = null;
-    Exception exceptionWhileInvoking = null;
-    method.setAccessible(true);
-    String objKey = null;
-    try {
-      returnValue = method.invoke(target, args);
-    } catch (Exception e) {
-      exceptionWhileInvoking = e;
-      logger.error("Caught and assigned to exceptionWhileInvoking", e);
-    }
-
-    //store in object map
-    if (returnValue != null) {
-      objKey = objectService.storeObject(returnValue);
-    }
-
-    /** 5. Wrap new object or exception **/
-    final DataMessage invokedMsg;
-
-    if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, null);
-    } else {
-      if (Wrapper.isWrappable(returnValue)) {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, false, null);
-      } else {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, method.getReturnType(), objKey, false, null);
-      }
-    }
-
-
-    /** 6. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    if (mustWait(invokedMsg)) {
-      /** 7. Receive object/exception **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 8. Return object or re-raise exception **/
-    if (exceptionWhileInvoking != null) {
-      if (exceptionWhileInvoking instanceof InvocationTargetException) {
-        throw exceptionWhileInvoking.getCause();
-      } else {
-        throw exceptionWhileInvoking;
-      }
-    }
-
-    logger.traceExit("with return value: {}", returnValue);
-    return returnValue;
-  }
-
-  /**
-   * This method currently only support calling method whose value is fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
-   *
-   * @param instanceMethodCall
-   */
-  static void incomingInstanceMethod(InstanceMethodCall instanceMethodCall, long recordOffset) {
-    logger.traceEntry("with instanceMethodCall: {}, recordOffset: {}", instanceMethodCall, recordOffset);
-
-    /** 1. Unwrap message and load class **/
-    Class clazz = null;
-    Method method = null;
-    Exception exceptionWhileLoading = null;
-    List<Class> paramClasses = new ArrayList<>();
-    try {
-      clazz = Class.forName(instanceMethodCall.getClass_().getName());
-      for (Primitives.Object obj : instanceMethodCall.getParameterList()) {
-        Class paramClass = Unwrapper.getClassForPrimitive(obj.getClass_().getName());
-        if (paramClass == null) {
-          paramClass = Class.forName(obj.getClass_().getName());
-        }
-        paramClasses.add(paramClass);
-      }
-    } catch (Exception e) {
-      exceptionWhileLoading = e;
-      logger.error("Caught and assigned to exceptionWhileLoading", e);
-    }
-
-    /** 2. If class loaded, unwrap/retrieve arguments and invoke method **/
-    Exception exceptionWhileInvoking = null;
-    Object returnValue = null;
-    String objKey = null;
-    if (exceptionWhileLoading == null) {
-      List<Object> args = new ArrayList<>();
-      for (int i = 0; i < instanceMethodCall.getParameterCount(); i++) {
-        Primitives.Object obj = instanceMethodCall.getParameter(i);
-        if (obj.getIsNull()) {
-          args.add(null);
-        } else if (obj.hasRef()) {
-          args.add(objectService.lookupObject(obj.getRef()));
+    protected static final Logger logger = LogManager.getLogger(Concentrator.class);
+
+    /**
+     * Static data (singletons) shared by all threads - sources of contention
+     */
+    private static final UUID uuid = UUID.randomUUID();
+
+    @Inject
+    private static DataMessageBuilder dataMessageBuilder;
+
+    @Inject
+    private static DataMessageDispatcher dataMessageDispatcher;
+
+    @Inject
+    private static ObjectService objectService;
+
+    /************************ INTERFACE ***************************/
+
+    //TODO: this method further ties this class to Protobuf, must decouple
+    static void incomingCall(DataMessage dataMessage, long recordOffset) {
+        if (dataMessage.hasConstructorCall()) {
+            final ConstructorCall constructorCall = dataMessage.getConstructorCall();
+            incomingConstructor(constructorCall, recordOffset);
+        } else if (dataMessage.hasClassMethodCall()) {
+            final ClassMethodCall methodCall = dataMessage.getClassMethodCall();
+            incomingClassMethod(methodCall, recordOffset);
+        } else if (dataMessage.hasInstanceMethodCall()) {
+            final InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
+            incomingInstanceMethod(methodCall, recordOffset);
+        } else if (dataMessage.hasStaticFieldGet()) {
+            final StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
+            incomingGetStatic(staticFieldGetCall, recordOffset);
+        } else if (dataMessage.hasInstanceFieldGet()) {
+            final InstanceFieldGet instanceFieldGet = dataMessage.getInstanceFieldGet();
+            incomingGetObject(instanceFieldGet, recordOffset);
+        } else if (dataMessage.hasStaticFieldPut()) {
+            final StaticFieldPut staticFieldPut = dataMessage.getStaticFieldPut();
+            incomingPutStatic(staticFieldPut, recordOffset);
+        } else if (dataMessage.hasInstanceFieldPut()) {
+            final InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
+            incomingPutField(instanceFieldPut, recordOffset);
         } else {
-          args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
+            logger.warn("Incoming message with offset {} ignored - no handler:\n{}", recordOffset, dataMessage);
         }
-      }
-      try {
-        Object target = null;
-        if (instanceMethodCall.hasObject()) {
-          Class objClass = Class.forName(instanceMethodCall.getClass_().getName());
-          target = Unwrapper.unwrapObject(instanceMethodCall.getObject(), objClass);
-          logger.debug("Unwrapped target: {}", target);
-        } else {
-          target = objectService.lookupObject(instanceMethodCall.getObjectRef());
-          logger.debug("Loaded target: {}", target);
+    }
+
+
+    // <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
+    public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
+        logger.traceEntry("with staticPart: {}, sender: {}", staticPart.getSignature(), sender);
+
+        /** 1. Wrap message **/
+        final DataMessage msg = dataMessageBuilder.buildClassInitializer(uuid, staticPart, sender);
+
+        /** 2. Send message **/
+        //ATTENTION: this send is asynchronous. Must call get later.
+        dataMessageDispatcher.send(msg);
+
+        if (mustWait(msg)) {
+            /** 3. Receive message **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
         }
-        if (target == null) {
-          throw new RuntimeException("Invoking a method on null object will yield a NPE!");
-        }
-        method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getName());
-        if (method == null) {
-          //TODO perhaps this should be thrown by ReflectionHelper instead of returning null
-          throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", instanceMethodCall.getName(), clazz.getName()));
-        }
-        method.setAccessible(true);
-        returnValue = method.invoke(target, args.toArray());
-      } catch (Exception e) {
-        exceptionWhileInvoking = e;
-        logger.error("Caught and assigned to exceptionWhileInvoking", e);
-      }
-    }
 
-    //store in object map
-    final boolean isVoid = method.getReturnType() == void.class;
-    if (returnValue != null && !isVoid) {
-      objKey = objectService.storeObject(returnValue);
-    }
-    if (isVoid) {
-      returnValue = Void.class;
-    }
-
-    /** 3. Wrap return value or exception **/
-    final DataMessage invokedMsg;
-
-    if (exceptionWhileLoading != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileLoading, recordOffset);
-    } else if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, recordOffset);
-    } else {
-      if (Wrapper.isWrappable(returnValue)) {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, isVoid, recordOffset);
-      } else {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, method.getReturnType(), objKey, isVoid, recordOffset);
-      }
-    }
-
-    /** 4. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    logger.traceExit();
-    return;
-  }
-
-  public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
-
-    final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
-
-    /** 1. Wrap message **/
-    final DataMessage msg = dataMessageBuilder.buildClassMethod(id, staticPart, sender, args);
-
-
-    /** 2. Send message **/
-    //ATTENTION: this send is asynchronous. Must call get later.
-    dataMessageDispatcher.send(msg);
-
-    if (mustWait(msg)) {
-      /** 3. Receive message **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-
-    /** 4. Invoke method **/
-
-    Method method = methodSignature.getMethod();
-    Exception exceptionWhileInvoking = null;
-    method.setAccessible(true);
-    try {
-      method.invoke(null, args);
-    } catch (Exception e) {
-      exceptionWhileInvoking = e;
-      logger.error("Caught and assigned to exceptionWhileInvoking", e);
-    }
-
-    /** 5. Wrap new object or exception **/
-    final DataMessage invokedMsg;
-
-    if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, null);
-    } else {
-      invokedMsg = dataMessageBuilder.buildReturnValue(id, Void.class, method.getReturnType(), null, true, null);
-    }
-
-
-    /** 6. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    if (mustWait(invokedMsg)) {
-      /** 7. Receive object/exception **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 8. Return object or re-raise exception **/
-    if (exceptionWhileInvoking != null) {
-      if (exceptionWhileInvoking instanceof InvocationTargetException) {
-        throw exceptionWhileInvoking.getCause();
-      } else {
-        throw exceptionWhileInvoking;
-      }
-    }
-
-    logger.traceExit();
-    return;
-  }
-
-  public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-    logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
-
-    final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
-
-    /** 1. Wrap message **/
-    final DataMessage msg = dataMessageBuilder.buildClassMethod(id, staticPart, sender, args);
-
-
-    /** 2. Send message **/
-    //ATTENTION: this send is asynchronous. Must call get later.
-    dataMessageDispatcher.send(msg);
-
-    if (mustWait(msg)) {
-      /** 3. Receive message **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-
-    /** 4. Invoke method **/
-
-    Method method = methodSignature.getMethod();
-    Object returnValue = null;
-    String objKey = null;
-    Exception exceptionWhileInvoking = null;
-    method.setAccessible(true);
-    try {
-      returnValue = method.invoke(null, args);
-    } catch (Exception e) {
-      exceptionWhileInvoking = e;
-      logger.error("Caught and assigned to exceptionWhileInvoking", e);
-    }
-
-    //store in object map
-    if (returnValue != null) {
-      objKey = objectService.storeObject(returnValue);
-    }
-
-    /** 5. Wrap new object or exception **/
-    final DataMessage invokedMsg;
-
-    if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, null);
-    } else {
-      if (Wrapper.isWrappable(returnValue)) {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, false, null);
-      } else {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, method.getReturnType(), objKey, false, null);
-      }
-    }
-
-
-    /** 6. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    if (mustWait(invokedMsg)) {
-      /** 7. Receive object/exception **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 8. Return object or re-raise exception **/
-    if (exceptionWhileInvoking != null) {
-      if (exceptionWhileInvoking instanceof InvocationTargetException) {
-        throw exceptionWhileInvoking.getCause();
-      } else {
-        throw exceptionWhileInvoking;
-      }
-    }
-
-    logger.traceExit("with return value: {}", returnValue);
-    return returnValue;
-  }
-
-
-  /**
-   * This method currently only support calling method whose value is fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
-   *
-   * @param classMethodCall
-   */
-  static void incomingClassMethod(ClassMethodCall classMethodCall, long recordOffset) {
-    logger.traceEntry("with classMethodCall: {}, recordOffset: {}", classMethodCall, recordOffset);
-
-    /** 1. Unwrap message and load class **/
-    Class clazz = null;
-    Method method = null;
-    Exception exceptionWhileLoading = null;
-    List<Class> paramClasses = new ArrayList<>();
-    try {
-      logger.debug("Attempting to load (initialize) class");
-      clazz = Class.forName(classMethodCall.getClass_().getName());
-      for (Primitives.Object obj : classMethodCall.getParameterList()) {
-        Class paramClass = Unwrapper.getClassForPrimitive(obj.getClass_().getName());
-        if (paramClass == null) {
-          paramClass = Class.forName(obj.getClass_().getName());
-        }
-        paramClasses.add(paramClass);
-      }
-    } catch (Exception e) {
-      exceptionWhileLoading = e;
-      logger.error("Caught and assigned to exceptionWhileLoading", e);
-    }
-
-    /** 2. If class loaded, unwrap/retrieve arguments and invoke method **/
-    Exception exceptionWhileInvoking = null;
-    Object returnValue = null;
-    String objKey = null;
-    if (exceptionWhileLoading == null) {
-      logger.debug("Unwrapping parameters");
-      List<Object> args = new ArrayList<>();
-      for (int i = 0; i < classMethodCall.getParameterCount(); i++) {
-        Primitives.Object obj = classMethodCall.getParameter(i);
-        if (obj.getIsNull()) {
-          args.add(null);
-        } else if (obj.hasRef()) {
-          args.add(objectService.lookupObject(obj.getRef()));
-        } else {
-          args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
-        }
-      }
-      try {
-        method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), classMethodCall.getName());
-        if (method == null) {
-          throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", classMethodCall.getName(), clazz.getName()));
-        }
-        method.setAccessible(true);
-        returnValue = method.invoke(null, args.toArray());
-      } catch (Exception e) {
-        exceptionWhileInvoking = e;
-        logger.error("Caught and assigned to exceptionWhileInvoking", e);
-      }
-    }
-
-    //store in object map
-    final boolean isVoid = method.getReturnType() == void.class;
-    if (returnValue != null && !isVoid) {
-      objKey = objectService.storeObject(returnValue);
-    }
-    if (isVoid) {
-      returnValue = Void.class;
-    }
-
-    /** 3. Wrap return value or exception **/
-    final DataMessage invokedMsg;
-
-    if (exceptionWhileLoading != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileLoading, recordOffset);
-    } else if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, method, exceptionWhileInvoking, recordOffset);
-    } else {
-      if (Wrapper.isWrappable(returnValue)) {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, returnValue, method.getReturnType(), null, isVoid, recordOffset);
-      } else {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, method.getReturnType(), objKey, isVoid, recordOffset);
-      }
-    }
-
-    /** 4. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    logger.traceExit();
-    return;
-  }
-
-
-  // </editor-fold>
-
-  // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
-
-  public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet, long recordOffset) {
-    logger.traceEntry("with staticFieldGet: {}, recordOffset: {}", staticFieldGet, recordOffset);
-
-    /** 1. Get Object **/
-    Class clazz = null;
-    Field field = null;
-    Exception exceptionWhileLoading = null;
-    try {
-      clazz = Class.forName(staticFieldGet.getClass_().getName());
-      field = clazz.getDeclaredField(staticFieldGet.getField().getName());
-      logger.debug("field {} is of type {}", field.getName(), field.getType());
-    } catch (Exception e) {
-      exceptionWhileLoading = e;
-      logger.error("Caught and assigned to exceptionWhileLoading", e);
-    }
-
-    /** 2. If class and field loaded, invoke field get **/
-    Exception exceptionWhileInvoking = null;
-
-    String objKey = null;
-    Object fieldValue = null;
-    if (exceptionWhileLoading == null) {
-      field.setAccessible(true);
-      try {
-        fieldValue = field.get(null);
-      } catch (Exception e) {
-        exceptionWhileInvoking = e;
-        logger.error("Caught and assigned to exceptionWhileInvoking", e);
-      }
-    }
-    //store in object map
-    if (fieldValue != null) {
-      objKey = objectService.storeObject(fieldValue);
-    }
-
-    /** 3. Wrap return value or exception **/
-    DataMessage invokedMsg = null;
-
-    if (exceptionWhileLoading != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileLoading, recordOffset);
-    } else if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileInvoking, recordOffset);
-    } else {
-      if (Wrapper.isWrappable(fieldValue)) {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, recordOffset);
-      } else {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, field.getType(), objKey, false, recordOffset);
-      }
-    }
-
-
-    /** 4. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    logger.traceExit();
-    return;
-
-  }
-
-  public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
-    logger.traceEntry("with staticPart: {}, sender: {}", staticPart.getSignature(), sender);
-
-    /** 1. Wrap message **/
-    final DataMessage msg = dataMessageBuilder.buildGetStatic(id, staticPart, sender);
-
-    /** 2. Send message **/
-    //ATTENTION: this send is asynchronous. Must call get later.
-    dataMessageDispatcher.send(msg);
-
-    if (mustWait(msg)) {
-      /** 3. Receive message **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 4. Get Object **/
-
-    Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
-    field.setAccessible(true);
-
-    IllegalAccessException exceptionGettingObject = null;
-    Object fieldValue = null;
-    String objKey = null;
-    try {
-      fieldValue = field.get(null);
-    } catch (IllegalAccessException iae) {
-      exceptionGettingObject = iae;
-      logger.error("Caught and assigned to exceptionGettingObject", iae);
-    }
-    //store in object map
-    if (fieldValue != null) {
-      objKey = objectService.storeObject(fieldValue);
-    }
-
-    /** 5. Wrap exception if any **/
-    DataMessage invokedMsg = null;
-    if (exceptionGettingObject != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionGettingObject, null);
-    } else {
-      if (Wrapper.isWrappable(fieldValue)) {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, null);
-      } else {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, field.getType(), objKey, false, null);
-      }
-    }
-
-    /** 6. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    if (mustWait(invokedMsg)) {
-      /** 7. Receive object/exception **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 8. Return or re-raise exception **/
-    if (exceptionGettingObject != null) {
-      throw exceptionGettingObject;
-    }
-
-    logger.traceExit("with fieldValue: {}", fieldValue);
-    return fieldValue;
-  }
-
-  public static void incomingGetObject(Fields.InstanceFieldGet instanceFieldGet, long recordOffset) {
-    logger.traceEntry("with instanceFieldGet: {}, recordOffset: {}", instanceFieldGet, recordOffset);
-
-    /** 1. Get Object **/
-    Class clazz = null;
-    Field field = null;
-    Exception exceptionWhileLoading = null;
-    try {
-      clazz = Class.forName(instanceFieldGet.getClass_().getName());
-      field = clazz.getDeclaredField(instanceFieldGet.getField().getName());
-    } catch (Exception e) {
-      exceptionWhileLoading = e;
-      logger.error("Caught and assigned to exceptionWhileLoading", e);
-    }
-
-    /** 2. If class and field loaded, invoke field get **/
-    Exception exceptionWhileInvoking = null;
-
-    Object fieldValue = null;
-    String objKey = null;
-    if (exceptionWhileLoading == null) {
-      field.setAccessible(true);
-      try {
-        Object target = null;
-        if (instanceFieldGet.hasObject()) {
-          Class objClass = Class.forName(instanceFieldGet.getClass_().getName());
-          target = Unwrapper.unwrapObject(instanceFieldGet.getObject(), objClass);
-          logger.debug("Unwrapped target: {}", target);
-        } else {
-          target = objectService.lookupObject(instanceFieldGet.getObjectRef());
-          logger.debug("Loaded target: {}", target);
-        }
-        if (target == null) {
-          throw new RuntimeException("Accessing a field on null object will yield a NPE!");
-        }
-        fieldValue = field.get(target);
-      } catch (Exception e) {
-        exceptionWhileInvoking = e;
-        logger.error("Caught and assigned to exceptionWhileInvoking", e);
-      }
-    }
-    //store in object map
-    if (fieldValue != null) {
-      objKey = objectService.storeObject(fieldValue);
-    }
-
-    /** 3. Wrap return value or exception **/
-    DataMessage invokedMsg = null;
-
-    if (exceptionWhileLoading != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileLoading, recordOffset);
-    } else if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileInvoking, recordOffset);
-    } else {
-      if (Wrapper.isWrappable(fieldValue)) {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, recordOffset);
-      } else {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, field.getType(), objKey, false, recordOffset);
-      }
-    }
-
-    /** 4. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    logger.traceExit();
-    return;
-
-  }
-
-  public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
-    logger.traceEntry("with staticPart: {}, sender: {}, target: {}", staticPart.getSignature(), sender, target);
-
-    /** 1. Wrap message **/
-    final DataMessage msg = dataMessageBuilder.buildGetObject(id, staticPart, sender, target);
-
-    /** 2. Send message **/
-    //ATTENTION: this send is asynchronous. Must call get later.
-    dataMessageDispatcher.send(msg);
-
-    if (mustWait(msg)) {
-      /** 3. Receive message **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-
-    /** 4. Get Object **/
-
-    Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
-    field.setAccessible(true);
-
-    IllegalAccessException exceptionGettingObject = null;
-    Object fieldValue = null;
-    String objKey = null;
-    try {
-      fieldValue = field.get(target);
-    } catch (IllegalAccessException iae) {
-      exceptionGettingObject = iae;
-      logger.error("Caught and assigned to exceptionGettingObject", iae);
-    }
-    //store in object map
-    if (fieldValue != null) {
-      objKey = objectService.storeObject(fieldValue);
-    }
-
-    /** 5. Wrap exception if any **/
-    DataMessage invokedMsg = null;
-    if (exceptionGettingObject != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionGettingObject, null);
-    } else {
-      if (Wrapper.isWrappable(fieldValue)) {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, fieldValue, field.getType(), null, false, null);
-      } else {
-        invokedMsg = dataMessageBuilder.buildReturnValue(id, null, field.getType(), objKey, false, null);
-      }
-    }
-
-    /** 6. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    if (mustWait(invokedMsg)) {
-      /** 7. Receive object/exception **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 8. Return or re-raise exception **/
-    if (exceptionGettingObject != null) {
-      throw exceptionGettingObject;
-    }
-
-    logger.traceExit("with fieldValue: {}", fieldValue);
-    return fieldValue;
-  }
-
-  public static void incomingPutStatic(Fields.StaticFieldPut staticFieldPut, long recordOffset) {
-    logger.traceEntry("with staticFieldPut: {}, recordOffset", staticFieldPut, recordOffset);
-
-    /** 1. Load class and field **/
-    final Class clazz;
-    Field field = null;
-    Exception exceptionWhileLoading = null;
-    try {
-      clazz = Class.forName(staticFieldPut.getClass_().getName());
-      field = clazz.getDeclaredField(staticFieldPut.getField().getName());
-    } catch (Exception e) {
-      exceptionWhileLoading = e;
-      logger.error("Caught and assigned to exceptionWhileLoading", e);
-    }
-
-    /** 2. If class and field loaded, unwrap value and invoke field set **/
-    //TODO unwrap or load object before and have a separate exception for this step
-
-    Exception exceptionWhileInvoking = null;
-
-    if (exceptionWhileLoading == null) {
-      field.setAccessible(true);
-      try {
-        final Object value;
-        if (staticFieldPut.hasObject()) {
-          value = Unwrapper.unwrapObject(staticFieldPut.getObject(), field.getType());
-          logger.debug("Unwrapped value: {}", value);
-        } else {
-          value = objectService.lookupObject(staticFieldPut.getObjectRef());
-          logger.debug("Loaded value: {}", value);
-        }
-        //invoke set
-        field.set(null, value);
-      } catch (Exception e) {
-        exceptionWhileInvoking = e;
-        logger.error("Caught and assigned to exceptionWhileInvoking", e);
-      }
-    }
-
-
-    /** 3. Wrap return value or exception **/
-    DataMessage invokedMsg = null;
-
-    if (exceptionWhileLoading != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileLoading, recordOffset);
-    } else if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileInvoking, recordOffset);
-    } else {
-      invokedMsg = dataMessageBuilder.buildPutStaticDone(id, staticFieldPut, field.getType(), recordOffset);
-    }
-
-
-    /** 4. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    logger.traceExit();
-    return;
-
-  }
-
-  public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
-    logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
-
-    /** 1. Wrap message **/
-    final DataMessage msg = dataMessageBuilder.buildPutStatic(id, staticPart, sender, args[0]);
-
-    /** 2. Send message **/
-    //ATTENTION: this send is asynchronous. Must call get later.
-    dataMessageDispatcher.send(msg);
-
-    if (mustWait(msg)) {
-      /** 3. Receive message **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 4. Put Object **/
-
-    Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
-    field.setAccessible(true);
-
-    IllegalAccessException exceptionSettingObject = null;
-    try {
-      //invoke set
-      field.set(null, args[0]);
-    } catch (IllegalAccessException iae) {
-      exceptionSettingObject = iae;
-      logger.error("Caught and assigned to exceptionSettingObject", iae);
-    }
-
-    /** 5. Wrap exception if any **/
-    DataMessage invokedMsg = null;
-    if (exceptionSettingObject != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionSettingObject, null);
-    } else {
-      invokedMsg = dataMessageBuilder.buildPutStaticDone(id, staticPart, sender, args[0]);
-    }
-
-    /** 6. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    if (mustWait(msg)) {
-      /** 7. Receive object/exception **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 8. Return or re-raise exception **/
-    if (exceptionSettingObject != null) {
-      throw exceptionSettingObject;
-    }
-
-    logger.traceExit();
-    return;
-  }
-
-  public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) throws IllegalAccessException {
-    logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
-
-    /** 1. Wrap message **/
-    final DataMessage msg = dataMessageBuilder.buildPutObject(id, staticPart, sender, target, args[0]);
-
-    /** 2. Send message **/
-    //ATTENTION: this send is asynchronous. Must call get later.
-    dataMessageDispatcher.send(msg);
-
-    if (mustWait(msg)) {
-      /** 3. Receive message **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 4. Put Object **/
-
-    Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
-    field.setAccessible(true);
-
-    IllegalAccessException exceptionSettingObject = null;
-    try {
-      //invoke set
-      field.set(target, args[0]);
-    } catch (IllegalAccessException iae) {
-      exceptionSettingObject = iae;
-      logger.error("Caught and assigned to exceptionSettingObject", iae);
-    }
-
-    /** 5. Wrap exception if any **/
-    DataMessage invokedMsg = null;
-    if (exceptionSettingObject != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionSettingObject, null);
-    } else {
-      invokedMsg = dataMessageBuilder.buildPutObjectDone(id, staticPart, sender, target, args[0]);
-    }
-
-    /** 6. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    if (mustWait(invokedMsg)) {
-      /** 7. Receive object/exception **/
-      DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-      logger.debug("Message received: {}", rcvdMsg.getMsgType());
-    }
-
-    /** 8. Return or re-raise exception **/
-    if (exceptionSettingObject != null) {
-      throw exceptionSettingObject;
-    }
-
-    logger.traceExit();
-    return;
-  }
-
-  public static void incomingPutField(Fields.InstanceFieldPut instanceFieldPut, long recordOffset) {
-    logger.traceEntry("with instanceFieldPut:\n {}, recordOffset: {}", instanceFieldPut, recordOffset);
-
-    /** 1. Load class and field **/
-    final Class clazz;
-    Field field = null;
-    Exception exceptionWhileLoading = null;
-    try {
-      clazz = Class.forName(instanceFieldPut.getClass_().getName());
-      field = clazz.getDeclaredField(instanceFieldPut.getField().getName());
-    } catch (Exception e) {
-      exceptionWhileLoading = e;
-      logger.error("Caught and assigned to exceptionWhileLoading", e);
-    }
-
-    /** 2. If class and field loaded, unwrap/load target object and value and invoke field set **/
-    //TODO unwrap or load object before and have a separate exception for this step
-
-    Exception exceptionWhileInvoking = null;
-
-    final Object target;
-    if (exceptionWhileLoading == null) {
-      field.setAccessible(true);
-      try {
-        //unwrap or load target object
-        if (instanceFieldPut.hasObject()) {
-          target = Unwrapper.unwrapObject(instanceFieldPut.getObject(), field.getType());
-          logger.debug("Unwrapped target: {}", target);
-        } else {
-          target = objectService.lookupObject(instanceFieldPut.getObjectRef());
-          logger.debug("Loaded target: {}", target);
-        }
-        //unwrap or load value
-        final Object value;
-        if (instanceFieldPut.hasValueObject()) {
-          value = Unwrapper.unwrapObject(instanceFieldPut.getValueObject(), field.getType());
-          logger.debug("Unwrapped value: {}", value);
-        } else {
-          value = objectService.lookupObject(instanceFieldPut.getValueObjectRef());
-          logger.debug("Loaded value: {}", value);
-        }
-        //invoke set
-        field.set(target, value);
-      } catch (Exception e) {
-        exceptionWhileInvoking = e;
-        logger.error("Caught and assigned to exceptionWhileInvoking", e);
-      }
-    }
-
-    /** 3. Wrap return value or exception **/
-    DataMessage invokedMsg = null;
-
-    if (exceptionWhileLoading != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileLoading, recordOffset);
-    } else if (exceptionWhileInvoking != null) {
-      invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(id, field, exceptionWhileInvoking, recordOffset);
-    } else {
-      invokedMsg = dataMessageBuilder.buildPutObjectDone(id, instanceFieldPut, field.getType(), recordOffset);
-    }
-
-
-    /** 4. Send object/exception **/
-    dataMessageDispatcher.send(invokedMsg);
-
-    logger.traceExit();
-    return;
-
-  }
-
-  // </editor-fold>
-
-  private static boolean mustWait(DataMessage dataMessage) {
-    return true;
-  }
-
-  /**
-   * The Concentrator takes 1 only argument, which is the location of the configuration (.properties) file
-   *
-   * @param args
-   */
-  public static void main(final String[] args) {
-    if (args.length != 1) {
-      System.err.println("Please provide the path to a configuration file");
-      System.exit(1);
-    }
-
-    final Properties properties = new Properties();
-    AbstractModule module = new AbstractModule() {
-      @Override
-      protected void configure() {
+        /** 4. Load and initialize class  -  WARNING: For some reason the class is not being initialized! **/
+        Class clazz = null;
+        ClassNotFoundException exceptionWhileLoadingClass = null;
         try {
-          properties.load(new FileInputStream(args[0]));
-        } catch (IOException e) {
-          logger.error("Could not load properties", e);
-          System.err.println("Please provide a valid path to the configuration file");
-          e.printStackTrace();
-          System.exit(2);
+            clazz = Class.forName(staticPart.getSignature().getDeclaringType().getName());
+            //Class.forName(codeSignature.getDeclaringTypeName(),true, Concentrator.class.getClassLoader());
+        } catch (ClassNotFoundException cnfe) {
+            exceptionWhileLoadingClass = cnfe;
+            logger.error("Caught and assigned to exceptionWhileLoadingClass", cnfe);
         }
 
-        Concentrator.id = Integer.parseInt(properties.getProperty("id"));
+        /** 5. Wrap class/exception if any **/
+        String objKey = null;
+        final DataMessage invokedMsg;
+        if (exceptionWhileLoadingClass != null) {
+            invokedMsg = dataMessageBuilder.buildInitializerThrowable(uuid, staticPart, exceptionWhileLoadingClass);
+        } else {
+            invokedMsg = dataMessageBuilder.buildLoadedClass(uuid, clazz);
+        }
 
-        Names.bindProperties(binder(), properties);
-        //bind implementations
-        bind(ObjectService.class).to(BiMapObjectService.class);
-        bind(ThreadFactory.class).to(ExecThreadFactory.class);
-        bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class);
-        bind(DataMessageDispatcher.class).to(KafkaDataMessageDispatcher.class);
-        bind(ExecutorService.class).to(ExtendedExecutor.class);
-        bind(ExecutionService.class).to(ExecutionThreadService.class);
-        //fields to be injected in Concentrator are static
-        requestStaticInjection(Concentrator.class);
-      }
-    };
+        /** 6. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
 
-    Injector injector = Guice.createInjector(module);
+        if (mustWait(invokedMsg)) {
+            /** 7. Receive object/exception **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
 
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
 
-    final Set<Service> services = new HashSet<Service>();
-    services.add((Service) injector.getInstance(DataMessageDispatcher.class));
-    services.add((Service) injector.getInstance(ExecutionThreadService.class));
-    services.add((Service) injector.getInstance(ObjectService.class));
-    final ServiceManager manager = new ServiceManager(services);
+        /** 8. Return or re-raise exception **/
+        if (exceptionWhileLoadingClass != null) {
+            throw exceptionWhileLoadingClass;
+        }
 
-    manager.addListener(new ServiceManager.Listener() {
-                          public void stopped() {
-                            logger.info("Service manager stopped.");
-                          }
+        //Since class initialization is not working, we will return false if we want to aspectj to proceed(), indicating class isn't initialized
+        boolean returnValue = false;
+        logger.traceExit("with return bool: {}", returnValue);
+        return returnValue;
+    }
 
-                          public void healthy() {
-                            // Services have been initialized and are healthy, start accepting requests...
-                            logger.info("Service manager is healthy.");
-                            dataMessageDispatcher.acceptConnections(true);
-                          }
+    /**
+     * @param constructorCall
+     * @throws Throwable
+     */
+    static void incomingConstructor(ConstructorCall constructorCall, long recordOffset) {
+        logger.traceEntry("with constructorCall: {}, recordOffset", constructorCall, recordOffset);
 
-                          public void failure(Service service) {
-                            // Something failed, at this point we could log it, notify a load balancer, or take
-                            // some other action.  For now we will just exit.
-                            logger.fatal("Service manager failed. Exiting ...", service.failureCause());
-                            System.exit(1);
-                          }
-                        },
-      MoreExecutors.directExecutor());
-
-    /** Add shutdown hook **/
-    Runtime.getRuntime().addShutdownHook(new Thread() {
-      @Override
-      public void run() {
+        /** 1. Unwrap message and load constructor **/
+        Class clazz = null;
+        final List<Class> paramClasses = new ArrayList<>();
+        Constructor constructor = null;
+        Exception exceptionWhileLoading = null;
         try {
-          manager.stopAsync().awaitStopped(5, TimeUnit.SECONDS);
-        } catch (TimeoutException ie) {
-          logger.error("Timeout exception in shutdown hook", ie);
+            clazz = Class.forName(constructorCall.getClass_().getName());
+            for (Primitives.Object param : constructorCall.getParameterList()) {
+                paramClasses.add(Class.forName(param.getClass_().getName()));
+            }
+            constructor = clazz.getDeclaredConstructor((Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
+        } catch (Exception e) {
+            exceptionWhileLoading = e;
+            logger.error("Caught and assigned to exceptionWhileLoading", e);
         }
-      }
-    });
 
-    //start services
-    manager.startAsync();
 
-  }
+        /** 2. If class and constructor loaded, unwrap arguments and invoke constructor **/
+        Exception exceptionWhileInvoking = null;
+        Object newObject = null;
+        String objKey = null;
+
+        if (exceptionWhileLoading == null) {
+            constructor.setAccessible(true);
+            try {
+                List<Object> args = new ArrayList<>();
+                for (int i = 0; i < constructorCall.getParameterCount(); i++) {
+                    Primitives.Object obj = constructorCall.getParameter(i);
+                    if (obj.getIsNull()) {
+                        args.add(null);
+                    } else if (obj.hasRef()) {
+                        args.add(objectService.lookupObject(obj.getRef()));
+                    } else {
+                        args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
+                    }
+                }
+                newObject = constructor.newInstance(args.toArray(new Object[args.size()]));
+            } catch (Exception ite) {
+                exceptionWhileInvoking = ite;
+                logger.error("Caught and assigned to exceptionWhileInvoking", ite);
+            }
+        }
+        //store in object map
+        if (newObject != null) {
+            objKey = objectService.storeObject(newObject);
+        }
+
+        /** 3. Wrap new object or exception **/
+        final DataMessage invokedMsg;
+
+        if (exceptionWhileLoading != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, constructor, exceptionWhileLoading, recordOffset);
+        } else if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, constructor, exceptionWhileInvoking, recordOffset);
+        } else {
+            if (Wrapper.isWrappable(newObject)) {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, newObject, clazz, null, false, recordOffset);
+            } else {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, clazz, objKey, false, recordOffset);
+            }
+        }
+
+
+        /** 4. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        logger.traceExit();
+        return;
+    }
+
+    public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
+        logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
+
+        final ConstructorSignature constructorSignature = (ConstructorSignature) staticPart.getSignature();
+
+        /** 1. Wrap message **/
+        final DataMessage callMsg = dataMessageBuilder.buildConstructor(uuid, staticPart, sender, args);
+
+        /** 2. Send message **/
+        //ATTENTION: this send is asynchronous. Must call get later.
+        dataMessageDispatcher.send(callMsg);
+
+        if (mustWait(callMsg)) {
+            /** 3. Receive message **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+
+        /** 4. Invoke constructor **/
+
+        Constructor constructor = constructorSignature.getConstructor();
+
+        Object newObject = null;
+        Exception exceptionWhileInvoking = null;
+        constructor.setAccessible(true);
+        String objKey = null;
+        try {
+            newObject = constructor.newInstance(args);
+        } catch (Exception ite) {
+            exceptionWhileInvoking = ite;
+            logger.error("Caught and assigned to exceptionWhileInvoking", ite);
+        }
+
+        //store in object map
+        if (newObject != null) {
+            objKey = objectService.storeObject(newObject);
+        }
+
+        /** 5. Wrap new object or exception **/
+        DataMessage invokedMsg = null;
+
+        if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, constructor, exceptionWhileInvoking, null);
+        } else {
+            if (Wrapper.isWrappable(newObject)) {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, newObject, constructor.getClass(), null, false, null);
+            } else {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, constructor.getClass(), objKey, false, null);
+            }
+        }
+
+        /** 6. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        if (mustWait(invokedMsg)) {
+            /** 7. Receive object/exception **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 8. Return object or re-raise exception **/
+        if (exceptionWhileInvoking != null) {
+            if (exceptionWhileInvoking instanceof InvocationTargetException) {
+                throw exceptionWhileInvoking.getCause();
+            } else {
+                throw exceptionWhileInvoking;
+            }
+        }
+
+        logger.traceExit("with new object: {}", newObject);
+        return newObject;
+    }
+    // </editor-fold>
+
+    // <editor-fold defaultstate="collapsed" desc="METHOD CALLS">
+
+    public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
+        logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
+
+        final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
+
+        /** 1. Wrap message **/
+        final DataMessage msg = dataMessageBuilder.buildInstanceMethod(uuid, staticPart, sender, target, args);
+
+
+        /** 2. Send message **/
+        //ATTENTION: this send is asynchronous. Must call get later.
+        dataMessageDispatcher.send(msg);
+
+        if (mustWait(msg)) {
+            /** 3. Receive message **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+
+        /** 4. Invoke method **/
+
+        Method method = methodSignature.getMethod();
+
+        Exception exceptionWhileInvoking = null;
+        method.setAccessible(true);
+        try {
+            method.invoke(target, args);
+        } catch (Exception e) {
+            exceptionWhileInvoking = e;
+            logger.error("Caught and assigned to exceptionWhileInvoking", e);
+        }
+
+        /** 5. Wrap new object or exception **/
+        final DataMessage invokedMsg;
+
+        if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking, null);
+        } else {
+            invokedMsg = dataMessageBuilder.buildReturnValue(uuid, Void.class, method.getReturnType(), null, true, null);
+        }
+
+
+        /** 6. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        if (mustWait(invokedMsg)) {
+            /** 7. Receive object/exception **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 8. Return object or re-raise exception **/
+        if (exceptionWhileInvoking != null) {
+            if (exceptionWhileInvoking instanceof InvocationTargetException) {
+                throw exceptionWhileInvoking.getCause();
+            } else {
+                throw exceptionWhileInvoking;
+            }
+        }
+
+        logger.traceExit();
+        return;
+    }
+
+    public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
+        logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
+
+        final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
+
+        /** 1. Wrap message **/
+        final DataMessage msg = dataMessageBuilder.buildInstanceMethod(uuid, staticPart, sender, target, args);
+
+
+        /** 2. Send message **/
+        //ATTENTION: this send is asynchronous. Must call get later.
+        dataMessageDispatcher.send(msg);
+
+        if (mustWait(msg)) {
+            /** 3. Receive message **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+
+        /** 4. Invoke method **/
+
+        Method method = methodSignature.getMethod();
+        Object returnValue = null;
+        Exception exceptionWhileInvoking = null;
+        method.setAccessible(true);
+        String objKey = null;
+        try {
+            returnValue = method.invoke(target, args);
+        } catch (Exception e) {
+            exceptionWhileInvoking = e;
+            logger.error("Caught and assigned to exceptionWhileInvoking", e);
+        }
+
+        //store in object map
+        if (returnValue != null) {
+            objKey = objectService.storeObject(returnValue);
+        }
+
+        /** 5. Wrap new object or exception **/
+        final DataMessage invokedMsg;
+
+        if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking, null);
+        } else {
+            if (Wrapper.isWrappable(returnValue)) {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null, false, null);
+            } else {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey, false, null);
+            }
+        }
+
+
+        /** 6. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        if (mustWait(invokedMsg)) {
+            /** 7. Receive object/exception **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 8. Return object or re-raise exception **/
+        if (exceptionWhileInvoking != null) {
+            if (exceptionWhileInvoking instanceof InvocationTargetException) {
+                throw exceptionWhileInvoking.getCause();
+            } else {
+                throw exceptionWhileInvoking;
+            }
+        }
+
+        logger.traceExit("with return value: {}", returnValue);
+        return returnValue;
+    }
+
+    /**
+     * This method currently only support calling method whose value is fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
+     *
+     * @param instanceMethodCall
+     */
+    static void incomingInstanceMethod(InstanceMethodCall instanceMethodCall, long recordOffset) {
+        logger.traceEntry("with instanceMethodCall: {}, recordOffset: {}", instanceMethodCall, recordOffset);
+
+        /** 1. Unwrap message and load class **/
+        Class clazz = null;
+        Method method = null;
+        Exception exceptionWhileLoading = null;
+        List<Class> paramClasses = new ArrayList<>();
+        try {
+            clazz = Class.forName(instanceMethodCall.getClass_().getName());
+            for (Primitives.Object obj : instanceMethodCall.getParameterList()) {
+                Class paramClass = Unwrapper.getClassForPrimitive(obj.getClass_().getName());
+                if (paramClass == null) {
+                    paramClass = Class.forName(obj.getClass_().getName());
+                }
+                paramClasses.add(paramClass);
+            }
+        } catch (Exception e) {
+            exceptionWhileLoading = e;
+            logger.error("Caught and assigned to exceptionWhileLoading", e);
+        }
+
+        /** 2. If class loaded, unwrap/retrieve arguments and invoke method **/
+        Exception exceptionWhileInvoking = null;
+        Object returnValue = null;
+        String objKey = null;
+        if (exceptionWhileLoading == null) {
+            List<Object> args = new ArrayList<>();
+            for (int i = 0; i < instanceMethodCall.getParameterCount(); i++) {
+                Primitives.Object obj = instanceMethodCall.getParameter(i);
+                if (obj.getIsNull()) {
+                    args.add(null);
+                } else if (obj.hasRef()) {
+                    args.add(objectService.lookupObject(obj.getRef()));
+                } else {
+                    args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
+                }
+            }
+            try {
+                Object target = null;
+                if (instanceMethodCall.hasObject()) {
+                    Class objClass = Class.forName(instanceMethodCall.getClass_().getName());
+                    target = Unwrapper.unwrapObject(instanceMethodCall.getObject(), objClass);
+                    logger.debug("Unwrapped target: {}", target);
+                } else {
+                    target = objectService.lookupObject(instanceMethodCall.getObjectRef());
+                    logger.debug("Loaded target: {}", target);
+                }
+                if (target == null) {
+                    throw new RuntimeException("Invoking a method on null object will yield a NPE!");
+                }
+                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getName());
+                if (method == null) {
+                    //TODO perhaps this should be thrown by ReflectionHelper instead of returning null
+                    throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", instanceMethodCall.getName(), clazz.getName()));
+                }
+                method.setAccessible(true);
+                returnValue = method.invoke(target, args.toArray());
+            } catch (Exception e) {
+                exceptionWhileInvoking = e;
+                logger.error("Caught and assigned to exceptionWhileInvoking", e);
+            }
+        }
+
+        //store in object map
+        final boolean isVoid = method.getReturnType() == void.class;
+        if (returnValue != null && !isVoid) {
+            objKey = objectService.storeObject(returnValue);
+        }
+        if (isVoid) {
+            returnValue = Void.class;
+        }
+
+        /** 3. Wrap return value or exception **/
+        final DataMessage invokedMsg;
+
+        if (exceptionWhileLoading != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileLoading, recordOffset);
+        } else if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking, recordOffset);
+        } else {
+            if (Wrapper.isWrappable(returnValue)) {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null, isVoid, recordOffset);
+            } else {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey, isVoid, recordOffset);
+            }
+        }
+
+        /** 4. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        logger.traceExit();
+        return;
+    }
+
+    public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
+        logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
+
+        final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
+
+        /** 1. Wrap message **/
+        final DataMessage msg = dataMessageBuilder.buildClassMethod(uuid, staticPart, sender, args);
+
+
+        /** 2. Send message **/
+        //ATTENTION: this send is asynchronous. Must call get later.
+        dataMessageDispatcher.send(msg);
+
+        if (mustWait(msg)) {
+            /** 3. Receive message **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+
+        /** 4. Invoke method **/
+
+        Method method = methodSignature.getMethod();
+        Exception exceptionWhileInvoking = null;
+        method.setAccessible(true);
+        try {
+            method.invoke(null, args);
+        } catch (Exception e) {
+            exceptionWhileInvoking = e;
+            logger.error("Caught and assigned to exceptionWhileInvoking", e);
+        }
+
+        /** 5. Wrap new object or exception **/
+        final DataMessage invokedMsg;
+
+        if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking, null);
+        } else {
+            invokedMsg = dataMessageBuilder.buildReturnValue(uuid, Void.class, method.getReturnType(), null, true, null);
+        }
+
+
+        /** 6. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        if (mustWait(invokedMsg)) {
+            /** 7. Receive object/exception **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 8. Return object or re-raise exception **/
+        if (exceptionWhileInvoking != null) {
+            if (exceptionWhileInvoking instanceof InvocationTargetException) {
+                throw exceptionWhileInvoking.getCause();
+            } else {
+                throw exceptionWhileInvoking;
+            }
+        }
+
+        logger.traceExit();
+        return;
+    }
+
+    public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
+        logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
+
+        final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
+
+        /** 1. Wrap message **/
+        final DataMessage msg = dataMessageBuilder.buildClassMethod(uuid, staticPart, sender, args);
+
+
+        /** 2. Send message **/
+        //ATTENTION: this send is asynchronous. Must call get later.
+        dataMessageDispatcher.send(msg);
+
+        if (mustWait(msg)) {
+            /** 3. Receive message **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+
+        /** 4. Invoke method **/
+
+        Method method = methodSignature.getMethod();
+        Object returnValue = null;
+        String objKey = null;
+        Exception exceptionWhileInvoking = null;
+        method.setAccessible(true);
+        try {
+            returnValue = method.invoke(null, args);
+        } catch (Exception e) {
+            exceptionWhileInvoking = e;
+            logger.error("Caught and assigned to exceptionWhileInvoking", e);
+        }
+
+        //store in object map
+        if (returnValue != null) {
+            objKey = objectService.storeObject(returnValue);
+        }
+
+        /** 5. Wrap new object or exception **/
+        final DataMessage invokedMsg;
+
+        if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking, null);
+        } else {
+            if (Wrapper.isWrappable(returnValue)) {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null, false, null);
+            } else {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey, false, null);
+            }
+        }
+
+
+        /** 6. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        if (mustWait(invokedMsg)) {
+            /** 7. Receive object/exception **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 8. Return object or re-raise exception **/
+        if (exceptionWhileInvoking != null) {
+            if (exceptionWhileInvoking instanceof InvocationTargetException) {
+                throw exceptionWhileInvoking.getCause();
+            } else {
+                throw exceptionWhileInvoking;
+            }
+        }
+
+        logger.traceExit("with return value: {}", returnValue);
+        return returnValue;
+    }
+
+
+    /**
+     * This method currently only support calling method whose value is fully contained in the msg. i.e. --> primitives, and Strings that haven't been trimmed.
+     *
+     * @param classMethodCall
+     */
+    static void incomingClassMethod(ClassMethodCall classMethodCall, long recordOffset) {
+        logger.traceEntry("with classMethodCall: {}, recordOffset: {}", classMethodCall, recordOffset);
+
+        /** 1. Unwrap message and load class **/
+        Class clazz = null;
+        Method method = null;
+        Exception exceptionWhileLoading = null;
+        List<Class> paramClasses = new ArrayList<>();
+        try {
+            logger.debug("Attempting to load (initialize) class");
+            clazz = Class.forName(classMethodCall.getClass_().getName());
+            for (Primitives.Object obj : classMethodCall.getParameterList()) {
+                Class paramClass = Unwrapper.getClassForPrimitive(obj.getClass_().getName());
+                if (paramClass == null) {
+                    paramClass = Class.forName(obj.getClass_().getName());
+                }
+                paramClasses.add(paramClass);
+            }
+        } catch (Exception e) {
+            exceptionWhileLoading = e;
+            logger.error("Caught and assigned to exceptionWhileLoading", e);
+        }
+
+        /** 2. If class loaded, unwrap/retrieve arguments and invoke method **/
+        Exception exceptionWhileInvoking = null;
+        Object returnValue = null;
+        String objKey = null;
+        if (exceptionWhileLoading == null) {
+            logger.debug("Unwrapping parameters");
+            List<Object> args = new ArrayList<>();
+            for (int i = 0; i < classMethodCall.getParameterCount(); i++) {
+                Primitives.Object obj = classMethodCall.getParameter(i);
+                if (obj.getIsNull()) {
+                    args.add(null);
+                } else if (obj.hasRef()) {
+                    args.add(objectService.lookupObject(obj.getRef()));
+                } else {
+                    args.add(Unwrapper.unwrapObject(obj, paramClasses.get(i)));
+                }
+            }
+            try {
+                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), classMethodCall.getName());
+                if (method == null) {
+                    throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", classMethodCall.getName(), clazz.getName()));
+                }
+                method.setAccessible(true);
+                returnValue = method.invoke(null, args.toArray());
+            } catch (Exception e) {
+                exceptionWhileInvoking = e;
+                logger.error("Caught and assigned to exceptionWhileInvoking", e);
+            }
+        }
+
+        //store in object map
+        final boolean isVoid = method.getReturnType() == void.class;
+        if (returnValue != null && !isVoid) {
+            objKey = objectService.storeObject(returnValue);
+        }
+        if (isVoid) {
+            returnValue = Void.class;
+        }
+
+        /** 3. Wrap return value or exception **/
+        final DataMessage invokedMsg;
+
+        if (exceptionWhileLoading != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileLoading, recordOffset);
+        } else if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking, recordOffset);
+        } else {
+            if (Wrapper.isWrappable(returnValue)) {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null, isVoid, recordOffset);
+            } else {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey, isVoid, recordOffset);
+            }
+        }
+
+        /** 4. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        logger.traceExit();
+        return;
+    }
+
+
+    // </editor-fold>
+
+    // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
+
+    public static void incomingGetStatic(Fields.StaticFieldGet staticFieldGet, long recordOffset) {
+        logger.traceEntry("with staticFieldGet: {}, recordOffset: {}", staticFieldGet, recordOffset);
+
+        /** 1. Get Object **/
+        Class clazz = null;
+        Field field = null;
+        Exception exceptionWhileLoading = null;
+        try {
+            clazz = Class.forName(staticFieldGet.getClass_().getName());
+            field = clazz.getDeclaredField(staticFieldGet.getField().getName());
+            logger.debug("field {} is of type {}", field.getName(), field.getType());
+        } catch (Exception e) {
+            exceptionWhileLoading = e;
+            logger.error("Caught and assigned to exceptionWhileLoading", e);
+        }
+
+        /** 2. If class and field loaded, invoke field get **/
+        Exception exceptionWhileInvoking = null;
+
+        String objKey = null;
+        Object fieldValue = null;
+        if (exceptionWhileLoading == null) {
+            field.setAccessible(true);
+            try {
+                fieldValue = field.get(null);
+            } catch (Exception e) {
+                exceptionWhileInvoking = e;
+                logger.error("Caught and assigned to exceptionWhileInvoking", e);
+            }
+        }
+        //store in object map
+        if (fieldValue != null) {
+            objKey = objectService.storeObject(fieldValue);
+        }
+
+        /** 3. Wrap return value or exception **/
+        DataMessage invokedMsg = null;
+
+        if (exceptionWhileLoading != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, recordOffset);
+        } else if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, recordOffset);
+        } else {
+            if (Wrapper.isWrappable(fieldValue)) {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null, false, recordOffset);
+            } else {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false, recordOffset);
+            }
+        }
+
+
+        /** 4. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        logger.traceExit();
+        return;
+
+    }
+
+    public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
+        logger.traceEntry("with staticPart: {}, sender: {}", staticPart.getSignature(), sender);
+
+        /** 1. Wrap message **/
+        final DataMessage msg = dataMessageBuilder.buildGetStatic(uuid, staticPart, sender);
+
+        /** 2. Send message **/
+        //ATTENTION: this send is asynchronous. Must call get later.
+        dataMessageDispatcher.send(msg);
+
+        if (mustWait(msg)) {
+            /** 3. Receive message **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 4. Get Object **/
+
+        Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
+        field.setAccessible(true);
+
+        IllegalAccessException exceptionGettingObject = null;
+        Object fieldValue = null;
+        String objKey = null;
+        try {
+            fieldValue = field.get(null);
+        } catch (IllegalAccessException iae) {
+            exceptionGettingObject = iae;
+            logger.error("Caught and assigned to exceptionGettingObject", iae);
+        }
+        //store in object map
+        if (fieldValue != null) {
+            objKey = objectService.storeObject(fieldValue);
+        }
+
+        /** 5. Wrap exception if any **/
+        DataMessage invokedMsg = null;
+        if (exceptionGettingObject != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionGettingObject, null);
+        } else {
+            if (Wrapper.isWrappable(fieldValue)) {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null, false, null);
+            } else {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false, null);
+            }
+        }
+
+        /** 6. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        if (mustWait(invokedMsg)) {
+            /** 7. Receive object/exception **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 8. Return or re-raise exception **/
+        if (exceptionGettingObject != null) {
+            throw exceptionGettingObject;
+        }
+
+        logger.traceExit("with fieldValue: {}", fieldValue);
+        return fieldValue;
+    }
+
+    public static void incomingGetObject(Fields.InstanceFieldGet instanceFieldGet, long recordOffset) {
+        logger.traceEntry("with instanceFieldGet: {}, recordOffset: {}", instanceFieldGet, recordOffset);
+
+        /** 1. Get Object **/
+        Class clazz = null;
+        Field field = null;
+        Exception exceptionWhileLoading = null;
+        try {
+            clazz = Class.forName(instanceFieldGet.getClass_().getName());
+            field = clazz.getDeclaredField(instanceFieldGet.getField().getName());
+        } catch (Exception e) {
+            exceptionWhileLoading = e;
+            logger.error("Caught and assigned to exceptionWhileLoading", e);
+        }
+
+        /** 2. If class and field loaded, invoke field get **/
+        Exception exceptionWhileInvoking = null;
+
+        Object fieldValue = null;
+        String objKey = null;
+        if (exceptionWhileLoading == null) {
+            field.setAccessible(true);
+            try {
+                Object target = null;
+                if (instanceFieldGet.hasObject()) {
+                    Class objClass = Class.forName(instanceFieldGet.getClass_().getName());
+                    target = Unwrapper.unwrapObject(instanceFieldGet.getObject(), objClass);
+                    logger.debug("Unwrapped target: {}", target);
+                } else {
+                    target = objectService.lookupObject(instanceFieldGet.getObjectRef());
+                    logger.debug("Loaded target: {}", target);
+                }
+                if (target == null) {
+                    throw new RuntimeException("Accessing a field on null object will yield a NPE!");
+                }
+                fieldValue = field.get(target);
+            } catch (Exception e) {
+                exceptionWhileInvoking = e;
+                logger.error("Caught and assigned to exceptionWhileInvoking", e);
+            }
+        }
+        //store in object map
+        if (fieldValue != null) {
+            objKey = objectService.storeObject(fieldValue);
+        }
+
+        /** 3. Wrap return value or exception **/
+        DataMessage invokedMsg = null;
+
+        if (exceptionWhileLoading != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, recordOffset);
+        } else if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, recordOffset);
+        } else {
+            if (Wrapper.isWrappable(fieldValue)) {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null, false, recordOffset);
+            } else {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false, recordOffset);
+            }
+        }
+
+        /** 4. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        logger.traceExit();
+        return;
+
+    }
+
+    public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
+        logger.traceEntry("with staticPart: {}, sender: {}, target: {}", staticPart.getSignature(), sender, target);
+
+        /** 1. Wrap message **/
+        final DataMessage msg = dataMessageBuilder.buildGetObject(uuid, staticPart, sender, target);
+
+        /** 2. Send message **/
+        //ATTENTION: this send is asynchronous. Must call get later.
+        dataMessageDispatcher.send(msg);
+
+        if (mustWait(msg)) {
+            /** 3. Receive message **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+
+        /** 4. Get Object **/
+
+        Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
+        field.setAccessible(true);
+
+        IllegalAccessException exceptionGettingObject = null;
+        Object fieldValue = null;
+        String objKey = null;
+        try {
+            fieldValue = field.get(target);
+        } catch (IllegalAccessException iae) {
+            exceptionGettingObject = iae;
+            logger.error("Caught and assigned to exceptionGettingObject", iae);
+        }
+        //store in object map
+        if (fieldValue != null) {
+            objKey = objectService.storeObject(fieldValue);
+        }
+
+        /** 5. Wrap exception if any **/
+        DataMessage invokedMsg = null;
+        if (exceptionGettingObject != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionGettingObject, null);
+        } else {
+            if (Wrapper.isWrappable(fieldValue)) {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null, false, null);
+            } else {
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false, null);
+            }
+        }
+
+        /** 6. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        if (mustWait(invokedMsg)) {
+            /** 7. Receive object/exception **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 8. Return or re-raise exception **/
+        if (exceptionGettingObject != null) {
+            throw exceptionGettingObject;
+        }
+
+        logger.traceExit("with fieldValue: {}", fieldValue);
+        return fieldValue;
+    }
+
+    public static void incomingPutStatic(Fields.StaticFieldPut staticFieldPut, long recordOffset) {
+        logger.traceEntry("with staticFieldPut: {}, recordOffset", staticFieldPut, recordOffset);
+
+        /** 1. Load class and field **/
+        final Class clazz;
+        Field field = null;
+        Exception exceptionWhileLoading = null;
+        try {
+            clazz = Class.forName(staticFieldPut.getClass_().getName());
+            field = clazz.getDeclaredField(staticFieldPut.getField().getName());
+        } catch (Exception e) {
+            exceptionWhileLoading = e;
+            logger.error("Caught and assigned to exceptionWhileLoading", e);
+        }
+
+        /** 2. If class and field loaded, unwrap value and invoke field set **/
+        //TODO unwrap or load object before and have a separate exception for this step
+
+        Exception exceptionWhileInvoking = null;
+
+        if (exceptionWhileLoading == null) {
+            field.setAccessible(true);
+            try {
+                final Object value;
+                if (staticFieldPut.hasObject()) {
+                    value = Unwrapper.unwrapObject(staticFieldPut.getObject(), field.getType());
+                    logger.debug("Unwrapped value: {}", value);
+                } else {
+                    value = objectService.lookupObject(staticFieldPut.getObjectRef());
+                    logger.debug("Loaded value: {}", value);
+                }
+                //invoke set
+                field.set(null, value);
+            } catch (Exception e) {
+                exceptionWhileInvoking = e;
+                logger.error("Caught and assigned to exceptionWhileInvoking", e);
+            }
+        }
+
+
+        /** 3. Wrap return value or exception **/
+        DataMessage invokedMsg = null;
+
+        if (exceptionWhileLoading != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, recordOffset);
+        } else if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, recordOffset);
+        } else {
+            invokedMsg = dataMessageBuilder.buildPutStaticDone(uuid, staticFieldPut, field.getType(), recordOffset);
+        }
+
+
+        /** 4. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        logger.traceExit();
+        return;
+
+    }
+
+    public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
+        logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
+
+        /** 1. Wrap message **/
+        final DataMessage msg = dataMessageBuilder.buildPutStatic(uuid, staticPart, sender, args[0]);
+
+        /** 2. Send message **/
+        //ATTENTION: this send is asynchronous. Must call get later.
+        dataMessageDispatcher.send(msg);
+
+        if (mustWait(msg)) {
+            /** 3. Receive message **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 4. Put Object **/
+
+        Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
+        field.setAccessible(true);
+
+        IllegalAccessException exceptionSettingObject = null;
+        try {
+            //invoke set
+            field.set(null, args[0]);
+        } catch (IllegalAccessException iae) {
+            exceptionSettingObject = iae;
+            logger.error("Caught and assigned to exceptionSettingObject", iae);
+        }
+
+        /** 5. Wrap exception if any **/
+        DataMessage invokedMsg = null;
+        if (exceptionSettingObject != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionSettingObject, null);
+        } else {
+            invokedMsg = dataMessageBuilder.buildPutStaticDone(uuid, staticPart, sender, args[0]);
+        }
+
+        /** 6. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        if (mustWait(msg)) {
+            /** 7. Receive object/exception **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 8. Return or re-raise exception **/
+        if (exceptionSettingObject != null) {
+            throw exceptionSettingObject;
+        }
+
+        logger.traceExit();
+        return;
+    }
+
+    public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) throws IllegalAccessException {
+        logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
+
+        /** 1. Wrap message **/
+        final DataMessage msg = dataMessageBuilder.buildPutObject(uuid, staticPart, sender, target, args[0]);
+
+        /** 2. Send message **/
+        //ATTENTION: this send is asynchronous. Must call get later.
+        dataMessageDispatcher.send(msg);
+
+        if (mustWait(msg)) {
+            /** 3. Receive message **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 4. Put Object **/
+
+        Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
+        field.setAccessible(true);
+
+        IllegalAccessException exceptionSettingObject = null;
+        try {
+            //invoke set
+            field.set(target, args[0]);
+        } catch (IllegalAccessException iae) {
+            exceptionSettingObject = iae;
+            logger.error("Caught and assigned to exceptionSettingObject", iae);
+        }
+
+        /** 5. Wrap exception if any **/
+        DataMessage invokedMsg = null;
+        if (exceptionSettingObject != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionSettingObject, null);
+        } else {
+            invokedMsg = dataMessageBuilder.buildPutObjectDone(uuid, staticPart, sender, target, args[0]);
+        }
+
+        /** 6. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        if (mustWait(invokedMsg)) {
+            /** 7. Receive object/exception **/
+            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
+
+            logger.debug("Message received: {}", rcvdMsg.getMsgType());
+        }
+
+        /** 8. Return or re-raise exception **/
+        if (exceptionSettingObject != null) {
+            throw exceptionSettingObject;
+        }
+
+        logger.traceExit();
+        return;
+    }
+
+    public static void incomingPutField(Fields.InstanceFieldPut instanceFieldPut, long recordOffset) {
+        logger.traceEntry("with instanceFieldPut:\n {}, recordOffset: {}", instanceFieldPut, recordOffset);
+
+        /** 1. Load class and field **/
+        final Class clazz;
+        Field field = null;
+        Exception exceptionWhileLoading = null;
+        try {
+            clazz = Class.forName(instanceFieldPut.getClass_().getName());
+            field = clazz.getDeclaredField(instanceFieldPut.getField().getName());
+        } catch (Exception e) {
+            exceptionWhileLoading = e;
+            logger.error("Caught and assigned to exceptionWhileLoading", e);
+        }
+
+        /** 2. If class and field loaded, unwrap/load target object and value and invoke field set **/
+        //TODO unwrap or load object before and have a separate exception for this step
+
+        Exception exceptionWhileInvoking = null;
+
+        final Object target;
+        if (exceptionWhileLoading == null) {
+            field.setAccessible(true);
+            try {
+                //unwrap or load target object
+                if (instanceFieldPut.hasObject()) {
+                    target = Unwrapper.unwrapObject(instanceFieldPut.getObject(), field.getType());
+                    logger.debug("Unwrapped target: {}", target);
+                } else {
+                    target = objectService.lookupObject(instanceFieldPut.getObjectRef());
+                    logger.debug("Loaded target: {}", target);
+                }
+                //unwrap or load value
+                final Object value;
+                if (instanceFieldPut.hasValueObject()) {
+                    value = Unwrapper.unwrapObject(instanceFieldPut.getValueObject(), field.getType());
+                    logger.debug("Unwrapped value: {}", value);
+                } else {
+                    value = objectService.lookupObject(instanceFieldPut.getValueObjectRef());
+                    logger.debug("Loaded value: {}", value);
+                }
+                //invoke set
+                field.set(target, value);
+            } catch (Exception e) {
+                exceptionWhileInvoking = e;
+                logger.error("Caught and assigned to exceptionWhileInvoking", e);
+            }
+        }
+
+        /** 3. Wrap return value or exception **/
+        DataMessage invokedMsg = null;
+
+        if (exceptionWhileLoading != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, recordOffset);
+        } else if (exceptionWhileInvoking != null) {
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, recordOffset);
+        } else {
+            invokedMsg = dataMessageBuilder.buildPutObjectDone(uuid, instanceFieldPut, field.getType(), recordOffset);
+        }
+
+
+        /** 4. Send object/exception **/
+        dataMessageDispatcher.send(invokedMsg);
+
+        logger.traceExit();
+        return;
+
+    }
+
+    // </editor-fold>
+
+    private static boolean mustWait(DataMessage dataMessage) {
+        return true;
+    }
+
+    /**
+     * The Concentrator takes 1 only argument, which is the location of the configuration (.properties) file
+     *
+     * @param args
+     */
+    public static void main(final String[] args) {
+        if (args.length != 1) {
+            System.err.println("Please provide the path to a configuration file");
+            System.exit(1);
+        }
+
+        final Properties properties = new Properties();
+        AbstractModule module = new AbstractModule() {
+            @Override
+            protected void configure() {
+                try {
+                    properties.load(new FileInputStream(args[0]));
+                    properties.put("id", uuid.toString());
+                } catch (IOException e) {
+                    logger.error("Could not load properties", e);
+                    System.err.println("Please provide a valid path to the configuration file");
+                    e.printStackTrace();
+                    System.exit(2);
+                }
+
+                Names.bindProperties(binder(), properties);
+                //bind implementations
+                bind(ObjectService.class).to(BiMapObjectService.class);
+                bind(ThreadFactory.class).to(ExecThreadFactory.class);
+                bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class);
+                bind(DataMessageDispatcher.class).to(KafkaDataMessageDispatcher.class);
+                bind(ExecutorService.class).to(ExtendedExecutor.class);
+                bind(ExecutionService.class).to(ExecutionThreadService.class);
+                //fields to be injected in Concentrator are static
+                requestStaticInjection(Concentrator.class);
+            }
+        };
+
+        Injector injector = Guice.createInjector(module);
+
+
+        final Set<Service> services = new HashSet<Service>();
+        services.add((Service) injector.getInstance(DataMessageDispatcher.class));
+        services.add((Service) injector.getInstance(ExecutionThreadService.class));
+        services.add((Service) injector.getInstance(ObjectService.class));
+        final ServiceManager manager = new ServiceManager(services);
+
+        manager.addListener(new ServiceManager.Listener() {
+                                public void stopped() {
+                                    logger.info("Service manager stopped.");
+                                }
+
+                                public void healthy() {
+                                    // Services have been initialized and are healthy, start accepting requests...
+                                    logger.info("Service manager is healthy.");
+                                    dataMessageDispatcher.acceptConnections(true);
+                                }
+
+                                public void failure(Service service) {
+                                    // Something failed, at this point we could log it, notify a load balancer, or take
+                                    // some other action.  For now we will just exit.
+                                    logger.fatal("Service manager failed. Exiting ...", service.failureCause());
+                                    System.exit(1);
+                                }
+                            },
+                MoreExecutors.directExecutor());
+
+        /** Add shutdown hook **/
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                try {
+                    manager.stopAsync().awaitStopped(5, TimeUnit.SECONDS);
+                } catch (TimeoutException ie) {
+                    logger.error("Timeout exception in shutdown hook", ie);
+                }
+            }
+        });
+
+        //start services
+        manager.startAsync();
+
+    }
 }
