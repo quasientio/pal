@@ -23,221 +23,244 @@ public final class Wrappers {
      *TO DO:  IP or hostname for this Concentrator
      * </pre>
      *
-     * <code>required int32 concentratorId = 1 [default = -1];</code>
+     * <code>required string concentratorUuid = 1;</code>
      */
-    boolean hasConcentratorId();
+    boolean hasConcentratorUuid();
     /**
      * <pre>
      *TO DO:  IP or hostname for this Concentrator
      * </pre>
      *
-     * <code>required int32 concentratorId = 1 [default = -1];</code>
+     * <code>required string concentratorUuid = 1;</code>
      */
-    int getConcentratorId();
+    java.lang.String getConcentratorUuid();
+    /**
+     * <pre>
+     *TO DO:  IP or hostname for this Concentrator
+     * </pre>
+     *
+     * <code>required string concentratorUuid = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getConcentratorUuidBytes();
 
     /**
-     * <code>required string msgType = 2;</code>
+     * <code>required string messageUuid = 2;</code>
+     */
+    boolean hasMessageUuid();
+    /**
+     * <code>required string messageUuid = 2;</code>
+     */
+    java.lang.String getMessageUuid();
+    /**
+     * <code>required string messageUuid = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getMessageUuidBytes();
+
+    /**
+     * <code>required string msgType = 3;</code>
      */
     boolean hasMsgType();
     /**
-     * <code>required string msgType = 2;</code>
+     * <code>required string msgType = 3;</code>
      */
     java.lang.String getMsgType();
     /**
-     * <code>required string msgType = 2;</code>
+     * <code>required string msgType = 3;</code>
      */
     com.google.protobuf.ByteString
         getMsgTypeBytes();
 
     /**
-     * <code>required int64 threadId = 3 [default = -1];</code>
+     * <code>required int64 threadId = 4 [default = -1];</code>
      */
     boolean hasThreadId();
     /**
-     * <code>required int64 threadId = 3 [default = -1];</code>
+     * <code>required int64 threadId = 4 [default = -1];</code>
      */
     long getThreadId();
 
     /**
-     * <code>required int64 currentTime = 4;</code>
+     * <code>required int64 currentTime = 5;</code>
      */
     boolean hasCurrentTime();
     /**
-     * <code>required int64 currentTime = 4;</code>
+     * <code>required int64 currentTime = 5;</code>
      */
     long getCurrentTime();
 
     /**
-     * <code>optional int64 threadSeq = 5;</code>
+     * <code>optional int64 threadSeq = 6;</code>
      */
     boolean hasThreadSeq();
     /**
-     * <code>optional int64 threadSeq = 5;</code>
+     * <code>optional int64 threadSeq = 6;</code>
      */
     long getThreadSeq();
 
     /**
-     * <code>optional int64 following = 6;</code>
+     * <code>optional int64 following = 7;</code>
      */
     boolean hasFollowing();
     /**
-     * <code>optional int64 following = 6;</code>
+     * <code>optional int64 following = 7;</code>
      */
     long getFollowing();
 
     /**
-     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
      */
     boolean hasConstructorCall();
     /**
-     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall getConstructorCall();
     /**
-     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCallOrBuilder getConstructorCallOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
      */
     boolean hasInstanceMethodCall();
     /**
-     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall getInstanceMethodCall();
     /**
-     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCallOrBuilder getInstanceMethodCallOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
      */
     boolean hasClassMethodCall();
     /**
-     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall getClassMethodCall();
     /**
-     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCallOrBuilder getClassMethodCallOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
      */
     boolean hasClinitCall();
     /**
-     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall getClinitCall();
     /**
-     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCallOrBuilder getClinitCallOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
      */
     boolean hasStaticFieldGet();
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet getStaticFieldGet();
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGetOrBuilder getStaticFieldGetOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
      */
     boolean hasStaticFieldPut();
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut getStaticFieldPut();
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder getStaticFieldPutOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
      */
     boolean hasInstanceFieldGet();
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet getInstanceFieldGet();
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGetOrBuilder getInstanceFieldGetOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
      */
     boolean hasInstanceFieldPut();
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut getInstanceFieldPut();
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder getInstanceFieldPutOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
      */
     boolean hasStaticFieldPutDone();
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone getStaticFieldPutDone();
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDoneOrBuilder getStaticFieldPutDoneOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
      */
     boolean hasInstanceFieldPutDone();
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone getInstanceFieldPutDone();
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDoneOrBuilder getInstanceFieldPutDoneOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
      */
     boolean hasRaisedThrowable();
     /**
-     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable getRaisedThrowable();
     /**
-     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowableOrBuilder getRaisedThrowableOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
      */
     boolean hasReturnValue();
     /**
-     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue getReturnValue();
     /**
-     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
      */
     com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValueOrBuilder getReturnValueOrBuilder();
 
@@ -255,7 +278,8 @@ public final class Wrappers {
       super(builder);
     }
     private DataMessage() {
-      concentratorId_ = -1;
+      concentratorUuid_ = "";
+      messageUuid_ = "";
       msgType_ = "";
       threadId_ = -1L;
       currentTime_ = 0L;
@@ -291,40 +315,47 @@ public final class Wrappers {
               }
               break;
             }
-            case 8: {
+            case 10: {
+              com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000001;
-              concentratorId_ = input.readInt32();
+              concentratorUuid_ = bs;
               break;
             }
             case 18: {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000002;
-              msgType_ = bs;
+              messageUuid_ = bs;
               break;
             }
-            case 24: {
+            case 26: {
+              com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000004;
-              threadId_ = input.readInt64();
+              msgType_ = bs;
               break;
             }
             case 32: {
               bitField0_ |= 0x00000008;
-              currentTime_ = input.readInt64();
+              threadId_ = input.readInt64();
               break;
             }
             case 40: {
               bitField0_ |= 0x00000010;
-              threadSeq_ = input.readInt64();
+              currentTime_ = input.readInt64();
               break;
             }
             case 48: {
               bitField0_ |= 0x00000020;
+              threadSeq_ = input.readInt64();
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000040;
               following_ = input.readInt64();
               break;
             }
-            case 58: {
+            case 66: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.Builder subBuilder = null;
-              if (contentCase_ == 7) {
+              if (contentCase_ == 8) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_).toBuilder();
               }
               content_ =
@@ -333,12 +364,12 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 7;
+              contentCase_ = 8;
               break;
             }
-            case 66: {
+            case 74: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.Builder subBuilder = null;
-              if (contentCase_ == 8) {
+              if (contentCase_ == 9) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_).toBuilder();
               }
               content_ =
@@ -347,12 +378,12 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 8;
+              contentCase_ = 9;
               break;
             }
-            case 74: {
+            case 82: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.Builder subBuilder = null;
-              if (contentCase_ == 9) {
+              if (contentCase_ == 10) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_).toBuilder();
               }
               content_ =
@@ -361,12 +392,12 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 9;
+              contentCase_ = 10;
               break;
             }
-            case 82: {
+            case 90: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.Builder subBuilder = null;
-              if (contentCase_ == 10) {
+              if (contentCase_ == 11) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_).toBuilder();
               }
               content_ =
@@ -375,12 +406,12 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 10;
+              contentCase_ = 11;
               break;
             }
-            case 90: {
+            case 98: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.Builder subBuilder = null;
-              if (contentCase_ == 11) {
+              if (contentCase_ == 12) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_).toBuilder();
               }
               content_ =
@@ -389,12 +420,12 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 11;
+              contentCase_ = 12;
               break;
             }
-            case 98: {
+            case 106: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.Builder subBuilder = null;
-              if (contentCase_ == 12) {
+              if (contentCase_ == 13) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_).toBuilder();
               }
               content_ =
@@ -403,12 +434,12 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 12;
+              contentCase_ = 13;
               break;
             }
-            case 106: {
+            case 114: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.Builder subBuilder = null;
-              if (contentCase_ == 13) {
+              if (contentCase_ == 14) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_).toBuilder();
               }
               content_ =
@@ -417,12 +448,12 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 13;
+              contentCase_ = 14;
               break;
             }
-            case 114: {
+            case 122: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.Builder subBuilder = null;
-              if (contentCase_ == 14) {
+              if (contentCase_ == 15) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_).toBuilder();
               }
               content_ =
@@ -431,12 +462,12 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 14;
+              contentCase_ = 15;
               break;
             }
-            case 122: {
+            case 130: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.Builder subBuilder = null;
-              if (contentCase_ == 15) {
+              if (contentCase_ == 16) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_).toBuilder();
               }
               content_ =
@@ -445,12 +476,12 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 15;
+              contentCase_ = 16;
               break;
             }
-            case 130: {
+            case 138: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.Builder subBuilder = null;
-              if (contentCase_ == 16) {
+              if (contentCase_ == 17) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_).toBuilder();
               }
               content_ =
@@ -459,12 +490,12 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 16;
+              contentCase_ = 17;
               break;
             }
-            case 138: {
+            case 146: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.Builder subBuilder = null;
-              if (contentCase_ == 17) {
+              if (contentCase_ == 18) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable) content_).toBuilder();
               }
               content_ =
@@ -473,12 +504,12 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 17;
+              contentCase_ = 18;
               break;
             }
-            case 146: {
+            case 154: {
               com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.Builder subBuilder = null;
-              if (contentCase_ == 18) {
+              if (contentCase_ == 19) {
                 subBuilder = ((com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue) content_).toBuilder();
               }
               content_ =
@@ -487,7 +518,7 @@ public final class Wrappers {
                 subBuilder.mergeFrom((com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue) content_);
                 content_ = subBuilder.buildPartial();
               }
-              contentCase_ = 18;
+              contentCase_ = 19;
               break;
             }
           }
@@ -519,18 +550,18 @@ public final class Wrappers {
     private java.lang.Object content_;
     public enum ContentCase
         implements com.google.protobuf.Internal.EnumLite {
-      CONSTRUCTORCALL(7),
-      INSTANCEMETHODCALL(8),
-      CLASSMETHODCALL(9),
-      CLINITCALL(10),
-      STATICFIELDGET(11),
-      STATICFIELDPUT(12),
-      INSTANCEFIELDGET(13),
-      INSTANCEFIELDPUT(14),
-      STATICFIELDPUTDONE(15),
-      INSTANCEFIELDPUTDONE(16),
-      RAISEDTHROWABLE(17),
-      RETURNVALUE(18),
+      CONSTRUCTORCALL(8),
+      INSTANCEMETHODCALL(9),
+      CLASSMETHODCALL(10),
+      CLINITCALL(11),
+      STATICFIELDGET(12),
+      STATICFIELDPUT(13),
+      INSTANCEFIELDGET(14),
+      INSTANCEFIELDPUT(15),
+      STATICFIELDPUTDONE(16),
+      INSTANCEFIELDPUTDONE(17),
+      RAISEDTHROWABLE(18),
+      RETURNVALUE(19),
       CONTENT_NOT_SET(0);
       private final int value;
       private ContentCase(int value) {
@@ -546,18 +577,18 @@ public final class Wrappers {
 
       public static ContentCase forNumber(int value) {
         switch (value) {
-          case 7: return CONSTRUCTORCALL;
-          case 8: return INSTANCEMETHODCALL;
-          case 9: return CLASSMETHODCALL;
-          case 10: return CLINITCALL;
-          case 11: return STATICFIELDGET;
-          case 12: return STATICFIELDPUT;
-          case 13: return INSTANCEFIELDGET;
-          case 14: return INSTANCEFIELDPUT;
-          case 15: return STATICFIELDPUTDONE;
-          case 16: return INSTANCEFIELDPUTDONE;
-          case 17: return RAISEDTHROWABLE;
-          case 18: return RETURNVALUE;
+          case 8: return CONSTRUCTORCALL;
+          case 9: return INSTANCEMETHODCALL;
+          case 10: return CLASSMETHODCALL;
+          case 11: return CLINITCALL;
+          case 12: return STATICFIELDGET;
+          case 13: return STATICFIELDPUT;
+          case 14: return INSTANCEFIELDGET;
+          case 15: return INSTANCEFIELDPUT;
+          case 16: return STATICFIELDPUTDONE;
+          case 17: return INSTANCEFIELDPUTDONE;
+          case 18: return RAISEDTHROWABLE;
+          case 19: return RETURNVALUE;
           case 0: return CONTENT_NOT_SET;
           default: return null;
         }
@@ -573,16 +604,16 @@ public final class Wrappers {
           contentCase_);
     }
 
-    public static final int CONCENTRATORID_FIELD_NUMBER = 1;
-    private int concentratorId_;
+    public static final int CONCENTRATORUUID_FIELD_NUMBER = 1;
+    private volatile java.lang.Object concentratorUuid_;
     /**
      * <pre>
      *TO DO:  IP or hostname for this Concentrator
      * </pre>
      *
-     * <code>required int32 concentratorId = 1 [default = -1];</code>
+     * <code>required string concentratorUuid = 1;</code>
      */
-    public boolean hasConcentratorId() {
+    public boolean hasConcentratorUuid() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
@@ -590,22 +621,95 @@ public final class Wrappers {
      *TO DO:  IP or hostname for this Concentrator
      * </pre>
      *
-     * <code>required int32 concentratorId = 1 [default = -1];</code>
+     * <code>required string concentratorUuid = 1;</code>
      */
-    public int getConcentratorId() {
-      return concentratorId_;
+    public java.lang.String getConcentratorUuid() {
+      java.lang.Object ref = concentratorUuid_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          concentratorUuid_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     *TO DO:  IP or hostname for this Concentrator
+     * </pre>
+     *
+     * <code>required string concentratorUuid = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getConcentratorUuidBytes() {
+      java.lang.Object ref = concentratorUuid_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        concentratorUuid_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
     }
 
-    public static final int MSGTYPE_FIELD_NUMBER = 2;
-    private volatile java.lang.Object msgType_;
+    public static final int MESSAGEUUID_FIELD_NUMBER = 2;
+    private volatile java.lang.Object messageUuid_;
     /**
-     * <code>required string msgType = 2;</code>
+     * <code>required string messageUuid = 2;</code>
      */
-    public boolean hasMsgType() {
+    public boolean hasMessageUuid() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required string msgType = 2;</code>
+     * <code>required string messageUuid = 2;</code>
+     */
+    public java.lang.String getMessageUuid() {
+      java.lang.Object ref = messageUuid_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          messageUuid_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string messageUuid = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getMessageUuidBytes() {
+      java.lang.Object ref = messageUuid_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        messageUuid_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int MSGTYPE_FIELD_NUMBER = 3;
+    private volatile java.lang.Object msgType_;
+    /**
+     * <code>required string msgType = 3;</code>
+     */
+    public boolean hasMsgType() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required string msgType = 3;</code>
      */
     public java.lang.String getMsgType() {
       java.lang.Object ref = msgType_;
@@ -622,7 +726,7 @@ public final class Wrappers {
       }
     }
     /**
-     * <code>required string msgType = 2;</code>
+     * <code>required string msgType = 3;</code>
      */
     public com.google.protobuf.ByteString
         getMsgTypeBytes() {
@@ -638,373 +742,373 @@ public final class Wrappers {
       }
     }
 
-    public static final int THREADID_FIELD_NUMBER = 3;
+    public static final int THREADID_FIELD_NUMBER = 4;
     private long threadId_;
     /**
-     * <code>required int64 threadId = 3 [default = -1];</code>
+     * <code>required int64 threadId = 4 [default = -1];</code>
      */
     public boolean hasThreadId() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>required int64 threadId = 3 [default = -1];</code>
+     * <code>required int64 threadId = 4 [default = -1];</code>
      */
     public long getThreadId() {
       return threadId_;
     }
 
-    public static final int CURRENTTIME_FIELD_NUMBER = 4;
+    public static final int CURRENTTIME_FIELD_NUMBER = 5;
     private long currentTime_;
     /**
-     * <code>required int64 currentTime = 4;</code>
+     * <code>required int64 currentTime = 5;</code>
      */
     public boolean hasCurrentTime() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
+      return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     /**
-     * <code>required int64 currentTime = 4;</code>
+     * <code>required int64 currentTime = 5;</code>
      */
     public long getCurrentTime() {
       return currentTime_;
     }
 
-    public static final int THREADSEQ_FIELD_NUMBER = 5;
+    public static final int THREADSEQ_FIELD_NUMBER = 6;
     private long threadSeq_;
     /**
-     * <code>optional int64 threadSeq = 5;</code>
+     * <code>optional int64 threadSeq = 6;</code>
      */
     public boolean hasThreadSeq() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
+      return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
-     * <code>optional int64 threadSeq = 5;</code>
+     * <code>optional int64 threadSeq = 6;</code>
      */
     public long getThreadSeq() {
       return threadSeq_;
     }
 
-    public static final int FOLLOWING_FIELD_NUMBER = 6;
+    public static final int FOLLOWING_FIELD_NUMBER = 7;
     private long following_;
     /**
-     * <code>optional int64 following = 6;</code>
+     * <code>optional int64 following = 7;</code>
      */
     public boolean hasFollowing() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
+      return ((bitField0_ & 0x00000040) == 0x00000040);
     }
     /**
-     * <code>optional int64 following = 6;</code>
+     * <code>optional int64 following = 7;</code>
      */
     public long getFollowing() {
       return following_;
     }
 
-    public static final int CONSTRUCTORCALL_FIELD_NUMBER = 7;
+    public static final int CONSTRUCTORCALL_FIELD_NUMBER = 8;
     /**
-     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
      */
     public boolean hasConstructorCall() {
-      return contentCase_ == 7;
-    }
-    /**
-     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
-     */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall getConstructorCall() {
-      if (contentCase_ == 7) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_;
-      }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.getDefaultInstance();
-    }
-    /**
-     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
-     */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCallOrBuilder getConstructorCallOrBuilder() {
-      if (contentCase_ == 7) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_;
-      }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.getDefaultInstance();
-    }
-
-    public static final int INSTANCEMETHODCALL_FIELD_NUMBER = 8;
-    /**
-     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
-     */
-    public boolean hasInstanceMethodCall() {
       return contentCase_ == 8;
     }
     /**
-     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall getInstanceMethodCall() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall getConstructorCall() {
       if (contentCase_ == 8) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.getDefaultInstance();
     }
     /**
-     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+     * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCallOrBuilder getInstanceMethodCallOrBuilder() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCallOrBuilder getConstructorCallOrBuilder() {
       if (contentCase_ == 8) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.getDefaultInstance();
     }
 
-    public static final int CLASSMETHODCALL_FIELD_NUMBER = 9;
+    public static final int INSTANCEMETHODCALL_FIELD_NUMBER = 9;
     /**
-     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
      */
-    public boolean hasClassMethodCall() {
+    public boolean hasInstanceMethodCall() {
       return contentCase_ == 9;
     }
     /**
-     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall getClassMethodCall() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall getInstanceMethodCall() {
       if (contentCase_ == 9) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.getDefaultInstance();
     }
     /**
-     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+     * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCallOrBuilder getClassMethodCallOrBuilder() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCallOrBuilder getInstanceMethodCallOrBuilder() {
       if (contentCase_ == 9) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.getDefaultInstance();
     }
 
-    public static final int CLINITCALL_FIELD_NUMBER = 10;
+    public static final int CLASSMETHODCALL_FIELD_NUMBER = 10;
     /**
-     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
      */
-    public boolean hasClinitCall() {
+    public boolean hasClassMethodCall() {
       return contentCase_ == 10;
     }
     /**
-     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall getClinitCall() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall getClassMethodCall() {
       if (contentCase_ == 10) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.getDefaultInstance();
     }
     /**
-     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+     * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCallOrBuilder getClinitCallOrBuilder() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCallOrBuilder getClassMethodCallOrBuilder() {
       if (contentCase_ == 10) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.getDefaultInstance();
     }
 
-    public static final int STATICFIELDGET_FIELD_NUMBER = 11;
+    public static final int CLINITCALL_FIELD_NUMBER = 11;
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
      */
-    public boolean hasStaticFieldGet() {
+    public boolean hasClinitCall() {
       return contentCase_ == 11;
     }
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet getStaticFieldGet() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall getClinitCall() {
       if (contentCase_ == 11) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.getDefaultInstance();
     }
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+     * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGetOrBuilder getStaticFieldGetOrBuilder() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCallOrBuilder getClinitCallOrBuilder() {
       if (contentCase_ == 11) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.getDefaultInstance();
     }
 
-    public static final int STATICFIELDPUT_FIELD_NUMBER = 12;
+    public static final int STATICFIELDGET_FIELD_NUMBER = 12;
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
      */
-    public boolean hasStaticFieldPut() {
+    public boolean hasStaticFieldGet() {
       return contentCase_ == 12;
     }
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut getStaticFieldPut() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet getStaticFieldGet() {
       if (contentCase_ == 12) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.getDefaultInstance();
     }
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder getStaticFieldPutOrBuilder() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGetOrBuilder getStaticFieldGetOrBuilder() {
       if (contentCase_ == 12) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.getDefaultInstance();
     }
 
-    public static final int INSTANCEFIELDGET_FIELD_NUMBER = 13;
+    public static final int STATICFIELDPUT_FIELD_NUMBER = 13;
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
      */
-    public boolean hasInstanceFieldGet() {
+    public boolean hasStaticFieldPut() {
       return contentCase_ == 13;
     }
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet getInstanceFieldGet() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut getStaticFieldPut() {
       if (contentCase_ == 13) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance();
     }
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGetOrBuilder getInstanceFieldGetOrBuilder() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder getStaticFieldPutOrBuilder() {
       if (contentCase_ == 13) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance();
     }
 
-    public static final int INSTANCEFIELDPUT_FIELD_NUMBER = 14;
+    public static final int INSTANCEFIELDGET_FIELD_NUMBER = 14;
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
      */
-    public boolean hasInstanceFieldPut() {
+    public boolean hasInstanceFieldGet() {
       return contentCase_ == 14;
     }
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut getInstanceFieldPut() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet getInstanceFieldGet() {
       if (contentCase_ == 14) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.getDefaultInstance();
     }
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder getInstanceFieldPutOrBuilder() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGetOrBuilder getInstanceFieldGetOrBuilder() {
       if (contentCase_ == 14) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.getDefaultInstance();
     }
 
-    public static final int STATICFIELDPUTDONE_FIELD_NUMBER = 15;
+    public static final int INSTANCEFIELDPUT_FIELD_NUMBER = 15;
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
      */
-    public boolean hasStaticFieldPutDone() {
+    public boolean hasInstanceFieldPut() {
       return contentCase_ == 15;
     }
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone getStaticFieldPutDone() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut getInstanceFieldPut() {
       if (contentCase_ == 15) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance();
     }
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDoneOrBuilder getStaticFieldPutDoneOrBuilder() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder getInstanceFieldPutOrBuilder() {
       if (contentCase_ == 15) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance();
     }
 
-    public static final int INSTANCEFIELDPUTDONE_FIELD_NUMBER = 16;
+    public static final int STATICFIELDPUTDONE_FIELD_NUMBER = 16;
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
      */
-    public boolean hasInstanceFieldPutDone() {
+    public boolean hasStaticFieldPutDone() {
       return contentCase_ == 16;
     }
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone getInstanceFieldPutDone() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone getStaticFieldPutDone() {
       if (contentCase_ == 16) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.getDefaultInstance();
     }
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+     * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDoneOrBuilder getInstanceFieldPutDoneOrBuilder() {
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDoneOrBuilder getStaticFieldPutDoneOrBuilder() {
       if (contentCase_ == 16) {
-         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_;
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_;
       }
-      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.getDefaultInstance();
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.getDefaultInstance();
     }
 
-    public static final int RAISEDTHROWABLE_FIELD_NUMBER = 17;
+    public static final int INSTANCEFIELDPUTDONE_FIELD_NUMBER = 17;
     /**
-     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
      */
-    public boolean hasRaisedThrowable() {
+    public boolean hasInstanceFieldPutDone() {
       return contentCase_ == 17;
     }
     /**
-     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
+     */
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone getInstanceFieldPutDone() {
+      if (contentCase_ == 17) {
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_;
+      }
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.getDefaultInstance();
+    }
+    /**
+     * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
+     */
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDoneOrBuilder getInstanceFieldPutDoneOrBuilder() {
+      if (contentCase_ == 17) {
+         return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_;
+      }
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.getDefaultInstance();
+    }
+
+    public static final int RAISEDTHROWABLE_FIELD_NUMBER = 18;
+    /**
+     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
+     */
+    public boolean hasRaisedThrowable() {
+      return contentCase_ == 18;
+    }
+    /**
+     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
      */
     public com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable getRaisedThrowable() {
-      if (contentCase_ == 17) {
+      if (contentCase_ == 18) {
          return (com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable) content_;
       }
       return com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.getDefaultInstance();
     }
     /**
-     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+     * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
      */
     public com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowableOrBuilder getRaisedThrowableOrBuilder() {
-      if (contentCase_ == 17) {
+      if (contentCase_ == 18) {
          return (com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable) content_;
       }
       return com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.getDefaultInstance();
     }
 
-    public static final int RETURNVALUE_FIELD_NUMBER = 18;
+    public static final int RETURNVALUE_FIELD_NUMBER = 19;
     /**
-     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
      */
     public boolean hasReturnValue() {
-      return contentCase_ == 18;
+      return contentCase_ == 19;
     }
     /**
-     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
      */
     public com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue getReturnValue() {
-      if (contentCase_ == 18) {
+      if (contentCase_ == 19) {
          return (com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue) content_;
       }
       return com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.getDefaultInstance();
     }
     /**
-     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+     * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
      */
     public com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValueOrBuilder getReturnValueOrBuilder() {
-      if (contentCase_ == 18) {
+      if (contentCase_ == 19) {
          return (com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue) content_;
       }
       return com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.getDefaultInstance();
@@ -1016,7 +1120,11 @@ public final class Wrappers {
       if (isInitialized == 1) return true;
       if (isInitialized == 0) return false;
 
-      if (!hasConcentratorId()) {
+      if (!hasConcentratorUuid()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasMessageUuid()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -1111,58 +1219,61 @@ public final class Wrappers {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeInt32(1, concentratorId_);
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, concentratorUuid_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, msgType_);
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, messageUuid_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeInt64(3, threadId_);
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, msgType_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeInt64(4, currentTime_);
+        output.writeInt64(4, threadId_);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeInt64(5, threadSeq_);
+        output.writeInt64(5, currentTime_);
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeInt64(6, following_);
+        output.writeInt64(6, threadSeq_);
       }
-      if (contentCase_ == 7) {
-        output.writeMessage(7, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_);
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeInt64(7, following_);
       }
       if (contentCase_ == 8) {
-        output.writeMessage(8, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_);
+        output.writeMessage(8, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_);
       }
       if (contentCase_ == 9) {
-        output.writeMessage(9, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_);
+        output.writeMessage(9, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_);
       }
       if (contentCase_ == 10) {
-        output.writeMessage(10, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_);
+        output.writeMessage(10, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_);
       }
       if (contentCase_ == 11) {
-        output.writeMessage(11, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_);
+        output.writeMessage(11, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_);
       }
       if (contentCase_ == 12) {
-        output.writeMessage(12, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_);
+        output.writeMessage(12, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_);
       }
       if (contentCase_ == 13) {
-        output.writeMessage(13, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_);
+        output.writeMessage(13, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_);
       }
       if (contentCase_ == 14) {
-        output.writeMessage(14, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_);
+        output.writeMessage(14, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_);
       }
       if (contentCase_ == 15) {
-        output.writeMessage(15, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_);
+        output.writeMessage(15, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_);
       }
       if (contentCase_ == 16) {
-        output.writeMessage(16, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_);
+        output.writeMessage(16, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_);
       }
       if (contentCase_ == 17) {
-        output.writeMessage(17, (com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable) content_);
+        output.writeMessage(17, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_);
       }
       if (contentCase_ == 18) {
-        output.writeMessage(18, (com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue) content_);
+        output.writeMessage(18, (com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable) content_);
+      }
+      if (contentCase_ == 19) {
+        output.writeMessage(19, (com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue) content_);
       }
       unknownFields.writeTo(output);
     }
@@ -1173,75 +1284,77 @@ public final class Wrappers {
 
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(1, concentratorId_);
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, concentratorUuid_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, msgType_);
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, messageUuid_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(3, threadId_);
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, msgType_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(4, currentTime_);
+          .computeInt64Size(4, threadId_);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(5, threadSeq_);
+          .computeInt64Size(5, currentTime_);
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(6, following_);
+          .computeInt64Size(6, threadSeq_);
       }
-      if (contentCase_ == 7) {
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(7, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_);
+          .computeInt64Size(7, following_);
       }
       if (contentCase_ == 8) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(8, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_);
+          .computeMessageSize(8, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_);
       }
       if (contentCase_ == 9) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(9, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_);
+          .computeMessageSize(9, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_);
       }
       if (contentCase_ == 10) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(10, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_);
+          .computeMessageSize(10, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_);
       }
       if (contentCase_ == 11) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(11, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_);
+          .computeMessageSize(11, (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_);
       }
       if (contentCase_ == 12) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(12, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_);
+          .computeMessageSize(12, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_);
       }
       if (contentCase_ == 13) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(13, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_);
+          .computeMessageSize(13, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_);
       }
       if (contentCase_ == 14) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(14, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_);
+          .computeMessageSize(14, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_);
       }
       if (contentCase_ == 15) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(15, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_);
+          .computeMessageSize(15, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_);
       }
       if (contentCase_ == 16) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(16, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_);
+          .computeMessageSize(16, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_);
       }
       if (contentCase_ == 17) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(17, (com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable) content_);
+          .computeMessageSize(17, (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_);
       }
       if (contentCase_ == 18) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(18, (com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue) content_);
+          .computeMessageSize(18, (com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable) content_);
+      }
+      if (contentCase_ == 19) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(19, (com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue) content_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -1260,10 +1373,15 @@ public final class Wrappers {
       com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage other = (com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage) obj;
 
       boolean result = true;
-      result = result && (hasConcentratorId() == other.hasConcentratorId());
-      if (hasConcentratorId()) {
-        result = result && (getConcentratorId()
-            == other.getConcentratorId());
+      result = result && (hasConcentratorUuid() == other.hasConcentratorUuid());
+      if (hasConcentratorUuid()) {
+        result = result && getConcentratorUuid()
+            .equals(other.getConcentratorUuid());
+      }
+      result = result && (hasMessageUuid() == other.hasMessageUuid());
+      if (hasMessageUuid()) {
+        result = result && getMessageUuid()
+            .equals(other.getMessageUuid());
       }
       result = result && (hasMsgType() == other.hasMsgType());
       if (hasMsgType()) {
@@ -1294,51 +1412,51 @@ public final class Wrappers {
           other.getContentCase());
       if (!result) return false;
       switch (contentCase_) {
-        case 7:
+        case 8:
           result = result && getConstructorCall()
               .equals(other.getConstructorCall());
           break;
-        case 8:
+        case 9:
           result = result && getInstanceMethodCall()
               .equals(other.getInstanceMethodCall());
           break;
-        case 9:
+        case 10:
           result = result && getClassMethodCall()
               .equals(other.getClassMethodCall());
           break;
-        case 10:
+        case 11:
           result = result && getClinitCall()
               .equals(other.getClinitCall());
           break;
-        case 11:
+        case 12:
           result = result && getStaticFieldGet()
               .equals(other.getStaticFieldGet());
           break;
-        case 12:
+        case 13:
           result = result && getStaticFieldPut()
               .equals(other.getStaticFieldPut());
           break;
-        case 13:
+        case 14:
           result = result && getInstanceFieldGet()
               .equals(other.getInstanceFieldGet());
           break;
-        case 14:
+        case 15:
           result = result && getInstanceFieldPut()
               .equals(other.getInstanceFieldPut());
           break;
-        case 15:
+        case 16:
           result = result && getStaticFieldPutDone()
               .equals(other.getStaticFieldPutDone());
           break;
-        case 16:
+        case 17:
           result = result && getInstanceFieldPutDone()
               .equals(other.getInstanceFieldPutDone());
           break;
-        case 17:
+        case 18:
           result = result && getRaisedThrowable()
               .equals(other.getRaisedThrowable());
           break;
-        case 18:
+        case 19:
           result = result && getReturnValue()
               .equals(other.getReturnValue());
           break;
@@ -1356,9 +1474,13 @@ public final class Wrappers {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
-      if (hasConcentratorId()) {
-        hash = (37 * hash) + CONCENTRATORID_FIELD_NUMBER;
-        hash = (53 * hash) + getConcentratorId();
+      if (hasConcentratorUuid()) {
+        hash = (37 * hash) + CONCENTRATORUUID_FIELD_NUMBER;
+        hash = (53 * hash) + getConcentratorUuid().hashCode();
+      }
+      if (hasMessageUuid()) {
+        hash = (37 * hash) + MESSAGEUUID_FIELD_NUMBER;
+        hash = (53 * hash) + getMessageUuid().hashCode();
       }
       if (hasMsgType()) {
         hash = (37 * hash) + MSGTYPE_FIELD_NUMBER;
@@ -1385,51 +1507,51 @@ public final class Wrappers {
             getFollowing());
       }
       switch (contentCase_) {
-        case 7:
+        case 8:
           hash = (37 * hash) + CONSTRUCTORCALL_FIELD_NUMBER;
           hash = (53 * hash) + getConstructorCall().hashCode();
           break;
-        case 8:
+        case 9:
           hash = (37 * hash) + INSTANCEMETHODCALL_FIELD_NUMBER;
           hash = (53 * hash) + getInstanceMethodCall().hashCode();
           break;
-        case 9:
+        case 10:
           hash = (37 * hash) + CLASSMETHODCALL_FIELD_NUMBER;
           hash = (53 * hash) + getClassMethodCall().hashCode();
           break;
-        case 10:
+        case 11:
           hash = (37 * hash) + CLINITCALL_FIELD_NUMBER;
           hash = (53 * hash) + getClinitCall().hashCode();
           break;
-        case 11:
+        case 12:
           hash = (37 * hash) + STATICFIELDGET_FIELD_NUMBER;
           hash = (53 * hash) + getStaticFieldGet().hashCode();
           break;
-        case 12:
+        case 13:
           hash = (37 * hash) + STATICFIELDPUT_FIELD_NUMBER;
           hash = (53 * hash) + getStaticFieldPut().hashCode();
           break;
-        case 13:
+        case 14:
           hash = (37 * hash) + INSTANCEFIELDGET_FIELD_NUMBER;
           hash = (53 * hash) + getInstanceFieldGet().hashCode();
           break;
-        case 14:
+        case 15:
           hash = (37 * hash) + INSTANCEFIELDPUT_FIELD_NUMBER;
           hash = (53 * hash) + getInstanceFieldPut().hashCode();
           break;
-        case 15:
+        case 16:
           hash = (37 * hash) + STATICFIELDPUTDONE_FIELD_NUMBER;
           hash = (53 * hash) + getStaticFieldPutDone().hashCode();
           break;
-        case 16:
+        case 17:
           hash = (37 * hash) + INSTANCEFIELDPUTDONE_FIELD_NUMBER;
           hash = (53 * hash) + getInstanceFieldPutDone().hashCode();
           break;
-        case 17:
+        case 18:
           hash = (37 * hash) + RAISEDTHROWABLE_FIELD_NUMBER;
           hash = (53 * hash) + getRaisedThrowable().hashCode();
           break;
-        case 18:
+        case 19:
           hash = (37 * hash) + RETURNVALUE_FIELD_NUMBER;
           hash = (53 * hash) + getReturnValue().hashCode();
           break;
@@ -1554,18 +1676,20 @@ public final class Wrappers {
       }
       public Builder clear() {
         super.clear();
-        concentratorId_ = -1;
+        concentratorUuid_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
-        msgType_ = "";
+        messageUuid_ = "";
         bitField0_ = (bitField0_ & ~0x00000002);
-        threadId_ = -1L;
+        msgType_ = "";
         bitField0_ = (bitField0_ & ~0x00000004);
-        currentTime_ = 0L;
+        threadId_ = -1L;
         bitField0_ = (bitField0_ & ~0x00000008);
-        threadSeq_ = 0L;
+        currentTime_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000010);
-        following_ = 0L;
+        threadSeq_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000020);
+        following_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000040);
         contentCase_ = 0;
         content_ = null;
         return this;
@@ -1595,105 +1719,109 @@ public final class Wrappers {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        result.concentratorId_ = concentratorId_;
+        result.concentratorUuid_ = concentratorUuid_;
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        result.msgType_ = msgType_;
+        result.messageUuid_ = messageUuid_;
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
         }
-        result.threadId_ = threadId_;
+        result.msgType_ = msgType_;
         if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
           to_bitField0_ |= 0x00000008;
         }
-        result.currentTime_ = currentTime_;
+        result.threadId_ = threadId_;
         if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000010;
         }
-        result.threadSeq_ = threadSeq_;
+        result.currentTime_ = currentTime_;
         if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000020;
         }
+        result.threadSeq_ = threadSeq_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
         result.following_ = following_;
-        if (contentCase_ == 7) {
+        if (contentCase_ == 8) {
           if (constructorCallBuilder_ == null) {
             result.content_ = content_;
           } else {
             result.content_ = constructorCallBuilder_.build();
           }
         }
-        if (contentCase_ == 8) {
+        if (contentCase_ == 9) {
           if (instanceMethodCallBuilder_ == null) {
             result.content_ = content_;
           } else {
             result.content_ = instanceMethodCallBuilder_.build();
           }
         }
-        if (contentCase_ == 9) {
+        if (contentCase_ == 10) {
           if (classMethodCallBuilder_ == null) {
             result.content_ = content_;
           } else {
             result.content_ = classMethodCallBuilder_.build();
           }
         }
-        if (contentCase_ == 10) {
+        if (contentCase_ == 11) {
           if (clinitCallBuilder_ == null) {
             result.content_ = content_;
           } else {
             result.content_ = clinitCallBuilder_.build();
           }
         }
-        if (contentCase_ == 11) {
+        if (contentCase_ == 12) {
           if (staticFieldGetBuilder_ == null) {
             result.content_ = content_;
           } else {
             result.content_ = staticFieldGetBuilder_.build();
           }
         }
-        if (contentCase_ == 12) {
+        if (contentCase_ == 13) {
           if (staticFieldPutBuilder_ == null) {
             result.content_ = content_;
           } else {
             result.content_ = staticFieldPutBuilder_.build();
           }
         }
-        if (contentCase_ == 13) {
+        if (contentCase_ == 14) {
           if (instanceFieldGetBuilder_ == null) {
             result.content_ = content_;
           } else {
             result.content_ = instanceFieldGetBuilder_.build();
           }
         }
-        if (contentCase_ == 14) {
+        if (contentCase_ == 15) {
           if (instanceFieldPutBuilder_ == null) {
             result.content_ = content_;
           } else {
             result.content_ = instanceFieldPutBuilder_.build();
           }
         }
-        if (contentCase_ == 15) {
+        if (contentCase_ == 16) {
           if (staticFieldPutDoneBuilder_ == null) {
             result.content_ = content_;
           } else {
             result.content_ = staticFieldPutDoneBuilder_.build();
           }
         }
-        if (contentCase_ == 16) {
+        if (contentCase_ == 17) {
           if (instanceFieldPutDoneBuilder_ == null) {
             result.content_ = content_;
           } else {
             result.content_ = instanceFieldPutDoneBuilder_.build();
           }
         }
-        if (contentCase_ == 17) {
+        if (contentCase_ == 18) {
           if (raisedThrowableBuilder_ == null) {
             result.content_ = content_;
           } else {
             result.content_ = raisedThrowableBuilder_.build();
           }
         }
-        if (contentCase_ == 18) {
+        if (contentCase_ == 19) {
           if (returnValueBuilder_ == null) {
             result.content_ = content_;
           } else {
@@ -1743,11 +1871,18 @@ public final class Wrappers {
 
       public Builder mergeFrom(com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage other) {
         if (other == com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage.getDefaultInstance()) return this;
-        if (other.hasConcentratorId()) {
-          setConcentratorId(other.getConcentratorId());
+        if (other.hasConcentratorUuid()) {
+          bitField0_ |= 0x00000001;
+          concentratorUuid_ = other.concentratorUuid_;
+          onChanged();
+        }
+        if (other.hasMessageUuid()) {
+          bitField0_ |= 0x00000002;
+          messageUuid_ = other.messageUuid_;
+          onChanged();
         }
         if (other.hasMsgType()) {
-          bitField0_ |= 0x00000002;
+          bitField0_ |= 0x00000004;
           msgType_ = other.msgType_;
           onChanged();
         }
@@ -1822,7 +1957,10 @@ public final class Wrappers {
       }
 
       public final boolean isInitialized() {
-        if (!hasConcentratorId()) {
+        if (!hasConcentratorUuid()) {
+          return false;
+        }
+        if (!hasMessageUuid()) {
           return false;
         }
         if (!hasMsgType()) {
@@ -1931,15 +2069,15 @@ public final class Wrappers {
 
       private int bitField0_;
 
-      private int concentratorId_ = -1;
+      private java.lang.Object concentratorUuid_ = "";
       /**
        * <pre>
        *TO DO:  IP or hostname for this Concentrator
        * </pre>
        *
-       * <code>required int32 concentratorId = 1 [default = -1];</code>
+       * <code>required string concentratorUuid = 1;</code>
        */
-      public boolean hasConcentratorId() {
+      public boolean hasConcentratorUuid() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
@@ -1947,21 +2085,56 @@ public final class Wrappers {
        *TO DO:  IP or hostname for this Concentrator
        * </pre>
        *
-       * <code>required int32 concentratorId = 1 [default = -1];</code>
+       * <code>required string concentratorUuid = 1;</code>
        */
-      public int getConcentratorId() {
-        return concentratorId_;
+      public java.lang.String getConcentratorUuid() {
+        java.lang.Object ref = concentratorUuid_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            concentratorUuid_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
       }
       /**
        * <pre>
        *TO DO:  IP or hostname for this Concentrator
        * </pre>
        *
-       * <code>required int32 concentratorId = 1 [default = -1];</code>
+       * <code>required string concentratorUuid = 1;</code>
        */
-      public Builder setConcentratorId(int value) {
-        bitField0_ |= 0x00000001;
-        concentratorId_ = value;
+      public com.google.protobuf.ByteString
+          getConcentratorUuidBytes() {
+        java.lang.Object ref = concentratorUuid_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          concentratorUuid_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       *TO DO:  IP or hostname for this Concentrator
+       * </pre>
+       *
+       * <code>required string concentratorUuid = 1;</code>
+       */
+      public Builder setConcentratorUuid(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        concentratorUuid_ = value;
         onChanged();
         return this;
       }
@@ -1970,24 +2143,117 @@ public final class Wrappers {
        *TO DO:  IP or hostname for this Concentrator
        * </pre>
        *
-       * <code>required int32 concentratorId = 1 [default = -1];</code>
+       * <code>required string concentratorUuid = 1;</code>
        */
-      public Builder clearConcentratorId() {
+      public Builder clearConcentratorUuid() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        concentratorId_ = -1;
+        concentratorUuid_ = getDefaultInstance().getConcentratorUuid();
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       *TO DO:  IP or hostname for this Concentrator
+       * </pre>
+       *
+       * <code>required string concentratorUuid = 1;</code>
+       */
+      public Builder setConcentratorUuidBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        concentratorUuid_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object messageUuid_ = "";
+      /**
+       * <code>required string messageUuid = 2;</code>
+       */
+      public boolean hasMessageUuid() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required string messageUuid = 2;</code>
+       */
+      public java.lang.String getMessageUuid() {
+        java.lang.Object ref = messageUuid_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            messageUuid_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string messageUuid = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getMessageUuidBytes() {
+        java.lang.Object ref = messageUuid_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          messageUuid_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string messageUuid = 2;</code>
+       */
+      public Builder setMessageUuid(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        messageUuid_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string messageUuid = 2;</code>
+       */
+      public Builder clearMessageUuid() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        messageUuid_ = getDefaultInstance().getMessageUuid();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string messageUuid = 2;</code>
+       */
+      public Builder setMessageUuidBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        messageUuid_ = value;
         onChanged();
         return this;
       }
 
       private java.lang.Object msgType_ = "";
       /**
-       * <code>required string msgType = 2;</code>
+       * <code>required string msgType = 3;</code>
        */
       public boolean hasMsgType() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>required string msgType = 2;</code>
+       * <code>required string msgType = 3;</code>
        */
       public java.lang.String getMsgType() {
         java.lang.Object ref = msgType_;
@@ -2004,7 +2270,7 @@ public final class Wrappers {
         }
       }
       /**
-       * <code>required string msgType = 2;</code>
+       * <code>required string msgType = 3;</code>
        */
       public com.google.protobuf.ByteString
           getMsgTypeBytes() {
@@ -2020,36 +2286,36 @@ public final class Wrappers {
         }
       }
       /**
-       * <code>required string msgType = 2;</code>
+       * <code>required string msgType = 3;</code>
        */
       public Builder setMsgType(
           java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000002;
+  bitField0_ |= 0x00000004;
         msgType_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>required string msgType = 2;</code>
+       * <code>required string msgType = 3;</code>
        */
       public Builder clearMsgType() {
-        bitField0_ = (bitField0_ & ~0x00000002);
+        bitField0_ = (bitField0_ & ~0x00000004);
         msgType_ = getDefaultInstance().getMsgType();
         onChanged();
         return this;
       }
       /**
-       * <code>required string msgType = 2;</code>
+       * <code>required string msgType = 3;</code>
        */
       public Builder setMsgTypeBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000002;
+  bitField0_ |= 0x00000004;
         msgType_ = value;
         onChanged();
         return this;
@@ -2057,31 +2323,31 @@ public final class Wrappers {
 
       private long threadId_ = -1L;
       /**
-       * <code>required int64 threadId = 3 [default = -1];</code>
+       * <code>required int64 threadId = 4 [default = -1];</code>
        */
       public boolean hasThreadId() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
-       * <code>required int64 threadId = 3 [default = -1];</code>
+       * <code>required int64 threadId = 4 [default = -1];</code>
        */
       public long getThreadId() {
         return threadId_;
       }
       /**
-       * <code>required int64 threadId = 3 [default = -1];</code>
+       * <code>required int64 threadId = 4 [default = -1];</code>
        */
       public Builder setThreadId(long value) {
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         threadId_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>required int64 threadId = 3 [default = -1];</code>
+       * <code>required int64 threadId = 4 [default = -1];</code>
        */
       public Builder clearThreadId() {
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = (bitField0_ & ~0x00000008);
         threadId_ = -1L;
         onChanged();
         return this;
@@ -2089,31 +2355,31 @@ public final class Wrappers {
 
       private long currentTime_ ;
       /**
-       * <code>required int64 currentTime = 4;</code>
+       * <code>required int64 currentTime = 5;</code>
        */
       public boolean hasCurrentTime() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       /**
-       * <code>required int64 currentTime = 4;</code>
+       * <code>required int64 currentTime = 5;</code>
        */
       public long getCurrentTime() {
         return currentTime_;
       }
       /**
-       * <code>required int64 currentTime = 4;</code>
+       * <code>required int64 currentTime = 5;</code>
        */
       public Builder setCurrentTime(long value) {
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         currentTime_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>required int64 currentTime = 4;</code>
+       * <code>required int64 currentTime = 5;</code>
        */
       public Builder clearCurrentTime() {
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = (bitField0_ & ~0x00000010);
         currentTime_ = 0L;
         onChanged();
         return this;
@@ -2121,31 +2387,31 @@ public final class Wrappers {
 
       private long threadSeq_ ;
       /**
-       * <code>optional int64 threadSeq = 5;</code>
+       * <code>optional int64 threadSeq = 6;</code>
        */
       public boolean hasThreadSeq() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
+        return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       /**
-       * <code>optional int64 threadSeq = 5;</code>
+       * <code>optional int64 threadSeq = 6;</code>
        */
       public long getThreadSeq() {
         return threadSeq_;
       }
       /**
-       * <code>optional int64 threadSeq = 5;</code>
+       * <code>optional int64 threadSeq = 6;</code>
        */
       public Builder setThreadSeq(long value) {
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000020;
         threadSeq_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional int64 threadSeq = 5;</code>
+       * <code>optional int64 threadSeq = 6;</code>
        */
       public Builder clearThreadSeq() {
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000020);
         threadSeq_ = 0L;
         onChanged();
         return this;
@@ -2153,31 +2419,31 @@ public final class Wrappers {
 
       private long following_ ;
       /**
-       * <code>optional int64 following = 6;</code>
+       * <code>optional int64 following = 7;</code>
        */
       public boolean hasFollowing() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+        return ((bitField0_ & 0x00000040) == 0x00000040);
       }
       /**
-       * <code>optional int64 following = 6;</code>
+       * <code>optional int64 following = 7;</code>
        */
       public long getFollowing() {
         return following_;
       }
       /**
-       * <code>optional int64 following = 6;</code>
+       * <code>optional int64 following = 7;</code>
        */
       public Builder setFollowing(long value) {
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000040;
         following_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional int64 following = 6;</code>
+       * <code>optional int64 following = 7;</code>
        */
       public Builder clearFollowing() {
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000040);
         following_ = 0L;
         onChanged();
         return this;
@@ -2186,29 +2452,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCallOrBuilder> constructorCallBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
        */
       public boolean hasConstructorCall() {
-        return contentCase_ == 7;
+        return contentCase_ == 8;
       }
       /**
-       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall getConstructorCall() {
         if (constructorCallBuilder_ == null) {
-          if (contentCase_ == 7) {
+          if (contentCase_ == 8) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.getDefaultInstance();
         } else {
-          if (contentCase_ == 7) {
+          if (contentCase_ == 8) {
             return constructorCallBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
        */
       public Builder setConstructorCall(com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall value) {
         if (constructorCallBuilder_ == null) {
@@ -2220,11 +2486,11 @@ public final class Wrappers {
         } else {
           constructorCallBuilder_.setMessage(value);
         }
-        contentCase_ = 7;
+        contentCase_ = 8;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
        */
       public Builder setConstructorCall(
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.Builder builderForValue) {
@@ -2234,15 +2500,15 @@ public final class Wrappers {
         } else {
           constructorCallBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 7;
+        contentCase_ = 8;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
        */
       public Builder mergeConstructorCall(com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall value) {
         if (constructorCallBuilder_ == null) {
-          if (contentCase_ == 7 &&
+          if (contentCase_ == 8 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_)
                 .mergeFrom(value).buildPartial();
@@ -2251,26 +2517,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 7) {
+          if (contentCase_ == 8) {
             constructorCallBuilder_.mergeFrom(value);
           }
           constructorCallBuilder_.setMessage(value);
         }
-        contentCase_ = 7;
+        contentCase_ = 8;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
        */
       public Builder clearConstructorCall() {
         if (constructorCallBuilder_ == null) {
-          if (contentCase_ == 7) {
+          if (contentCase_ == 8) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 7) {
+          if (contentCase_ == 8) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -2279,32 +2545,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.Builder getConstructorCallBuilder() {
         return getConstructorCallFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCallOrBuilder getConstructorCallOrBuilder() {
-        if ((contentCase_ == 7) && (constructorCallBuilder_ != null)) {
+        if ((contentCase_ == 8) && (constructorCallBuilder_ != null)) {
           return constructorCallBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 7) {
+          if (contentCase_ == 8) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 7;</code>
+       * <code>optional .messages.protobuf.data.ConstructorCall constructorCall = 8;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCallOrBuilder> 
           getConstructorCallFieldBuilder() {
         if (constructorCallBuilder_ == null) {
-          if (!(contentCase_ == 7)) {
+          if (!(contentCase_ == 8)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ConstructorCall.getDefaultInstance();
           }
           constructorCallBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -2314,7 +2580,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 7;
+        contentCase_ = 8;
         onChanged();;
         return constructorCallBuilder_;
       }
@@ -2322,29 +2588,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCallOrBuilder> instanceMethodCallBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
        */
       public boolean hasInstanceMethodCall() {
-        return contentCase_ == 8;
+        return contentCase_ == 9;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall getInstanceMethodCall() {
         if (instanceMethodCallBuilder_ == null) {
-          if (contentCase_ == 8) {
+          if (contentCase_ == 9) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.getDefaultInstance();
         } else {
-          if (contentCase_ == 8) {
+          if (contentCase_ == 9) {
             return instanceMethodCallBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
        */
       public Builder setInstanceMethodCall(com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall value) {
         if (instanceMethodCallBuilder_ == null) {
@@ -2356,11 +2622,11 @@ public final class Wrappers {
         } else {
           instanceMethodCallBuilder_.setMessage(value);
         }
-        contentCase_ = 8;
+        contentCase_ = 9;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
        */
       public Builder setInstanceMethodCall(
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.Builder builderForValue) {
@@ -2370,15 +2636,15 @@ public final class Wrappers {
         } else {
           instanceMethodCallBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 8;
+        contentCase_ = 9;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
        */
       public Builder mergeInstanceMethodCall(com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall value) {
         if (instanceMethodCallBuilder_ == null) {
-          if (contentCase_ == 8 &&
+          if (contentCase_ == 9 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_)
                 .mergeFrom(value).buildPartial();
@@ -2387,26 +2653,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 8) {
+          if (contentCase_ == 9) {
             instanceMethodCallBuilder_.mergeFrom(value);
           }
           instanceMethodCallBuilder_.setMessage(value);
         }
-        contentCase_ = 8;
+        contentCase_ = 9;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
        */
       public Builder clearInstanceMethodCall() {
         if (instanceMethodCallBuilder_ == null) {
-          if (contentCase_ == 8) {
+          if (contentCase_ == 9) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 8) {
+          if (contentCase_ == 9) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -2415,32 +2681,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.Builder getInstanceMethodCallBuilder() {
         return getInstanceMethodCallFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCallOrBuilder getInstanceMethodCallOrBuilder() {
-        if ((contentCase_ == 8) && (instanceMethodCallBuilder_ != null)) {
+        if ((contentCase_ == 9) && (instanceMethodCallBuilder_ != null)) {
           return instanceMethodCallBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 8) {
+          if (contentCase_ == 9) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 8;</code>
+       * <code>optional .messages.protobuf.data.InstanceMethodCall instanceMethodCall = 9;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCallOrBuilder> 
           getInstanceMethodCallFieldBuilder() {
         if (instanceMethodCallBuilder_ == null) {
-          if (!(contentCase_ == 8)) {
+          if (!(contentCase_ == 9)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Calls.InstanceMethodCall.getDefaultInstance();
           }
           instanceMethodCallBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -2450,7 +2716,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 8;
+        contentCase_ = 9;
         onChanged();;
         return instanceMethodCallBuilder_;
       }
@@ -2458,29 +2724,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCallOrBuilder> classMethodCallBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
        */
       public boolean hasClassMethodCall() {
-        return contentCase_ == 9;
+        return contentCase_ == 10;
       }
       /**
-       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall getClassMethodCall() {
         if (classMethodCallBuilder_ == null) {
-          if (contentCase_ == 9) {
+          if (contentCase_ == 10) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.getDefaultInstance();
         } else {
-          if (contentCase_ == 9) {
+          if (contentCase_ == 10) {
             return classMethodCallBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
        */
       public Builder setClassMethodCall(com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall value) {
         if (classMethodCallBuilder_ == null) {
@@ -2492,11 +2758,11 @@ public final class Wrappers {
         } else {
           classMethodCallBuilder_.setMessage(value);
         }
-        contentCase_ = 9;
+        contentCase_ = 10;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
        */
       public Builder setClassMethodCall(
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.Builder builderForValue) {
@@ -2506,15 +2772,15 @@ public final class Wrappers {
         } else {
           classMethodCallBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 9;
+        contentCase_ = 10;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
        */
       public Builder mergeClassMethodCall(com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall value) {
         if (classMethodCallBuilder_ == null) {
-          if (contentCase_ == 9 &&
+          if (contentCase_ == 10 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_)
                 .mergeFrom(value).buildPartial();
@@ -2523,26 +2789,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 9) {
+          if (contentCase_ == 10) {
             classMethodCallBuilder_.mergeFrom(value);
           }
           classMethodCallBuilder_.setMessage(value);
         }
-        contentCase_ = 9;
+        contentCase_ = 10;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
        */
       public Builder clearClassMethodCall() {
         if (classMethodCallBuilder_ == null) {
-          if (contentCase_ == 9) {
+          if (contentCase_ == 10) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 9) {
+          if (contentCase_ == 10) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -2551,32 +2817,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.Builder getClassMethodCallBuilder() {
         return getClassMethodCallFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCallOrBuilder getClassMethodCallOrBuilder() {
-        if ((contentCase_ == 9) && (classMethodCallBuilder_ != null)) {
+        if ((contentCase_ == 10) && (classMethodCallBuilder_ != null)) {
           return classMethodCallBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 9) {
+          if (contentCase_ == 10) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 9;</code>
+       * <code>optional .messages.protobuf.data.ClassMethodCall classMethodCall = 10;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCallOrBuilder> 
           getClassMethodCallFieldBuilder() {
         if (classMethodCallBuilder_ == null) {
-          if (!(contentCase_ == 9)) {
+          if (!(contentCase_ == 10)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClassMethodCall.getDefaultInstance();
           }
           classMethodCallBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -2586,7 +2852,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 9;
+        contentCase_ = 10;
         onChanged();;
         return classMethodCallBuilder_;
       }
@@ -2594,29 +2860,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCallOrBuilder> clinitCallBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
        */
       public boolean hasClinitCall() {
-        return contentCase_ == 10;
+        return contentCase_ == 11;
       }
       /**
-       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall getClinitCall() {
         if (clinitCallBuilder_ == null) {
-          if (contentCase_ == 10) {
+          if (contentCase_ == 11) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.getDefaultInstance();
         } else {
-          if (contentCase_ == 10) {
+          if (contentCase_ == 11) {
             return clinitCallBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
        */
       public Builder setClinitCall(com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall value) {
         if (clinitCallBuilder_ == null) {
@@ -2628,11 +2894,11 @@ public final class Wrappers {
         } else {
           clinitCallBuilder_.setMessage(value);
         }
-        contentCase_ = 10;
+        contentCase_ = 11;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
        */
       public Builder setClinitCall(
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.Builder builderForValue) {
@@ -2642,15 +2908,15 @@ public final class Wrappers {
         } else {
           clinitCallBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 10;
+        contentCase_ = 11;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
        */
       public Builder mergeClinitCall(com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall value) {
         if (clinitCallBuilder_ == null) {
-          if (contentCase_ == 10 &&
+          if (contentCase_ == 11 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_)
                 .mergeFrom(value).buildPartial();
@@ -2659,26 +2925,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 10) {
+          if (contentCase_ == 11) {
             clinitCallBuilder_.mergeFrom(value);
           }
           clinitCallBuilder_.setMessage(value);
         }
-        contentCase_ = 10;
+        contentCase_ = 11;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
        */
       public Builder clearClinitCall() {
         if (clinitCallBuilder_ == null) {
-          if (contentCase_ == 10) {
+          if (contentCase_ == 11) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 10) {
+          if (contentCase_ == 11) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -2687,32 +2953,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.Builder getClinitCallBuilder() {
         return getClinitCallFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCallOrBuilder getClinitCallOrBuilder() {
-        if ((contentCase_ == 10) && (clinitCallBuilder_ != null)) {
+        if ((contentCase_ == 11) && (clinitCallBuilder_ != null)) {
           return clinitCallBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 10) {
+          if (contentCase_ == 11) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 10;</code>
+       * <code>optional .messages.protobuf.data.ClInitCall clinitCall = 11;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCallOrBuilder> 
           getClinitCallFieldBuilder() {
         if (clinitCallBuilder_ == null) {
-          if (!(contentCase_ == 10)) {
+          if (!(contentCase_ == 11)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Calls.ClInitCall.getDefaultInstance();
           }
           clinitCallBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -2722,7 +2988,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 10;
+        contentCase_ = 11;
         onChanged();;
         return clinitCallBuilder_;
       }
@@ -2730,29 +2996,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGetOrBuilder> staticFieldGetBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
        */
       public boolean hasStaticFieldGet() {
-        return contentCase_ == 11;
+        return contentCase_ == 12;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet getStaticFieldGet() {
         if (staticFieldGetBuilder_ == null) {
-          if (contentCase_ == 11) {
+          if (contentCase_ == 12) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.getDefaultInstance();
         } else {
-          if (contentCase_ == 11) {
+          if (contentCase_ == 12) {
             return staticFieldGetBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
        */
       public Builder setStaticFieldGet(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet value) {
         if (staticFieldGetBuilder_ == null) {
@@ -2764,11 +3030,11 @@ public final class Wrappers {
         } else {
           staticFieldGetBuilder_.setMessage(value);
         }
-        contentCase_ = 11;
+        contentCase_ = 12;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
        */
       public Builder setStaticFieldGet(
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.Builder builderForValue) {
@@ -2778,15 +3044,15 @@ public final class Wrappers {
         } else {
           staticFieldGetBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 11;
+        contentCase_ = 12;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
        */
       public Builder mergeStaticFieldGet(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet value) {
         if (staticFieldGetBuilder_ == null) {
-          if (contentCase_ == 11 &&
+          if (contentCase_ == 12 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_)
                 .mergeFrom(value).buildPartial();
@@ -2795,26 +3061,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 11) {
+          if (contentCase_ == 12) {
             staticFieldGetBuilder_.mergeFrom(value);
           }
           staticFieldGetBuilder_.setMessage(value);
         }
-        contentCase_ = 11;
+        contentCase_ = 12;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
        */
       public Builder clearStaticFieldGet() {
         if (staticFieldGetBuilder_ == null) {
-          if (contentCase_ == 11) {
+          if (contentCase_ == 12) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 11) {
+          if (contentCase_ == 12) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -2823,32 +3089,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.Builder getStaticFieldGetBuilder() {
         return getStaticFieldGetFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGetOrBuilder getStaticFieldGetOrBuilder() {
-        if ((contentCase_ == 11) && (staticFieldGetBuilder_ != null)) {
+        if ((contentCase_ == 12) && (staticFieldGetBuilder_ != null)) {
           return staticFieldGetBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 11) {
+          if (contentCase_ == 12) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 11;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldGet staticFieldGet = 12;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGetOrBuilder> 
           getStaticFieldGetFieldBuilder() {
         if (staticFieldGetBuilder_ == null) {
-          if (!(contentCase_ == 11)) {
+          if (!(contentCase_ == 12)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldGet.getDefaultInstance();
           }
           staticFieldGetBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -2858,7 +3124,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 11;
+        contentCase_ = 12;
         onChanged();;
         return staticFieldGetBuilder_;
       }
@@ -2866,29 +3132,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder> staticFieldPutBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
        */
       public boolean hasStaticFieldPut() {
-        return contentCase_ == 12;
+        return contentCase_ == 13;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut getStaticFieldPut() {
         if (staticFieldPutBuilder_ == null) {
-          if (contentCase_ == 12) {
+          if (contentCase_ == 13) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance();
         } else {
-          if (contentCase_ == 12) {
+          if (contentCase_ == 13) {
             return staticFieldPutBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
        */
       public Builder setStaticFieldPut(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut value) {
         if (staticFieldPutBuilder_ == null) {
@@ -2900,11 +3166,11 @@ public final class Wrappers {
         } else {
           staticFieldPutBuilder_.setMessage(value);
         }
-        contentCase_ = 12;
+        contentCase_ = 13;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
        */
       public Builder setStaticFieldPut(
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.Builder builderForValue) {
@@ -2914,15 +3180,15 @@ public final class Wrappers {
         } else {
           staticFieldPutBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 12;
+        contentCase_ = 13;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
        */
       public Builder mergeStaticFieldPut(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut value) {
         if (staticFieldPutBuilder_ == null) {
-          if (contentCase_ == 12 &&
+          if (contentCase_ == 13 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_)
                 .mergeFrom(value).buildPartial();
@@ -2931,26 +3197,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 12) {
+          if (contentCase_ == 13) {
             staticFieldPutBuilder_.mergeFrom(value);
           }
           staticFieldPutBuilder_.setMessage(value);
         }
-        contentCase_ = 12;
+        contentCase_ = 13;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
        */
       public Builder clearStaticFieldPut() {
         if (staticFieldPutBuilder_ == null) {
-          if (contentCase_ == 12) {
+          if (contentCase_ == 13) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 12) {
+          if (contentCase_ == 13) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -2959,32 +3225,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.Builder getStaticFieldPutBuilder() {
         return getStaticFieldPutFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder getStaticFieldPutOrBuilder() {
-        if ((contentCase_ == 12) && (staticFieldPutBuilder_ != null)) {
+        if ((contentCase_ == 13) && (staticFieldPutBuilder_ != null)) {
           return staticFieldPutBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 12) {
+          if (contentCase_ == 13) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 12;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 13;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder> 
           getStaticFieldPutFieldBuilder() {
         if (staticFieldPutBuilder_ == null) {
-          if (!(contentCase_ == 12)) {
+          if (!(contentCase_ == 13)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance();
           }
           staticFieldPutBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -2994,7 +3260,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 12;
+        contentCase_ = 13;
         onChanged();;
         return staticFieldPutBuilder_;
       }
@@ -3002,29 +3268,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGetOrBuilder> instanceFieldGetBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
        */
       public boolean hasInstanceFieldGet() {
-        return contentCase_ == 13;
+        return contentCase_ == 14;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet getInstanceFieldGet() {
         if (instanceFieldGetBuilder_ == null) {
-          if (contentCase_ == 13) {
+          if (contentCase_ == 14) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.getDefaultInstance();
         } else {
-          if (contentCase_ == 13) {
+          if (contentCase_ == 14) {
             return instanceFieldGetBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
        */
       public Builder setInstanceFieldGet(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet value) {
         if (instanceFieldGetBuilder_ == null) {
@@ -3036,11 +3302,11 @@ public final class Wrappers {
         } else {
           instanceFieldGetBuilder_.setMessage(value);
         }
-        contentCase_ = 13;
+        contentCase_ = 14;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
        */
       public Builder setInstanceFieldGet(
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.Builder builderForValue) {
@@ -3050,15 +3316,15 @@ public final class Wrappers {
         } else {
           instanceFieldGetBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 13;
+        contentCase_ = 14;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
        */
       public Builder mergeInstanceFieldGet(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet value) {
         if (instanceFieldGetBuilder_ == null) {
-          if (contentCase_ == 13 &&
+          if (contentCase_ == 14 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_)
                 .mergeFrom(value).buildPartial();
@@ -3067,26 +3333,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 13) {
+          if (contentCase_ == 14) {
             instanceFieldGetBuilder_.mergeFrom(value);
           }
           instanceFieldGetBuilder_.setMessage(value);
         }
-        contentCase_ = 13;
+        contentCase_ = 14;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
        */
       public Builder clearInstanceFieldGet() {
         if (instanceFieldGetBuilder_ == null) {
-          if (contentCase_ == 13) {
+          if (contentCase_ == 14) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 13) {
+          if (contentCase_ == 14) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -3095,32 +3361,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.Builder getInstanceFieldGetBuilder() {
         return getInstanceFieldGetFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGetOrBuilder getInstanceFieldGetOrBuilder() {
-        if ((contentCase_ == 13) && (instanceFieldGetBuilder_ != null)) {
+        if ((contentCase_ == 14) && (instanceFieldGetBuilder_ != null)) {
           return instanceFieldGetBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 13) {
+          if (contentCase_ == 14) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 13;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldGet instanceFieldGet = 14;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGetOrBuilder> 
           getInstanceFieldGetFieldBuilder() {
         if (instanceFieldGetBuilder_ == null) {
-          if (!(contentCase_ == 13)) {
+          if (!(contentCase_ == 14)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet.getDefaultInstance();
           }
           instanceFieldGetBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -3130,7 +3396,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 13;
+        contentCase_ = 14;
         onChanged();;
         return instanceFieldGetBuilder_;
       }
@@ -3138,29 +3404,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder> instanceFieldPutBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
        */
       public boolean hasInstanceFieldPut() {
-        return contentCase_ == 14;
+        return contentCase_ == 15;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut getInstanceFieldPut() {
         if (instanceFieldPutBuilder_ == null) {
-          if (contentCase_ == 14) {
+          if (contentCase_ == 15) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance();
         } else {
-          if (contentCase_ == 14) {
+          if (contentCase_ == 15) {
             return instanceFieldPutBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
        */
       public Builder setInstanceFieldPut(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut value) {
         if (instanceFieldPutBuilder_ == null) {
@@ -3172,11 +3438,11 @@ public final class Wrappers {
         } else {
           instanceFieldPutBuilder_.setMessage(value);
         }
-        contentCase_ = 14;
+        contentCase_ = 15;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
        */
       public Builder setInstanceFieldPut(
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.Builder builderForValue) {
@@ -3186,15 +3452,15 @@ public final class Wrappers {
         } else {
           instanceFieldPutBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 14;
+        contentCase_ = 15;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
        */
       public Builder mergeInstanceFieldPut(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut value) {
         if (instanceFieldPutBuilder_ == null) {
-          if (contentCase_ == 14 &&
+          if (contentCase_ == 15 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_)
                 .mergeFrom(value).buildPartial();
@@ -3203,26 +3469,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 14) {
+          if (contentCase_ == 15) {
             instanceFieldPutBuilder_.mergeFrom(value);
           }
           instanceFieldPutBuilder_.setMessage(value);
         }
-        contentCase_ = 14;
+        contentCase_ = 15;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
        */
       public Builder clearInstanceFieldPut() {
         if (instanceFieldPutBuilder_ == null) {
-          if (contentCase_ == 14) {
+          if (contentCase_ == 15) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 14) {
+          if (contentCase_ == 15) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -3231,32 +3497,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.Builder getInstanceFieldPutBuilder() {
         return getInstanceFieldPutFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder getInstanceFieldPutOrBuilder() {
-        if ((contentCase_ == 14) && (instanceFieldPutBuilder_ != null)) {
+        if ((contentCase_ == 15) && (instanceFieldPutBuilder_ != null)) {
           return instanceFieldPutBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 14) {
+          if (contentCase_ == 15) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 14;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 15;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder> 
           getInstanceFieldPutFieldBuilder() {
         if (instanceFieldPutBuilder_ == null) {
-          if (!(contentCase_ == 14)) {
+          if (!(contentCase_ == 15)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance();
           }
           instanceFieldPutBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -3266,7 +3532,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 14;
+        contentCase_ = 15;
         onChanged();;
         return instanceFieldPutBuilder_;
       }
@@ -3274,29 +3540,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDoneOrBuilder> staticFieldPutDoneBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
        */
       public boolean hasStaticFieldPutDone() {
-        return contentCase_ == 15;
+        return contentCase_ == 16;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone getStaticFieldPutDone() {
         if (staticFieldPutDoneBuilder_ == null) {
-          if (contentCase_ == 15) {
+          if (contentCase_ == 16) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.getDefaultInstance();
         } else {
-          if (contentCase_ == 15) {
+          if (contentCase_ == 16) {
             return staticFieldPutDoneBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
        */
       public Builder setStaticFieldPutDone(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone value) {
         if (staticFieldPutDoneBuilder_ == null) {
@@ -3308,11 +3574,11 @@ public final class Wrappers {
         } else {
           staticFieldPutDoneBuilder_.setMessage(value);
         }
-        contentCase_ = 15;
+        contentCase_ = 16;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
        */
       public Builder setStaticFieldPutDone(
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.Builder builderForValue) {
@@ -3322,15 +3588,15 @@ public final class Wrappers {
         } else {
           staticFieldPutDoneBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 15;
+        contentCase_ = 16;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
        */
       public Builder mergeStaticFieldPutDone(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone value) {
         if (staticFieldPutDoneBuilder_ == null) {
-          if (contentCase_ == 15 &&
+          if (contentCase_ == 16 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_)
                 .mergeFrom(value).buildPartial();
@@ -3339,26 +3605,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 15) {
+          if (contentCase_ == 16) {
             staticFieldPutDoneBuilder_.mergeFrom(value);
           }
           staticFieldPutDoneBuilder_.setMessage(value);
         }
-        contentCase_ = 15;
+        contentCase_ = 16;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
        */
       public Builder clearStaticFieldPutDone() {
         if (staticFieldPutDoneBuilder_ == null) {
-          if (contentCase_ == 15) {
+          if (contentCase_ == 16) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 15) {
+          if (contentCase_ == 16) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -3367,32 +3633,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.Builder getStaticFieldPutDoneBuilder() {
         return getStaticFieldPutDoneFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDoneOrBuilder getStaticFieldPutDoneOrBuilder() {
-        if ((contentCase_ == 15) && (staticFieldPutDoneBuilder_ != null)) {
+        if ((contentCase_ == 16) && (staticFieldPutDoneBuilder_ != null)) {
           return staticFieldPutDoneBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 15) {
+          if (contentCase_ == 16) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 15;</code>
+       * <code>optional .messages.protobuf.data.StaticFieldPutDone staticFieldPutDone = 16;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDoneOrBuilder> 
           getStaticFieldPutDoneFieldBuilder() {
         if (staticFieldPutDoneBuilder_ == null) {
-          if (!(contentCase_ == 15)) {
+          if (!(contentCase_ == 16)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutDone.getDefaultInstance();
           }
           staticFieldPutDoneBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -3402,7 +3668,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 15;
+        contentCase_ = 16;
         onChanged();;
         return staticFieldPutDoneBuilder_;
       }
@@ -3410,29 +3676,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDoneOrBuilder> instanceFieldPutDoneBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
        */
       public boolean hasInstanceFieldPutDone() {
-        return contentCase_ == 16;
+        return contentCase_ == 17;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone getInstanceFieldPutDone() {
         if (instanceFieldPutDoneBuilder_ == null) {
-          if (contentCase_ == 16) {
+          if (contentCase_ == 17) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.getDefaultInstance();
         } else {
-          if (contentCase_ == 16) {
+          if (contentCase_ == 17) {
             return instanceFieldPutDoneBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
        */
       public Builder setInstanceFieldPutDone(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone value) {
         if (instanceFieldPutDoneBuilder_ == null) {
@@ -3444,11 +3710,11 @@ public final class Wrappers {
         } else {
           instanceFieldPutDoneBuilder_.setMessage(value);
         }
-        contentCase_ = 16;
+        contentCase_ = 17;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
        */
       public Builder setInstanceFieldPutDone(
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.Builder builderForValue) {
@@ -3458,15 +3724,15 @@ public final class Wrappers {
         } else {
           instanceFieldPutDoneBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 16;
+        contentCase_ = 17;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
        */
       public Builder mergeInstanceFieldPutDone(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone value) {
         if (instanceFieldPutDoneBuilder_ == null) {
-          if (contentCase_ == 16 &&
+          if (contentCase_ == 17 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_)
                 .mergeFrom(value).buildPartial();
@@ -3475,26 +3741,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 16) {
+          if (contentCase_ == 17) {
             instanceFieldPutDoneBuilder_.mergeFrom(value);
           }
           instanceFieldPutDoneBuilder_.setMessage(value);
         }
-        contentCase_ = 16;
+        contentCase_ = 17;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
        */
       public Builder clearInstanceFieldPutDone() {
         if (instanceFieldPutDoneBuilder_ == null) {
-          if (contentCase_ == 16) {
+          if (contentCase_ == 17) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 16) {
+          if (contentCase_ == 17) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -3503,32 +3769,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.Builder getInstanceFieldPutDoneBuilder() {
         return getInstanceFieldPutDoneFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDoneOrBuilder getInstanceFieldPutDoneOrBuilder() {
-        if ((contentCase_ == 16) && (instanceFieldPutDoneBuilder_ != null)) {
+        if ((contentCase_ == 17) && (instanceFieldPutDoneBuilder_ != null)) {
           return instanceFieldPutDoneBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 16) {
+          if (contentCase_ == 17) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 16;</code>
+       * <code>optional .messages.protobuf.data.InstanceFieldPutDone instanceFieldPutDone = 17;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDoneOrBuilder> 
           getInstanceFieldPutDoneFieldBuilder() {
         if (instanceFieldPutDoneBuilder_ == null) {
-          if (!(contentCase_ == 16)) {
+          if (!(contentCase_ == 17)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutDone.getDefaultInstance();
           }
           instanceFieldPutDoneBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -3538,7 +3804,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 16;
+        contentCase_ = 17;
         onChanged();;
         return instanceFieldPutDoneBuilder_;
       }
@@ -3546,29 +3812,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable, com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowableOrBuilder> raisedThrowableBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
        */
       public boolean hasRaisedThrowable() {
-        return contentCase_ == 17;
+        return contentCase_ == 18;
       }
       /**
-       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable getRaisedThrowable() {
         if (raisedThrowableBuilder_ == null) {
-          if (contentCase_ == 17) {
+          if (contentCase_ == 18) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.getDefaultInstance();
         } else {
-          if (contentCase_ == 17) {
+          if (contentCase_ == 18) {
             return raisedThrowableBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
        */
       public Builder setRaisedThrowable(com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable value) {
         if (raisedThrowableBuilder_ == null) {
@@ -3580,11 +3846,11 @@ public final class Wrappers {
         } else {
           raisedThrowableBuilder_.setMessage(value);
         }
-        contentCase_ = 17;
+        contentCase_ = 18;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
        */
       public Builder setRaisedThrowable(
           com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.Builder builderForValue) {
@@ -3594,15 +3860,15 @@ public final class Wrappers {
         } else {
           raisedThrowableBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 17;
+        contentCase_ = 18;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
        */
       public Builder mergeRaisedThrowable(com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable value) {
         if (raisedThrowableBuilder_ == null) {
-          if (contentCase_ == 17 &&
+          if (contentCase_ == 18 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable) content_)
                 .mergeFrom(value).buildPartial();
@@ -3611,26 +3877,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 17) {
+          if (contentCase_ == 18) {
             raisedThrowableBuilder_.mergeFrom(value);
           }
           raisedThrowableBuilder_.setMessage(value);
         }
-        contentCase_ = 17;
+        contentCase_ = 18;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
        */
       public Builder clearRaisedThrowable() {
         if (raisedThrowableBuilder_ == null) {
-          if (contentCase_ == 17) {
+          if (contentCase_ == 18) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 17) {
+          if (contentCase_ == 18) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -3639,32 +3905,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.Builder getRaisedThrowableBuilder() {
         return getRaisedThrowableFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowableOrBuilder getRaisedThrowableOrBuilder() {
-        if ((contentCase_ == 17) && (raisedThrowableBuilder_ != null)) {
+        if ((contentCase_ == 18) && (raisedThrowableBuilder_ != null)) {
           return raisedThrowableBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 17) {
+          if (contentCase_ == 18) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 17;</code>
+       * <code>optional .messages.protobuf.data.RaisedThrowable raisedThrowable = 18;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable, com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowableOrBuilder> 
           getRaisedThrowableFieldBuilder() {
         if (raisedThrowableBuilder_ == null) {
-          if (!(contentCase_ == 17)) {
+          if (!(contentCase_ == 18)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.RaisedThrowable.getDefaultInstance();
           }
           raisedThrowableBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -3674,7 +3940,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 17;
+        contentCase_ = 18;
         onChanged();;
         return raisedThrowableBuilder_;
       }
@@ -3682,29 +3948,29 @@ public final class Wrappers {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue, com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValueOrBuilder> returnValueBuilder_;
       /**
-       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
        */
       public boolean hasReturnValue() {
-        return contentCase_ == 18;
+        return contentCase_ == 19;
       }
       /**
-       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue getReturnValue() {
         if (returnValueBuilder_ == null) {
-          if (contentCase_ == 18) {
+          if (contentCase_ == 19) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.getDefaultInstance();
         } else {
-          if (contentCase_ == 18) {
+          if (contentCase_ == 19) {
             return returnValueBuilder_.getMessage();
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
        */
       public Builder setReturnValue(com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue value) {
         if (returnValueBuilder_ == null) {
@@ -3716,11 +3982,11 @@ public final class Wrappers {
         } else {
           returnValueBuilder_.setMessage(value);
         }
-        contentCase_ = 18;
+        contentCase_ = 19;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
        */
       public Builder setReturnValue(
           com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.Builder builderForValue) {
@@ -3730,15 +3996,15 @@ public final class Wrappers {
         } else {
           returnValueBuilder_.setMessage(builderForValue.build());
         }
-        contentCase_ = 18;
+        contentCase_ = 19;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
        */
       public Builder mergeReturnValue(com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue value) {
         if (returnValueBuilder_ == null) {
-          if (contentCase_ == 18 &&
+          if (contentCase_ == 19 &&
               content_ != com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.getDefaultInstance()) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.newBuilder((com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue) content_)
                 .mergeFrom(value).buildPartial();
@@ -3747,26 +4013,26 @@ public final class Wrappers {
           }
           onChanged();
         } else {
-          if (contentCase_ == 18) {
+          if (contentCase_ == 19) {
             returnValueBuilder_.mergeFrom(value);
           }
           returnValueBuilder_.setMessage(value);
         }
-        contentCase_ = 18;
+        contentCase_ = 19;
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
        */
       public Builder clearReturnValue() {
         if (returnValueBuilder_ == null) {
-          if (contentCase_ == 18) {
+          if (contentCase_ == 19) {
             contentCase_ = 0;
             content_ = null;
             onChanged();
           }
         } else {
-          if (contentCase_ == 18) {
+          if (contentCase_ == 19) {
             contentCase_ = 0;
             content_ = null;
           }
@@ -3775,32 +4041,32 @@ public final class Wrappers {
         return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.Builder getReturnValueBuilder() {
         return getReturnValueFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
        */
       public com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValueOrBuilder getReturnValueOrBuilder() {
-        if ((contentCase_ == 18) && (returnValueBuilder_ != null)) {
+        if ((contentCase_ == 19) && (returnValueBuilder_ != null)) {
           return returnValueBuilder_.getMessageOrBuilder();
         } else {
-          if (contentCase_ == 18) {
+          if (contentCase_ == 19) {
             return (com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue) content_;
           }
           return com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.getDefaultInstance();
         }
       }
       /**
-       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 18;</code>
+       * <code>optional .messages.protobuf.data.ReturnValue returnValue = 19;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue, com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValueOrBuilder> 
           getReturnValueFieldBuilder() {
         if (returnValueBuilder_ == null) {
-          if (!(contentCase_ == 18)) {
+          if (!(contentCase_ == 19)) {
             content_ = com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue.getDefaultInstance();
           }
           returnValueBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -3810,7 +4076,7 @@ public final class Wrappers {
                   isClean());
           content_ = null;
         }
-        contentCase_ = 18;
+        contentCase_ = 19;
         onChanged();;
         return returnValueBuilder_;
       }
@@ -3879,33 +4145,33 @@ public final class Wrappers {
     java.lang.String[] descriptorData = {
       "\n\016wrappers.proto\022\026messages.protobuf.data" +
       "\032\013calls.proto\032\014fields.proto\032\020exceptions." +
-      "proto\032\014values.proto\"\312\007\n\013DataMessage\022\032\n\016c" +
-      "oncentratorId\030\001 \002(\005:\002-1\022\017\n\007msgType\030\002 \002(\t" +
-      "\022\024\n\010threadId\030\003 \002(\003:\002-1\022\023\n\013currentTime\030\004 " +
-      "\002(\003\022\021\n\tthreadSeq\030\005 \001(\003\022\021\n\tfollowing\030\006 \001(" +
-      "\003\022B\n\017constructorCall\030\007 \001(\0132\'.messages.pr" +
-      "otobuf.data.ConstructorCallH\000\022H\n\022instanc" +
-      "eMethodCall\030\010 \001(\0132*.messages.protobuf.da" +
-      "ta.InstanceMethodCallH\000\022B\n\017classMethodCa",
-      "ll\030\t \001(\0132\'.messages.protobuf.data.ClassM" +
-      "ethodCallH\000\0228\n\nclinitCall\030\n \001(\0132\".messag" +
-      "es.protobuf.data.ClInitCallH\000\022@\n\016staticF" +
-      "ieldGet\030\013 \001(\0132&.messages.protobuf.data.S" +
-      "taticFieldGetH\000\022@\n\016staticFieldPut\030\014 \001(\0132" +
-      "&.messages.protobuf.data.StaticFieldPutH" +
-      "\000\022D\n\020instanceFieldGet\030\r \001(\0132(.messages.p" +
-      "rotobuf.data.InstanceFieldGetH\000\022D\n\020insta" +
-      "nceFieldPut\030\016 \001(\0132(.messages.protobuf.da" +
-      "ta.InstanceFieldPutH\000\022H\n\022staticFieldPutD",
-      "one\030\017 \001(\0132*.messages.protobuf.data.Stati" +
-      "cFieldPutDoneH\000\022L\n\024instanceFieldPutDone\030" +
-      "\020 \001(\0132,.messages.protobuf.data.InstanceF" +
-      "ieldPutDoneH\000\022B\n\017raisedThrowable\030\021 \001(\0132\'" +
-      ".messages.protobuf.data.RaisedThrowableH" +
-      "\000\022:\n\013returnValue\030\022 \001(\0132#.messages.protob" +
-      "uf.data.ReturnValueH\000B\t\n\007contentB9\n5com." +
-      "ittera.cometa.concentrator.messages.prot" +
-      "obuf.dataH\001"
+      "proto\032\014values.proto\"\335\007\n\013DataMessage\022\030\n\020c" +
+      "oncentratorUuid\030\001 \002(\t\022\023\n\013messageUuid\030\002 \002" +
+      "(\t\022\017\n\007msgType\030\003 \002(\t\022\024\n\010threadId\030\004 \002(\003:\002-" +
+      "1\022\023\n\013currentTime\030\005 \002(\003\022\021\n\tthreadSeq\030\006 \001(" +
+      "\003\022\021\n\tfollowing\030\007 \001(\003\022B\n\017constructorCall\030" +
+      "\010 \001(\0132\'.messages.protobuf.data.Construct" +
+      "orCallH\000\022H\n\022instanceMethodCall\030\t \001(\0132*.m" +
+      "essages.protobuf.data.InstanceMethodCall",
+      "H\000\022B\n\017classMethodCall\030\n \001(\0132\'.messages.p" +
+      "rotobuf.data.ClassMethodCallH\000\0228\n\nclinit" +
+      "Call\030\013 \001(\0132\".messages.protobuf.data.ClIn" +
+      "itCallH\000\022@\n\016staticFieldGet\030\014 \001(\0132&.messa" +
+      "ges.protobuf.data.StaticFieldGetH\000\022@\n\016st" +
+      "aticFieldPut\030\r \001(\0132&.messages.protobuf.d" +
+      "ata.StaticFieldPutH\000\022D\n\020instanceFieldGet" +
+      "\030\016 \001(\0132(.messages.protobuf.data.Instance" +
+      "FieldGetH\000\022D\n\020instanceFieldPut\030\017 \001(\0132(.m" +
+      "essages.protobuf.data.InstanceFieldPutH\000",
+      "\022H\n\022staticFieldPutDone\030\020 \001(\0132*.messages." +
+      "protobuf.data.StaticFieldPutDoneH\000\022L\n\024in" +
+      "stanceFieldPutDone\030\021 \001(\0132,.messages.prot" +
+      "obuf.data.InstanceFieldPutDoneH\000\022B\n\017rais" +
+      "edThrowable\030\022 \001(\0132\'.messages.protobuf.da" +
+      "ta.RaisedThrowableH\000\022:\n\013returnValue\030\023 \001(" +
+      "\0132#.messages.protobuf.data.ReturnValueH\000" +
+      "B\t\n\007contentB9\n5com.ittera.cometa.concent" +
+      "rator.messages.protobuf.dataH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -3928,7 +4194,7 @@ public final class Wrappers {
     internal_static_messages_protobuf_data_DataMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_messages_protobuf_data_DataMessage_descriptor,
-        new java.lang.String[] { "ConcentratorId", "MsgType", "ThreadId", "CurrentTime", "ThreadSeq", "Following", "ConstructorCall", "InstanceMethodCall", "ClassMethodCall", "ClinitCall", "StaticFieldGet", "StaticFieldPut", "InstanceFieldGet", "InstanceFieldPut", "StaticFieldPutDone", "InstanceFieldPutDone", "RaisedThrowable", "ReturnValue", "Content", });
+        new java.lang.String[] { "ConcentratorUuid", "MessageUuid", "MsgType", "ThreadId", "CurrentTime", "ThreadSeq", "Following", "ConstructorCall", "InstanceMethodCall", "ClassMethodCall", "ClinitCall", "StaticFieldGet", "StaticFieldPut", "InstanceFieldGet", "InstanceFieldPut", "StaticFieldPutDone", "InstanceFieldPutDone", "RaisedThrowable", "ReturnValue", "Content", });
     com.ittera.cometa.concentrator.messages.protobuf.data.Calls.getDescriptor();
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.getDescriptor();
     com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.getDescriptor();
