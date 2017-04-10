@@ -132,7 +132,6 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
 
     protected void openConnections() {
         this.producer = new KafkaProducer<>(producerProperties);
-
         this.consumer = new KafkaConsumer<>(consumerProperties);
         //manual assignment of partition so we can control offset seek
         final List<TopicPartition> topicPartitionList = Arrays.asList(new TopicPartition(kafkaTopic, 0));
@@ -161,8 +160,8 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
                 }
             }
 
-            //print stats every 100 iterations
-            if ((++iterations % 100 == 0) && logger.isDebugEnabled()) {
+            //print stats every 10000 iterations
+            if ((++iterations % 10000 == 0) && logger.isDebugEnabled()) {
                 printDebugStats();
             }
 
@@ -202,7 +201,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
                     try {
                         //push to queue of the Destination thread
                         threadBlockingQueueMap.get(threadId).put(dataMessage);
-                        logger.info("Pushed message with offset {} to thread queue", recordOffset);
+                        logger.debug("Pushed message with offset {} to thread queue with id = {}", recordOffset, threadId);
                     } catch (InterruptedException e) {
                         logger.error("Interrupted while putting message in queue", e);
                         //TODO: should/can we do something about it?
