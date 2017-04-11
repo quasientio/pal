@@ -72,7 +72,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
         }
 
         void sendToKafka(DataMessage message) {
-            ProducerRecord newRecord = new ProducerRecord(kafkaTopic, message);
+            ProducerRecord newRecord = new ProducerRecord(kafkaTopic,message.getMessageUuid(), message);
             producer.send(newRecord);
             messagesSent.getAndIncrement();
             logger.debug("new message sent:\n {}", message);

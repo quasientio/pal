@@ -91,13 +91,13 @@ public final class Wrappers {
     long getCurrentTime();
 
     /**
-     * <code>optional int64 threadSeq = 6;</code>
+     * <code>optional int64 builderSeq = 6;</code>
      */
-    boolean hasThreadSeq();
+    boolean hasBuilderSeq();
     /**
-     * <code>optional int64 threadSeq = 6;</code>
+     * <code>optional int64 builderSeq = 6;</code>
      */
-    long getThreadSeq();
+    long getBuilderSeq();
 
     /**
      * <code>optional int64 following = 7;</code>
@@ -283,7 +283,7 @@ public final class Wrappers {
       msgType_ = "";
       threadId_ = -1L;
       currentTime_ = 0L;
-      threadSeq_ = 0L;
+      builderSeq_ = 0L;
       following_ = 0L;
     }
 
@@ -345,7 +345,7 @@ public final class Wrappers {
             }
             case 48: {
               bitField0_ |= 0x00000020;
-              threadSeq_ = input.readInt64();
+              builderSeq_ = input.readInt64();
               break;
             }
             case 56: {
@@ -772,19 +772,19 @@ public final class Wrappers {
       return currentTime_;
     }
 
-    public static final int THREADSEQ_FIELD_NUMBER = 6;
-    private long threadSeq_;
+    public static final int BUILDERSEQ_FIELD_NUMBER = 6;
+    private long builderSeq_;
     /**
-     * <code>optional int64 threadSeq = 6;</code>
+     * <code>optional int64 builderSeq = 6;</code>
      */
-    public boolean hasThreadSeq() {
+    public boolean hasBuilderSeq() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
-     * <code>optional int64 threadSeq = 6;</code>
+     * <code>optional int64 builderSeq = 6;</code>
      */
-    public long getThreadSeq() {
-      return threadSeq_;
+    public long getBuilderSeq() {
+      return builderSeq_;
     }
 
     public static final int FOLLOWING_FIELD_NUMBER = 7;
@@ -1234,7 +1234,7 @@ public final class Wrappers {
         output.writeInt64(5, currentTime_);
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeInt64(6, threadSeq_);
+        output.writeInt64(6, builderSeq_);
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeInt64(7, following_);
@@ -1302,7 +1302,7 @@ public final class Wrappers {
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(6, threadSeq_);
+          .computeInt64Size(6, builderSeq_);
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1398,10 +1398,10 @@ public final class Wrappers {
         result = result && (getCurrentTime()
             == other.getCurrentTime());
       }
-      result = result && (hasThreadSeq() == other.hasThreadSeq());
-      if (hasThreadSeq()) {
-        result = result && (getThreadSeq()
-            == other.getThreadSeq());
+      result = result && (hasBuilderSeq() == other.hasBuilderSeq());
+      if (hasBuilderSeq()) {
+        result = result && (getBuilderSeq()
+            == other.getBuilderSeq());
       }
       result = result && (hasFollowing() == other.hasFollowing());
       if (hasFollowing()) {
@@ -1496,10 +1496,10 @@ public final class Wrappers {
         hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
             getCurrentTime());
       }
-      if (hasThreadSeq()) {
-        hash = (37 * hash) + THREADSEQ_FIELD_NUMBER;
+      if (hasBuilderSeq()) {
+        hash = (37 * hash) + BUILDERSEQ_FIELD_NUMBER;
         hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-            getThreadSeq());
+            getBuilderSeq());
       }
       if (hasFollowing()) {
         hash = (37 * hash) + FOLLOWING_FIELD_NUMBER;
@@ -1686,7 +1686,7 @@ public final class Wrappers {
         bitField0_ = (bitField0_ & ~0x00000008);
         currentTime_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000010);
-        threadSeq_ = 0L;
+        builderSeq_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000020);
         following_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000040);
@@ -1739,7 +1739,7 @@ public final class Wrappers {
         if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000020;
         }
-        result.threadSeq_ = threadSeq_;
+        result.builderSeq_ = builderSeq_;
         if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
           to_bitField0_ |= 0x00000040;
         }
@@ -1892,8 +1892,8 @@ public final class Wrappers {
         if (other.hasCurrentTime()) {
           setCurrentTime(other.getCurrentTime());
         }
-        if (other.hasThreadSeq()) {
-          setThreadSeq(other.getThreadSeq());
+        if (other.hasBuilderSeq()) {
+          setBuilderSeq(other.getBuilderSeq());
         }
         if (other.hasFollowing()) {
           setFollowing(other.getFollowing());
@@ -2385,34 +2385,34 @@ public final class Wrappers {
         return this;
       }
 
-      private long threadSeq_ ;
+      private long builderSeq_ ;
       /**
-       * <code>optional int64 threadSeq = 6;</code>
+       * <code>optional int64 builderSeq = 6;</code>
        */
-      public boolean hasThreadSeq() {
+      public boolean hasBuilderSeq() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       /**
-       * <code>optional int64 threadSeq = 6;</code>
+       * <code>optional int64 builderSeq = 6;</code>
        */
-      public long getThreadSeq() {
-        return threadSeq_;
+      public long getBuilderSeq() {
+        return builderSeq_;
       }
       /**
-       * <code>optional int64 threadSeq = 6;</code>
+       * <code>optional int64 builderSeq = 6;</code>
        */
-      public Builder setThreadSeq(long value) {
+      public Builder setBuilderSeq(long value) {
         bitField0_ |= 0x00000020;
-        threadSeq_ = value;
+        builderSeq_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional int64 threadSeq = 6;</code>
+       * <code>optional int64 builderSeq = 6;</code>
        */
-      public Builder clearThreadSeq() {
+      public Builder clearBuilderSeq() {
         bitField0_ = (bitField0_ & ~0x00000020);
-        threadSeq_ = 0L;
+        builderSeq_ = 0L;
         onChanged();
         return this;
       }
@@ -4145,33 +4145,33 @@ public final class Wrappers {
     java.lang.String[] descriptorData = {
       "\n\016wrappers.proto\022\026messages.protobuf.data" +
       "\032\013calls.proto\032\014fields.proto\032\020exceptions." +
-      "proto\032\014values.proto\"\335\007\n\013DataMessage\022\030\n\020c" +
+      "proto\032\014values.proto\"\336\007\n\013DataMessage\022\030\n\020c" +
       "oncentratorUuid\030\001 \002(\t\022\023\n\013messageUuid\030\002 \002" +
       "(\t\022\017\n\007msgType\030\003 \002(\t\022\024\n\010threadId\030\004 \002(\003:\002-" +
-      "1\022\023\n\013currentTime\030\005 \002(\003\022\021\n\tthreadSeq\030\006 \001(" +
-      "\003\022\021\n\tfollowing\030\007 \001(\003\022B\n\017constructorCall\030" +
-      "\010 \001(\0132\'.messages.protobuf.data.Construct" +
-      "orCallH\000\022H\n\022instanceMethodCall\030\t \001(\0132*.m" +
-      "essages.protobuf.data.InstanceMethodCall",
-      "H\000\022B\n\017classMethodCall\030\n \001(\0132\'.messages.p" +
-      "rotobuf.data.ClassMethodCallH\000\0228\n\nclinit" +
-      "Call\030\013 \001(\0132\".messages.protobuf.data.ClIn" +
-      "itCallH\000\022@\n\016staticFieldGet\030\014 \001(\0132&.messa" +
-      "ges.protobuf.data.StaticFieldGetH\000\022@\n\016st" +
-      "aticFieldPut\030\r \001(\0132&.messages.protobuf.d" +
-      "ata.StaticFieldPutH\000\022D\n\020instanceFieldGet" +
-      "\030\016 \001(\0132(.messages.protobuf.data.Instance" +
-      "FieldGetH\000\022D\n\020instanceFieldPut\030\017 \001(\0132(.m" +
-      "essages.protobuf.data.InstanceFieldPutH\000",
-      "\022H\n\022staticFieldPutDone\030\020 \001(\0132*.messages." +
-      "protobuf.data.StaticFieldPutDoneH\000\022L\n\024in" +
-      "stanceFieldPutDone\030\021 \001(\0132,.messages.prot" +
-      "obuf.data.InstanceFieldPutDoneH\000\022B\n\017rais" +
-      "edThrowable\030\022 \001(\0132\'.messages.protobuf.da" +
-      "ta.RaisedThrowableH\000\022:\n\013returnValue\030\023 \001(" +
-      "\0132#.messages.protobuf.data.ReturnValueH\000" +
-      "B\t\n\007contentB9\n5com.ittera.cometa.concent" +
-      "rator.messages.protobuf.dataH\001"
+      "1\022\023\n\013currentTime\030\005 \002(\003\022\022\n\nbuilderSeq\030\006 \001" +
+      "(\003\022\021\n\tfollowing\030\007 \001(\003\022B\n\017constructorCall" +
+      "\030\010 \001(\0132\'.messages.protobuf.data.Construc" +
+      "torCallH\000\022H\n\022instanceMethodCall\030\t \001(\0132*." +
+      "messages.protobuf.data.InstanceMethodCal",
+      "lH\000\022B\n\017classMethodCall\030\n \001(\0132\'.messages." +
+      "protobuf.data.ClassMethodCallH\000\0228\n\nclini" +
+      "tCall\030\013 \001(\0132\".messages.protobuf.data.ClI" +
+      "nitCallH\000\022@\n\016staticFieldGet\030\014 \001(\0132&.mess" +
+      "ages.protobuf.data.StaticFieldGetH\000\022@\n\016s" +
+      "taticFieldPut\030\r \001(\0132&.messages.protobuf." +
+      "data.StaticFieldPutH\000\022D\n\020instanceFieldGe" +
+      "t\030\016 \001(\0132(.messages.protobuf.data.Instanc" +
+      "eFieldGetH\000\022D\n\020instanceFieldPut\030\017 \001(\0132(." +
+      "messages.protobuf.data.InstanceFieldPutH",
+      "\000\022H\n\022staticFieldPutDone\030\020 \001(\0132*.messages" +
+      ".protobuf.data.StaticFieldPutDoneH\000\022L\n\024i" +
+      "nstanceFieldPutDone\030\021 \001(\0132,.messages.pro" +
+      "tobuf.data.InstanceFieldPutDoneH\000\022B\n\017rai" +
+      "sedThrowable\030\022 \001(\0132\'.messages.protobuf.d" +
+      "ata.RaisedThrowableH\000\022:\n\013returnValue\030\023 \001" +
+      "(\0132#.messages.protobuf.data.ReturnValueH" +
+      "\000B\t\n\007contentB9\n5com.ittera.cometa.concen" +
+      "trator.messages.protobuf.dataH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -4194,7 +4194,7 @@ public final class Wrappers {
     internal_static_messages_protobuf_data_DataMessage_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_messages_protobuf_data_DataMessage_descriptor,
-        new java.lang.String[] { "ConcentratorUuid", "MessageUuid", "MsgType", "ThreadId", "CurrentTime", "ThreadSeq", "Following", "ConstructorCall", "InstanceMethodCall", "ClassMethodCall", "ClinitCall", "StaticFieldGet", "StaticFieldPut", "InstanceFieldGet", "InstanceFieldPut", "StaticFieldPutDone", "InstanceFieldPutDone", "RaisedThrowable", "ReturnValue", "Content", });
+        new java.lang.String[] { "ConcentratorUuid", "MessageUuid", "MsgType", "ThreadId", "CurrentTime", "BuilderSeq", "Following", "ConstructorCall", "InstanceMethodCall", "ClassMethodCall", "ClinitCall", "StaticFieldGet", "StaticFieldPut", "InstanceFieldGet", "InstanceFieldPut", "StaticFieldPutDone", "InstanceFieldPutDone", "RaisedThrowable", "ReturnValue", "Content", });
     com.ittera.cometa.concentrator.messages.protobuf.data.Calls.getDescriptor();
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.getDescriptor();
     com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions.getDescriptor();

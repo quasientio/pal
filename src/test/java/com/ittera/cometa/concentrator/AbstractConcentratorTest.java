@@ -126,7 +126,7 @@ public abstract class AbstractConcentratorTest {
     }
 
     protected static Long send(DataMessage message) {
-        Future<RecordMetadata> recordMetadataFuture = producer.send(new ProducerRecord(kafkaTopic, message));
+        Future<RecordMetadata> recordMetadataFuture = producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
         try {
             RecordMetadata recordMetadata = recordMetadataFuture.get();
             if (logger.isDebugEnabled()) {

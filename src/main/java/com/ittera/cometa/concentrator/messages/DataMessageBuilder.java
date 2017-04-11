@@ -45,7 +45,7 @@ public interface DataMessageBuilder {
 
     DataMessage buildPutStatic(UUID concentratorUuid, StaticPart staticPart, Object sender, Object arg);
 
-    DataMessage buildPutStaticDone(UUID concentratorUuid, Fields.StaticFieldPut staticFieldPut, Class fieldType, Long followingOffset);
+    DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid, Fields.StaticFieldPut staticFieldPut, Class fieldType, Long followingOffset);
 
     DataMessage buildPutStaticDone(UUID concentratorUuid, StaticPart staticPart, Object sender, Object arg);
 
@@ -55,7 +55,7 @@ public interface DataMessageBuilder {
 
     DataMessage buildPutObject(UUID concentratorUuid, StaticPart staticPart, Object sender, Object target, Object arg);
 
-    DataMessage buildPutObjectDone(UUID concentratorUuid, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, Long followingOffset);
+    DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, Long followingOffset);
 
     DataMessage buildPutObjectDone(UUID concentratorUuid, StaticPart staticPart, Object sender, Object target, Object arg);
 

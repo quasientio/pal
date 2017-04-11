@@ -16,7 +16,7 @@ message DataMessage {
     required string msgType = 3;
     required int64 threadId = 4 [default = -1];
     required int64 currentTime = 5;
-    optional int64 threadSeq = 6;
+    optional int64 builderSeq = 6;
     optional int64 following = 7;
 
     oneof content {
