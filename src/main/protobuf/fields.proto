@@ -54,7 +54,7 @@ message StaticFieldPutDone {
 
     required Field field = 2;
 
-    optional StaticFieldPut staticFieldPut = 3;
+    optional string staticFieldPutUuid = 3;
 }
 
 message InstanceFieldGet {
@@ -111,5 +111,5 @@ message InstanceFieldPutDone {
 
     required Field field = 2;
 
-    optional InstanceFieldPut instanceFieldPut = 3;
+    optional string instanceFieldPutUuid = 3;
 }

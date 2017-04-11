@@ -418,7 +418,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
      * This method is to be called when no joinpoint context is available.
      * Equivalent to the above, for objectRefs
      */
-    public DataMessage buildPutStaticDone(UUID concentratorUuid, Fields.StaticFieldPut staticFieldPut, Class fieldType, Long followingOffset) {
+    public DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid, Fields.StaticFieldPut staticFieldPut, Class fieldType, Long followingOffset) {
 
         final StaticFieldPutDone.Builder fieldBuilder = StaticFieldPutDone.newBuilder();
         if (staticFieldPut.getField().hasClass_()) {
@@ -430,7 +430,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
         final DataMessage.Builder msgBuilder = newWrapperBuilder(MessageType.PUT_STATIC_DONE, concentratorUuid, followingOffset)
                 .setStaticFieldPutDone(fieldBuilder
                         .setClass_(Wrapper.getWrappedClass(staticFieldPut.getClass_().getName()))
-                        .setStaticFieldPut(staticFieldPut));
+                        .setStaticFieldPutUuid(staticFieldPutUuid));
 
         return msgBuilder.build();
     }
@@ -499,7 +499,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
         return msgBuilder.build();
     }
 
-    public DataMessage buildPutObjectDone(UUID concentratorUuid, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, Long followingOffset) {
+    public DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, Long followingOffset) {
 
         final Fields.InstanceFieldPutDone.Builder fieldBuilder = InstanceFieldPutDone.newBuilder();
         if (instanceFieldPut.getField().hasClass_()) {
@@ -511,7 +511,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
         final DataMessage.Builder msgBuilder = newWrapperBuilder(MessageType.PUT_FIELD_DONE, concentratorUuid, followingOffset)
                 .setInstanceFieldPutDone(fieldBuilder
                         .setClass_(Wrapper.getWrappedClass(instanceFieldPut.getClass_().getName()))
-                        .setInstanceFieldPut(instanceFieldPut));
+                        .setInstanceFieldPutUuid(instanceFieldPutUuid));
 
         return msgBuilder.build();
     }

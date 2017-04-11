@@ -3540,17 +3540,18 @@ public final class Fields {
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.FieldOrBuilder getFieldOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+     * <code>optional string staticFieldPutUuid = 3;</code>
      */
-    boolean hasStaticFieldPut();
+    boolean hasStaticFieldPutUuid();
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+     * <code>optional string staticFieldPutUuid = 3;</code>
      */
-    com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut getStaticFieldPut();
+    java.lang.String getStaticFieldPutUuid();
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+     * <code>optional string staticFieldPutUuid = 3;</code>
      */
-    com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder getStaticFieldPutOrBuilder();
+    com.google.protobuf.ByteString
+        getStaticFieldPutUuidBytes();
   }
   /**
    * <pre>
@@ -3568,6 +3569,7 @@ public final class Fields {
       super(builder);
     }
     private StaticFieldPutDone() {
+      staticFieldPutUuid_ = "";
     }
 
     @java.lang.Override
@@ -3625,16 +3627,9 @@ public final class Fields {
               break;
             }
             case 26: {
-              com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000004) == 0x00000004)) {
-                subBuilder = staticFieldPut_.toBuilder();
-              }
-              staticFieldPut_ = input.readMessage(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(staticFieldPut_);
-                staticFieldPut_ = subBuilder.buildPartial();
-              }
+              com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000004;
+              staticFieldPutUuid_ = bs;
               break;
             }
           }
@@ -3716,25 +3711,46 @@ public final class Fields {
       return field_ == null ? com.ittera.cometa.concentrator.messages.protobuf.data.Fields.Field.getDefaultInstance() : field_;
     }
 
-    public static final int STATICFIELDPUT_FIELD_NUMBER = 3;
-    private com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut staticFieldPut_;
+    public static final int STATICFIELDPUTUUID_FIELD_NUMBER = 3;
+    private volatile java.lang.Object staticFieldPutUuid_;
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+     * <code>optional string staticFieldPutUuid = 3;</code>
      */
-    public boolean hasStaticFieldPut() {
+    public boolean hasStaticFieldPutUuid() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+     * <code>optional string staticFieldPutUuid = 3;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut getStaticFieldPut() {
-      return staticFieldPut_ == null ? com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance() : staticFieldPut_;
+    public java.lang.String getStaticFieldPutUuid() {
+      java.lang.Object ref = staticFieldPutUuid_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          staticFieldPutUuid_ = s;
+        }
+        return s;
+      }
     }
     /**
-     * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+     * <code>optional string staticFieldPutUuid = 3;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder getStaticFieldPutOrBuilder() {
-      return staticFieldPut_ == null ? com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance() : staticFieldPut_;
+    public com.google.protobuf.ByteString
+        getStaticFieldPutUuidBytes() {
+      java.lang.Object ref = staticFieldPutUuid_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        staticFieldPutUuid_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
     }
 
     private byte memoizedIsInitialized = -1;
@@ -3755,12 +3771,6 @@ public final class Fields {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (hasStaticFieldPut()) {
-        if (!getStaticFieldPut().isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -3774,7 +3784,7 @@ public final class Fields {
         output.writeMessage(2, getField());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeMessage(3, getStaticFieldPut());
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, staticFieldPutUuid_);
       }
       unknownFields.writeTo(output);
     }
@@ -3793,8 +3803,7 @@ public final class Fields {
           .computeMessageSize(2, getField());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(3, getStaticFieldPut());
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, staticFieldPutUuid_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -3823,10 +3832,10 @@ public final class Fields {
         result = result && getField()
             .equals(other.getField());
       }
-      result = result && (hasStaticFieldPut() == other.hasStaticFieldPut());
-      if (hasStaticFieldPut()) {
-        result = result && getStaticFieldPut()
-            .equals(other.getStaticFieldPut());
+      result = result && (hasStaticFieldPutUuid() == other.hasStaticFieldPutUuid());
+      if (hasStaticFieldPutUuid()) {
+        result = result && getStaticFieldPutUuid()
+            .equals(other.getStaticFieldPutUuid());
       }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
@@ -3847,9 +3856,9 @@ public final class Fields {
         hash = (37 * hash) + FIELD_FIELD_NUMBER;
         hash = (53 * hash) + getField().hashCode();
       }
-      if (hasStaticFieldPut()) {
-        hash = (37 * hash) + STATICFIELDPUT_FIELD_NUMBER;
-        hash = (53 * hash) + getStaticFieldPut().hashCode();
+      if (hasStaticFieldPutUuid()) {
+        hash = (37 * hash) + STATICFIELDPUTUUID_FIELD_NUMBER;
+        hash = (53 * hash) + getStaticFieldPutUuid().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -3971,7 +3980,6 @@ public final class Fields {
                 .alwaysUseFieldBuilders) {
           getClass_FieldBuilder();
           getFieldFieldBuilder();
-          getStaticFieldPutFieldBuilder();
         }
       }
       public Builder clear() {
@@ -3988,11 +3996,7 @@ public final class Fields {
           fieldBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
-        if (staticFieldPutBuilder_ == null) {
-          staticFieldPut_ = null;
-        } else {
-          staticFieldPutBuilder_.clear();
-        }
+        staticFieldPutUuid_ = "";
         bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
@@ -4037,11 +4041,7 @@ public final class Fields {
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
         }
-        if (staticFieldPutBuilder_ == null) {
-          result.staticFieldPut_ = staticFieldPut_;
-        } else {
-          result.staticFieldPut_ = staticFieldPutBuilder_.build();
-        }
+        result.staticFieldPutUuid_ = staticFieldPutUuid_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4090,8 +4090,10 @@ public final class Fields {
         if (other.hasField()) {
           mergeField(other.getField());
         }
-        if (other.hasStaticFieldPut()) {
-          mergeStaticFieldPut(other.getStaticFieldPut());
+        if (other.hasStaticFieldPutUuid()) {
+          bitField0_ |= 0x00000004;
+          staticFieldPutUuid_ = other.staticFieldPutUuid_;
+          onChanged();
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -4107,11 +4109,6 @@ public final class Fields {
         }
         if (!getField().isInitialized()) {
           return false;
-        }
-        if (hasStaticFieldPut()) {
-          if (!getStaticFieldPut().isInitialized()) {
-            return false;
-          }
         }
         return true;
       }
@@ -4407,122 +4404,80 @@ public final class Fields {
         return fieldBuilder_;
       }
 
-      private com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut staticFieldPut_ = null;
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder> staticFieldPutBuilder_;
+      private java.lang.Object staticFieldPutUuid_ = "";
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+       * <code>optional string staticFieldPutUuid = 3;</code>
        */
-      public boolean hasStaticFieldPut() {
+      public boolean hasStaticFieldPutUuid() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+       * <code>optional string staticFieldPutUuid = 3;</code>
        */
-      public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut getStaticFieldPut() {
-        if (staticFieldPutBuilder_ == null) {
-          return staticFieldPut_ == null ? com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance() : staticFieldPut_;
-        } else {
-          return staticFieldPutBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
-       */
-      public Builder setStaticFieldPut(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut value) {
-        if (staticFieldPutBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
+      public java.lang.String getStaticFieldPutUuid() {
+        java.lang.Object ref = staticFieldPutUuid_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            staticFieldPutUuid_ = s;
           }
-          staticFieldPut_ = value;
-          onChanged();
+          return s;
         } else {
-          staticFieldPutBuilder_.setMessage(value);
+          return (java.lang.String) ref;
         }
-        bitField0_ |= 0x00000004;
-        return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+       * <code>optional string staticFieldPutUuid = 3;</code>
        */
-      public Builder setStaticFieldPut(
-          com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.Builder builderForValue) {
-        if (staticFieldPutBuilder_ == null) {
-          staticFieldPut_ = builderForValue.build();
-          onChanged();
+      public com.google.protobuf.ByteString
+          getStaticFieldPutUuidBytes() {
+        java.lang.Object ref = staticFieldPutUuid_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          staticFieldPutUuid_ = b;
+          return b;
         } else {
-          staticFieldPutBuilder_.setMessage(builderForValue.build());
+          return (com.google.protobuf.ByteString) ref;
         }
-        bitField0_ |= 0x00000004;
-        return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+       * <code>optional string staticFieldPutUuid = 3;</code>
        */
-      public Builder mergeStaticFieldPut(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut value) {
-        if (staticFieldPutBuilder_ == null) {
-          if (((bitField0_ & 0x00000004) == 0x00000004) &&
-              staticFieldPut_ != null &&
-              staticFieldPut_ != com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance()) {
-            staticFieldPut_ =
-              com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.newBuilder(staticFieldPut_).mergeFrom(value).buildPartial();
-          } else {
-            staticFieldPut_ = value;
-          }
-          onChanged();
-        } else {
-          staticFieldPutBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000004;
-        return this;
-      }
-      /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
-       */
-      public Builder clearStaticFieldPut() {
-        if (staticFieldPutBuilder_ == null) {
-          staticFieldPut_ = null;
-          onChanged();
-        } else {
-          staticFieldPutBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000004);
-        return this;
-      }
-      /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
-       */
-      public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.Builder getStaticFieldPutBuilder() {
-        bitField0_ |= 0x00000004;
+      public Builder setStaticFieldPutUuid(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        staticFieldPutUuid_ = value;
         onChanged();
-        return getStaticFieldPutFieldBuilder().getBuilder();
+        return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+       * <code>optional string staticFieldPutUuid = 3;</code>
        */
-      public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder getStaticFieldPutOrBuilder() {
-        if (staticFieldPutBuilder_ != null) {
-          return staticFieldPutBuilder_.getMessageOrBuilder();
-        } else {
-          return staticFieldPut_ == null ?
-              com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.getDefaultInstance() : staticFieldPut_;
-        }
+      public Builder clearStaticFieldPutUuid() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        staticFieldPutUuid_ = getDefaultInstance().getStaticFieldPutUuid();
+        onChanged();
+        return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.StaticFieldPut staticFieldPut = 3;</code>
+       * <code>optional string staticFieldPutUuid = 3;</code>
        */
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder> 
-          getStaticFieldPutFieldBuilder() {
-        if (staticFieldPutBuilder_ == null) {
-          staticFieldPutBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-              com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPut.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldPutOrBuilder>(
-                  getStaticFieldPut(),
-                  getParentForChildren(),
-                  isClean());
-          staticFieldPut_ = null;
-        }
-        return staticFieldPutBuilder_;
+      public Builder setStaticFieldPutUuidBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        staticFieldPutUuid_ = value;
+        onChanged();
+        return this;
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -8307,17 +8262,18 @@ public final class Fields {
     com.ittera.cometa.concentrator.messages.protobuf.data.Fields.FieldOrBuilder getFieldOrBuilder();
 
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+     * <code>optional string instanceFieldPutUuid = 3;</code>
      */
-    boolean hasInstanceFieldPut();
+    boolean hasInstanceFieldPutUuid();
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+     * <code>optional string instanceFieldPutUuid = 3;</code>
      */
-    com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut getInstanceFieldPut();
+    java.lang.String getInstanceFieldPutUuid();
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+     * <code>optional string instanceFieldPutUuid = 3;</code>
      */
-    com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder getInstanceFieldPutOrBuilder();
+    com.google.protobuf.ByteString
+        getInstanceFieldPutUuidBytes();
   }
   /**
    * Protobuf type {@code messages.protobuf.data.InstanceFieldPutDone}
@@ -8331,6 +8287,7 @@ public final class Fields {
       super(builder);
     }
     private InstanceFieldPutDone() {
+      instanceFieldPutUuid_ = "";
     }
 
     @java.lang.Override
@@ -8388,16 +8345,9 @@ public final class Fields {
               break;
             }
             case 26: {
-              com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000004) == 0x00000004)) {
-                subBuilder = instanceFieldPut_.toBuilder();
-              }
-              instanceFieldPut_ = input.readMessage(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(instanceFieldPut_);
-                instanceFieldPut_ = subBuilder.buildPartial();
-              }
+              com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000004;
+              instanceFieldPutUuid_ = bs;
               break;
             }
           }
@@ -8479,25 +8429,46 @@ public final class Fields {
       return field_ == null ? com.ittera.cometa.concentrator.messages.protobuf.data.Fields.Field.getDefaultInstance() : field_;
     }
 
-    public static final int INSTANCEFIELDPUT_FIELD_NUMBER = 3;
-    private com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut instanceFieldPut_;
+    public static final int INSTANCEFIELDPUTUUID_FIELD_NUMBER = 3;
+    private volatile java.lang.Object instanceFieldPutUuid_;
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+     * <code>optional string instanceFieldPutUuid = 3;</code>
      */
-    public boolean hasInstanceFieldPut() {
+    public boolean hasInstanceFieldPutUuid() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+     * <code>optional string instanceFieldPutUuid = 3;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut getInstanceFieldPut() {
-      return instanceFieldPut_ == null ? com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance() : instanceFieldPut_;
+    public java.lang.String getInstanceFieldPutUuid() {
+      java.lang.Object ref = instanceFieldPutUuid_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          instanceFieldPutUuid_ = s;
+        }
+        return s;
+      }
     }
     /**
-     * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+     * <code>optional string instanceFieldPutUuid = 3;</code>
      */
-    public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder getInstanceFieldPutOrBuilder() {
-      return instanceFieldPut_ == null ? com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance() : instanceFieldPut_;
+    public com.google.protobuf.ByteString
+        getInstanceFieldPutUuidBytes() {
+      java.lang.Object ref = instanceFieldPutUuid_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        instanceFieldPutUuid_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
     }
 
     private byte memoizedIsInitialized = -1;
@@ -8518,12 +8489,6 @@ public final class Fields {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (hasInstanceFieldPut()) {
-        if (!getInstanceFieldPut().isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -8537,7 +8502,7 @@ public final class Fields {
         output.writeMessage(2, getField());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeMessage(3, getInstanceFieldPut());
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, instanceFieldPutUuid_);
       }
       unknownFields.writeTo(output);
     }
@@ -8556,8 +8521,7 @@ public final class Fields {
           .computeMessageSize(2, getField());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(3, getInstanceFieldPut());
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, instanceFieldPutUuid_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -8586,10 +8550,10 @@ public final class Fields {
         result = result && getField()
             .equals(other.getField());
       }
-      result = result && (hasInstanceFieldPut() == other.hasInstanceFieldPut());
-      if (hasInstanceFieldPut()) {
-        result = result && getInstanceFieldPut()
-            .equals(other.getInstanceFieldPut());
+      result = result && (hasInstanceFieldPutUuid() == other.hasInstanceFieldPutUuid());
+      if (hasInstanceFieldPutUuid()) {
+        result = result && getInstanceFieldPutUuid()
+            .equals(other.getInstanceFieldPutUuid());
       }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
@@ -8610,9 +8574,9 @@ public final class Fields {
         hash = (37 * hash) + FIELD_FIELD_NUMBER;
         hash = (53 * hash) + getField().hashCode();
       }
-      if (hasInstanceFieldPut()) {
-        hash = (37 * hash) + INSTANCEFIELDPUT_FIELD_NUMBER;
-        hash = (53 * hash) + getInstanceFieldPut().hashCode();
+      if (hasInstanceFieldPutUuid()) {
+        hash = (37 * hash) + INSTANCEFIELDPUTUUID_FIELD_NUMBER;
+        hash = (53 * hash) + getInstanceFieldPutUuid().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -8730,7 +8694,6 @@ public final class Fields {
                 .alwaysUseFieldBuilders) {
           getClass_FieldBuilder();
           getFieldFieldBuilder();
-          getInstanceFieldPutFieldBuilder();
         }
       }
       public Builder clear() {
@@ -8747,11 +8710,7 @@ public final class Fields {
           fieldBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
-        if (instanceFieldPutBuilder_ == null) {
-          instanceFieldPut_ = null;
-        } else {
-          instanceFieldPutBuilder_.clear();
-        }
+        instanceFieldPutUuid_ = "";
         bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
@@ -8796,11 +8755,7 @@ public final class Fields {
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
         }
-        if (instanceFieldPutBuilder_ == null) {
-          result.instanceFieldPut_ = instanceFieldPut_;
-        } else {
-          result.instanceFieldPut_ = instanceFieldPutBuilder_.build();
-        }
+        result.instanceFieldPutUuid_ = instanceFieldPutUuid_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -8849,8 +8804,10 @@ public final class Fields {
         if (other.hasField()) {
           mergeField(other.getField());
         }
-        if (other.hasInstanceFieldPut()) {
-          mergeInstanceFieldPut(other.getInstanceFieldPut());
+        if (other.hasInstanceFieldPutUuid()) {
+          bitField0_ |= 0x00000004;
+          instanceFieldPutUuid_ = other.instanceFieldPutUuid_;
+          onChanged();
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -8866,11 +8823,6 @@ public final class Fields {
         }
         if (!getField().isInitialized()) {
           return false;
-        }
-        if (hasInstanceFieldPut()) {
-          if (!getInstanceFieldPut().isInitialized()) {
-            return false;
-          }
         }
         return true;
       }
@@ -9166,122 +9118,80 @@ public final class Fields {
         return fieldBuilder_;
       }
 
-      private com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut instanceFieldPut_ = null;
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder> instanceFieldPutBuilder_;
+      private java.lang.Object instanceFieldPutUuid_ = "";
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+       * <code>optional string instanceFieldPutUuid = 3;</code>
        */
-      public boolean hasInstanceFieldPut() {
+      public boolean hasInstanceFieldPutUuid() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+       * <code>optional string instanceFieldPutUuid = 3;</code>
        */
-      public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut getInstanceFieldPut() {
-        if (instanceFieldPutBuilder_ == null) {
-          return instanceFieldPut_ == null ? com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance() : instanceFieldPut_;
-        } else {
-          return instanceFieldPutBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
-       */
-      public Builder setInstanceFieldPut(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut value) {
-        if (instanceFieldPutBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
+      public java.lang.String getInstanceFieldPutUuid() {
+        java.lang.Object ref = instanceFieldPutUuid_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            instanceFieldPutUuid_ = s;
           }
-          instanceFieldPut_ = value;
-          onChanged();
+          return s;
         } else {
-          instanceFieldPutBuilder_.setMessage(value);
+          return (java.lang.String) ref;
         }
-        bitField0_ |= 0x00000004;
-        return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+       * <code>optional string instanceFieldPutUuid = 3;</code>
        */
-      public Builder setInstanceFieldPut(
-          com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.Builder builderForValue) {
-        if (instanceFieldPutBuilder_ == null) {
-          instanceFieldPut_ = builderForValue.build();
-          onChanged();
+      public com.google.protobuf.ByteString
+          getInstanceFieldPutUuidBytes() {
+        java.lang.Object ref = instanceFieldPutUuid_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          instanceFieldPutUuid_ = b;
+          return b;
         } else {
-          instanceFieldPutBuilder_.setMessage(builderForValue.build());
+          return (com.google.protobuf.ByteString) ref;
         }
-        bitField0_ |= 0x00000004;
-        return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+       * <code>optional string instanceFieldPutUuid = 3;</code>
        */
-      public Builder mergeInstanceFieldPut(com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut value) {
-        if (instanceFieldPutBuilder_ == null) {
-          if (((bitField0_ & 0x00000004) == 0x00000004) &&
-              instanceFieldPut_ != null &&
-              instanceFieldPut_ != com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance()) {
-            instanceFieldPut_ =
-              com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.newBuilder(instanceFieldPut_).mergeFrom(value).buildPartial();
-          } else {
-            instanceFieldPut_ = value;
-          }
-          onChanged();
-        } else {
-          instanceFieldPutBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000004;
-        return this;
-      }
-      /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
-       */
-      public Builder clearInstanceFieldPut() {
-        if (instanceFieldPutBuilder_ == null) {
-          instanceFieldPut_ = null;
-          onChanged();
-        } else {
-          instanceFieldPutBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000004);
-        return this;
-      }
-      /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
-       */
-      public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.Builder getInstanceFieldPutBuilder() {
-        bitField0_ |= 0x00000004;
+      public Builder setInstanceFieldPutUuid(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        instanceFieldPutUuid_ = value;
         onChanged();
-        return getInstanceFieldPutFieldBuilder().getBuilder();
+        return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+       * <code>optional string instanceFieldPutUuid = 3;</code>
        */
-      public com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder getInstanceFieldPutOrBuilder() {
-        if (instanceFieldPutBuilder_ != null) {
-          return instanceFieldPutBuilder_.getMessageOrBuilder();
-        } else {
-          return instanceFieldPut_ == null ?
-              com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.getDefaultInstance() : instanceFieldPut_;
-        }
+      public Builder clearInstanceFieldPutUuid() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        instanceFieldPutUuid_ = getDefaultInstance().getInstanceFieldPutUuid();
+        onChanged();
+        return this;
       }
       /**
-       * <code>optional .messages.protobuf.data.InstanceFieldPut instanceFieldPut = 3;</code>
+       * <code>optional string instanceFieldPutUuid = 3;</code>
        */
-      private com.google.protobuf.SingleFieldBuilderV3<
-          com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder> 
-          getInstanceFieldPutFieldBuilder() {
-        if (instanceFieldPutBuilder_ == null) {
-          instanceFieldPutBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-              com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut.Builder, com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPutOrBuilder>(
-                  getInstanceFieldPut(),
-                  getParentForChildren(),
-                  isClean());
-          instanceFieldPut_ = null;
-        }
-        return instanceFieldPutBuilder_;
+      public Builder setInstanceFieldPutUuidBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        instanceFieldPutUuid_ = value;
+        onChanged();
+        return this;
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -9390,33 +9300,31 @@ public final class Fields {
       " \001(\0132\036.messages.protobuf.data.ObjectH\000\022\023" +
       "\n\tobjectRef\030\004 \001(\tH\000\022\021\n\tmodifiers\030\005 \001(\005\0220" +
       "\n\007context\030\006 \001(\0132\037.messages.protobuf.data" +
-      ".ContextB\007\n\005value\"\260\001\n\022StaticFieldPutDone" +
+      ".ContextB\007\n\005value\"\214\001\n\022StaticFieldPutDone" +
       "\022,\n\005class\030\001 \002(\0132\035.messages.protobuf.data" +
       ".Class\022,\n\005field\030\002 \002(\0132\035.messages.protobu" +
-      "f.data.Field\022>\n\016staticFieldPut\030\003 \001(\0132&.m" +
-      "essages.protobuf.data.StaticFieldPut\"\204\002\n" +
-      "\020InstanceFieldGet\022,\n\005class\030\001 \002(\0132\035.messa",
-      "ges.protobuf.data.Class\0220\n\006object\030\002 \001(\0132" +
-      "\036.messages.protobuf.data.ObjectH\000\022\023\n\tobj" +
-      "ectRef\030\003 \001(\tH\000\022,\n\005field\030\004 \002(\0132\035.messages" +
-      ".protobuf.data.Field\022\021\n\tmodifiers\030\005 \001(\005\022" +
-      "0\n\007context\030\006 \001(\0132\037.messages.protobuf.dat" +
-      "a.ContextB\010\n\006target\"\336\002\n\020InstanceFieldPut" +
-      "\022,\n\005class\030\001 \002(\0132\035.messages.protobuf.data" +
-      ".Class\0220\n\006object\030\002 \001(\0132\036.messages.protob" +
-      "uf.data.ObjectH\000\022\023\n\tobjectRef\030\003 \001(\tH\000\022,\n" +
-      "\005field\030\004 \002(\0132\035.messages.protobuf.data.Fi",
-      "eld\0225\n\013valueObject\030\005 \001(\0132\036.messages.prot" +
-      "obuf.data.ObjectH\001\022\030\n\016valueObjectRef\030\006 \001" +
-      "(\tH\001\022\021\n\tmodifiers\030\007 \001(\005\0220\n\007context\030\010 \001(\013" +
-      "2\037.messages.protobuf.data.ContextB\010\n\006tar" +
-      "getB\007\n\005value\"\266\001\n\024InstanceFieldPutDone\022,\n" +
-      "\005class\030\001 \002(\0132\035.messages.protobuf.data.Cl" +
-      "ass\022,\n\005field\030\002 \002(\0132\035.messages.protobuf.d" +
-      "ata.Field\022B\n\020instanceFieldPut\030\003 \001(\0132(.me" +
-      "ssages.protobuf.data.InstanceFieldPutBA\n" +
-      "5com.ittera.cometa.concentrator.messages",
-      ".protobuf.dataB\006FieldsH\001"
+      "f.data.Field\022\032\n\022staticFieldPutUuid\030\003 \001(\t" +
+      "\"\204\002\n\020InstanceFieldGet\022,\n\005class\030\001 \002(\0132\035.m" +
+      "essages.protobuf.data.Class\0220\n\006object\030\002 ",
+      "\001(\0132\036.messages.protobuf.data.ObjectH\000\022\023\n" +
+      "\tobjectRef\030\003 \001(\tH\000\022,\n\005field\030\004 \002(\0132\035.mess" +
+      "ages.protobuf.data.Field\022\021\n\tmodifiers\030\005 " +
+      "\001(\005\0220\n\007context\030\006 \001(\0132\037.messages.protobuf" +
+      ".data.ContextB\010\n\006target\"\336\002\n\020InstanceFiel" +
+      "dPut\022,\n\005class\030\001 \002(\0132\035.messages.protobuf." +
+      "data.Class\0220\n\006object\030\002 \001(\0132\036.messages.pr" +
+      "otobuf.data.ObjectH\000\022\023\n\tobjectRef\030\003 \001(\tH" +
+      "\000\022,\n\005field\030\004 \002(\0132\035.messages.protobuf.dat" +
+      "a.Field\0225\n\013valueObject\030\005 \001(\0132\036.messages.",
+      "protobuf.data.ObjectH\001\022\030\n\016valueObjectRef" +
+      "\030\006 \001(\tH\001\022\021\n\tmodifiers\030\007 \001(\005\0220\n\007context\030\010" +
+      " \001(\0132\037.messages.protobuf.data.ContextB\010\n" +
+      "\006targetB\007\n\005value\"\220\001\n\024InstanceFieldPutDon" +
+      "e\022,\n\005class\030\001 \002(\0132\035.messages.protobuf.dat" +
+      "a.Class\022,\n\005field\030\002 \002(\0132\035.messages.protob" +
+      "uf.data.Field\022\034\n\024instanceFieldPutUuid\030\003 " +
+      "\001(\tBA\n5com.ittera.cometa.concentrator.me" +
+      "ssages.protobuf.dataB\006FieldsH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -9455,7 +9363,7 @@ public final class Fields {
     internal_static_messages_protobuf_data_StaticFieldPutDone_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_messages_protobuf_data_StaticFieldPutDone_descriptor,
-        new java.lang.String[] { "Class_", "Field", "StaticFieldPut", });
+        new java.lang.String[] { "Class_", "Field", "StaticFieldPutUuid", });
     internal_static_messages_protobuf_data_InstanceFieldGet_descriptor =
       getDescriptor().getMessageTypes().get(4);
     internal_static_messages_protobuf_data_InstanceFieldGet_fieldAccessorTable = new
@@ -9473,7 +9381,7 @@ public final class Fields {
     internal_static_messages_protobuf_data_InstanceFieldPutDone_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_messages_protobuf_data_InstanceFieldPutDone_descriptor,
-        new java.lang.String[] { "Class_", "Field", "InstanceFieldPut", });
+        new java.lang.String[] { "Class_", "Field", "InstanceFieldPutUuid", });
     com.ittera.cometa.concentrator.messages.protobuf.data.Primitives.getDescriptor();
     com.ittera.cometa.concentrator.messages.protobuf.data.Ctxt.getDescriptor();
   }
