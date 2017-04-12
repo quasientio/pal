@@ -14,6 +14,195 @@ public final class Wrappers {
     registerAllExtensions(
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
+  /**
+   * Protobuf enum {@code messages.protobuf.data.Type}
+   */
+  public enum Type
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>STATIC_CONSTRUCTOR = 1;</code>
+     */
+    STATIC_CONSTRUCTOR(1),
+    /**
+     * <code>RETURN_CLASS = 2;</code>
+     */
+    RETURN_CLASS(2),
+    /**
+     * <code>CONSTRUCTOR = 3;</code>
+     */
+    CONSTRUCTOR(3),
+    /**
+     * <code>INSTANCE_METHOD = 4;</code>
+     */
+    INSTANCE_METHOD(4),
+    /**
+     * <code>CLASS_METHOD = 5;</code>
+     */
+    CLASS_METHOD(5),
+    /**
+     * <code>GET_STATIC = 6;</code>
+     */
+    GET_STATIC(6),
+    /**
+     * <code>GET_FIELD = 7;</code>
+     */
+    GET_FIELD(7),
+    /**
+     * <code>PUT_STATIC = 8;</code>
+     */
+    PUT_STATIC(8),
+    /**
+     * <code>PUT_FIELD = 9;</code>
+     */
+    PUT_FIELD(9),
+    /**
+     * <code>PUT_STATIC_DONE = 10;</code>
+     */
+    PUT_STATIC_DONE(10),
+    /**
+     * <code>PUT_FIELD_DONE = 11;</code>
+     */
+    PUT_FIELD_DONE(11),
+    /**
+     * <code>THROWABLE = 12;</code>
+     */
+    THROWABLE(12),
+    /**
+     * <code>RETURN_VALUE = 13;</code>
+     */
+    RETURN_VALUE(13),
+    ;
+
+    /**
+     * <code>STATIC_CONSTRUCTOR = 1;</code>
+     */
+    public static final int STATIC_CONSTRUCTOR_VALUE = 1;
+    /**
+     * <code>RETURN_CLASS = 2;</code>
+     */
+    public static final int RETURN_CLASS_VALUE = 2;
+    /**
+     * <code>CONSTRUCTOR = 3;</code>
+     */
+    public static final int CONSTRUCTOR_VALUE = 3;
+    /**
+     * <code>INSTANCE_METHOD = 4;</code>
+     */
+    public static final int INSTANCE_METHOD_VALUE = 4;
+    /**
+     * <code>CLASS_METHOD = 5;</code>
+     */
+    public static final int CLASS_METHOD_VALUE = 5;
+    /**
+     * <code>GET_STATIC = 6;</code>
+     */
+    public static final int GET_STATIC_VALUE = 6;
+    /**
+     * <code>GET_FIELD = 7;</code>
+     */
+    public static final int GET_FIELD_VALUE = 7;
+    /**
+     * <code>PUT_STATIC = 8;</code>
+     */
+    public static final int PUT_STATIC_VALUE = 8;
+    /**
+     * <code>PUT_FIELD = 9;</code>
+     */
+    public static final int PUT_FIELD_VALUE = 9;
+    /**
+     * <code>PUT_STATIC_DONE = 10;</code>
+     */
+    public static final int PUT_STATIC_DONE_VALUE = 10;
+    /**
+     * <code>PUT_FIELD_DONE = 11;</code>
+     */
+    public static final int PUT_FIELD_DONE_VALUE = 11;
+    /**
+     * <code>THROWABLE = 12;</code>
+     */
+    public static final int THROWABLE_VALUE = 12;
+    /**
+     * <code>RETURN_VALUE = 13;</code>
+     */
+    public static final int RETURN_VALUE_VALUE = 13;
+
+
+    public final int getNumber() {
+      return value;
+    }
+
+    /**
+     * @deprecated Use {@link #forNumber(int)} instead.
+     */
+    @java.lang.Deprecated
+    public static Type valueOf(int value) {
+      return forNumber(value);
+    }
+
+    public static Type forNumber(int value) {
+      switch (value) {
+        case 1: return STATIC_CONSTRUCTOR;
+        case 2: return RETURN_CLASS;
+        case 3: return CONSTRUCTOR;
+        case 4: return INSTANCE_METHOD;
+        case 5: return CLASS_METHOD;
+        case 6: return GET_STATIC;
+        case 7: return GET_FIELD;
+        case 8: return PUT_STATIC;
+        case 9: return PUT_FIELD;
+        case 10: return PUT_STATIC_DONE;
+        case 11: return PUT_FIELD_DONE;
+        case 12: return THROWABLE;
+        case 13: return RETURN_VALUE;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<Type>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static final com.google.protobuf.Internal.EnumLiteMap<
+        Type> internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<Type>() {
+            public Type findValueByNumber(int number) {
+              return Type.forNumber(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(ordinal());
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.getDescriptor().getEnumTypes().get(0);
+    }
+
+    private static final Type[] VALUES = values();
+
+    public static Type valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int value;
+
+    private Type(int value) {
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:messages.protobuf.data.Type)
+  }
+
   public interface DataMessageOrBuilder extends
       // @@protoc_insertion_point(interface_extends:messages.protobuf.data.DataMessage)
       com.google.protobuf.MessageOrBuilder {
@@ -59,18 +248,13 @@ public final class Wrappers {
         getMessageUuidBytes();
 
     /**
-     * <code>required string msgType = 3;</code>
+     * <code>required .messages.protobuf.data.Type msgType = 3;</code>
      */
     boolean hasMsgType();
     /**
-     * <code>required string msgType = 3;</code>
+     * <code>required .messages.protobuf.data.Type msgType = 3;</code>
      */
-    java.lang.String getMsgType();
-    /**
-     * <code>required string msgType = 3;</code>
-     */
-    com.google.protobuf.ByteString
-        getMsgTypeBytes();
+    com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type getMsgType();
 
     /**
      * <code>required int64 threadId = 4 [default = -1];</code>
@@ -280,7 +464,7 @@ public final class Wrappers {
     private DataMessage() {
       concentratorUuid_ = "";
       messageUuid_ = "";
-      msgType_ = "";
+      msgType_ = 1;
       threadId_ = -1L;
       currentTime_ = 0L;
       builderSeq_ = 0L;
@@ -327,10 +511,15 @@ public final class Wrappers {
               messageUuid_ = bs;
               break;
             }
-            case 26: {
-              com.google.protobuf.ByteString bs = input.readBytes();
-              bitField0_ |= 0x00000004;
-              msgType_ = bs;
+            case 24: {
+              int rawValue = input.readEnum();
+              com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type value = com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(3, rawValue);
+              } else {
+                bitField0_ |= 0x00000004;
+                msgType_ = rawValue;
+              }
               break;
             }
             case 32: {
@@ -701,45 +890,19 @@ public final class Wrappers {
     }
 
     public static final int MSGTYPE_FIELD_NUMBER = 3;
-    private volatile java.lang.Object msgType_;
+    private int msgType_;
     /**
-     * <code>required string msgType = 3;</code>
+     * <code>required .messages.protobuf.data.Type msgType = 3;</code>
      */
     public boolean hasMsgType() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>required string msgType = 3;</code>
+     * <code>required .messages.protobuf.data.Type msgType = 3;</code>
      */
-    public java.lang.String getMsgType() {
-      java.lang.Object ref = msgType_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          msgType_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>required string msgType = 3;</code>
-     */
-    public com.google.protobuf.ByteString
-        getMsgTypeBytes() {
-      java.lang.Object ref = msgType_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        msgType_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type getMsgType() {
+      com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type result = com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type.valueOf(msgType_);
+      return result == null ? com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type.STATIC_CONSTRUCTOR : result;
     }
 
     public static final int THREADID_FIELD_NUMBER = 4;
@@ -1225,7 +1388,7 @@ public final class Wrappers {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, messageUuid_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, msgType_);
+        output.writeEnum(3, msgType_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeInt64(4, threadId_);
@@ -1290,7 +1453,8 @@ public final class Wrappers {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, messageUuid_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, msgType_);
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(3, msgType_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1385,8 +1549,7 @@ public final class Wrappers {
       }
       result = result && (hasMsgType() == other.hasMsgType());
       if (hasMsgType()) {
-        result = result && getMsgType()
-            .equals(other.getMsgType());
+        result = result && msgType_ == other.msgType_;
       }
       result = result && (hasThreadId() == other.hasThreadId());
       if (hasThreadId()) {
@@ -1484,7 +1647,7 @@ public final class Wrappers {
       }
       if (hasMsgType()) {
         hash = (37 * hash) + MSGTYPE_FIELD_NUMBER;
-        hash = (53 * hash) + getMsgType().hashCode();
+        hash = (53 * hash) + msgType_;
       }
       if (hasThreadId()) {
         hash = (37 * hash) + THREADID_FIELD_NUMBER;
@@ -1680,7 +1843,7 @@ public final class Wrappers {
         bitField0_ = (bitField0_ & ~0x00000001);
         messageUuid_ = "";
         bitField0_ = (bitField0_ & ~0x00000002);
-        msgType_ = "";
+        msgType_ = 1;
         bitField0_ = (bitField0_ & ~0x00000004);
         threadId_ = -1L;
         bitField0_ = (bitField0_ & ~0x00000008);
@@ -1882,9 +2045,7 @@ public final class Wrappers {
           onChanged();
         }
         if (other.hasMsgType()) {
-          bitField0_ |= 0x00000004;
-          msgType_ = other.msgType_;
-          onChanged();
+          setMsgType(other.getMsgType());
         }
         if (other.hasThreadId()) {
           setThreadId(other.getThreadId());
@@ -2245,78 +2406,38 @@ public final class Wrappers {
         return this;
       }
 
-      private java.lang.Object msgType_ = "";
+      private int msgType_ = 1;
       /**
-       * <code>required string msgType = 3;</code>
+       * <code>required .messages.protobuf.data.Type msgType = 3;</code>
        */
       public boolean hasMsgType() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>required string msgType = 3;</code>
+       * <code>required .messages.protobuf.data.Type msgType = 3;</code>
        */
-      public java.lang.String getMsgType() {
-        java.lang.Object ref = msgType_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            msgType_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      public com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type getMsgType() {
+        com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type result = com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type.valueOf(msgType_);
+        return result == null ? com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type.STATIC_CONSTRUCTOR : result;
       }
       /**
-       * <code>required string msgType = 3;</code>
+       * <code>required .messages.protobuf.data.Type msgType = 3;</code>
        */
-      public com.google.protobuf.ByteString
-          getMsgTypeBytes() {
-        java.lang.Object ref = msgType_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          msgType_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>required string msgType = 3;</code>
-       */
-      public Builder setMsgType(
-          java.lang.String value) {
+      public Builder setMsgType(com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
-        msgType_ = value;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
+        msgType_ = value.getNumber();
         onChanged();
         return this;
       }
       /**
-       * <code>required string msgType = 3;</code>
+       * <code>required .messages.protobuf.data.Type msgType = 3;</code>
        */
       public Builder clearMsgType() {
         bitField0_ = (bitField0_ & ~0x00000004);
-        msgType_ = getDefaultInstance().getMsgType();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>required string msgType = 3;</code>
-       */
-      public Builder setMsgTypeBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
-        msgType_ = value;
+        msgType_ = 1;
         onChanged();
         return this;
       }
@@ -4145,33 +4266,40 @@ public final class Wrappers {
     java.lang.String[] descriptorData = {
       "\n\016wrappers.proto\022\026messages.protobuf.data" +
       "\032\013calls.proto\032\014fields.proto\032\020exceptions." +
-      "proto\032\014values.proto\"\336\007\n\013DataMessage\022\030\n\020c" +
+      "proto\032\014values.proto\"\374\007\n\013DataMessage\022\030\n\020c" +
       "oncentratorUuid\030\001 \002(\t\022\023\n\013messageUuid\030\002 \002" +
-      "(\t\022\017\n\007msgType\030\003 \002(\t\022\024\n\010threadId\030\004 \002(\003:\002-" +
-      "1\022\023\n\013currentTime\030\005 \002(\003\022\022\n\nbuilderSeq\030\006 \001" +
-      "(\003\022\021\n\tfollowing\030\007 \001(\003\022B\n\017constructorCall" +
-      "\030\010 \001(\0132\'.messages.protobuf.data.Construc" +
-      "torCallH\000\022H\n\022instanceMethodCall\030\t \001(\0132*." +
-      "messages.protobuf.data.InstanceMethodCal",
-      "lH\000\022B\n\017classMethodCall\030\n \001(\0132\'.messages." +
-      "protobuf.data.ClassMethodCallH\000\0228\n\nclini" +
-      "tCall\030\013 \001(\0132\".messages.protobuf.data.ClI" +
-      "nitCallH\000\022@\n\016staticFieldGet\030\014 \001(\0132&.mess" +
-      "ages.protobuf.data.StaticFieldGetH\000\022@\n\016s" +
-      "taticFieldPut\030\r \001(\0132&.messages.protobuf." +
-      "data.StaticFieldPutH\000\022D\n\020instanceFieldGe" +
-      "t\030\016 \001(\0132(.messages.protobuf.data.Instanc" +
-      "eFieldGetH\000\022D\n\020instanceFieldPut\030\017 \001(\0132(." +
-      "messages.protobuf.data.InstanceFieldPutH",
-      "\000\022H\n\022staticFieldPutDone\030\020 \001(\0132*.messages" +
-      ".protobuf.data.StaticFieldPutDoneH\000\022L\n\024i" +
-      "nstanceFieldPutDone\030\021 \001(\0132,.messages.pro" +
-      "tobuf.data.InstanceFieldPutDoneH\000\022B\n\017rai" +
-      "sedThrowable\030\022 \001(\0132\'.messages.protobuf.d" +
-      "ata.RaisedThrowableH\000\022:\n\013returnValue\030\023 \001" +
-      "(\0132#.messages.protobuf.data.ReturnValueH" +
-      "\000B\t\n\007contentB9\n5com.ittera.cometa.concen" +
-      "trator.messages.protobuf.dataH\001"
+      "(\t\022-\n\007msgType\030\003 \002(\0162\034.messages.protobuf." +
+      "data.Type\022\024\n\010threadId\030\004 \002(\003:\002-1\022\023\n\013curre" +
+      "ntTime\030\005 \002(\003\022\022\n\nbuilderSeq\030\006 \001(\003\022\021\n\tfoll" +
+      "owing\030\007 \001(\003\022B\n\017constructorCall\030\010 \001(\0132\'.m" +
+      "essages.protobuf.data.ConstructorCallH\000\022" +
+      "H\n\022instanceMethodCall\030\t \001(\0132*.messages.p",
+      "rotobuf.data.InstanceMethodCallH\000\022B\n\017cla" +
+      "ssMethodCall\030\n \001(\0132\'.messages.protobuf.d" +
+      "ata.ClassMethodCallH\000\0228\n\nclinitCall\030\013 \001(" +
+      "\0132\".messages.protobuf.data.ClInitCallH\000\022" +
+      "@\n\016staticFieldGet\030\014 \001(\0132&.messages.proto" +
+      "buf.data.StaticFieldGetH\000\022@\n\016staticField" +
+      "Put\030\r \001(\0132&.messages.protobuf.data.Stati" +
+      "cFieldPutH\000\022D\n\020instanceFieldGet\030\016 \001(\0132(." +
+      "messages.protobuf.data.InstanceFieldGetH" +
+      "\000\022D\n\020instanceFieldPut\030\017 \001(\0132(.messages.p",
+      "rotobuf.data.InstanceFieldPutH\000\022H\n\022stati" +
+      "cFieldPutDone\030\020 \001(\0132*.messages.protobuf." +
+      "data.StaticFieldPutDoneH\000\022L\n\024instanceFie" +
+      "ldPutDone\030\021 \001(\0132,.messages.protobuf.data" +
+      ".InstanceFieldPutDoneH\000\022B\n\017raisedThrowab" +
+      "le\030\022 \001(\0132\'.messages.protobuf.data.Raised" +
+      "ThrowableH\000\022:\n\013returnValue\030\023 \001(\0132#.messa" +
+      "ges.protobuf.data.ReturnValueH\000B\t\n\007conte" +
+      "nt*\360\001\n\004Type\022\026\n\022STATIC_CONSTRUCTOR\020\001\022\020\n\014R" +
+      "ETURN_CLASS\020\002\022\017\n\013CONSTRUCTOR\020\003\022\023\n\017INSTAN",
+      "CE_METHOD\020\004\022\020\n\014CLASS_METHOD\020\005\022\016\n\nGET_STA" +
+      "TIC\020\006\022\r\n\tGET_FIELD\020\007\022\016\n\nPUT_STATIC\020\010\022\r\n\t" +
+      "PUT_FIELD\020\t\022\023\n\017PUT_STATIC_DONE\020\n\022\022\n\016PUT_" +
+      "FIELD_DONE\020\013\022\r\n\tTHROWABLE\020\014\022\020\n\014RETURN_VA" +
+      "LUE\020\rB9\n5com.ittera.cometa.concentrator." +
+      "messages.protobuf.dataH\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
