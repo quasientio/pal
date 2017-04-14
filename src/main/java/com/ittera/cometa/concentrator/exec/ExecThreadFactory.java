@@ -7,8 +7,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.inject.Singleton;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+
 import org.zeromq.ZContext;
-import com.google.inject.*;
 
 @Singleton
 public class ExecThreadFactory implements ThreadFactory {
@@ -24,14 +26,17 @@ public class ExecThreadFactory implements ThreadFactory {
   private static final boolean THREAD_GROUP_IS_DAEMON = false;
   private static final boolean THREAD_IS_DAEMON = false;
 
+  // zmq stuff
   private ZContext zmqContext;
+  private final String dealerAddress;
 
   @Inject
-  public ExecThreadFactory(ZContext zmqContext) {
+  public ExecThreadFactory(ZContext zmqContext, @Named("in.dealer") String dealerAddress) {
     threadGroup = new ThreadGroup(THREAD_GROUP_NAME);
     threadGroup.setDaemon(THREAD_GROUP_IS_DAEMON);
     threadGroup.setMaxPriority(THREAD_GROUP_MAX_PRIORITY);
     this.zmqContext = zmqContext;
+    this.dealerAddress = dealerAddress;
     logger.info("Initialized exec thread factory with group name: {}, daemon: {}, maxPriority: {}", THREAD_GROUP_NAME, THREAD_GROUP_IS_DAEMON, THREAD_GROUP_MAX_PRIORITY);
   }
 
@@ -39,7 +44,7 @@ public class ExecThreadFactory implements ThreadFactory {
   public Thread newThread(Runnable r) {
     logger.traceEntry();
     final String newThreadName = THREAD_BASE_NAME + ' ' + threadCounter.getAndIncrement();
-    final Thread thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext);
+    final Thread thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext, dealerAddress);
     thread.setPriority(THREAD_PRIORITY);
     thread.setDaemon(THREAD_IS_DAEMON);
     logger.info("Created new executor thread with name: '{}' and id: {}", newThreadName, thread.getId());

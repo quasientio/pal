@@ -17,14 +17,16 @@ import org.zeromq.ZMQ.Socket;
 public class PeerMessageInvoker extends Thread {
 
     protected static final Logger logger = LogManager.getLogger(PeerMessageInvoker.class);
-
+    // zmq stuff
     private ZContext zmqContext;
+    private final String dealerAddress;
 
     protected AtomicLong requestsDispatched = new AtomicLong(0);
 
-    public PeerMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext) {
+    public PeerMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext, String dealerAddress) {
         super(group, target, name);
         this.zmqContext = zmqContext;
+        this.dealerAddress = dealerAddress;
     }
 
     @Override
@@ -32,7 +34,7 @@ public class PeerMessageInvoker extends Thread {
 
         // create REP socket
         Socket socket = zmqContext.createSocket(ZMQ.REP);
-        socket.connect("inproc://deal");
+        socket.connect(dealerAddress);
 
         boolean running = true;
         DataMessage requestMsg, replyMsg;

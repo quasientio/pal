@@ -40,20 +40,25 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService i
     @Inject
     private ZContext context;
     private Socket broker, publisher;
+    private final String outCellAddress, outPubAddress;
 
     @Inject
-    public JeromqOutMessageDispatcher(@Named("kafkaTopic") String kafkaTopic) {
+    public JeromqOutMessageDispatcher(@Named("kafkaTopic") String kafkaTopic,
+                                      @Named("out.cell") String outCellAddress,
+                                      @Named("out.pub") String outPubAddress) {
         this.kafkaTopic = kafkaTopic;
+        this.outCellAddress = outCellAddress;
+        this.outPubAddress = outPubAddress;
         logger.info("Initialized OUT message dispatcher for concentrator with topic '{}'", kafkaTopic);
     }
 
     protected void openConnections() {
 
         broker = context.createSocket(ZMQ.REP);
-        broker.bind("inproc://cell");
+        broker.bind(outCellAddress);
 
         publisher = context.createSocket(ZMQ.PUB);
-        publisher.bind("inproc://pub");
+        publisher.bind(outPubAddress);
 
         logger.info("All connections open");
     }

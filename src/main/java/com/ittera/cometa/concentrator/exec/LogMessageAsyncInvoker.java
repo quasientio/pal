@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 
@@ -26,8 +27,9 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
 
     protected AtomicLong requestsDispatched = new AtomicLong(0);
 
-    @Inject
+    // zmq stuff
     private ZContext zmqContext;
+    private final String inLogAddress;
 
 //    @Inject
 //    private ExecutionService executor;
@@ -39,11 +41,17 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
         @Override
         protected Socket initialValue() {
             Socket socket = zmqContext.createSocket(ZMQ.SUB);
-            socket.connect("tcp://*:9999");
+            socket.connect(inLogAddress);
             socket.subscribe(ZMQ.SUBSCRIPTION_ALL);
             return socket;
         }
     };
+
+    @Inject
+    LogMessageAsyncInvoker(@Named("in.log") String inLogAddress, ZContext zmqContext) {
+       this.inLogAddress = inLogAddress;
+       this.zmqContext = zmqContext;
+    }
 
     @Override
     public void run() {

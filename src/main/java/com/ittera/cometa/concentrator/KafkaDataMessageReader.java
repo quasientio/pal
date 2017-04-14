@@ -38,7 +38,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     // zmq stuff
     @Inject
     private ZContext zmqContext;
-    private Socket kafkaSubscriber;
+    private Socket kafkaPublisher;
+    private final String inLogAddress;
 
     // counters
     private final AtomicLong totalPollingNanos = new AtomicLong(0);
@@ -62,8 +63,10 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
                                   @Named("session.timeout.ms") String sessionTimeout,
                                   @Named("id") String concentratorId,
                                   @Named("pollTimeout") String pollTimeout,
-                                  @Named("kafkaTopic") String kafkaTopic) {
+                                  @Named("kafkaTopic") String kafkaTopic,
+                                  @Named("in.log") String inLogAddress) {
         this.kafkaTopic = kafkaTopic;
+        this.inLogAddress = inLogAddress;
         this.pollTimeout = Long.parseLong(pollTimeout);
         //create Kafka consumer
         consumerProperties.put("group.id", concentratorId);
@@ -93,8 +96,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 
         logger.info("Initialized kafka consumer and producer");
 
-        this.kafkaSubscriber = zmqContext.createSocket(ZMQ.PUB);
-        kafkaSubscriber.bind("tcp://*:9999");
+        this.kafkaPublisher = zmqContext.createSocket(ZMQ.PUB);
+        kafkaPublisher.bind(inLogAddress);
 
         connectionsOpen = true;
     }
@@ -138,23 +141,23 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
                 totalPollingNanos.getAndAdd(System.nanoTime() - t0);
                 totalPolls.getAndIncrement();
             }
-            if (records.count() > 0) {
-                logger.info("Records read: {}", records.count());
+            if (logger.isDebugEnabled() && records.count() > 0) {
+                logger.debug("Records read: {}", records.count());
             }
             for (ConsumerRecord record : records) {
                 messagesRcvd.getAndIncrement();
 
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Processing received record # {} :\n {}",messagesRcvd, record);
+                    logger.debug("Processing received record # {} :\n {}", messagesRcvd, record);
                 }
 
                 final DataMessage dataMessage = (DataMessage) record.value();
                 final long messageOffset = record.offset();
 
                 // send request to PUB socket
-                kafkaSubscriber.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
-                kafkaSubscriber.send(dataMessage.toByteArray(), 0);
-                logger.debug("Published new log Data Message with uuid: " + dataMessage.getMessageUuid());
+                kafkaPublisher.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
+                kafkaPublisher.send(dataMessage.toByteArray(), 0);
+                logger.debug("Published new log Data Message with uuid: {}" , dataMessage.getMessageUuid());
             }
         }
     }

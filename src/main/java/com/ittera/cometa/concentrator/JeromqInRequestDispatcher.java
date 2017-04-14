@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,24 +23,29 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService im
     private final AtomicInteger messagesRcvd = new AtomicInteger(0);
 
     // zmq stuff
+    private final String routerAddress, dealerAddress;
+
     @Inject
     private ZContext context;
     private Socket router, dealer;
 
     private boolean connectionsOpen = false;
 
-    public JeromqInRequestDispatcher() {
+    @Inject
+    public JeromqInRequestDispatcher(@Named("in.router") String routerAddress, @Named("in.dealer") String dealerAddress) {
+        this.routerAddress = routerAddress;
+        this.dealerAddress = dealerAddress;
         logger.info("Initialized IN message dispatcher for concentrator");
     }
 
     protected void openConnections() {
-         // to get requests for conc
+        // to get requests for conc
         this.router = context.createSocket(ZMQ.ROUTER);
-        router.bind("tcp://*:5671");
+        router.bind(routerAddress);
 
         // to send requests to conc
         this.dealer = context.createSocket(ZMQ.DEALER);
-        dealer.bind("inproc://deal");
+        dealer.bind(dealerAddress);
 
 
         connectionsOpen = true;

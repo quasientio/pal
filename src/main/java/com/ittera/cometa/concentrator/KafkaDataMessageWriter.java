@@ -30,24 +30,29 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 
     protected static final Logger logger = LogManager.getLogger(KafkaDataMessageWriter.class);
 
+    // kafka stuff
     private KafkaProducer producer;
     private final String kafkaTopic;
     private final Properties producerProperties = new Properties();
 
-    private volatile boolean connectionsOpen = false;
-    private final AtomicInteger messagesSent = new AtomicInteger(0);
-
-    private int messagesReceived = 0;
+    // zmq stuff
     @Inject
     private ZContext zmqContext;
     private Socket subscriber;
+    private final String outPubAddress;
+
+    private volatile boolean connectionsOpen = false;
+    private final AtomicInteger messagesSent = new AtomicInteger(0);
+    private int messagesReceived = 0;
 
     @Inject
     public KafkaDataMessageWriter(@Named("bootstrap.servers") String bootstrapServers,
                                   @Named("key.serializer") String keySerializer,
                                   @Named("value.serializer") String valueSerializer,
-                                  @Named("kafkaTopic") String kafkaTopic) {
+                                  @Named("kafkaTopic") String kafkaTopic,
+                                  @Named("out.pub") String outPubAddress) {
         this.kafkaTopic = kafkaTopic;
+        this.outPubAddress = outPubAddress;
         producerProperties.put("key.serializer", keySerializer);
         producerProperties.put("value.serializer", valueSerializer);
         producerProperties.put("bootstrap.servers", bootstrapServers);
@@ -62,7 +67,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
         // start subscriber
         this.subscriber = zmqContext.createSocket(ZMQ.SUB);
 
-        subscriber.connect("inproc://pub");
+        subscriber.connect(outPubAddress);
         subscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
         connectionsOpen = true;

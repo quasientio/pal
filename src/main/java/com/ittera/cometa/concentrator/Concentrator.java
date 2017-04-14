@@ -57,19 +57,14 @@ public class Concentrator {
 
     protected static final Logger logger = LogManager.getLogger(Concentrator.class);
 
-    /**
-     * Static data (singletons) shared by all threads - sources of contention
-     */
     public static final UUID uuid = UUID.randomUUID();
+
+    /**
+     * Non-final static data (eg. singletons) shared by all threads - possible sources of contention
+     */
 
     @Inject
     private static DataMessageBuilder dataMessageBuilder;
-
-    @Inject
-    private static IncomingMessageDispatcher dataMessageDispatcher;
-
-    @Inject
-    private static OutgoingMessageDispatcher outgoingMessageDispatcher;
 
     @Inject
     private static ObjectService objectService;
@@ -77,18 +72,19 @@ public class Concentrator {
     // zmq context -- gets injected to all other threads
     private static final ZContext zmqContext = new ZContext();
 
+    private static String outCellAddress;
+
     // per-thread REP socket to send messages to dispatcher
     private static final ThreadLocal<Socket> threadSocket = new ThreadLocal<Socket>() {
         @Override
         protected Socket initialValue() {
             Socket worker = zmqContext.createSocket(ZMQ.REQ);
-            worker.connect("inproc://cell");
+            worker.connect(outCellAddress);
             return worker;
         }
     };
 
-
-    /************************ INTERFACE ***************************/
+    /*********************** INVOKERS INTERFACE ***************************/
 
     //TODO: this method further ties this class to Protobuf, must decouple
     public static DataMessage incomingCall(DataMessage dataMessage, long recordOffset) {
@@ -1227,6 +1223,7 @@ public class Concentrator {
                 bind(LogMessageInvoker.class).to(LogMessageAsyncInvoker.class);
                 bind(InRequestMessageDispatcher.class).to(JeromqInRequestDispatcher.class);
                 //fields to be injected in Concentrator are static
+                Concentrator.outCellAddress = properties.getProperty("out.cell");
                 requestStaticInjection(Concentrator.class);
             }
 
@@ -1236,7 +1233,7 @@ public class Concentrator {
             }
         };
 
-        Injector injector = Guice.createInjector(module);
+        final Injector injector = Guice.createInjector(module);
 
         final Set<Service> services = new HashSet<Service>();
         services.add((Service) injector.getInstance(IncomingMessageDispatcher.class));
@@ -1257,7 +1254,8 @@ public class Concentrator {
                                 public void healthy() {
                                     // Services have been initialized and are healthy, start accepting requests...
                                     logger.info("Service manager is healthy.");
-                                    dataMessageDispatcher.acceptConnections(true);
+                                    IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
+                                    incomingMessageDispatcher.acceptConnections(true);
                                 }
 
                                 public void failure(Service service) {
