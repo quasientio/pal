@@ -31,10 +31,13 @@ import org.apache.logging.log4j.LogManager;
 import com.google.protobuf.Message;
 
 import com.google.inject.Singleton;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 /**
  * Methods of this class receive aspectj objects (i.e. StaticPart) as arguments as convenience.
  */
+//TODO what's the point of this being a singleton?
 @Singleton
 public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
@@ -48,8 +51,12 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
     };
 
-    public ProtobufDataMessageBuilder() {
+    private static String peerAddress;
+
+    @Inject
+    public ProtobufDataMessageBuilder(@Named("in.router") String thisPeerAddress) {
         logger.info("Initialized message builder");
+        peerAddress = thisPeerAddress;
     }
 
     //<editor-fold desc="Private Auxiliary methods">
@@ -125,6 +132,10 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
         if (followingOffset != null) {
             msgBuilder.setFollowing(followingOffset);
+        }
+
+        if (peerAddress != null) {
+            msgBuilder.setConcentratorPeerAddr(peerAddress);
         }
 
         return msgBuilder;

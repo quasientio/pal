@@ -47,7 +47,6 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService im
         this.dealer = context.createSocket(ZMQ.DEALER);
         dealer.bind(dealerAddress);
 
-
         connectionsOpen = true;
         logger.info("All connections open");
     }
@@ -55,9 +54,10 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService im
     @Override
     public final void run() {
 
+        logger.info("Running router-dealer proxy");
+
         // create router-dealer proxy
         ZMQ.proxy(router, dealer, null);
-
     }
 
     @Override

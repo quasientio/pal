@@ -27,6 +27,7 @@ public class PeerMessageInvoker extends Thread {
         super(group, target, name);
         this.zmqContext = zmqContext;
         this.dealerAddress = dealerAddress;
+        logger.debug("Initialized new peer message invoker with dealerAddress: {}", dealerAddress);
     }
 
     @Override
@@ -42,8 +43,10 @@ public class PeerMessageInvoker extends Thread {
         logger.debug("Start getting requests from socket");
 
         while (running) {
+
             // recv req
             byte[] req = socket.recv(0);
+
             requestMsg = null;
 
             // parse req
@@ -52,6 +55,8 @@ public class PeerMessageInvoker extends Thread {
             } catch (InvalidProtocolBufferException ipbe) {
                 logger.error("Caught protobuf exception", ipbe);
             }
+
+            logger.debug("Received req message with uuid: {}", requestMsg.getMessageUuid());
 
             if (requestMsg != null) {
 

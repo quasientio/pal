@@ -6,4 +6,6 @@ public interface ExecutionService {
 
     Future<?> submit(Runnable task);
 
+    void startCoreThreads();
+
 }

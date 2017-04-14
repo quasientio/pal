@@ -1256,6 +1256,10 @@ public class Concentrator {
                                     logger.info("Service manager is healthy.");
                                     IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
                                     incomingMessageDispatcher.acceptConnections(true);
+
+                                    // We must ensure REP sockets are open after DEALER
+                                    ExecutionService executionService = injector.getInstance(ExecutionService.class);
+                                    executionService.startCoreThreads();
                                 }
 
                                 public void failure(Service service) {

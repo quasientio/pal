@@ -2,6 +2,7 @@ package com.ittera.cometa.concentrator.exec;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -24,6 +25,7 @@ public class ExecutionThreadService extends AbstractIdleService implements Execu
         logger.info("Initialized thread service with executorService: {}", executorService);
     }
 
+
     @Override
     protected void startUp() throws Exception {
         //TODO initialize internal queues, etc.
@@ -40,6 +42,14 @@ public class ExecutionThreadService extends AbstractIdleService implements Execu
             return executor.submit(task);
         } else {
             throw new IllegalStateException("Service is not running");
+        }
+    }
+
+    @Override
+    public void startCoreThreads() {
+        if (executor instanceof ThreadPoolExecutor) {
+            ((ThreadPoolExecutor) executor).prestartAllCoreThreads();
+            logger.debug("All core threads started.");
         }
     }
 }

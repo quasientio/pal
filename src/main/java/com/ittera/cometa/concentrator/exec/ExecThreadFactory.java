@@ -47,7 +47,7 @@ public class ExecThreadFactory implements ThreadFactory {
         final Thread thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext, dealerAddress);
         thread.setPriority(THREAD_PRIORITY);
         thread.setDaemon(THREAD_IS_DAEMON);
-        logger.info("Created new executor thread with name: '{}' and id: {}", newThreadName, thread.getId());
+        logger.debug("Created new executor thread with name: '{}' and id: {}", newThreadName, thread.getId());
         logger.traceExit();
         return thread;
     }

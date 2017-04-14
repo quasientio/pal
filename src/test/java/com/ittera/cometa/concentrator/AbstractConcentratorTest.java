@@ -33,6 +33,12 @@ import org.junit.BeforeClass;
 
 import static org.junit.Assert.*;
 
+import org.zeromq.ZMQ;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ.Socket;
+
+import com.google.protobuf.InvalidProtocolBufferException;
+
 public abstract class AbstractConcentratorTest {
 
     protected final static Logger logger = LogManager.getLogger("tests");
@@ -52,8 +58,17 @@ public abstract class AbstractConcentratorTest {
     private static Properties kafkaConsumerProps = new Properties();
     private static TopicPartition topicPartition;
 
+    // zmq stuff
+    private static ZContext zmqContext;
+    private static Socket peerSocket;
+    private static String currentPeerAddress;
+    private static boolean talkingToPeer = false;
+
     @BeforeClass
     public static void initialize() throws IOException {
+        logger.debug("Initializing, w/ zmqContext null? : {}, currentPeerAddress: {}, talkingToPeer: {}",
+                zmqContext == null ? "yes" : "no", currentPeerAddress, talkingToPeer);
+
         //load properties
         final Properties properties = new Properties();
         try (final InputStream stream = AbstractConcentratorTest.class.getResourceAsStream("/tests.properties")) {
@@ -96,14 +111,50 @@ public abstract class AbstractConcentratorTest {
         consumer.assign(Arrays.asList(topicPartition));
 //    consumer.seekToBeginning(Arrays.asList(topicPartition));
 
+        // create zmq context
+        if (zmqContext == null) {
+            logger.debug("Initializing zmq context");
+            zmqContext = new ZContext();
+        }
+        peerSocket = zmqContext.createSocket(ZMQ.REQ);
+
+        if (talkingToPeer && zmqContext != null) {
+            connectSocket();
+        }
+
         //init msg builder
-        dataMessageBuilder = new ProtobufDataMessageBuilder();
+        dataMessageBuilder = new ProtobufDataMessageBuilder(null);
 
     }
 
+    private static void connectSocket() {
+        peerSocket.setIdentity("Test Client".getBytes(ZMQ.CHARSET));
+        peerSocket.connect(currentPeerAddress);
+    }
+
     protected static DataMessage sendAndReceive(DataMessage message) {
-        //send
-        Long sentRecordOffset = send(message);
+        if (talkingToPeer) {
+            return sendToPeer(message);
+        } else {
+            return sendAndReceiveToLog(message);
+        }
+    }
+
+    protected static DataMessage sendAndReceiveToLog(DataMessage message) {
+
+        //send to kafka
+        Long sentRecordOffset;
+        Future<RecordMetadata> recordMetadataFuture = producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
+        try {
+            RecordMetadata recordMetadata = recordMetadataFuture.get();
+            if (logger.isDebugEnabled()) {
+                logger.debug("Message sent:\n{}", getRecordInfo(recordMetadata));
+            }
+            sentRecordOffset = recordMetadata.offset();
+        } catch (Exception e) {
+            logger.error("Error getting sent record metadata", e);
+            return null;
+        }
 
         //now poll to consume
         logger.debug("Consumer seeking to offset: {}", sentRecordOffset);
@@ -117,6 +168,12 @@ public abstract class AbstractConcentratorTest {
                 long receivedMsgOffset = record.offset();
                 if (dataMessage.hasFollowing() && dataMessage.getFollowing() == sentRecordOffset) {
                     logger.info("Got reply with offset {}", receivedMsgOffset);
+                    if (dataMessage.hasConcentratorPeerAddr()) {
+                        String newPeerAddress = dataMessage.getConcentratorPeerAddr();
+                        if (currentPeerAddress != newPeerAddress) {
+                            switchToPeer(newPeerAddress);
+                        }
+                    }
                     return dataMessage;
                 } else {
                     logger.debug("Skipping record with offset {}", receivedMsgOffset);
@@ -125,18 +182,32 @@ public abstract class AbstractConcentratorTest {
         }
     }
 
-    protected static Long send(DataMessage message) {
-        Future<RecordMetadata> recordMetadataFuture = producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
+    private static void switchToPeer(String peerAddress) {
+        logger.info("Switching to direct talk with peer @ {}", peerAddress);
+        currentPeerAddress = peerAddress;
+        connectSocket();
+        talkingToPeer = true;
+    }
+
+    private static DataMessage sendToPeer(DataMessage message) {
+
+        // send message request to peer
+        peerSocket.send(message.toByteArray(), 0);
+
+        byte[] reply = peerSocket.recv(0);
+
+        DataMessage replyMsg = null;
         try {
-            RecordMetadata recordMetadata = recordMetadataFuture.get();
-            if (logger.isDebugEnabled()) {
-                logger.debug("Message sent:\n{}", getRecordInfo(recordMetadata));
-            }
-            return recordMetadata.offset();
-        } catch (Exception e) {
-            logger.error("Error getting sent record metadata", e);
-            return null;
+            replyMsg = DataMessage.parseFrom(reply);
+        } catch (InvalidProtocolBufferException ipbe) {
+            System.err.println("Caught protobuf exception: " + ipbe.getMessage());
+            ipbe.printStackTrace(System.err);
+            logger.error("Caught protobuf exception", ipbe);
         }
+
+        logger.debug("Got back Data Message with uuid: " + replyMsg.getMessageUuid());
+
+        return replyMsg;
     }
 
     private static String getRecordInfo(RecordMetadata recordMetadata) {
@@ -201,6 +272,8 @@ public abstract class AbstractConcentratorTest {
     @AfterClass
     public static void finalizeStuff() {
         logger.debug("Finalizing after tests...");
+        peerSocket.close();
+        logger.debug("Peer socket closed.");
         producer.close();
         logger.debug("Producer closed.");
         consumer.close();

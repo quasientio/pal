@@ -100,6 +100,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         kafkaPublisher.bind(inLogAddress);
 
         connectionsOpen = true;
+        logger.info("All connections open");
     }
 
     @Override
