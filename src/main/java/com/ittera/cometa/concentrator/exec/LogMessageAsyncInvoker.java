@@ -31,7 +31,7 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
     private ZContext zmqContext;
     private final String inLogAddress;
 
-//    @Inject
+    //    @Inject
 //    private ExecutionService executor;
     private static ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -49,8 +49,8 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
 
     @Inject
     LogMessageAsyncInvoker(@Named("in.log") String inLogAddress, ZContext zmqContext) {
-       this.inLogAddress = inLogAddress;
-       this.zmqContext = zmqContext;
+        this.inLogAddress = inLogAddress;
+        this.zmqContext = zmqContext;
     }
 
     @Override

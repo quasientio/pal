@@ -157,7 +157,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
                 // send request to PUB socket
                 kafkaPublisher.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
                 kafkaPublisher.send(dataMessage.toByteArray(), 0);
-                logger.debug("Published new log Data Message with uuid: {}" , dataMessage.getMessageUuid());
+                logger.debug("Published new log Data Message with uuid: {}", dataMessage.getMessageUuid());
             }
         }
     }
