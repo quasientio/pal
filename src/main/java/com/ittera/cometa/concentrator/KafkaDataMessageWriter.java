@@ -38,6 +38,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
     private final AtomicInteger messagesSent = new AtomicInteger(0);
 
     private int messagesReceived = 0;
+    @Inject
     private ZContext zmqContext;
     private Socket subscriber;
 
@@ -53,10 +54,8 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
         logger.info("Initialized kafka message writer for concentrator with topic '{}'", kafkaTopic);
     }
 
-    @Override
-    public void openConnections(ZContext zmqContext) {
+    public void openConnections() {
 
-        this.zmqContext = zmqContext;
         // start kafka writer
         this.producer = new KafkaProducer<>(producerProperties);
 
@@ -109,4 +108,8 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
         logger.debug("new message sent:\n {}", message);
     }
 
+    @Override
+    protected void startUp() throws Exception {
+        openConnections();
+    }
 }

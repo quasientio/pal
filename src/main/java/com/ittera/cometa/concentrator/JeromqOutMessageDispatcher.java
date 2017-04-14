@@ -19,9 +19,9 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
 
 @Singleton
-public class JeromqDataMessageDispatcher extends AbstractExecutionThreadService implements OutgoingMessageDispatcher {
+public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService implements OutgoingMessageDispatcher {
 
-    protected static final Logger logger = LogManager.getLogger(JeromqDataMessageDispatcher.class);
+    protected static final Logger logger = LogManager.getLogger(JeromqOutMessageDispatcher.class);
 
     // counters
     private final AtomicLong totalReadBlockingQueueNanos = new AtomicLong(0);
@@ -37,17 +37,17 @@ public class JeromqDataMessageDispatcher extends AbstractExecutionThreadService 
     private final String kafkaTopic;
 
     // zmq stuff
+    @Inject
     private ZContext context;
     private Socket broker, publisher;
 
     @Inject
-    public JeromqDataMessageDispatcher(@Named("kafkaTopic") String kafkaTopic) {
+    public JeromqOutMessageDispatcher(@Named("kafkaTopic") String kafkaTopic) {
         this.kafkaTopic = kafkaTopic;
-        logger.info("Initialized outgoing message dispatcher for concentrator with topic '{}'", kafkaTopic);
+        logger.info("Initialized OUT message dispatcher for concentrator with topic '{}'", kafkaTopic);
     }
 
     protected void openConnections() {
-        this.context = new ZContext();
 
         broker = context.createSocket(ZMQ.REP);
         broker.bind("inproc://cell");
@@ -55,7 +55,6 @@ public class JeromqDataMessageDispatcher extends AbstractExecutionThreadService 
         publisher = context.createSocket(ZMQ.PUB);
         publisher.bind("inproc://pub");
 
-        kafkaDataMessageWriter.openConnections(context);
         logger.info("All connections open");
     }
 
@@ -84,11 +83,6 @@ public class JeromqDataMessageDispatcher extends AbstractExecutionThreadService 
                 }
             }
         }
-    }
-
-    @Override
-    public ZContext getZContext() {
-        return context;
     }
 
     //TODO

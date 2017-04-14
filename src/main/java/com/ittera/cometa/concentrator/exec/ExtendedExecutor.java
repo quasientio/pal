@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec;
 
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Future;
 import java.util.concurrent.CancellationException;
@@ -22,10 +23,11 @@ public class ExtendedExecutor extends ThreadPoolExecutor {
   @Inject
   public ExtendedExecutor(@Named("corePoolSize") String corePoolSize,
                           @Named("maximumPoolSize") String maximumPoolSize,
-                          @Named("keepAliveSeconds") String keepAliveSeconds) {
+                          @Named("keepAliveSeconds") String keepAliveSeconds,
+                          ThreadFactory threadFactory) {
 
     super(Integer.valueOf(corePoolSize), Integer.valueOf(maximumPoolSize), Integer.valueOf(keepAliveSeconds),
-      TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), new ExecThreadFactory());
+      TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), threadFactory);
     logger.info("Initialized executor, with corePoolSize={}, maximumPoolSize={}, keepAliveSeconds={}",
       corePoolSize, maximumPoolSize, keepAliveSeconds);
   }

@@ -1,15 +1,11 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.exec.ExecutionService;
 import com.ittera.cometa.concentrator.messages.IncomingMessageDispatcher;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.Properties;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -27,19 +23,25 @@ import com.google.inject.Singleton;
 
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
+import org.zeromq.ZMQ.Socket;
+
 @Singleton
-public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService implements IncomingMessageDispatcher {
+public class KafkaDataMessageReader extends AbstractExecutionThreadService implements IncomingMessageDispatcher {
 
-    protected static final Logger logger = LogManager.getLogger(KafkaDataMessageDispatcher.class);
+    protected static final Logger logger = LogManager.getLogger(KafkaDataMessageReader.class);
 
-    private static final Map<Long, BlockingQueue<DataMessage>> threadBlockingQueueMap = new ConcurrentHashMap<Long, BlockingQueue<DataMessage>>();
-
-    private final ExecutionService executionService;
     private volatile boolean acceptingConnections = false;
+    private volatile boolean connectionsOpen = false;
+
+    // zmq stuff
+    @Inject
+    private ZContext zmqContext;
+    private Socket kafkaSubscriber;
 
     // counters
     private final AtomicLong totalPollingNanos = new AtomicLong(0);
-    private final AtomicInteger totalReadCalls = new AtomicInteger(0);
     private final AtomicInteger totalPolls = new AtomicInteger(0);
     private final AtomicInteger messagesRcvd = new AtomicInteger(0);
 
@@ -49,21 +51,20 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
     private KafkaConsumer<String, String> consumer;
     private final Properties consumerProperties = new Properties();
 
+
     @Inject
-    public KafkaDataMessageDispatcher(@Named("bootstrap.servers") String bootstrapServers,
-                                      @Named("key.deserializer") String keyDeserializer,
-                                      @Named("value.deserializer") String valueDeserializer,
-                                      @Named("enable.auto.commit") String autoCommit,
-                                      @Named("auto.commit.interval.ms") String autoCommitInterval,
-                                      @Named("auto.offset.reset") String autoOffsetReset,
-                                      @Named("session.timeout.ms") String sessionTimeout,
-                                      @Named("id") String concentratorId,
-                                      ExecutionService executionService,
-                                      @Named("pollTimeout") String pollTimeout,
-                                      @Named("kafkaTopic") String kafkaTopic) {
+    public KafkaDataMessageReader(@Named("bootstrap.servers") String bootstrapServers,
+                                  @Named("key.deserializer") String keyDeserializer,
+                                  @Named("value.deserializer") String valueDeserializer,
+                                  @Named("enable.auto.commit") String autoCommit,
+                                  @Named("auto.commit.interval.ms") String autoCommitInterval,
+                                  @Named("auto.offset.reset") String autoOffsetReset,
+                                  @Named("session.timeout.ms") String sessionTimeout,
+                                  @Named("id") String concentratorId,
+                                  @Named("pollTimeout") String pollTimeout,
+                                  @Named("kafkaTopic") String kafkaTopic) {
         this.kafkaTopic = kafkaTopic;
         this.pollTimeout = Long.parseLong(pollTimeout);
-        this.executionService = executionService;
         //create Kafka consumer
         consumerProperties.put("group.id", concentratorId);
         consumerProperties.put("bootstrap.servers", bootstrapServers);
@@ -79,7 +80,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
             for (String propKey : consumerProperties.stringPropertyNames()) {
                 propsStr.append(propKey).append('=').append(consumerProperties.getProperty(propKey)).append(", ");
             }
-            logger.info("Initialized dispatcher for concentrator with id '{}', topic '{}' and properties: [{}]", concentratorId, kafkaTopic, propsStr.toString());
+            logger.info("Initialized kafka publisher for concentrator with id '{}', topic '{}' and properties: [{}]", concentratorId, kafkaTopic, propsStr.toString());
         }
     }
 
@@ -91,12 +92,26 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
         consumer.seekToBeginning(topicPartitionList);
 
         logger.info("Initialized kafka consumer and producer");
+
+        this.kafkaSubscriber = zmqContext.createSocket(ZMQ.PUB);
+        kafkaSubscriber.bind("tcp://*:9999");
+
+        connectionsOpen = true;
     }
 
     @Override
     public final void run() {
 
         long iterations = 0;
+
+        //wait for connections established
+        while (!connectionsOpen) {
+            try {
+                Thread.sleep(300);
+            } catch (InterruptedException e) {
+                //what to do
+            }
+        }
 
         while (isRunning()) {
             if (!acceptingConnections) {
@@ -108,6 +123,7 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
                     continue;
                 }
             }
+
 
             //print stats every 10000 iterations
             if ((++iterations % 10000 == 0) && logger.isDebugEnabled()) {
@@ -126,31 +142,19 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
                 logger.info("Records read: {}", records.count());
             }
             for (ConsumerRecord record : records) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Processing received record:\n {}", record);
-                }
-
                 messagesRcvd.getAndIncrement();
-                final DataMessage dataMessage = (DataMessage) record.value();
-                final long threadId = dataMessage.getThreadId();
-                final long recordOffset = record.offset();
 
-                // we dispatch only if concentrator uuid isn't ours
-                if (!Concentrator.uuid.toString().equals(dataMessage.getConcentratorUuid())) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Thread queue has thread with ids: {}", threadBlockingQueueMap.keySet());
-                        logger.debug("No thread for incoming call, dispatching to thread pool...");
-                    }
-                    executionService.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            Concentrator.incomingCall(dataMessage, recordOffset);
-                        }
-                    });
-                } else {
-                    //TODO: should/can we do
-                    logger.debug("Discarding kafka message originated in self, with uuid: {}", dataMessage.getConcentratorUuid());
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Processing received record # {} :\n {}",messagesRcvd, record);
                 }
+
+                final DataMessage dataMessage = (DataMessage) record.value();
+                final long messageOffset = record.offset();
+
+                // send request to PUB socket
+                kafkaSubscriber.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
+                kafkaSubscriber.send(dataMessage.toByteArray(), 0);
+                logger.debug("Published new log Data Message with uuid: " + dataMessage.getMessageUuid());
             }
         }
     }
@@ -183,7 +187,6 @@ public class KafkaDataMessageDispatcher extends AbstractExecutionThreadService i
         logger.debug("# of messages received from k-log: {}", messagesRcvd.get());
         logger.debug("# polling nanoseconds: {}", totalPollingNanos.get());
         logger.debug("# polls: {}", totalPolls.get());
-        logger.debug("# queue reads: {}", totalReadCalls.get());
         logger.debug("-----END OF STATS-----");
     }
 

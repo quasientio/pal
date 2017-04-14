@@ -1,9 +1,6 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.exec.ExecThreadFactory;
-import com.ittera.cometa.concentrator.exec.ExecutionService;
-import com.ittera.cometa.concentrator.exec.ExecutionThreadService;
-import com.ittera.cometa.concentrator.exec.ExtendedExecutor;
+import com.ittera.cometa.concentrator.exec.*;
 import com.ittera.cometa.concentrator.messages.IncomingMessageDispatcher;
 import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
@@ -54,6 +51,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
+import org.zeromq.ZContext;
 
 public class Concentrator {
 
@@ -62,7 +60,7 @@ public class Concentrator {
     /**
      * Static data (singletons) shared by all threads - sources of contention
      */
-    static final UUID uuid = UUID.randomUUID();
+    public static final UUID uuid = UUID.randomUUID();
 
     @Inject
     private static DataMessageBuilder dataMessageBuilder;
@@ -76,11 +74,14 @@ public class Concentrator {
     @Inject
     private static ObjectService objectService;
 
+    // zmq context -- gets injected to all other threads
+    private static final ZContext zmqContext = new ZContext();
+
     // per-thread REP socket to send messages to dispatcher
     private static final ThreadLocal<Socket> threadSocket = new ThreadLocal<Socket>() {
         @Override
         protected Socket initialValue() {
-            Socket worker = outgoingMessageDispatcher.getZContext().createSocket(ZMQ.REQ);
+            Socket worker = zmqContext.createSocket(ZMQ.REQ);
             worker.connect("inproc://cell");
             return worker;
         }
@@ -90,30 +91,30 @@ public class Concentrator {
     /************************ INTERFACE ***************************/
 
     //TODO: this method further ties this class to Protobuf, must decouple
-    static void incomingCall(DataMessage dataMessage, long recordOffset) {
+    public static DataMessage incomingCall(DataMessage dataMessage, long recordOffset) {
         if (dataMessage.hasConstructorCall()) {
             final ConstructorCall constructorCall = dataMessage.getConstructorCall();
-            incomingConstructor(dataMessage.getMessageUuid(), constructorCall, recordOffset);
+            return incomingConstructor(dataMessage.getMessageUuid(), constructorCall, recordOffset);
         } else if (dataMessage.hasClassMethodCall()) {
             final ClassMethodCall methodCall = dataMessage.getClassMethodCall();
-            incomingClassMethod(dataMessage.getMessageUuid(), methodCall, recordOffset);
+            return incomingClassMethod(dataMessage.getMessageUuid(), methodCall, recordOffset);
         } else if (dataMessage.hasInstanceMethodCall()) {
             final InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
-            incomingInstanceMethod(dataMessage.getMessageUuid(), methodCall, recordOffset);
+            return incomingInstanceMethod(dataMessage.getMessageUuid(), methodCall, recordOffset);
         } else if (dataMessage.hasStaticFieldGet()) {
             final StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
-            incomingGetStatic(dataMessage.getMessageUuid(), staticFieldGetCall, recordOffset);
+            return incomingGetStatic(dataMessage.getMessageUuid(), staticFieldGetCall, recordOffset);
         } else if (dataMessage.hasInstanceFieldGet()) {
             final InstanceFieldGet instanceFieldGet = dataMessage.getInstanceFieldGet();
-            incomingGetObject(dataMessage.getMessageUuid(), instanceFieldGet, recordOffset);
+            return incomingGetObject(dataMessage.getMessageUuid(), instanceFieldGet, recordOffset);
         } else if (dataMessage.hasStaticFieldPut()) {
             final StaticFieldPut staticFieldPut = dataMessage.getStaticFieldPut();
-            incomingPutStatic(dataMessage.getMessageUuid(), staticFieldPut, recordOffset);
+            return incomingPutStatic(dataMessage.getMessageUuid(), staticFieldPut, recordOffset);
         } else if (dataMessage.hasInstanceFieldPut()) {
             final InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
-            incomingPutField(dataMessage.getMessageUuid(), instanceFieldPut, recordOffset);
+            return incomingPutField(dataMessage.getMessageUuid(), instanceFieldPut, recordOffset);
         } else {
-            logger.warn("Incoming message with offset {} ignored - no handler:\n{}", recordOffset, dataMessage);
+            throw new IllegalArgumentException(String.format("Incoming message with offset {} ignored - no handler:\n{}", recordOffset, dataMessage));
         }
     }
 
@@ -166,7 +167,7 @@ public class Concentrator {
      * @param constructorCall
      * @throws Throwable
      */
-    static void incomingConstructor(String messageUuid, ConstructorCall constructorCall, long recordOffset) {
+    static DataMessage incomingConstructor(String messageUuid, ConstructorCall constructorCall, long recordOffset) {
         logger.traceEntry("with constructorCall: {}, recordOffset", constructorCall, recordOffset);
 
         /** 1. Unwrap message and load constructor **/
@@ -236,7 +237,7 @@ public class Concentrator {
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
     }
 
     public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
@@ -420,7 +421,7 @@ public class Concentrator {
      *
      * @param instanceMethodCall
      */
-    static void incomingInstanceMethod(String messageUuid, InstanceMethodCall instanceMethodCall, long recordOffset) {
+    static DataMessage incomingInstanceMethod(String messageUuid, InstanceMethodCall instanceMethodCall, long recordOffset) {
         logger.traceEntry("with instanceMethodCall: {}, recordOffset: {}", instanceMethodCall, recordOffset);
 
         /** 1. Unwrap message and load class **/
@@ -512,7 +513,7 @@ public class Concentrator {
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
     }
 
     public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
@@ -632,7 +633,7 @@ public class Concentrator {
      *
      * @param classMethodCall
      */
-    static void incomingClassMethod(String messageUuid, ClassMethodCall classMethodCall, long recordOffset) {
+    static DataMessage incomingClassMethod(String messageUuid, ClassMethodCall classMethodCall, long recordOffset) {
         logger.traceEntry("with classMethodCall: {}, recordOffset: {}", classMethodCall, recordOffset);
 
         /** 1. Unwrap message and load class **/
@@ -713,7 +714,7 @@ public class Concentrator {
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
     }
 
 
@@ -721,7 +722,7 @@ public class Concentrator {
 
     // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
 
-    public static void incomingGetStatic(String messageUuid, Fields.StaticFieldGet staticFieldGet, long recordOffset) {
+    public static DataMessage incomingGetStatic(String messageUuid, Fields.StaticFieldGet staticFieldGet, long recordOffset) {
         logger.traceEntry("with staticFieldGet: {}, recordOffset: {}", staticFieldGet, recordOffset);
 
         /** 1. Get Object **/
@@ -776,7 +777,7 @@ public class Concentrator {
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
 
     }
 
@@ -832,7 +833,7 @@ public class Concentrator {
         return fieldValue;
     }
 
-    public static void incomingGetObject(String messageUuid, Fields.InstanceFieldGet instanceFieldGet, long recordOffset) {
+    public static DataMessage incomingGetObject(String messageUuid, Fields.InstanceFieldGet instanceFieldGet, long recordOffset) {
         logger.traceEntry("with instanceFieldGet: {}, recordOffset: {}", instanceFieldGet, recordOffset);
 
         /** 1. Get Object **/
@@ -897,7 +898,7 @@ public class Concentrator {
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
 
     }
 
@@ -953,7 +954,7 @@ public class Concentrator {
         return fieldValue;
     }
 
-    public static void incomingPutStatic(String messageUuid, Fields.StaticFieldPut staticFieldPut, long recordOffset) {
+    public static DataMessage incomingPutStatic(String messageUuid, Fields.StaticFieldPut staticFieldPut, long recordOffset) {
         logger.traceEntry("with staticFieldPut: {}, recordOffset", staticFieldPut, recordOffset);
 
         /** 1. Load class and field **/
@@ -1009,7 +1010,7 @@ public class Concentrator {
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
 
     }
 
@@ -1099,7 +1100,7 @@ public class Concentrator {
         return;
     }
 
-    public static void incomingPutField(String messageUuid, Fields.InstanceFieldPut instanceFieldPut, long recordOffset) {
+    public static DataMessage incomingPutField(String messageUuid, Fields.InstanceFieldPut instanceFieldPut, long recordOffset) {
         logger.traceEntry("with instanceFieldPut:\n {}, recordOffset: {}", instanceFieldPut, recordOffset);
 
         /** 1. Load class and field **/
@@ -1164,7 +1165,7 @@ public class Concentrator {
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
 
     }
 
@@ -1219,24 +1220,33 @@ public class Concentrator {
                 bind(ThreadFactory.class).to(ExecThreadFactory.class);
                 bind(KafkaMessageWriter.class).to(KafkaDataMessageWriter.class);
                 bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class);
-                bind(IncomingMessageDispatcher.class).to(KafkaDataMessageDispatcher.class);
-                bind(OutgoingMessageDispatcher.class).to(JeromqDataMessageDispatcher.class);
+                bind(IncomingMessageDispatcher.class).to(KafkaDataMessageReader.class);
+                bind(OutgoingMessageDispatcher.class).to(JeromqOutMessageDispatcher.class);
                 bind(ExecutorService.class).to(ExtendedExecutor.class);
                 bind(ExecutionService.class).to(ExecutionThreadService.class);
+                bind(LogMessageInvoker.class).to(LogMessageAsyncInvoker.class);
+                bind(InRequestMessageDispatcher.class).to(JeromqInRequestDispatcher.class);
                 //fields to be injected in Concentrator are static
                 requestStaticInjection(Concentrator.class);
+            }
+
+            @Provides
+            ZContext getZmqContext() {
+                return Concentrator.zmqContext;
             }
         };
 
         Injector injector = Guice.createInjector(module);
 
-
         final Set<Service> services = new HashSet<Service>();
         services.add((Service) injector.getInstance(IncomingMessageDispatcher.class));
         services.add((Service) injector.getInstance(OutgoingMessageDispatcher.class));
-        services.add((Service) injector.getInstance(KafkaDataMessageWriter.class));
-        services.add((Service) injector.getInstance(ExecutionThreadService.class));
+        services.add(injector.getInstance(KafkaDataMessageWriter.class));
+        services.add(injector.getInstance(ExecutionThreadService.class));
         services.add((Service) injector.getInstance(ObjectService.class));
+        services.add(injector.getInstance(JeromqInRequestDispatcher.class));
+        services.add((Service) injector.getInstance(LogMessageInvoker.class));
+
         final ServiceManager manager = new ServiceManager(services);
 
         manager.addListener(new ServiceManager.Listener() {

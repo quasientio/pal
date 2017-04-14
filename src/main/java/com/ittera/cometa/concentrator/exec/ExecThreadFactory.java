@@ -7,6 +7,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.inject.Singleton;
+import org.zeromq.ZContext;
+import com.google.inject.*;
 
 @Singleton
 public class ExecThreadFactory implements ThreadFactory {
@@ -15,25 +17,29 @@ public class ExecThreadFactory implements ThreadFactory {
 
   private final ThreadGroup threadGroup;
   private final AtomicInteger threadCounter = new AtomicInteger(0);
-  private static final String THREAD_GROUP_NAME = "Executor Thread Group";
-  private static final String THREAD_BASE_NAME = "Executor Thread";
+  private static final String THREAD_GROUP_NAME = "Executor Group";
+  private static final String THREAD_BASE_NAME = "Executor";
   private static final int THREAD_GROUP_MAX_PRIORITY = Thread.NORM_PRIORITY;
   private static final int THREAD_PRIORITY = Thread.NORM_PRIORITY;
   private static final boolean THREAD_GROUP_IS_DAEMON = false;
   private static final boolean THREAD_IS_DAEMON = false;
 
-  public ExecThreadFactory() {
-    threadGroup = new ThreadGroup("Executor Thread Group");
+  private ZContext zmqContext;
+
+  @Inject
+  public ExecThreadFactory(ZContext zmqContext) {
+    threadGroup = new ThreadGroup(THREAD_GROUP_NAME);
     threadGroup.setDaemon(THREAD_GROUP_IS_DAEMON);
     threadGroup.setMaxPriority(THREAD_GROUP_MAX_PRIORITY);
-    logger.info("Initialized thread factory with thread group name: {}, daemon: {}, maxPriority: {}", THREAD_GROUP_NAME, THREAD_GROUP_IS_DAEMON, THREAD_GROUP_MAX_PRIORITY);
+    this.zmqContext = zmqContext;
+    logger.info("Initialized exec thread factory with group name: {}, daemon: {}, maxPriority: {}", THREAD_GROUP_NAME, THREAD_GROUP_IS_DAEMON, THREAD_GROUP_MAX_PRIORITY);
   }
 
   @Override
   public Thread newThread(Runnable r) {
     logger.traceEntry();
     final String newThreadName = THREAD_BASE_NAME + ' ' + threadCounter.getAndIncrement();
-    final Thread thread = new Thread(threadGroup, r, newThreadName);
+    final Thread thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext);
     thread.setPriority(THREAD_PRIORITY);
     thread.setDaemon(THREAD_IS_DAEMON);
     logger.info("Created new executor thread with name: '{}' and id: {}", newThreadName, thread.getId());

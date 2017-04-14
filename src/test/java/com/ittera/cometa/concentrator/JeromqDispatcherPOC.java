@@ -44,7 +44,7 @@ import org.zeromq.ZMQ.Socket;
 import static org.junit.Assert.*;
 import org.junit.Test;
 
-public class JeromqDispatcherPOCTest {
+public class JeromqDispatcherPOC {
     protected final static Logger logger = LogManager.getLogger("tests");
     private static Random rand = new Random(System.currentTimeMillis ());
 
