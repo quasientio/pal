@@ -1,0 +1,100 @@
+package com.ittera.cometa.concentrator;
+
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
+import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class DualPeerTest {
+
+    protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder(null);
+
+    protected final String className = "com.ittera.cometa.apps.PrintHelloWorld";
+//    protected final String className = "com.ittera.cometa.demos.App";
+
+    @Test
+    public void runReqsWithOneClient() throws Exception {
+//        DualPeer dualPeer = new DualPeer("/tests.properties");
+        //cheat in order to skip the first req+rep through the log and talk directly to the peer
+        DualPeer dualPeer = new DualPeer("/tests.properties", "tcp://127.0.0.1:5671");
+
+        long start = System.currentTimeMillis();
+
+        final String methodName = "main";
+
+        Class[] parameterTypes = new Class[]{String[].class};
+        String[] parameterTypesNamesArray = new String[parameterTypes.length];
+        for (int i = 0; i < parameterTypes.length; i++) {
+            parameterTypesNamesArray[i] = parameterTypes[i].getName();
+        }
+        Object[] parameters = new Object[]{new String[]{}};
+
+        final int requests = 5000;
+        for (int i = 0; i < requests; i++) {
+            DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+            DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
+        }
+
+        System.out.println("runReqsWithOneClient took " + (System.currentTimeMillis() - start) + " milliseconds");
+    }
+
+    @Test
+    public void runAsyncReqsWithNClients() throws Exception {
+        long start = System.currentTimeMillis();
+
+        final int clients = 10;
+        final int requests = 500;
+
+        //test main
+        final String methodName = "main";
+
+        // we can reuse this. so better just once
+        final Class[] parameterTypes = new Class[]{String[].class};
+        final String[] parameterTypesNamesArray = new String[parameterTypes.length];
+        for (int i = 0; i < parameterTypes.length; i++) {
+            parameterTypesNamesArray[i] = parameterTypes[i].getName();
+        }
+        final Object[] parameters = new Object[]{new String[]{}};
+        Thread[] clientList = new Thread[clients];
+
+        final AtomicInteger finishedThreads = new AtomicInteger(0);
+
+        // create all threads
+        for (int i = 0; i < clients; i++) {
+            Thread client = new Thread() {
+                @Override
+                public void run() {
+                    DualPeer dualPeer = null;
+                    try {
+//                        dualPeer = new DualPeer("/tests.properties");
+                        //cheat in order to skip the first req+rep through the log and talk directly to the peer
+                        dualPeer = new DualPeer("/tests.properties", "tcp://127.0.0.1:5671");
+                    } catch (IOException ie) {
+                        ie.printStackTrace();
+                    }
+                    for (int i = 0; i < requests; i++) {
+                        DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+                        DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
+                    }
+                    finishedThreads.incrementAndGet();
+                }
+            };
+            clientList[i] = client;
+        }
+
+
+        // then start all clients at once
+        for (int i = 0; i < clients; i++) {
+            clientList[i].start();
+        }
+
+        while (finishedThreads.get() < clients) {
+            Thread.sleep(1);
+        }
+
+        System.out.println("runAsyncReqsWithNClients took " + (System.currentTimeMillis() - start) + " milliseconds");
+    }
+}

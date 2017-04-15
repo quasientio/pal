@@ -27,6 +27,10 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
+/**
+ * TODO Optimize - :ampling with visualvm shows this class as the one with highest memory allocation per thread.
+ * We are reading everything from the log. Is it absolutely required? Can it be optional? If so, what to skip reading?
+ */
 @Singleton
 public class KafkaDataMessageReader extends AbstractExecutionThreadService implements IncomingMessageDispatcher {
 
@@ -90,7 +94,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     protected void openConnections() {
         this.consumer = new KafkaConsumer<>(consumerProperties);
         //manual assignment of partition so we can control offset seek
-        final List<TopicPartition> topicPartitionList = Arrays.asList(new TopicPartition(kafkaTopic, 0));
+        TopicPartition topicPartition = new TopicPartition(kafkaTopic, 0);
+        final List<TopicPartition> topicPartitionList = Arrays.asList(topicPartition);
         consumer.assign(topicPartitionList);
         consumer.seekToBeginning(topicPartitionList);
 
