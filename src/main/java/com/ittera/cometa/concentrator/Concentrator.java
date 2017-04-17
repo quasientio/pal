@@ -468,7 +468,7 @@ public class Concentrator {
                 if (target == null) {
                     throw new RuntimeException("Invoking a method on null object will yield a NPE!");
                 }
-                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getName());
+                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getParameterList() ,instanceMethodCall.getName());
                 if (method == null) {
                     //TODO perhaps this should be thrown by ReflectionHelper instead of returning null
                     throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", instanceMethodCall.getName(), clazz.getName()));
@@ -670,7 +670,7 @@ public class Concentrator {
                 }
             }
             try {
-                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), classMethodCall.getName());
+                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), classMethodCall.getParameterList(), classMethodCall.getName());
                 if (method == null) {
                     throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", classMethodCall.getName(), clazz.getName()));
                 }
