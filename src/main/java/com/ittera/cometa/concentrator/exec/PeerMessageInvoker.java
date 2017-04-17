@@ -47,6 +47,8 @@ public class PeerMessageInvoker extends Thread {
             // recv req
             byte[] req = socket.recv(0);
 
+            final long started = System.currentTimeMillis();
+
             requestMsg = null;
 
             // parse req
@@ -65,7 +67,11 @@ public class PeerMessageInvoker extends Thread {
 
                 //send reply
                 socket.send(replyMsg.toByteArray(), 0);
-                logger.debug("Sent dispatched data message reply with uuid: {}", requestMsg.getMessageUuid());
+
+                if (logger.isDebugEnabled()) {
+                    final long took = System.currentTimeMillis() - started;
+                    logger.debug("Dispatched and sent data message reply with uuid: {} in {} millisecs", requestMsg.getMessageUuid(), took);
+                }
 
 
                 if (requestsDispatched.incrementAndGet() % 25 == 0) {

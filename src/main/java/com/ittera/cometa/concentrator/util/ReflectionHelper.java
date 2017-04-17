@@ -1,4 +1,4 @@
-package com.ittera.cometa.util;
+package com.ittera.cometa.concentrator.util;
 
 import org.apache.commons.lang3.ClassUtils;
 

@@ -3,6 +3,8 @@ package com.ittera.cometa.concentrator;
 import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.*;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -83,8 +85,6 @@ public class DualPeer {
 
         kafkaProducerProps.put("client.id", String.valueOf(peerId));
         producer = new KafkaProducer<>(kafkaProducerProps);
-        logger.debug("Kafka producer initialized: {}", producer);
-
 
         /** Configure and Initialize Kafka Consumer **/
         for (String propKey : properties.stringPropertyNames()) {
@@ -123,11 +123,34 @@ public class DualPeer {
         peerSocket.connect(currentPeerAddress);
     }
 
-    protected DataMessage sendAndReceive(DataMessage message) {
+    public DataMessage sendAndReceive(DataMessage message) {
         if (talkingToPeer) {
             return sendToPeer(message);
         } else {
             return sendAndReceiveToLog(message);
+        }
+    }
+
+    public DataMessage waitFor(Wrappers.Type type, String fieldName) {
+        logger.info("Starting wait for type: {} and field name: {}", type, fieldName);
+        DataMessage reply = null;
+        // TODO extra param to seek before
+        //consumer.seek(topicPartition, sentRecordOffset);
+
+        while (true) {
+            ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+            for (ConsumerRecord record : records) {
+                final DataMessage dataMessage = (DataMessage) record.value();
+                long receivedMsgOffset = record.offset();
+
+                if (dataMessage.hasStaticFieldPut() &&
+                   fieldName.equals(dataMessage.getStaticFieldPut().getField().getName())) {
+                        logger.info("Got matching message with offset {}:\n{}", receivedMsgOffset, dataMessage);
+                        return dataMessage;
+                } else {
+                        logger.debug("Skipping record with offset {}",  receivedMsgOffset);
+                }
+            }
         }
     }
 
@@ -137,6 +160,12 @@ public class DualPeer {
 
     public UUID getPeerUuid() {
         return peerUuid;
+    }
+
+    public void sendToLogAndForget(DataMessage message) {
+        //send to kafka
+        producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
+        logger.debug("Message sent to log, and we're done:\n{}", message);
     }
 
     private DataMessage sendAndReceiveToLog(DataMessage message) {
@@ -219,9 +248,8 @@ public class DualPeer {
         return builder.toString();
     }
 
-    @Override
-    public void finalize() {
-        logger.debug("Finalizing after tests...");
+
+    public void close() {
         peerSocket.close();
         zmqContext.destroy();
         logger.debug("Peer socket and context closed.");

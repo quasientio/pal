@@ -17,7 +17,7 @@ import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldP
 import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut;
 
-import com.ittera.cometa.util.ReflectionHelper;
+import com.ittera.cometa.concentrator.util.ReflectionHelper;
 
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.MethodSignature;
