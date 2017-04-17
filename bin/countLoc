@@ -1,3 +1,10 @@
 #!/bin/bash
 
-wc -l `find src/ -type f ! -name Wrappers.java ! -name Primitives.java ! -name Calls.java ! -name Exceptions.java ! -name Fields.java ! -name Values.java ! -name Ctxt.java`
+echo "   SOURCES LOC"
+echo "   ==========="
+wc -l `find src/main -type f ! -name Wrappers.java ! -name Primitives.java ! -name Calls.java ! -name Exceptions.java ! -name Fields.java ! -name Values.java ! -name Ctxt.java`
+
+echo
+echo "   TESTS LOC"
+echo "   ==========="
+wc -l `find src/test -type f`
