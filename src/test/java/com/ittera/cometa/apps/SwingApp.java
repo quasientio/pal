@@ -20,7 +20,7 @@ public class SwingApp {
         frame.setSize(200,100);
 
         frame.setContentPane(app.panel1);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);
     }

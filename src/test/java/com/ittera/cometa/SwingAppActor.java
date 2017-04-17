@@ -3,6 +3,7 @@ package com.ittera.cometa;
 import com.ittera.cometa.concentrator.DualPeer;
 import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
+import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type;
 
@@ -15,7 +16,7 @@ public class SwingAppActor {
     public static void main(String[] args) throws Exception {
 
         final DualPeer dualPeer = new DualPeer("/tests.properties");
-        final String methodName;
+        String methodName;
 
         methodName = "main";
         Class[] parameterTypes = new Class[]{String[].class};
@@ -26,23 +27,57 @@ public class SwingAppActor {
         Object[] parameters = new Object[]{new String[]{}};
 
 
-        final DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(),
-                    swingAppClassName, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+        final DataMessage mainRequest = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(),
+                swingAppClassName, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
 
-        // call main
+        // start the swingapp by calling main in background
         Thread asyncSend = new Thread() {
             @Override
             public void run() {
-                dualPeer.sendToLogAndForget(requestMsg);
+                dualPeer.sendToLogAndForget(mainRequest);
             }
         };
         asyncSend.start();
 
-        // wait for put of javax.swing.JFrame;
-//        DataMessage msg = dualPeer.waitFor(Type.PUT_STATIC,"javax.swing.JFrame" );
-        DataMessage msg = dualPeer.waitFor(Type.PUT_STATIC,"frame" );
+        // wait for put of JFrame field;
+        String fieldName = "frame";
+        dualPeer.waitFor(Type.PUT_STATIC_DONE, fieldName);
+
+        // now get the jframe
+        DataMessage requestMsg = dataMessageBuilder.buildGetStatic(dualPeer.getPeerUuid(), swingAppClassName, fieldName);
+        DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
+        Primitives.Object myFrame = replyMsg.getReturnValue().getObject();
+
+        for (int i = 0; i < 5; i++) {
+            sleep(1);
+
+            // set visible = false
+            String fieldClassName = "javax.swing.JFrame";
+            methodName = "setVisible";
+            parameters = new Object[]{false};
+            parameterTypesNamesArray = new String[]{"boolean"};
+            requestMsg = dataMessageBuilder.buildInstanceMethod(dualPeer.getPeerUuid(), fieldClassName,
+                    methodName, myFrame.getRef(), parameterTypesNamesArray, parameters, new String[parameters.length]);
+            replyMsg = dualPeer.sendAndReceive(requestMsg);
+
+            sleep(1);
+
+            // reset visible = true
+            parameters = new Object[]{Boolean.TRUE};
+            requestMsg = dataMessageBuilder.buildInstanceMethod(dualPeer.getPeerUuid(), fieldClassName,
+                    methodName, myFrame.getRef(), parameterTypesNamesArray, parameters, new String[parameters.length]);
+            replyMsg = dualPeer.sendAndReceive(requestMsg);
+        }
 
         // finalize
         dualPeer.close();
+    }
+
+    protected static void sleep(int secs) {
+        try {
+            Thread.sleep(secs * 1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }
