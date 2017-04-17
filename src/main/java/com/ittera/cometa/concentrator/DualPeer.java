@@ -143,8 +143,8 @@ public class DualPeer {
                 final DataMessage dataMessage = (DataMessage) record.value();
                 long receivedMsgOffset = record.offset();
 
-                if (dataMessage.hasStaticFieldPut() &&
-                   fieldName.equals(dataMessage.getStaticFieldPut().getField().getName())) {
+                if (dataMessage.hasStaticFieldPutDone() &&
+                   fieldName.equals(dataMessage.getStaticFieldPutDone().getField().getName())) {
                         logger.info("Got matching message with offset {}:\n{}", receivedMsgOffset, dataMessage);
                         return dataMessage;
                 } else {

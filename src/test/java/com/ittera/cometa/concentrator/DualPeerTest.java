@@ -3,7 +3,6 @@ package com.ittera.cometa.concentrator;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -12,10 +11,9 @@ public class DualPeerTest {
 
     protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder(null);
 
-    protected final String className = "com.ittera.cometa.apps.PrintHelloWorld";
-//    protected final String className = "com.ittera.cometa.apps.App";
+//    protected final String className = "com.ittera.cometa.apps.PrintHelloWorld";
+    protected final String className = "com.ittera.cometa.apps.App";
 
-//    @Test
     public void runReqsWithOneClient() throws Exception {
 //        DualPeer dualPeer = new DualPeer("/tests.properties");
         //cheat in order to skip the first req+rep through the log and talk directly to the peer
@@ -35,13 +33,13 @@ public class DualPeerTest {
         final int requests = 500;
         for (int i = 0; i < requests; i++) {
             DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
-            DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
+//            DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
+            dualPeer.sendToLogAndForget(requestMsg);
         }
 
         System.out.println("runReqsWithOneClient took " + (System.currentTimeMillis() - start) + " milliseconds");
     }
 
-//    @Test
     public void runAsyncReqsWithNClients() throws Exception {
         long start = System.currentTimeMillis();
 
@@ -77,7 +75,8 @@ public class DualPeerTest {
                     }
                     for (int i = 0; i < requests; i++) {
                         DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
-                        DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
+//                        DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
+                        dualPeer.sendToLogAndForget(requestMsg);
                     }
                     finishedThreads.incrementAndGet();
                 }
@@ -96,5 +95,11 @@ public class DualPeerTest {
         }
 
         System.out.println("runAsyncReqsWithNClients took " + (System.currentTimeMillis() - start) + " milliseconds");
+    }
+
+    public static void main(String[] args) throws Exception {
+        DualPeerTest dualPeerTest = new DualPeerTest();
+        dualPeerTest.runReqsWithOneClient();
+        dualPeerTest.runAsyncReqsWithNClients();
     }
 }
