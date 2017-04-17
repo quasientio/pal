@@ -103,14 +103,17 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
         }
         String objectRef = generateObjectRef(object);
         final IdentifiableObject wrappedObject = new IdentifiableObject(object);
-        if (syncdObjectMap.containsValue(wrappedObject)) {
-            objectRef = syncdObjectMap.inverse().get(wrappedObject);
-            logger.traceExit("with (pre-existing) objectRef: {}", objectRef);
-            return objectRef;
+        synchronized (syncdObjectMap) {
+            if (syncdObjectMap.containsValue(wrappedObject)) {
+                objectRef = syncdObjectMap.inverse().get(wrappedObject);
+                logger.traceExit("with (pre-existing) objectRef: {}", objectRef);
+                return objectRef;
+            } else {
+                syncdObjectMap.put(objectRef, wrappedObject);
+                logger.traceExit("with objectRef: {}", objectRef);
+                return objectRef;
+            }
         }
-        syncdObjectMap.put(objectRef, wrappedObject);
-        logger.traceExit("with objectRef: {}", objectRef);
-        return objectRef;
     }
 
     public Object lookupObject(String objectRef) {
