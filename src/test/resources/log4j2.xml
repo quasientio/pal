@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="warn" strict="true" monitorInterval="90">
     <Properties>
+        <Property name="concentratorLog">logs/concentrator-tests.log</Property>
         <Property name="kafkaLog">logs/kafka-tests.log</Property>
         <Property name="testsLog">logs/tests.log</Property>
     </Properties>
@@ -9,6 +10,12 @@
 
         <Appender type="Console" name="stdout">
             <Layout type="PatternLayout" pattern="%m MDC%X%n"/>
+        </Appender>
+
+        <Appender type="File" name="concentrator" fileName="${concentratorLog}">
+            <Layout type="PatternLayout">
+                <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
+            </Layout>
         </Appender>
 
         <Appender type="File" name="kafka" fileName="${kafkaLog}">
@@ -26,24 +33,20 @@
     </Appenders>
 
     <Loggers>
-        <!-- Let's send logging of cometa.util package to the tests log -->
-        <Logger name="com.ittera.cometa.concentrator.util" level="info" additivity="false">
-            <AppenderRef ref="tests"/>
+        <Logger name="com.ittera.cometa.concentrator" level="trace" additivity="false">
+            <AppenderRef ref="concentrator"/>
         </Logger>
 
-        <Logger name="com.ittera.cometa.concentrator" level="info" additivity="false">
-            <AppenderRef ref="tests"/>
+        <!-- Let's send logging of cometa.util package to the concentrator log -->
+        <Logger name="com.ittera.cometa.util" level="trace" additivity="false">
+            <AppenderRef ref="concentrator"/>
         </Logger>
 
-        <Logger name="org.apache.kafka" level="warn" additivity="false">
+        <Logger name="org.apache.kafka" level="debug" additivity="false">
             <AppenderRef ref="kafka"/>
         </Logger>
 
         <Logger name="tests" level="debug" additivity="false">
-            <AppenderRef ref="tests"/>
-        </Logger>
-
-        <Logger name="com.ittera.cometa.concentrator.DualPeer" level="debug" additivity="false">
             <AppenderRef ref="tests"/>
         </Logger>
 

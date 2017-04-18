@@ -25,7 +25,7 @@ import static org.junit.Assert.*;
  */
 public class SetInstanceVariableTest extends AbstractConcentratorTest {
 
-  protected final String className = "com.ittera.cometa.apps.App";
+  protected final String className = "com.ittera.cometa.demos.App";
 
   @Test
   public void testPutInteger() throws ClassNotFoundException {

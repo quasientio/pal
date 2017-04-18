@@ -9,45 +9,28 @@ import "values.proto";
 option java_package = "com.ittera.cometa.concentrator.messages.protobuf.data";
 option optimize_for = SPEED;
 
-enum Type {
-    STATIC_CONSTRUCTOR = 1;
-    RETURN_CLASS = 2;
-    CONSTRUCTOR = 3;
-    INSTANCE_METHOD = 4;
-    CLASS_METHOD = 5;
-    GET_STATIC = 6;
-    GET_FIELD = 7;
-    PUT_STATIC = 8;
-    PUT_FIELD = 9;
-    PUT_STATIC_DONE = 10;
-    PUT_FIELD_DONE = 11;
-    THROWABLE = 12;
-    RETURN_VALUE = 13;
-}
-
 message DataMessage {
     //TO DO:  IP or hostname for this Concentrator
     required string concentratorUuid = 1;
     required string messageUuid = 2;
-    required Type msgType = 3;
+    required string msgType = 3;
     required int64 threadId = 4 [default = -1];
     required int64 currentTime = 5;
     optional int64 builderSeq = 6;
     optional int64 following = 7;
-    optional string concentratorPeerAddr = 8;
 
     oneof content {
-        ConstructorCall constructorCall = 9;
-        InstanceMethodCall instanceMethodCall = 10;
-        ClassMethodCall classMethodCall = 11;
-        ClInitCall clinitCall = 12;
-        StaticFieldGet staticFieldGet = 13;
-        StaticFieldPut staticFieldPut = 14;
-        InstanceFieldGet instanceFieldGet = 15;
-        InstanceFieldPut instanceFieldPut = 16;
-        StaticFieldPutDone staticFieldPutDone = 17;
-        InstanceFieldPutDone instanceFieldPutDone = 18;
-        RaisedThrowable raisedThrowable = 19;
-        ReturnValue returnValue = 20;
+        ConstructorCall constructorCall = 8;
+        InstanceMethodCall instanceMethodCall = 9;
+        ClassMethodCall classMethodCall = 10;
+        ClInitCall clinitCall = 11;
+        StaticFieldGet staticFieldGet = 12;
+        StaticFieldPut staticFieldPut = 13;
+        InstanceFieldGet instanceFieldGet = 14;
+        InstanceFieldPut instanceFieldPut = 15;
+        StaticFieldPutDone staticFieldPutDone = 16;
+        InstanceFieldPutDone instanceFieldPutDone = 17;
+        RaisedThrowable raisedThrowable = 18;
+        ReturnValue returnValue = 19;
     }
 }

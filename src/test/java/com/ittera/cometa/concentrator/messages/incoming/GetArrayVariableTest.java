@@ -22,7 +22,7 @@ import static org.junit.Assert.*;
 
 public class GetArrayVariableTest extends AbstractConcentratorTest {
 
-  protected final String className = "com.ittera.cometa.apps.ArrayVars";
+  protected final String className = "com.ittera.cometa.demos.ArrayVars";
 
   @Test
   public void getStaticPrivate_booleanArrayNull() throws ClassNotFoundException {

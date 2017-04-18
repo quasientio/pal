@@ -1,4 +1,4 @@
-package com.ittera.cometa.apps;
+package com.ittera.cometa.demos;
 
 /**
  * NOTE THAT UNIT TESTS in com.ittera.cometa.concentrator.messages.incoming are dependant on this class and

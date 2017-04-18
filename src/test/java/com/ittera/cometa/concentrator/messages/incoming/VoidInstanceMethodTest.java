@@ -22,7 +22,7 @@ import static org.junit.Assert.*;
  */
 public class VoidInstanceMethodTest extends AbstractConcentratorTest {
 
-  protected final String className = "com.ittera.cometa.apps.App";
+  protected final String className = "com.ittera.cometa.demos.App";
 
   @Test
   public void packageVisibleNoArgs() throws ClassNotFoundException {
