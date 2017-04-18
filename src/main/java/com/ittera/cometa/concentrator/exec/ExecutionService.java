@@ -4,6 +4,8 @@ import java.util.concurrent.Future;
 
 public interface ExecutionService {
 
-  Future<?> submit(Runnable task);
+    Future<?> submit(Runnable task);
+
+    void startCoreThreads();
 
 }

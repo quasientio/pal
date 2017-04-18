@@ -1,10 +1,7 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.exec.ExecThreadFactory;
-import com.ittera.cometa.concentrator.exec.ExecutionService;
-import com.ittera.cometa.concentrator.exec.ExecutionThreadService;
-import com.ittera.cometa.concentrator.exec.ExtendedExecutor;
-import com.ittera.cometa.concentrator.messages.DataMessageDispatcher;
+import com.ittera.cometa.concentrator.exec.*;
+import com.ittera.cometa.concentrator.messages.IncomingMessageDispatcher;
 import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.Wrapper;
@@ -20,7 +17,7 @@ import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.StaticFieldP
 import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldGet;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.InstanceFieldPut;
 
-import com.ittera.cometa.util.ReflectionHelper;
+import com.ittera.cometa.concentrator.util.ReflectionHelper;
 
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -52,51 +49,68 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import org.zeromq.ZMQ;
+import org.zeromq.ZMQ.Socket;
+import org.zeromq.ZContext;
+
 public class Concentrator {
 
     protected static final Logger logger = LogManager.getLogger(Concentrator.class);
 
+    public static final UUID uuid = UUID.randomUUID();
+
     /**
-     * Static data (singletons) shared by all threads - sources of contention
+     * Non-final static data (eg. singletons) shared by all threads - possible sources of contention
      */
-    private static final UUID uuid = UUID.randomUUID();
 
     @Inject
     private static DataMessageBuilder dataMessageBuilder;
 
     @Inject
-    private static DataMessageDispatcher dataMessageDispatcher;
-
-    @Inject
     private static ObjectService objectService;
 
-    /************************ INTERFACE ***************************/
+    // zmq context -- gets injected to all other threads
+    private static final ZContext zmqContext = new ZContext();
+
+    private static String outCellAddress;
+
+    // per-thread REP socket to send messages to dispatcher
+    private static final ThreadLocal<Socket> threadSocket = new ThreadLocal<Socket>() {
+        @Override
+        protected Socket initialValue() {
+            Socket worker = zmqContext.createSocket(ZMQ.REQ);
+            worker.connect(outCellAddress);
+            return worker;
+        }
+    };
+
+    /*********************** INVOKERS INTERFACE ***************************/
 
     //TODO: this method further ties this class to Protobuf, must decouple
-    static void incomingCall(DataMessage dataMessage, long recordOffset) {
+    public static DataMessage incomingCall(DataMessage dataMessage, long recordOffset) {
         if (dataMessage.hasConstructorCall()) {
             final ConstructorCall constructorCall = dataMessage.getConstructorCall();
-            incomingConstructor(dataMessage.getMessageUuid(), constructorCall, recordOffset);
+            return incomingConstructor(dataMessage.getMessageUuid(), constructorCall, recordOffset);
         } else if (dataMessage.hasClassMethodCall()) {
             final ClassMethodCall methodCall = dataMessage.getClassMethodCall();
-            incomingClassMethod(dataMessage.getMessageUuid(), methodCall, recordOffset);
+            return incomingClassMethod(dataMessage.getMessageUuid(), methodCall, recordOffset);
         } else if (dataMessage.hasInstanceMethodCall()) {
             final InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
-            incomingInstanceMethod(dataMessage.getMessageUuid(), methodCall, recordOffset);
+            return incomingInstanceMethod(dataMessage.getMessageUuid(), methodCall, recordOffset);
         } else if (dataMessage.hasStaticFieldGet()) {
             final StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
-            incomingGetStatic(dataMessage.getMessageUuid(), staticFieldGetCall, recordOffset);
+            return incomingGetStatic(dataMessage.getMessageUuid(), staticFieldGetCall, recordOffset);
         } else if (dataMessage.hasInstanceFieldGet()) {
             final InstanceFieldGet instanceFieldGet = dataMessage.getInstanceFieldGet();
-            incomingGetObject(dataMessage.getMessageUuid(), instanceFieldGet, recordOffset);
+            return incomingGetObject(dataMessage.getMessageUuid(), instanceFieldGet, recordOffset);
         } else if (dataMessage.hasStaticFieldPut()) {
             final StaticFieldPut staticFieldPut = dataMessage.getStaticFieldPut();
-            incomingPutStatic(dataMessage.getMessageUuid(), staticFieldPut, recordOffset);
+            return incomingPutStatic(dataMessage.getMessageUuid(), staticFieldPut, recordOffset);
         } else if (dataMessage.hasInstanceFieldPut()) {
             final InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
-            incomingPutField(dataMessage.getMessageUuid(), instanceFieldPut, recordOffset);
+            return incomingPutField(dataMessage.getMessageUuid(), instanceFieldPut, recordOffset);
         } else {
-            logger.warn("Incoming message with offset {} ignored - no handler:\n{}", recordOffset, dataMessage);
+            throw new IllegalArgumentException(String.format("Incoming message with offset {} ignored - no handler:\n{}", recordOffset, dataMessage));
         }
     }
 
@@ -109,15 +123,7 @@ public class Concentrator {
         final DataMessage msg = dataMessageBuilder.buildClassInitializer(uuid, staticPart, sender);
 
         /** 2. Send message **/
-        //ATTENTION: this send is asynchronous. Must call get later.
-        dataMessageDispatcher.send(msg);
-
-        if (mustWait(msg)) {
-            /** 3. Receive message **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        DataMessage rcvdMsg = sendAndRecv(msg);
 
         /** 4. Load and initialize class  -  WARNING: For some reason the class is not being initialized! **/
         Class clazz = null;
@@ -140,14 +146,7 @@ public class Concentrator {
         }
 
         /** 6. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
-
-        if (mustWait(invokedMsg)) {
-            /** 7. Receive object/exception **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        rcvdMsg = sendAndRecv(msg);
 
         /** 8. Return or re-raise exception **/
         if (exceptionWhileLoadingClass != null) {
@@ -164,7 +163,7 @@ public class Concentrator {
      * @param constructorCall
      * @throws Throwable
      */
-    static void incomingConstructor(String messageUuid, ConstructorCall constructorCall, long recordOffset) {
+    static DataMessage incomingConstructor(String messageUuid, ConstructorCall constructorCall, long recordOffset) {
         logger.traceEntry("with constructorCall: {}, recordOffset", constructorCall, recordOffset);
 
         /** 1. Unwrap message and load constructor **/
@@ -231,10 +230,10 @@ public class Concentrator {
 
 
         /** 4. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
+        DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
     }
 
     public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
@@ -246,16 +245,7 @@ public class Concentrator {
         final DataMessage callMsg = dataMessageBuilder.buildConstructor(uuid, staticPart, sender, args);
 
         /** 2. Send message **/
-        //ATTENTION: this send is asynchronous. Must call get later.
-        dataMessageDispatcher.send(callMsg);
-
-        if (mustWait(callMsg)) {
-            /** 3. Receive message **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
-
+        DataMessage rcvdMsg = sendAndRecv(callMsg);
 
         /** 4. Invoke constructor **/
 
@@ -291,14 +281,7 @@ public class Concentrator {
         }
 
         /** 6. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
-
-        if (mustWait(invokedMsg)) {
-            /** 7. Receive object/exception **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        rcvdMsg = sendAndRecv(callMsg);
 
         /** 8. Return object or re-raise exception **/
         if (exceptionWhileInvoking != null) {
@@ -326,16 +309,7 @@ public class Concentrator {
 
 
         /** 2. Send message **/
-        //ATTENTION: this send is asynchronous. Must call get later.
-        dataMessageDispatcher.send(msg);
-
-        if (mustWait(msg)) {
-            /** 3. Receive message **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
-
+        DataMessage rcvdMsg = sendAndRecv(msg);
 
         /** 4. Invoke method **/
 
@@ -361,14 +335,8 @@ public class Concentrator {
 
 
         /** 6. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
+        rcvdMsg = sendAndRecv(invokedMsg);
 
-        if (mustWait(invokedMsg)) {
-            /** 7. Receive object/exception **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
 
         /** 8. Return object or re-raise exception **/
         if (exceptionWhileInvoking != null) {
@@ -393,16 +361,7 @@ public class Concentrator {
 
 
         /** 2. Send message **/
-        //ATTENTION: this send is asynchronous. Must call get later.
-        dataMessageDispatcher.send(msg);
-
-        if (mustWait(msg)) {
-            /** 3. Receive message **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
-
+        DataMessage rcvdMsg = sendAndRecv(msg);
 
         /** 4. Invoke method **/
 
@@ -438,14 +397,7 @@ public class Concentrator {
 
 
         /** 6. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
-
-        if (mustWait(invokedMsg)) {
-            /** 7. Receive object/exception **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        rcvdMsg = sendAndRecv(msg);
 
         /** 8. Return object or re-raise exception **/
         if (exceptionWhileInvoking != null) {
@@ -465,7 +417,7 @@ public class Concentrator {
      *
      * @param instanceMethodCall
      */
-    static void incomingInstanceMethod(String messageUuid, InstanceMethodCall instanceMethodCall, long recordOffset) {
+    static DataMessage incomingInstanceMethod(String messageUuid, InstanceMethodCall instanceMethodCall, long recordOffset) {
         logger.traceEntry("with instanceMethodCall: {}, recordOffset: {}", instanceMethodCall, recordOffset);
 
         /** 1. Unwrap message and load class **/
@@ -516,7 +468,7 @@ public class Concentrator {
                 if (target == null) {
                     throw new RuntimeException("Invoking a method on null object will yield a NPE!");
                 }
-                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getName());
+                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getParameterList() ,instanceMethodCall.getName());
                 if (method == null) {
                     //TODO perhaps this should be thrown by ReflectionHelper instead of returning null
                     throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", instanceMethodCall.getName(), clazz.getName()));
@@ -554,10 +506,10 @@ public class Concentrator {
         }
 
         /** 4. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
+        DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
     }
 
     public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
@@ -570,16 +522,7 @@ public class Concentrator {
 
 
         /** 2. Send message **/
-        //ATTENTION: this send is asynchronous. Must call get later.
-        dataMessageDispatcher.send(msg);
-
-        if (mustWait(msg)) {
-            /** 3. Receive message **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
-
+        DataMessage rcvdMsg = sendAndRecv(msg);
 
         /** 4. Invoke method **/
 
@@ -604,14 +547,7 @@ public class Concentrator {
 
 
         /** 6. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
-
-        if (mustWait(invokedMsg)) {
-            /** 7. Receive object/exception **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        rcvdMsg = sendAndRecv(invokedMsg);
 
         /** 8. Return object or re-raise exception **/
         if (exceptionWhileInvoking != null) {
@@ -636,16 +572,7 @@ public class Concentrator {
 
 
         /** 2. Send message **/
-        //ATTENTION: this send is asynchronous. Must call get later.
-        dataMessageDispatcher.send(msg);
-
-        if (mustWait(msg)) {
-            /** 3. Receive message **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
-
+        DataMessage rcvdMsg = sendAndRecv(msg);
 
         /** 4. Invoke method **/
 
@@ -681,14 +608,7 @@ public class Concentrator {
 
 
         /** 6. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
-
-        if (mustWait(invokedMsg)) {
-            /** 7. Receive object/exception **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        rcvdMsg = sendAndRecv(invokedMsg);
 
         /** 8. Return object or re-raise exception **/
         if (exceptionWhileInvoking != null) {
@@ -709,7 +629,7 @@ public class Concentrator {
      *
      * @param classMethodCall
      */
-    static void incomingClassMethod(String messageUuid, ClassMethodCall classMethodCall, long recordOffset) {
+    static DataMessage incomingClassMethod(String messageUuid, ClassMethodCall classMethodCall, long recordOffset) {
         logger.traceEntry("with classMethodCall: {}, recordOffset: {}", classMethodCall, recordOffset);
 
         /** 1. Unwrap message and load class **/
@@ -750,7 +670,7 @@ public class Concentrator {
                 }
             }
             try {
-                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), classMethodCall.getName());
+                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), classMethodCall.getParameterList(), classMethodCall.getName());
                 if (method == null) {
                     throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", classMethodCall.getName(), clazz.getName()));
                 }
@@ -787,10 +707,10 @@ public class Concentrator {
         }
 
         /** 4. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
+        DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
     }
 
 
@@ -798,7 +718,7 @@ public class Concentrator {
 
     // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
 
-    public static void incomingGetStatic(String messageUuid, Fields.StaticFieldGet staticFieldGet, long recordOffset) {
+    public static DataMessage incomingGetStatic(String messageUuid, Fields.StaticFieldGet staticFieldGet, long recordOffset) {
         logger.traceEntry("with staticFieldGet: {}, recordOffset: {}", staticFieldGet, recordOffset);
 
         /** 1. Get Object **/
@@ -850,10 +770,10 @@ public class Concentrator {
 
 
         /** 4. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
+        DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
 
     }
 
@@ -864,15 +784,7 @@ public class Concentrator {
         final DataMessage msg = dataMessageBuilder.buildGetStatic(uuid, staticPart, sender);
 
         /** 2. Send message **/
-        //ATTENTION: this send is asynchronous. Must call get later.
-        dataMessageDispatcher.send(msg);
-
-        if (mustWait(msg)) {
-            /** 3. Receive message **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        DataMessage rcvdMsg = sendAndRecv(msg);
 
         /** 4. Get Object **/
 
@@ -906,14 +818,7 @@ public class Concentrator {
         }
 
         /** 6. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
-
-        if (mustWait(invokedMsg)) {
-            /** 7. Receive object/exception **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        rcvdMsg = sendAndRecv(invokedMsg);
 
         /** 8. Return or re-raise exception **/
         if (exceptionGettingObject != null) {
@@ -924,7 +829,7 @@ public class Concentrator {
         return fieldValue;
     }
 
-    public static void incomingGetObject(String messageUuid, Fields.InstanceFieldGet instanceFieldGet, long recordOffset) {
+    public static DataMessage incomingGetObject(String messageUuid, Fields.InstanceFieldGet instanceFieldGet, long recordOffset) {
         logger.traceEntry("with instanceFieldGet: {}, recordOffset: {}", instanceFieldGet, recordOffset);
 
         /** 1. Get Object **/
@@ -986,10 +891,10 @@ public class Concentrator {
         }
 
         /** 4. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
+        DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
 
     }
 
@@ -1000,15 +905,7 @@ public class Concentrator {
         final DataMessage msg = dataMessageBuilder.buildGetObject(uuid, staticPart, sender, target);
 
         /** 2. Send message **/
-        //ATTENTION: this send is asynchronous. Must call get later.
-        dataMessageDispatcher.send(msg);
-
-        if (mustWait(msg)) {
-            /** 3. Receive message **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
-
+        DataMessage rcvdMsg = sendAndRecv(msg);
 
         /** 4. Get Object **/
 
@@ -1042,14 +939,7 @@ public class Concentrator {
         }
 
         /** 6. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
-
-        if (mustWait(invokedMsg)) {
-            /** 7. Receive object/exception **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        rcvdMsg = sendAndRecv(invokedMsg);
 
         /** 8. Return or re-raise exception **/
         if (exceptionGettingObject != null) {
@@ -1060,7 +950,7 @@ public class Concentrator {
         return fieldValue;
     }
 
-    public static void incomingPutStatic(String messageUuid, Fields.StaticFieldPut staticFieldPut, long recordOffset) {
+    public static DataMessage incomingPutStatic(String messageUuid, Fields.StaticFieldPut staticFieldPut, long recordOffset) {
         logger.traceEntry("with staticFieldPut: {}, recordOffset", staticFieldPut, recordOffset);
 
         /** 1. Load class and field **/
@@ -1113,10 +1003,10 @@ public class Concentrator {
 
 
         /** 4. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
+        DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
 
     }
 
@@ -1127,15 +1017,7 @@ public class Concentrator {
         final DataMessage msg = dataMessageBuilder.buildPutStatic(uuid, staticPart, sender, args[0]);
 
         /** 2. Send message **/
-        //ATTENTION: this send is asynchronous. Must call get later.
-        dataMessageDispatcher.send(msg);
-
-        if (mustWait(msg)) {
-            /** 3. Receive message **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        DataMessage rcvdMsg = sendAndRecv(msg);
 
         /** 4. Put Object **/
 
@@ -1160,14 +1042,7 @@ public class Concentrator {
         }
 
         /** 6. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
-
-        if (mustWait(msg)) {
-            /** 7. Receive object/exception **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        rcvdMsg = sendAndRecv(invokedMsg);
 
         /** 8. Return or re-raise exception **/
         if (exceptionSettingObject != null) {
@@ -1185,15 +1060,7 @@ public class Concentrator {
         final DataMessage msg = dataMessageBuilder.buildPutObject(uuid, staticPart, sender, target, args[0]);
 
         /** 2. Send message **/
-        //ATTENTION: this send is asynchronous. Must call get later.
-        dataMessageDispatcher.send(msg);
-
-        if (mustWait(msg)) {
-            /** 3. Receive message **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        DataMessage rcvdMsg = sendAndRecv(msg);
 
         /** 4. Put Object **/
 
@@ -1218,14 +1085,7 @@ public class Concentrator {
         }
 
         /** 6. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
-
-        if (mustWait(invokedMsg)) {
-            /** 7. Receive object/exception **/
-            DataMessage rcvdMsg = dataMessageDispatcher.receiveMsgForCurrentThread();
-
-            logger.debug("Message received: {}", rcvdMsg.getMsgType());
-        }
+        rcvdMsg = sendAndRecv(invokedMsg);
 
         /** 8. Return or re-raise exception **/
         if (exceptionSettingObject != null) {
@@ -1236,7 +1096,7 @@ public class Concentrator {
         return;
     }
 
-    public static void incomingPutField(String messageUuid, Fields.InstanceFieldPut instanceFieldPut, long recordOffset) {
+    public static DataMessage incomingPutField(String messageUuid, Fields.InstanceFieldPut instanceFieldPut, long recordOffset) {
         logger.traceEntry("with instanceFieldPut:\n {}, recordOffset: {}", instanceFieldPut, recordOffset);
 
         /** 1. Load class and field **/
@@ -1298,17 +1158,31 @@ public class Concentrator {
 
 
         /** 4. Send object/exception **/
-        dataMessageDispatcher.send(invokedMsg);
+        DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
         logger.traceExit();
-        return;
+        return rcvdMsg;
 
     }
 
     // </editor-fold>
 
-    private static boolean mustWait(DataMessage dataMessage) {
-        return true;
+    private static DataMessage sendAndRecv(DataMessage dataMessage) {
+        logger.traceEntry("with dataMessage with uuid: {}", dataMessage.getMessageUuid());
+        threadSocket.get().send(dataMessage.toByteArray(), 0);
+        String rcvdString = threadSocket.get().recvStr();
+        DataMessage returnValue;
+        if ("0".equals(rcvdString)) {
+            logger.debug("0 means return same message");
+            returnValue = dataMessage;
+        } else {
+            //TODO should get it and return it
+            logger.warn("We should not get here");
+            returnValue = null;
+        }
+
+        logger.traceExit();
+        return returnValue;
     }
 
     /**
@@ -1340,22 +1214,36 @@ public class Concentrator {
                 //bind implementations
                 bind(ObjectService.class).to(BiMapObjectService.class);
                 bind(ThreadFactory.class).to(ExecThreadFactory.class);
+                bind(KafkaMessageWriter.class).to(KafkaDataMessageWriter.class);
                 bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class);
-                bind(DataMessageDispatcher.class).to(KafkaDataMessageDispatcher.class);
+                bind(IncomingMessageDispatcher.class).to(KafkaDataMessageReader.class);
+                bind(OutgoingMessageDispatcher.class).to(JeromqOutMessageDispatcher.class);
                 bind(ExecutorService.class).to(ExtendedExecutor.class);
                 bind(ExecutionService.class).to(ExecutionThreadService.class);
+                bind(LogMessageInvoker.class).to(LogMessageAsyncInvoker.class);
+                bind(InRequestMessageDispatcher.class).to(JeromqInRequestDispatcher.class);
                 //fields to be injected in Concentrator are static
+                Concentrator.outCellAddress = properties.getProperty("out.cell");
                 requestStaticInjection(Concentrator.class);
+            }
+
+            @Provides
+            ZContext getZmqContext() {
+                return Concentrator.zmqContext;
             }
         };
 
-        Injector injector = Guice.createInjector(module);
-
+        final Injector injector = Guice.createInjector(module);
 
         final Set<Service> services = new HashSet<Service>();
-        services.add((Service) injector.getInstance(DataMessageDispatcher.class));
-        services.add((Service) injector.getInstance(ExecutionThreadService.class));
+        services.add((Service) injector.getInstance(IncomingMessageDispatcher.class));
+        services.add((Service) injector.getInstance(OutgoingMessageDispatcher.class));
+        services.add(injector.getInstance(KafkaDataMessageWriter.class));
+        services.add(injector.getInstance(ExecutionThreadService.class));
         services.add((Service) injector.getInstance(ObjectService.class));
+        services.add(injector.getInstance(JeromqInRequestDispatcher.class));
+        services.add((Service) injector.getInstance(LogMessageInvoker.class));
+
         final ServiceManager manager = new ServiceManager(services);
 
         manager.addListener(new ServiceManager.Listener() {
@@ -1366,7 +1254,12 @@ public class Concentrator {
                                 public void healthy() {
                                     // Services have been initialized and are healthy, start accepting requests...
                                     logger.info("Service manager is healthy.");
-                                    dataMessageDispatcher.acceptConnections(true);
+                                    IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
+                                    incomingMessageDispatcher.acceptConnections(true);
+
+                                    // We must ensure REP sockets are open after DEALER
+                                    ExecutionService executionService = injector.getInstance(ExecutionService.class);
+                                    executionService.startCoreThreads();
                                 }
 
                                 public void failure(Service service) {

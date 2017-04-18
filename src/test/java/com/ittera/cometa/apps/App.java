@@ -1,4 +1,4 @@
-package com.ittera.cometa.demos;
+package com.ittera.cometa.apps;
 
 import java.util.Arrays;
 import java.util.List;
