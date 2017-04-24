@@ -468,7 +468,7 @@ public class Concentrator {
                 if (target == null) {
                     throw new RuntimeException("Invoking a method on null object will yield a NPE!");
                 }
-                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getParameterList() ,instanceMethodCall.getName());
+                method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getParameterList(), instanceMethodCall.getName());
                 if (method == null) {
                     //TODO perhaps this should be thrown by ReflectionHelper instead of returning null
                     throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types", instanceMethodCall.getName(), clazz.getName()));
@@ -1211,18 +1211,20 @@ public class Concentrator {
                 }
 
                 Names.bindProperties(binder(), properties);
-                //bind implementations
+                // bind implementations
+                bind(PeerThreadFactory.class).to(PeerExecThreadFactory.class);
+                bind(PeerExecutor.class).to(PeerMessageExecutor.class);
+                bind(LogThreadFactory.class).to(LogExecThreadFactory.class);
+                bind(LogExecutor.class).to(LogMessageExecutor.class);
+                bind(LogMessageInvoker.class).to(LogMessageAsyncInvoker.class);
                 bind(ObjectService.class).to(BiMapObjectService.class);
-                bind(ThreadFactory.class).to(ExecThreadFactory.class);
                 bind(KafkaMessageWriter.class).to(KafkaDataMessageWriter.class);
                 bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class);
                 bind(IncomingMessageDispatcher.class).to(KafkaDataMessageReader.class);
                 bind(OutgoingMessageDispatcher.class).to(JeromqOutMessageDispatcher.class);
-                bind(ExecutorService.class).to(ExtendedExecutor.class);
-                bind(ExecutionService.class).to(ExecutionThreadService.class);
-                bind(LogMessageInvoker.class).to(LogMessageAsyncInvoker.class);
                 bind(InRequestMessageDispatcher.class).to(JeromqInRequestDispatcher.class);
-                //fields to be injected in Concentrator are static
+
+                // fields to be injected in Concentrator are static
                 Concentrator.outCellAddress = properties.getProperty("out.cell");
                 requestStaticInjection(Concentrator.class);
             }
@@ -1235,11 +1237,10 @@ public class Concentrator {
 
         final Injector injector = Guice.createInjector(module);
 
-        final Set<Service> services = new HashSet<Service>();
+        final Set<Service> services = new HashSet<>();
         services.add((Service) injector.getInstance(IncomingMessageDispatcher.class));
         services.add((Service) injector.getInstance(OutgoingMessageDispatcher.class));
         services.add(injector.getInstance(KafkaDataMessageWriter.class));
-        services.add(injector.getInstance(ExecutionThreadService.class));
         services.add((Service) injector.getInstance(ObjectService.class));
         services.add(injector.getInstance(JeromqInRequestDispatcher.class));
         services.add((Service) injector.getInstance(LogMessageInvoker.class));
@@ -1257,9 +1258,9 @@ public class Concentrator {
                                     IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
                                     incomingMessageDispatcher.acceptConnections(true);
 
-                                    // We must ensure REP sockets are open after DEALER
-                                    ExecutionService executionService = injector.getInstance(ExecutionService.class);
-                                    executionService.startCoreThreads();
+                                    // We must prestart threads to create the REP sockets, and this must be done after DEALER
+                                    ExtendedThreadPoolExecutor executor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
+                                    executor.prestartAllCoreThreads();
                                 }
 
                                 public void failure(Service service) {

@@ -4,13 +4,13 @@ import com.ittera.cometa.concentrator.Concentrator;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+
 import com.google.protobuf.InvalidProtocolBufferException;
+
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 
 import org.apache.logging.log4j.LogManager;
@@ -31,9 +31,7 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
     private ZContext zmqContext;
     private final String inLogAddress;
 
-    //    @Inject
-//    private ExecutionService executor;
-    private static ExecutorService executor = Executors.newCachedThreadPool();
+    private final LogExecutor executor;
 
     //TODO if we only need this one thread, then the ThreadLocal is pointless
     // per-thread SUB socket to rcv messages from kafka publisher
@@ -48,9 +46,10 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
     };
 
     @Inject
-    LogMessageAsyncInvoker(@Named("in.log") String inLogAddress, ZContext zmqContext) {
+    LogMessageAsyncInvoker(@Named("in.log") String inLogAddress, ZContext zmqContext, LogExecutor executor) {
         this.inLogAddress = inLogAddress;
         this.zmqContext = zmqContext;
+        this.executor = executor;
     }
 
     @Override
@@ -83,7 +82,7 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
                     //dispatch
                     dispatchAsync(requestMsg, logOffset);
                 } else {
-                    logger.debug("Discarding message with uuid: ", requestMsg.getMessageUuid());
+                    logger.debug("Discarding message with uuid: {}", requestMsg.getMessageUuid());
                 }
             }
         }
@@ -95,8 +94,7 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
             @Override
             public void run() {
                 Concentrator.incomingCall(requestMsg, recordOffset);
-                logger.debug("Invoker dispatched log data message with uuid: " + requestMsg.getMessageUuid() + " for class: " +
-                        requestMsg.getConstructorCall().getClass_().getName());
+                logger.debug("Invoker dispatched log data message with uuid: {} for class: {}", requestMsg.getMessageUuid(), requestMsg.getConstructorCall().getClass_().getName());
                 requestsDispatched.getAndIncrement();
             }
         });

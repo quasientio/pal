@@ -1,33 +1,24 @@
 package com.ittera.cometa.concentrator.exec;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.SynchronousQueue;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
 
-import com.google.inject.name.Named;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
+public class ExtendedThreadPoolExecutor extends ThreadPoolExecutor {
 
-@Singleton
-public class ExtendedExecutor extends ThreadPoolExecutor {
+    protected static final Logger logger = LogManager.getLogger(ExtendedThreadPoolExecutor.class);
 
-    protected static final Logger logger = LogManager.getLogger(ExtendedExecutor.class);
-
-    @Inject
-    public ExtendedExecutor(@Named("corePoolSize") String corePoolSize,
-                            @Named("maximumPoolSize") String maximumPoolSize,
-                            @Named("keepAliveSeconds") String keepAliveSeconds,
-                            ThreadFactory threadFactory) {
-
-        super(Integer.valueOf(corePoolSize), Integer.valueOf(maximumPoolSize), Integer.valueOf(keepAliveSeconds),
-                TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), threadFactory);
+    public ExtendedThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveSeconds,
+                                      TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory) {
+        super(corePoolSize, maximumPoolSize, keepAliveSeconds, unit, workQueue, threadFactory);
         logger.info("Initialized executor, with corePoolSize={}, maximumPoolSize={}, keepAliveSeconds={}",
                 corePoolSize, maximumPoolSize, keepAliveSeconds);
     }
