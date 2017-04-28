@@ -28,7 +28,7 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 /**
- * TODO Optimize - :ampling with visualvm shows this class as the one with highest memory allocation per thread.
+ * TODO Optimize - :sampling with visualvm shows this class as the one with highest memory allocation per thread.
  * We are reading everything from the log. Is it absolutely required? Can it be optional? If so, what to skip reading?
  */
 @Singleton
@@ -141,15 +141,18 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 
             final ConsumerRecords<String, String> records;
             final long t0;
-            synchronized (consumer) {
-                t0 = System.nanoTime();
-                records = consumer.poll(pollTimeout);
-                totalPollingNanos.getAndAdd(System.nanoTime() - t0);
-                totalPolls.getAndIncrement();
-            }
+
+            // read from kafka
+            t0 = System.nanoTime();
+            records = consumer.poll(pollTimeout);
+            totalPollingNanos.getAndAdd(System.nanoTime() - t0);
+            totalPolls.getAndIncrement();
+
             if (logger.isDebugEnabled() && records.count() > 0) {
                 logger.debug("Records read: {}", records.count());
             }
+
+            // process records if any
             for (ConsumerRecord record : records) {
                 messagesRcvd.getAndIncrement();
 
@@ -164,6 +167,13 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
                 kafkaPublisher.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
                 kafkaPublisher.send(dataMessage.toByteArray(), 0);
                 logger.debug("Published new log Data Message with uuid: {}", dataMessage.getMessageUuid());
+            }
+
+            // short pause, not to be eager
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                logger.error("Interrupted in sleep", e);
             }
         }
     }
@@ -183,10 +193,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         acceptingConnections = false;
 
         if (consumer != null) {
-            synchronized (consumer) {
-                consumer.close();
-                logger.info("Closed kafka consumer");
-            }
+            consumer.close();
+            logger.info("Closed kafka consumer");
         }
         logger.info("Message dispatcher shut down");
     }
