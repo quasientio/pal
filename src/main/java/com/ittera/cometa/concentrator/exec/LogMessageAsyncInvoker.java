@@ -39,6 +39,7 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
         @Override
         protected Socket initialValue() {
             Socket socket = zmqContext.createSocket(ZMQ.SUB);
+            logger.info("Connecting to {}",inLogAddress);
             socket.connect(inLogAddress);
             socket.subscribe(ZMQ.SUBSCRIPTION_ALL);
             return socket;
@@ -63,14 +64,17 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
 
             // recv req
             String offset = kafkaSocket.recvStr();
+            logger.debug("Getting message with kafka offset: {}", offset);
             long logOffset = Long.parseLong(offset);
 
             byte[] req = kafkaSocket.recv(0);
             requestMsg = null;
 
+            logger.debug("received {} bytes", req.length);
             // parse req
             try {
                 requestMsg = DataMessage.parseFrom(req);
+                logger.debug("message received:\n{}", requestMsg);
             } catch (InvalidProtocolBufferException ipbe) {
                 logger.error("Caught protobuf exception", ipbe);
             }
