@@ -102,7 +102,6 @@ public class DualPeer {
         //manual assignment of partition so we can control offset seek
         topicPartition = new TopicPartition(kafkaTopic, 0);
         consumer.assign(Arrays.asList(topicPartition));
-//    consumer.seekToBeginning(Arrays.asList(topicPartition));
 
         // create zmq context
         logger.debug("Initializing zmq context");
@@ -143,11 +142,11 @@ public class DualPeer {
                 long receivedMsgOffset = record.offset();
 
                 if (dataMessage.hasStaticFieldPutDone() &&
-                   fieldName.equals(dataMessage.getStaticFieldPutDone().getField().getName())) {
-                        logger.info("Got matching message with offset {}:\n{}", receivedMsgOffset, dataMessage);
-                        return dataMessage;
+                        fieldName.equals(dataMessage.getStaticFieldPutDone().getField().getName())) {
+                    logger.info("Got matching message with offset {}:\n{}", receivedMsgOffset, dataMessage);
+                    return dataMessage;
                 } else {
-                        logger.debug("Skipping record with offset {}",  receivedMsgOffset);
+                    logger.debug("Skipping record with offset {}", receivedMsgOffset);
                 }
             }
         }
