@@ -34,10 +34,8 @@ import java.lang.reflect.InvocationTargetException;
 
 import java.util.*;
 
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.ThreadFactory;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -80,6 +78,7 @@ public class Concentrator {
         protected Socket initialValue() {
             Socket worker = zmqContext.createSocket(ZMQ.REQ);
             worker.connect(outCellAddress);
+            logger.debug("Created and connected REQ new socket to outCellAddress: {}", outCellAddress);
             return worker;
         }
     };
