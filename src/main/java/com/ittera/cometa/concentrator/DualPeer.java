@@ -4,7 +4,6 @@ import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.*;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -250,9 +249,14 @@ public class DualPeer {
 
 
     public void close() {
-        peerSocket.close();
-        zmqContext.destroy();
-        logger.debug("Peer socket and context closed.");
+        try {
+            peerSocket.close();
+            logger.debug("Peer socket closed.");
+            zmqContext.destroy();
+            logger.debug("Zmq context closed.");
+        } catch (Exception ex) {
+            logger.error("Error closing zmq connection", ex);
+        }
         producer.close();
         logger.debug("Producer closed.");
         consumer.close();
