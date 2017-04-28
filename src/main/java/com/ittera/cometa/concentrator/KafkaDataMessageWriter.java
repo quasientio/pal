@@ -13,7 +13,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.UUID;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -88,20 +87,32 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 
         logger.debug("Starting to dispatch messages to kafka");
         while (isRunning()) {
-            byte[] reply = subscriber.recv(0);
-            DataMessage dataMessage = null;
-            try {
-                dataMessage = DataMessage.parseFrom(reply);
-            } catch (InvalidProtocolBufferException ipbe) {
-                logger.error("Caught protobuf exception", ipbe);
+            byte[] reply;
+            reply = subscriber.recv(ZMQ.NOBLOCK);
+            while (reply != null) {
+                DataMessage dataMessage = null;
+                try {
+                    dataMessage = DataMessage.parseFrom(reply);
+                } catch (InvalidProtocolBufferException ipbe) {
+                    logger.error("Caught protobuf exception", ipbe);
+                }
+
+                // got a message
+                if (dataMessage != null) {
+                    messagesReceived++;
+
+                    // send to kafka immediately
+                    sendToKafka(dataMessage);
+                }
+
+                reply = subscriber.recv(ZMQ.NOBLOCK);
             }
 
-            // got a message
-            if (dataMessage != null) {
-                messagesReceived++;
-
-                // send to kafka immediately
-                sendToKafka(dataMessage);
+            // short pause, not to be eager
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                logger.error("Interrupted in sleep", e);
             }
         }
     }
