@@ -11,13 +11,11 @@ public class DualPeerTest {
 
     protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder(null);
 
-//    protected final String className = "com.ittera.cometa.apps.PrintHelloWorld";
+    //        protected final String className = "com.ittera.cometa.apps.PrintHelloWorld";
     protected final String className = "com.ittera.cometa.apps.App";
 
     public void runReqsWithOneClient() throws Exception {
-//        DualPeer dualPeer = new DualPeer("/tests.properties");
-        //cheat in order to skip the first req+rep through the log and talk directly to the peer
-        DualPeer dualPeer = new DualPeer("/tests.properties", "tcp://127.0.0.1:5671");
+        DualPeer dualPeer = new DualPeer("/tests.properties");
 
         long start = System.currentTimeMillis();
 
@@ -30,11 +28,13 @@ public class DualPeerTest {
         }
         Object[] parameters = new Object[]{new String[]{}};
 
-        final int requests = 500;
+        final int requests = 5000;
         for (int i = 0; i < requests; i++) {
             DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
-//            DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
-            dualPeer.sendToLogAndForget(requestMsg);
+            // send async to log and forget
+//            dualPeer.sendToLogAndForget(requestMsg);
+            // send and wait for reply
+            DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
         }
 
         System.out.println("runReqsWithOneClient took " + (System.currentTimeMillis() - start) + " milliseconds");
@@ -43,7 +43,7 @@ public class DualPeerTest {
     public void runAsyncReqsWithNClients() throws Exception {
         long start = System.currentTimeMillis();
 
-        final int clients = 10;
+        final int clients = 100;
         final int requests = 50;
 
         //test main
@@ -67,16 +67,16 @@ public class DualPeerTest {
                 public void run() {
                     DualPeer dualPeer = null;
                     try {
-//                        dualPeer = new DualPeer("/tests.properties");
-                        //cheat in order to skip the first req+rep through the log and talk directly to the peer
-                        dualPeer = new DualPeer("/tests.properties", "tcp://127.0.0.1:5671");
+                        dualPeer = new DualPeer("/tests.properties");
                     } catch (IOException ie) {
                         ie.printStackTrace();
                     }
                     for (int i = 0; i < requests; i++) {
                         DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
-//                        DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
-                        dualPeer.sendToLogAndForget(requestMsg);
+                        // send async to log and forget
+//                        dualPeer.sendToLogAndForget(requestMsg);
+                        // send and wait for reply
+                        DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
                     }
                     finishedThreads.incrementAndGet();
                 }

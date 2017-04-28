@@ -7,7 +7,7 @@ import com.google.inject.name.Named;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 
 @Singleton
@@ -22,6 +22,6 @@ public class LogMessageExecutor extends ExtendedThreadPoolExecutor implements Lo
                               LogThreadFactory threadFactory) {
 
         super(Integer.valueOf(corePoolSize), Integer.valueOf(maximumPoolSize), Integer.valueOf(keepAliveSeconds),
-                TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), threadFactory);
+                TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), threadFactory);
     }
 }

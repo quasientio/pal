@@ -1,6 +1,6 @@
 package com.ittera.cometa.concentrator.exec;
 
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.Logger;
@@ -22,6 +22,6 @@ public class PeerMessageExecutor extends ExtendedThreadPoolExecutor implements P
                                PeerThreadFactory threadFactory) {
 
         super(Integer.valueOf(corePoolSize), Integer.valueOf(maximumPoolSize), Integer.valueOf(keepAliveSeconds),
-                TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), threadFactory);
+                TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), threadFactory);
     }
 }
