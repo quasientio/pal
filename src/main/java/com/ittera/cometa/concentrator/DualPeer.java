@@ -220,7 +220,9 @@ public class DualPeer {
         // send message request to peer
         peerSocket.send(message.toByteArray(), 0);
 
+        final long waitStart = System.currentTimeMillis();
         byte[] reply = peerSocket.recv(0);
+        final long waitEnd = System.currentTimeMillis();
 
         DataMessage replyMsg = null;
         try {
@@ -231,7 +233,7 @@ public class DualPeer {
             logger.error("Caught protobuf exception", ipbe);
         }
 
-        logger.debug("Got back Data Message with uuid: " + replyMsg.getMessageUuid());
+        logger.debug("Got back Data Message with uuid: {}, waited {} ms" ,replyMsg.getMessageUuid(), (waitEnd - waitStart));
 
         return replyMsg;
     }
