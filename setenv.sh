@@ -15,6 +15,11 @@ COMMONS_PATH=$MVN_REPO/org/apache/commons/commons-lang3/3.4/commons-lang3-3.4.ja
 COMPILED_CLASSES=$WORKING_DIR/target/classes:$WORKING_DIR/target/test-classes
 
 CLASSPATH=$COMPILED_CLASSES:$ASPECTJ_PATH:$GUAVA_PATH:$GUICE_PATH:$JAVAX_INJECT_PATH:$PROTOBUF_PATH:$KAFKA_PATH:$JEROMQ_PATH:$SLF4J_PATH:$LOG4J_PATH:$COMMONS_PATH:$CONF_PATH
+
+# git completion
+GIT_COMPLETION=/usr/share/git/completion/git-completion.bash
+[ -r $GIT_COMPLETION ] && source $GIT_COMPLETION
+
 export CLASSPATH
 export PATH=$WORKING_DIR/bin:$PATH
 export KAFKA_HOME='/usr/local/lib/kafka'
