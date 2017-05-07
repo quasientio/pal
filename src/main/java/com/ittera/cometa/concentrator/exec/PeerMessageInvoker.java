@@ -84,9 +84,8 @@ public class PeerMessageInvoker extends Thread {
     }
 
     private DataMessage dispatch(DataMessage requestMsg) {
-        DataMessage replyMsg = Concentrator.incomingCall(requestMsg, 0);
-        logger.debug("Invoker dispatched data message with uuid: " + requestMsg.getMessageUuid() + " for class: " +
-                requestMsg.getConstructorCall().getClass_().getName());
+        DataMessage replyMsg = Concentrator.incomingCall(requestMsg);
+        logger.debug("Invoker dispatched peer request message uuid: {}, reply uuid: {}", requestMsg.getMessageUuid(), replyMsg.getMessageUuid());
         return replyMsg;
     }
 }

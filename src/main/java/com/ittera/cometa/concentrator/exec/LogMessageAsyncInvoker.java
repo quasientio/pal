@@ -39,7 +39,7 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
         @Override
         protected Socket initialValue() {
             Socket socket = zmqContext.createSocket(ZMQ.SUB);
-            logger.info("Connecting to {}",inLogAddress);
+            logger.info("Connecting to {}", inLogAddress);
             socket.connect(inLogAddress);
             socket.subscribe(ZMQ.SUBSCRIPTION_ALL);
             return socket;
@@ -97,8 +97,9 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
         executor.submit(new Runnable() {
             @Override
             public void run() {
-                Concentrator.incomingCall(requestMsg, recordOffset);
-                logger.debug("Invoker dispatched log data message with uuid: {} for class: {}", requestMsg.getMessageUuid(), requestMsg.getConstructorCall().getClass_().getName());
+                DataMessage replyMsg = Concentrator.incomingCall(requestMsg);
+                logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",
+                        requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());
                 requestsDispatched.getAndIncrement();
             }
         });

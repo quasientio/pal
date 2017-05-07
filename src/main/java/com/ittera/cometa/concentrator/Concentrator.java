@@ -86,30 +86,30 @@ public class Concentrator {
     /*********************** INVOKERS INTERFACE ***************************/
 
     //TODO: this method further ties this class to Protobuf, must decouple
-    public static DataMessage incomingCall(DataMessage dataMessage, long recordOffset) {
+    public static DataMessage incomingCall(DataMessage dataMessage) {
         if (dataMessage.hasConstructorCall()) {
             final ConstructorCall constructorCall = dataMessage.getConstructorCall();
-            return incomingConstructor(dataMessage.getMessageUuid(), constructorCall, recordOffset);
+            return incomingConstructor(dataMessage.getMessageUuid(), constructorCall, dataMessage.getMessageUuid());
         } else if (dataMessage.hasClassMethodCall()) {
             final ClassMethodCall methodCall = dataMessage.getClassMethodCall();
-            return incomingClassMethod(dataMessage.getMessageUuid(), methodCall, recordOffset);
+            return incomingClassMethod(dataMessage.getMessageUuid(), methodCall, dataMessage.getMessageUuid());
         } else if (dataMessage.hasInstanceMethodCall()) {
             final InstanceMethodCall methodCall = dataMessage.getInstanceMethodCall();
-            return incomingInstanceMethod(dataMessage.getMessageUuid(), methodCall, recordOffset);
+            return incomingInstanceMethod(dataMessage.getMessageUuid(), methodCall, dataMessage.getMessageUuid());
         } else if (dataMessage.hasStaticFieldGet()) {
             final StaticFieldGet staticFieldGetCall = dataMessage.getStaticFieldGet();
-            return incomingGetStatic(dataMessage.getMessageUuid(), staticFieldGetCall, recordOffset);
+            return incomingGetStatic(dataMessage.getMessageUuid(), staticFieldGetCall, dataMessage.getMessageUuid());
         } else if (dataMessage.hasInstanceFieldGet()) {
             final InstanceFieldGet instanceFieldGet = dataMessage.getInstanceFieldGet();
-            return incomingGetObject(dataMessage.getMessageUuid(), instanceFieldGet, recordOffset);
+            return incomingGetObject(dataMessage.getMessageUuid(), instanceFieldGet, dataMessage.getMessageUuid());
         } else if (dataMessage.hasStaticFieldPut()) {
             final StaticFieldPut staticFieldPut = dataMessage.getStaticFieldPut();
-            return incomingPutStatic(dataMessage.getMessageUuid(), staticFieldPut, recordOffset);
+            return incomingPutStatic(dataMessage.getMessageUuid(), staticFieldPut, dataMessage.getMessageUuid());
         } else if (dataMessage.hasInstanceFieldPut()) {
             final InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
-            return incomingPutField(dataMessage.getMessageUuid(), instanceFieldPut, recordOffset);
+            return incomingPutField(dataMessage.getMessageUuid(), instanceFieldPut, dataMessage.getMessageUuid());
         } else {
-            throw new IllegalArgumentException(String.format("Incoming message with offset {} ignored - no handler:\n{}", recordOffset, dataMessage));
+            throw new IllegalArgumentException(String.format("Incoming message with uuid {} ignored - no handler:\n{}", dataMessage.getMessageUuid()));
         }
     }
 
@@ -162,8 +162,8 @@ public class Concentrator {
      * @param constructorCall
      * @throws Throwable
      */
-    static DataMessage incomingConstructor(String messageUuid, ConstructorCall constructorCall, long recordOffset) {
-        logger.traceEntry("with constructorCall: {}, recordOffset", constructorCall, recordOffset);
+    static DataMessage incomingConstructor(String messageUuid, ConstructorCall constructorCall, String followingUuid) {
+        logger.traceEntry("with constructorCall: {}, messageUuid: {}, following uuid: {}", constructorCall, messageUuid, followingUuid);
 
         /** 1. Unwrap message and load constructor **/
         Class clazz = null;
@@ -216,14 +216,14 @@ public class Concentrator {
         final DataMessage invokedMsg;
 
         if (exceptionWhileLoading != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, constructor, exceptionWhileLoading, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, constructor, exceptionWhileLoading, followingUuid);
         } else if (exceptionWhileInvoking != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, constructor, exceptionWhileInvoking, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, constructor, exceptionWhileInvoking, followingUuid);
         } else {
             if (Wrapper.isWrappable(newObject)) {
-                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, newObject, clazz, null, false, recordOffset);
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, newObject, clazz, null, false, followingUuid);
             } else {
-                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, clazz, objKey, false, recordOffset);
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, clazz, objKey, false, followingUuid);
             }
         }
 
@@ -416,8 +416,8 @@ public class Concentrator {
      *
      * @param instanceMethodCall
      */
-    static DataMessage incomingInstanceMethod(String messageUuid, InstanceMethodCall instanceMethodCall, long recordOffset) {
-        logger.traceEntry("with instanceMethodCall: {}, recordOffset: {}", instanceMethodCall, recordOffset);
+    static DataMessage incomingInstanceMethod(String messageUuid, InstanceMethodCall instanceMethodCall, String followingUuid) {
+        logger.traceEntry("with instanceMethodCall: {}, messageUuid: {}, following uuid: {}", instanceMethodCall, messageUuid, followingUuid);
 
         /** 1. Unwrap message and load class **/
         Class clazz = null;
@@ -493,14 +493,14 @@ public class Concentrator {
         final DataMessage invokedMsg;
 
         if (exceptionWhileLoading != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileLoading, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileLoading, followingUuid);
         } else if (exceptionWhileInvoking != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking, followingUuid);
         } else {
             if (Wrapper.isWrappable(returnValue)) {
-                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null, isVoid, recordOffset);
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null, isVoid, followingUuid);
             } else {
-                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey, isVoid, recordOffset);
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey, isVoid, followingUuid);
             }
         }
 
@@ -628,8 +628,8 @@ public class Concentrator {
      *
      * @param classMethodCall
      */
-    static DataMessage incomingClassMethod(String messageUuid, ClassMethodCall classMethodCall, long recordOffset) {
-        logger.traceEntry("with classMethodCall: {}, recordOffset: {}", classMethodCall, recordOffset);
+    static DataMessage incomingClassMethod(String messageUuid, ClassMethodCall classMethodCall, String followingUuid) {
+        logger.traceEntry("with classMethodCall: {}, messageUuid: {}, following uuid: {}", classMethodCall, messageUuid, followingUuid);
 
         /** 1. Unwrap message and load class **/
         Class clazz = null;
@@ -694,14 +694,14 @@ public class Concentrator {
         final DataMessage invokedMsg;
 
         if (exceptionWhileLoading != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileLoading, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileLoading, followingUuid);
         } else if (exceptionWhileInvoking != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking, followingUuid);
         } else {
             if (Wrapper.isWrappable(returnValue)) {
-                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null, isVoid, recordOffset);
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null, isVoid, followingUuid);
             } else {
-                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey, isVoid, recordOffset);
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey, isVoid, followingUuid);
             }
         }
 
@@ -717,8 +717,8 @@ public class Concentrator {
 
     // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
 
-    public static DataMessage incomingGetStatic(String messageUuid, Fields.StaticFieldGet staticFieldGet, long recordOffset) {
-        logger.traceEntry("with staticFieldGet: {}, recordOffset: {}", staticFieldGet, recordOffset);
+    public static DataMessage incomingGetStatic(String messageUuid, Fields.StaticFieldGet staticFieldGet, String followingUuid) {
+        logger.traceEntry("with staticFieldGet: {}, messageUuid: {}, following uuid: {}", staticFieldGet, messageUuid, followingUuid);
 
         /** 1. Get Object **/
         Class clazz = null;
@@ -756,14 +756,14 @@ public class Concentrator {
         DataMessage invokedMsg = null;
 
         if (exceptionWhileLoading != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, followingUuid);
         } else if (exceptionWhileInvoking != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, followingUuid);
         } else {
             if (Wrapper.isWrappable(fieldValue)) {
-                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null, false, recordOffset);
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null, false, followingUuid);
             } else {
-                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false, recordOffset);
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false, followingUuid);
             }
         }
 
@@ -828,8 +828,8 @@ public class Concentrator {
         return fieldValue;
     }
 
-    public static DataMessage incomingGetObject(String messageUuid, Fields.InstanceFieldGet instanceFieldGet, long recordOffset) {
-        logger.traceEntry("with instanceFieldGet: {}, recordOffset: {}", instanceFieldGet, recordOffset);
+    public static DataMessage incomingGetObject(String messageUuid, Fields.InstanceFieldGet instanceFieldGet, String followingUuid) {
+        logger.traceEntry("with instanceFieldGet: {}, messageUuid: {}, following uuid: {}", instanceFieldGet, messageUuid, followingUuid);
 
         /** 1. Get Object **/
         Class clazz = null;
@@ -878,14 +878,14 @@ public class Concentrator {
         DataMessage invokedMsg = null;
 
         if (exceptionWhileLoading != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, followingUuid);
         } else if (exceptionWhileInvoking != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, followingUuid);
         } else {
             if (Wrapper.isWrappable(fieldValue)) {
-                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null, false, recordOffset);
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null, false, followingUuid);
             } else {
-                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false, recordOffset);
+                invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false, followingUuid);
             }
         }
 
@@ -949,8 +949,8 @@ public class Concentrator {
         return fieldValue;
     }
 
-    public static DataMessage incomingPutStatic(String messageUuid, Fields.StaticFieldPut staticFieldPut, long recordOffset) {
-        logger.traceEntry("with staticFieldPut: {}, recordOffset", staticFieldPut, recordOffset);
+    public static DataMessage incomingPutStatic(String messageUuid, Fields.StaticFieldPut staticFieldPut, String followingUuid) {
+        logger.traceEntry("with staticFieldPut: {}, messageUuid: {}, following uuid: {}", staticFieldPut, messageUuid, followingUuid);
 
         /** 1. Load class and field **/
         final Class clazz;
@@ -993,11 +993,11 @@ public class Concentrator {
         DataMessage invokedMsg = null;
 
         if (exceptionWhileLoading != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, followingUuid);
         } else if (exceptionWhileInvoking != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, followingUuid);
         } else {
-            invokedMsg = dataMessageBuilder.buildPutStaticDone(uuid, messageUuid, staticFieldPut, field.getType(), recordOffset);
+            invokedMsg = dataMessageBuilder.buildPutStaticDone(uuid, messageUuid, staticFieldPut, field.getType(), followingUuid);
         }
 
 
@@ -1095,8 +1095,8 @@ public class Concentrator {
         return;
     }
 
-    public static DataMessage incomingPutField(String messageUuid, Fields.InstanceFieldPut instanceFieldPut, long recordOffset) {
-        logger.traceEntry("with instanceFieldPut:\n {}, recordOffset: {}", instanceFieldPut, recordOffset);
+    public static DataMessage incomingPutField(String messageUuid, Fields.InstanceFieldPut instanceFieldPut, String followingUuid) {
+        logger.traceEntry("with instanceFieldPut: {}, messageUuid: {}, following uuid: {}", instanceFieldPut, messageUuid, followingUuid);
 
         /** 1. Load class and field **/
         final Class clazz;
@@ -1148,11 +1148,11 @@ public class Concentrator {
         DataMessage invokedMsg = null;
 
         if (exceptionWhileLoading != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, followingUuid);
         } else if (exceptionWhileInvoking != null) {
-            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, recordOffset);
+            invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking, followingUuid);
         } else {
-            invokedMsg = dataMessageBuilder.buildPutObjectDone(uuid, messageUuid, instanceFieldPut, field.getType(), recordOffset);
+            invokedMsg = dataMessageBuilder.buildPutObjectDone(uuid, messageUuid, instanceFieldPut, field.getType(), followingUuid);
         }
 
 

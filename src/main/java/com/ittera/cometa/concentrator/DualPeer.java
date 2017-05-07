@@ -174,7 +174,7 @@ public class DualPeer {
         try {
             RecordMetadata recordMetadata = recordMetadataFuture.get();
             if (logger.isDebugEnabled()) {
-                logger.debug("Message sent:\n{}", getRecordInfo(recordMetadata));
+                logger.debug("Message sent with uuid: {} \n{}", message.getMessageUuid(), getRecordInfo(recordMetadata));
             }
             sentRecordOffset = recordMetadata.offset();
         } catch (Exception e) {
@@ -192,8 +192,8 @@ public class DualPeer {
             for (ConsumerRecord record : records) {
                 final DataMessage dataMessage = (DataMessage) record.value();
                 long receivedMsgOffset = record.offset();
-                if (dataMessage.hasFollowing() && dataMessage.getFollowing() == sentRecordOffset) {
-                    logger.info("Got reply with offset {}", receivedMsgOffset);
+                if (dataMessage.hasFollowingUuid() && message.getMessageUuid().equals(dataMessage.getFollowingUuid())) {
+                    logger.info("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
                     if (dataMessage.hasConcentratorPeerAddr()) {
                         String newPeerAddress = dataMessage.getConcentratorPeerAddr();
                         if (currentPeerAddress != newPeerAddress) {
@@ -233,7 +233,7 @@ public class DualPeer {
             logger.error("Caught protobuf exception", ipbe);
         }
 
-        logger.debug("Got back Data Message with uuid: {}, waited {} ms" ,replyMsg.getMessageUuid(), (waitEnd - waitStart));
+        logger.debug("Got reply message with uuid: {}, waited {} ms", replyMsg.getMessageUuid(), (waitEnd - waitStart));
 
         return replyMsg;
     }
