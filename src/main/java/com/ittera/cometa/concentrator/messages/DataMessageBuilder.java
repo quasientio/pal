@@ -45,7 +45,7 @@ public interface DataMessageBuilder {
 
     DataMessage buildPutStatic(UUID concentratorUuid, StaticPart staticPart, Object sender, Object arg);
 
-    DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid, Fields.StaticFieldPut staticFieldPut, Class fieldType, Long followingOffset);
+    DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid, Fields.StaticFieldPut staticFieldPut, Class fieldType, String followingUuid);
 
     DataMessage buildPutStaticDone(UUID concentratorUuid, StaticPart staticPart, Object sender, Object arg);
 
@@ -55,13 +55,13 @@ public interface DataMessageBuilder {
 
     DataMessage buildPutObject(UUID concentratorUuid, StaticPart staticPart, Object sender, Object target, Object arg);
 
-    DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, Long followingOffset);
+    DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, String followingUuid);
 
     DataMessage buildPutObjectDone(UUID concentratorUuid, StaticPart staticPart, Object sender, Object target, Object arg);
 
-    DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, AccessibleObject accessibleObject, Exception exception, Long followingOffset);
+    DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, AccessibleObject accessibleObject, Exception exception, String followingUuid);
 
     DataMessage buildInitializerThrowable(UUID concentratorUuid, StaticPart staticPart, Exception exception);
 
-    DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, String objectKey, boolean isVoid, Long followingOffset);
+    DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, String objectKey, boolean isVoid, String followingUuid);
 }

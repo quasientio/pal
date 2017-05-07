@@ -33,7 +33,7 @@ message DataMessage {
     required int64 threadId = 4 [default = -1];
     required int64 currentTime = 5;
     optional int64 builderSeq = 6;
-    optional int64 following = 7;
+    optional string followingUuid = 7;
     optional string concentratorPeerAddr = 8;
 
     oneof content {

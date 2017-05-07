@@ -121,7 +121,8 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
         ProducerRecord newRecord = new ProducerRecord(kafkaTopic, message);
         producer.send(newRecord);
         messagesSent.getAndIncrement();
-        logger.debug("new message sent:\n {}", message);
+        logger.debug("new message sent with uuid: {} replying to message uuid: {}", message.getMessageUuid(),
+                message.getFollowingUuid());
     }
 
     @Override

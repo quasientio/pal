@@ -120,7 +120,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
     }
 
 
-    private static DataMessage.Builder newWrapperBuilder(Type msgType, UUID concentratorUuid, Long followingOffset) {
+    private static DataMessage.Builder newWrapperBuilder(Type msgType, UUID concentratorUuid, String followingUuid) {
 
         DataMessage.Builder msgBuilder = DataMessage.newBuilder()
                 .setConcentratorUuid(concentratorUuid.toString())
@@ -130,8 +130,8 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
                 .setBuilderSeq(threadSequence.get().incrementAndGet())
                 .setCurrentTime(System.currentTimeMillis());
 
-        if (followingOffset != null) {
-            msgBuilder.setFollowing(followingOffset);
+        if (followingUuid != null && !followingUuid.isEmpty()) {
+            msgBuilder.setFollowingUuid(followingUuid);
         }
 
         if (peerAddress != null) {
@@ -414,7 +414,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
      * This method is to be called when no joinpoint context is available.
      * Equivalent to the above, for objectRefs
      */
-    public DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid, Fields.StaticFieldPut staticFieldPut, Class fieldType, Long followingOffset) {
+    public DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid, Fields.StaticFieldPut staticFieldPut, Class fieldType, String followingUuid) {
 
         final StaticFieldPutDone.Builder fieldBuilder = StaticFieldPutDone.newBuilder();
         if (staticFieldPut.getField().hasClass_()) {
@@ -423,7 +423,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
             fieldBuilder.setField(Wrapper.getWrappedField(fieldType, staticFieldPut.getField().getName()));
         }
 
-        final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC_DONE, concentratorUuid, followingOffset)
+        final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC_DONE, concentratorUuid, followingUuid)
                 .setStaticFieldPutDone(fieldBuilder
                         .setClass_(Wrapper.getWrappedClass(staticFieldPut.getClass_().getName()))
                         .setStaticFieldPutUuid(staticFieldPutUuid));
@@ -495,7 +495,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
         return msgBuilder.build();
     }
 
-    public DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, Long followingOffset) {
+    public DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid, Fields.InstanceFieldPut instanceFieldPut, Class fieldType, String followingUuid) {
 
         final Fields.InstanceFieldPutDone.Builder fieldBuilder = InstanceFieldPutDone.newBuilder();
         if (instanceFieldPut.getField().hasClass_()) {
@@ -504,7 +504,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
             fieldBuilder.setField(Wrapper.getWrappedField(fieldType, instanceFieldPut.getField().getName()));
         }
 
-        final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD_DONE, concentratorUuid, followingOffset)
+        final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD_DONE, concentratorUuid, followingUuid)
                 .setInstanceFieldPutDone(fieldBuilder
                         .setClass_(Wrapper.getWrappedClass(instanceFieldPut.getClass_().getName()))
                         .setInstanceFieldPutUuid(instanceFieldPutUuid));
@@ -526,7 +526,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
     //</editor-fold>
 
     //<editor-fold desc="Throwable messages">
-    public DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, AccessibleObject accessibleObject, Exception exception, Long followingOffset) {
+    public DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, AccessibleObject accessibleObject, Exception exception, String followingUuid) {
 
         final Exceptions.RaisedThrowable.Builder thrBuilder = Exceptions.RaisedThrowable.newBuilder();
         if (accessibleObject instanceof Constructor) {
@@ -542,7 +542,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
             throw new UnsupportedOperationException(String.format("Unsupported accessibleObject type: %s", accessibleObject.getClass().getName()));
         }
 
-        final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.THROWABLE, concentratorUuid, followingOffset)
+        final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.THROWABLE, concentratorUuid, followingUuid)
                 .setRaisedThrowable(thrBuilder
                         .setClass_(Wrapper.getWrappedClass(exception.getClass().getName()))
                         .setThrowable(buildThrowableMessage(exception)));
@@ -590,14 +590,14 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
     //</editor-fold>
 
     //<editor-fold desc="Return value messages">
-    public DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, String objectKey, boolean isVoid, Long followingOffset) {
+    public DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, String objectKey, boolean isVoid, String followingUuid) {
 
         final ReturnValue.Builder contentBuilder = Values.ReturnValue.newBuilder();
         if (!isVoid) {
             ((Values.ReturnValue.Builder) contentBuilder).setObject(Wrapper.getWrappedObject(object, type, objectKey));
         }
 
-        final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.RETURN_VALUE, concentratorUuid, followingOffset)
+        final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.RETURN_VALUE, concentratorUuid, followingUuid)
                 .setReturnValue(contentBuilder
                         .setIsVoid(isVoid)
                         .setClazz(Wrapper.getWrappedClass(type)));
