@@ -14,7 +14,7 @@ public class DualPeerTest {
     //        protected final String className = "com.ittera.cometa.apps.PrintHelloWorld";
     protected final String className = "com.ittera.cometa.apps.App";
 
-    public void runReqsWithOneClient() throws Exception {
+    public void runReqsWithOneClient(int requests) throws Exception {
         DualPeer dualPeer = new DualPeer("/tests.properties");
 
         long start = System.currentTimeMillis();
@@ -28,7 +28,6 @@ public class DualPeerTest {
         }
         Object[] parameters = new Object[]{new String[]{}};
 
-        final int requests = 5000;
         for (int i = 0; i < requests; i++) {
             DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
             // send async to log and forget
@@ -40,11 +39,8 @@ public class DualPeerTest {
         System.out.println("runReqsWithOneClient took " + (System.currentTimeMillis() - start) + " milliseconds");
     }
 
-    public void runAsyncReqsWithNClients() throws Exception {
+    public void runAsyncReqsWithNClients(int clients, final int requestsPerClient) throws Exception {
         long start = System.currentTimeMillis();
-
-        final int clients = 100;
-        final int requests = 50;
 
         //test main
         final String methodName = "main";
@@ -71,7 +67,7 @@ public class DualPeerTest {
                     } catch (IOException ie) {
                         ie.printStackTrace();
                     }
-                    for (int i = 0; i < requests; i++) {
+                    for (int i = 0; i < requestsPerClient; i++) {
                         DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
                         // send async to log and forget
 //                        dualPeer.sendToLogAndForget(requestMsg);
@@ -98,8 +94,17 @@ public class DualPeerTest {
     }
 
     public static void main(String[] args) throws Exception {
+        if (args.length != 2) {
+            System.out.println("Usage: ..DualPeerTest <requests> <clients>");
+            System.exit(1);
+        }
+
+        int requests = Integer.parseInt(args[0]);
+        int clients = Integer.parseInt(args[1]);
+        Double reqsPerClients = Double.valueOf(requests / clients);
+
         DualPeerTest dualPeerTest = new DualPeerTest();
-        dualPeerTest.runReqsWithOneClient();
-        dualPeerTest.runAsyncReqsWithNClients();
+        dualPeerTest.runReqsWithOneClient(requests);
+        dualPeerTest.runAsyncReqsWithNClients(clients, reqsPerClients.intValue());
     }
 }
