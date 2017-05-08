@@ -6,6 +6,8 @@ import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessag
 import java.util.Properties;
 import java.util.Arrays;
 import java.util.List;
+import java.util.AbstractQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -43,7 +45,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     @Inject
     private ZContext zmqContext;
     private Socket kafkaPublisher;
-    private final String inLogAddress;
+    private Socket offsetSubscriber;
+    private final String inLogAddress, offsetPubAddress;
 
     // counters
     private final AtomicLong totalPollingNanos = new AtomicLong(0);
@@ -53,9 +56,45 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     // kafka stuff
     private final long pollTimeout;
     private final String kafkaTopic;
+    private TopicPartition topicPartition;
     private KafkaConsumer<String, String> consumer;
     private final Properties consumerProperties = new Properties();
+    private volatile long lastOffsetRead = -1;
 
+    // shared by threads OffsetUpdater and KafkaDataMessageReader: TODO avoid sharing
+    final private AbstractQueue<Long> skipOffsets = new ConcurrentLinkedQueue<>();
+
+    private final class OffsetUpdater extends Thread {
+
+        private Socket offsetSubscriber;
+
+        OffsetUpdater(Socket offsetSubscriber) {
+            super("Offset informer");
+            this.offsetSubscriber = offsetSubscriber;
+        }
+
+        @Override
+        public void run() {
+            logger.debug("Offset informer running");
+
+            while (!Thread.currentThread().isInterrupted()) {
+                String rcvd = offsetSubscriber.recvStr(ZMQ.NOBLOCK);
+                while (rcvd != null) {
+                    long offset = Long.valueOf(rcvd);
+                    skipOffsets.add(offset);
+
+                    rcvd = offsetSubscriber.recvStr(ZMQ.NOBLOCK);
+                }
+
+                // short pause, not to be eager
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    logger.error("Interrupted in sleep", e);
+                }
+            }
+        }
+    }
 
     @Inject
     public KafkaDataMessageReader(@Named("bootstrap.servers") String bootstrapServers,
@@ -68,9 +107,11 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
                                   @Named("id") String concentratorId,
                                   @Named("pollTimeout") String pollTimeout,
                                   @Named("kafkaTopic") String kafkaTopic,
-                                  @Named("in.log") String inLogAddress) {
+                                  @Named("in.log") String inLogAddress,
+                                  @Named("offset.pub") String offsetPubAddress) {
         this.kafkaTopic = kafkaTopic;
         this.inLogAddress = inLogAddress;
+        this.offsetPubAddress = offsetPubAddress;
         this.pollTimeout = Long.parseLong(pollTimeout);
         //create Kafka consumer
         consumerProperties.put("group.id", concentratorId);
@@ -94,7 +135,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     protected void openConnections() {
         this.consumer = new KafkaConsumer<>(consumerProperties);
         //manual assignment of partition so we can control offset seek
-        TopicPartition topicPartition = new TopicPartition(kafkaTopic, 0);
+        topicPartition = new TopicPartition(kafkaTopic, 0);
         final List<TopicPartition> topicPartitionList = Arrays.asList(topicPartition);
         consumer.assign(topicPartitionList);
         consumer.seekToBeginning(topicPartitionList);
@@ -103,6 +144,15 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 
         this.kafkaPublisher = zmqContext.createSocket(ZMQ.PUB);
         kafkaPublisher.bind(inLogAddress);
+
+        // subscriber to get the offsets written by the message writer
+        this.offsetSubscriber = zmqContext.createSocket(ZMQ.SUB);
+        offsetSubscriber.connect(offsetPubAddress);
+        offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
+        logger.info("Initialized zmq sockets");
+
+        new OffsetUpdater(offsetSubscriber).start();
+        logger.info("Initialized offset notifier thread");
 
         connectionsOpen = true;
         logger.info("All connections open");
@@ -122,6 +172,9 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
             }
         }
 
+        ConsumerRecords<String, String> records;
+        long t0;
+
         while (isRunning()) {
             if (!acceptingConnections) {
                 try {
@@ -134,13 +187,11 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
             }
 
 
-            //print stats every 10000 iterations
-            if ((++iterations % 10000 == 0) && logger.isDebugEnabled()) {
+            //print stats every 1000 iterations
+            if ((++iterations % 1000 == 0) && logger.isDebugEnabled()) {
                 printDebugStats();
             }
 
-            final ConsumerRecords<String, String> records;
-            final long t0;
 
             // read from kafka
             t0 = System.nanoTime();
@@ -154,19 +205,29 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 
             // process records if any
             for (ConsumerRecord record : records) {
+
                 messagesRcvd.getAndIncrement();
 
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Processing received record # {} :\n {}", messagesRcvd, record);
+                    logger.debug("Processing received record # {} with offset {} :\n {}", messagesRcvd, record.offset(), record);
                 }
 
                 final DataMessage dataMessage = (DataMessage) record.value();
                 final long messageOffset = record.offset();
+                lastOffsetRead = messageOffset;
 
                 // send request to PUB socket
                 kafkaPublisher.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
                 kafkaPublisher.send(dataMessage.toByteArray(), 0);
                 logger.debug("Published new log Data Message with uuid: {}", dataMessage.getMessageUuid());
+
+                // get next offset to poll
+                Long nextOffset = nextOffset();
+                if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
+                    logger.debug("Skipping received records. Jumping from offset: {} to: {}", lastOffsetRead, nextOffset);
+                    consumer.seek(topicPartition, nextOffset);
+                    break;
+                }
             }
 
             // short pause, not to be eager
@@ -175,7 +236,46 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
             } catch (InterruptedException e) {
                 logger.error("Interrupted in sleep", e);
             }
+
+            // get next offset to poll
+            Long nextOffset = nextOffset();
+            if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
+                logger.debug("Jumping from offset: {} to: {}", lastOffsetRead, nextOffset);
+                consumer.seek(topicPartition, nextOffset);
+            }
         }
+    }
+
+    private Long nextOffset() {
+        if (logger.isTraceEnabled()) {
+            final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
+            logger.traceEntry("with lastOffsetRead = {}, and queue: {}", lastOffsetRead, queueStr);
+        }
+
+        // initial candidate == last read + 1
+        Long nextToRead = lastOffsetRead + 1;
+
+        Long nextOffsetToSkip = skipOffsets.peek();
+
+        // clean up all possible offsets up to and including last read
+        while ((nextOffsetToSkip != null) && (nextOffsetToSkip < nextToRead)) {
+            skipOffsets.poll();
+            nextOffsetToSkip = skipOffsets.peek();
+        }
+
+        // while queue not empty, pop next offsets in sequence
+        while (nextToRead.equals(nextOffsetToSkip)) {
+            skipOffsets.poll();
+            nextToRead++;
+            nextOffsetToSkip = skipOffsets.peek();
+        }
+
+        if (logger.isTraceEnabled()) {
+            final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
+            logger.trace("returning nextToRead = {} with lastOffsetRead = {}, and final queue: {}",
+                    nextToRead, lastOffsetRead, queueStr);
+        }
+        return nextToRead;
     }
 
     @Override
