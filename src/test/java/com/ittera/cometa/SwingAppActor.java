@@ -9,7 +9,7 @@ import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type;
 
 public class SwingAppActor {
 
-    protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder(null);
+    protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
 
     protected static final String swingAppClassName = "com.ittera.cometa.apps.SwingApp";
 

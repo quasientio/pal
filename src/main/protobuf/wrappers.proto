@@ -34,20 +34,19 @@ message DataMessage {
     required int64 currentTime = 5;
     optional int64 builderSeq = 6;
     optional string followingUuid = 7;
-    optional string concentratorPeerAddr = 8;
 
     oneof content {
-        ConstructorCall constructorCall = 9;
-        InstanceMethodCall instanceMethodCall = 10;
-        ClassMethodCall classMethodCall = 11;
-        ClInitCall clinitCall = 12;
-        StaticFieldGet staticFieldGet = 13;
-        StaticFieldPut staticFieldPut = 14;
-        InstanceFieldGet instanceFieldGet = 15;
-        InstanceFieldPut instanceFieldPut = 16;
-        StaticFieldPutDone staticFieldPutDone = 17;
-        InstanceFieldPutDone instanceFieldPutDone = 18;
-        RaisedThrowable raisedThrowable = 19;
-        ReturnValue returnValue = 20;
+        ConstructorCall constructorCall = 8;
+        InstanceMethodCall instanceMethodCall = 9;
+        ClassMethodCall classMethodCall = 10;
+        ClInitCall clinitCall = 11;
+        StaticFieldGet staticFieldGet = 12;
+        StaticFieldPut staticFieldPut = 13;
+        InstanceFieldGet instanceFieldGet = 14;
+        InstanceFieldPut instanceFieldPut = 15;
+        StaticFieldPutDone staticFieldPutDone = 16;
+        InstanceFieldPutDone instanceFieldPutDone = 17;
+        RaisedThrowable raisedThrowable = 18;
+        ReturnValue returnValue = 19;
     }
 }

@@ -28,9 +28,9 @@ public abstract class AbstractConcentratorTest {
     private static DualPeer dualPeer;
 
     @BeforeClass
-    public static void initialize() throws IOException {
+    public static void initialize() throws Exception {
 
-        dataMessageBuilder = new ProtobufDataMessageBuilder(null);
+        dataMessageBuilder = new ProtobufDataMessageBuilder();
         dualPeer = new DualPeer("/tests.properties");
 
     }

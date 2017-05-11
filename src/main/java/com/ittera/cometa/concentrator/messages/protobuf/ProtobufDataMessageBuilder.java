@@ -31,8 +31,6 @@ import org.apache.logging.log4j.LogManager;
 import com.google.protobuf.Message;
 
 import com.google.inject.Singleton;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 
 /**
  * Methods of this class receive aspectj objects (i.e. StaticPart) as arguments as convenience.
@@ -53,10 +51,8 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
     private static String peerAddress;
 
-    @Inject
-    public ProtobufDataMessageBuilder(@Named("in.router") String thisPeerAddress) {
+    public ProtobufDataMessageBuilder() {
         logger.info("Initialized message builder");
-        peerAddress = thisPeerAddress;
     }
 
     //<editor-fold desc="Private Auxiliary methods">
@@ -132,10 +128,6 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
         if (followingUuid != null && !followingUuid.isEmpty()) {
             msgBuilder.setFollowingUuid(followingUuid);
-        }
-
-        if (peerAddress != null) {
-            msgBuilder.setConcentratorPeerAddr(peerAddress);
         }
 
         return msgBuilder;

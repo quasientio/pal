@@ -1222,6 +1222,7 @@ public class Concentrator {
                 bind(IncomingMessageDispatcher.class).to(KafkaDataMessageReader.class);
                 bind(OutgoingMessageDispatcher.class).to(JeromqOutMessageDispatcher.class);
                 bind(InRequestMessageDispatcher.class).to(JeromqInRequestDispatcher.class);
+                bind(PeerLogDirectory.class).to(ZkClient.class);
 
                 // fields to be injected in Concentrator are static
                 Concentrator.outCellAddress = properties.getProperty("out.cell");
@@ -1236,6 +1237,34 @@ public class Concentrator {
 
         final Injector injector = Guice.createInjector(module);
 
+        // Register peer and create new log
+        final PeerLogDirectory registry = (PeerLogDirectory) injector.getInstance(PeerLogDirectory.class);
+        try {
+            // register self as new peer
+            final Properties peerProperties = new Properties();
+            peerProperties.put("peerAddr", properties.getProperty("in.router"));
+            registry.registerPeer(uuid, peerProperties);
+
+            // create new log
+            final Properties logProperties = new Properties();
+            logProperties.put("bootstrap.servers", "localhost:9092");
+            registry.addLog(properties.getProperty("kafkaTopic"), logProperties);
+        } catch (Exception ex) {
+            logger.error("Error registering peer", ex);
+        }
+
+
+        // since the new log is created, we inform the message reader and writer. This must be done before starting the service.
+        IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
+        KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
+        try {
+            incomingMessageDispatcher.readFromLastLog(properties.getProperty("kafkaTopic"));
+            kafkaMessageWriter.writeToLastLog(properties.getProperty("kafkaTopic"));
+        } catch (Exception ex) {
+            logger.error("Could not initialize reader/writer to last log", ex);
+        }
+
+        // managed services
         final Set<Service> services = new HashSet<>();
         services.add((Service) injector.getInstance(IncomingMessageDispatcher.class));
         services.add((Service) injector.getInstance(OutgoingMessageDispatcher.class));
@@ -1258,7 +1287,7 @@ public class Concentrator {
                                     incomingMessageDispatcher.acceptConnections(true);
 
                                     // We must prestart threads to create the REP sockets, and this must be done after DEALER
-                                    ExtendedThreadPoolExecutor executor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
+                                    final ExtendedThreadPoolExecutor executor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
                                     executor.prestartAllCoreThreads();
                                 }
 

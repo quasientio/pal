@@ -41,7 +41,7 @@ public class DualPeer {
     protected final DataMessageBuilder dataMessageBuilder;
 
     // kafka stuff
-    private final String kafkaTopic;
+    private final String kafkaTopicPrefix, kafkaTopic;
     private final TopicPartition topicPartition;
     private final Long pollTimeout;
 
@@ -57,12 +57,14 @@ public class DualPeer {
     private String currentPeerAddress;
     private boolean talkingToPeer = false;
 
+    // zookeeper
+    private PeerLogDirectory peerLogDirectory;
 
-    public DualPeer(String propertiesFile) throws IOException {
+    public DualPeer(String propertiesFile) throws Exception {
         this(propertiesFile, null);
     }
 
-    public DualPeer(String propertiesFile, String initialPeerAddress) throws IOException {
+    public DualPeer(String propertiesFile, String initialPeerAddress) throws Exception {
         currentPeerAddress = initialPeerAddress;
 
         //load properties
@@ -71,7 +73,24 @@ public class DualPeer {
             properties.load(stream);
         }
 
-        kafkaTopic = properties.getProperty("kafkaTopic");
+        kafkaTopicPrefix = properties.getProperty("kafkaTopicPrefix");
+
+        // Register peer
+        peerLogDirectory = new ZkClient(properties.getProperty("zookeeper.url"));
+        try {
+            // register self as new peer
+            final Properties peerProperties = new Properties();
+            peerLogDirectory.registerPeer(peerUuid, peerProperties);
+        } catch (Exception ex) {
+            logger.error("Error registering peer", ex);
+        }
+
+        // Now get last log with prefix = kafkaTopic
+        this.kafkaTopic = peerLogDirectory.getLastLog(kafkaTopicPrefix);
+        logger.info("Will read and write to log: {}", kafkaTopic);
+        Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
+        String bootstrapServers = logProps.getProperty("bootstrap.servers");
+
 
         /** Configure and Initialize Kafka Producer **/
         for (String propKey : properties.stringPropertyNames()) {
@@ -83,6 +102,7 @@ public class DualPeer {
         }
 
         kafkaProducerProps.put("client.id", String.valueOf(peerId));
+        kafkaProducerProps.put("bootstrap.servers", bootstrapServers);
         producer = new KafkaProducer<>(kafkaProducerProps);
 
         /** Configure and Initialize Kafka Consumer **/
@@ -95,7 +115,8 @@ public class DualPeer {
         }
 
         pollTimeout = Long.parseLong((String) kafkaConsumerProps.remove("pollTimeout"));
-        kafkaConsumerProps.put("group.id", properties.getProperty("id"));
+        kafkaConsumerProps.put("group.id", String.valueOf(peerId));
+        kafkaConsumerProps.put("bootstrap.servers", bootstrapServers);
         consumer = new KafkaConsumer<>(kafkaConsumerProps);
         logger.debug("Kafka consumer initialized: {}", consumer);
 
@@ -112,8 +133,7 @@ public class DualPeer {
         }
 
         //init msg builder
-        dataMessageBuilder = new ProtobufDataMessageBuilder(null);
-
+        dataMessageBuilder = new ProtobufDataMessageBuilder();
     }
 
     private void connectSocket() {
@@ -194,12 +214,13 @@ public class DualPeer {
                 long receivedMsgOffset = record.offset();
                 if (dataMessage.hasFollowingUuid() && message.getMessageUuid().equals(dataMessage.getFollowingUuid())) {
                     logger.info("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
-                    if (dataMessage.hasConcentratorPeerAddr()) {
-                        String newPeerAddress = dataMessage.getConcentratorPeerAddr();
-                        if (currentPeerAddress != newPeerAddress) {
-                            connectToPeer(newPeerAddress);
-                        }
-                    }
+
+//                    if (dataMessage.hasConcentratorPeerAddr()) {
+//                        String newPeerAddress = dataMessage.getConcentratorPeerAddr();
+//                        if (currentPeerAddress != newPeerAddress) {
+//                            connectToPeer(newPeerAddress);
+//                        }
+//                    }
                     return dataMessage;
                 } else {
                     logger.debug("Skipping record with offset {}", receivedMsgOffset);

@@ -16,10 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Properties;
-import java.util.Map;
-import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.Future;
 
 import org.zeromq.ZMQ;
 import org.zeromq.ZContext;
@@ -36,9 +33,8 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 
     // kafka stuff
     private KafkaProducer producer;
-    private final String kafkaTopic;
+    private String kafkaTopic;
     private final Properties producerProperties = new Properties();
-    private final Map<Long, DataMessage> checksumsMap = new HashMap<>();
 
     // zmq stuff
     @Inject
@@ -47,28 +43,27 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
     private Socket offsetPublisher;
     private final String outPubAddress, offsetPubAddress;
 
+    // zookeeper
+    @Inject
+    private PeerLogDirectory peerLogDirectory;
+
     private volatile boolean connectionsOpen = false;
     private final AtomicInteger messagesSent = new AtomicInteger(0);
     private int messagesReceived = 0;
 
     @Inject
-    public KafkaDataMessageWriter(@Named("bootstrap.servers") String bootstrapServers,
-                                  @Named("key.serializer") String keySerializer,
+    public KafkaDataMessageWriter(@Named("key.serializer") String keySerializer,
                                   @Named("value.serializer") String valueSerializer,
-                                  @Named("kafkaTopic") String kafkaTopic,
                                   @Named("out.pub") String outPubAddress,
                                   @Named("offset.pub") String offsetPubAddress) {
-        this.kafkaTopic = kafkaTopic;
         this.outPubAddress = outPubAddress;
         this.offsetPubAddress = offsetPubAddress;
         producerProperties.put("key.serializer", keySerializer);
         producerProperties.put("value.serializer", valueSerializer);
-        producerProperties.put("bootstrap.servers", bootstrapServers);
-        logger.info("Initialized kafka message writer for concentrator with topic '{}'", kafkaTopic);
+        logger.info("Initialized kafka message writer");
     }
 
     public void openConnections() {
-
         // start kafka writer
         this.producer = new KafkaProducer<>(producerProperties);
 
@@ -83,6 +78,17 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 
         connectionsOpen = true;
         logger.info("All connections open");
+    }
+
+    @Override
+    public void writeToLastLog(String logNamePrefix) throws Exception {
+
+        this.kafkaTopic = peerLogDirectory.getLastLog(logNamePrefix);
+
+        Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
+        String bootstrapServers = logProps.getProperty("bootstrap.servers");
+        producerProperties.put("bootstrap.servers", bootstrapServers);
+        logger.info("Will write to log: {} and bootstrapServers: {}", kafkaTopic, bootstrapServers);
     }
 
     @Override
