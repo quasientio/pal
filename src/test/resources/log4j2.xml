@@ -31,7 +31,7 @@
             <AppenderRef ref="tests"/>
         </Logger>
 
-        <Logger name="com.ittera.cometa.concentrator" level="info" additivity="false">
+        <Logger name="com.ittera.cometa.concentrator.ZkClient" level="debug" additivity="false">
             <AppenderRef ref="tests"/>
         </Logger>
 

@@ -64,20 +64,20 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
     }
 
     public void openConnections() {
-        // start kafka writer
-        this.producer = new KafkaProducer<>(producerProperties);
 
         // start subscriber
         this.subscriber = zmqContext.createSocket(ZMQ.SUB);
         subscriber.connect(outPubAddress);
         subscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
+        logger.info("Subscriber connected");
 
         // start offsets publisher
         this.offsetPublisher = zmqContext.createSocket(ZMQ.PUB);
         offsetPublisher.bind(offsetPubAddress);
+        logger.info("Publisher connected");
 
         connectionsOpen = true;
-        logger.info("All connections open");
+        logger.info("All connections open - except kafka producer");
     }
 
     @Override
@@ -88,6 +88,8 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
         Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
         String bootstrapServers = logProps.getProperty("bootstrap.servers");
         producerProperties.put("bootstrap.servers", bootstrapServers);
+        // start kafka writer
+        this.producer = new KafkaProducer<>(producerProperties);
         logger.info("Will write to log: {} and bootstrapServers: {}", kafkaTopic, bootstrapServers);
     }
 
@@ -136,6 +138,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
     }
 
     private void sendToKafka(DataMessage message) {
+        logger.debug("sending new message with uuid: {}", message.getMessageUuid());
         ProducerRecord newRecord = new ProducerRecord(kafkaTopic, message);
         producer.send(newRecord, this);
         messagesSent.getAndIncrement();

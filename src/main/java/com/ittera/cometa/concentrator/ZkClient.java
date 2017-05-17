@@ -28,12 +28,15 @@ public class ZkClient implements Watcher, PeerLogDirectory {
     public static final String PEERS_PATH = ROOT_PATH + "/peers";
     public static final String LOGS_PATH = ROOT_PATH + "/logs";
 
-    public static final int SESSION_TIMEOUT = 3000;
+    public static final int SESSION_TIMEOUT = 10000;
 
     private ZooKeeper zk;
 
+    private final String zookeeperUrl;
+
     @Inject
     public ZkClient(@Named("zookeeper.url") String zookeeperUrl) throws Exception {
+        this.zookeeperUrl = zookeeperUrl;
         zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, this);
         ensureRootAndSubdirsExist();
     }
@@ -96,6 +99,20 @@ public class ZkClient implements Watcher, PeerLogDirectory {
     }
 
     @Override
+    public void unregisterAllPeers() throws Exception {
+
+        List<String> peerUuids = zk.getChildren(PEERS_PATH, false);
+        // loop through all peers
+        int deleted = 0;
+        for (String peerUuid : peerUuids) {
+            unregisterPeer(UUID.fromString(peerUuid));
+            deleted++;
+        }
+
+        logger.debug("deleted {} peers", deleted);
+    }
+
+    @Override
     public boolean peerExists(UUID peerUuid) throws Exception {
         String peerNode = PEERS_PATH + "/" + peerUuid;
         return zk.exists(peerNode, null) != null;
@@ -128,14 +145,13 @@ public class ZkClient implements Watcher, PeerLogDirectory {
     @Override
     public String getLastLog(String logNamePrefix) throws Exception {
 
-        //find last
-        //String createdLogName = StringUtils.substringAfterLast(newLogPath, "/");
+        // find last
         List<String> logs = zk.getChildren(LOGS_PATH, false);
         long maxLogIndex = 0;
         String lastLog = null;
         // loop through all logs
         for (String log : logs) {
-            // filter out those with our prefix
+            // filter those with our prefix
             if (log.startsWith(logNamePrefix)) {
                 // parse index in log names and set max
                 String logIdxStr = StringUtils.substringAfter(log, logNamePrefix);
@@ -150,6 +166,18 @@ public class ZkClient implements Watcher, PeerLogDirectory {
         logger.debug("log with max index = {}", lastLog);
 
         return lastLog;
+    }
+
+    @Override
+    public int getLogCount(String logNamePrefix) throws Exception {
+        int count = 0;
+        List<String> logs = zk.getChildren(LOGS_PATH, false);
+        for (String log : logs) {
+            if (log.startsWith(logNamePrefix)) {
+                count++;
+            }
+        }
+        return count;
     }
 
 
@@ -168,6 +196,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
     @Override
     public Properties getLogProperties(String logName) throws Exception {
+        if (!zk.getState().equals(ZooKeeper.States.CONNECTED)) {
+            zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, this);
+        }
         Stat nodeStat = getLogNodeStat(logName);
         String logNode = LOGS_PATH + "/" + logName;
 
@@ -176,10 +207,22 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
     @Override
     public Properties getPeerProperties(UUID peerUuid) throws Exception {
+        if (!zk.getState().equals(ZooKeeper.States.CONNECTED)) {
+            zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, this);
+        }
         Stat nodeStat = getPeerNodeStat(peerUuid);
         String peerNode = PEERS_PATH + "/" + peerUuid;
 
         return getProperties(peerNode, nodeStat);
+    }
+
+    @Override
+    public int getPeerCount() throws Exception {
+        int count = 0;
+        // find last
+        List<String> logs = zk.getChildren(PEERS_PATH, false);
+        return logs.size();
+
     }
 
     @Override
@@ -189,6 +232,24 @@ public class ZkClient implements Watcher, PeerLogDirectory {
             zk.delete(logNode, 0);
             logger.info("Unregistered (i.e. deleted) log node: {}", logName);
         }
+    }
+
+    @Override
+    public void deleteAllLogs(String logNamePrefix) throws Exception {
+
+        List<String> logs = zk.getChildren(LOGS_PATH, false);
+        // loop through all logs
+        int deleted = 0;
+        for (String log : logs) {
+            // filter those with our prefix
+            if (log.startsWith(logNamePrefix)) {
+                deleteLog(log);
+                deleted++;
+            }
+        }
+
+        logger.debug("deleted {} logs with prefix: {}", deleted, logNamePrefix);
+
     }
 
     protected Stat getLogNodeStat(String logName) throws Exception {

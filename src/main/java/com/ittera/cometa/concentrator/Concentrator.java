@@ -1254,7 +1254,7 @@ public class Concentrator {
         }
 
 
-        // since the new log is created, we inform the message reader and writer. This must be done before starting the service.
+        // since the new log is created, we inform the message reader and writer. This must be done before starting the services.
         IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
         KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
         try {

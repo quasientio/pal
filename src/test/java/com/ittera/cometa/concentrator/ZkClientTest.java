@@ -176,6 +176,27 @@ public class ZkClientTest {
     }
 
     @Test
+    public void deleteAllLogs_matchingLogs_allMatchingDeleted() throws Exception {
+        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
+
+        String logNamePrefix = "test.topic";
+        Properties logProps = new Properties();
+        logProps.put("bootstrap.servers", "localhost:9092");
+
+        // create  a few
+        String lastCreated = null;
+        for (int i = 0; i > 10; i--) {
+            lastCreated = zkCli.addLog(logNamePrefix, logProps);
+            createdLogs.add(lastCreated);
+        }
+
+        assertNotEquals(0, zkCli.getLogCount(logNamePrefix));
+        zkCli.deleteAllLogs(logNamePrefix);
+        assertEquals(0, zkCli.getLogCount(logNamePrefix));
+        zkCli.close();
+    }
+
+    @Test
     public void getLogProperties_existingLog_logProperties() throws Exception {
         PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
@@ -208,9 +229,24 @@ public class ZkClientTest {
         assertEquals(peerProps, propsLoaded);
     }
 
+    //    @Test
+    // Disabled so it won't delete the running concentrator peer
+    public void unregisterAllPeers_somePeersExist_peersDeleted() throws Exception {
+        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
+        Properties peerProps = new Properties();
 
-    // TODO
-    // get peer node's address
+        // create ten peers
+        for (int i = 0; i < 10; i++) {
+            // create
+            UUID peerUuid = UUID.randomUUID();
+            createdPeers.add(peerUuid);
+            zkCli.registerPeer(peerUuid, peerProps);
+        }
+
+        assertNotEquals(0, zkCli.getPeerCount());
+        zkCli.unregisterAllPeers();
+        assertEquals(0, zkCli.getPeerCount());
+    }
 
 
     @AfterClass
@@ -229,5 +265,4 @@ public class ZkClientTest {
 
         zkCli.close();
     }
-
 }

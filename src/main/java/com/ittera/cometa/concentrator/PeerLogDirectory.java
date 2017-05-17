@@ -8,15 +8,21 @@ public interface PeerLogDirectory {
 
     void unregisterPeer(UUID peerUuid) throws Exception;
 
+    void unregisterAllPeers() throws Exception;
+
     boolean peerExists(UUID peerUuid) throws Exception;
+
+    Properties getPeerProperties(UUID peerUuid) throws Exception;
+
+    int getPeerCount() throws Exception;
 
     String addLog(String logNamePrefix, Properties logProperties) throws Exception;
 
     String getLastLog(String logNamePrefix) throws Exception;
 
-    Properties getLogProperties(String logName) throws Exception;
+    int getLogCount(String logNamePrefix) throws Exception;
 
-    Properties getPeerProperties(UUID peerUuid) throws Exception;
+    Properties getLogProperties(String logName) throws Exception;
 
     void deleteLog(String logName) throws Exception;
 

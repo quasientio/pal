@@ -90,6 +90,7 @@ public class DualPeer {
         logger.info("Will read and write to log: {}", kafkaTopic);
         Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
         String bootstrapServers = logProps.getProperty("bootstrap.servers");
+        peerLogDirectory.close();
 
 
         /** Configure and Initialize Kafka Producer **/
@@ -103,6 +104,7 @@ public class DualPeer {
 
         kafkaProducerProps.put("client.id", String.valueOf(peerId));
         kafkaProducerProps.put("bootstrap.servers", bootstrapServers);
+        logger.info("Will connect to bootstrap servers: {}", bootstrapServers);
         producer = new KafkaProducer<>(kafkaProducerProps);
 
         /** Configure and Initialize Kafka Consumer **/
@@ -209,18 +211,27 @@ public class DualPeer {
         //wait for the reply to the sent message (reply should contain following = sentRecordOffset in message)
         while (true) {
             ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+            if (records.count() != 0) {
+                logger.debug("Received {} records", records.count());
+            }
             for (ConsumerRecord record : records) {
                 final DataMessage dataMessage = (DataMessage) record.value();
                 long receivedMsgOffset = record.offset();
                 if (dataMessage.hasFollowingUuid() && message.getMessageUuid().equals(dataMessage.getFollowingUuid())) {
                     logger.info("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
-
-//                    if (dataMessage.hasConcentratorPeerAddr()) {
-//                        String newPeerAddress = dataMessage.getConcentratorPeerAddr();
-//                        if (currentPeerAddress != newPeerAddress) {
-//                            connectToPeer(newPeerAddress);
-//                        }
-//                    }
+                    String concentratorUuid = dataMessage.getConcentratorUuid();
+                    String newPeerAddress = null;
+                    try {
+                        // we getPeerProperties and close after since we assume we'll get here only once
+                        Properties peerProps = peerLogDirectory.getPeerProperties(UUID.fromString(concentratorUuid));
+                        peerLogDirectory.close();
+                        newPeerAddress = peerProps.getProperty("peerAddr");
+                    } catch (Exception ex) {
+                        logger.error("Couldn't get peer properties", ex);
+                    }
+                    if (currentPeerAddress != newPeerAddress) {
+                        connectToPeer(newPeerAddress);
+                    }
                     return dataMessage;
                 } else {
                     logger.debug("Skipping record with offset {}", receivedMsgOffset);
