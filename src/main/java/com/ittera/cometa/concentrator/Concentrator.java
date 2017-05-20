@@ -1237,31 +1237,42 @@ public class Concentrator {
 
         final Injector injector = Guice.createInjector(module);
 
-        // Register peer and create new log
         final PeerLogDirectory registry = (PeerLogDirectory) injector.getInstance(PeerLogDirectory.class);
+        final String kafkaTopicPrefix = properties.getProperty("kafkaTopic");
+        String newLogName = null;
+
+        // register self as new peer
         try {
-            // register self as new peer
             final Properties peerProperties = new Properties();
             peerProperties.put("peerAddr", properties.getProperty("in.router"));
             registry.registerPeer(uuid, peerProperties);
-
-            // create new log
-            final Properties logProperties = new Properties();
-            logProperties.put("bootstrap.servers", "localhost:9092");
-            registry.addLog(properties.getProperty("kafkaTopic"), logProperties);
         } catch (Exception ex) {
             logger.error("Error registering peer", ex);
+            ex.printStackTrace();
+            System.exit(1);
         }
 
+        // register new log
+        try {
+            final Properties logProperties = new Properties();
+            logProperties.put("bootstrap.servers", "localhost:9092");
+            newLogName = registry.addLog(kafkaTopicPrefix, logProperties);
+        } catch (Exception ex) {
+            logger.error("Error registering new log", ex);
+            ex.printStackTrace();
+            System.exit(2);
+        }
 
-        // since the new log is created, we inform the message reader and writer. This must be done before starting the services.
+        // once new log registered, we inform the message reader and writer. This must be done before starting the services.
         IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
         KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
         try {
-            incomingMessageDispatcher.readFromLastLog(properties.getProperty("kafkaTopic"));
-            kafkaMessageWriter.writeToLastLog(properties.getProperty("kafkaTopic"));
+            kafkaMessageWriter.writeToLog(newLogName);
+            incomingMessageDispatcher.readFromLog(newLogName);
         } catch (Exception ex) {
-            logger.error("Could not initialize reader/writer to last log", ex);
+            logger.fatal("Could not initialize reader/writer to last log. Aborting ...", ex);
+            ex.printStackTrace();
+            System.exit(3);
         }
 
         // managed services
@@ -1295,7 +1306,7 @@ public class Concentrator {
                                     // Something failed, at this point we could log it, notify a load balancer, or take
                                     // some other action.  For now we will just exit.
                                     logger.fatal("Service manager failed. Exiting ...", service.failureCause());
-                                    System.exit(1);
+                                    System.exit(4);
                                 }
                             },
                 MoreExecutors.directExecutor());

@@ -132,11 +132,21 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         }
     }
 
-    // currently, readFromLastLog must be called before openConnections, that is, before starting this service
     @Override
     public void readFromLastLog(String logNamePrefix) throws Exception {
 
         this.kafkaTopic = peerLogDirectory.getLastLog(logNamePrefix);
+
+        Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
+        String bootstrapServers = logProps.getProperty("bootstrap.servers");
+        consumerProperties.put("bootstrap.servers", bootstrapServers);
+        logger.info("Now reading from log: {} and bootstrapServers: {}", kafkaTopic, bootstrapServers);
+    }
+
+    @Override
+    public void readFromLog(String logName) throws Exception {
+
+        this.kafkaTopic = logName;
 
         Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
         String bootstrapServers = logProps.getProperty("bootstrap.servers");
@@ -155,7 +165,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         logger.info("Initialized kafka consumer and producer");
 
         this.kafkaPublisher = zmqContext.createSocket(ZMQ.PUB);
-        kafkaPublisher.bind(inLogAddress);
+        kafkaPublisher.connect(inLogAddress);
 
         // subscriber to get the offsets written by the message writer
         this.offsetSubscriber = zmqContext.createSocket(ZMQ.SUB);

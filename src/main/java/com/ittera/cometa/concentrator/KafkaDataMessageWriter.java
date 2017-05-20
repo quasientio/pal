@@ -67,7 +67,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 
         // start subscriber
         this.subscriber = zmqContext.createSocket(ZMQ.SUB);
-        subscriber.connect(outPubAddress);
+        subscriber.bind(outPubAddress);
         subscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
         logger.info("Subscriber connected");
 
@@ -84,6 +84,19 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
     public void writeToLastLog(String logNamePrefix) throws Exception {
 
         this.kafkaTopic = peerLogDirectory.getLastLog(logNamePrefix);
+
+        Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
+        String bootstrapServers = logProps.getProperty("bootstrap.servers");
+        producerProperties.put("bootstrap.servers", bootstrapServers);
+        // start kafka writer
+        this.producer = new KafkaProducer<>(producerProperties);
+        logger.info("Will write to log: {} and bootstrapServers: {}", kafkaTopic, bootstrapServers);
+    }
+
+    @Override
+    public void writeToLog(String logName) throws Exception {
+
+        this.kafkaTopic = logName;
 
         Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
         String bootstrapServers = logProps.getProperty("bootstrap.servers");

@@ -31,11 +31,6 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService i
     private final AtomicInteger messagesQueuedToSend = new AtomicInteger(0);
     private final AtomicInteger messagesRcvd = new AtomicInteger(0);
 
-    // kafka stuff
-    @Inject
-    private KafkaMessageWriter kafkaDataMessageWriter;
-    private final String kafkaTopic;
-
     // zmq stuff
     @Inject
     private ZContext context;
@@ -43,13 +38,11 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService i
     private final String outCellAddress, outPubAddress;
 
     @Inject
-    public JeromqOutMessageDispatcher(@Named("kafkaTopic") String kafkaTopic,
-                                      @Named("out.cell") String outCellAddress,
+    public JeromqOutMessageDispatcher(@Named("out.cell") String outCellAddress,
                                       @Named("out.pub") String outPubAddress) {
-        this.kafkaTopic = kafkaTopic;
         this.outCellAddress = outCellAddress;
         this.outPubAddress = outPubAddress;
-        logger.info("Initialized OUT message dispatcher for concentrator with topic '{}'", kafkaTopic);
+        logger.info("Initialized OUT message dispatcher");
     }
 
     protected void openConnections() {
@@ -58,7 +51,7 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService i
         broker.bind(outCellAddress);
 
         publisher = context.createSocket(ZMQ.PUB);
-        publisher.bind(outPubAddress);
+        publisher.connect(outPubAddress);
 
         logger.info("All connections open");
     }

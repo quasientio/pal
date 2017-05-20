@@ -163,7 +163,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
             }
         }
 
-        logger.debug("log with max index = {}", lastLog);
+        logger.debug("with prefix '{}' got log = {}", logNamePrefix, lastLog);
 
         return lastLog;
     }
