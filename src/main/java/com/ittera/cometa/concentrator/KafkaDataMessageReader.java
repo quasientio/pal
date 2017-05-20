@@ -55,11 +55,15 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 
     // kafka stuff
     private final long pollTimeout;
-    private final String kafkaTopic;
+    private String kafkaTopic;
     private TopicPartition topicPartition;
     private KafkaConsumer<String, String> consumer;
     private final Properties consumerProperties = new Properties();
     private volatile long lastOffsetRead = -1;
+
+    // zookeeper
+    @Inject
+    private PeerLogDirectory peerLogDirectory;
 
     // shared by threads OffsetUpdater and KafkaDataMessageReader: TODO avoid sharing
     final private AbstractQueue<Long> skipOffsets = new ConcurrentLinkedQueue<>();
@@ -97,8 +101,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     }
 
     @Inject
-    public KafkaDataMessageReader(@Named("bootstrap.servers") String bootstrapServers,
-                                  @Named("key.deserializer") String keyDeserializer,
+    public KafkaDataMessageReader(@Named("key.deserializer") String keyDeserializer,
                                   @Named("value.deserializer") String valueDeserializer,
                                   @Named("enable.auto.commit") String autoCommit,
                                   @Named("auto.commit.interval.ms") String autoCommitInterval,
@@ -106,16 +109,13 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
                                   @Named("session.timeout.ms") String sessionTimeout,
                                   @Named("id") String concentratorId,
                                   @Named("pollTimeout") String pollTimeout,
-                                  @Named("kafkaTopic") String kafkaTopic,
                                   @Named("in.log") String inLogAddress,
                                   @Named("offset.pub") String offsetPubAddress) {
-        this.kafkaTopic = kafkaTopic;
         this.inLogAddress = inLogAddress;
         this.offsetPubAddress = offsetPubAddress;
         this.pollTimeout = Long.parseLong(pollTimeout);
-        //create Kafka consumer
+        // prepare Kafka consumer
         consumerProperties.put("group.id", concentratorId);
-        consumerProperties.put("bootstrap.servers", bootstrapServers);
         consumerProperties.put("key.deserializer", keyDeserializer);
         consumerProperties.put("value.deserializer", valueDeserializer);
         consumerProperties.put("enable.auto.commit", autoCommit);
@@ -128,8 +128,30 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
             for (String propKey : consumerProperties.stringPropertyNames()) {
                 propsStr.append(propKey).append('=').append(consumerProperties.getProperty(propKey)).append(", ");
             }
-            logger.info("Initialized kafka publisher for concentrator with id '{}', topic '{}' and properties: [{}]", concentratorId, kafkaTopic, propsStr.toString());
+            logger.info("Initialized kafka publisher for concentrator with id '{}' and properties: [{}]", concentratorId, propsStr.toString());
         }
+    }
+
+    @Override
+    public void readFromLastLog(String logNamePrefix) throws Exception {
+
+        this.kafkaTopic = peerLogDirectory.getLastLog(logNamePrefix);
+
+        Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
+        String bootstrapServers = logProps.getProperty("bootstrap.servers");
+        consumerProperties.put("bootstrap.servers", bootstrapServers);
+        logger.info("Now reading from log: {} and bootstrapServers: {}", kafkaTopic, bootstrapServers);
+    }
+
+    @Override
+    public void readFromLog(String logName) throws Exception {
+
+        this.kafkaTopic = logName;
+
+        Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
+        String bootstrapServers = logProps.getProperty("bootstrap.servers");
+        consumerProperties.put("bootstrap.servers", bootstrapServers);
+        logger.info("Now reading from log: {} and bootstrapServers: {}", kafkaTopic, bootstrapServers);
     }
 
     protected void openConnections() {
@@ -143,7 +165,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         logger.info("Initialized kafka consumer and producer");
 
         this.kafkaPublisher = zmqContext.createSocket(ZMQ.PUB);
-        kafkaPublisher.bind(inLogAddress);
+        kafkaPublisher.connect(inLogAddress);
 
         // subscriber to get the offsets written by the message writer
         this.offsetSubscriber = zmqContext.createSocket(ZMQ.SUB);

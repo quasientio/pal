@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DualPeerTest {
 
-    protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder(null);
+    protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
 
     //        protected final String className = "com.ittera.cometa.apps.PrintHelloWorld";
     protected final String className = "com.ittera.cometa.apps.App";
@@ -64,8 +64,8 @@ public class DualPeerTest {
                     DualPeer dualPeer = null;
                     try {
                         dualPeer = new DualPeer("/tests.properties");
-                    } catch (IOException ie) {
-                        ie.printStackTrace();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
                     }
                     for (int i = 0; i < requestsPerClient; i++) {
                         DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);

@@ -1222,6 +1222,7 @@ public class Concentrator {
                 bind(IncomingMessageDispatcher.class).to(KafkaDataMessageReader.class);
                 bind(OutgoingMessageDispatcher.class).to(JeromqOutMessageDispatcher.class);
                 bind(InRequestMessageDispatcher.class).to(JeromqInRequestDispatcher.class);
+                bind(PeerLogDirectory.class).to(ZkClient.class);
 
                 // fields to be injected in Concentrator are static
                 Concentrator.outCellAddress = properties.getProperty("out.cell");
@@ -1236,6 +1237,45 @@ public class Concentrator {
 
         final Injector injector = Guice.createInjector(module);
 
+        final PeerLogDirectory registry = (PeerLogDirectory) injector.getInstance(PeerLogDirectory.class);
+        final String kafkaTopicPrefix = properties.getProperty("kafkaTopic");
+        String newLogName = null;
+
+        // register self as new peer
+        try {
+            final Properties peerProperties = new Properties();
+            peerProperties.put("peerAddr", properties.getProperty("in.router"));
+            registry.registerPeer(uuid, peerProperties);
+        } catch (Exception ex) {
+            logger.error("Error registering peer", ex);
+            ex.printStackTrace();
+            System.exit(1);
+        }
+
+        // register new log
+        try {
+            final Properties logProperties = new Properties();
+            logProperties.put("bootstrap.servers", "localhost:9092");
+            newLogName = registry.addLog(kafkaTopicPrefix, logProperties);
+        } catch (Exception ex) {
+            logger.error("Error registering new log", ex);
+            ex.printStackTrace();
+            System.exit(2);
+        }
+
+        // once new log registered, we inform the message reader and writer. This must be done before starting the services.
+        IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
+        KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
+        try {
+            kafkaMessageWriter.writeToLog(newLogName);
+            incomingMessageDispatcher.readFromLog(newLogName);
+        } catch (Exception ex) {
+            logger.fatal("Could not initialize reader/writer to last log. Aborting ...", ex);
+            ex.printStackTrace();
+            System.exit(3);
+        }
+
+        // managed services
         final Set<Service> services = new HashSet<>();
         services.add((Service) injector.getInstance(IncomingMessageDispatcher.class));
         services.add((Service) injector.getInstance(OutgoingMessageDispatcher.class));
@@ -1258,7 +1298,7 @@ public class Concentrator {
                                     incomingMessageDispatcher.acceptConnections(true);
 
                                     // We must prestart threads to create the REP sockets, and this must be done after DEALER
-                                    ExtendedThreadPoolExecutor executor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
+                                    final ExtendedThreadPoolExecutor executor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
                                     executor.prestartAllCoreThreads();
                                 }
 
@@ -1266,7 +1306,7 @@ public class Concentrator {
                                     // Something failed, at this point we could log it, notify a load balancer, or take
                                     // some other action.  For now we will just exit.
                                     logger.fatal("Service manager failed. Exiting ...", service.failureCause());
-                                    System.exit(1);
+                                    System.exit(4);
                                 }
                             },
                 MoreExecutors.directExecutor());

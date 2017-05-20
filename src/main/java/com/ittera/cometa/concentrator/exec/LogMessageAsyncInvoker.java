@@ -40,7 +40,7 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
         protected Socket initialValue() {
             Socket socket = zmqContext.createSocket(ZMQ.SUB);
             logger.info("Connecting to {}", inLogAddress);
-            socket.connect(inLogAddress);
+            socket.bind(inLogAddress);
             socket.subscribe(ZMQ.SUBSCRIPTION_ALL);
             return socket;
         }

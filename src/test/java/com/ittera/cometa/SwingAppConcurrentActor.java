@@ -11,7 +11,7 @@ import java.io.IOException;
 
 public class SwingAppConcurrentActor {
 
-    protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder(null);
+    protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
 
     protected static final String swingAppClassName = "com.ittera.cometa.apps.SwingApp";
 
@@ -23,9 +23,9 @@ public class SwingAppConcurrentActor {
             this.jframeRef = jframeRef;
             try {
                 this.dualPeer = new DualPeer("/tests.properties");
-            } catch (IOException ioe) {
+            } catch (Exception ex) {
                 System.err.println("error starting dual peer");
-                ioe.printStackTrace();
+                ex.printStackTrace();
             }
         }
 

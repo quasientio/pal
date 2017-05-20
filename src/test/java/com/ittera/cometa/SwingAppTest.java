@@ -7,7 +7,7 @@ import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessag
 
 public class SwingAppTest {
 
-    protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder(null);
+    protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
 
     protected static final String className = "com.ittera.cometa.apps.SwingApp";
 
