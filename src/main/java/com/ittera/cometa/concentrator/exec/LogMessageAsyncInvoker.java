@@ -33,18 +33,6 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
 
     private final LogExecutor executor;
 
-    //TODO if we only need this one thread, then the ThreadLocal is pointless
-    // per-thread SUB socket to rcv messages from kafka publisher
-    private final ThreadLocal<Socket> kafkaThreadSocket = new ThreadLocal<Socket>() {
-        @Override
-        protected Socket initialValue() {
-            Socket socket = zmqContext.createSocket(ZMQ.SUB);
-            logger.info("Connecting to {}", inLogAddress);
-            socket.bind(inLogAddress);
-            socket.subscribe(ZMQ.SUBSCRIPTION_ALL);
-            return socket;
-        }
-    };
 
     @Inject
     LogMessageAsyncInvoker(@Named("in.log") String inLogAddress, ZContext zmqContext, LogExecutor executor) {
@@ -58,7 +46,12 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
 
         DataMessage requestMsg;
         boolean running = true;
-        Socket kafkaSocket = kafkaThreadSocket.get();
+
+        // connect SUB socket
+        Socket kafkaSocket = zmqContext.createSocket(ZMQ.SUB);
+        logger.info("Connecting to {}", inLogAddress);
+        kafkaSocket.bind(inLogAddress);
+        kafkaSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
         while (running) {
 
