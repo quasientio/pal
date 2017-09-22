@@ -1,3 +1,10 @@
 #!/bin/bash
+
 CLASSPATH=$CLASSPATH:/usr/local/lib/aspectj/lib/aspectjtools.jar
-ajc -1.7 -argfile sources.lst
+SOURCES=sources.lst
+
+if [[ $1 = '-ltw' ]]; then
+	SOURCES=sources-ltw.lst
+fi
+
+ajc -1.7 -argfile $SOURCES

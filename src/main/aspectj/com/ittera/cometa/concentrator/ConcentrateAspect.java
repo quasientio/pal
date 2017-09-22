@@ -1,14 +1,8 @@
-package com.ittera.cometa;
-
-/**
- * Created by libre on 7/31/16.
- */
+package com.ittera.cometa.concentrator;
 
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.reflect.CodeSignature;
 import org.aspectj.lang.reflect.FieldSignature;
-
-import com.ittera.cometa.concentrator.Concentrator;
 
 aspect ConcentrateAspect {
 	//if false, no output at all
@@ -133,6 +127,7 @@ aspect ConcentrateAspect {
 
 	/** ADVICE for Initializers (ie. class constructors) **/
 
+	/**
 	void around(): staticConstructors() {
 		if (verbose) {
 			print(" D --> static constructor: "+thisJoinPoint);
@@ -148,7 +143,7 @@ aspect ConcentrateAspect {
 		if (!classLoaded) {
 			proceed();
 		}
-	}
+	}*
 
 
 	/** ADVICE for Fields **/

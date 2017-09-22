@@ -1,7 +1,13 @@
 #!/bin/bash
 
 JVM_OPTS="-Xmx1024M -Xms512M -server"
+LTW_OPTS=""
+
+if [[ $1 = '-ltw' ]]; then
+  LTW_OPTS="-javaagent:$ASPECTJ_HOME/lib/aspectjweaver.jar"
+fi
+
 SYSTEM_PROPS=-Dlog4j.configurationFile=file://`pwd`/conf/log4j2.xml
 ARGS=conf/dist.properties
 
-java $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.concentrator.Concentrator $ARGS
+java $LTW_OPTS $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.concentrator.Concentrator $ARGS
