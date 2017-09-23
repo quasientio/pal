@@ -23,3 +23,4 @@ export SJK_PATH
 export PATH=$WORKING_DIR/bin:$PATH
 export KAFKA_HOME='/usr/local/lib/kafka'
 export ASPECTJ_HOME='/usr/local/lib/aspectj'
+export JLINE_HOME='/usr/share/java'
