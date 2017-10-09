@@ -224,8 +224,8 @@ public class ZkClient implements Watcher, PeerLogDirectory {
     public int getPeerCount() throws Exception {
         int count = 0;
         // find last
-        List<String> logs = zk.getChildren(PEERS_PATH, false);
-        return logs.size();
+        List<String> peers = zk.getChildren(PEERS_PATH, false);
+        return peers.size();
 
     }
 
