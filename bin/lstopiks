@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#Kafka doesn't like something in the classpath we export in setenv.sh
+unset CLASSPATH
+
+for log in `$KAFKA_HOME/bin/kafka-topics.sh --zookeeper localhost:2181 --list`; do
+	if [[ "$log" != "__consumer_offsets" ]]; then
+		echo $log 
+	fi
+done
