@@ -162,7 +162,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         consumer.assign(topicPartitionList);
         consumer.seekToBeginning(topicPartitionList);
 
-        logger.info("Initialized kafka consumer and producer");
+        logger.info("Initialized kafka consumer");
 
         this.kafkaPublisher = zmqContext.createSocket(ZMQ.PUB);
         kafkaPublisher.connect(inLogAddress);
