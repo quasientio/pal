@@ -1,9 +1,9 @@
 package com.ittera.cometa;
 
 import com.ittera.cometa.concentrator.DualPeer;
-import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
-import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
+import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 public class SwingAppTest {
 

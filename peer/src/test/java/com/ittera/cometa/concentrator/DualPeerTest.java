@@ -1,8 +1,8 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
-import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
-import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
+import com.ittera.cometa.messages.DataMessageBuilder;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;

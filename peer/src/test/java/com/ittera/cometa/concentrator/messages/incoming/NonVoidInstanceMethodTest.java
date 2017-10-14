@@ -1,10 +1,10 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.protobuf.Unwrapper;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.Unwrapper;
+import com.ittera.cometa.messages.protobuf.data.Primitives;
+import com.ittera.cometa.messages.protobuf.data.Values;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.List;
 import java.util.ArrayList;

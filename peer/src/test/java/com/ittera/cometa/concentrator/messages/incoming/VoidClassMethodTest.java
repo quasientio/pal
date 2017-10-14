@@ -1,7 +1,7 @@
 package com.ittera.cometa.concentrator.messages.incoming;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.junit.Test;
 import static org.junit.Assert.*;

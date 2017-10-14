@@ -1,10 +1,10 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.messages.protobuf.ProtobufDataMessageBuilder;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Values.ReturnValue;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
-import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Primitives;
+import com.ittera.cometa.messages.DataMessageBuilder;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
