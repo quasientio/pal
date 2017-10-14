@@ -1,7 +1,7 @@
 package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.Concentrator;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.concurrent.atomic.AtomicLong;
 

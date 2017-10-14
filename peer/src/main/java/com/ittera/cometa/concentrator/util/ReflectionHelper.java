@@ -1,6 +1,6 @@
 package com.ittera.cometa.concentrator.util;
 
-import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
+import com.ittera.cometa.messages.protobuf.data.Primitives;
 
 import org.apache.commons.lang3.ClassUtils;
 

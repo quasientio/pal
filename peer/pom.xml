@@ -3,10 +3,10 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ittera.cometa</groupId>
-    <artifactId>cometa</artifactId>
+    <artifactId>peer</artifactId>
     <packaging>jar</packaging>
     <version>1.0-SNAPSHOT</version>
-    <name>cometa</name>
+    <name>peer</name>
     <url>http://maven.apache.org</url>
 
     <!-- PROPERTIES -->
@@ -36,6 +36,11 @@
             <artifactId>junit</artifactId>
             <version>4.12</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.ittera.cometa</groupId>
+            <artifactId>peer-cli</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>

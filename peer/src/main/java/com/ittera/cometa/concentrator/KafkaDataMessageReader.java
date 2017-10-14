@@ -1,7 +1,8 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+
 import com.ittera.cometa.concentrator.messages.IncomingMessageDispatcher;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.Properties;
 import java.util.Arrays;

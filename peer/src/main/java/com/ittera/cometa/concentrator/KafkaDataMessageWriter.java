@@ -1,6 +1,6 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
