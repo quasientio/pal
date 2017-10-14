@@ -1,14 +1,14 @@
-package com.ittera.cometa.concentrator.messages.protobuf;
+package com.ittera.cometa.messages.protobuf;
 
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.Type;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Exceptions;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Fields;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Values;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.*;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Calls.*;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Values.*;
-import com.ittera.cometa.concentrator.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.protobuf.data.Exceptions;
+import com.ittera.cometa.messages.protobuf.data.Fields;
+import com.ittera.cometa.messages.protobuf.data.Values;
+import com.ittera.cometa.messages.protobuf.data.Fields.*;
+import com.ittera.cometa.messages.protobuf.data.Calls.*;
+import com.ittera.cometa.messages.protobuf.data.Values.*;
+import com.ittera.cometa.messages.DataMessageBuilder;
 
 import org.aspectj.runtime.reflect.FieldSignatureImpl;
 import org.aspectj.lang.reflect.CodeSignature;

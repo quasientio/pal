@@ -1,7 +1,7 @@
-package com.ittera.cometa.concentrator.messages;
+package com.ittera.cometa.messages;
 
-import com.ittera.cometa.concentrator.messages.protobuf.data.Fields;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Fields;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.aspectj.lang.JoinPoint.StaticPart;
 

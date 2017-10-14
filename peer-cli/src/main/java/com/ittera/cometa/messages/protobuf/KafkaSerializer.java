@@ -1,6 +1,6 @@
-package com.ittera.cometa.concentrator.messages.protobuf;
+package com.ittera.cometa.messages.protobuf;
 
-import com.ittera.cometa.concentrator.messages.protobuf.data.Wrappers;
+import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import org.apache.kafka.common.serialization.Serializer;
 
 import java.util.Map;

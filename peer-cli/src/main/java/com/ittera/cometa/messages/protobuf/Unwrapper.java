@@ -1,8 +1,8 @@
-package com.ittera.cometa.concentrator.messages.protobuf;
+package com.ittera.cometa.messages.protobuf;
 
 import java.util.Map;
 
-import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
+import com.ittera.cometa.messages.protobuf.data.Primitives;
 
 import com.google.common.collect.ImmutableMap;
 

@@ -1,9 +1,9 @@
-package com.ittera.cometa.concentrator.messages.protobuf;
+package com.ittera.cometa.messages.protobuf;
 
-import com.ittera.cometa.concentrator.messages.protobuf.data.Fields.Field;
+import com.ittera.cometa.messages.protobuf.data.Fields.Field;
+import com.ittera.cometa.messages.protobuf.data.Ctxt;
+import com.ittera.cometa.messages.protobuf.data.Primitives;
 
-import com.ittera.cometa.concentrator.messages.protobuf.data.Ctxt;
-import com.ittera.cometa.concentrator.messages.protobuf.data.Primitives;
 import org.aspectj.lang.JoinPoint.StaticPart;
 
 import java.lang.reflect.Array;

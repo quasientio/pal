@@ -6,7 +6,7 @@ import "fields.proto";
 import "exceptions.proto";
 import "values.proto";
 
-option java_package = "com.ittera.cometa.concentrator.messages.protobuf.data";
+option java_package = "com.ittera.cometa.messages.protobuf.data";
 option optimize_for = SPEED;
 
 enum Type {

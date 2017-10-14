@@ -3,7 +3,7 @@ package messages.protobuf.data;
 
 import "primitives.proto";
 
-option java_package = "com.ittera.cometa.concentrator.messages.protobuf.data";
+option java_package = "com.ittera.cometa.messages.protobuf.data";
 option java_outer_classname = "Ctxt";
 option optimize_for = SPEED;
 
