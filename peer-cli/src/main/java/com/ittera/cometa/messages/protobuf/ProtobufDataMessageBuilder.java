@@ -30,13 +30,9 @@ import org.apache.logging.log4j.LogManager;
 
 import com.google.protobuf.Message;
 
-import com.google.inject.Singleton;
-
 /**
  * Methods of this class receive aspectj objects (i.e. StaticPart) as arguments as convenience.
  */
-//TODO what's the point of this being a singleton?
-@Singleton
 public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
     protected static final Logger logger = LogManager.getLogger(ProtobufDataMessageBuilder.class);

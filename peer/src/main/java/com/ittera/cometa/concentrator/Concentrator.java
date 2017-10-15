@@ -1218,11 +1218,13 @@ public class Concentrator {
                 bind(LogMessageInvoker.class).to(LogMessageAsyncInvoker.class);
                 bind(ObjectService.class).to(BiMapObjectService.class);
                 bind(KafkaMessageWriter.class).to(KafkaDataMessageWriter.class);
-                bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class);
                 bind(IncomingMessageDispatcher.class).to(KafkaDataMessageReader.class);
                 bind(OutgoingMessageDispatcher.class).to(JeromqOutMessageDispatcher.class);
                 bind(InRequestMessageDispatcher.class).to(JeromqInRequestDispatcher.class);
                 bind(PeerLogDirectory.class).to(ZkClient.class);
+
+                // client library classes are not annotated with (@Singleton)
+                bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class).asEagerSingleton();
 
                 // fields to be injected in Concentrator are static
                 Concentrator.outCellAddress = properties.getProperty("out.cell");
