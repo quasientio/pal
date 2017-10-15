@@ -7,7 +7,6 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.google.inject.Singleton;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -127,8 +126,8 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
                 DataMessage dataMessage = null;
                 try {
                     dataMessage = DataMessage.parseFrom(reply);
-                } catch (InvalidProtocolBufferException ipbe) {
-                    logger.error("Caught protobuf exception", ipbe);
+                } catch (Exception e) {
+                    logger.error("Caught exception parsing message", e);
                 }
 
                 // got a message

@@ -9,8 +9,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 
 import org.apache.logging.log4j.LogManager;
@@ -68,8 +66,8 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
             try {
                 requestMsg = DataMessage.parseFrom(req);
                 logger.debug("message received:\n{}", requestMsg);
-            } catch (InvalidProtocolBufferException ipbe) {
-                logger.error("Caught protobuf exception", ipbe);
+            } catch (Exception e) {
+                logger.error("Caught exception parsing message", e);
             }
 
             if (requestMsg != null) {

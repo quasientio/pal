@@ -6,7 +6,6 @@ import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -64,8 +63,8 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService i
             DataMessage dataMessage = null;
             try {
                 dataMessage = DataMessage.parseFrom(reply);
-            } catch (InvalidProtocolBufferException ipbe) {
-                logger.error("Caught protobuf exception", ipbe);
+            } catch (Exception e) {
+                logger.error("Caught exception parsing message", e);
             }
 
             // got a message

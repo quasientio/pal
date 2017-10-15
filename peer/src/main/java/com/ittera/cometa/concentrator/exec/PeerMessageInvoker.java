@@ -5,8 +5,6 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -54,8 +52,8 @@ public class PeerMessageInvoker extends Thread {
             // parse req
             try {
                 requestMsg = DataMessage.parseFrom(req);
-            } catch (InvalidProtocolBufferException ipbe) {
-                logger.error("Caught protobuf exception", ipbe);
+            } catch (Exception e) {
+                logger.error("Caught exception parsing message", e);
             }
 
             logger.debug("Received req message with uuid: {}", requestMsg.getMessageUuid());
