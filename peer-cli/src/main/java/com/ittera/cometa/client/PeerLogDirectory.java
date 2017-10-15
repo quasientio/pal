@@ -1,9 +1,11 @@
-package com.ittera.cometa.concentrator;
+package com.ittera.cometa.client;
 
 import java.util.Properties;
 import java.util.UUID;
 
 public interface PeerLogDirectory {
+    void connect(String zookeeperUrl) throws Exception;
+
     void registerPeer(UUID peerUuid, Properties peerProperties) throws Exception;
 
     void unregisterPeer(UUID peerUuid) throws Exception;

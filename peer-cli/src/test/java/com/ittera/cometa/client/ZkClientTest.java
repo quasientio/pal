@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator;
+package com.ittera.cometa.client;
 
 import org.junit.AfterClass;
 import org.junit.Test;

@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator;
+package com.ittera.cometa.client;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
@@ -20,7 +20,6 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
-import java.io.IOException;
 import java.io.InputStream;
 
 import java.util.Arrays;

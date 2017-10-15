@@ -1,10 +1,9 @@
-package com.ittera.cometa.concentrator;
+package com.ittera.cometa.client;
 
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.DataMessageBuilder;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DualPeerTest {

@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator;
+package com.ittera.cometa.client;
 
 import java.util.UUID;
 import java.util.Properties;
@@ -6,10 +6,6 @@ import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import com.google.inject.name.Named;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.Watcher;
@@ -20,7 +16,6 @@ import org.apache.zookeeper.data.Stat;
 
 import org.apache.commons.lang3.StringUtils;
 
-@Singleton
 public class ZkClient implements Watcher, PeerLogDirectory {
 
     protected static final Logger logger = LogManager.getLogger(ZkClient.class);
@@ -36,15 +31,24 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
     private ZooKeeper zk;
 
-    private final String zookeeperUrl;
+    private String zookeeperUrl;
 
-    @Inject
-    public ZkClient(@Named("zookeeper.url") String zookeeperUrl) throws Exception {
-        this.zookeeperUrl = zookeeperUrl;
-        zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, this);
-        ensureRootAndSubdirsExist();
+    /**
+     * Provides a disconnected ZkClient
+     * NOTE: when using this constructor, be sure to call connect() before anything else
+     */
+    public ZkClient() {
     }
 
+    /**
+     * Provides a connected ZkClient
+     * @param zookeeperUrl
+     * @throws Exception
+     */
+    public ZkClient(String zookeeperUrl) throws Exception {
+        this.zookeeperUrl = zookeeperUrl;
+        connect(zookeeperUrl);
+    }
 
     private void ensureRootAndSubdirsExist() throws Exception {
 
@@ -67,6 +71,12 @@ public class ZkClient implements Watcher, PeerLogDirectory {
             logger.info("Created persistent logs node: {}", LOGS_PATH);
         }
 
+    }
+
+    @Override
+    public void connect(String zookeeperUrl) throws Exception {
+        zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, this);
+        ensureRootAndSubdirsExist();
     }
 
     @Override

@@ -1,5 +1,8 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.client.PeerLogDirectory;
+import com.ittera.cometa.client.ZkClient;
+
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Wrapper;
@@ -1210,6 +1213,7 @@ public class Concentrator {
                 }
 
                 Names.bindProperties(binder(), properties);
+
                 // bind implementations
                 bind(PeerThreadFactory.class).to(PeerExecThreadFactory.class);
                 bind(PeerExecutor.class).to(PeerMessageExecutor.class);
@@ -1221,10 +1225,10 @@ public class Concentrator {
                 bind(IncomingMessageDispatcher.class).to(KafkaDataMessageReader.class);
                 bind(OutgoingMessageDispatcher.class).to(JeromqOutMessageDispatcher.class);
                 bind(InRequestMessageDispatcher.class).to(JeromqInRequestDispatcher.class);
-                bind(PeerLogDirectory.class).to(ZkClient.class);
 
-                // client library classes are not annotated with (@Singleton)
+                // client library classes are not annotated with @Singleton
                 bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class).asEagerSingleton();
+                bind(PeerLogDirectory.class).to(ZkClient.class).asEagerSingleton();
 
                 // fields to be injected in Concentrator are static
                 Concentrator.outCellAddress = properties.getProperty("out.cell");
@@ -1239,7 +1243,15 @@ public class Concentrator {
 
         final Injector injector = Guice.createInjector(module);
 
-        final PeerLogDirectory registry = (PeerLogDirectory) injector.getInstance(PeerLogDirectory.class);
+        final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
+        // connect to directory
+        try {
+            registry.connect(properties.getProperty("zookeeper.url"));
+        } catch(Exception ex) {
+            logger.error("Error connecting to directory", ex);
+            ex.printStackTrace();
+            System.exit(3);
+        }
         final String kafkaTopicPrefix = properties.getProperty("kafkaTopic");
         String newLogName = null;
 
@@ -1251,7 +1263,7 @@ public class Concentrator {
         } catch (Exception ex) {
             logger.error("Error registering peer", ex);
             ex.printStackTrace();
-            System.exit(1);
+            System.exit(4);
         }
 
         // register new log
@@ -1262,7 +1274,7 @@ public class Concentrator {
         } catch (Exception ex) {
             logger.error("Error registering new log", ex);
             ex.printStackTrace();
-            System.exit(2);
+            System.exit(5);
         }
 
         // once new log registered, we inform the message reader and writer. This must be done before starting the services.
@@ -1274,7 +1286,7 @@ public class Concentrator {
         } catch (Exception ex) {
             logger.fatal("Could not initialize reader/writer to last log. Aborting ...", ex);
             ex.printStackTrace();
-            System.exit(3);
+            System.exit(6);
         }
 
         // managed services
@@ -1308,7 +1320,7 @@ public class Concentrator {
                                     // Something failed, at this point we could log it, notify a load balancer, or take
                                     // some other action.  For now we will just exit.
                                     logger.fatal("Service manager failed. Exiting ...", service.failureCause());
-                                    System.exit(4);
+                                    System.exit(7);
                                 }
                             },
                 MoreExecutors.directExecutor());
