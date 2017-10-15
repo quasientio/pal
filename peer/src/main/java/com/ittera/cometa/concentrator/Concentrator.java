@@ -1187,6 +1187,57 @@ public class Concentrator {
         return returnValue;
     }
 
+    private static void registerLogAndSelf(Properties properties, Injector injector) {
+
+        final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
+
+        // connect to directory
+        try {
+            registry.connect(properties.getProperty("zookeeper.url"));
+        } catch(Exception ex) {
+            logger.error("Error connecting to directory", ex);
+            ex.printStackTrace();
+            System.exit(3);
+        }
+
+        // register self as new peer
+        try {
+            final Properties peerProperties = new Properties();
+            peerProperties.put("peerAddr", properties.getProperty("in.router"));
+            registry.registerPeer(uuid, peerProperties);
+        } catch (Exception ex) {
+            logger.error("Error registering peer", ex);
+            ex.printStackTrace();
+            System.exit(4);
+        }
+
+        final String kafkaTopicPrefix = properties.getProperty("kafkaTopic");
+        String newLogName = null;
+
+        // register new log
+        try {
+            final Properties logProperties = new Properties();
+            logProperties.put("bootstrap.servers", "localhost:9092");
+            newLogName = registry.addLog(kafkaTopicPrefix, logProperties);
+        } catch (Exception ex) {
+            logger.error("Error registering new log", ex);
+            ex.printStackTrace();
+            System.exit(5);
+        }
+
+        // once new log registered, we inform the message reader and writer. This must be done before starting the services.
+        IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
+        KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
+        try {
+            kafkaMessageWriter.writeToLog(newLogName);
+            incomingMessageDispatcher.readFromLog(newLogName);
+        } catch (Exception ex) {
+            logger.fatal("Could not initialize reader/writer to last log. Aborting ...", ex);
+            ex.printStackTrace();
+            System.exit(6);
+        }
+    }
+
     /**
      * The Concentrator takes 1 only argument, which is the location of the configuration (.properties) file
      *
@@ -1242,52 +1293,8 @@ public class Concentrator {
         };
 
         final Injector injector = Guice.createInjector(module);
+        registerLogAndSelf(properties, injector);
 
-        final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
-        // connect to directory
-        try {
-            registry.connect(properties.getProperty("zookeeper.url"));
-        } catch(Exception ex) {
-            logger.error("Error connecting to directory", ex);
-            ex.printStackTrace();
-            System.exit(3);
-        }
-        final String kafkaTopicPrefix = properties.getProperty("kafkaTopic");
-        String newLogName = null;
-
-        // register self as new peer
-        try {
-            final Properties peerProperties = new Properties();
-            peerProperties.put("peerAddr", properties.getProperty("in.router"));
-            registry.registerPeer(uuid, peerProperties);
-        } catch (Exception ex) {
-            logger.error("Error registering peer", ex);
-            ex.printStackTrace();
-            System.exit(4);
-        }
-
-        // register new log
-        try {
-            final Properties logProperties = new Properties();
-            logProperties.put("bootstrap.servers", "localhost:9092");
-            newLogName = registry.addLog(kafkaTopicPrefix, logProperties);
-        } catch (Exception ex) {
-            logger.error("Error registering new log", ex);
-            ex.printStackTrace();
-            System.exit(5);
-        }
-
-        // once new log registered, we inform the message reader and writer. This must be done before starting the services.
-        IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
-        KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
-        try {
-            kafkaMessageWriter.writeToLog(newLogName);
-            incomingMessageDispatcher.readFromLog(newLogName);
-        } catch (Exception ex) {
-            logger.fatal("Could not initialize reader/writer to last log. Aborting ...", ex);
-            ex.printStackTrace();
-            System.exit(6);
-        }
 
         // managed services
         final Set<Service> services = new HashSet<>();
