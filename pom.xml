@@ -11,7 +11,8 @@
 
     <modules>
         <module>peer</module>
-        <module>peer-cli</module>
+        <module>peer-serdes</module>
+        <module>peer-client</module>
     </modules>
 
 </project>
