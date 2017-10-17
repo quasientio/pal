@@ -7,8 +7,6 @@ import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
-import java.io.IOException;
-
 public class SwingAppConcurrentActor {
 
     protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
