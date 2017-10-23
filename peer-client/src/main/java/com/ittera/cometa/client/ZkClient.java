@@ -144,13 +144,15 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
         // create new node
         StringBuffer sb = new StringBuffer();
-        sb.append("bootstrap.servers").append(PROPERTIES_SEP).append(bootstrapServers.trim());
+        String newLogUuid = UUID.randomUUID().toString();
+        sb.append("bootstrap.servers").append(PROPERTIES_SEP).append(bootstrapServers.trim()).append('\n');
+        sb.append("uuid").append(PROPERTIES_SEP).append(newLogUuid).append('\n');
         data = sb.toString().getBytes();
         String createdNode = zk.create(logNodePrefix, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
 
         String createdLogName = StringUtils.substringAfterLast(createdNode, "/");
-        LogInfo newLogInfo = new LogInfo(createdLogName, bootstrapServers);
-        logger.info("Created new log node: {} with bootstrapServers:{}", createdLogName, bootstrapServers);
+        LogInfo newLogInfo = getLogInfo(createdLogName);
+        logger.info("Created new log node: {} with bootstrapServers: {} and uuid: {}", createdLogName, bootstrapServers, newLogUuid);
         return newLogInfo;
     }
 
@@ -228,8 +230,10 @@ public class ZkClient implements Watcher, PeerLogDirectory {
         Stat nodeStat = getLogNodeStat(logName);
         String logNode = LOGS_PATH + "/" + logName;
 
-        String servers = getProperties(logNode, nodeStat).getProperty("bootstrap.servers");
-        return new LogInfo(logName, servers);
+        Properties props = getProperties(logNode, nodeStat);
+        String servers = props.getProperty("bootstrap.servers");
+        String uuid = props.getProperty("uuid");
+        return new LogInfo(logName, servers, uuid);
     }
 
     @Override

@@ -100,6 +100,7 @@ public class ZkClientTest {
         String createdLogName = newLogInfo.getName();
 
         assertTrue(zkCli.logExists(createdLogName));
+        assertNotNull(newLogInfo.getUuid());
         createdLogs.add(createdLogName);
 
         zkCli.close();

@@ -4,6 +4,7 @@ public class LogInfo implements Comparable {
 
   private String name;
   private String bootstrapServers;
+  private String uuid;
   private long startOffset, endOffset;
   private int logSegments;
   private int bytes;
@@ -18,8 +19,21 @@ public class LogInfo implements Comparable {
     this.bootstrapServers = bootstrapServers;
   }
 
+  public LogInfo(String name, String bootstrapServers, String uuid) {
+    this(name, bootstrapServers);
+    this.uuid = uuid;
+  }
+
   public String getName() {
     return name;
+  }
+
+  public void setUuid(String uuid) {
+    this.uuid = uuid;
+  }
+
+  public String getUuid() {
+    return uuid;
   }
 
   public void setName(String name) {
