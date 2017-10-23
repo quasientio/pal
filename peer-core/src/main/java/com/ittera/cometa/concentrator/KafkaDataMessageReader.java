@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.client.PeerLogDirectory;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -62,6 +63,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     private KafkaConsumer<String, String> consumer;
     private final Properties consumerProperties = new Properties();
     private volatile long lastOffsetRead = -1;
+    private LogInfo currentLog;
 
     // zookeeper
     @Inject
@@ -137,23 +139,18 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     @Override
     public void readFromLastLog(String logNamePrefix) throws Exception {
 
-        this.kafkaTopic = peerLogDirectory.getLastLog(logNamePrefix);
-
-        Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
-        String bootstrapServers = logProps.getProperty("bootstrap.servers");
-        consumerProperties.put("bootstrap.servers", bootstrapServers);
-        logger.info("Now reading from log: {} and bootstrapServers: {}", kafkaTopic, bootstrapServers);
+        LogInfo lastLog = peerLogDirectory.getLastLog(logNamePrefix);
+        readFromLog(lastLog.getName());
     }
 
     @Override
     public void readFromLog(String logName) throws Exception {
 
         this.kafkaTopic = logName;
-
-        Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
-        String bootstrapServers = logProps.getProperty("bootstrap.servers");
-        consumerProperties.put("bootstrap.servers", bootstrapServers);
-        logger.info("Now reading from log: {} and bootstrapServers: {}", kafkaTopic, bootstrapServers);
+        LogInfo logInfo = peerLogDirectory.getLogInfo(logName);
+        this.currentLog = logInfo;
+        consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
+        logger.info("Now reading from log: {} and bootstrapServers: {}", logInfo.getName(), logInfo.getBootstrapServers());
     }
 
     protected void openConnections() {

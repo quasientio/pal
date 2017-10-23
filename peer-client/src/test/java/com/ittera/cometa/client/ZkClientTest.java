@@ -1,5 +1,7 @@
 package com.ittera.cometa.client;
 
+import com.ittera.cometa.LogInfo;
+
 import org.junit.AfterClass;
 import org.junit.Test;
 
@@ -93,11 +95,9 @@ public class ZkClientTest {
         PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logName = "test.topic";
-        Properties logProps = new Properties();
-        logProps.put("bootstrap.servers", "localhost:9092");
 
-        String newLogPath = zkCli.addLog(logName, logProps);
-        String createdLogName = newLogPath;
+        LogInfo newLogInfo = zkCli.addLog(logName, "localhost:9092");
+        String createdLogName = newLogInfo.getName();
 
         assertTrue(zkCli.logExists(createdLogName));
         createdLogs.add(createdLogName);
@@ -111,11 +111,9 @@ public class ZkClientTest {
         PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logName = "test.topic";
-        Properties logProps = new Properties();
-        logProps.put("bootstrap.servers", "localhost:9092");
 
-        String newLogPath = zkCli.addLog(logName, logProps);
-        String createdLogName = newLogPath;
+        LogInfo newLogInfo = zkCli.addLog(logName, "localhost:9092");
+        String createdLogName = newLogInfo.getName();
 
         assertTrue(zkCli.logExists(createdLogName));
         createdLogs.add(createdLogName);
@@ -127,21 +125,44 @@ public class ZkClientTest {
     public void getLastLog_someLogsMatch_last() throws Exception {
         PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
-        // make sure no logs around
-        this.deleteLog_existingLog_logDeleted();
-
         String logNamePrefix = "test.topic";
-        Properties logProps = new Properties();
-        logProps.put("bootstrap.servers", "localhost:9092");
+
+        // make sure no logs around
+        zkCli.deleteAllLogs(logNamePrefix);
+        assertEquals(0, zkCli.getAllLogs().size());
 
         // create  a few
         String lastCreated = null;
         for (int i = 6; i > 0; i--) {
-            lastCreated = zkCli.addLog(logNamePrefix, logProps);
+            LogInfo newLogInfo = zkCli.addLog(logNamePrefix, "localhost:9092");
+            lastCreated = newLogInfo.getName();
             createdLogs.add(lastCreated);
         }
 
-        assertEquals(lastCreated, zkCli.getLastLog(logNamePrefix));
+        assertEquals(lastCreated, zkCli.getLastLog(logNamePrefix).getName());
+
+        zkCli.close();
+    }
+
+    @Test
+    public void getAllLogs_someLogsExist_all() throws Exception {
+        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
+
+        String logNamePrefix = "test.topic";
+
+        // make sure no logs around
+        zkCli.deleteAllLogs(logNamePrefix);
+        assertEquals(0, zkCli.getAllLogs().size());
+
+        // create N nodes
+        String lastCreated = null;
+        int N = 30;
+        for (int i = N; i > 0; i--) {
+            LogInfo newLogInfo = zkCli.addLog(logNamePrefix, "localhost:9092");
+            createdLogs.add(newLogInfo.getName());
+        }
+
+        assertEquals(N, zkCli.getAllLogs().size());
 
         zkCli.close();
     }
@@ -161,15 +182,13 @@ public class ZkClientTest {
         PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logName = "test.topic";
-        Properties logProps = new Properties();
-        logProps.put("bootstrap.servers", "localhost:9092");
 
-        String newLogPath = zkCli.addLog(logName, logProps);
-        String createdLogName = newLogPath;
+        LogInfo newLogInfo = zkCli.addLog(logName, "localhost:9092");
+        String createdLogName = newLogInfo.getName();
 
         assertTrue(zkCli.logExists(createdLogName));
 
-        zkCli.deleteLog(createdLogName);
+        zkCli.deleteLogNamed(createdLogName);
         assertFalse(zkCli.logExists(createdLogName));
 
         zkCli.close();
@@ -180,14 +199,12 @@ public class ZkClientTest {
         PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logNamePrefix = "test.topic";
-        Properties logProps = new Properties();
-        logProps.put("bootstrap.servers", "localhost:9092");
 
         // create  a few
         String lastCreated = null;
         for (int i = 0; i > 10; i--) {
-            lastCreated = zkCli.addLog(logNamePrefix, logProps);
-            createdLogs.add(lastCreated);
+            LogInfo newLogInfo = zkCli.addLog(logNamePrefix, "localhost:9092");
+            createdLogs.add(newLogInfo.getName());
         }
 
         assertNotEquals(0, zkCli.getLogCount(logNamePrefix));
@@ -197,19 +214,17 @@ public class ZkClientTest {
     }
 
     @Test
-    public void getLogProperties_existingLog_logProperties() throws Exception {
+    public void getLogProperties_existingLog_logInfo() throws Exception {
         PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logName = "test.topic";
-        Properties logProps = new Properties();
-        logProps.put("bootstrap.servers", "localhost:9092");
+        String bootstrapServers = "localhost:9092";
 
-        String createdLogName = zkCli.addLog(logName, logProps);
-        createdLogs.add(createdLogName);
+        LogInfo newLogInfo = zkCli.addLog(logName, bootstrapServers);
+        createdLogs.add(newLogInfo.getName());
 
-        // now load and compare
-        Properties propsLoaded = zkCli.getLogProperties(createdLogName);
-        assertEquals(logProps, propsLoaded);
+        // now compare
+        assertEquals(bootstrapServers, newLogInfo.getBootstrapServers());
     }
 
     @Test
@@ -259,7 +274,7 @@ public class ZkClientTest {
         }
 
         for (String log : createdLogs) {
-            zkCli.deleteLog(log);
+            zkCli.deleteLogNamed(log);
             logger.info("Cleaned up left over peer: {}", log);
         }
 

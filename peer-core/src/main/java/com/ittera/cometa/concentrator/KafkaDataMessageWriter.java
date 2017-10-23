@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.client.PeerLogDirectory;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -83,23 +84,16 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
     @Override
     public void writeToLastLog(String logNamePrefix) throws Exception {
 
-        this.kafkaTopic = peerLogDirectory.getLastLog(logNamePrefix);
-
-        Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
-        String bootstrapServers = logProps.getProperty("bootstrap.servers");
-        producerProperties.put("bootstrap.servers", bootstrapServers);
-        // start kafka writer
-        this.producer = new KafkaProducer<>(producerProperties);
-        logger.info("Will write to log: {} and bootstrapServers: {}", kafkaTopic, bootstrapServers);
+        LogInfo lastLog = peerLogDirectory.getLastLog(logNamePrefix);
+        writeToLog(lastLog.getName());
     }
 
     @Override
     public void writeToLog(String logName) throws Exception {
 
-        this.kafkaTopic = logName;
-
-        Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
-        String bootstrapServers = logProps.getProperty("bootstrap.servers");
+        LogInfo lastLog = peerLogDirectory.getLogInfo(logName);
+        this.kafkaTopic = lastLog.getName();
+        String bootstrapServers = lastLog.getBootstrapServers();
         producerProperties.put("bootstrap.servers", bootstrapServers);
         // start kafka writer
         this.producer = new KafkaProducer<>(producerProperties);

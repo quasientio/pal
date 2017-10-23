@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.client.PeerLogDirectory;
 import com.ittera.cometa.client.ZkClient;
 
@@ -1212,13 +1213,11 @@ public class Concentrator {
         }
 
         final String kafkaTopicPrefix = properties.getProperty("kafkaTopic");
-        String newLogName = null;
+        LogInfo newLogInfo = null;
 
         // register new log
         try {
-            final Properties logProperties = new Properties();
-            logProperties.put("bootstrap.servers", "localhost:9092");
-            newLogName = registry.addLog(kafkaTopicPrefix, logProperties);
+            newLogInfo = registry.addLog(kafkaTopicPrefix, "localhost:9092");
         } catch (Exception ex) {
             logger.error("Error registering new log", ex);
             ex.printStackTrace();
@@ -1229,8 +1228,8 @@ public class Concentrator {
         IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
         KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
         try {
-            kafkaMessageWriter.writeToLog(newLogName);
-            incomingMessageDispatcher.readFromLog(newLogName);
+            kafkaMessageWriter.writeToLog(newLogInfo.getName());
+            incomingMessageDispatcher.readFromLog(newLogInfo.getName());
         } catch (Exception ex) {
             logger.fatal("Could not initialize reader/writer to last log. Aborting ...", ex);
             ex.printStackTrace();

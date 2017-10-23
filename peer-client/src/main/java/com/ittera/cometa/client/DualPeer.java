@@ -1,5 +1,6 @@
 package com.ittera.cometa.client;
 
+import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -60,10 +61,10 @@ public class DualPeer {
     private PeerLogDirectory peerLogDirectory;
 
     public DualPeer(String propertiesFile) throws Exception {
-        this(propertiesFile, null);
+        this(propertiesFile, null, null);
     }
 
-    public DualPeer(String propertiesFile, String initialPeerAddress) throws Exception {
+    public DualPeer(String propertiesFile, String initialPeerAddress, LogInfo logInfo) throws Exception {
         currentPeerAddress = initialPeerAddress;
 
         //load properties
@@ -74,7 +75,7 @@ public class DualPeer {
 
         kafkaTopicPrefix = properties.getProperty("kafkaTopicPrefix");
 
-        // Register peer
+        // connect to log and peer directory
         peerLogDirectory = new ZkClient(properties.getProperty("zookeeper.url"));
         try {
             // register self as new peer
@@ -84,11 +85,20 @@ public class DualPeer {
             logger.error("Error registering peer", ex);
         }
 
-        // Now get last log with prefix = kafkaTopic
-        this.kafkaTopic = peerLogDirectory.getLastLog(kafkaTopicPrefix);
-        logger.info("Will read and write to log: {}", kafkaTopic);
-        Properties logProps = peerLogDirectory.getLogProperties(kafkaTopic);
-        String bootstrapServers = logProps.getProperty("bootstrap.servers");
+        // get log to connect to
+        String bootstrapServers = null;
+        if (logInfo != null) {
+            this.kafkaTopic = logInfo.getName();
+            bootstrapServers = logInfo.getBootstrapServers();
+        }
+        else {
+            // get last log with prefix = kafkaTopic
+            LogInfo lastLog = peerLogDirectory.getLastLog(kafkaTopicPrefix);
+            this.kafkaTopic = lastLog.getName();
+            bootstrapServers = lastLog.getBootstrapServers();
+        }
+
+        logger.info("Will read and write to log: {}", this.kafkaTopic);
         peerLogDirectory.close();
 
 

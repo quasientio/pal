@@ -1,7 +1,10 @@
 package com.ittera.cometa.client;
 
+import com.ittera.cometa.LogInfo;
+
 import java.util.Properties;
 import java.util.UUID;
+import java.util.Set;
 
 public interface PeerLogDirectory {
     void connect(String zookeeperUrl) throws Exception;
@@ -18,15 +21,17 @@ public interface PeerLogDirectory {
 
     int getPeerCount() throws Exception;
 
-    String addLog(String logNamePrefix, Properties logProperties) throws Exception;
+    LogInfo addLog(String logNamePrefix, String bootstrapServers) throws Exception;
 
-    String getLastLog(String logNamePrefix) throws Exception;
+    LogInfo getLastLog(String logNamePrefix) throws Exception;
 
     int getLogCount(String logNamePrefix) throws Exception;
 
-    Properties getLogProperties(String logName) throws Exception;
+    Set<LogInfo> getAllLogs() throws Exception;
 
-    void deleteLog(String logName) throws Exception;
+    LogInfo getLogInfo(String logName) throws Exception;
+
+    void deleteLogNamed(String logName) throws Exception;
 
     void deleteAllLogs(String logNamePrefix) throws Exception;
 
