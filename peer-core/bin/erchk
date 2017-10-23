@@ -1,0 +1,4 @@
+#!/bin/bash
+
+grep -ci exception logs/*.log
+grep -ci error logs/*.log
