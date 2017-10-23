@@ -183,6 +183,19 @@ public class DualPeer {
         }
     }
 
+    public DataMessage getMessageAtOffset(long seek) {
+        logger.info("Getting message @ offset #{}", seek);
+        consumer.seek(topicPartition, seek);
+
+        while (true) {
+            ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+            for (ConsumerRecord record : records) {
+                if (seek == record.offset()) {
+                    return (DataMessage) record.value();
+                }
+            }
+        }
+    }
     public long getPeerId() {
         return peerId;
     }
