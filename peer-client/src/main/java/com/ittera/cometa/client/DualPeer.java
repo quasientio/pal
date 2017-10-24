@@ -247,7 +247,7 @@ public class DualPeer {
                         // we getPeerProperties and close after since we assume we'll get here only once
                         Properties peerProps = peerLogDirectory.getPeerProperties(UUID.fromString(concentratorUuid));
                         peerLogDirectory.close();
-                        newPeerAddress = peerProps.getProperty("peerAddr");
+                        newPeerAddress = peerProps.getProperty("listenAddress");
                     } catch (Exception ex) {
                         logger.error("Couldn't get peer properties", ex);
                     }

@@ -1204,7 +1204,7 @@ public class Concentrator {
         // register self as new peer
         try {
             final Properties peerProperties = new Properties();
-            peerProperties.put("peerAddr", properties.getProperty("in.router"));
+            peerProperties.put("listenAddress", properties.getProperty("in.router"));
             registry.registerPeer(uuid, peerProperties);
         } catch (Exception ex) {
             logger.error("Error registering peer", ex);

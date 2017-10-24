@@ -45,8 +45,6 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
     };
 
-    private static String peerAddress;
-
     public ProtobufDataMessageBuilder() {
         logger.info("Initialized message builder");
     }

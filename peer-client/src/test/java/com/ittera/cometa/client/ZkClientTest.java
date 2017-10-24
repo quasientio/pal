@@ -46,7 +46,7 @@ public class ZkClientTest {
 
         UUID peerUuid = UUID.randomUUID();
         Properties peerProps = new Properties();
-        peerProps.put("peerAddr", "tcp://127.0.0.1:5671");
+        peerProps.put("listenAddress", "tcp://127.0.0.1:5671");
 
         zkCli.registerPeer(peerUuid, peerProps);
         assertTrue(zkCli.peerExists(peerUuid));
@@ -59,7 +59,7 @@ public class ZkClientTest {
 
         UUID peerUuid = UUID.randomUUID();
         Properties peerProps = new Properties();
-        peerProps.put("peerAddr", "tcp://127.0.0.1:5671");
+        peerProps.put("listenAddress", "tcp://127.0.0.1:5671");
 
         zkCli.registerPeer(peerUuid, peerProps);
 
@@ -79,7 +79,7 @@ public class ZkClientTest {
     public void unregisterPeer_existingPeer_peerDeleted() throws Exception {
 
         Properties peerProps = new Properties();
-        peerProps.put("peerAddr", "tcp://127.0.0.1:5671");
+        peerProps.put("listenAddress", "tcp://127.0.0.1:5671");
 
         // create
         UUID peerUuid = UUID.randomUUID();
@@ -216,7 +216,7 @@ public class ZkClientTest {
     public void getPeerProperties_existingPeer_peerProperties() throws Exception {
 
         Properties peerProps = new Properties();
-        peerProps.put("peerAddr", "tcp://127.0.0.1:5671");
+        peerProps.put("listenAddress", "tcp://127.0.0.1:5671");
 
         // create
         UUID peerUuid = UUID.randomUUID();
@@ -258,7 +258,7 @@ public class ZkClientTest {
         // create a peer
         UUID peerUuid = UUID.randomUUID();
         Properties peerProps = new Properties();
-        peerProps.put("peerAddr", "tcp://127.0.0.1:5671");
+        peerProps.put("listenAddress", "tcp://127.0.0.1:5671");
 
         zkCli.registerPeer(peerUuid, peerProps);
         createdPeers.add(peerUuid);
@@ -266,7 +266,7 @@ public class ZkClientTest {
         // create a second peer
         peerUuid = UUID.randomUUID();
         peerProps = new Properties();
-        peerProps.put("peerAddr", "tcp://127.0.0.1:5671");
+        peerProps.put("listenAddress", "tcp://127.0.0.1:5671");
 
         zkCli.registerPeer(peerUuid, peerProps);
         createdPeers.add(peerUuid);
