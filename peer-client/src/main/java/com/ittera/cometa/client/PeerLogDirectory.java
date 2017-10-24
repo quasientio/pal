@@ -1,6 +1,7 @@
 package com.ittera.cometa.client;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.PeerInfo;
 
 import java.util.Properties;
 import java.util.UUID;
@@ -21,6 +22,12 @@ public interface PeerLogDirectory {
 
     int getPeerCount() throws Exception;
 
+    PeerInfo getPeerInfo(UUID peerUuid) throws Exception;
+
+    PeerInfo getPeerInfo(String peerUuid) throws Exception;
+
+    Set<PeerInfo> getAllPeers() throws Exception;
+
     LogInfo addLog(String logNamePrefix, String bootstrapServers) throws Exception;
 
     LogInfo getLastLog(String logNamePrefix) throws Exception;
@@ -36,6 +43,10 @@ public interface PeerLogDirectory {
     void deleteAllLogs(String logNamePrefix) throws Exception;
 
     boolean logExists(String logName) throws Exception;
+
+    boolean isConnectionEstablished() throws Exception;
+
+    String getUrl();
 
     void close();
 }

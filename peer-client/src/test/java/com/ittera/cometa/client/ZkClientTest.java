@@ -1,8 +1,11 @@
 package com.ittera.cometa.client;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.PeerInfo;
 
 import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -26,9 +29,20 @@ public class ZkClientTest {
     private static final Set<UUID> createdPeers = new HashSet<>();
     private static final Set<String> createdLogs = new HashSet<>();
 
+    private PeerLogDirectory zkCli ;
+
+    @Before
+    public void setup() throws Exception {
+        zkCli = new ZkClient(zookeeperUrl);
+    }
+    
+    @After
+    public void cleanup() throws Exception {
+        zkCli.close();
+    }
+
     @Test
     public void registerPeer_newPeer_peerCreated() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         UUID peerUuid = UUID.randomUUID();
         Properties peerProps = new Properties();
@@ -37,14 +51,11 @@ public class ZkClientTest {
         zkCli.registerPeer(peerUuid, peerProps);
         assertTrue(zkCli.peerExists(peerUuid));
         createdPeers.add(peerUuid);
-
-        zkCli.close();
     }
 
 
     @Test
     public void peerExists_existingPeer_true() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         UUID peerUuid = UUID.randomUUID();
         Properties peerProps = new Properties();
@@ -54,23 +65,18 @@ public class ZkClientTest {
 
         assertTrue(zkCli.peerExists(peerUuid));
         createdPeers.add(peerUuid);
-
-        zkCli.close();
     }
 
     @Test
     public void peerExists_nonExistingPeer_false() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
+      
         UUID peerUuid = UUID.randomUUID();
-
+        
         assertFalse(zkCli.peerExists(peerUuid));
-        zkCli.close();
     }
 
     @Test
     public void unregisterPeer_existingPeer_peerDeleted() throws Exception {
-
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         Properties peerProps = new Properties();
         peerProps.put("peerAddr", "tcp://127.0.0.1:5671");
@@ -86,13 +92,10 @@ public class ZkClientTest {
         zkCli.unregisterPeer(peerUuid);
         assertFalse(zkCli.peerExists(peerUuid));
         createdPeers.remove(peerUuid);
-
-        zkCli.close();
     }
 
     @Test
     public void addLog_newLog_logCreated() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logName = "test.topic";
 
@@ -102,14 +105,11 @@ public class ZkClientTest {
         assertTrue(zkCli.logExists(createdLogName));
         assertNotNull(newLogInfo.getUuid());
         createdLogs.add(createdLogName);
-
-        zkCli.close();
     }
 
 
     @Test
     public void logExists_existingLog_true() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logName = "test.topic";
 
@@ -118,13 +118,10 @@ public class ZkClientTest {
 
         assertTrue(zkCli.logExists(createdLogName));
         createdLogs.add(createdLogName);
-
-        zkCli.close();
     }
 
     @Test
     public void getLastLog_someLogsMatch_last() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logNamePrefix = "test.topic";
 
@@ -141,13 +138,10 @@ public class ZkClientTest {
         }
 
         assertEquals(lastCreated, zkCli.getLastLog(logNamePrefix).getName());
-
-        zkCli.close();
     }
 
     @Test
     public void getAllLogs_someLogsExist_all() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logNamePrefix = "test.topic";
 
@@ -164,23 +158,18 @@ public class ZkClientTest {
         }
 
         assertEquals(N, zkCli.getAllLogs().size());
-
-        zkCli.close();
     }
 
 
     @Test
     public void logExists_nonExistingLog_false() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
         String logName = "test.topic";
 
         assertFalse(zkCli.logExists(logName));
-        zkCli.close();
     }
 
     @Test
     public void deleteLog_existingLog_logDeleted() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logName = "test.topic";
 
@@ -191,13 +180,10 @@ public class ZkClientTest {
 
         zkCli.deleteLogNamed(createdLogName);
         assertFalse(zkCli.logExists(createdLogName));
-
-        zkCli.close();
     }
 
     @Test
     public void deleteAllLogs_matchingLogs_allMatchingDeleted() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logNamePrefix = "test.topic";
 
@@ -211,12 +197,10 @@ public class ZkClientTest {
         assertNotEquals(0, zkCli.getLogCount(logNamePrefix));
         zkCli.deleteAllLogs(logNamePrefix);
         assertEquals(0, zkCli.getLogCount(logNamePrefix));
-        zkCli.close();
     }
 
     @Test
     public void getLogProperties_existingLog_logInfo() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         String logName = "test.topic";
         String bootstrapServers = "localhost:9092";
@@ -230,7 +214,6 @@ public class ZkClientTest {
 
     @Test
     public void getPeerProperties_existingPeer_peerProperties() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         Properties peerProps = new Properties();
         peerProps.put("peerAddr", "tcp://127.0.0.1:5671");
@@ -243,30 +226,58 @@ public class ZkClientTest {
         // now load and compare
         Properties propsLoaded = zkCli.getPeerProperties(peerUuid);
         assertEquals(peerProps, propsLoaded);
+
     }
 
-    //    @Test
-    // Disabled so it won't delete the running concentrator peer
-    public void unregisterAllPeers_somePeersExist_peersDeleted() throws Exception {
-        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
+    @Test
+    public void isConnectionEstablished_notConnected_false() throws Exception {
+
+        PeerLogDirectory detachedZkCli = new ZkClient();
+        assertFalse(detachedZkCli.isConnectionEstablished());
+    }
+
+    @Test
+    public void isConnectionEstablished_connected_true() throws Exception {
+
+        assertTrue(zkCli.isConnectionEstablished());
+    }
+
+    @Test
+    public void getAllPeers_noPeers_emptySet() throws Exception {
+
+        // first make sure we have no peers
+        deleteCreatedPeers();
+
+        Set<PeerInfo> allPeers = zkCli.getAllPeers();
+        assertTrue(allPeers.isEmpty());
+    }
+
+    @Test
+    public void getAllPeers_somePeers_nonEmptySet() throws Exception {
+
+        // create a peer
+        UUID peerUuid = UUID.randomUUID();
         Properties peerProps = new Properties();
+        peerProps.put("peerAddr", "tcp://127.0.0.1:5671");
 
-        // create ten peers
-        for (int i = 0; i < 10; i++) {
-            // create
-            UUID peerUuid = UUID.randomUUID();
-            createdPeers.add(peerUuid);
-            zkCli.registerPeer(peerUuid, peerProps);
-        }
+        zkCli.registerPeer(peerUuid, peerProps);
+        createdPeers.add(peerUuid);
 
-        assertNotEquals(0, zkCli.getPeerCount());
-        zkCli.unregisterAllPeers();
-        assertEquals(0, zkCli.getPeerCount());
+        // create a second peer
+        peerUuid = UUID.randomUUID();
+        peerProps = new Properties();
+        peerProps.put("peerAddr", "tcp://127.0.0.1:5671");
+
+        zkCli.registerPeer(peerUuid, peerProps);
+        createdPeers.add(peerUuid);
+
+        // now check
+        Set<PeerInfo> allPeers = zkCli.getAllPeers();
+        assertEquals(2, allPeers.size());
+
     }
 
-
-    @AfterClass
-    public static void deleteCreatedPeersAndLogs() throws Exception {
+    private static void deleteCreatedPeers() throws Exception {
         PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
 
         for (UUID peer : createdPeers) {
@@ -274,11 +285,24 @@ public class ZkClientTest {
             logger.info("Cleaned up left over peer: {}", peer);
         }
 
+        zkCli.close();
+    }
+
+    private static void deleteCreatedLogs() throws Exception {
+        PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
+
         for (String log : createdLogs) {
             zkCli.deleteLogNamed(log);
-            logger.info("Cleaned up left over peer: {}", log);
+            logger.info("Cleaned up left over log: {}", log);
         }
 
         zkCli.close();
+    }
+
+    @AfterClass
+    public static void deleteCreatedPeersAndLogs() throws Exception {
+
+        deleteCreatedPeers();
+        deleteCreatedLogs();
     }
 }

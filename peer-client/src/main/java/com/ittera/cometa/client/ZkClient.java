@@ -1,6 +1,7 @@
 package com.ittera.cometa.client;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.PeerInfo;
 
 import java.util.Set;
 import java.util.TreeSet;
@@ -80,6 +81,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
     @Override
     public void connect(String zookeeperUrl) throws Exception {
         zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, this);
+        logger.info("Connected to zookeeper at {}", zookeeperUrl);
         ensureRootAndSubdirsExist();
     }
 
@@ -127,7 +129,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
             deleted++;
         }
 
-        logger.debug("deleted {} peers", deleted);
+        logger.debug("Deleted {} peers", deleted);
     }
 
     @Override
@@ -159,7 +161,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
     @Override
     public LogInfo getLastLog(String logNamePrefix) throws Exception {
         if (!zk.getState().equals(ZooKeeper.States.CONNECTED)) {
-            zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, this);
+          connect(zookeeperUrl);
         }
 
         // find last
@@ -180,7 +182,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
             }
         }
 
-        logger.debug("with prefix '{}' got log = {}", logNamePrefix, lastLog);
+        logger.debug("With prefix '{}' got log = {}", logNamePrefix, lastLog);
 
         return getLogInfo(lastLog);
     }
@@ -210,13 +212,19 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 
     private Properties getProperties(String node, Stat nodeStat) throws Exception {
-        String nodeData = new String(zk.getData(node, false, nodeStat));
-        String[] lines = nodeData.split("\n");
+
+        byte[]  data = zk.getData(node, false, nodeStat);
+
         Properties properties = new Properties();
-        for (int i = 0; i < lines.length; i++) {
-            String key = StringUtils.substringBefore(lines[i], PROPERTIES_SEP);
-            String value = StringUtils.substringAfter(lines[i], PROPERTIES_SEP);
-            properties.put(key, value);
+
+        if (data != null) {
+            String nodeData = new String(zk.getData(node, false, nodeStat));
+            String[] lines = nodeData.split("\n");
+            for (int i = 0; i < lines.length; i++) {
+                String key = StringUtils.substringBefore(lines[i], PROPERTIES_SEP);
+                String value = StringUtils.substringAfter(lines[i], PROPERTIES_SEP);
+                properties.put(key, value);
+            }
         }
 
         return properties;
@@ -225,22 +233,29 @@ public class ZkClient implements Watcher, PeerLogDirectory {
     @Override
     public LogInfo getLogInfo(String logName) throws Exception {
         if (!zk.getState().equals(ZooKeeper.States.CONNECTED)) {
-            zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, this);
+          connect(zookeeperUrl);
         }
+
         Stat nodeStat = getLogNodeStat(logName);
         String logNode = LOGS_PATH + "/" + logName;
 
         Properties props = getProperties(logNode, nodeStat);
         String servers = props.getProperty("bootstrap.servers");
         String uuid = props.getProperty("uuid");
-        return new LogInfo(logName, servers, uuid);
+
+        // fill stat info
+        LogInfo logInfo = new LogInfo(logName, servers, uuid);
+        logInfo.setZk_ctime(nodeStat.getCtime());
+
+        return logInfo;
     }
 
     @Override
     public Properties getPeerProperties(UUID peerUuid) throws Exception {
         if (!zk.getState().equals(ZooKeeper.States.CONNECTED)) {
-            zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, this);
+          connect(zookeeperUrl);
         }
+
         Stat nodeStat = getPeerNodeStat(peerUuid);
         String peerNode = PEERS_PATH + "/" + peerUuid;
 
@@ -254,6 +269,46 @@ public class ZkClient implements Watcher, PeerLogDirectory {
         List<String> peers = zk.getChildren(PEERS_PATH, false);
         return peers.size();
 
+    }
+
+    @Override
+    public PeerInfo getPeerInfo(UUID peerUuid) throws Exception {
+        if (!zk.getState().equals(ZooKeeper.States.CONNECTED)) {
+          connect(zookeeperUrl);
+        }
+
+        PeerInfo peerInfo =  new PeerInfo(peerUuid);
+
+        Stat nodeStat = getPeerNodeStat(peerUuid);
+        String peerNode = PEERS_PATH + "/" + peerUuid;
+
+        Properties props = getProperties(peerNode, nodeStat);
+        String listenAddress = props.getProperty("listenAddress");
+        if (listenAddress != null) {
+            peerInfo.setListenAddress(listenAddress);
+        }
+
+        // fill stat info
+        peerInfo.setZk_ctime(nodeStat.getCtime());
+
+        return peerInfo;
+    }
+
+    @Override
+    public PeerInfo getPeerInfo(String peerUuid) throws Exception {
+        return getPeerInfo(UUID.fromString(peerUuid));
+    }
+
+    @Override
+    public Set<PeerInfo> getAllPeers() throws Exception {
+
+        Set<PeerInfo> allPeers = new TreeSet();
+        List<String> peers = zk.getChildren(PEERS_PATH, false);
+        for(String uuid: peers) {
+          allPeers.add(getPeerInfo(uuid));
+        }
+
+        return allPeers;
     }
 
     @Override
@@ -279,7 +334,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
             }
         }
 
-        logger.debug("deleted {} logs with prefix: {}", deleted, logNamePrefix);
+        logger.debug("Deleted {} logs with prefix: {}", deleted, logNamePrefix);
 
     }
 
@@ -299,17 +354,27 @@ public class ZkClient implements Watcher, PeerLogDirectory {
     }
 
     @Override
+    public boolean isConnectionEstablished() throws Exception {
+        return zk != null && zk.getState().equals(ZooKeeper.States.CONNECTED);
+    }
+
+    @Override
+    public String getUrl() {
+        return zookeeperUrl;
+    }
+
+    @Override
     public void process(WatchedEvent watchedEvent) {
-        logger.debug("Got event: {}", watchedEvent);
+        logger.debug("Ignoring received event: {}", watchedEvent);
     }
 
     @Override
     public void close() {
+        logger.info("Closing zookeeper connection to {}", zookeeperUrl);
         try {
             zk.close();
-            logger.info("Closed zookeeper connection");
         } catch (InterruptedException ex) {
-            logger.error("Error while closing down zookeeper client", ex);
+            logger.error("Error while closing down zookeeper connection", ex);
         }
     }
 }
