@@ -1,5 +1,7 @@
 package com.ittera.cometa;
 
+import com.ittera.cometa.util.ByteSizeConverter;
+
 public class LogInfo implements Comparable {
 
   // name of node in zk
@@ -15,7 +17,7 @@ public class LogInfo implements Comparable {
   // to be filled from (kafka) mbeans via jmx
   private long startOffset, endOffset;
   private int logSegments;
-  private int bytes;
+  private long bytes;
   private boolean exists;
 
 
@@ -64,6 +66,10 @@ public class LogInfo implements Comparable {
 
   public long getZk_ctime() {
     return zk_ctime;
+  }
+
+  public String getHumanReadableByteSize() {
+    return ByteSizeConverter.humanReadableByteCount(bytes, false);
   }
 
   // log names are unique in zookeeper, so no need to compare anything else if sorting by name
