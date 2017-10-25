@@ -28,6 +28,8 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -186,6 +188,7 @@ public class DualPeer {
     }
 
     public DataMessage getMessageAtOffset(long seek) {
+
         logger.info("Getting message @ offset #{}", seek);
         consumer.seek(topicPartition, seek);
 
@@ -198,6 +201,28 @@ public class DualPeer {
             }
         }
     }
+
+    public List<ConsumerRecord> getMessages(long startOffset, long numMessages) {
+
+        logger.info("Getting {} messages starting @ offset #{}", numMessages, startOffset);
+        consumer.seek(topicPartition, startOffset);
+        List<ConsumerRecord> messages = new ArrayList();
+        boolean gotAllMessages = false;
+
+        while (!gotAllMessages) {
+            ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+            logger.debug("got {} records after poll", records.count());
+            for (ConsumerRecord record : records) {
+                if (record.offset() < startOffset + numMessages) {
+                    messages.add(record);
+                    gotAllMessages = messages.size() == numMessages;
+                }
+            }
+        }
+
+        return messages;
+    }
+
     public long getPeerId() {
         return peerId;
     }
