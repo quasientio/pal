@@ -11,8 +11,8 @@ import com.google.inject.name.Named;
 
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -21,7 +21,7 @@ import org.zeromq.ZMQ.Socket;
 @Singleton
 public class LogMessageAsyncInvoker extends AbstractExecutionThreadService implements LogMessageInvoker {
 
-    protected static final Logger logger = LogManager.getLogger(LogMessageAsyncInvoker.class);
+    protected static final Logger logger = LoggerFactory.getLogger(LogMessageAsyncInvoker.class);
 
     protected AtomicLong requestsDispatched = new AtomicLong(0);
 

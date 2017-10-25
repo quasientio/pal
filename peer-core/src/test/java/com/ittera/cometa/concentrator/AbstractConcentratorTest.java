@@ -7,8 +7,8 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.DataMessageBuilder;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 
 public abstract class AbstractConcentratorTest {
 
-    protected final static Logger logger = LogManager.getLogger("tests");
+    protected final static Logger logger = LoggerFactory.getLogger("tests");
 
     protected final static UUID clientId = UUID.randomUUID();
 

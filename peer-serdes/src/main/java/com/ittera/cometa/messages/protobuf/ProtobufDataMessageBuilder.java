@@ -25,8 +25,8 @@ import java.lang.reflect.Field;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.Message;
 
@@ -35,7 +35,7 @@ import com.google.protobuf.Message;
  */
 public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
-    protected static final Logger logger = LogManager.getLogger(ProtobufDataMessageBuilder.class);
+    protected static final Logger logger = LoggerFactory.getLogger(ProtobufDataMessageBuilder.class);
 
     private static final ThreadLocal<AtomicLong> threadSequence = new ThreadLocal<AtomicLong>() {
         @Override

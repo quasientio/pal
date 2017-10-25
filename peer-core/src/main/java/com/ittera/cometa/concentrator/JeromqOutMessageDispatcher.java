@@ -7,8 +7,8 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -20,7 +20,7 @@ import org.zeromq.ZMQ.Socket;
 @Singleton
 public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService implements OutgoingMessageDispatcher {
 
-    protected static final Logger logger = LogManager.getLogger(JeromqOutMessageDispatcher.class);
+    protected static final Logger logger = LoggerFactory.getLogger(JeromqOutMessageDispatcher.class);
 
     // counters
     private final AtomicLong totalReadBlockingQueueNanos = new AtomicLong(0);

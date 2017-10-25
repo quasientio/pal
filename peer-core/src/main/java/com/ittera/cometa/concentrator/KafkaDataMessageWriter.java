@@ -13,8 +13,8 @@ import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,7 +30,7 @@ import org.zeromq.ZMQ.Socket;
 @Singleton
 public class KafkaDataMessageWriter extends AbstractExecutionThreadService implements KafkaMessageWriter, Callback {
 
-    protected static final Logger logger = LogManager.getLogger(KafkaDataMessageWriter.class);
+    protected static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageWriter.class);
 
     // kafka stuff
     private KafkaProducer producer;

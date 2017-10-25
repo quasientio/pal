@@ -1,7 +1,7 @@
 package com.ittera.cometa.concentrator.exec;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutionException;
 
 public class ExtendedThreadPoolExecutor extends ThreadPoolExecutor {
 
-    protected static final Logger logger = LogManager.getLogger(ExtendedThreadPoolExecutor.class);
+    protected static final Logger logger = LoggerFactory.getLogger(ExtendedThreadPoolExecutor.class);
 
     public ExtendedThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveSeconds,
                                       TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory) {

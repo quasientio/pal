@@ -1,7 +1,7 @@
 package com.ittera.cometa.concentrator.exec;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -14,7 +14,7 @@ import org.zeromq.ZContext;
 @Singleton
 public class PeerExecThreadFactory implements PeerThreadFactory {
 
-    protected static final Logger logger = LogManager.getLogger(PeerExecThreadFactory.class);
+    protected static final Logger logger = LoggerFactory.getLogger(PeerExecThreadFactory.class);
 
     private final ThreadGroup threadGroup;
     private final AtomicInteger threadCounter = new AtomicInteger(0);
@@ -41,13 +41,11 @@ public class PeerExecThreadFactory implements PeerThreadFactory {
 
     @Override
     public Thread newThread(Runnable r) {
-        logger.traceEntry();
         final String newThreadName = THREAD_BASE_NAME + ' ' + threadCounter.getAndIncrement();
         final Thread thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext, dealerAddress);
         thread.setPriority(THREAD_PRIORITY);
         thread.setDaemon(THREAD_IS_DAEMON);
         logger.debug("Created new peer executor thread with name: '{}' and id: {}", newThreadName, thread.getId());
-        logger.traceExit();
         return thread;
     }
 

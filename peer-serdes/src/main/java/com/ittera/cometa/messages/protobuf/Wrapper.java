@@ -10,8 +10,8 @@ import java.lang.reflect.Array;
 
 import org.apache.commons.lang3.ClassUtils;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * WRAPPING METHODS:
@@ -20,7 +20,7 @@ import org.apache.logging.log4j.LogManager;
  */
 public final class Wrapper {
 
-    private static final Logger logger = LogManager.getLogger(Wrapper.class);
+    private static final Logger logger = LoggerFactory.getLogger(Wrapper.class);
 
     private Wrapper() {
         //avoid instantiation
@@ -34,7 +34,7 @@ public final class Wrapper {
      * @return
      */
     private static Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, Class clazz, String objectKey) {
-        logger.traceEntry("with object: {}, class: {}, objectKey: {}", object, clazz, objectKey);
+        logger.trace("in with object: {}, class: {}, objectKey: {}", object, clazz, objectKey);
 
         if (object != null && objectKey != null) {
             throw new IllegalArgumentException("Both object and objectKey can't have values");
@@ -80,7 +80,7 @@ public final class Wrapper {
         }
 
         final Primitives.Object builtValue = builder.build();
-        logger.traceExit("with wrappedValue: {}", builtValue);
+        logger.trace("out with wrappedValue: {}", builtValue);
         return builtValue;
     }
 

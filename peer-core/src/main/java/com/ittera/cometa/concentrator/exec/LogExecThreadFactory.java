@@ -2,8 +2,8 @@ package com.ittera.cometa.concentrator.exec;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Singleton
 public class LogExecThreadFactory implements LogThreadFactory {
 
-    protected static final Logger logger = LogManager.getLogger(LogExecThreadFactory.class);
+    protected static final Logger logger = LoggerFactory.getLogger(LogExecThreadFactory.class);
 
     private final ThreadGroup threadGroup;
     private final AtomicInteger threadCounter = new AtomicInteger(0);
@@ -36,13 +36,11 @@ public class LogExecThreadFactory implements LogThreadFactory {
 
     @Override
     public Thread newThread(Runnable r) {
-        logger.traceEntry();
         final String newThreadName = THREAD_BASE_NAME + ' ' + threadCounter.getAndIncrement();
         final Thread thread = new Thread(threadGroup, r, newThreadName);
         thread.setPriority(THREAD_PRIORITY);
         thread.setDaemon(THREAD_IS_DAEMON);
         logger.debug("Created new log executor thread with name: '{}' and id: {}", newThreadName, thread.getId());
-        logger.traceExit();
         return thread;
     }
 

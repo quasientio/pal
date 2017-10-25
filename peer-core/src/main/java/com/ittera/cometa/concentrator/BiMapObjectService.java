@@ -4,8 +4,8 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -36,7 +36,7 @@ import com.google.common.util.concurrent.AbstractIdleService;
 @Singleton
 public final class BiMapObjectService extends AbstractIdleService implements ObjectService {
 
-    private static final Logger logger = LogManager.getLogger(BiMapObjectService.class);
+    private static final Logger logger = LoggerFactory.getLogger(BiMapObjectService.class);
 
     //A map for all objects created by the Concentrator.
     private static final BiMap<String, BiMapObjectService.IdentifiableObject> objectBiMap = HashBiMap.create();
@@ -94,7 +94,7 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
     }
 
     public String storeObject(Object object) {
-        logger.traceEntry("with object: {}", object);
+        logger.trace("in w/ object: {}", object);
         if (!isRunning()) {
             throw new IllegalStateException("Service not running");
         }
@@ -106,18 +106,18 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
         synchronized (syncdObjectMap) {
             if (syncdObjectMap.containsValue(wrappedObject)) {
                 objectRef = syncdObjectMap.inverse().get(wrappedObject);
-                logger.traceExit("with (pre-existing) objectRef: {}", objectRef);
+                logger.trace("out w/ (pre-existing) objectRef: {}", objectRef);
                 return objectRef;
             } else {
                 syncdObjectMap.put(objectRef, wrappedObject);
-                logger.traceExit("with objectRef: {}", objectRef);
+                logger.trace("out w/ objectRef: {}", objectRef);
                 return objectRef;
             }
         }
     }
 
     public Object lookupObject(String objectRef) {
-        logger.traceEntry("with objectRef: {}", objectRef);
+        logger.trace("in w/ objectRef: {}", objectRef);
         if (!isRunning()) {
             throw new IllegalStateException("Service not running");
         }
@@ -129,12 +129,12 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
         if (identifiableObject != null) {
             object = identifiableObject.object;
         }
-        logger.traceExit("with object: {}", object);
+        logger.trace("out w/ object: {}", object);
         return object;
     }
 
     public String lookupObjectRef(Object object) {
-        logger.traceEntry("with object: {}", object);
+        logger.trace("in w/ object: {}", object);
         if (!isRunning()) {
             throw new IllegalStateException("Service not running");
         }
@@ -142,7 +142,7 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
             throw new NullPointerException("object cannot be null");
         }
         final String objectRef = syncdObjectMap.inverse().get(new IdentifiableObject(object));
-        logger.traceExit("with objectRef: {}", objectRef);
+        logger.trace("out w/ objectRef: {}", objectRef);
         return objectRef;
     }
 
@@ -168,7 +168,7 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
     }
 
     public boolean containsValue(Object object) {
-        logger.traceEntry("with object: {}", object);
+        logger.trace("in w/ object: {}", object);
         if (!isRunning()) {
             throw new IllegalStateException("Service not running");
         }
@@ -176,12 +176,12 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
             throw new NullPointerException("object cannot be null");
         }
         final boolean containsValue = syncdObjectMap.containsValue(new IdentifiableObject(object));
-        logger.traceExit("with containsValue: {}", containsValue);
+        logger.trace("out w/ containsValue: {}", containsValue);
         return containsValue;
     }
 
     public boolean containsObjectRef(String objectRef) {
-        logger.traceEntry("with objectRef: {}", objectRef);
+        logger.trace("in w/ objectRef: {}", objectRef);
         if (!isRunning()) {
             throw new IllegalStateException("Service not running");
         }
@@ -189,12 +189,12 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
             throw new NullPointerException("objectRef cannot be null");
         }
         final boolean containsObjectRef = syncdObjectMap.containsKey(objectRef);
-        logger.traceExit("with containsObjectRef: {}", containsObjectRef);
+        logger.trace("out w/ containsObjectRef: {}", containsObjectRef);
         return containsObjectRef;
     }
 
     public Object remove(String objectRef) {
-        logger.traceEntry("with objectRef: {}", objectRef);
+        logger.trace("in w/ objectRef: {}", objectRef);
         if (!isRunning()) {
             throw new IllegalStateException("Service not running");
         }
@@ -206,7 +206,7 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
         if (identifiableObject != null) {
             object = identifiableObject.object;
         }
-        logger.traceExit("with object: {}", object);
+        logger.trace("out w/ object: {}", object);
         return object;
     }
 }

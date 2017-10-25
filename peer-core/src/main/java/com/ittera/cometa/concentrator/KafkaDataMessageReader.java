@@ -19,8 +19,8 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import com.google.inject.name.Named;
 import com.google.inject.Inject;
@@ -39,7 +39,7 @@ import org.zeromq.ZMQ.Socket;
 @Singleton
 public class KafkaDataMessageReader extends AbstractExecutionThreadService implements IncomingMessageDispatcher {
 
-    protected static final Logger logger = LogManager.getLogger(KafkaDataMessageReader.class);
+    protected static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageReader.class);
 
     private volatile boolean acceptingConnections = false;
     private volatile boolean connectionsOpen = false;
@@ -270,7 +270,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     private Long nextOffset() {
         if (logger.isTraceEnabled()) {
             final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
-            logger.traceEntry("with lastOffsetRead = {}, and queue: {}", lastOffsetRead, queueStr);
+            logger.trace("in w/ lastOffsetRead = {}, and queue: {}", lastOffsetRead, queueStr);
         }
 
         // initial candidate == last read + 1
@@ -293,7 +293,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 
         if (logger.isTraceEnabled()) {
             final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
-            logger.trace("returning nextToRead = {} with lastOffsetRead = {}, and final queue: {}",
+            logger.trace("out w/ nextToRead = {} with lastOffsetRead = {}, and final queue: {}",
                     nextToRead, lastOffsetRead, queueStr);
         }
         return nextToRead;

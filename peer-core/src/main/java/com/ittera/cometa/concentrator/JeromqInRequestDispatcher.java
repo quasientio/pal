@@ -7,8 +7,8 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -17,7 +17,7 @@ import org.zeromq.ZMQ.Socket;
 @Singleton
 public class JeromqInRequestDispatcher extends AbstractExecutionThreadService implements InRequestMessageDispatcher {
 
-    protected static final Logger logger = LogManager.getLogger(JeromqInRequestDispatcher.class);
+    protected static final Logger logger = LoggerFactory.getLogger(JeromqInRequestDispatcher.class);
 
     // counters
     private final AtomicInteger messagesRcvd = new AtomicInteger(0);

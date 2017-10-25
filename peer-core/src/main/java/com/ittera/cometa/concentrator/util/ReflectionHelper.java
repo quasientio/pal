@@ -4,12 +4,11 @@ import com.ittera.cometa.messages.protobuf.data.Primitives;
 
 import org.apache.commons.lang3.ClassUtils;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ReflectionHelper {
 
-    protected static final Logger logger = LogManager.getLogger(ReflectionHelper.class);
+    protected static final Logger logger = LoggerFactory.getLogger(ReflectionHelper.class);
 
     private static Map<String,Method> matchedMethodsCache = new ConcurrentHashMap<>();
     private ReflectionHelper() {
@@ -37,7 +36,7 @@ public final class ReflectionHelper {
      * @return
      */
     public static Method getMethodToInvoke(Class clazz, Object[] parameters, List<Primitives.Object> parameterTypeNames, String methodName) {
-        logger.traceEntry("w/ class:{} and method:{}", clazz.getName(), methodName);
+        logger.trace("in w/ class:{} and method:{}", clazz.getName(), methodName);
 
         if (parameters.length != parameterTypeNames.size()) {
             throw new IllegalArgumentException(String.format("Parameters length=%s, different from parameter types length=%s",

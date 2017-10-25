@@ -7,6 +7,7 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
 
 import org.apache.commons.lang3.StringUtils;
+
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -14,8 +15,9 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -34,7 +36,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 public class DualPeer {
 
     // static
-    protected final static Logger logger = LogManager.getLogger(DualPeer.class);
+    protected final static Logger logger = LoggerFactory.getLogger(DualPeer.class);
     private static AtomicLong peerIdSeq = new AtomicLong(0);
 
     private final long peerId = peerIdSeq.incrementAndGet();

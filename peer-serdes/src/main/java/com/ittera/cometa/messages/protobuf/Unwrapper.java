@@ -8,12 +8,12 @@ import com.google.common.collect.ImmutableMap;
 
 import org.apache.commons.lang3.ClassUtils;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Unwrapper {
 
-    protected static final Logger logger = LogManager.getLogger(Unwrapper.class);
+    protected static final Logger logger = LoggerFactory.getLogger(Unwrapper.class);
 
     private static final Map<String, Class> shortPrimitiveNameToClass = ImmutableMap.<String, Class>builder()
             .put("byte", byte.class)
@@ -39,7 +39,7 @@ public class Unwrapper {
      * @return
      */
     public static Object unwrapObject(Primitives.Object object, Class clazz) {
-        logger.traceEntry("with object:\n{}, clazz:\n{}", object, clazz);
+        logger.trace("in with object:\n{}, clazz:\n{}", object, clazz);
 
         if (object.getIsNull()) {
             return null;

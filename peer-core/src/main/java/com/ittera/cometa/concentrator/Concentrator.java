@@ -41,8 +41,8 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import com.google.inject.name.Names;
 import com.google.inject.*;
@@ -57,7 +57,7 @@ import org.zeromq.ZContext;
 
 public class Concentrator {
 
-    protected static final Logger logger = LogManager.getLogger(Concentrator.class);
+    protected static final Logger logger = LoggerFactory.getLogger(Concentrator.class);
 
     public static final UUID uuid = UUID.randomUUID();
 
@@ -120,7 +120,7 @@ public class Concentrator {
 
     // <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
     public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
-        logger.traceEntry("with staticPart: {}, sender: {}", staticPart.getSignature(), sender);
+        logger.trace("in w/ staticPart: {}, sender: {}", staticPart.getSignature(), sender);
 
         /** 1. Wrap message **/
         final DataMessage msg = dataMessageBuilder.buildClassInitializer(uuid, staticPart, sender);
@@ -158,7 +158,7 @@ public class Concentrator {
 
         //Since class initialization is not working, we will return false if we want to aspectj to proceed(), indicating class isn't initialized
         boolean returnValue = false;
-        logger.traceExit("with return bool: {}", returnValue);
+        logger.trace("out w/ return bool: {}", returnValue);
         return returnValue;
     }
 
@@ -167,7 +167,7 @@ public class Concentrator {
      * @throws Throwable
      */
     static DataMessage incomingConstructor(String messageUuid, ConstructorCall constructorCall, String followingUuid) {
-        logger.traceEntry("with constructorCall: {}, messageUuid: {}, following uuid: {}", constructorCall, messageUuid, followingUuid);
+        logger.trace("in w/ constructorCall: {}, messageUuid: {}, following uuid: {}", constructorCall, messageUuid, followingUuid);
 
         /** 1. Unwrap message and load constructor **/
         Class clazz = null;
@@ -235,12 +235,12 @@ public class Concentrator {
         /** 4. Send object/exception **/
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
-        logger.traceExit();
+        logger.trace("out w/ {}", rcvdMsg);
         return rcvdMsg;
     }
 
     public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-        logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
+        logger.trace("in w/ staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
 
         final ConstructorSignature constructorSignature = (ConstructorSignature) staticPart.getSignature();
 
@@ -295,7 +295,7 @@ public class Concentrator {
             }
         }
 
-        logger.traceExit("with new object: {}", newObject);
+        logger.trace("out w/ new object: {}", newObject);
         return newObject;
     }
     // </editor-fold>
@@ -303,7 +303,7 @@ public class Concentrator {
     // <editor-fold defaultstate="collapsed" desc="METHOD CALLS">
 
     public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-        logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
+        logger.trace("in w/ staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
 
         final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -350,12 +350,12 @@ public class Concentrator {
             }
         }
 
-        logger.traceExit();
+        logger.trace("out");
         return;
     }
 
     public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args) throws Throwable {
-        logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
+        logger.trace("in w/ staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
 
         final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -411,7 +411,7 @@ public class Concentrator {
             }
         }
 
-        logger.traceExit("with return value: {}", returnValue);
+        logger.trace("out w/ return value: {}", returnValue);
         return returnValue;
     }
 
@@ -421,7 +421,7 @@ public class Concentrator {
      * @param instanceMethodCall
      */
     static DataMessage incomingInstanceMethod(String messageUuid, InstanceMethodCall instanceMethodCall, String followingUuid) {
-        logger.traceEntry("with instanceMethodCall: {}, messageUuid: {}, following uuid: {}", instanceMethodCall, messageUuid, followingUuid);
+        logger.trace("in w/ instanceMethodCall: {}, messageUuid: {}, following uuid: {}", instanceMethodCall, messageUuid, followingUuid);
 
         /** 1. Unwrap message and load class **/
         Class clazz = null;
@@ -511,12 +511,12 @@ public class Concentrator {
         /** 4. Send object/exception **/
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
-        logger.traceExit();
+        logger.trace("out w/ {}", rcvdMsg);
         return rcvdMsg;
     }
 
     public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-        logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
+        logger.trace("in w/ staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
 
         final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -561,12 +561,12 @@ public class Concentrator {
             }
         }
 
-        logger.traceExit();
+        logger.trace("out");
         return;
     }
 
     public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-        logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
+        logger.trace("in w/ staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
 
         final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 
@@ -622,7 +622,7 @@ public class Concentrator {
             }
         }
 
-        logger.traceExit("with return value: {}", returnValue);
+        logger.trace("out w/ return value: {}", returnValue);
         return returnValue;
     }
 
@@ -633,7 +633,7 @@ public class Concentrator {
      * @param classMethodCall
      */
     static DataMessage incomingClassMethod(String messageUuid, ClassMethodCall classMethodCall, String followingUuid) {
-        logger.traceEntry("with classMethodCall: {}, messageUuid: {}, following uuid: {}", classMethodCall, messageUuid, followingUuid);
+        logger.trace("in w/ classMethodCall: {}, messageUuid: {}, following uuid: {}", classMethodCall, messageUuid, followingUuid);
 
         /** 1. Unwrap message and load class **/
         Class clazz = null;
@@ -712,7 +712,7 @@ public class Concentrator {
         /** 4. Send object/exception **/
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
-        logger.traceExit();
+        logger.trace("out w/ {}", rcvdMsg);
         return rcvdMsg;
     }
 
@@ -722,7 +722,7 @@ public class Concentrator {
     // <editor-fold defaultstate="collapsed" desc="FIELD OPERATIONS">
 
     public static DataMessage incomingGetStatic(String messageUuid, Fields.StaticFieldGet staticFieldGet, String followingUuid) {
-        logger.traceEntry("with staticFieldGet: {}, messageUuid: {}, following uuid: {}", staticFieldGet, messageUuid, followingUuid);
+        logger.trace("in w/ staticFieldGet: {}, messageUuid: {}, following uuid: {}", staticFieldGet, messageUuid, followingUuid);
 
         /** 1. Get Object **/
         Class clazz = null;
@@ -775,13 +775,13 @@ public class Concentrator {
         /** 4. Send object/exception **/
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
-        logger.traceExit();
+        logger.trace("out w/ {}", rcvdMsg);
         return rcvdMsg;
 
     }
 
     public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
-        logger.traceEntry("with staticPart: {}, sender: {}", staticPart.getSignature(), sender);
+        logger.trace("in w/ staticPart: {}, sender: {}", staticPart.getSignature(), sender);
 
         /** 1. Wrap message **/
         final DataMessage msg = dataMessageBuilder.buildGetStatic(uuid, staticPart, sender);
@@ -828,12 +828,12 @@ public class Concentrator {
             throw exceptionGettingObject;
         }
 
-        logger.traceExit("with fieldValue: {}", fieldValue);
+        logger.trace("out w/ fieldValue: {}", fieldValue);
         return fieldValue;
     }
 
     public static DataMessage incomingGetObject(String messageUuid, Fields.InstanceFieldGet instanceFieldGet, String followingUuid) {
-        logger.traceEntry("with instanceFieldGet: {}, messageUuid: {}, following uuid: {}", instanceFieldGet, messageUuid, followingUuid);
+        logger.trace("in w/ instanceFieldGet: {}, messageUuid: {}, following uuid: {}", instanceFieldGet, messageUuid, followingUuid);
 
         /** 1. Get Object **/
         Class clazz = null;
@@ -896,13 +896,13 @@ public class Concentrator {
         /** 4. Send object/exception **/
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
-        logger.traceExit();
+        logger.trace("out w/ {}", rcvdMsg);
         return rcvdMsg;
 
     }
 
     public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
-        logger.traceEntry("with staticPart: {}, sender: {}, target: {}", staticPart.getSignature(), sender, target);
+        logger.trace("in w/ staticPart: {}, sender: {}, target: {}", staticPart.getSignature(), sender, target);
 
         /** 1. Wrap message **/
         final DataMessage msg = dataMessageBuilder.buildGetObject(uuid, staticPart, sender, target);
@@ -949,12 +949,12 @@ public class Concentrator {
             throw exceptionGettingObject;
         }
 
-        logger.traceExit("with fieldValue: {}", fieldValue);
+        logger.trace("out w/ fieldValue: {}", fieldValue);
         return fieldValue;
     }
 
     public static DataMessage incomingPutStatic(String messageUuid, Fields.StaticFieldPut staticFieldPut, String followingUuid) {
-        logger.traceEntry("with staticFieldPut: {}, messageUuid: {}, following uuid: {}", staticFieldPut, messageUuid, followingUuid);
+        logger.trace("in w/ staticFieldPut: {}, messageUuid: {}, following uuid: {}", staticFieldPut, messageUuid, followingUuid);
 
         /** 1. Load class and field **/
         final Class clazz;
@@ -1008,13 +1008,13 @@ public class Concentrator {
         /** 4. Send object/exception **/
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
-        logger.traceExit();
+        logger.trace("out w/ {}", rcvdMsg);
         return rcvdMsg;
 
     }
 
     public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
-        logger.traceEntry("with staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
+        logger.trace("in w/ staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
 
         /** 1. Wrap message **/
         final DataMessage msg = dataMessageBuilder.buildPutStatic(uuid, staticPart, sender, args[0]);
@@ -1052,12 +1052,12 @@ public class Concentrator {
             throw exceptionSettingObject;
         }
 
-        logger.traceExit();
+        logger.trace("out");
         return;
     }
 
     public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args) throws IllegalAccessException {
-        logger.traceEntry("with staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
+        logger.trace("in w/ staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target, args);
 
         /** 1. Wrap message **/
         final DataMessage msg = dataMessageBuilder.buildPutObject(uuid, staticPart, sender, target, args[0]);
@@ -1095,12 +1095,12 @@ public class Concentrator {
             throw exceptionSettingObject;
         }
 
-        logger.traceExit();
+        logger.trace("out");
         return;
     }
 
     public static DataMessage incomingPutField(String messageUuid, Fields.InstanceFieldPut instanceFieldPut, String followingUuid) {
-        logger.traceEntry("with instanceFieldPut: {}, messageUuid: {}, following uuid: {}", instanceFieldPut, messageUuid, followingUuid);
+        logger.trace("in w/ instanceFieldPut: {}, messageUuid: {}, following uuid: {}", instanceFieldPut, messageUuid, followingUuid);
 
         /** 1. Load class and field **/
         final Class clazz;
@@ -1163,7 +1163,7 @@ public class Concentrator {
         /** 4. Send object/exception **/
         DataMessage rcvdMsg = sendAndRecv(invokedMsg);
 
-        logger.traceExit();
+        logger.trace("out w/ {}", rcvdMsg);
         return rcvdMsg;
 
     }
@@ -1171,7 +1171,7 @@ public class Concentrator {
     // </editor-fold>
 
     private static DataMessage sendAndRecv(DataMessage dataMessage) {
-        logger.traceEntry("with dataMessage with uuid: {}", dataMessage.getMessageUuid());
+        logger.trace("in w/ dataMessage with uuid: {}", dataMessage.getMessageUuid());
         threadSocket.get().send(dataMessage.toByteArray(), 0);
         String rcvdString = threadSocket.get().recvStr();
         DataMessage returnValue;
@@ -1184,7 +1184,7 @@ public class Concentrator {
             returnValue = null;
         }
 
-        logger.traceExit();
+        logger.trace("out w/ {}", returnValue);
         return returnValue;
     }
 
@@ -1231,7 +1231,7 @@ public class Concentrator {
             kafkaMessageWriter.writeToLog(newLogInfo.getName());
             incomingMessageDispatcher.readFromLog(newLogInfo.getName());
         } catch (Exception ex) {
-            logger.fatal("Could not initialize reader/writer to last log. Aborting ...", ex);
+            logger.error("Could not initialize reader/writer to last log. Aborting ...", ex);
             ex.printStackTrace();
             System.exit(6);
         }
@@ -1325,7 +1325,7 @@ public class Concentrator {
                                 public void failure(Service service) {
                                     // Something failed, at this point we could log it, notify a load balancer, or take
                                     // some other action.  For now we will just exit.
-                                    logger.fatal("Service manager failed. Exiting ...", service.failureCause());
+                                    logger.error("Service manager failed. Exiting ...", service.failureCause());
                                     System.exit(7);
                                 }
                             },

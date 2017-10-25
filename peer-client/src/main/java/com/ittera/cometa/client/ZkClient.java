@@ -9,8 +9,8 @@ import java.util.UUID;
 import java.util.Properties;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.Watcher;
@@ -23,7 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 
 public class ZkClient implements Watcher, PeerLogDirectory {
 
-    protected static final Logger logger = LogManager.getLogger(ZkClient.class);
+    protected static final Logger logger = LoggerFactory.getLogger(ZkClient.class);
 
     protected static final String PROPERTIES_SEP = "|";
 

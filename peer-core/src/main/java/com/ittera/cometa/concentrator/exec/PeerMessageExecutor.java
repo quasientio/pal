@@ -3,8 +3,8 @@ package com.ittera.cometa.concentrator.exec;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import com.google.inject.name.Named;
 import com.google.inject.Inject;
@@ -13,7 +13,7 @@ import com.google.inject.Singleton;
 @Singleton
 public class PeerMessageExecutor extends ExtendedThreadPoolExecutor implements PeerExecutor {
 
-    protected static final Logger logger = LogManager.getLogger(PeerMessageExecutor.class);
+    protected static final Logger logger = LoggerFactory.getLogger(PeerMessageExecutor.class);
 
     @Inject
     public PeerMessageExecutor(@Named("peer.corePoolSize") String corePoolSize,

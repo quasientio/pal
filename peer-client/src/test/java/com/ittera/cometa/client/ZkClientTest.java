@@ -15,15 +15,15 @@ import java.util.UUID;
 import java.util.Set;
 import java.util.HashSet;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior
  */
 public class ZkClientTest {
 
-    protected final static Logger logger = LogManager.getLogger("tests");
+    protected final static Logger logger = LoggerFactory.getLogger("tests");
 
     private static final String zookeeperUrl = "localhost:2181";
     private static final Set<UUID> createdPeers = new HashSet<>();

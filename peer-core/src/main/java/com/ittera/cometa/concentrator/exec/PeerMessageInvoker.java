@@ -5,8 +5,8 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -14,7 +14,7 @@ import org.zeromq.ZMQ.Socket;
 
 public class PeerMessageInvoker extends Thread {
 
-    protected static final Logger logger = LogManager.getLogger(PeerMessageInvoker.class);
+    protected static final Logger logger = LoggerFactory.getLogger(PeerMessageInvoker.class);
     // zmq stuff
     private ZContext zmqContext;
     private final String dealerAddress;

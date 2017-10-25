@@ -1,8 +1,5 @@
 package com.ittera.cometa.concentrator;
 
-import java.util.List;
-import java.util.ArrayList;
-
 import org.apache.commons.lang3.ClassUtils;
 
 import org.junit.Test;

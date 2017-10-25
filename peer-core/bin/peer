@@ -7,7 +7,7 @@ if [[ $1 = '-ltw' ]]; then
   LTW_OPTS="-javaagent:$ASPECTJ_HOME/lib/aspectjweaver.jar"
 fi
 
-SYSTEM_PROPS=-Dlog4j.configurationFile=file://`pwd`/conf/log4j2.xml
+SYSTEM_PROPS=-Dlogback.configurationFile=file://$PEER_HOME/conf/logback.xml
 ARGS=conf/dist.properties
 
 java $LTW_OPTS $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.concentrator.Concentrator $ARGS
