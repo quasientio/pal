@@ -3,6 +3,7 @@
     <Properties>
         <Property name="kafkaLog">logs/kafka-tests.log</Property>
         <Property name="testsLog">logs/tests.log</Property>
+        <Property name="zookeeperLog">logs/zookeeper-tests.log</Property>
     </Properties>
 
     <Appenders>
@@ -23,15 +24,19 @@
             </Layout>
         </Appender>
 
+        <Appender type="File" name="zookeeper" fileName="${zookeeperLog}">
+            <Layout type="PatternLayout">
+                <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
+            </Layout>
+        </Appender>
     </Appenders>
 
     <Loggers>
-        <!-- Let's send logging of cometa.util package to the tests log -->
-        <Logger name="com.ittera.cometa.concentrator.util" level="info" additivity="false">
+        <Logger name="tests" level="debug" additivity="false">
             <AppenderRef ref="tests"/>
         </Logger>
 
-        <Logger name="com.ittera.cometa.concentrator.ZkClient" level="debug" additivity="false">
+        <Logger name="com.ittera.cometa.client" level="debug" additivity="false">
             <AppenderRef ref="tests"/>
         </Logger>
 
@@ -39,12 +44,8 @@
             <AppenderRef ref="kafka"/>
         </Logger>
 
-        <Logger name="tests" level="debug" additivity="false">
-            <AppenderRef ref="tests"/>
-        </Logger>
-
-        <Logger name="com.ittera.cometa.concentrator.DualPeer" level="debug" additivity="false">
-            <AppenderRef ref="tests"/>
+        <Logger name="org.apache.zookeeper" level="info" additivity="false">
+            <AppenderRef ref="zookeeper"/>
         </Logger>
 
         <Root level="warn">

@@ -3,6 +3,7 @@
     <Properties>
         <Property name="concentratorLog">logs/concentrator.log</Property>
         <Property name="kafkaLog">logs/kafka.log</Property>
+        <Property name="zookeeperLog">logs/zookeeper.log</Property>
     </Properties>
 
     <Appenders>
@@ -18,6 +19,12 @@
         </Appender>
 
         <Appender type="File" name="kafka" fileName="${kafkaLog}">
+            <Layout type="PatternLayout">
+                <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
+            </Layout>
+        </Appender>
+
+        <Appender type="File" name="zookeeper" fileName="${zookeeperLog}">
             <Layout type="PatternLayout">
                 <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
             </Layout>
@@ -40,6 +47,10 @@
 
         <Logger name="org.apache.kafka" level="info" additivity="false">
             <AppenderRef ref="kafka"/>
+        </Logger>
+
+        <Logger name="org.apache.zookeeper" level="info" additivity="false">
+            <AppenderRef ref="zookeeper"/>
         </Logger>
 
         <Root level="warn">
