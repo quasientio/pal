@@ -57,11 +57,6 @@
         </dependency>
         <dependency>
             <groupId>com.ittera.cometa</groupId>
-            <artifactId>peer-serdes</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.ittera.cometa</groupId>
             <artifactId>peer-client</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
