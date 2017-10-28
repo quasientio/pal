@@ -1,6 +1,6 @@
 package com.ittera.cometa;
 
-import com.ittera.cometa.client.DualPeer;
+import com.ittera.cometa.cxn.DualPeer;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Primitives;

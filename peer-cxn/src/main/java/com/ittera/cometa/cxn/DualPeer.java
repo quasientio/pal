@@ -1,4 +1,4 @@
-package com.ittera.cometa.client;
+package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.messages.DataMessageBuilder;
@@ -115,7 +115,7 @@ public class DualPeer {
             }
         }
 
-        kafkaProducerProps.put("client.id", String.valueOf(peerId));
+        kafkaProducerProps.put("cxn.id", String.valueOf(peerId));
         kafkaProducerProps.put("bootstrap.servers", bootstrapServers);
         logger.info("Will connect to bootstrap servers: {}", bootstrapServers);
         producer = new KafkaProducer<>(kafkaProducerProps);

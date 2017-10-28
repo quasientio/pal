@@ -1,8 +1,8 @@
 package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.client.PeerLogDirectory;
-import com.ittera.cometa.client.ZkClient;
+import com.ittera.cometa.cxn.PeerLogDirectory;
+import com.ittera.cometa.cxn.ZkClient;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
@@ -1276,7 +1276,7 @@ public class Concentrator {
                 bind(OutgoingMessageDispatcher.class).to(JeromqOutMessageDispatcher.class);
                 bind(InRequestMessageDispatcher.class).to(JeromqInRequestDispatcher.class);
 
-                // client library classes are not annotated with @Singleton
+                // cxn library classes are not annotated with @Singleton
                 bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class).asEagerSingleton();
                 bind(PeerLogDirectory.class).to(ZkClient.class).asEagerSingleton();
 

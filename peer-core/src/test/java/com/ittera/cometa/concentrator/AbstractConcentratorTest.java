@@ -1,6 +1,6 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.client.DualPeer;
+import com.ittera.cometa.cxn.DualPeer;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;

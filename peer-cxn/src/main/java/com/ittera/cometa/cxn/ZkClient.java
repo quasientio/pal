@@ -1,4 +1,4 @@
-package com.ittera.cometa.client;
+package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.PeerInfo;

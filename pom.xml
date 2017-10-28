@@ -12,7 +12,7 @@
     <modules>
         <module>peer-core</module>
         <module>peer-serdes</module>
-        <module>peer-client</module>
+        <module>peer-cxn</module>
     </modules>
 
 </project>
