@@ -2,4 +2,3 @@ target/
 logs/
 .idea/
 *.iml
-conf/logback.xml
