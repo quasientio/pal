@@ -1,6 +1,6 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.cxn.DualPeer;
+import com.ittera.cometa.cxn.ThinPeer;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -24,18 +24,18 @@ public abstract class AbstractConcentratorTest {
     protected final static UUID clientId = UUID.randomUUID();
 
     protected static DataMessageBuilder dataMessageBuilder;
-    private static DualPeer dualPeer;
+    private static ThinPeer thinPeer;
 
     @BeforeClass
     public static void initialize() throws Exception {
 
         dataMessageBuilder = new ProtobufDataMessageBuilder();
-        dualPeer = new DualPeer("/tests.properties");
+        thinPeer = new ThinPeer("/tests.properties");
 
     }
 
     protected DataMessage sendAndReceive(DataMessage message) {
-        return dualPeer.sendAndReceive(message);
+        return thinPeer.sendAndReceive(message);
     }
 
     /**
@@ -90,7 +90,7 @@ public abstract class AbstractConcentratorTest {
     @AfterClass
     public static void finalizeStuff() {
         logger.debug("Finalizing after tests...");
-        dualPeer.close();
+        thinPeer.close();
     }
 }
 

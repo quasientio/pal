@@ -1,6 +1,6 @@
 package com.ittera.cometa;
 
-import com.ittera.cometa.cxn.DualPeer;
+import com.ittera.cometa.cxn.ThinPeer;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
@@ -14,13 +14,13 @@ public class SwingAppConcurrentActor {
     protected static final String swingAppClassName = "com.ittera.cometa.apps.SwingApp";
 
     private static class SwingActor implements Runnable {
-        DualPeer dualPeer;
+        ThinPeer thinPeer;
         final String jframeRef;
 
         SwingActor(String jframeRef) {
             this.jframeRef = jframeRef;
             try {
-                this.dualPeer = new DualPeer("/tests.properties");
+                this.thinPeer = new ThinPeer("/tests.properties");
             } catch (Exception ex) {
                 System.err.println("error starting dual peer");
                 ex.printStackTrace();
@@ -35,7 +35,7 @@ public class SwingAppConcurrentActor {
                 setFrameVisible(i % 2 == 0);
             }
             // finalize
-            dualPeer.close();
+            thinPeer.close();
         }
 
         private void setFrameVisible(boolean visible) {
@@ -46,9 +46,9 @@ public class SwingAppConcurrentActor {
             String fieldClassName = "javax.swing.JFrame";
 
             parameters = new Object[]{visible};
-            requestMsg = dataMessageBuilder.buildInstanceMethod(dualPeer.getPeerUuid(), fieldClassName,
+            requestMsg = dataMessageBuilder.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
                     methodName, jframeRef, parameterTypesNamesArray, parameters, new String[parameters.length]);
-            replyMsg = dualPeer.sendAndReceive(requestMsg);
+            replyMsg = thinPeer.sendAndReceive(requestMsg);
 
         }
 
@@ -63,7 +63,7 @@ public class SwingAppConcurrentActor {
 
     public static void main(String[] args) throws Exception {
 
-        final DualPeer dualPeer = new DualPeer("/tests.properties");
+        final ThinPeer thinPeer = new ThinPeer("/tests.properties");
         String methodName;
 
         methodName = "main";
@@ -75,25 +75,25 @@ public class SwingAppConcurrentActor {
         Object[] parameters = new Object[]{new String[]{}};
 
 
-        final DataMessage mainRequest = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(),
+        final DataMessage mainRequest = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(),
                 swingAppClassName, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
 
         // start the swingapp by calling main in background
         Thread asyncSend = new Thread() {
             @Override
             public void run() {
-                dualPeer.sendToLogAndForget(mainRequest);
+                thinPeer.sendToLogAndForget(mainRequest);
             }
         };
         asyncSend.start();
 
         // wait for put of JFrame field;
         String fieldName = "frame";
-        dualPeer.waitFor(Type.PUT_STATIC_DONE, fieldName);
+        thinPeer.waitFor(Type.PUT_STATIC_DONE, fieldName);
 
         // now get the jframe
-        DataMessage requestMsg = dataMessageBuilder.buildGetStatic(dualPeer.getPeerUuid(), swingAppClassName, fieldName);
-        DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
+        DataMessage requestMsg = dataMessageBuilder.buildGetStatic(thinPeer.getPeerUuid(), swingAppClassName, fieldName);
+        DataMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
         Primitives.Object myFrame = replyMsg.getReturnValue().getObject();
 
         // start some actors and pass them the frame to play with
@@ -105,6 +105,6 @@ public class SwingAppConcurrentActor {
             actors[i].start();
         }
 
-        dualPeer.close();
+        thinPeer.close();
     }
 }

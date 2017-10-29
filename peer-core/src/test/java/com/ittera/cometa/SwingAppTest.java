@@ -1,6 +1,6 @@
 package com.ittera.cometa;
 
-import com.ittera.cometa.cxn.DualPeer;
+import com.ittera.cometa.cxn.ThinPeer;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -12,7 +12,7 @@ public class SwingAppTest {
     protected static final String className = "com.ittera.cometa.apps.SwingApp";
 
     public static void main(String[] args) throws Exception {
-        DualPeer dualPeer = new DualPeer("/tests.properties");
+        ThinPeer thinPeer = new ThinPeer("/tests.properties");
         final String methodName = "main";
 
         Class[] parameterTypes = new Class[]{String[].class};
@@ -22,8 +22,8 @@ public class SwingAppTest {
         }
         Object[] parameters = new Object[]{new String[]{}};
 
-        DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(),
+        DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(),
                     className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
-        DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
+        DataMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
     }
 }

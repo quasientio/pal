@@ -6,7 +6,7 @@ import com.ittera.cometa.messages.DataMessageBuilder;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class DualPeerTest {
+public class ThinPeerTest {
 
     protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
 
@@ -14,7 +14,7 @@ public class DualPeerTest {
     protected final String className = "com.ittera.cometa.apps.App";
 
     public void runReqsWithOneClient(int requests) throws Exception {
-        DualPeer dualPeer = new DualPeer("/tests.properties");
+        ThinPeer thinPeer = new ThinPeer("/tests.properties");
 
         long start = System.currentTimeMillis();
 
@@ -28,11 +28,11 @@ public class DualPeerTest {
         Object[] parameters = new Object[]{new String[]{}};
 
         for (int i = 0; i < requests; i++) {
-            DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+            DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
             // send async to log and forget
-//            dualPeer.sendToLogAndForget(requestMsg);
+//            thinPeer.sendToLogAndForget(requestMsg);
             // send and wait for reply
-            DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
+            DataMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
         }
 
         System.out.println("runReqsWithOneClient took " + (System.currentTimeMillis() - start) + " milliseconds");
@@ -60,18 +60,18 @@ public class DualPeerTest {
             Thread client = new Thread() {
                 @Override
                 public void run() {
-                    DualPeer dualPeer = null;
+                    ThinPeer thinPeer = null;
                     try {
-                        dualPeer = new DualPeer("/tests.properties");
+                        thinPeer = new ThinPeer("/tests.properties");
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
                     for (int i = 0; i < requestsPerClient; i++) {
-                        DataMessage requestMsg = dataMessageBuilder.buildClassMethod(dualPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+                        DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
                         // send async to log and forget
-//                        dualPeer.sendToLogAndForget(requestMsg);
+//                        thinPeer.sendToLogAndForget(requestMsg);
                         // send and wait for reply
-                        DataMessage replyMsg = dualPeer.sendAndReceive(requestMsg);
+                        DataMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
                     }
                     finishedThreads.incrementAndGet();
                 }
@@ -94,7 +94,7 @@ public class DualPeerTest {
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) {
-            System.out.println("Usage: ..DualPeerTest <requests> <clients>");
+            System.out.println("Usage: ..ThinPeerTest <requests> <clients>");
             System.exit(1);
         }
 
@@ -102,8 +102,8 @@ public class DualPeerTest {
         int clients = Integer.parseInt(args[1]);
         Double reqsPerClients = Double.valueOf(requests / clients);
 
-        DualPeerTest dualPeerTest = new DualPeerTest();
-        dualPeerTest.runReqsWithOneClient(requests);
-        dualPeerTest.runAsyncReqsWithNClients(clients, reqsPerClients.intValue());
+        ThinPeerTest thinPeerTest = new ThinPeerTest();
+        thinPeerTest.runReqsWithOneClient(requests);
+        thinPeerTest.runAsyncReqsWithNClients(clients, reqsPerClients.intValue());
     }
 }

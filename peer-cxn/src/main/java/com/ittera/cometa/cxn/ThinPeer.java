@@ -35,10 +35,10 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
-public class DualPeer {
+public class ThinPeer {
 
     // static
-    protected final static Logger logger = LoggerFactory.getLogger(DualPeer.class);
+    protected final static Logger logger = LoggerFactory.getLogger(ThinPeer.class);
     private static AtomicLong peerIdSeq = new AtomicLong(0);
 
     private final long peerId = peerIdSeq.incrementAndGet();
@@ -64,16 +64,16 @@ public class DualPeer {
     // zookeeper
     private PeerLogDirectory peerLogDirectory;
 
-    public DualPeer(String propertiesFile) throws Exception {
+    public ThinPeer(String propertiesFile) throws Exception {
         this(propertiesFile, null, null);
     }
 
-    public DualPeer(String propertiesFile, String initialPeerAddress, LogInfo logInfo) throws Exception {
+    public ThinPeer(String propertiesFile, String initialPeerAddress, LogInfo logInfo) throws Exception {
         currentPeerAddress = initialPeerAddress;
 
         //load properties
         final Properties properties = new Properties();
-        try (final InputStream stream = DualPeer.class.getResourceAsStream(propertiesFile)) {
+        try (final InputStream stream = ThinPeer.class.getResourceAsStream(propertiesFile)) {
             properties.load(stream);
         }
 
