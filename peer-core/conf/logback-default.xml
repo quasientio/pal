@@ -58,11 +58,11 @@
 		<appender-ref ref="concentrator"/>
 	</logger>
 
-	<logger name="org.apache.kafka" level="info" additivity="false">
+	<logger name="org.apache.kafka" level="warn" additivity="false">
 		<appender-ref ref="kafka"/>
 	</logger>
 
-	<logger name="org.apache.zookeeper" level="info" additivity="false">
+	<logger name="org.apache.zookeeper" level="warn" additivity="false">
 		<appender-ref ref="zookeeper"/>
 	</logger>
 
