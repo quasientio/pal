@@ -131,7 +131,6 @@ public class AppRunner {
     options.addOption(Option.builder("h").required(false).longOpt("help").desc("print usage").build());
     options.addOption(Option.builder("v").required(false).longOpt("verbose").desc("print useful info").build());
     options.addOption(Option.builder("forget").required(false).longOpt("forget-reply").desc("do not wait for replies").build());
-    options.addOption(Option.builder("seq").required(false).longOpt("sequential").desc("don't run requests in parallel").build());
     options.addOption(Option.builder("reqs").required(false).longOpt("num-requests").desc("number of requests to send").hasArg().build());
     options.addOption(Option.builder("clients").required(false).longOpt("num-clients").desc("number of clients to use").hasArg().build());
 
@@ -152,12 +151,11 @@ public class AppRunner {
     int requests = Integer.parseInt(line.getOptionValue("reqs", "1"));
     int clients = Integer.parseInt(line.getOptionValue("clients", "1"));
     boolean verbose = line.hasOption("v");
-    boolean sequential = line.hasOption("seq");
     boolean dontWait = line.hasOption("forget");
     String className = line.getArgs()[0];
 
     AppRunner appRunner = new AppRunner(verbose);
-    if (sequential || requests == 1) {
+    if (requests == 1 || clients == 1) {
       appRunner.runReqsWithOneClient(className, "main", requests, dontWait);
     } else {
       appRunner.runAsyncReqsWithNClients(className, "main", clients, requests, dontWait);
