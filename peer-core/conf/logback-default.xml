@@ -31,6 +31,13 @@
 		</encoder>
 	</appender>
 
+	<appender name="runner" class="ch.qos.logback.core.FileAppender">
+		<file>${logs.dir}/runner.log</file>
+		<encoder>
+			<pattern>%date %level [%thread] %logger{10} %msg%n</pattern>
+		</encoder>
+	</appender>
+
 
 	<!-- LOGGERS -->
 
@@ -40,6 +47,10 @@
 
 	<logger name="com.ittera.cometa.concentrator.KafkaDataMessageReader" level="info" additivity="false">
 		<appender-ref ref="concentrator"/>
+	</logger>
+
+	<logger name="com.ittera.cometa.util.AppRunner" level="info" additivity="false">
+		<appender-ref ref="runner"/>
 	</logger>
 
 	<!-- Let's send logging of cometa.util package to the concentrator log -->

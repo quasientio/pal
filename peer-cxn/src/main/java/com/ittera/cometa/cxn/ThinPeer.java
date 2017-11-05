@@ -31,17 +31,15 @@ import java.util.UUID;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
 public class ThinPeer {
 
+    private UUID peerUuid = UUID.randomUUID();
+
     // static
     protected final static Logger logger = LoggerFactory.getLogger(ThinPeer.class);
-    private static AtomicLong peerIdSeq = new AtomicLong(0);
-
-    private final long peerId = peerIdSeq.incrementAndGet();
     protected final DataMessageBuilder dataMessageBuilder;
 
     // kafka stuff
@@ -55,7 +53,6 @@ public class ThinPeer {
     private final Properties kafkaConsumerProps = new Properties();
 
     // zmq stuff
-    private final UUID peerUuid = UUID.randomUUID();
     private final ZContext zmqContext;
     private final Socket peerSocket;
     private String currentPeerAddress;
@@ -78,6 +75,7 @@ public class ThinPeer {
         }
 
         kafkaTopicPrefix = properties.getProperty("kafkaTopicPrefix");
+        pollTimeout = Long.parseLong(properties.getProperty("pollTimeout"));
 
         // connect to log and peer directory
         peerLogDirectory = new ZkClient(properties.getProperty("zookeeper.url"));
@@ -115,7 +113,7 @@ public class ThinPeer {
             }
         }
 
-        kafkaProducerProps.put("cxn.id", String.valueOf(peerId));
+        kafkaProducerProps.put("client.id", peerUuid.toString());
         kafkaProducerProps.put("bootstrap.servers", bootstrapServers);
         logger.info("Will connect to bootstrap servers: {}", bootstrapServers);
         producer = new KafkaProducer<>(kafkaProducerProps);
@@ -129,8 +127,7 @@ public class ThinPeer {
             }
         }
 
-        pollTimeout = Long.parseLong((String) kafkaConsumerProps.remove("pollTimeout"));
-        kafkaConsumerProps.put("group.id", String.valueOf(peerId));
+        kafkaConsumerProps.put("group.id", peerUuid.toString());
         kafkaConsumerProps.put("bootstrap.servers", bootstrapServers);
         consumer = new KafkaConsumer<>(kafkaConsumerProps);
         logger.debug("Kafka consumer initialized: {}", consumer);
@@ -152,7 +149,7 @@ public class ThinPeer {
     }
 
     private void connectSocket() {
-        peerSocket.setIdentity(("Dual-Peer-" + String.valueOf(peerId)).getBytes(ZMQ.CHARSET));
+        peerSocket.setIdentity(("Dual-Peer-" + peerUuid.toString()).getBytes(ZMQ.CHARSET));
         peerSocket.connect(currentPeerAddress);
     }
 
@@ -221,10 +218,6 @@ public class ThinPeer {
         }
 
         return messages;
-    }
-
-    public long getPeerId() {
-        return peerId;
     }
 
     public UUID getPeerUuid() {
