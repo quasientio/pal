@@ -15,11 +15,10 @@ public class LogInfo implements Comparable {
   private String uuid;
 
   // to be filled from (kafka) mbeans via jmx
-  private long startOffset, endOffset;
-  private int logSegments;
+  private long startOffset;
+  private long endOffset;
   private long bytes;
   private boolean exists;
-
 
 
   public LogInfo(String name) {
@@ -69,12 +68,43 @@ public class LogInfo implements Comparable {
   }
 
   public String getHumanReadableByteSize() {
-    return ByteSizeConverter.humanReadableByteCount(bytes, false);
+    return ByteSizeConverter.humanReadableByteCount(getBytes(), false);
   }
 
-  // log names are unique in zookeeper, so no need to compare anything else if sorting by name
+  public long getStartOffset() {
+    return startOffset;
+  }
+
+  public void setStartOffset(long startOffset) {
+    this.startOffset = startOffset;
+  }
+
+  public long getEndOffset() {
+    return endOffset;
+  }
+
+  public void setEndOffset(long endOffset) {
+    this.endOffset = endOffset;
+  }
+
+  public long getBytes() {
+    return bytes;
+  }
+
+  public void setBytes(long bytes) {
+    this.bytes = bytes;
+  }
+
+  public boolean isExists() {
+    return exists;
+  }
+
+  public void setExists(boolean exists) {
+    this.exists = exists;
+  }
+   // log names are unique in zookeeper, so no need to compare anything else if sorting by name
   @Override
   public int compareTo(Object o) {
-    return getName().compareTo(((LogInfo)o).getName());
+    return getName().compareTo(((LogInfo) o).getName());
   }
 }
