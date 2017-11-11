@@ -251,6 +251,18 @@ public class ZkClient implements Watcher, PeerLogDirectory {
     }
 
     @Override
+    public LogInfo getLogInfo(UUID uuid) throws Exception {
+      Set<LogInfo> allLogs = getAllLogs();
+      for (LogInfo logInfo: allLogs) {
+          if (logInfo.getUuid().equalsIgnoreCase(uuid.toString())) {
+              return logInfo;
+          }
+      }
+
+      return null;
+    }
+
+    @Override
     public Properties getPeerProperties(UUID peerUuid) throws Exception {
         if (!zk.getState().equals(ZooKeeper.States.CONNECTED)) {
           connect(zookeeperUrl);

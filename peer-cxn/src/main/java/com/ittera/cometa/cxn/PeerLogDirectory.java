@@ -8,7 +8,16 @@ import java.util.UUID;
 import java.util.Set;
 
 public interface PeerLogDirectory {
+
     void connect(String zookeeperUrl) throws Exception;
+
+    boolean isConnectionEstablished() throws Exception;
+
+    String getUrl();
+
+    void close();
+
+    /** PEER METHODS */
 
     void registerPeer(UUID peerUuid, Properties peerProperties) throws Exception;
 
@@ -28,6 +37,8 @@ public interface PeerLogDirectory {
 
     Set<PeerInfo> getAllPeers() throws Exception;
 
+    /** LOG METHODS */
+
     LogInfo addLog(String logNamePrefix, String bootstrapServers) throws Exception;
 
     LogInfo getLastLog(String logNamePrefix) throws Exception;
@@ -38,15 +49,13 @@ public interface PeerLogDirectory {
 
     LogInfo getLogInfo(String logName) throws Exception;
 
+    LogInfo getLogInfo(UUID uuid) throws Exception;
+
     void deleteLogNamed(String logName) throws Exception;
 
     void deleteAllLogs(String logNamePrefix) throws Exception;
 
     boolean logExists(String logName) throws Exception;
 
-    boolean isConnectionEstablished() throws Exception;
 
-    String getUrl();
-
-    void close();
 }
