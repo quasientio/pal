@@ -102,9 +102,20 @@ public class LogInfo implements Comparable {
   public void setExists(boolean exists) {
     this.exists = exists;
   }
-   // log names are unique in zookeeper, so no need to compare anything else if sorting by name
+
+  // log names are unique in zookeeper, so no need to compare anything else if sorting by name
   @Override
   public int compareTo(Object o) {
     return getName().compareTo(((LogInfo) o).getName());
+  }
+
+  @Override
+  public int hashCode() {
+    return name.hashCode() + bootstrapServers.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    return name.equals(((LogInfo) o).getName()) && bootstrapServers.equals(((LogInfo) o).getBootstrapServers());
   }
 }
