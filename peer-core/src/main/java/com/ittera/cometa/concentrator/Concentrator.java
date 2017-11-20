@@ -119,6 +119,7 @@ public class Concentrator {
 
 
     // <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
+
     public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
         logger.trace("in w/ staticPart: {}, sender: {}", staticPart.getSignature(), sender);
 
@@ -149,7 +150,7 @@ public class Concentrator {
         }
 
         /** 6. Send object/exception **/
-        rcvdMsg = sendAndRecv(msg);
+        rcvdMsg = sendAndRecv(invokedMsg);
 
         /** 8. Return or re-raise exception **/
         if (exceptionWhileLoadingClass != null) {
@@ -284,7 +285,7 @@ public class Concentrator {
         }
 
         /** 6. Send object/exception **/
-        rcvdMsg = sendAndRecv(callMsg);
+        rcvdMsg = sendAndRecv(invokedMsg);
 
         /** 8. Return object or re-raise exception **/
         if (exceptionWhileInvoking != null) {
@@ -400,7 +401,7 @@ public class Concentrator {
 
 
         /** 6. Send object/exception **/
-        rcvdMsg = sendAndRecv(msg);
+        rcvdMsg = sendAndRecv(invokedMsg);
 
         /** 8. Return object or re-raise exception **/
         if (exceptionWhileInvoking != null) {
