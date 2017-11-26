@@ -22,6 +22,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.zeromq.ZMQ;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
+import org.zeromq.ZMQException;
+import zmq.ZError;
 
 /**
  * TODO A 2nd thread that sends non-urgent messages from a queue.
@@ -50,7 +52,6 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 
     private volatile boolean connectionsOpen = false;
     private final AtomicInteger messagesSent = new AtomicInteger(0);
-    private int messagesReceived = 0;
 
     @Inject
     public KafkaDataMessageWriter(@Named("key.serializer") String keySerializer,
@@ -79,6 +80,22 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 
         connectionsOpen = true;
         logger.info("All connections open - except kafka producer");
+    }
+
+    protected void closeConnections() {
+        if (producer != null) {
+            producer.close();
+        }
+
+        if (subscriber != null) {
+            subscriber.close();
+        }
+
+        if (offsetPublisher != null) {
+            offsetPublisher.close();
+        }
+
+        logger.info("All connections closed");
     }
 
     @Override
@@ -113,35 +130,41 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
         }
 
         logger.debug("Starting to dispatch messages to kafka");
-        while (isRunning()) {
-            byte[] reply;
-            reply = subscriber.recv(ZMQ.NOBLOCK);
-            while (reply != null) {
-                DataMessage dataMessage = null;
-                try {
-                    dataMessage = DataMessage.parseFrom(reply);
-                } catch (Exception e) {
-                    logger.error("Caught exception parsing message", e);
+
+        while (isRunning() && !Thread.interrupted()) {
+
+            byte[] msg = null;
+            try {
+                msg = subscriber.recv();
+            } catch (ZMQException ex) {
+                int errorCode = ex.getErrorCode();
+                if (errorCode == ZError.ETERM) {
+                    logger.debug("Caught ETERM during blocking read. Breaking out.");
+                    break;
+                } else if (errorCode == ZError.EINTR) {
+                    logger.debug("Caught EINTR during blocking read. Breaking out.");
+                    break;
+                } else {
+                    throw ex;
                 }
-
-                // got a message
-                if (dataMessage != null) {
-                    messagesReceived++;
-
-                    // send to kafka immediately
-                    sendToKafka(dataMessage);
-                }
-
-                reply = subscriber.recv(ZMQ.NOBLOCK);
             }
 
-            // short pause, not to be eager
+            DataMessage dataMessage = null;
             try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                logger.error("Interrupted in sleep", e);
+                dataMessage = DataMessage.parseFrom(msg);
+            } catch (Exception e) {
+                logger.error("Caught exception parsing message", e);
+            }
+
+            // got a message
+            if (dataMessage != null) {
+
+                // send to kafka immediately
+                sendToKafka(dataMessage);
             }
         }
+
+        closeConnections();
     }
 
     private void sendToKafka(DataMessage message) {
@@ -154,14 +177,15 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
     }
 
     @Override
-    protected void shutDown() throws Exception {
-        producer.close();
-        logger.debug("Closed kafka producer");
-        subscriber.close();
-        logger.debug("Closed subscriber socket");
-        offsetPublisher.close();
-        logger.debug("Closed offsetPublisher socket");
+    protected void triggerShutdown() {
 
+        logger.info("Data message writer shutting down.");
+    }
+
+    @Override
+    protected void shutDown() throws Exception {
+
+        logger.info("Data message writer shut down.");
     }
 
     @Override

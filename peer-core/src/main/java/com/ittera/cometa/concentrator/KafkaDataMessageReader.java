@@ -31,6 +31,8 @@ import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
+import org.zeromq.ZMQException;
+import zmq.ZError;
 
 /**
  * TODO Optimize - :sampling with visualvm shows this class as the one with highest memory allocation per thread.
@@ -85,13 +87,45 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         public void run() {
             logger.debug("Offset informer running");
 
-            while (!Thread.currentThread().isInterrupted()) {
-                String rcvd = offsetSubscriber.recvStr(ZMQ.NOBLOCK);
+            String rcvd;
+            boolean breakOut = false;
+
+            while (!Thread.interrupted() && !breakOut) {
+                rcvd = null;
+                try {
+                    rcvd = offsetSubscriber.recvStr();
+                } catch (ZMQException ex) {
+                  int errorCode = ex.getErrorCode();
+                  if (errorCode == ZError.ETERM) {
+                      logger.debug("Caught ETERM during blocking read. Breaking out.");
+                      break;
+                  } else if (errorCode == ZError.EINTR) {
+                      logger.debug("Caught EINTR during blocking read. Breaking out.");
+                      break;
+                  } else {
+                      throw ex;
+                  }
+                }
+
                 while (rcvd != null) {
                     long offset = Long.valueOf(rcvd);
+                    rcvd = null;
                     skipOffsets.add(offset);
-
-                    rcvd = offsetSubscriber.recvStr(ZMQ.NOBLOCK);
+                    try {
+                        rcvd = offsetSubscriber.recvStr();
+                    } catch (ZMQException ex) {
+                      int errorCode = ex.getErrorCode();
+                      if (errorCode == ZError.ETERM) {
+                          logger.debug("Caught ETERM during blocking read. Breaking out.");
+                          breakOut = true;
+                          break;
+                      } else if (errorCode == ZError.EINTR) {
+                          logger.debug("Caught EINTR during blocking read. Breaking out.");
+                          break;
+                      } else {
+                          throw ex;
+                      }
+                    }
                 }
 
                 // short pause, not to be eager
@@ -179,6 +213,24 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         logger.info("All connections open");
     }
 
+    protected void closeConnections() {
+
+        if (consumer != null) {
+            consumer.close();
+            logger.info("Closed kafka consumer");
+        }
+
+        if (kafkaPublisher != null) {
+            kafkaPublisher.close();
+        }
+
+        if (offsetSubscriber != null) {
+            offsetSubscriber.close();
+        }
+
+        logger.info("All connections closed");
+    }
+
     @Override
     public final void run() {
 
@@ -196,23 +248,15 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         ConsumerRecords<String, String> records;
         long t0;
 
-        while (isRunning()) {
+        while (isRunning() && !Thread.interrupted()) {
+
             if (!acceptingConnections) {
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
-                    logger.error("Interrupted in sleep", e);
-                } finally {
-                    continue;
+                    break;
                 }
             }
-
-
-            //print stats every 1000 iterations
-            if ((++iterations % 1000 == 0) && logger.isDebugEnabled()) {
-                printDebugStats();
-            }
-
 
             // read from kafka
             t0 = System.nanoTime();
@@ -255,7 +299,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
             try {
                 Thread.sleep(1);
             } catch (InterruptedException e) {
-                logger.error("Interrupted in sleep", e);
+              break;
             }
 
             // get next offset to poll
@@ -265,6 +309,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
                 consumer.seek(topicPartition, nextOffset);
             }
         }
+
+        closeConnections();
     }
 
     private Long nextOffset() {
@@ -305,19 +351,18 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     }
 
     @Override
-    protected void shutDown() throws Exception {
+    protected void triggerShutdown() {
 
-        //print some statistics
-        printDebugStats();
+        logger.info("Data message reader shutting down.");
 
         //TODO: clean up, send uncommitted offset, etc.
         acceptingConnections = false;
+    }
 
-        if (consumer != null) {
-            consumer.close();
-            logger.info("Closed kafka consumer");
-        }
-        logger.info("Message dispatcher shut down");
+    @Override
+    protected void shutDown() {
+
+        logger.info("Data message reader shut down.");
     }
 
     protected void printDebugStats() {

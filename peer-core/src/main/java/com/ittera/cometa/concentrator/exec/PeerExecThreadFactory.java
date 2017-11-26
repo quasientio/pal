@@ -3,8 +3,6 @@ package com.ittera.cometa.concentrator.exec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.google.inject.Singleton;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -12,18 +10,12 @@ import com.google.inject.name.Named;
 import org.zeromq.ZContext;
 
 @Singleton
-public class PeerExecThreadFactory implements PeerThreadFactory {
+public class PeerExecThreadFactory extends ExecThreadFactory implements PeerThreadFactory {
 
     protected static final Logger logger = LoggerFactory.getLogger(PeerExecThreadFactory.class);
 
-    private final ThreadGroup threadGroup;
-    private final AtomicInteger threadCounter = new AtomicInteger(0);
     private static final String THREAD_GROUP_NAME = "Peer Executor Group";
     private static final String THREAD_BASE_NAME = "Peer Executor";
-    private static final int THREAD_GROUP_MAX_PRIORITY = Thread.NORM_PRIORITY;
-    private static final int THREAD_PRIORITY = Thread.NORM_PRIORITY;
-    private static final boolean THREAD_GROUP_IS_DAEMON = false;
-    private static final boolean THREAD_IS_DAEMON = false;
 
     // zmq stuff
     private ZContext zmqContext;
@@ -45,12 +37,8 @@ public class PeerExecThreadFactory implements PeerThreadFactory {
         final Thread thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext, dealerAddress);
         thread.setPriority(THREAD_PRIORITY);
         thread.setDaemon(THREAD_IS_DAEMON);
+        addCreatedThread(thread);
         logger.debug("Created new peer executor thread with name: '{}' and id: {}", newThreadName, thread.getId());
         return thread;
     }
-
-    public ThreadGroup getThreadGroup() {
-        return threadGroup;
-    }
-
 }

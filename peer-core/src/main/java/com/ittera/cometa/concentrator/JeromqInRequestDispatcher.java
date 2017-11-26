@@ -1,7 +1,5 @@
 package com.ittera.cometa.concentrator;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -19,9 +17,6 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService im
 
     protected static final Logger logger = LoggerFactory.getLogger(JeromqInRequestDispatcher.class);
 
-    // counters
-    private final AtomicInteger messagesRcvd = new AtomicInteger(0);
-
     // zmq stuff
     private final String routerAddress, dealerAddress;
 
@@ -29,13 +24,10 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService im
     private ZContext context;
     private Socket router, dealer;
 
-    private boolean connectionsOpen = false;
-
     @Inject
     public JeromqInRequestDispatcher(@Named("in.router") String routerAddress, @Named("in.dealer") String dealerAddress) {
         this.routerAddress = routerAddress;
         this.dealerAddress = dealerAddress;
-        logger.info("Initialized IN message dispatcher for concentrator");
     }
 
     protected void openConnections() {
@@ -47,8 +39,19 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService im
         this.dealer = context.createSocket(ZMQ.DEALER);
         dealer.bind(dealerAddress);
 
-        connectionsOpen = true;
         logger.info("All connections open");
+    }
+
+    protected void closeConnections () {
+        if (router != null) {
+            router.close();
+        }
+
+        if (dealer != null) {
+            dealer.close();
+        }
+
+        logger.info("All connections closed");
     }
 
     @Override
@@ -63,25 +66,21 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService im
     @Override
     protected void startUp() throws Exception {
         openConnections();
+
+        logger.info("Initialized IN message dispatcher");
+    }
+
+    @Override
+    protected void triggerShutdown() {
+
+        closeConnections();
+
+        logger.info("IN Message dispatcher shutting down.");
     }
 
     @Override
     protected void shutDown() throws Exception {
 
-        //print some statistics
-        printDebugStats();
-
-        router.close();
-        dealer.close();
-        context.destroy();
-
-        logger.info("IN request dispatcher shut down");
+        logger.info("IN Message dispatcher shut down");
     }
-
-    protected void printDebugStats() {
-        logger.debug("--------STATS--------");
-//        logger.debug("# of messages received from k-log: {}", messagesRcvd.get());
-        logger.debug("-----END OF STATS-----");
-    }
-
 }

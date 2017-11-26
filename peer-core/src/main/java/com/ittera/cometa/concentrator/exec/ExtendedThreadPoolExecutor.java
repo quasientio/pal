@@ -3,6 +3,8 @@ package com.ittera.cometa.concentrator.exec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -15,6 +17,7 @@ import java.util.concurrent.ExecutionException;
 public class ExtendedThreadPoolExecutor extends ThreadPoolExecutor {
 
     protected static final Logger logger = LoggerFactory.getLogger(ExtendedThreadPoolExecutor.class);
+
 
     public ExtendedThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveSeconds,
                                       TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory) {
@@ -48,5 +51,16 @@ public class ExtendedThreadPoolExecutor extends ThreadPoolExecutor {
         }
         if (t != null)
             logger.error("Error executing r", t);
+    }
+
+    @Override
+    public List<Runnable> shutdownNow() {
+
+        ExecThreadFactory execThreadFactory = (ExecThreadFactory) getThreadFactory();
+        logger.info("Sending interrupt to {} threads", execThreadFactory.getCreatedThreads().size());
+        for (Thread thread: execThreadFactory.getCreatedThreads()) {
+            thread.interrupt();
+        }
+        return super.shutdownNow();
     }
 }

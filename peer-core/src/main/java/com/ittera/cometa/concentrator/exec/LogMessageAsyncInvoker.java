@@ -17,6 +17,8 @@ import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
+import org.zeromq.ZMQException;
+import zmq.ZError;
 
 @Singleton
 public class LogMessageAsyncInvoker extends AbstractExecutionThreadService implements LogMessageInvoker {
@@ -28,6 +30,7 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
     // zmq stuff
     private ZContext zmqContext;
     private final String inLogAddress;
+    private Socket logSocket;
 
     private final LogExecutor executor;
 
@@ -39,26 +42,62 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
         this.executor = executor;
     }
 
+    protected void closeConnections() {
+
+        if (logSocket != null) {
+            logSocket.close();
+        }
+
+        logger.debug("All connections closed");
+    }
+
     @Override
     public void run() {
 
         DataMessage requestMsg;
-        boolean running = true;
 
         // connect SUB socket
-        Socket kafkaSocket = zmqContext.createSocket(ZMQ.SUB);
+        logSocket = zmqContext.createSocket(ZMQ.SUB);
         logger.info("Connecting to {}", inLogAddress);
-        kafkaSocket.bind(inLogAddress);
-        kafkaSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
+        logSocket.bind(inLogAddress);
+        logSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
-        while (running) {
+        while (isRunning() && !Thread.interrupted()) {
 
             // recv req
-            String offset = kafkaSocket.recvStr();
+            String offset = null;
+            try {
+                offset = logSocket.recvStr();
+            } catch (ZMQException ex) {
+                int errorCode = ex.getErrorCode();
+                if (errorCode == ZError.ETERM) {
+                    logger.debug("Caught ETERM during blocking read. Breaking out.");
+                    break;
+                } else if (errorCode == ZError.EINTR) {
+                    logger.debug("Caught EINTR during blocking read. Breaking out.");
+                    break;
+                } else {
+                    throw ex;
+                }
+            }
+
             logger.debug("Getting message with kafka offset: {}", offset);
             long logOffset = Long.parseLong(offset);
 
-            byte[] req = kafkaSocket.recv(0);
+            // recv req body: message
+            byte[] req = null;
+            try {
+                req = logSocket.recv();
+            } catch (ZMQException ex) {
+                int errorCode = ex.getErrorCode();
+                if (errorCode == ZError.ETERM) {
+                    logger.debug("Caught ETERM during blocking read. Breaking out.");
+                    break;
+                } else {
+                    throw ex;
+                }
+            }
+
             requestMsg = null;
 
             logger.debug("received {} bytes", req.length);
@@ -81,7 +120,20 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
                 }
             }
         }
-        kafkaSocket.close();
+
+        closeConnections();
+    }
+
+    @Override
+    protected void triggerShutdown() {
+
+        logger.info("Log message invoker shutting down");
+    }
+
+    @Override
+    protected void shutDown() throws Exception {
+
+        logger.info("Log message invoker shut down");
     }
 
     protected void dispatchAsync(final DataMessage requestMsg, final long recordOffset) {

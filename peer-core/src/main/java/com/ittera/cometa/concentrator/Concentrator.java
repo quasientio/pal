@@ -54,6 +54,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZContext;
+import org.zeromq.ZMQException;
+import zmq.ZError;
 
 public class Concentrator {
 
@@ -72,7 +74,7 @@ public class Concentrator {
     private static ObjectService objectService;
 
     // zmq context -- gets injected to all other threads
-    private static final ZContext zmqContext = new ZContext();
+    private static final ZContext zmqContext;
 
     private static String outCellAddress;
 
@@ -86,6 +88,12 @@ public class Concentrator {
             return worker;
         }
     };
+
+    static {
+        zmqContext = new ZContext();
+        zmqContext.setLinger(1000);
+    }
+
 
     /*********************** INVOKERS INTERFACE ***************************/
 
@@ -1173,8 +1181,25 @@ public class Concentrator {
 
     private static DataMessage sendAndRecv(DataMessage dataMessage) {
         logger.trace("in w/ dataMessage with uuid: {}", dataMessage.getMessageUuid());
-        threadSocket.get().send(dataMessage.toByteArray(), 0);
-        String rcvdString = threadSocket.get().recvStr();
+        Socket outSocket = threadSocket.get();
+        outSocket.send(dataMessage.toByteArray(), 0);
+
+        String rcvdString = null;
+        try {
+            rcvdString = outSocket.recvStr();
+        } catch (ZMQException ex) {
+          int errorCode = ex.getErrorCode();
+          if (errorCode == ZError.ETERM) {
+            logger.warn("Caught ETERM during blocking read. Will close socket");
+            outSocket.close();
+            return null;
+          } else if (errorCode == ZError.EINTR) {
+            logger.warn("Caught EINTR during blocking read. Will close socket.");
+            outSocket.close();
+            return null;
+          }
+        }
+
         DataMessage returnValue;
         if ("0".equals(rcvdString)) {
             logger.debug("0 means return same message");
@@ -1236,6 +1261,12 @@ public class Concentrator {
             ex.printStackTrace();
             System.exit(6);
         }
+    }
+
+    private static void closeZmqContext() {
+        logger.info("Destroying zmq context");
+        zmqContext.destroy();
+        logger.info("Destroyed zmq context");
     }
 
     /**
@@ -1313,19 +1344,17 @@ public class Concentrator {
                                 }
 
                                 public void healthy() {
-                                    // Services have been initialized and are healthy, start accepting requests...
+                                    // start accepting requests...
                                     logger.info("Service manager is healthy.");
                                     IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
                                     incomingMessageDispatcher.acceptConnections(true);
 
                                     // We must prestart threads to create the REP sockets, and this must be done after DEALER
-                                    final ExtendedThreadPoolExecutor executor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
-                                    executor.prestartAllCoreThreads();
+                                    final ExtendedThreadPoolExecutor peerMessageExecutor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
+                                    peerMessageExecutor.prestartAllCoreThreads();
                                 }
 
                                 public void failure(Service service) {
-                                    // Something failed, at this point we could log it, notify a load balancer, or take
-                                    // some other action.  For now we will just exit.
                                     logger.error("Service manager failed. Exiting ...", service.failureCause());
                                     System.exit(7);
                                 }
@@ -1337,9 +1366,22 @@ public class Concentrator {
             @Override
             public void run() {
                 try {
-                    manager.stopAsync().awaitStopped(5, TimeUnit.SECONDS);
+                    // stop peer executor
+                    final ExtendedThreadPoolExecutor peerMessageExecutor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
+                    logger.info("shutting down peer threads");
+                    peerMessageExecutor.shutdownNow();
+
+                    // stop log executor
+                    final ExtendedThreadPoolExecutor logMessageExecutor = (LogMessageExecutor) injector.getInstance(LogExecutor.class);
+                    logger.info("shutting down log threads");
+                    logMessageExecutor.shutdownNow();
+
+                    // stop all services
+                    manager.stopAsync().awaitStopped(3, TimeUnit.SECONDS);
                 } catch (TimeoutException ie) {
                     logger.error("Timeout exception in shutdown hook", ie);
+                } finally {
+                  Concentrator.closeZmqContext();
                 }
             }
         });

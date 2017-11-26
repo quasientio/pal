@@ -11,15 +11,19 @@ import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
+import org.zeromq.ZMQException;
+import zmq.ZError;
 
 public class PeerMessageInvoker extends Thread {
 
     protected static final Logger logger = LoggerFactory.getLogger(PeerMessageInvoker.class);
+
+    protected AtomicLong requestsDispatched = new AtomicLong(0);
+
     // zmq stuff
     private ZContext zmqContext;
     private final String dealerAddress;
-
-    protected AtomicLong requestsDispatched = new AtomicLong(0);
+    private Socket socket;
 
     public PeerMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext, String dealerAddress) {
         super(group, target, name);
@@ -32,18 +36,32 @@ public class PeerMessageInvoker extends Thread {
     public void run() {
 
         // create REP socket
-        Socket socket = zmqContext.createSocket(ZMQ.REP);
+        socket = zmqContext.createSocket(ZMQ.REP);
         socket.connect(dealerAddress);
 
-        boolean running = true;
         DataMessage requestMsg, replyMsg;
 
         logger.debug("Start getting requests from socket");
 
-        while (running) {
+        while (!Thread.interrupted()) {
 
             // recv req
-            byte[] req = socket.recv(0);
+            byte[] req = null;
+
+            try {
+                req = socket.recv();
+            } catch (ZMQException ex) {
+                int errorCode = ex.getErrorCode();
+                if (errorCode == ZError.ETERM) {
+                    logger.debug("Caught ETERM during blocking read. Breaking out.");
+                    break;
+                } else if (errorCode == ZError.EINTR) {
+                    logger.debug("Caught EINTR during blocking read. Breaking out.");
+                    break;
+                } else {
+                    throw ex;
+                }
+            }
 
             final long started = System.currentTimeMillis();
 
@@ -78,7 +96,12 @@ public class PeerMessageInvoker extends Thread {
                 }
             }
         }
-        socket.close();
+
+         if (socket != null) {
+            socket.close();
+        }
+
+        logger.debug("Stopped peer executor thread: {}", getName());
     }
 
     private DataMessage dispatch(DataMessage requestMsg) {
