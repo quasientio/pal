@@ -8,6 +8,10 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers;
 
 import org.apache.commons.lang3.StringUtils;
 
+import org.apache.zookeeper.AsyncCallback;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.KeeperException.Code;
+
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -101,7 +105,6 @@ public class ThinPeer {
         }
 
         logger.info("Will read and write to log: {}", this.kafkaTopic);
-        peerLogDirectory.close();
 
 
         /** Configure and Initialize Kafka Producer **/
@@ -191,6 +194,7 @@ public class ThinPeer {
 
         while (true) {
             ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+            logger.debug("Read {} records during poll", records.count());
             for (ConsumerRecord record : records) {
                 if (seek == record.offset()) {
                     return (DataMessage) record.value();
@@ -225,9 +229,55 @@ public class ThinPeer {
     }
 
     public void sendToLogAndForget(DataMessage message) {
-        //send to kafka
+
+        // send to kafka
         producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
         logger.debug("Message sent to log, and we're done:\n{}", message);
+    }
+
+    public Future<DataMessage> sendToLogAsync(DataMessage message) {
+
+        final String requestMsgUuid = message.getMessageUuid();
+
+        // send to kafka
+        producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
+        logger.debug("Message sent to log:\n{}", message);
+
+        DataMessageFuture messageFuture = new DataMessageFuture();
+        final Watcher messageWatcher = new LogMessageReplyWatcher(messageFuture, this, peerLogDirectory, kafkaTopic, requestMsgUuid);
+
+        // getChildren callback
+        final AsyncCallback.ChildrenCallback getChildrenCallback = new AsyncCallback.ChildrenCallback() {
+            @Override
+            public void processResult(int rc, String path, Object ctx, List<String> children) {
+                logger.debug("get children called for {}", path);
+            }
+        };
+
+        // addLog callback
+        AsyncCallback.StringCallback addLogCallback = new AsyncCallback.StringCallback() {
+            @Override
+            public void processResult(int rc, String path, Object ctx, String name) {
+                switch(Code.get(rc)) {
+                    case OK:
+                        ((ZkClient)peerLogDirectory).getChildren(kafkaTopic, requestMsgUuid, messageWatcher, getChildrenCallback, null);
+                        break;
+                    default:
+                        logger.warn("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
+                        return;
+                }
+            }
+        };
+
+        // asynchronously create req node in zk
+        try {
+            ((ZkClient)peerLogDirectory).addLogRequest(kafkaTopic, requestMsgUuid, addLogCallback, null);
+        } catch (Exception e) {
+           logger.error("Couldn't add request node to directory", e);
+           return null;
+        }
+
+        return messageFuture;
     }
 
     private DataMessage sendAndReceiveToLog(DataMessage message) {
@@ -266,7 +316,6 @@ public class ThinPeer {
                     try {
                         // we getPeerProperties and close after since we assume we'll get here only once
                         Properties peerProps = peerLogDirectory.getPeerProperties(UUID.fromString(concentratorUuid));
-                        peerLogDirectory.close();
                         newPeerAddress = peerProps.getProperty("listenAddress");
                     } catch (Exception ex) {
                         logger.error("Couldn't get peer properties", ex);

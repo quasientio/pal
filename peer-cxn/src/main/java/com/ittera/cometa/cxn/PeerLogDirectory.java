@@ -1,6 +1,7 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.LogReply;
 import com.ittera.cometa.PeerInfo;
 
 import java.util.Properties;
@@ -9,7 +10,7 @@ import java.util.Set;
 
 public interface PeerLogDirectory {
 
-    void connect(String zookeeperUrl) throws Exception;
+    void connect(String url) throws Exception;
 
     boolean isConnectionEstablished() throws Exception;
 
@@ -41,6 +42,18 @@ public interface PeerLogDirectory {
 
     LogInfo addLog(String logNamePrefix, String bootstrapServers) throws Exception;
 
+    String addLogRequest(String logName, String requestUuid) throws Exception;
+
+    void addLogReply(String logName, LogReply reply) throws Exception;
+
+    void deleteLogRequest(String logName, String requestUuid) throws Exception;
+
+    void deleteLogRequests(String logName) throws Exception;
+
+    Set<LogReply> getRepliesTo(String logName, String requestUuid) throws Exception;
+
+    LogReply getLogReply(String logName, String requestUuid, String replyUuid) throws Exception;
+
     LogInfo getLastLog(String logNamePrefix) throws Exception;
 
     int getLogCount(String logNamePrefix) throws Exception;
@@ -56,6 +69,5 @@ public interface PeerLogDirectory {
     void deleteAllLogs(String logNamePrefix) throws Exception;
 
     boolean logExists(String logName) throws Exception;
-
 
 }

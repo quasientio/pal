@@ -6,6 +6,9 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.DataMessageBuilder;
 
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.cli.CommandLine;
@@ -32,18 +35,53 @@ class ThinPeerThread extends Thread {
 public class AppRunner {
 
   protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
-  protected boolean verbose = false;
+  protected boolean verbose;
 
   AppRunner(boolean verbose) {
     this.verbose = verbose;
   }
 
-  protected void runReqsWithOneClient(String className, String methodName, int requests, boolean sendAndForget) throws Exception {
+  protected void runReqsWithOneClient(String className, String methodName, final int requests, boolean async, boolean sendAndForget) throws Exception {
     ThinPeer thinPeer = new ThinPeer("/runner.properties");
 
     long start = System.currentTimeMillis();
     int reqsSent = 0;
+    DataMessage replyMsg;
+    Future<DataMessage> messageFuture;
 
+    // a queue to store futures (async mode)
+    final Queue<Future<DataMessage>> messageFutureQueue = new ConcurrentLinkedQueue<>();
+    Thread replyProcessorThread = null;
+    if (async) {
+      replyProcessorThread = new Thread() {
+        @Override
+        public void run() {
+          int totalProcessed = 0;
+          int processed;
+          while (totalProcessed < requests) {
+            processed = 0;
+            for (Future<DataMessage> futureReply: messageFutureQueue) {
+              if (futureReply.isDone()) {
+                messageFutureQueue.remove(futureReply);
+                totalProcessed+=++processed;
+              }
+            }
+            System.out.println(String.format("processed %s records", processed));
+            try {
+              Thread.sleep(100);
+            } catch (InterruptedException e) {
+              // what to do
+            }
+          }
+          System.out.println(String.format("total processed %s records", totalProcessed));
+        }
+      };
+
+      // start background reply processor
+      replyProcessorThread.start();
+    }
+
+    // prepare arrays for message construction
     Class[] parameterTypes = new Class[]{String[].class};
     String[] parameterTypesNamesArray = new String[parameterTypes.length];
     for (int i = 0; i < parameterTypes.length; i++) {
@@ -51,16 +89,27 @@ public class AppRunner {
     }
     Object[] parameters = new Object[]{new String[]{}};
 
+
     for (int i = 0; i < requests; i++) {
       DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
       if (sendAndForget) {
-        // send async to log and forget
+        // send to log and forget
         thinPeer.sendToLogAndForget(requestMsg);
+      } else if (async) {
+        // send async, store future reply
+        messageFuture = thinPeer.sendToLogAsync(requestMsg);
+        messageFutureQueue.add(messageFuture);
       } else {
         // send and wait for reply
-        DataMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
+        replyMsg = thinPeer.sendAndReceive(requestMsg);
       }
       reqsSent++;
+    }
+
+    System.out.println("done sending reqs");
+    // wait for background reply processor to be done
+    if (async) {
+      replyProcessorThread.join();
     }
 
     if (verbose) {
@@ -96,7 +145,8 @@ public class AppRunner {
             DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
             if (sendAndForget) {
               // send async to log and forget
-              thinPeer.sendToLogAndForget(requestMsg);
+//              thinPeer.sendToLogAndForget(requestMsg);
+              thinPeer.sendToLogAsync(requestMsg);
             } else {
               // send and wait for reply
               DataMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
@@ -128,11 +178,12 @@ public class AppRunner {
 
     CommandLineParser parser = new DefaultParser();
     Options options = new Options();
-    options.addOption(Option.builder("h").required(false).longOpt("help").desc("print usage").build());
+    options.addOption(Option.builder("r").required(false).longOpt("num-requests").desc("number of requests to send").hasArg().build());
+    options.addOption(Option.builder("c").required(false).longOpt("num-clients").desc("number of clients to use").hasArg().build());
+    options.addOption(Option.builder("f").required(false).longOpt("forget-reply").desc("do not wait for replies").build());
+    options.addOption(Option.builder("a").required(false).longOpt("async").desc("send to log in async mode").build());
     options.addOption(Option.builder("v").required(false).longOpt("verbose").desc("print useful info").build());
-    options.addOption(Option.builder("forget").required(false).longOpt("forget-reply").desc("do not wait for replies").build());
-    options.addOption(Option.builder("reqs").required(false).longOpt("num-requests").desc("number of requests to send").hasArg().build());
-    options.addOption(Option.builder("clients").required(false).longOpt("num-clients").desc("number of clients to use").hasArg().build());
+    options.addOption(Option.builder("h").required(false).longOpt("help").desc("print usage").build());
 
     CommandLine line = null;
     try {
@@ -148,17 +199,18 @@ public class AppRunner {
       System.exit(0);
     }
 
-    int requests = Integer.parseInt(line.getOptionValue("reqs", "1"));
-    int clients = Integer.parseInt(line.getOptionValue("clients", "1"));
+    int requests = Integer.parseInt(line.getOptionValue("r", "1"));
+    int clients = Integer.parseInt(line.getOptionValue("c", "1"));
     boolean verbose = line.hasOption("v");
-    boolean dontWait = line.hasOption("forget");
+    boolean sendAndForget = line.hasOption("forget");
+    boolean async = line.hasOption("async");
     String className = line.getArgs()[0];
 
     AppRunner appRunner = new AppRunner(verbose);
     if (requests == 1 || clients == 1) {
-      appRunner.runReqsWithOneClient(className, "main", requests, dontWait);
+      appRunner.runReqsWithOneClient(className, "main", requests, async, sendAndForget);
     } else {
-      appRunner.runAsyncReqsWithNClients(className, "main", clients, requests, dontWait);
+      appRunner.runAsyncReqsWithNClients(className, "main", clients, requests, sendAndForget);
     }
   }
 }
