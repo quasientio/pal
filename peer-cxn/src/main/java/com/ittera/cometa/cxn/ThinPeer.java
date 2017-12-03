@@ -9,7 +9,6 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.zookeeper.AsyncCallback;
-import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.KeeperException.Code;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -33,8 +32,12 @@ import java.util.Arrays;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.concurrent.Future;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -55,6 +58,9 @@ public class ThinPeer {
     private final KafkaProducer producer;
     private final KafkaConsumer<String, String> consumer;
     private final Properties kafkaConsumerProps = new Properties();
+
+    private Map<Long,ConsumerRecord> lastRecordsRead = new HashMap();
+    private final ExecutorService singleThreadConsumerExecutor = Executors.newSingleThreadExecutor();
 
     // zmq stuff
     private final ZContext zmqContext;
@@ -187,20 +193,43 @@ public class ThinPeer {
         }
     }
 
-    public DataMessage getMessageAtOffset(long seek) {
+    public DataMessage getMessageAtOffset(Long seek) {
 
         logger.info("Getting message @ offset #{}", seek);
         consumer.seek(topicPartition, seek);
 
-        while (true) {
+        DataMessage cachedMsg = getCachedMessageAtOffset(seek);
+        if (cachedMsg != null) {
+           logger.debug("Got cached record at offset {}", seek);
+           return cachedMsg;
+        }
+
+        Map recordsRead = new HashMap<Long,ConsumerRecord>();
+        ConsumerRecord requestedRecord = null;
+
+        while (requestedRecord == null) {
             ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
             logger.debug("Read {} records during poll", records.count());
             for (ConsumerRecord record : records) {
                 if (seek == record.offset()) {
-                    return (DataMessage) record.value();
+                    requestedRecord = record;
                 }
+                recordsRead.put(record.offset(), record);
             }
         }
+
+        // now swap last batch (map) of records read with the new one
+        this.lastRecordsRead = recordsRead;
+
+        return (DataMessage)requestedRecord.value();
+    }
+
+    private DataMessage getCachedMessageAtOffset(Long offset) {
+        ConsumerRecord cached = lastRecordsRead.get(offset);
+        if (cached != null) {
+            return (DataMessage) cached.value();
+        }
+        return null;
     }
 
     public List<ConsumerRecord> getMessages(long startOffset, long numMessages) {
@@ -243,16 +272,8 @@ public class ThinPeer {
         producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
         logger.debug("Message sent to log:\n{}", message);
 
-        DataMessageFuture messageFuture = new DataMessageFuture();
-        final Watcher messageWatcher = new LogMessageReplyWatcher(messageFuture, this, peerLogDirectory, kafkaTopic, requestMsgUuid);
-
-        // getChildren callback
-        final AsyncCallback.ChildrenCallback getChildrenCallback = new AsyncCallback.ChildrenCallback() {
-            @Override
-            public void processResult(int rc, String path, Object ctx, List<String> children) {
-                logger.debug("get children called for {}", path);
-            }
-        };
+        final DataMessageFuture messageFuture = new DataMessageFuture(this, peerLogDirectory,
+          singleThreadConsumerExecutor, kafkaTopic, requestMsgUuid);
 
         // addLog callback
         AsyncCallback.StringCallback addLogCallback = new AsyncCallback.StringCallback() {
@@ -260,7 +281,7 @@ public class ThinPeer {
             public void processResult(int rc, String path, Object ctx, String name) {
                 switch(Code.get(rc)) {
                     case OK:
-                        ((ZkClient)peerLogDirectory).getChildren(kafkaTopic, requestMsgUuid, messageWatcher, getChildrenCallback, null);
+                        ((ZkClient)peerLogDirectory).getChildren(kafkaTopic, requestMsgUuid, messageFuture, messageFuture, null);
                         break;
                     default:
                         logger.warn("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
@@ -373,18 +394,22 @@ public class ThinPeer {
 
 
     public void close() {
+
+        singleThreadConsumerExecutor.shutdown();
+        logger.info("Consumer executor service shut down");
+
         try {
             peerSocket.close();
-            logger.debug("Peer socket closed.");
+            logger.info("Peer socket closed.");
             zmqContext.destroy();
-            logger.debug("Zmq context closed.");
+            logger.info("Zmq context closed.");
         } catch (Exception ex) {
             logger.error("Error closing zmq connection", ex);
         }
         producer.close();
-        logger.debug("Producer closed.");
+        logger.info("Producer closed.");
         consumer.close();
-        logger.debug("Consumer closed.");
+        logger.info("Consumer closed.");
     }
 }
 

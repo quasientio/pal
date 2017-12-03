@@ -63,21 +63,23 @@ public class AppRunner {
             for (Future<DataMessage> futureReply: messageFutureQueue) {
               if (futureReply.isDone()) {
                 messageFutureQueue.remove(futureReply);
-                totalProcessed+=++processed;
+                processed++;
               }
             }
-            System.out.println(String.format("processed %s records", processed));
+            totalProcessed+=processed;
+            System.out.println(String.format("processed %s records, total so far: %s, size of queue: %s",
+              processed, totalProcessed, messageFutureQueue.size()));
             try {
-              Thread.sleep(100);
+              Thread.sleep(10);
             } catch (InterruptedException e) {
               // what to do
             }
           }
-          System.out.println(String.format("total processed %s records", totalProcessed));
         }
       };
 
       // start background reply processor
+      replyProcessorThread.setDaemon(true);
       replyProcessorThread.start();
     }
 
@@ -89,7 +91,7 @@ public class AppRunner {
     }
     Object[] parameters = new Object[]{new String[]{}};
 
-
+    // send all requests
     for (int i = 0; i < requests; i++) {
       DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
       if (sendAndForget) {
@@ -106,14 +108,15 @@ public class AppRunner {
       reqsSent++;
     }
 
-    System.out.println("done sending reqs");
     // wait for background reply processor to be done
     if (async) {
       replyProcessorThread.join();
     }
 
+    thinPeer.close();
+
     if (verbose) {
-      System.out.println(String.format("sent %s requests in %s ms", reqsSent, (System.currentTimeMillis() - start)));
+      System.out.println(String.format("sent and received %s requests in %s ms", reqsSent, (System.currentTimeMillis() - start)));
     }
   }
 
@@ -168,6 +171,8 @@ public class AppRunner {
     while (finishedThreads.get() < clients) {
       Thread.sleep(10);
     }
+
+    //TODO close thinPeers!!!
 
     if (verbose) {
       System.out.println(String.format("sent %s requests with %s client(s) in %s ms", reqsSent.get(), clients, (System.currentTimeMillis() - start)));
