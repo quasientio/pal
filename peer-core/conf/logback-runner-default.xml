@@ -10,8 +10,8 @@
 		</encoder>
 	</appender>
 
-	<appender name="concentrator" class="ch.qos.logback.core.FileAppender">
-		<file>${logs.dir}/concentrator.log</file>
+	<appender name="runner" class="ch.qos.logback.core.FileAppender">
+		<file>${logs.dir}/runner.log</file>
 		<encoder>
 			<pattern>%date %level [%thread] %logger{10} %msg%n</pattern>
 		</encoder>
@@ -34,7 +34,7 @@
 	<!-- LOGGERS -->
 
 	<logger name="com.ittera.cometa" level="info" additivity="false">
-		<appender-ref ref="concentrator"/>
+		<appender-ref ref="runner"/>
 	</logger>
 
 	<logger name="org.apache.kafka" level="warn" additivity="false">
