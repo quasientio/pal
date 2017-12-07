@@ -68,7 +68,7 @@ public class Concentrator {
    // zmq context -- gets injected to all other threads
     protected static final ZContext zmqContext;
 
-    protected static final String PROPERTIES_FILE = "/dist.properties";
+    protected static final String PROPERTIES_FILE = "/peer.properties";
 
     // defaults for properties
     private static final String ZMQ_LINGER_DEFAULT = "1000";
