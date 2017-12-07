@@ -1,13 +1,10 @@
 #!/bin/bash
 
-JVM_OPTS="-Xmx1024M -Xms512M -server"
+JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA"
 LTW_OPTS=""
 
 if [[ $1 = '-ltw' ]]; then
   LTW_OPTS="-javaagent:$ASPECTJ_HOME/lib/aspectjweaver.jar"
 fi
 
-SYSTEM_PROPS=-Dlogback.configurationFile=file://$PEER_HOME/conf/logback.xml
-ARGS=conf/dist.properties
-
-java $LTW_OPTS $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.concentrator.Concentrator $ARGS
+java $LTW_OPTS $JVM_OPTS com.ittera.cometa.concentrator.Concentrator

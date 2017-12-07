@@ -28,8 +28,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.aspectj.lang.JoinPoint.StaticPart;
 import org.aspectj.runtime.reflect.FieldSignatureImpl;
 
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.InputStream;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
@@ -59,24 +58,47 @@ import zmq.ZError;
 
 public class Concentrator {
 
+    // <editor-fold defaultstate="collapsed" desc="STATIC VARS">
     protected static final Logger logger = LoggerFactory.getLogger(Concentrator.class);
 
     public static final UUID uuid = UUID.randomUUID();
 
-    /**
-     * Non-final static data (eg. singletons) shared by all threads - possible sources of contention
-     */
+    private static final Properties properties = new Properties();
 
-    @Inject
-    private static DataMessageBuilder dataMessageBuilder;
+   // zmq context -- gets injected to all other threads
+    protected static final ZContext zmqContext;
 
-    @Inject
-    private static ObjectService objectService;
+    protected static final String PROPERTIES_FILE = "/peer.properties";
 
-    // zmq context -- gets injected to all other threads
-    private static final ZContext zmqContext;
+    // defaults for properties
+    private static final String ZMQ_LINGER_DEFAULT = "1000";
+    private static final String ZMQ_RCVHWM_DEFAULT = "10000";
+    private static final String ZMQ_SNDHWM_DEFAULT = "10000";
 
-    private static String outCellAddress;
+    protected static String outCellAddress;
+
+    static {
+
+        // load properties from file in classpath
+        try (final InputStream stream = Concentrator.class.getResourceAsStream(PROPERTIES_FILE)) {
+            properties.load(stream);
+        } catch (Exception e) {
+            logger.error("Could not load properties", e);
+            System.err.println(String.format("Could not load properties. Make sure to have `%s` in the classpath",
+              PROPERTIES_FILE));
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        // add our uuid
+        properties.put("id", uuid.toString());
+
+        // initialize zmq context
+        zmqContext = new ZContext();
+        zmqContext.setLinger(Integer.valueOf(properties.getProperty("ZMQ_LINGER",ZMQ_LINGER_DEFAULT)));
+        zmqContext.setRcvHWM(Integer.valueOf(properties.getProperty("ZMQ_RCVHWM",ZMQ_RCVHWM_DEFAULT)));
+        zmqContext.setSndHWM(Integer.valueOf(properties.getProperty("ZMQ_SNDHWM",ZMQ_SNDHWM_DEFAULT)));
+    }
 
     // per-thread REP socket to send messages to dispatcher
     private static final ThreadLocal<Socket> threadSocket = new ThreadLocal<Socket>() {
@@ -89,11 +111,15 @@ public class Concentrator {
         }
     };
 
-    static {
-        zmqContext = new ZContext();
-        zmqContext.setLinger(1000);
-    }
+    // shared by threads - possible sources of contention
 
+    @Inject
+    protected static DataMessageBuilder dataMessageBuilder;
+
+    @Inject
+    protected static ObjectService objectService;
+
+    // </editor-fold>
 
     /*********************** INVOKERS INTERFACE ***************************/
 
@@ -124,7 +150,6 @@ public class Concentrator {
             throw new IllegalArgumentException(String.format("Incoming message with uuid {} ignored - no handler:\n{}", dataMessage.getMessageUuid()));
         }
     }
-
 
     // <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
 
@@ -1275,24 +1300,10 @@ public class Concentrator {
      * @param args
      */
     public static void main(final String[] args) {
-        if (args.length != 1) {
-            System.err.println("Please provide the path to a configuration file");
-            System.exit(1);
-        }
 
-        final Properties properties = new Properties();
         AbstractModule module = new AbstractModule() {
             @Override
             protected void configure() {
-                try {
-                    properties.load(new FileInputStream(args[0]));
-                    properties.put("id", uuid.toString());
-                } catch (IOException e) {
-                    logger.error("Could not load properties", e);
-                    System.err.println("Please provide a valid path to the configuration file");
-                    e.printStackTrace();
-                    System.exit(2);
-                }
 
                 Names.bindProperties(binder(), properties);
 

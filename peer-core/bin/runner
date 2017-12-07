@@ -1,7 +1,7 @@
 #!/bin/bash
 
-JVM_OPTS="-Xmx1024M -Xms512M -server"
+JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA"
 
-SYSTEM_PROPS=-Dlogback.configurationFile=file://$PEER_HOME/conf/logback-runner.xml
+SYSTEM_PROPS=-Dlogback.configurationFile=logback-runner.xml
 
 java $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.util.AppRunner "$@"
