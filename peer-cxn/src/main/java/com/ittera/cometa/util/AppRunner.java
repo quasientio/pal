@@ -19,6 +19,9 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 // Provides a Thread for ThinPeer that gets initialized/connected in the constructor, not in run()
 class ThinPeerThread extends Thread {
   ThinPeer thinPeer;
@@ -34,8 +37,10 @@ class ThinPeerThread extends Thread {
 
 public class AppRunner {
 
+  protected final static Logger logger = LoggerFactory.getLogger(AppRunner.class);
   protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
   protected boolean verbose;
+  protected static final long REPLY_PROCESSOR_SLEEP_MS = 100;
 
   AppRunner(boolean verbose) {
     this.verbose = verbose;
@@ -67,10 +72,18 @@ public class AppRunner {
               }
             }
             totalProcessed+=processed;
-            System.out.println(String.format("processed %s records, total so far: %s, size of queue: %s",
-              processed, totalProcessed, messageFutureQueue.size()));
+            if (logger.isDebugEnabled()) {
+              int queueSize = messageFutureQueue.size();
+              logger.debug("processed {} records, total so far: {}, size of queue: {}", processed, totalProcessed, queueSize);
+              if (logger.isTraceEnabled() && queueSize>0) {
+                logger.trace("PENDING:");
+                for (Future<DataMessage> futureReply : messageFutureQueue) {
+                  logger.trace(futureReply.toString());
+                }
+              }
+            }
             try {
-              Thread.sleep(10);
+              Thread.sleep(REPLY_PROCESSOR_SLEEP_MS);
             } catch (InterruptedException e) {
               // what to do
             }

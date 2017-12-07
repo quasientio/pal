@@ -22,6 +22,7 @@ import org.apache.zookeeper.AsyncCallback;
 public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCallback.ChildrenCallback {
   private final CountDownLatch latch = new CountDownLatch(1);
   private DataMessage value;
+  private boolean cancelled;
 
   protected final static Logger logger = LoggerFactory.getLogger(DataMessageFuture.class);
 
@@ -42,13 +43,14 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
   // <editor-fold defaultstate="collapsed" desc="FUTURE Interface">
   @Override
   public boolean cancel(boolean mayInterruptIfRunning) {
-    return false;
+    cancelled = true;
+    return cancelled;
   }
 
   @Override
   public boolean isCancelled() {
     //TODO (shouldn't we countDown and return true?)
-    return false;
+    return cancelled;
   }
 
   @Override
@@ -103,6 +105,11 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
     }
   }
   // </editor-fold>
+
+  @Override
+  public String toString() {
+    return String.format("uuid: %s done: %s cancelled: %s", requestUuid, isDone(), isCancelled());
+  }
 
   private void process() {
       final LogReply logReply = getReplyNode();

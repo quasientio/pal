@@ -41,6 +41,9 @@ import java.util.concurrent.Executors;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
+/**
+ * This class is not thread-safe. For multi-threaded scenarios, use different instances.
+ */
 public class ThinPeer {
 
     private UUID peerUuid = UUID.randomUUID();
@@ -384,7 +387,7 @@ public class ThinPeer {
 
     private static String getRecordInfo(RecordMetadata recordMetadata) {
         StringBuilder builder = new StringBuilder();
-        builder.append("{\n checksum: ").append(recordMetadata.checksum()).append('\n').append(
+        builder.append("{\n checksum: ").append('\n').append(
                 " timestamp: ").append(recordMetadata.timestamp()).append('\n').append(
                 " offset: ").append(recordMetadata.offset()).append('\n').append(
                 " #bytes in value: ").append(recordMetadata.serializedValueSize()).append("\n}");
