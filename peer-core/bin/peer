@@ -1,6 +1,6 @@
 #!/bin/bash
 
-JVM_OPTS="-Xmx1024M -Xms512M -server"
+JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA"
 LTW_OPTS=""
 
 if [[ $1 = '-ltw' ]]; then
