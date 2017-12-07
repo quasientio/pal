@@ -8,6 +8,5 @@ if [[ $1 = '-ltw' ]]; then
 fi
 
 SYSTEM_PROPS=-Dlogback.configurationFile=file://$PEER_HOME/conf/logback.xml
-ARGS=conf/dist.properties
 
-java $LTW_OPTS $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.concentrator.Concentrator $ARGS
+java $LTW_OPTS $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.concentrator.Concentrator
