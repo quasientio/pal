@@ -292,7 +292,7 @@ public class ThinPeer {
     private DataMessage sendToPeer(DataMessage message) {
 
         // send message request to peer
-        peerSocket.send(message.toByteArray(), 0);
+        peerSocket.send(message.toByteArray());
 
         final long waitStart = System.currentTimeMillis();
         byte[] reply = peerSocket.recv(0);

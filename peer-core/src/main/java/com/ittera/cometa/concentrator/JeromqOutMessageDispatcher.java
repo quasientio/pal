@@ -103,7 +103,7 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService i
                 logger.debug("Got for dispatch data message with uuid: " + dataMessage.getMessageUuid());
 
                 // send to subscribers
-                publisher.send(dataMessage.toByteArray(), 0);
+                publisher.send(dataMessage.toByteArray());
 
                 // finally, if message has no actors, reply 0 to signal to go ahead with sent message
                 if (!hasActors(dataMessage)) {

@@ -82,7 +82,7 @@ public class PeerMessageInvoker extends Thread {
                 replyMsg = dispatch(requestMsg);
 
                 //send reply
-                socket.send(replyMsg.toByteArray(), 0);
+                socket.send(replyMsg.toByteArray());
 
                 if (logger.isDebugEnabled()) {
                     final long took = System.currentTimeMillis() - started;

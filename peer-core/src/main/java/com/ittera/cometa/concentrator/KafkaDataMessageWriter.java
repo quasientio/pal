@@ -196,7 +196,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
     @Override
     public void onCompletion(RecordMetadata recordMetadata, Exception e) {
         //publish new record offset
-        offsetPublisher.send(String.valueOf(recordMetadata.offset()), 0);
+        offsetPublisher.send(String.valueOf(recordMetadata.offset()));
         logger.debug("New offset {}", recordMetadata.offset());
     }
 }

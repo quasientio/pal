@@ -1207,7 +1207,7 @@ public class Concentrator {
     private static DataMessage sendAndRecv(DataMessage dataMessage) {
         logger.trace("in w/ dataMessage with uuid: {}", dataMessage.getMessageUuid());
         Socket outSocket = threadSocket.get();
-        outSocket.send(dataMessage.toByteArray(), 0);
+        outSocket.send(dataMessage.toByteArray());
 
         String rcvdString = null;
         try {
