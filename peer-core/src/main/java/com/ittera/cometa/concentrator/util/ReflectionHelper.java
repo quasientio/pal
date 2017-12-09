@@ -143,7 +143,8 @@ public final class ReflectionHelper {
 
     private static String buildKey(Class clazz, String methodName, List<Primitives.Object> parameterTypeNames) {
         StringBuffer keyBuilder = new StringBuffer(methodName);
-        keyBuilder.append(clazz.getClassLoader().toString());
+        ClassLoader cl = clazz.getClassLoader();
+        keyBuilder.append(cl == null? "bootstrapCL" : cl.toString());
         keyBuilder.append(clazz.getName());
         for (Primitives.Object paramType : parameterTypeNames) {
             keyBuilder.append(paramType.getClass_().getName());
