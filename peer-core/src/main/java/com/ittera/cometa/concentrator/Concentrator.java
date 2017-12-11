@@ -107,7 +107,16 @@ public class Concentrator {
             Socket worker = zmqContext.createSocket(ZMQ.REQ);
             worker.connect(outCellAddress);
             logger.debug("Created and connected REQ new socket to outCellAddress: {}", outCellAddress);
+            threadSocketCreated.set(true);
             return worker;
+        }
+    };
+
+    // flag to avoid creating the threadLocal socket when we're trying to close it and it hasn't been created yet.
+    private static final ThreadLocal<Boolean> threadSocketCreated = new ThreadLocal<Boolean>() {
+        @Override
+        protected Boolean initialValue() {
+            return false;
         }
     };
 
@@ -1207,7 +1216,7 @@ public class Concentrator {
     private static DataMessage sendAndRecv(DataMessage dataMessage) {
         logger.trace("in w/ dataMessage with uuid: {}", dataMessage.getMessageUuid());
         Socket outSocket = threadSocket.get();
-        outSocket.send(dataMessage.toByteArray(), 0);
+        outSocket.send(dataMessage.toByteArray());
 
         String rcvdString = null;
         try {
@@ -1237,6 +1246,16 @@ public class Concentrator {
 
         logger.trace("out w/ {}", returnValue);
         return returnValue;
+    }
+
+    public static void closeThreadLocalSocket() {
+        if (threadSocketCreated.get()) {
+            Socket outSocket = threadSocket.get();
+            if (outSocket != null) {
+                outSocket.close();
+                logger.debug("Thread local socket closed");
+            }
+        }
     }
 
     private static void registerLogAndSelf(Properties properties, Injector injector) {
@@ -1312,7 +1331,7 @@ public class Concentrator {
                 bind(PeerExecutor.class).to(PeerMessageExecutor.class);
                 bind(LogThreadFactory.class).to(LogExecThreadFactory.class);
                 bind(LogExecutor.class).to(LogMessageExecutor.class);
-                bind(LogMessageInvoker.class).to(LogMessageAsyncInvoker.class);
+                bind(LogMessageDispatcher.class).to(LogMessageAsyncDispatcher.class);
                 bind(ObjectService.class).to(BiMapObjectService.class);
                 bind(KafkaMessageWriter.class).to(KafkaDataMessageWriter.class);
                 bind(IncomingMessageDispatcher.class).to(KafkaDataMessageReader.class);
@@ -1345,7 +1364,7 @@ public class Concentrator {
         services.add(injector.getInstance(KafkaDataMessageWriter.class));
         services.add((Service) injector.getInstance(ObjectService.class));
         services.add(injector.getInstance(JeromqInRequestDispatcher.class));
-        services.add((Service) injector.getInstance(LogMessageInvoker.class));
+        services.add((Service) injector.getInstance(LogMessageDispatcher.class));
 
         final ServiceManager manager = new ServiceManager(services);
 
@@ -1377,22 +1396,26 @@ public class Concentrator {
             @Override
             public void run() {
                 try {
-                    // stop peer executor
+                    // destroy context
+                    Concentrator.closeZmqContext();
+
+                    // stop peer executor (interrupts all peer exec threads)
                     final ExtendedThreadPoolExecutor peerMessageExecutor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
                     logger.info("shutting down peer threads");
                     peerMessageExecutor.shutdownNow();
 
-                    // stop log executor
+                    // stop log executor (interrupts all log exec threads)
                     final ExtendedThreadPoolExecutor logMessageExecutor = (LogMessageExecutor) injector.getInstance(LogExecutor.class);
                     logger.info("shutting down log threads");
                     logMessageExecutor.shutdownNow();
 
                     // stop all services
                     manager.stopAsync().awaitStopped(3, TimeUnit.SECONDS);
+
                 } catch (TimeoutException ie) {
                     logger.error("Timeout exception in shutdown hook", ie);
                 } finally {
-                  Concentrator.closeZmqContext();
+                    logger.info("This peer is done! bye");
                 }
             }
         });

@@ -29,9 +29,15 @@ public class LogExecThreadFactory extends ExecThreadFactory implements LogThread
     @Override
     public Thread newThread(Runnable r) {
         final String newThreadName = THREAD_BASE_NAME + ' ' + threadCounter.getAndIncrement();
-        final Thread thread = new Thread(threadGroup, r, newThreadName);
+        final Thread thread = new LogMessageInvokerThread(threadGroup, r, newThreadName);
         thread.setPriority(THREAD_PRIORITY);
         thread.setDaemon(THREAD_IS_DAEMON);
+        thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread t, Throwable e) {
+                logger.error("Uncaught exception in log exec thread: {}", newThreadName, e);
+            }
+        });
         addCreatedThread(thread);
         logger.debug("Created new log executor thread with name: '{}' and id: {}", newThreadName, thread.getId());
         return thread;

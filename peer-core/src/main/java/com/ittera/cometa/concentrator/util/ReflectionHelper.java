@@ -21,7 +21,8 @@ public final class ReflectionHelper {
 
     protected static final Logger logger = LoggerFactory.getLogger(ReflectionHelper.class);
 
-    private static Map<String,Method> matchedMethodsCache = new ConcurrentHashMap<>();
+    private static Map<String, Method> matchedMethodsCache = new ConcurrentHashMap<>();
+
     private ReflectionHelper() {
         //avoid instantiation
     }
@@ -40,7 +41,7 @@ public final class ReflectionHelper {
 
         if (parameters.length != parameterTypeNames.size()) {
             throw new IllegalArgumentException(String.format("Parameters length=%s, different from parameter types length=%s",
-                    parameters.length, parameterTypeNames.size()));
+              parameters.length, parameterTypeNames.size()));
         }
 
         // trace params
@@ -52,7 +53,7 @@ public final class ReflectionHelper {
         }
 
         // cache lookup
-        Method cached = lookup(methodName, parameterTypeNames);
+        Method cached = lookup(clazz, methodName, parameterTypeNames);
         if (cached != null) {
             logger.debug("Got cached method with signature in step0: {}", cached);
             return cached;
@@ -67,11 +68,11 @@ public final class ReflectionHelper {
             }
 
             Method methodFound = clazz.getMethod(methodName, parameterTypes);
-            cache(methodName, parameterTypeNames, methodFound);
+            cache(clazz, methodName, parameterTypeNames, methodFound);
             logger.debug("Got method with signature in step1: {}", methodFound);
             return methodFound;
         } catch (Exception e) {
-           logger.debug("Could not find method the easy way - {}", e.getMessage());
+            logger.debug("Could not find method the easy way - {}", e.getMessage());
         }
 
 
@@ -94,7 +95,7 @@ public final class ReflectionHelper {
                 }
             }
             if (matches) {
-                cache(methodName, parameterTypeNames, method);
+                cache(clazz, methodName, parameterTypeNames, method);
                 logger.debug("Got method with signature in step2: {}", method);
                 return method;
             }
@@ -119,7 +120,7 @@ public final class ReflectionHelper {
                 }
             }
             if (matches) {
-                cache(methodName, parameterTypeNames, method);
+                cache(clazz, methodName, parameterTypeNames, method);
                 logger.debug("Got method with signature in step3: {}", method);
                 return method;
             }
@@ -130,19 +131,25 @@ public final class ReflectionHelper {
         return null;
     }
 
-    private static void cache(String methodName, List<Primitives.Object> parameterTypeNames, Method method) {
-       StringBuffer keyBuilder = new StringBuffer(methodName);
-       for (Primitives.Object paramType: parameterTypeNames) {
-           keyBuilder.append(paramType.getClass_().getName());
-       }
-       matchedMethodsCache.put(keyBuilder.toString(), method);
+    private static void cache(Class clazz, String methodName, List<Primitives.Object> parameterTypeNames, Method method) {
+        String key = buildKey(clazz, methodName, parameterTypeNames);
+        matchedMethodsCache.put(key, method);
     }
 
-    private static Method lookup(String methodName, List<Primitives.Object> parameterTypeNames) {
+    private static Method lookup(Class clazz, String methodName, List<Primitives.Object> parameterTypeNames) {
+        String key = buildKey(clazz, methodName, parameterTypeNames);
+        return matchedMethodsCache.get(key);
+    }
+
+    private static String buildKey(Class clazz, String methodName, List<Primitives.Object> parameterTypeNames) {
         StringBuffer keyBuilder = new StringBuffer(methodName);
-        for (Primitives.Object paramType: parameterTypeNames) {
+        ClassLoader cl = clazz.getClassLoader();
+        keyBuilder.append(cl == null? "bootstrapCL" : cl.toString());
+        keyBuilder.append(clazz.getName());
+        for (Primitives.Object paramType : parameterTypeNames) {
             keyBuilder.append(paramType.getClass_().getName());
         }
-        return matchedMethodsCache.get(keyBuilder.toString());
+        return keyBuilder.toString();
     }
 }
+
