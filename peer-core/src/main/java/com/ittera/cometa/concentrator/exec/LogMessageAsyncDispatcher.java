@@ -21,9 +21,9 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 @Singleton
-public class LogMessageAsyncInvoker extends AbstractExecutionThreadService implements LogMessageInvoker {
+public class LogMessageAsyncDispatcher extends AbstractExecutionThreadService implements LogMessageDispatcher {
 
-    protected static final Logger logger = LoggerFactory.getLogger(LogMessageAsyncInvoker.class);
+    protected static final Logger logger = LoggerFactory.getLogger(LogMessageAsyncDispatcher.class);
 
     protected AtomicLong requestsDispatched = new AtomicLong(0);
 
@@ -36,7 +36,7 @@ public class LogMessageAsyncInvoker extends AbstractExecutionThreadService imple
 
 
     @Inject
-    LogMessageAsyncInvoker(@Named("in.log") String inLogAddress, ZContext zmqContext, LogExecutor executor) {
+    LogMessageAsyncDispatcher(@Named("in.log") String inLogAddress, ZContext zmqContext, LogExecutor executor) {
         this.inLogAddress = inLogAddress;
         this.zmqContext = zmqContext;
         this.executor = executor;

@@ -14,9 +14,9 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-public class PeerMessageInvoker extends Thread {
+public class PeerMessageInvokerThread extends Thread {
 
-    protected static final Logger logger = LoggerFactory.getLogger(PeerMessageInvoker.class);
+    protected static final Logger logger = LoggerFactory.getLogger(PeerMessageInvokerThread.class);
 
     protected AtomicLong requestsDispatched = new AtomicLong(0);
 
@@ -25,11 +25,11 @@ public class PeerMessageInvoker extends Thread {
     private final String dealerAddress;
     private Socket socket;
 
-    public PeerMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext, String dealerAddress) {
+    public PeerMessageInvokerThread(ThreadGroup group, Runnable target, String name, ZContext zmqContext, String dealerAddress) {
         super(group, target, name);
         this.zmqContext = zmqContext;
         this.dealerAddress = dealerAddress;
-        logger.debug("Initialized new peer message invoker with dealerAddress: {}", dealerAddress);
+        logger.debug("Initialized new peer message invoker thread named: {} with dealerAddress: {}", name, dealerAddress);
     }
 
     @Override
@@ -59,6 +59,7 @@ public class PeerMessageInvoker extends Thread {
                     logger.debug("Caught EINTR during blocking read. Breaking out.");
                     break;
                 } else {
+                    logger.debug("Re-throwing unexpected exception", ex);
                     throw ex;
                 }
             }
@@ -97,11 +98,17 @@ public class PeerMessageInvoker extends Thread {
             }
         }
 
-         if (socket != null) {
-            socket.close();
-        }
+        closeConnections();
 
         logger.debug("Stopped peer executor thread: {}", getName());
+    }
+
+    protected void closeConnections() {
+
+        if (socket != null) {
+            socket.close();
+        }
+        Concentrator.closeThreadLocalSocket();
     }
 
     private DataMessage dispatch(DataMessage requestMsg) {

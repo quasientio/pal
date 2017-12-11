@@ -49,8 +49,9 @@ public class ExtendedThreadPoolExecutor extends ThreadPoolExecutor {
                 Thread.currentThread().interrupt(); // ignore/reset
             }
         }
-        if (t != null)
+        if (t != null) {
             logger.error("Error executing r", t);
+        }
     }
 
     @Override
