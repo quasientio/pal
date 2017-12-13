@@ -1,5 +1,6 @@
 package com.ittera.cometa.util;
 
+import com.ittera.cometa.PeerInfo;
 import com.ittera.cometa.cxn.ThinPeer;
 
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -7,6 +8,7 @@ import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.DataMessageBuilder;
 
 import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -46,6 +48,64 @@ public class AppRunner {
     this.verbose = verbose;
   }
 
+
+  /**
+   * Sends 1st req to log and waits for future reply, then sends all other directly to peer
+   * @param className
+   * @param methodName
+   * @param requests
+   * @throws Exception
+   */
+  protected void runReqsWithOneClient(String className, String methodName, final int requests) throws Exception {
+    ThinPeer thinPeer = new ThinPeer("/runner.properties");
+    long start = System.currentTimeMillis();
+    int reqsSent = 0;
+    DataMessage replyMsg;
+    Future<DataMessage> messageFuture;
+
+     // prepare arrays for message construction
+    Class[] parameterTypes = new Class[]{String[].class};
+    String[] parameterTypesNamesArray = new String[parameterTypes.length];
+    for (int i = 0; i < parameterTypes.length; i++) {
+      parameterTypesNamesArray[i] = parameterTypes[i].getName();
+    }
+    Object[] parameters = new Object[]{new String[]{}};
+
+    // send 1st request
+    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+    messageFuture = thinPeer.sendToLogAsync(requestMsg);
+    reqsSent++;
+    // wait for reply (blocking)
+    replyMsg = messageFuture.get();
+
+    String concentratorUuid = replyMsg.getConcentratorUuid();
+    PeerInfo newPeer = null;
+    thinPeer.connectToPeer(UUID.fromString(concentratorUuid));
+
+    // send rest of requests
+    for (int i = 1; i < requests; i++) {
+      requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+      // send and wait for reply
+      replyMsg = thinPeer.sendAndReceive(requestMsg);
+      reqsSent++;
+    }
+
+    thinPeer.close();
+
+    if (verbose) {
+      System.out.println(String.format("sent and received %s requests in %s ms", reqsSent, (System.currentTimeMillis() - start)));
+    }
+  }
+
+  /**
+   * Sends all requests either asynchronously (async=true), discarding replies (sendAndForget=true), or sequentially
+   * @param className
+   * @param methodName
+   * @param requests
+   * @param async
+   * @param sendAndForget
+   * @throws Exception
+   */
   protected void runReqsWithOneClient(String className, String methodName, final int requests, boolean async, boolean sendAndForget) throws Exception {
     ThinPeer thinPeer = new ThinPeer("/runner.properties");
 
@@ -226,7 +286,8 @@ public class AppRunner {
 
     AppRunner appRunner = new AppRunner(verbose);
     if (requests == 1 || clients == 1) {
-      appRunner.runReqsWithOneClient(className, "main", requests, async, sendAndForget);
+      //appRunner.runReqsWithOneClient(className, "main", requests, async, sendAndForget);
+      appRunner.runReqsWithOneClient(className, "main", requests);
     } else {
       appRunner.runAsyncReqsWithNClients(className, "main", clients, requests, sendAndForget);
     }

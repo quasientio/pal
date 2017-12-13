@@ -1,6 +1,7 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.PeerInfo;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -68,7 +69,7 @@ public class ThinPeer {
     // zmq stuff
     private final ZContext zmqContext;
     private final Socket peerSocket;
-    private String currentPeerAddress;
+    private PeerInfo currentPeer;
     private boolean talkingToPeer = false;
 
     // zookeeper
@@ -78,8 +79,8 @@ public class ThinPeer {
         this(propertiesFile, null, null);
     }
 
-    public ThinPeer(String propertiesFile, String initialPeerAddress, LogInfo logInfo) throws Exception {
-        currentPeerAddress = initialPeerAddress;
+    public ThinPeer(String propertiesFile, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
+        currentPeer = initialPeer;
 
         //load properties
         final Properties properties = new Properties();
@@ -152,8 +153,8 @@ public class ThinPeer {
         logger.debug("Initializing zmq context");
         zmqContext = new ZContext();
         peerSocket = zmqContext.createSocket(ZMQ.REQ);
-        if (currentPeerAddress != null) {
-            connectToPeer(currentPeerAddress);
+        if (currentPeer != null) {
+            connectToPeer(currentPeer);
         }
 
         //init msg builder
@@ -162,7 +163,7 @@ public class ThinPeer {
 
     private void connectSocket() {
         peerSocket.setIdentity(("Dual-Peer-" + peerUuid.toString()).getBytes(ZMQ.CHARSET));
-        peerSocket.connect(currentPeerAddress);
+        peerSocket.connect(currentPeer.getListenAddress());
     }
 
     public DataMessage sendAndReceive(DataMessage message) {
@@ -336,16 +337,15 @@ public class ThinPeer {
                 if (dataMessage.hasFollowingUuid() && message.getMessageUuid().equals(dataMessage.getFollowingUuid())) {
                     logger.info("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
                     String concentratorUuid = dataMessage.getConcentratorUuid();
-                    String newPeerAddress = null;
+                    PeerInfo newPeer = null;
                     try {
                         // we getPeerProperties and close after since we assume we'll get here only once
-                        Properties peerProps = peerLogDirectory.getPeerProperties(UUID.fromString(concentratorUuid));
-                        newPeerAddress = peerProps.getProperty("listenAddress");
+                        newPeer = peerLogDirectory.getPeerInfo(concentratorUuid);
                     } catch (Exception ex) {
                         logger.error("Couldn't get peer properties", ex);
                     }
-                    if (currentPeerAddress != newPeerAddress) {
-                        connectToPeer(newPeerAddress);
+                    if (newPeer !=null && !newPeer.equals(currentPeer)) {
+                        connectToPeer(newPeer);
                     }
                     return dataMessage;
                 } else {
@@ -355,9 +355,24 @@ public class ThinPeer {
         }
     }
 
-    private void connectToPeer(String peerAddress) {
-        logger.info("Switching to direct talk with peer @ {}", peerAddress);
-        currentPeerAddress = peerAddress;
+    public void connectToPeer(UUID peerUuid) {
+        PeerInfo newPeer = null;
+        try {
+            // we getPeerProperties and close after since we assume we'll get here only once
+            newPeer = peerLogDirectory.getPeerInfo(peerUuid);
+        } catch (Exception ex) {
+            logger.error("Couldn't get peer properties", ex);
+        }
+        if (newPeer !=null && !newPeer.equals(currentPeer)) {
+            connectToPeer(newPeer);
+         } else {
+            throw new IllegalArgumentException(String.format("peer entry w/uuid: %s not found in directory", peerUuid));
+        }
+    }
+
+    private void connectToPeer(PeerInfo peerInfo) {
+        logger.info("Switching to direct talk with {}", peerInfo);
+        currentPeer = peerInfo;
         connectSocket();
         talkingToPeer = true;
     }
