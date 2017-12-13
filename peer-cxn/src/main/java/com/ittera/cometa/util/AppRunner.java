@@ -24,18 +24,6 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// Provides a Thread for ThinPeer that gets initialized/connected in the constructor, not in run()
-class ThinPeerThread extends Thread {
-  ThinPeer thinPeer;
-
-  ThinPeerThread() {
-    try {
-      thinPeer = new ThinPeer("/runner.properties");
-    } catch (Exception ex) {
-      ex.printStackTrace();
-    }
-  }
-}
 
 public class AppRunner {
 
@@ -50,13 +38,10 @@ public class AppRunner {
 
 
   /**
-   * Sends 1st req to log and waits for future reply, then sends all other directly to peer
-   * @param className
-   * @param methodName
-   * @param requests
-   * @throws Exception
+   * Serially sends all requests in a single (ThinPeer) thread.
+   * Sends 1st req to log and waits for Future reply, then sends all other directly to peer
    */
-  protected void runReqsWithOneClient(String className, String methodName, final int requests) throws Exception {
+  protected int runReqsWithSingleClient(String className, String methodName, final int requests) throws Exception {
     ThinPeer thinPeer = new ThinPeer("/runner.properties");
     long start = System.currentTimeMillis();
     int reqsSent = 0;
@@ -72,52 +57,53 @@ public class AppRunner {
     Object[] parameters = new Object[]{new String[]{}};
 
     // send 1st request
-    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
+      parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
     messageFuture = thinPeer.sendToLogAsync(requestMsg);
     reqsSent++;
+
     // wait for reply (blocking)
     replyMsg = messageFuture.get();
 
+    // switch to direct p2p talk
     String concentratorUuid = replyMsg.getConcentratorUuid();
     PeerInfo newPeer = null;
     thinPeer.connectToPeer(UUID.fromString(concentratorUuid));
 
     // send rest of requests
-    for (int i = 1; i < requests; i++) {
-      requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
-      // send and wait for reply
+    for (; reqsSent < requests; reqsSent++) {
+      requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
+        parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
       replyMsg = thinPeer.sendAndReceive(requestMsg);
-      reqsSent++;
     }
 
     thinPeer.close();
 
     if (verbose) {
-      System.out.println(String.format("sent and received %s requests in %s ms", reqsSent, (System.currentTimeMillis() - start)));
+      System.out.println(String.format("sent and received %s requests in %s ms", reqsSent,
+        (System.currentTimeMillis() - start)));
     }
+
+    return reqsSent;
   }
 
   /**
-   * Sends all requests either asynchronously (async=true), discarding replies (sendAndForget=true), or sequentially
-   * @param className
-   * @param methodName
-   * @param requests
-   * @param async
-   * @param sendAndForget
-   * @throws Exception
+   * Use this method when no direct peer-to-peer talk is available or desirable.
+   * Sends all requests asynchronously to log, waits for reply offsets in directory, then fetches them from log.
+   * If sendAndForget=true, it doesn't wait for replies, useful for void methods for instance.
    */
-  protected void runReqsWithOneClient(String className, String methodName, final int requests, boolean async, boolean sendAndForget) throws Exception {
+  protected int runReqsWithSingleClientAsync(String className, String methodName, final int requests,
+                                              boolean sendAndForget) throws Exception {
     ThinPeer thinPeer = new ThinPeer("/runner.properties");
 
     long start = System.currentTimeMillis();
     int reqsSent = 0;
-    DataMessage replyMsg;
     Future<DataMessage> messageFuture;
 
     // a queue to store futures (async mode)
     final Queue<Future<DataMessage>> messageFutureQueue = new ConcurrentLinkedQueue<>();
     Thread replyProcessorThread = null;
-    if (async) {
+    if (!sendAndForget) {
       replyProcessorThread = new Thread() {
         @Override
         public void run() {
@@ -165,48 +151,46 @@ public class AppRunner {
     Object[] parameters = new Object[]{new String[]{}};
 
     // send all requests
-    for (int i = 0; i < requests; i++) {
-      DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+    for (; reqsSent < requests; reqsSent++) {
+      DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
+        parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
       if (sendAndForget) {
         // send to log and forget
         thinPeer.sendToLogAndForget(requestMsg);
-      } else if (async) {
+      } else {
         // send async, store future reply
         messageFuture = thinPeer.sendToLogAsync(requestMsg);
         messageFutureQueue.add(messageFuture);
-      } else {
-        // send and wait for reply
-        replyMsg = thinPeer.sendAndReceive(requestMsg);
       }
-      reqsSent++;
     }
 
     // wait for background reply processor to be done
-    if (async) {
+    if (!sendAndForget) {
       replyProcessorThread.join();
     }
 
     thinPeer.close();
 
     if (verbose) {
-      System.out.println(String.format("sent and received %s requests in %s ms", reqsSent, (System.currentTimeMillis() - start)));
+      System.out.println(String.format("sent and received %s requests in %s ms", reqsSent,
+        (System.currentTimeMillis() - start)));
     }
+
+    return reqsSent;
   }
 
-  protected void runAsyncReqsWithNClients(final String className, final String methodName, int clients, final int requests, final boolean sendAndForget) throws Exception {
+  /**
+   * Use this method to send requests in parallel with separate client (ThinPeer) threads
+   * NOTE that this method simply calls the above runReqsWithSingleClient() method in parallel threads
+   */
+  protected int runReqsWithNClients(final String className, final String methodName, int clients,
+                                     final int requests) throws Exception {
 
+    assert requests > 1;
+    assert clients > 1;
 
-    // we can reuse this. so better just once
-    final Class[] parameterTypes = new Class[]{String[].class};
-    final String[] parameterTypesNamesArray = new String[parameterTypes.length];
-    for (int i = 0; i < parameterTypes.length; i++) {
-      parameterTypesNamesArray[i] = parameterTypes[i].getName();
-    }
-    final Object[] parameters = new Object[]{new String[]{}};
     Thread[] clientList = new Thread[clients];
-
     final AtomicInteger finishedThreads = new AtomicInteger(0);
-    final AtomicInteger reqsToSend = new AtomicInteger(requests);
     final AtomicInteger reqsSent = new AtomicInteger(0);
 
     // start timing
@@ -214,22 +198,16 @@ public class AppRunner {
 
     // create all threads
     for (int i = 0; i < clients; i++) {
-      ThinPeerThread client = new ThinPeerThread() {
+      Thread client = new Thread() {
         @Override
         public void run() {
-          while (reqsToSend.getAndDecrement() > 0) {
-            DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
-            if (sendAndForget) {
-              // send async to log and forget
-//              thinPeer.sendToLogAndForget(requestMsg);
-              thinPeer.sendToLogAsync(requestMsg);
-            } else {
-              // send and wait for reply
-              DataMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
-            }
-            reqsSent.getAndIncrement();
+          try {
+            int sent = runReqsWithSingleClient(className, methodName, requests);
+            finishedThreads.getAndIncrement();
+            reqsSent.getAndAdd(sent);
+          } catch (Exception e) {
+            logger.error("Caught error running requests", e);
           }
-          finishedThreads.getAndIncrement();
         }
       };
       clientList[i] = client;
@@ -245,11 +223,12 @@ public class AppRunner {
       Thread.sleep(10);
     }
 
-    //TODO close thinPeers!!!
-
     if (verbose) {
-      System.out.println(String.format("sent %s requests with %s client(s) in %s ms", reqsSent.get(), clients, (System.currentTimeMillis() - start)));
+      System.out.println(String.format("sent %s requests with %s client(s) in %s ms", reqsSent.get(), clients,
+        (System.currentTimeMillis() - start)));
     }
+
+    return reqsSent.get();
   }
 
   public static void main(String[] args) throws Exception {
@@ -280,16 +259,25 @@ public class AppRunner {
     int requests = Integer.parseInt(line.getOptionValue("r", "1"));
     int clients = Integer.parseInt(line.getOptionValue("c", "1"));
     boolean verbose = line.hasOption("v");
-    boolean sendAndForget = line.hasOption("forget");
+    boolean sendAndForget = line.hasOption("forget-reply");
     boolean async = line.hasOption("async");
+
+    if (async && sendAndForget) {
+      System.err.println("async (-a) and forget-reply (-f) options are mutually-exclusive");
+      System.exit(1);
+    }
+
     String className = line.getArgs()[0];
 
     AppRunner appRunner = new AppRunner(verbose);
     if (requests == 1 || clients == 1) {
-      //appRunner.runReqsWithOneClient(className, "main", requests, async, sendAndForget);
-      appRunner.runReqsWithOneClient(className, "main", requests);
+      if (async || sendAndForget) {
+        appRunner.runReqsWithSingleClientAsync(className, "main", requests, sendAndForget);
+      } else {
+        appRunner.runReqsWithSingleClient(className, "main", requests);
+      }
     } else {
-      appRunner.runAsyncReqsWithNClients(className, "main", clients, requests, sendAndForget);
+      appRunner.runReqsWithNClients(className, "main", clients, requests);
     }
   }
 }

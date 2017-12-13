@@ -21,7 +21,7 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.apps.App";
 
   @Test
-  public void privateWithArg() {
+  public void privateWithArg() throws Exception {
 
     String methodName = "testVoidStatic";
 
@@ -37,7 +37,7 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void privateWithPrimitiveAndWrapperArgs() {
+  public void privateWithPrimitiveAndWrapperArgs() throws Exception {
 
     String methodName = "printArg";
 
@@ -53,7 +53,7 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void packageWithNoArgs() {
+  public void packageWithNoArgs() throws Exception {
 
     String methodName = "doSomethingStatically";
 
@@ -70,7 +70,7 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
 
 
   @Test
-  public void publicStaticVoidMain() {
+  public void publicStaticVoidMain() throws Exception {
 
     //test main
     String methodName = "main";
@@ -91,7 +91,7 @@ public class VoidClassMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void withObjectrefAsArg() {
+  public void withObjectrefAsArg() throws Exception {
 
     String methodName = "sumUpList";
 

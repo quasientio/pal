@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -63,7 +64,7 @@ public class ThinPeer {
     private final KafkaConsumer<String, String> consumer;
     private final Properties kafkaConsumerProps = new Properties();
 
-    private Map<Long,ConsumerRecord> lastRecordsRead = new HashMap();
+    private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap();
     private final ExecutorService singleThreadConsumerExecutor = Executors.newSingleThreadExecutor();
 
     // zmq stuff
@@ -106,8 +107,7 @@ public class ThinPeer {
         if (logInfo != null) {
             this.kafkaTopic = logInfo.getName();
             bootstrapServers = logInfo.getBootstrapServers();
-        }
-        else {
+        } else {
             // get last log with prefix = kafkaTopic
             LogInfo lastLog = peerLogDirectory.getLastLog(kafkaTopicPrefix);
             this.kafkaTopic = lastLog.getName();
@@ -166,11 +166,11 @@ public class ThinPeer {
         peerSocket.connect(currentPeer.getListenAddress());
     }
 
-    public DataMessage sendAndReceive(DataMessage message) {
+    public DataMessage sendAndReceive(DataMessage message) throws ExecutionException, InterruptedException {
         if (talkingToPeer) {
             return sendToPeer(message);
         } else {
-            return sendAndReceiveToLog(message);
+            return sendToLogAndReceive(message);
         }
     }
 
@@ -187,7 +187,7 @@ public class ThinPeer {
                 long receivedMsgOffset = record.offset();
 
                 if (dataMessage.hasStaticFieldPutDone() &&
-                        fieldName.equals(dataMessage.getStaticFieldPutDone().getField().getName())) {
+                  fieldName.equals(dataMessage.getStaticFieldPutDone().getField().getName())) {
                     logger.info("Got matching message with offset {}:\n{}", receivedMsgOffset, dataMessage);
                     return dataMessage;
                 } else {
@@ -204,11 +204,11 @@ public class ThinPeer {
 
         DataMessage cachedMsg = getCachedMessageAtOffset(seek);
         if (cachedMsg != null) {
-           logger.debug("Got cached record at offset {}", seek);
-           return cachedMsg;
+            logger.debug("Got cached record at offset {}", seek);
+            return cachedMsg;
         }
 
-        Map recordsRead = new HashMap<Long,ConsumerRecord>();
+        Map recordsRead = new HashMap<Long, ConsumerRecord>();
         ConsumerRecord requestedRecord = null;
 
         while (requestedRecord == null) {
@@ -225,7 +225,7 @@ public class ThinPeer {
         // now swap last batch (map) of records read with the new one
         this.lastRecordsRead = recordsRead;
 
-        return (DataMessage)requestedRecord.value();
+        return (DataMessage) requestedRecord.value();
     }
 
     private DataMessage getCachedMessageAtOffset(Long offset) {
@@ -283,9 +283,9 @@ public class ThinPeer {
         AsyncCallback.StringCallback addLogCallback = new AsyncCallback.StringCallback() {
             @Override
             public void processResult(int rc, String path, Object ctx, String name) {
-                switch(Code.get(rc)) {
+                switch (Code.get(rc)) {
                     case OK:
-                        ((ZkClient)peerLogDirectory).getChildren(kafkaTopic, requestMsgUuid, messageFuture, messageFuture, null);
+                        ((ZkClient) peerLogDirectory).getChildren(kafkaTopic, requestMsgUuid, messageFuture, messageFuture, null);
                         break;
                     default:
                         logger.warn("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
@@ -296,16 +296,45 @@ public class ThinPeer {
 
         // asynchronously create req node in zk
         try {
-            ((ZkClient)peerLogDirectory).addLogRequest(kafkaTopic, requestMsgUuid, addLogCallback, null);
+            ((ZkClient) peerLogDirectory).addLogRequest(kafkaTopic, requestMsgUuid, addLogCallback, null);
         } catch (Exception e) {
-           logger.error("Couldn't add request node to directory", e);
-           return null;
+            logger.error("Couldn't add request node to directory", e);
+            return null;
         }
 
         return messageFuture;
     }
 
-    private DataMessage sendAndReceiveToLog(DataMessage message) {
+    private DataMessage sendToLogAndReceive(DataMessage message) throws ExecutionException, InterruptedException {
+        return sendToLogAndReceive(message, false);
+    }
+
+    private DataMessage sendToLogAndReceive(DataMessage message, boolean consumeLogUntilReply)
+      throws ExecutionException, InterruptedException {
+
+        if (consumeLogUntilReply) {
+            return sendAndReceiveConsumingLog(message);
+        }
+
+        // default behavior (consumeLogUntilReply=false) is to wait for Future reply on directory
+      return sendAsyncAndSwitchToPeer(message);
+    }
+
+    private DataMessage sendAsyncAndSwitchToPeer(DataMessage message) throws ExecutionException, InterruptedException {
+
+        Future<DataMessage> replyFuture = sendToLogAsync(message);
+
+        // wait for reply (blocking)
+        DataMessage replyMsg = replyFuture.get();
+
+        // switch to direct p2p talk
+        String concentratorUuid = replyMsg.getConcentratorUuid();
+        connectToPeer(UUID.fromString(concentratorUuid));
+
+        return replyMsg;
+    }
+
+    private DataMessage sendAndReceiveConsumingLog(DataMessage message) {
 
         //send to kafka
         Long sentRecordOffset;

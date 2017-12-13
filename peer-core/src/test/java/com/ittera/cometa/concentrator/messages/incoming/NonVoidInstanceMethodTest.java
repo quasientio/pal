@@ -28,7 +28,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.apps.App";
 
   @Test
-  public void packageVisibleNoArgs() throws ClassNotFoundException {
+  public void packageVisibleNoArgs() throws Exception {
     String methodName = "giveMeX";
 
     Object[] parameters = new Object[]{};
@@ -55,7 +55,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
 
 
   @Test
-  public void publicReturnsListAsRef() throws ClassNotFoundException {
+  public void publicReturnsListAsRef() throws Exception {
     String methodName = "getListOfStrings";
 
     Object[] parameters = new Object[]{};
@@ -86,7 +86,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
    * Very similar to above test, but return value here is not a ref!
    */
   @Test
-  public void publicReturnsNativelyInitListAsRef() throws ClassNotFoundException {
+  public void publicReturnsNativelyInitListAsRef() throws Exception {
     String methodName = "getListOfStringsShorthand";
 
     Object[] parameters = new Object[]{};
@@ -114,7 +114,7 @@ public class NonVoidInstanceMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void withObjectsAndObjectrefsAsArgs() throws ClassNotFoundException {
+  public void withObjectsAndObjectrefsAsArgs() throws Exception {
 
     String methodName = "addOffsetToListAndSumUp";
 

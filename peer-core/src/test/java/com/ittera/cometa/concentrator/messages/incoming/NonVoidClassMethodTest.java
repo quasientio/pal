@@ -28,7 +28,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.apps.App";
 
   @Test
-  public void privateWithArg() throws ClassNotFoundException {
+  public void privateWithArg() throws Exception {
 
     String methodName = "testNonVoidStatic";
 
@@ -49,7 +49,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void protectedNoArgs() throws ClassNotFoundException {
+  public void protectedNoArgs() throws Exception {
 
     String methodName = "highFive";
 
@@ -69,7 +69,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void returnsIntegerSum() throws ClassNotFoundException {
+  public void returnsIntegerSum() throws Exception {
 
     String methodName = "nonVoidSumUpList";
 
@@ -111,7 +111,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
 
 
   @Test
-  public void returningNullObject() throws ClassNotFoundException {
+  public void returningNullObject() throws Exception {
 
     String methodName = "giveMeANull";
 
@@ -131,7 +131,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void returningCharArray() throws ClassNotFoundException {
+  public void returningCharArray() throws Exception {
 
     String methodName = "toCharArray";
 
@@ -153,7 +153,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
 
 
   @Test
-  public void returningEmptyArray() throws ClassNotFoundException {
+  public void returningEmptyArray() throws Exception {
 
     String methodName = "giveMeAnEmptyLongArray";
 
@@ -173,7 +173,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void returningNullArray() throws ClassNotFoundException {
+  public void returningNullArray() throws Exception {
 
     String methodName = "giveMeANullBoolArray";
 
@@ -193,7 +193,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void returningObjectRef() throws ClassNotFoundException {
+  public void returningObjectRef() throws Exception {
 
     String methodName = "fetchMeAnApp";
 
@@ -238,7 +238,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void returningObjectRefArray() throws ClassNotFoundException {
+  public void returningObjectRefArray() throws Exception {
 
     String methodName = "fetchMeAnAppArray";
 

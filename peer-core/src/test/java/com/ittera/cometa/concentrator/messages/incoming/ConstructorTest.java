@@ -27,7 +27,7 @@ public class ConstructorTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.apps.App";
 
   @Test
-  public void publicEmptyConstructor() {
+  public void publicEmptyConstructor() throws Exception {
 
     DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
     DataMessage replyMsg = sendAndReceive(requestMsg);
@@ -37,7 +37,7 @@ public class ConstructorTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void publicNonEmptyConstructor() {
+  public void publicNonEmptyConstructor() throws Exception {
 
     Object[] args = {"Constructing an app", Integer.valueOf(5)};
     String[] argRefs = {null, null};
@@ -55,7 +55,7 @@ public class ConstructorTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void publicNonEmptyConstructorNullArg() {
+  public void publicNonEmptyConstructorNullArg() throws Exception {
 
     Object[] args = {null};
     String[] argRefs = {null};
@@ -73,7 +73,7 @@ public class ConstructorTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void privateNonEmptyConstructorArrayArg() {
+  public void privateNonEmptyConstructorArrayArg() throws Exception {
 
     Object[] args = {new String[]{"Aa", "Bb", "Cc"}};
     String[] argRefs = {null};
@@ -91,7 +91,7 @@ public class ConstructorTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void publicConstructorObjectrefArg() {
+  public void publicConstructorObjectrefArg() throws Exception {
 
     //1. Construct an App calling no-args constructor
     DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);

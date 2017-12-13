@@ -30,7 +30,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.apps.App";
 
   @Test
-  public void getStaticStringPublicNotNull() throws ClassNotFoundException {
+  public void getStaticStringPublicNotNull() throws Exception {
 
     String fieldName = "aClassString";
     String fieldClassName = "java.lang.String";
@@ -48,7 +48,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticStringPublicNull() throws ClassNotFoundException {
+  public void getStaticStringPublicNull() throws Exception {
 
     String fieldName = "aNullStaticStr";
     String fieldClassName = "java.lang.String";
@@ -61,7 +61,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticIntegerPrivateNotNull() throws ClassNotFoundException {
+  public void getStaticIntegerPrivateNotNull() throws Exception {
 
     String fieldName = "aPrivateClassInt";
     String fieldClassName = "java.lang.Integer";
@@ -79,7 +79,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticBooleanProtectedNull() throws ClassNotFoundException {
+  public void getStaticBooleanProtectedNull() throws Exception {
 
     String fieldName = "aProtectedBool";
     String fieldClassName = "java.lang.Boolean";
@@ -92,7 +92,7 @@ public class GetClassVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticBooleanPackageVisibleNotNull() throws ClassNotFoundException {
+  public void getStaticBooleanPackageVisibleNotNull() throws Exception {
 
     String fieldName = "aPackageVisibleBool";
     String fieldClassName = "boolean";

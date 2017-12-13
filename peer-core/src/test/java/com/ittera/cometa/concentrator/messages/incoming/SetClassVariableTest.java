@@ -27,7 +27,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.apps.App";
 
   @Test
-  public void testPutStaticIntegerNotNull() throws ClassNotFoundException {
+  public void testPutStaticIntegerNotNull() throws Exception {
 
     String fieldName = "aStaticInteger";
     String fieldClassName = "int";
@@ -75,7 +75,7 @@ public class SetClassVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void testPutStaticStringNotNull() throws ClassNotFoundException {
+  public void testPutStaticStringNotNull() throws Exception {
 
     //test with a non null String
     String fieldName = "aClassString";

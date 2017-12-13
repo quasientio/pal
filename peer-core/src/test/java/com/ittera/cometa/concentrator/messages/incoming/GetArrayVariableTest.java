@@ -25,7 +25,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.apps.ArrayVars";
 
   @Test
-  public void getStaticPrivate_booleanArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivate_booleanArrayNull() throws Exception {
 
     String fieldName = "aNull_booleanArray";
     String fieldClassName = "[Z";
@@ -38,7 +38,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_booleanArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivate_booleanArrayEmpty() throws Exception {
     String fieldName = "anEmpty_booleanArray";
     String fieldClassName = "[Z";
     boolean[] actualArray = {};
@@ -55,7 +55,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_booleanArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivate_booleanArrayNotNull() throws Exception {
     String fieldName = "a_booleanArray";
     String fieldClassName = "[Z";
     boolean[] actualArray = {false, false, true};
@@ -75,7 +75,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_byteArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivate_byteArrayNull() throws Exception {
     String fieldName = "aNull_byteArray";
     String fieldClassName = "[B";
 
@@ -87,7 +87,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_byteArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivate_byteArrayEmpty() throws Exception {
     String fieldName = "anEmpty_byteArray";
     String fieldClassName = "[B";
     byte[] actualArray = {};
@@ -104,7 +104,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_byteArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivate_byteArrayNotNull() throws Exception {
     String fieldName = "a_byteArray";
     String fieldClassName = "[B";
     byte[] actualArray = {0, 1, 2, 3, 4, 5, 6};
@@ -124,7 +124,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_shortArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivate_shortArrayNull() throws Exception {
     String fieldName = "aNull_shortArray";
     String fieldClassName = "[S";
 
@@ -136,7 +136,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_shortArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivate_shortArrayEmpty() throws Exception {
     String fieldName = "anEmpty_shortArray";
     String fieldClassName = "[S";
     short[] actualArray = {};
@@ -153,7 +153,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_shortArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivate_shortArrayNotNull() throws Exception {
     String fieldName = "a_shortArray";
     String fieldClassName = "[S";
     short[] actualArray = {-200, -100, 0, 100, 200, 300, 400, 500, 600};
@@ -173,7 +173,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_charArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivate_charArrayNull() throws Exception {
     String fieldName = "aNull_charArray";
     String fieldClassName = "[C";
 
@@ -185,7 +185,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_charArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivate_charArrayEmpty() throws Exception {
     String fieldName = "anEmpty_charArray";
     String fieldClassName = "[C";
     char[] actualArray = {};
@@ -202,7 +202,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_charArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivate_charArrayNotNull() throws Exception {
     String fieldName = "a_charArray";
     String fieldClassName = "[C";
     char[] actualArray = {'a', 'r', 'r', 'a', 'y'};
@@ -222,7 +222,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_intArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivate_intArrayNull() throws Exception {
     String fieldName = "aNull_intArray";
     String fieldClassName = "[I";
 
@@ -234,7 +234,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_intArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivate_intArrayEmpty() throws Exception {
     String fieldName = "anEmpty_intArray";
     String fieldClassName = "[I";
     int[] actualArray = {};
@@ -251,7 +251,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_intArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivate_intArrayNotNull() throws Exception {
     String fieldName = "an_intArray";
     String fieldClassName = "[I";
     int[] actualArray = {2333, -2, 0, 892, 9381};
@@ -271,7 +271,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_longArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivate_longArrayNull() throws Exception {
     String fieldName = "aNull_longArray";
     String fieldClassName = "[J";
 
@@ -283,7 +283,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_longArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivate_longArrayEmpty() throws Exception {
     String fieldName = "anEmpty_longArray";
     String fieldClassName = "[J";
     long[] actualArray = {};
@@ -300,7 +300,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_longArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivate_longArrayNotNull() throws Exception {
     String fieldName = "a_longArray";
     String fieldClassName = "[J";
     long[] actualArray = {23230233L, -8929381L, 0L};
@@ -320,7 +320,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_floatArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivate_floatArrayNull() throws Exception {
     String fieldName = "aNull_floatArray";
     String fieldClassName = "[F";
 
@@ -332,7 +332,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_floatArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivate_floatArrayEmpty() throws Exception {
     String fieldName = "anEmpty_floatArray";
     String fieldClassName = "[F";
     float[] actualArray = {};
@@ -349,7 +349,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_floatArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivate_floatArrayNotNull() throws Exception {
     String fieldName = "a_floatArray";
     String fieldClassName = "[F";
     float[] actualArray = {23.3f, 0f, -763.03f, 892.938f};
@@ -369,7 +369,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_doubleArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivate_doubleArrayNull() throws Exception {
     String fieldName = "aNull_doubleArray";
     String fieldClassName = "[D";
 
@@ -381,7 +381,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_doubleArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivate_doubleArrayEmpty() throws Exception {
     String fieldName = "anEmpty_doubleArray";
     String fieldClassName = "[D";
     double[] actualArray = {};
@@ -398,7 +398,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivate_doubleArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivate_doubleArrayNotNull() throws Exception {
     String fieldName = "a_doubleArray";
     String fieldClassName = "[D";
     double[] actualArray = {383239.3d, 0d, -239923.4038d};
@@ -419,7 +419,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
 
   //WRAPPERS
   @Test
-  public void getStaticPrivateBooleanArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivateBooleanArrayNull() throws Exception {
 
     String fieldName = "aNullBooleanArray";
     String fieldClassName = "[Ljava.lang.Boolean;";
@@ -432,7 +432,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateBooleanArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivateBooleanArrayEmpty() throws Exception {
     String fieldName = "anEmptyBooleanArray";
     String fieldClassName = "[Ljava.lang.Boolean;";
     Boolean[] actualArray = {};
@@ -449,7 +449,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateBooleanArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivateBooleanArrayNotNull() throws Exception {
     String fieldName = "aBooleanArray";
     String fieldClassName = "[Ljava.lang.Boolean;";
     Boolean[] actualArray = {false, false, true};
@@ -469,7 +469,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateByteArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivateByteArrayNull() throws Exception {
     String fieldName = "aNullByteArray";
     String fieldClassName = "[Ljava.lang.Byte;";
 
@@ -481,7 +481,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateByteArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivateByteArrayEmpty() throws Exception {
     String fieldName = "anEmptyByteArray";
     String fieldClassName = "[Ljava.lang.Byte;";
     byte[] actualArray = {};
@@ -498,7 +498,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateByteArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivateByteArrayNotNull() throws Exception {
     String fieldName = "aByteArray";
     String fieldClassName = "[Ljava.lang.Byte;";
     Byte[] actualArray = {0, 1, 2, 3, 4, 5, 6};
@@ -518,7 +518,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateShortArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivateShortArrayNull() throws Exception {
     String fieldName = "aNullShortArray";
     String fieldClassName = "[Ljava.lang.Short;";
 
@@ -530,7 +530,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateShortArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivateShortArrayEmpty() throws Exception {
     String fieldName = "anEmptyShortArray";
     String fieldClassName = "[Ljava.lang.Short;";
     Short[] actualArray = {};
@@ -547,7 +547,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateShortArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivateShortArrayNotNull() throws Exception {
     String fieldName = "aShortArray";
     String fieldClassName = "[Ljava.lang.Short;";
     Short[] actualArray = {-200, -100, 0, 100, 200, 300, 400, 500, 600};
@@ -567,7 +567,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateCharacterArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivateCharacterArrayNull() throws Exception {
     String fieldName = "aNullCharArray";
     String fieldClassName = "[Ljava.lang.Character;";
 
@@ -579,7 +579,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateCharacterArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivateCharacterArrayEmpty() throws Exception {
     String fieldName = "anEmptyCharArray";
     String fieldClassName = "[Ljava.lang.Character;";
     Character[] actualArray = {};
@@ -596,7 +596,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateCharacterArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivateCharacterArrayNotNull() throws Exception {
     String fieldName = "aCharArray";
     String fieldClassName = "[Ljava.lang.Character;";
     Character[] actualArray = {'a', 'r', 'r', 'a', 'y'};
@@ -616,7 +616,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateIntegerArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivateIntegerArrayNull() throws Exception {
     String fieldName = "aNullIntArray";
     String fieldClassName = "[Ljava.lang.Integer;";
 
@@ -628,7 +628,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateIntegerArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivateIntegerArrayEmpty() throws Exception {
     String fieldName = "anEmptyIntArray";
     String fieldClassName = "[Ljava.lang.Integer;";
     Integer[] actualArray = {};
@@ -645,7 +645,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateIntegerArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivateIntegerArrayNotNull() throws Exception {
     String fieldName = "anIntArray";
     String fieldClassName = "[Ljava.lang.Integer;";
     Integer[] actualArray = {2333, -2, 0, 892, 9381};
@@ -665,7 +665,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateLongArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivateLongArrayNull() throws Exception {
     String fieldName = "aNullLongArray";
     String fieldClassName = "[Ljava.lang.Long;";
 
@@ -677,7 +677,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateLongArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivateLongArrayEmpty() throws Exception {
     String fieldName = "anEmptyLongArray";
     String fieldClassName = "[Ljava.lang.Long;";
     Long[] actualArray = {};
@@ -694,7 +694,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateLongArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivateLongArrayNotNull() throws Exception {
     String fieldName = "aLongArray";
     String fieldClassName = "[Ljava.lang.Long;";
     Long[] actualArray = {23230233L, -8929381L, 0L};
@@ -714,7 +714,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateFloatArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivateFloatArrayNull() throws Exception {
     String fieldName = "aNullFloatArray";
     String fieldClassName = "[Ljava.lang.Float;";
 
@@ -726,7 +726,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateFloatArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivateFloatArrayEmpty() throws Exception {
     String fieldName = "anEmptyFloatArray";
     String fieldClassName = "[Ljava.lang.Float;";
     Float[] actualArray = {};
@@ -743,7 +743,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateFloatArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivateFloatArrayNotNull() throws Exception {
     String fieldName = "aFloatArray";
     String fieldClassName = "[Ljava.lang.Float;";
     Float[] actualArray = {23.3f, 0f, -763.03f, 892.938f};
@@ -763,7 +763,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateDoubleArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivateDoubleArrayNull() throws Exception {
     String fieldName = "aNullDoubleArray";
     String fieldClassName = "[Ljava.lang.Double;";
 
@@ -775,7 +775,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateDoubleArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivateDoubleArrayEmpty() throws Exception {
     String fieldName = "anEmptyDoubleArray";
     String fieldClassName = "[Ljava.lang.Double;";
     Double[] actualArray = {};
@@ -792,7 +792,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateDoubleArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivateDoubleArrayNotNull() throws Exception {
     String fieldName = "aDoubleArray";
     String fieldClassName = "[Ljava.lang.Double;";
     Double[] actualArray = {383239.3d, 0d, -239923.4038d};
@@ -812,7 +812,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateStringArrayNull() throws ClassNotFoundException {
+  public void getStaticPrivateStringArrayNull() throws Exception {
     String fieldName = "aNullStringArray";
     String fieldClassName = "[Ljava.lang.String;";
 
@@ -824,7 +824,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateStringArrayEmpty() throws ClassNotFoundException {
+  public void getStaticPrivateStringArrayEmpty() throws Exception {
     String fieldName = "anEmptyStringArray";
     String fieldClassName = "[Ljava.lang.String;";
     String[] actualArray = {};
@@ -841,7 +841,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStaticPrivateStringArrayNotNull() throws ClassNotFoundException {
+  public void getStaticPrivateStringArrayNotNull() throws Exception {
     String fieldName = "aStringArray";
     String fieldClassName = "[Ljava.lang.String;";
     String[] actualArray = {"hello", "world", "!"};
