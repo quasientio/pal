@@ -24,7 +24,6 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 public class AppRunner {
 
   protected final static Logger logger = LoggerFactory.getLogger(AppRunner.class);
@@ -35,7 +34,6 @@ public class AppRunner {
   AppRunner(boolean verbose) {
     this.verbose = verbose;
   }
-
 
   /**
    * Serially sends all requests in a single (ThinPeer) thread.
@@ -90,7 +88,8 @@ public class AppRunner {
   /**
    * Use this method when no direct peer-to-peer talk is available or desirable.
    * Sends all requests asynchronously to log, waits for reply offsets in directory, then fetches them from log.
-   * If sendAndForget=true, it doesn't wait for replies, useful for void methods for instance.
+   * If sendAndForget=true, it doesn't wait for replies, useful for void methods or any other type of call where
+   * we don't care about the returned value or thrown exceptions.
    */
   protected int runReqsWithSingleClientAsync(String className, String methodName, final int requests,
                                               boolean sendAndForget) throws Exception {
@@ -181,10 +180,11 @@ public class AppRunner {
 
   /**
    * Use this method to send requests in parallel with separate client (ThinPeer) threads
-   * NOTE that this method simply calls the above runReqsWithSingleClient() method in parallel threads
+   * NOTE that this method calls either the runReqsWithSingleClient() or runReqsWithSingleClientAsync()
+   * methods in parallel threads
    */
-  protected int runReqsWithNClients(final String className, final String methodName, int clients,
-                                     final int requests) throws Exception {
+  protected int runReqsWithNClients(final String className, final String methodName, int clients, final int requests,
+                                    final boolean sendAndForget, final boolean async) throws Exception {
 
     assert requests > 1;
     assert clients > 1;
@@ -202,7 +202,12 @@ public class AppRunner {
         @Override
         public void run() {
           try {
-            int sent = runReqsWithSingleClient(className, methodName, requests);
+            int sent = 0;
+            if (async || sendAndForget) {
+              sent = runReqsWithSingleClientAsync(className, methodName, requests, sendAndForget);
+            } else {
+              sent = runReqsWithSingleClient(className, methodName, requests);
+            }
             finishedThreads.getAndIncrement();
             reqsSent.getAndAdd(sent);
           } catch (Exception e) {
@@ -223,7 +228,7 @@ public class AppRunner {
       Thread.sleep(10);
     }
 
-    if (verbose) {
+     if (verbose) {
       System.out.println(String.format("sent %s requests with %s client(s) in %s ms", reqsSent.get(), clients,
         (System.currentTimeMillis() - start)));
     }
@@ -277,7 +282,7 @@ public class AppRunner {
         appRunner.runReqsWithSingleClient(className, "main", requests);
       }
     } else {
-      appRunner.runReqsWithNClients(className, "main", clients, requests);
+        appRunner.runReqsWithNClients(className, "main", clients, requests, sendAndForget, async);
     }
   }
 }
