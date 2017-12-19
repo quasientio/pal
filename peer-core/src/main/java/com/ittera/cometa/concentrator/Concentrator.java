@@ -1331,7 +1331,6 @@ public class Concentrator {
                 bind(PeerExecutor.class).to(PeerMessageExecutor.class);
                 bind(LogThreadFactory.class).to(LogExecThreadFactory.class);
                 bind(LogExecutor.class).to(LogMessageExecutor.class);
-                bind(LogMessageDispatcher.class).to(LogMessageAsyncDispatcher.class);
                 bind(ObjectService.class).to(BiMapObjectService.class);
                 bind(KafkaMessageWriter.class).to(KafkaDataMessageWriter.class);
                 bind(IncomingMessageDispatcher.class).to(KafkaDataMessageReader.class);
@@ -1364,7 +1363,6 @@ public class Concentrator {
         services.add(injector.getInstance(KafkaDataMessageWriter.class));
         services.add((Service) injector.getInstance(ObjectService.class));
         services.add(injector.getInstance(JeromqInRequestDispatcher.class));
-        services.add((Service) injector.getInstance(LogMessageDispatcher.class));
 
         final ServiceManager manager = new ServiceManager(services);
 
@@ -1380,8 +1378,10 @@ public class Concentrator {
                                     incomingMessageDispatcher.acceptConnections(true);
 
                                     // We must prestart threads to create the REP sockets, and this must be done after DEALER
-                                    final ExtendedThreadPoolExecutor peerMessageExecutor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
-                                    peerMessageExecutor.prestartAllCoreThreads();
+                                    ExtendedThreadPoolExecutor executor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
+                                    executor.prestartAllCoreThreads();
+                                    executor = (LogMessageExecutor) injector.getInstance(LogExecutor.class);
+                                    executor.prestartAllCoreThreads();
                                 }
 
                                 public void failure(Service service) {

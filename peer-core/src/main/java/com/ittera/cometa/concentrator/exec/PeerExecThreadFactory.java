@@ -34,7 +34,7 @@ public class PeerExecThreadFactory extends ExecThreadFactory implements PeerThre
     @Override
     public Thread newThread(Runnable r) {
         final String newThreadName = THREAD_BASE_NAME + ' ' + threadCounter.getAndIncrement();
-        final Thread thread = new PeerMessageInvokerThread(threadGroup, r, newThreadName, zmqContext, dealerAddress);
+        final Thread thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext, dealerAddress);
         thread.setPriority(THREAD_PRIORITY);
         thread.setDaemon(THREAD_IS_DAEMON);
         thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {

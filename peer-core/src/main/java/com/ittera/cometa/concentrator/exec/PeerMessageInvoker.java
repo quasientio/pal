@@ -14,18 +14,19 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-public class PeerMessageInvokerThread extends Thread {
+public class PeerMessageInvoker extends Thread {
 
-    protected static final Logger logger = LoggerFactory.getLogger(PeerMessageInvokerThread.class);
+    protected static final Logger logger = LoggerFactory.getLogger(PeerMessageInvoker.class);
 
     protected AtomicLong requestsDispatched = new AtomicLong(0);
+    protected AtomicLong requestsDismissed = new AtomicLong(0);
 
     // zmq stuff
     private ZContext zmqContext;
     private final String dealerAddress;
     private Socket socket;
 
-    public PeerMessageInvokerThread(ThreadGroup group, Runnable target, String name, ZContext zmqContext, String dealerAddress) {
+    public PeerMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext, String dealerAddress) {
         super(group, target, name);
         this.zmqContext = zmqContext;
         this.dealerAddress = dealerAddress;
@@ -89,18 +90,13 @@ public class PeerMessageInvokerThread extends Thread {
                     final long took = System.currentTimeMillis() - started;
                     logger.debug("Dispatched and sent data message reply with uuid: {} in {} millisecs", requestMsg.getMessageUuid(), took);
                 }
-
-
-                if (requestsDispatched.incrementAndGet() % 25 == 0) {
-                    // print #some stats
-                    logger.debug("# of messages dispatched: {}", requestsDispatched);
-                }
             }
         }
 
         closeConnections();
 
-        logger.debug("Stopped peer executor thread: {}", getName());
+        logger.debug("Stopped peer executor thread: {}, dispatched={} dismissed={}", getName(), requestsDispatched.get(),
+          requestsDismissed.get());
     }
 
     protected void closeConnections() {

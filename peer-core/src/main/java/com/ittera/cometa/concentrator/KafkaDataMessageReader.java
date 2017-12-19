@@ -49,7 +49,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     // zmq stuff
     @Inject
     private ZContext zmqContext;
-    private Socket kafkaPublisher;
+    private Socket logDealer;
     private Socket offsetSubscriber;
     private final String inLogAddress, offsetPubAddress;
 
@@ -197,8 +197,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 
         logger.info("Initialized kafka consumer");
 
-        this.kafkaPublisher = zmqContext.createSocket(ZMQ.PUB);
-        kafkaPublisher.connect(inLogAddress);
+        this.logDealer = zmqContext.createSocket(ZMQ.DEALER);
+        logDealer.bind(inLogAddress);
 
         // subscriber to get the offsets written by the message writer
         this.offsetSubscriber = zmqContext.createSocket(ZMQ.SUB);
@@ -220,8 +220,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
             logger.info("Closed kafka consumer");
         }
 
-        if (kafkaPublisher != null) {
-            kafkaPublisher.close();
+        if (logDealer != null) {
+            logDealer.close();
         }
 
         if (offsetSubscriber != null) {
@@ -281,10 +281,11 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
                 final long messageOffset = record.offset();
                 lastOffsetRead = messageOffset;
 
-                // send request to PUB socket
-                kafkaPublisher.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
-                kafkaPublisher.send(dataMessage.toByteArray());
-                logger.debug("Published new log Data Message with uuid: {}", dataMessage.getMessageUuid());
+                // send request to DEALER socket
+                logDealer.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
+                logDealer.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
+                logDealer.send(dataMessage.toByteArray(), 0);
+                logger.debug("Dealt new log Data Message with uuid: {}", dataMessage.getMessageUuid());
 
                 // get next offset to poll
                 Long nextOffset = nextOffset();
