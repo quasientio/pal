@@ -2,21 +2,21 @@ package com.ittera.cometa.concentrator;
 
 public interface ObjectService {
 
-    String storeObject(Object object);
+	String storeObject(Object object);
 
-    Object lookupObject(String objectRef);
+	Object lookupObject(String objectRef);
 
-    String lookupObjectRef(Object object);
+	String lookupObjectRef(Object object);
 
-    void clear();
+	void clear();
 
-    int size();
+	int size();
 
-    boolean isEmpty();
+	boolean isEmpty();
 
-    boolean containsValue(Object object);
+	boolean containsValue(Object object);
 
-    boolean containsObjectRef(String objectRef);
+	boolean containsObjectRef(String objectRef);
 
-    Object remove(String objectRef);
+	Object remove(String objectRef);
 }

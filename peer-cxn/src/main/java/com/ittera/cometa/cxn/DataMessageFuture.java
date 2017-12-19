@@ -20,140 +20,141 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.AsyncCallback;
 
 public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCallback.ChildrenCallback {
-  private final CountDownLatch latch = new CountDownLatch(1);
-  private DataMessage value;
-  private boolean cancelled;
+	private final CountDownLatch latch = new CountDownLatch(1);
+	private DataMessage value;
+	private boolean cancelled;
 
-  protected final static Logger logger = LoggerFactory.getLogger(DataMessageFuture.class);
+	protected final static Logger logger = LoggerFactory.getLogger(DataMessageFuture.class);
 
-  private final ThinPeer thinPeer;
-  private final PeerLogDirectory peerLogDirectory;
-  private final String logName, requestUuid;
-  private final ExecutorService executorService;
+	private final ThinPeer thinPeer;
+	private final PeerLogDirectory peerLogDirectory;
+	private final String logName, requestUuid;
+	private final ExecutorService executorService;
 
-  DataMessageFuture(ThinPeer thinPeer, PeerLogDirectory peerLogDirectory,
-                                ExecutorService executorService, String logName, String requestUuid) {
-    this.thinPeer = thinPeer;
-    this.peerLogDirectory = peerLogDirectory;
-    this.executorService = executorService;
-    this.logName = logName;
-    this.requestUuid = requestUuid;
-  }
+	DataMessageFuture(ThinPeer thinPeer, PeerLogDirectory peerLogDirectory,
+										ExecutorService executorService, String logName, String requestUuid) {
+		this.thinPeer = thinPeer;
+		this.peerLogDirectory = peerLogDirectory;
+		this.executorService = executorService;
+		this.logName = logName;
+		this.requestUuid = requestUuid;
+	}
 
-  // <editor-fold defaultstate="collapsed" desc="FUTURE Interface">
-  @Override
-  public boolean cancel(boolean mayInterruptIfRunning) {
-    cancelled = true;
-    return cancelled;
-  }
+	// <editor-fold defaultstate="collapsed" desc="FUTURE Interface">
+	@Override
+	public boolean cancel(boolean mayInterruptIfRunning) {
+		cancelled = true;
+		return cancelled;
+	}
 
-  @Override
-  public boolean isCancelled() {
-    //TODO (shouldn't we countDown and return true?)
-    return cancelled;
-  }
+	@Override
+	public boolean isCancelled() {
+		//TODO (shouldn't we countDown and return true?)
+		return cancelled;
+	}
 
-  @Override
-  public boolean isDone() {
-    return latch.getCount() == 0;
-  }
+	@Override
+	public boolean isDone() {
+		return latch.getCount() == 0;
+	}
 
-  @Override
-  public DataMessage get() throws InterruptedException {
-    latch.await();
-    return value;
-  }
+	@Override
+	public DataMessage get() throws InterruptedException {
+		latch.await();
+		return value;
+	}
 
-  @Override
-  public DataMessage get(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException {
-    if (latch.await(timeout, unit)) {
-      return value;
-    } else {
-      throw new TimeoutException();
-    }
-  }
+	@Override
+	public DataMessage get(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException {
+		if (latch.await(timeout, unit)) {
+			return value;
+		} else {
+			throw new TimeoutException();
+		}
+	}
 
-   /**
-   * To be called just once
-   * @param result
-   */
-  private void put(DataMessage result) {
-    value = result;
-    latch.countDown();
-  }
+	/**
+	 * To be called just once
+	 *
+	 * @param result
+	 */
+	private void put(DataMessage result) {
+		value = result;
+		latch.countDown();
+	}
 
-  // </editor-fold>
+	// </editor-fold>
 
-  // <editor-fold defaultstate="collapsed" desc="Zk Watcher Interface">
-  @Override
-  public void process(WatchedEvent evt) {
-    logger.debug("NodeChildrenChanged event for node of request w/uuid: {}", requestUuid);
+	// <editor-fold defaultstate="collapsed" desc="Zk Watcher Interface">
+	@Override
+	public void process(WatchedEvent evt) {
+		logger.debug("NodeChildrenChanged event for node of request w/uuid: {}", requestUuid);
 
-    if (evt.getType() == Event.EventType.NodeChildrenChanged) {
-      process();
-    }
-  }
-  // </editor-fold>
+		if (evt.getType() == Event.EventType.NodeChildrenChanged) {
+			process();
+		}
+	}
+	// </editor-fold>
 
-  // <editor-fold defaultstate="collapsed" desc="Zk Callback Interface">
-  @Override
-  public void processResult(int rc, String path, Object ctx, List<String> children) {
-    logger.debug("getChildren returned for request w/uuid: {}, with {} children", requestUuid, children.size());
+	// <editor-fold defaultstate="collapsed" desc="Zk Callback Interface">
+	@Override
+	public void processResult(int rc, String path, Object ctx, List<String> children) {
+		logger.debug("getChildren returned for request w/uuid: {}, with {} children", requestUuid, children.size());
 
-    if (!children.isEmpty()) {
-      process();
-    }
-  }
-  // </editor-fold>
+		if (!children.isEmpty()) {
+			process();
+		}
+	}
+	// </editor-fold>
 
-  @Override
-  public String toString() {
-    return String.format("uuid: %s done: %s cancelled: %s", requestUuid, isDone(), isCancelled());
-  }
+	@Override
+	public String toString() {
+		return String.format("uuid: %s done: %s cancelled: %s", requestUuid, isDone(), isCancelled());
+	}
 
-  private void process() {
-      final LogReply logReply = getReplyNode();
-      if (logReply == null) {
-        logger.error("Null LogReply object for request msg w/uuid: {}. Cancelling future.", requestUuid);
-        this.cancel(true);
-        return;
-      }
+	private void process() {
+		final LogReply logReply = getReplyNode();
+		if (logReply == null) {
+			logger.error("Null LogReply object for request msg w/uuid: {}. Cancelling future.", requestUuid);
+			this.cancel(true);
+			return;
+		}
 
-      // let the executor service fetch the message from the log
-      executorService.submit(new Runnable() {
-        @Override
-        public void run() {
-          // set msg value to complete future
-          DataMessage messageReply = thinPeer.getMessageAtOffset(logReply.getOffset());
-          logger.debug("completing future reply msg w/uuid: {} for request w/uuid: {}",
-            messageReply.getMessageUuid(), messageReply.getFollowingUuid());
-          DataMessageFuture.this.put(messageReply);
-          // delete request and reply nodes
-          deleteRequestNode();
-        }
-      });
-  }
+		// let the executor service fetch the message from the log
+		executorService.submit(new Runnable() {
+			@Override
+			public void run() {
+				// set msg value to complete future
+				DataMessage messageReply = thinPeer.getMessageAtOffset(logReply.getOffset());
+				logger.debug("completing future reply msg w/uuid: {} for request w/uuid: {}",
+					messageReply.getMessageUuid(), messageReply.getFollowingUuid());
+				DataMessageFuture.this.put(messageReply);
+				// delete request and reply nodes
+				deleteRequestNode();
+			}
+		});
+	}
 
-  private LogReply getReplyNode() {
+	private LogReply getReplyNode() {
 
-    LogReply logReply = null;
-    try {
-      Set<LogReply> replySet = peerLogDirectory.getRepliesTo(logName, requestUuid);
-      if (!replySet.isEmpty()) {
-        logReply = (LogReply) replySet.toArray()[0];
-      }
-    } catch (Exception ex) {
-      logger.error("Error getting LogReply object for request msg w/uuid: {}", requestUuid, ex);
-    }
+		LogReply logReply = null;
+		try {
+			Set<LogReply> replySet = peerLogDirectory.getRepliesTo(logName, requestUuid);
+			if (!replySet.isEmpty()) {
+				logReply = (LogReply) replySet.toArray()[0];
+			}
+		} catch (Exception ex) {
+			logger.error("Error getting LogReply object for request msg w/uuid: {}", requestUuid, ex);
+		}
 
-    return logReply;
-  }
+		return logReply;
+	}
 
-  private void deleteRequestNode() {
-    try {
-      peerLogDirectory.deleteLogRequest(logName, requestUuid);
-    } catch (Exception e) {
-      logger.error("Error deleting directory request node: {} for log: {}", requestUuid, logName);
-    }
-  }
+	private void deleteRequestNode() {
+		try {
+			peerLogDirectory.deleteLogRequest(logName, requestUuid);
+		} catch (Exception e) {
+			logger.error("Error deleting directory request node: {} for log: {}", requestUuid, logName);
+		}
+	}
 }

@@ -13,15 +13,15 @@ import java.util.concurrent.TimeUnit;
 @Singleton
 public class LogMessageExecutor extends ExtendedThreadPoolExecutor implements LogExecutor {
 
-    protected static final Logger logger = LoggerFactory.getLogger(LogMessageExecutor.class);
+	protected static final Logger logger = LoggerFactory.getLogger(LogMessageExecutor.class);
 
-    @Inject
-    public LogMessageExecutor(@Named("log.corePoolSize") String corePoolSize,
-                              @Named("log.maximumPoolSize") String maximumPoolSize,
-                              @Named("log.keepAliveSeconds") String keepAliveSeconds,
-                              LogThreadFactory threadFactory) {
+	@Inject
+	public LogMessageExecutor(@Named("log.corePoolSize") String corePoolSize,
+														@Named("log.maximumPoolSize") String maximumPoolSize,
+														@Named("log.keepAliveSeconds") String keepAliveSeconds,
+														LogThreadFactory threadFactory) {
 
-        super(Integer.valueOf(corePoolSize), Integer.valueOf(maximumPoolSize), Integer.valueOf(keepAliveSeconds),
-                TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), threadFactory);
-    }
+		super(Integer.valueOf(corePoolSize), Integer.valueOf(maximumPoolSize), Integer.valueOf(keepAliveSeconds),
+			TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), threadFactory);
+	}
 }

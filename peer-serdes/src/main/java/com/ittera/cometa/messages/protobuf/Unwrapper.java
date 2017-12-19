@@ -13,215 +13,215 @@ import org.slf4j.LoggerFactory;
 
 public class Unwrapper {
 
-    protected static final Logger logger = LoggerFactory.getLogger(Unwrapper.class);
+	protected static final Logger logger = LoggerFactory.getLogger(Unwrapper.class);
 
-    private static final Map<String, Class> shortPrimitiveNameToClass = ImmutableMap.<String, Class>builder()
-            .put("byte", byte.class)
-            .put("short", short.class)
-            .put("int", int.class)
-            .put("long", long.class)
-            .put("float", float.class)
-            .put("double", double.class)
-            .put("char", char.class)
-            .put("boolean", boolean.class)
-            .build();
+	private static final Map<String, Class> shortPrimitiveNameToClass = ImmutableMap.<String, Class>builder()
+		.put("byte", byte.class)
+		.put("short", short.class)
+		.put("int", int.class)
+		.put("long", long.class)
+		.put("float", float.class)
+		.put("double", double.class)
+		.put("char", char.class)
+		.put("boolean", boolean.class)
+		.build();
 
-    public static Class getClassForPrimitive(String primitiveType) {
-        return shortPrimitiveNameToClass.get(primitiveType);
-    }
+	public static Class getClassForPrimitive(String primitiveType) {
+		return shortPrimitiveNameToClass.get(primitiveType);
+	}
 
-    /**
-     * Returns objects in objectList as Object array with each object typed as its type in classList
-     * This method undoes the wrapping of objects done in ProtobufDataMessageBuilder.getWrappedValue()
-     *
-     * @param object
-     * @param clazz
-     * @return
-     */
-    public static Object unwrapObject(Primitives.Object object, Class clazz) {
-        logger.trace("in with object:\n{}, clazz:\n{}", object, clazz);
+	/**
+	 * Returns objects in objectList as Object array with each object typed as its type in classList
+	 * This method undoes the wrapping of objects done in ProtobufDataMessageBuilder.getWrappedValue()
+	 *
+	 * @param object
+	 * @param clazz
+	 * @return
+	 */
+	public static Object unwrapObject(Primitives.Object object, Class clazz) {
+		logger.trace("in with object:\n{}, clazz:\n{}", object, clazz);
 
-        if (object.getIsNull()) {
-            return null;
-        }
+		if (object.getIsNull()) {
+			return null;
+		}
 
-        //is primitive
-        if (ClassUtils.isPrimitiveOrWrapper(clazz)) {
-            if (clazz == byte.class || clazz == Byte.class) {
-                return Byte.valueOf(object.getValue());
-            } else if (clazz == short.class || clazz == Short.class) {
-                return Short.valueOf(object.getValue());
-            } else if (clazz == int.class || clazz == Integer.class) {
-                return Integer.valueOf(object.getValue());
-            } else if (clazz == long.class || clazz == Long.class) {
-                return Long.valueOf(object.getValue());
-            } else if (clazz == float.class || clazz == Float.class) {
-                return Float.valueOf(object.getValue());
-            } else if (clazz == double.class || clazz == Double.class) {
-                return Double.valueOf(object.getValue());
-            } else if (clazz == char.class || clazz == Character.class) {
-                return Character.valueOf(object.getValue().charAt(0));
-            } else if (clazz == boolean.class || clazz == Boolean.class) {
-                return Boolean.valueOf(object.getValue());
-            } else {
-                throw new IllegalArgumentException("Unsupported primitive type:" + clazz.getName());
-            }
-        }
-        //is Array
-        else if (clazz.isArray()) {
-            if (!object.getIsArray()) {
-                throw new IllegalArgumentException("Type is array but wrapped object isn't:" + clazz.getName());
-            }
-            //String[]
-            if (clazz == String[].class) {
-                String[] array = new String[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = strObj.getValue();
-                }
-                return array;
-            }
-            //PRIMITIVE WRAPPERS
-            else if (clazz == Integer[].class) {
-                Integer[] array = new Integer[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Integer.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == Boolean[].class) {
-                Boolean[] array = new Boolean[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Boolean.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == Byte[].class) {
-                Byte[] array = new Byte[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Byte.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == Character[].class) {
-                Character[] array = new Character[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Character.valueOf(strObj.getValue().charAt(0));
-                }
-                return array;
-            } else if (clazz == Short[].class) {
-                Short[] array = new Short[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Short.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == Long[].class) {
-                Long[] array = new Long[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Long.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == Float[].class) {
-                Float[] array = new Float[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Float.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == Double[].class) {
-                Double[] array = new Double[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Double.valueOf(strObj.getValue());
-                }
-                return array;
-            }
-            //PRIMITIVES
-            else if (clazz == int[].class) {
-                int[] array = new int[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Integer.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == boolean[].class) {
-                boolean[] array = new boolean[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Boolean.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == byte[].class) {
-                byte[] array = new byte[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Byte.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == char[].class) {
-                char[] array = new char[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = strObj.getValue().charAt(0);
-                }
-                return array;
-            } else if (clazz == short[].class) {
-                short[] array = new short[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Short.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == long[].class) {
-                long[] array = new long[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Long.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == float[].class) {
-                float[] array = new float[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Float.valueOf(strObj.getValue());
-                }
-                return array;
-            } else if (clazz == double[].class) {
-                double[] array = new double[object.getArrayValueList().size()];
-                int idx = 0;
-                for (Primitives.Object strObj : object.getArrayValueList()) {
-                    array[idx++] = Double.valueOf(strObj.getValue());
-                }
-                return array;
+		//is primitive
+		if (ClassUtils.isPrimitiveOrWrapper(clazz)) {
+			if (clazz == byte.class || clazz == Byte.class) {
+				return Byte.valueOf(object.getValue());
+			} else if (clazz == short.class || clazz == Short.class) {
+				return Short.valueOf(object.getValue());
+			} else if (clazz == int.class || clazz == Integer.class) {
+				return Integer.valueOf(object.getValue());
+			} else if (clazz == long.class || clazz == Long.class) {
+				return Long.valueOf(object.getValue());
+			} else if (clazz == float.class || clazz == Float.class) {
+				return Float.valueOf(object.getValue());
+			} else if (clazz == double.class || clazz == Double.class) {
+				return Double.valueOf(object.getValue());
+			} else if (clazz == char.class || clazz == Character.class) {
+				return Character.valueOf(object.getValue().charAt(0));
+			} else if (clazz == boolean.class || clazz == Boolean.class) {
+				return Boolean.valueOf(object.getValue());
+			} else {
+				throw new IllegalArgumentException("Unsupported primitive type:" + clazz.getName());
+			}
+		}
+		//is Array
+		else if (clazz.isArray()) {
+			if (!object.getIsArray()) {
+				throw new IllegalArgumentException("Type is array but wrapped object isn't:" + clazz.getName());
+			}
+			//String[]
+			if (clazz == String[].class) {
+				String[] array = new String[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = strObj.getValue();
+				}
+				return array;
+			}
+			//PRIMITIVE WRAPPERS
+			else if (clazz == Integer[].class) {
+				Integer[] array = new Integer[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Integer.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == Boolean[].class) {
+				Boolean[] array = new Boolean[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Boolean.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == Byte[].class) {
+				Byte[] array = new Byte[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Byte.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == Character[].class) {
+				Character[] array = new Character[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Character.valueOf(strObj.getValue().charAt(0));
+				}
+				return array;
+			} else if (clazz == Short[].class) {
+				Short[] array = new Short[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Short.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == Long[].class) {
+				Long[] array = new Long[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Long.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == Float[].class) {
+				Float[] array = new Float[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Float.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == Double[].class) {
+				Double[] array = new Double[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Double.valueOf(strObj.getValue());
+				}
+				return array;
+			}
+			//PRIMITIVES
+			else if (clazz == int[].class) {
+				int[] array = new int[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Integer.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == boolean[].class) {
+				boolean[] array = new boolean[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Boolean.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == byte[].class) {
+				byte[] array = new byte[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Byte.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == char[].class) {
+				char[] array = new char[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = strObj.getValue().charAt(0);
+				}
+				return array;
+			} else if (clazz == short[].class) {
+				short[] array = new short[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Short.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == long[].class) {
+				long[] array = new long[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Long.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == float[].class) {
+				float[] array = new float[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Float.valueOf(strObj.getValue());
+				}
+				return array;
+			} else if (clazz == double[].class) {
+				double[] array = new double[object.getArrayValueList().size()];
+				int idx = 0;
+				for (Primitives.Object strObj : object.getArrayValueList()) {
+					array[idx++] = Double.valueOf(strObj.getValue());
+				}
+				return array;
 
-            } else {
-                //TODO finish all primitive types
-                throw new IllegalArgumentException("Unsupported array type:" + clazz.getName());
-            }
+			} else {
+				//TODO finish all primitive types
+				throw new IllegalArgumentException("Unsupported array type:" + clazz.getName());
+			}
 
-            //is String
-        } else if (clazz == String.class) {
-            //no casting needed
-            return object.getValue();
+			//is String
+		} else if (clazz == String.class) {
+			//no casting needed
+			return object.getValue();
 
-            //no other types supported
-        } else {
-            throw new IllegalArgumentException("Unsupported object type:" + clazz.getName());
-        }
-    }
+			//no other types supported
+		} else {
+			throw new IllegalArgumentException("Unsupported object type:" + clazz.getName());
+		}
+	}
 
 
-    public static Object unwrapObject(Primitives.Object object) throws ClassNotFoundException {
-        final String objClassName = object.getClass_().getName();
-        final Class objectClass;
-        if (shortPrimitiveNameToClass.containsKey(objClassName)) {
-            objectClass = shortPrimitiveNameToClass.get(objClassName);
-        } else {
-            objectClass = Class.forName(objClassName);
-        }
-        return unwrapObject(object, objectClass);
-    }
+	public static Object unwrapObject(Primitives.Object object) throws ClassNotFoundException {
+		final String objClassName = object.getClass_().getName();
+		final Class objectClass;
+		if (shortPrimitiveNameToClass.containsKey(objClassName)) {
+			objectClass = shortPrimitiveNameToClass.get(objClassName);
+		} else {
+			objectClass = Class.forName(objClassName);
+		}
+		return unwrapObject(object, objectClass);
+	}
 }

@@ -1,9 +1,9 @@
 package com.ittera.cometa.concentrator;
 
 public interface KafkaMessageWriter {
-    void openConnections();
+	void openConnections();
 
-    void writeToLog(String logName) throws Exception;
+	void writeToLog(String logName) throws Exception;
 
-    void writeToLastLog(String logNamePrefix) throws Exception;
+	void writeToLastLog(String logNamePrefix) throws Exception;
 }

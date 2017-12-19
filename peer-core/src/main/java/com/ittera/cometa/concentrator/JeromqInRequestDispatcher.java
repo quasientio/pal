@@ -15,72 +15,72 @@ import org.zeromq.ZMQ.Socket;
 @Singleton
 public class JeromqInRequestDispatcher extends AbstractExecutionThreadService implements InRequestMessageDispatcher {
 
-    protected static final Logger logger = LoggerFactory.getLogger(JeromqInRequestDispatcher.class);
+	protected static final Logger logger = LoggerFactory.getLogger(JeromqInRequestDispatcher.class);
 
-    // zmq stuff
-    private final String routerAddress, dealerAddress;
+	// zmq stuff
+	private final String routerAddress, dealerAddress;
 
-    @Inject
-    private ZContext context;
-    private Socket router, dealer;
+	@Inject
+	private ZContext context;
+	private Socket router, dealer;
 
-    @Inject
-    public JeromqInRequestDispatcher(@Named("in.router") String routerAddress, @Named("in.dealer") String dealerAddress) {
-        this.routerAddress = routerAddress;
-        this.dealerAddress = dealerAddress;
-    }
+	@Inject
+	public JeromqInRequestDispatcher(@Named("in.router") String routerAddress, @Named("in.dealer") String dealerAddress) {
+		this.routerAddress = routerAddress;
+		this.dealerAddress = dealerAddress;
+	}
 
-    protected void openConnections() {
-        // to get requests for conc
-        this.router = context.createSocket(ZMQ.ROUTER);
-        router.bind(routerAddress);
+	protected void openConnections() {
+		// to get requests for conc
+		this.router = context.createSocket(ZMQ.ROUTER);
+		router.bind(routerAddress);
 
-        // to send requests to conc
-        this.dealer = context.createSocket(ZMQ.DEALER);
-        dealer.bind(dealerAddress);
+		// to send requests to conc
+		this.dealer = context.createSocket(ZMQ.DEALER);
+		dealer.bind(dealerAddress);
 
-        logger.info("All connections open");
-    }
+		logger.info("All connections open");
+	}
 
-    protected void closeConnections () {
-        if (router != null) {
-            router.close();
-        }
+	protected void closeConnections() {
+		if (router != null) {
+			router.close();
+		}
 
-        if (dealer != null) {
-            dealer.close();
-        }
+		if (dealer != null) {
+			dealer.close();
+		}
 
-        logger.info("All connections closed");
-    }
+		logger.info("All connections closed");
+	}
 
-    @Override
-    public final void run() {
+	@Override
+	public final void run() {
 
-        logger.info("Running router-dealer proxy");
+		logger.info("Running router-dealer proxy");
 
-        // create router-dealer proxy
-        ZMQ.proxy(router, dealer, null);
-    }
+		// create router-dealer proxy
+		ZMQ.proxy(router, dealer, null);
+	}
 
-    @Override
-    protected void startUp() throws Exception {
-        openConnections();
+	@Override
+	protected void startUp() throws Exception {
+		openConnections();
 
-        logger.info("Initialized IN message dispatcher");
-    }
+		logger.info("Initialized IN message dispatcher");
+	}
 
-    @Override
-    protected void triggerShutdown() {
+	@Override
+	protected void triggerShutdown() {
 
-        closeConnections();
+		closeConnections();
 
-        logger.info("IN Message dispatcher shutting down.");
-    }
+		logger.info("IN Message dispatcher shutting down.");
+	}
 
-    @Override
-    protected void shutDown() throws Exception {
+	@Override
+	protected void shutDown() throws Exception {
 
-        logger.info("IN Message dispatcher shut down");
-    }
+		logger.info("IN Message dispatcher shut down");
+	}
 }

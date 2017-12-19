@@ -86,7 +86,8 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
                         done = true;
                         break;
                     default:
-                        logger.warn("reply node NOT created (error code: {}) for message w/uuid: {}", rc, message.getMessageUuid());
+                        logger.warn("reply node NOT created (error code: {}) for message w/uuid: {}", rc,
+                          message.getMessageUuid());
                         return;
                 }
             }
@@ -120,14 +121,17 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 
             // if message is reply, save offset to zookeeper
             if (message.hasFollowingUuid()) {
-                this.logReply = new LogReply(message.getMessageUuid(), Concentrator.uuid.toString(), message.getFollowingUuid(), recordMetadata.offset());
+                this.logReply = new LogReply(message.getMessageUuid(), Concentrator.uuid.toString(),
+                  message.getFollowingUuid(), recordMetadata.offset());
                 try {
                     ((ZkClient)peerLogDirectory).addLogReply(kafkaTopic, logReply, addReplyCallback);
                 } catch (IllegalArgumentException iae) {
                   // request node probably doesn't exist, add ourselves as watcher
-                  ((ZkClient)peerLogDirectory).requestExists(kafkaTopic, message.getFollowingUuid(), this, statCallback);
+                  ((ZkClient)peerLogDirectory).requestExists(kafkaTopic, message.getFollowingUuid(), this,
+                    statCallback);
                 } catch (Exception ex) {
-                    logger.error("Unhandled error creating reply message offset for request w/uuid: {}. Giving up.", message.getFollowingUuid(), ex);
+                    logger.error("Unhandled error creating reply message offset for request w/uuid: {}. Giving up.",
+                      message.getFollowingUuid(), ex);
                     lastError = ex;
                 }
             }
@@ -145,7 +149,8 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
             try {
                 ((ZkClient)peerLogDirectory).addLogReply(kafkaTopic, logReply, addReplyCallback);
             } catch (Exception ex) {
-                logger.error("Error creating reply message offset for request w/uuid: {}. Giving up.", message.getFollowingUuid(), ex);
+                logger.error("Error creating reply message offset for request w/uuid: {}. Giving up.",
+                  message.getFollowingUuid(), ex);
                 lastError = ex;
             }
           }

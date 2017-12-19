@@ -166,7 +166,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
             for (String propKey : consumerProperties.stringPropertyNames()) {
                 propsStr.append(propKey).append('=').append(consumerProperties.getProperty(propKey)).append(", ");
             }
-            logger.info("Initialized kafka publisher for concentrator with id '{}' and properties: [{}]", concentratorId, propsStr.toString());
+            logger.info("Initialized kafka publisher for concentrator with id '{}' and properties: [{}]",
+              concentratorId, propsStr.toString());
         }
     }
 
@@ -184,7 +185,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         LogInfo logInfo = peerLogDirectory.getLogInfo(logName);
         this.currentLog = logInfo;
         consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
-        logger.info("Now reading from log: {} and bootstrapServers: {}", logInfo.getName(), logInfo.getBootstrapServers());
+        logger.info("Now reading from log: {} and bootstrapServers: {}", logInfo.getName(),
+          logInfo.getBootstrapServers());
     }
 
     protected void openConnections() {
@@ -274,7 +276,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
                 messagesRcvd.getAndIncrement();
 
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Processing received record # {} with offset {} :\n {}", messagesRcvd, record.offset(), record);
+                    logger.debug("Processing received record # {} with offset {} :\n {}", messagesRcvd, record.offset(),
+                      record);
                 }
 
                 final DataMessage dataMessage = (DataMessage) record.value();
@@ -290,7 +293,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
                 // get next offset to poll
                 Long nextOffset = nextOffset();
                 if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
-                    logger.debug("Skipping received records. Jumping from offset: {} to: {}", lastOffsetRead, nextOffset);
+                    logger.debug("Skipping received records. Jumping from offset: {} to: {}", lastOffsetRead,
+                      nextOffset);
                     consumer.seek(topicPartition, nextOffset);
                     break;
                 }
