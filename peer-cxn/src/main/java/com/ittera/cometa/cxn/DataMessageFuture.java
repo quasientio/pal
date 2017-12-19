@@ -128,6 +128,8 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
           logger.debug("completing future reply msg w/uuid: {} for request w/uuid: {}",
             messageReply.getMessageUuid(), messageReply.getFollowingUuid());
           DataMessageFuture.this.put(messageReply);
+          // delete request and reply nodes
+          deleteRequestNode();
         }
       });
   }
@@ -145,5 +147,13 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
     }
 
     return logReply;
+  }
+
+  private void deleteRequestNode() {
+    try {
+      peerLogDirectory.deleteLogRequest(logName, requestUuid);
+    } catch (Exception e) {
+      logger.error("Error deleting directory request node: {} for log: {}", requestUuid, logName);
+    }
   }
 }
