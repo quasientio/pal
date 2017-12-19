@@ -1,7 +1,12 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.LogReply;
 import com.ittera.cometa.PeerInfo;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.zookeeper.AsyncCallback;
+import org.apache.zookeeper.KeeperException.Code;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -14,6 +19,9 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.Set;
 import java.util.HashSet;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +37,7 @@ public class ZkClientTest {
     private static final Set<UUID> createdPeers = new HashSet<>();
     private static final Set<String> createdLogs = new HashSet<>();
 
-    private PeerLogDirectory zkCli ;
+    private ZkClient zkCli;
 
     @Before
     public void setup() throws Exception {
@@ -107,6 +115,217 @@ public class ZkClientTest {
         createdLogs.add(createdLogName);
     }
 
+    @Test
+    public void addLogRequest_newLogRequest_reqNodeCreated() throws Exception {
+
+        String logName = "test.topic";
+
+        LogInfo newLogInfo = zkCli.addLog(logName, "localhost:9092");
+        String createdLogName = newLogInfo.getName();
+        createdLogs.add(createdLogName);
+
+        String someRequestUuid = UUID.randomUUID().toString();
+
+        String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequestUuid);
+        assertEquals(someRequestUuid, StringUtils.substringAfterLast(reqNodeCreated, "/"));
+    }
+
+    @Test
+    public void addLogRequestAsync_newLogRequest_reqNodeCreated() throws Exception {
+
+        String logName = "test.topic";
+
+        LogInfo newLogInfo = zkCli.addLog(logName, "localhost:9092");
+        String createdLogName = newLogInfo.getName();
+        createdLogs.add(createdLogName);
+
+        String someRequestUuid = UUID.randomUUID().toString();
+
+        AsyncCallback.StringCallback cb = new AsyncCallback.StringCallback() {
+            @Override
+            public void processResult(int rc, String path, Object ctx, String name) {
+                switch(Code.get(rc)) {
+                    case OK: ((CountDownLatch) ctx).countDown();
+                        break;
+                    default: return;
+                }
+            }
+        };
+
+        CountDownLatch latch = new CountDownLatch(1);
+        zkCli.addLogRequest(createdLogName, someRequestUuid, cb, latch);
+        if (!latch.await(5, TimeUnit.SECONDS)) {
+          fail("Timeout awaiting latch downcount - node not created?");
+        }
+    }
+
+    @Test
+    public void addLogRequest_noLog_illegalArgument() throws Exception {
+
+        String logName = "someRandomLogName";
+        String someRequestUuid = UUID.randomUUID().toString();
+
+        try {
+            zkCli.addLogRequest(logName, someRequestUuid);
+            fail();
+        } catch (IllegalArgumentException iae) {
+            // OK
+        }
+    }
+
+    @Test
+    public void addLogReply_noLog_illegalArgument() throws Exception {
+
+        String logName = "someRandomLogName";
+        String someRequestUuid = UUID.randomUUID().toString();
+        long someOffset = 32384893;
+
+        try {
+            zkCli.addLogReply(logName, new LogReply(UUID.randomUUID().toString(), null, someRequestUuid, someOffset));
+            fail();
+        } catch (IllegalArgumentException iae) {
+            // OK
+        }
+    }
+
+    @Test
+    public void addLogReply_noReq_illegalArgument() throws Exception {
+
+        String logName = "test.topic";
+        long someOffset = 32384893;
+
+        // create log
+        LogInfo newLogInfo = zkCli.addLog(logName, "localhost:9092");
+        String createdLogName = newLogInfo.getName();
+        createdLogs.add(createdLogName);
+
+        // we DON'T create req node
+        String someRequestUuid = UUID.randomUUID().toString();
+
+        // create rep node
+        try {
+            zkCli.addLogReply(createdLogName, new LogReply(UUID.randomUUID().toString(), null, someRequestUuid, someOffset));
+            fail();
+        } catch (IllegalArgumentException iae) {
+            // OK
+        }
+    }
+
+    @Test
+    public void getReplies_noLog_illegalArgument() throws Exception {
+
+        String logName = "someRandomLogName";
+        String someRequestUuid = UUID.randomUUID().toString();
+
+        // get replies to req
+        try {
+            zkCli.getRepliesTo(logName, someRequestUuid);
+            fail();
+        } catch (IllegalArgumentException iae) {
+            // OK
+        }
+    }
+
+    @Test
+    public void getReplies_noReq_illegalArgument() throws Exception {
+        String logName = "someRandomLogName";
+
+        // create log
+        LogInfo newLogInfo = zkCli.addLog(logName, "localhost:9092");
+        String createdLogName = newLogInfo.getName();
+        createdLogs.add(createdLogName);
+
+        // we DON'T create req node
+        String someRequestUuid = UUID.randomUUID().toString();
+
+        // get replies to req
+        try {
+            zkCli.getRepliesTo(createdLogName, someRequestUuid);
+            fail();
+        } catch (IllegalArgumentException iae) {
+            // OK
+        }
+    }
+
+    @Test
+    public void getReplies_noRepsExist_emptySet() throws Exception {
+
+        String logName = "test.topic";
+
+        // create log
+        LogInfo newLogInfo = zkCli.addLog(logName, "localhost:9092");
+        String createdLogName = newLogInfo.getName();
+        createdLogs.add(createdLogName);
+
+        // create req node
+        String someRequestUuid = UUID.randomUUID().toString();
+        String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequestUuid);
+
+        // get replies to req
+        Set<LogReply> replies = zkCli.getRepliesTo(createdLogName, someRequestUuid);
+        assertTrue(replies.isEmpty());
+    }
+
+    @Test
+    public void getReplies_replyExists_nonEmptySet() throws Exception {
+
+        String logName = "test.topic";
+        long someOffset = 32384893;
+
+        // create log
+        LogInfo newLogInfo = zkCli.addLog(logName, "localhost:9092");
+        String createdLogName = newLogInfo.getName();
+        createdLogs.add(createdLogName);
+
+        // create req node
+        String someRequestUuid = UUID.randomUUID().toString();
+        String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequestUuid);
+
+        // create rep node
+        String someReplyUuid = UUID.randomUUID().toString();
+        zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequestUuid, someOffset));
+
+        // get replies to req
+        Set<LogReply> replies = zkCli.getRepliesTo(createdLogName, someRequestUuid);
+        assertFalse(replies.isEmpty());
+    }
+
+    @Test
+    public void getReplies_multipleRepliesExist_allRepsSortedByOffset() throws Exception {
+
+        String logName = "test.topic";
+        long smallOffset = 39483;
+        long largeOffset = 32384893;
+
+        // create log
+        LogInfo newLogInfo = zkCli.addLog(logName, "localhost:9092");
+        String createdLogName = newLogInfo.getName();
+        createdLogs.add(createdLogName);
+
+        // create req node
+        String someRequestUuid = UUID.randomUUID().toString();
+        String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequestUuid);
+
+        // create rep node #1
+        String someReplyUuid = UUID.randomUUID().toString();
+        zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequestUuid, largeOffset));
+
+        // create rep node #2 with lower offset then first reply
+        someReplyUuid = UUID.randomUUID().toString();
+        zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequestUuid, smallOffset));
+
+        // get replies to req
+        Set<LogReply> replies = zkCli.getRepliesTo(createdLogName, someRequestUuid);
+        assertFalse(replies.isEmpty());
+        assertEquals(2, replies.size());
+        long lastOffset = 0;
+
+        // assert that replies are sorted by increasing offset
+        for (LogReply reply: replies) {
+            assertTrue(reply.getOffset() > lastOffset);
+            lastOffset = reply.getOffset();
+        }
+    }
 
     @Test
     public void logExists_existingLog_true() throws Exception {

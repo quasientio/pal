@@ -1,12 +1,16 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.PeerInfo;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
 
 import org.apache.commons.lang3.StringUtils;
+
+import org.apache.zookeeper.AsyncCallback;
+import org.apache.zookeeper.KeeperException.Code;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -29,11 +33,19 @@ import java.util.Arrays;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
+/**
+ * This class is not thread-safe. For multi-threaded scenarios, use different instances.
+ */
 public class ThinPeer {
 
     private UUID peerUuid = UUID.randomUUID();
@@ -52,10 +64,13 @@ public class ThinPeer {
     private final KafkaConsumer<String, String> consumer;
     private final Properties kafkaConsumerProps = new Properties();
 
+    private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap();
+    private final ExecutorService singleThreadConsumerExecutor = Executors.newSingleThreadExecutor();
+
     // zmq stuff
     private final ZContext zmqContext;
     private final Socket peerSocket;
-    private String currentPeerAddress;
+    private PeerInfo currentPeer;
     private boolean talkingToPeer = false;
 
     // zookeeper
@@ -65,8 +80,8 @@ public class ThinPeer {
         this(propertiesFile, null, null);
     }
 
-    public ThinPeer(String propertiesFile, String initialPeerAddress, LogInfo logInfo) throws Exception {
-        currentPeerAddress = initialPeerAddress;
+    public ThinPeer(String propertiesFile, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
+        currentPeer = initialPeer;
 
         //load properties
         final Properties properties = new Properties();
@@ -92,8 +107,7 @@ public class ThinPeer {
         if (logInfo != null) {
             this.kafkaTopic = logInfo.getName();
             bootstrapServers = logInfo.getBootstrapServers();
-        }
-        else {
+        } else {
             // get last log with prefix = kafkaTopic
             LogInfo lastLog = peerLogDirectory.getLastLog(kafkaTopicPrefix);
             this.kafkaTopic = lastLog.getName();
@@ -101,7 +115,6 @@ public class ThinPeer {
         }
 
         logger.info("Will read and write to log: {}", this.kafkaTopic);
-        peerLogDirectory.close();
 
 
         /** Configure and Initialize Kafka Producer **/
@@ -140,8 +153,8 @@ public class ThinPeer {
         logger.debug("Initializing zmq context");
         zmqContext = new ZContext();
         peerSocket = zmqContext.createSocket(ZMQ.REQ);
-        if (currentPeerAddress != null) {
-            connectToPeer(currentPeerAddress);
+        if (currentPeer != null) {
+            connectToPeer(currentPeer);
         }
 
         //init msg builder
@@ -150,14 +163,14 @@ public class ThinPeer {
 
     private void connectSocket() {
         peerSocket.setIdentity(("Dual-Peer-" + peerUuid.toString()).getBytes(ZMQ.CHARSET));
-        peerSocket.connect(currentPeerAddress);
+        peerSocket.connect(currentPeer.getListenAddress());
     }
 
-    public DataMessage sendAndReceive(DataMessage message) {
+    public DataMessage sendAndReceive(DataMessage message) throws ExecutionException, InterruptedException {
         if (talkingToPeer) {
             return sendToPeer(message);
         } else {
-            return sendAndReceiveToLog(message);
+            return sendToLogAndReceive(message);
         }
     }
 
@@ -174,7 +187,7 @@ public class ThinPeer {
                 long receivedMsgOffset = record.offset();
 
                 if (dataMessage.hasStaticFieldPutDone() &&
-                        fieldName.equals(dataMessage.getStaticFieldPutDone().getField().getName())) {
+                  fieldName.equals(dataMessage.getStaticFieldPutDone().getField().getName())) {
                     logger.info("Got matching message with offset {}:\n{}", receivedMsgOffset, dataMessage);
                     return dataMessage;
                 } else {
@@ -184,19 +197,43 @@ public class ThinPeer {
         }
     }
 
-    public DataMessage getMessageAtOffset(long seek) {
+    public DataMessage getMessageAtOffset(Long seek) {
 
         logger.info("Getting message @ offset #{}", seek);
         consumer.seek(topicPartition, seek);
 
-        while (true) {
+        DataMessage cachedMsg = getCachedMessageAtOffset(seek);
+        if (cachedMsg != null) {
+            logger.debug("Got cached record at offset {}", seek);
+            return cachedMsg;
+        }
+
+        Map recordsRead = new HashMap<Long, ConsumerRecord>();
+        ConsumerRecord requestedRecord = null;
+
+        while (requestedRecord == null) {
             ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+            logger.debug("Read {} records during poll", records.count());
             for (ConsumerRecord record : records) {
                 if (seek == record.offset()) {
-                    return (DataMessage) record.value();
+                    requestedRecord = record;
                 }
+                recordsRead.put(record.offset(), record);
             }
         }
+
+        // now swap last batch (map) of records read with the new one
+        this.lastRecordsRead = recordsRead;
+
+        return (DataMessage) requestedRecord.value();
+    }
+
+    private DataMessage getCachedMessageAtOffset(Long offset) {
+        ConsumerRecord cached = lastRecordsRead.get(offset);
+        if (cached != null) {
+            return (DataMessage) cached.value();
+        }
+        return null;
     }
 
     public List<ConsumerRecord> getMessages(long startOffset, long numMessages) {
@@ -225,12 +262,79 @@ public class ThinPeer {
     }
 
     public void sendToLogAndForget(DataMessage message) {
-        //send to kafka
+
+        // send to kafka
         producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
         logger.debug("Message sent to log, and we're done:\n{}", message);
     }
 
-    private DataMessage sendAndReceiveToLog(DataMessage message) {
+    public Future<DataMessage> sendToLogAsync(DataMessage message) {
+
+        final String requestMsgUuid = message.getMessageUuid();
+
+        // send to kafka
+        producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
+        logger.debug("Message sent to log:\n{}", message);
+
+        final DataMessageFuture messageFuture = new DataMessageFuture(this, peerLogDirectory,
+          singleThreadConsumerExecutor, kafkaTopic, requestMsgUuid);
+
+        // addLog callback
+        AsyncCallback.StringCallback addLogCallback = new AsyncCallback.StringCallback() {
+            @Override
+            public void processResult(int rc, String path, Object ctx, String name) {
+                switch (Code.get(rc)) {
+                    case OK:
+                        ((ZkClient) peerLogDirectory).getChildren(kafkaTopic, requestMsgUuid, messageFuture, messageFuture, null);
+                        break;
+                    default:
+                        logger.warn("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
+                        return;
+                }
+            }
+        };
+
+        // asynchronously create req node in zk
+        try {
+            ((ZkClient) peerLogDirectory).addLogRequest(kafkaTopic, requestMsgUuid, addLogCallback, null);
+        } catch (Exception e) {
+            logger.error("Couldn't add request node to directory", e);
+            return null;
+        }
+
+        return messageFuture;
+    }
+
+    private DataMessage sendToLogAndReceive(DataMessage message) throws ExecutionException, InterruptedException {
+        return sendToLogAndReceive(message, false);
+    }
+
+    private DataMessage sendToLogAndReceive(DataMessage message, boolean consumeLogUntilReply)
+      throws ExecutionException, InterruptedException {
+
+        if (consumeLogUntilReply) {
+            return sendAndReceiveConsumingLog(message);
+        }
+
+        // default behavior (consumeLogUntilReply=false) is to wait for Future reply on directory
+      return sendAsyncAndSwitchToPeer(message);
+    }
+
+    private DataMessage sendAsyncAndSwitchToPeer(DataMessage message) throws ExecutionException, InterruptedException {
+
+        Future<DataMessage> replyFuture = sendToLogAsync(message);
+
+        // wait for reply (blocking)
+        DataMessage replyMsg = replyFuture.get();
+
+        // switch to direct p2p talk
+        String concentratorUuid = replyMsg.getConcentratorUuid();
+        connectToPeer(UUID.fromString(concentratorUuid));
+
+        return replyMsg;
+    }
+
+    private DataMessage sendAndReceiveConsumingLog(DataMessage message) {
 
         //send to kafka
         Long sentRecordOffset;
@@ -262,17 +366,15 @@ public class ThinPeer {
                 if (dataMessage.hasFollowingUuid() && message.getMessageUuid().equals(dataMessage.getFollowingUuid())) {
                     logger.info("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
                     String concentratorUuid = dataMessage.getConcentratorUuid();
-                    String newPeerAddress = null;
+                    PeerInfo newPeer = null;
                     try {
                         // we getPeerProperties and close after since we assume we'll get here only once
-                        Properties peerProps = peerLogDirectory.getPeerProperties(UUID.fromString(concentratorUuid));
-                        peerLogDirectory.close();
-                        newPeerAddress = peerProps.getProperty("listenAddress");
+                        newPeer = peerLogDirectory.getPeerInfo(concentratorUuid);
                     } catch (Exception ex) {
                         logger.error("Couldn't get peer properties", ex);
                     }
-                    if (currentPeerAddress != newPeerAddress) {
-                        connectToPeer(newPeerAddress);
+                    if (newPeer !=null && !newPeer.equals(currentPeer)) {
+                        connectToPeer(newPeer);
                     }
                     return dataMessage;
                 } else {
@@ -282,9 +384,24 @@ public class ThinPeer {
         }
     }
 
-    private void connectToPeer(String peerAddress) {
-        logger.info("Switching to direct talk with peer @ {}", peerAddress);
-        currentPeerAddress = peerAddress;
+    public void connectToPeer(UUID peerUuid) {
+        PeerInfo newPeer = null;
+        try {
+            // we getPeerProperties and close after since we assume we'll get here only once
+            newPeer = peerLogDirectory.getPeerInfo(peerUuid);
+        } catch (Exception ex) {
+            logger.error("Couldn't get peer properties", ex);
+        }
+        if (newPeer !=null && !newPeer.equals(currentPeer)) {
+            connectToPeer(newPeer);
+         } else {
+            throw new IllegalArgumentException(String.format("peer entry w/uuid: %s not found in directory", peerUuid));
+        }
+    }
+
+    private void connectToPeer(PeerInfo peerInfo) {
+        logger.info("Switching to direct talk with {}", peerInfo);
+        currentPeer = peerInfo;
         connectSocket();
         talkingToPeer = true;
     }
@@ -314,7 +431,7 @@ public class ThinPeer {
 
     private static String getRecordInfo(RecordMetadata recordMetadata) {
         StringBuilder builder = new StringBuilder();
-        builder.append("{\n checksum: ").append(recordMetadata.checksum()).append('\n').append(
+        builder.append("{\n checksum: ").append('\n').append(
                 " timestamp: ").append(recordMetadata.timestamp()).append('\n').append(
                 " offset: ").append(recordMetadata.offset()).append('\n').append(
                 " #bytes in value: ").append(recordMetadata.serializedValueSize()).append("\n}");
@@ -324,18 +441,22 @@ public class ThinPeer {
 
 
     public void close() {
+
+        singleThreadConsumerExecutor.shutdown();
+        logger.info("Consumer executor service shut down");
+
         try {
             peerSocket.close();
-            logger.debug("Peer socket closed.");
+            logger.info("Peer socket closed.");
             zmqContext.destroy();
-            logger.debug("Zmq context closed.");
+            logger.info("Zmq context closed.");
         } catch (Exception ex) {
             logger.error("Error closing zmq connection", ex);
         }
         producer.close();
-        logger.debug("Producer closed.");
+        logger.info("Producer closed.");
         consumer.close();
-        logger.debug("Consumer closed.");
+        logger.info("Consumer closed.");
     }
 }
 

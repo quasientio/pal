@@ -25,7 +25,7 @@ public class VoidInstanceMethodTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.apps.App";
 
   @Test
-  public void packageVisibleNoArgs() throws ClassNotFoundException {
+  public void packageVisibleNoArgs() throws Exception {
 
     String methodName = "doSomething";
 
@@ -48,7 +48,7 @@ public class VoidInstanceMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void privateWithArg() throws ClassNotFoundException {
+  public void privateWithArg() throws Exception {
 
     String methodName = "testArg";
 
@@ -72,7 +72,7 @@ public class VoidInstanceMethodTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void protectedNoArgs() throws ClassNotFoundException {
+  public void protectedNoArgs() throws Exception {
 
     String methodName = "printDate";
 

@@ -34,7 +34,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.apps.App";
 
   @Test
-  public void getIntegerPublicNotNull() throws ClassNotFoundException {
+  public void getIntegerPublicNotNull() throws Exception {
     //TODO have a native instance at hand for comparisons: the problem is that we need it in another path (not weaved) or loaded by another classloader!!
 //    App app = new App();
 
@@ -59,7 +59,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getIntegerPrivateNull() throws ClassNotFoundException {
+  public void getIntegerPrivateNull() throws Exception {
 
     String fieldName = "aNullInt";
     String fieldClassName = "java.lang.Integer";
@@ -77,7 +77,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStringProtectedNotNull() throws ClassNotFoundException {
+  public void getStringProtectedNotNull() throws Exception {
 
     String fieldName = "someString";
     String fieldClassName = "java.lang.String";
@@ -101,7 +101,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getStringPublicNull() throws ClassNotFoundException {
+  public void getStringPublicNull() throws Exception {
 
     String fieldName = "aNullStr";
     String fieldClassName = "java.lang.String";
@@ -119,7 +119,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getBooleanPackageVisibleNull() throws ClassNotFoundException {
+  public void getBooleanPackageVisibleNull() throws Exception {
 
     String fieldName = "aNullBool";
     String fieldClassName = "java.lang.Boolean";
@@ -137,7 +137,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getBooleanPublicNotNull() throws ClassNotFoundException {
+  public void getBooleanPublicNotNull() throws Exception {
 
     String fieldName = "aBool";
     String fieldClassName = "boolean";
@@ -160,7 +160,7 @@ public class GetInstanceVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void getShortPrivateNotZero() throws ClassNotFoundException {
+  public void getShortPrivateNotZero() throws Exception {
 
     String fieldName = "someShort";
     String fieldClassName = "short";

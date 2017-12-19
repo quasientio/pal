@@ -7,6 +7,8 @@ import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
+import java.util.concurrent.ExecutionException;
+
 public class SwingAppConcurrentActor {
 
     protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
@@ -48,7 +50,11 @@ public class SwingAppConcurrentActor {
             parameters = new Object[]{visible};
             requestMsg = dataMessageBuilder.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
                     methodName, jframeRef, parameterTypesNamesArray, parameters, new String[parameters.length]);
-            replyMsg = thinPeer.sendAndReceive(requestMsg);
+            try {
+                replyMsg = thinPeer.sendAndReceive(requestMsg);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
         }
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA"
+JVM_OPTS="-Xmx1024M -Xms512M -server -enableassertions:com.ittera.cometa.util... -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA"
 
 SYSTEM_PROPS=-Dlogback.configurationFile=logback-runner.xml
 

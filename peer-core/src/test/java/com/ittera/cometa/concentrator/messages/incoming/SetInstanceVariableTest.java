@@ -28,7 +28,7 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
   protected final String className = "com.ittera.cometa.apps.App";
 
   @Test
-  public void testPutInteger() throws ClassNotFoundException {
+  public void testPutInteger() throws Exception {
 
     String fieldName = "anInt";
     String fieldClassName = "java.lang.Integer";
@@ -73,7 +73,7 @@ public class SetInstanceVariableTest extends AbstractConcentratorTest {
   }
 
   @Test
-  public void testPutIntegerSetNull() throws ClassNotFoundException {
+  public void testPutIntegerSetNull() throws Exception {
 
     String fieldName = "anotherInt";
     String fieldClassName = "java.lang.Integer";

@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -34,7 +35,7 @@ public abstract class AbstractConcentratorTest {
 
     }
 
-    protected DataMessage sendAndReceive(DataMessage message) {
+    protected DataMessage sendAndReceive(DataMessage message) throws Exception {
         return thinPeer.sendAndReceive(message);
     }
 

@@ -11,13 +11,14 @@ zk = zc.zk.ZooKeeper(ZK_URL)
 print("Deleting peers")
 peers = zk.children(PEERS_ROOT)
 for peer in sorted(peers):
-	zk.delete(PEERS_ROOT + "/" + peer)
+	zk.delete("%s/%s" % (PEERS_ROOT, peer))
 	print(peer + " deleted.")
 
 print("\nDeleting logs")
 logs = zk.children(LOGS_ROOT)
 for log in sorted(logs):
-	zk.delete(LOGS_ROOT + "/" + log)
-	print(log + " deleted.")
+	logPath = "%s/%s" % (LOGS_ROOT,log)
+	zk.delete_recursive(logPath)
+	print(log + " recursively deleted.")
 
 zk.close()

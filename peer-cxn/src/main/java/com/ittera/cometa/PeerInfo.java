@@ -47,6 +47,23 @@ public class PeerInfo implements Comparable {
 
   @Override
   public int compareTo(Object o) {
-    return getUuid().compareTo(((PeerInfo)o).getUuid());
+    return getUuid().compareTo(((PeerInfo) o).getUuid());
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == null || !(o instanceof PeerInfo)) {
+      return false;
+    }
+    PeerInfo otherPeer = (PeerInfo) o;
+    return this.getUuid().equals(otherPeer.getUuid()) &&
+      this.getListenAddress().equals(otherPeer.getListenAddress());
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("peer uuid: ").append(getUuid()).append(" listen-addr: ").append(getListenAddress());
+    return sb.toString();
   }
 }
