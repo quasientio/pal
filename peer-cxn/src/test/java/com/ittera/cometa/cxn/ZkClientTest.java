@@ -33,6 +33,8 @@ public class ZkClientTest {
 
 	protected final static Logger logger = LoggerFactory.getLogger("tests");
 
+	private static final String TESTS_ZK_ROOT_PATH = "/cometa_tests";
+
 	private static final String zookeeperUrl = "localhost:2181";
 	private static final Set<UUID> createdPeers = new HashSet<>();
 	private static final Set<String> createdLogs = new HashSet<>();
@@ -41,7 +43,7 @@ public class ZkClientTest {
 
 	@Before
 	public void setup() throws Exception {
-		zkCli = new ZkClient(zookeeperUrl);
+		zkCli = ZkClient.getConnectedClient(zookeeperUrl, TESTS_ZK_ROOT_PATH);
 	}
 
 	@After
@@ -455,7 +457,7 @@ public class ZkClientTest {
 	@Test
 	public void isConnectionEstablished_notConnected_false() throws Exception {
 
-		PeerLogDirectory detachedZkCli = new ZkClient();
+		PeerLogDirectory detachedZkCli = ZkClient.getDisconnectedClient();
 		assertFalse(detachedZkCli.isConnectionEstablished());
 	}
 
@@ -501,7 +503,7 @@ public class ZkClientTest {
 	}
 
 	private static void deleteCreatedPeers() throws Exception {
-		PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
+		PeerLogDirectory zkCli = ZkClient.getConnectedClient(zookeeperUrl, TESTS_ZK_ROOT_PATH);
 
 		for (UUID peer : createdPeers) {
 			zkCli.unregisterPeer(peer);
@@ -512,7 +514,7 @@ public class ZkClientTest {
 	}
 
 	private static void deleteCreatedLogs() throws Exception {
-		PeerLogDirectory zkCli = new ZkClient(zookeeperUrl);
+		PeerLogDirectory zkCli = ZkClient.getConnectedClient(zookeeperUrl, TESTS_ZK_ROOT_PATH);
 
 		for (String log : createdLogs) {
 			zkCli.deleteLogNamed(log);
@@ -522,10 +524,17 @@ public class ZkClientTest {
 		zkCli.close();
 	}
 
+	private static void deleteTestRootPaths() throws Exception {
+		PeerLogDirectory zkCli = ZkClient.getConnectedClient(zookeeperUrl, TESTS_ZK_ROOT_PATH);
+
+		zkCli.deleteRootPaths();
+	}
+
 	@AfterClass
 	public static void deleteCreatedPeersAndLogs() throws Exception {
 
 		deleteCreatedPeers();
 		deleteCreatedLogs();
+		deleteTestRootPaths();
 	}
 }

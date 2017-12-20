@@ -74,4 +74,5 @@ public interface PeerLogDirectory {
 
 	boolean logExists(String logName) throws Exception;
 
+	void deleteRootPaths() throws Exception;
 }

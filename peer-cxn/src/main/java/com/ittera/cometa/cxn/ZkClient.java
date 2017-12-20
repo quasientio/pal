@@ -32,66 +32,102 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	protected static final String PROPERTIES_SEP = "|";
 
 	// root paths
-	public static final String ROOT_PATH = "/cometa";
-	public static final String PEERS_PATH = ROOT_PATH + "/peers";
-	public static final String LOGS_PATH = ROOT_PATH + "/logs";
+	protected static final String DEFAULT_ROOT_PATH = "/cometa";
+	protected static final String PEERS_SUBPATH = "/peers";
+	protected static final String LOGS_SUBPATH = "/logs";
 
 	public static final int SESSION_TIMEOUT = 10000;
 
 	private ZooKeeper zk;
 	private Watcher watcher;
-
+	private String customRootPath;
 	private String zookeeperUrl;
 
-	/**
-	 * Provides a disconnected ZkClient
-	 * NOTE: when using this constructor, be sure to call connect() before anything else
-	 */
-	public ZkClient() {
+	public static ZkClient getConnectedClient(String zookeeperUrl, String customRootPath, Watcher watcher)
+		throws Exception {
+
+		ZkClient cli = new ZkClient();
+
+		if (watcher!=null) {
+			cli.watcher = watcher;
+		}
+
+		if (customRootPath != null) {
+			cli.setCustomRootPath(customRootPath);
+		}
+
+		cli.connect(zookeeperUrl);
+
+		return cli;
 	}
 
-	/**
-	 * Provides a connected ZkClient
-	 *
-	 * @param zookeeperUrl
-	 * @throws Exception
-	 */
-	public ZkClient(String zookeeperUrl) throws Exception {
-		this.zookeeperUrl = zookeeperUrl;
-		connect(zookeeperUrl);
+	public static ZkClient getConnectedClient(String zookeeperUrl, String customRootPath)
+		throws Exception {
+		return getConnectedClient(zookeeperUrl, customRootPath, null);
 	}
 
-	public ZkClient(String zookeeperUrl, Watcher watcher) throws Exception {
-		this.zookeeperUrl = zookeeperUrl;
-		this.watcher = watcher;
-		connect(zookeeperUrl);
+	public static ZkClient getConnectedClient(String zookeeperUrl, Watcher watcher)
+		throws Exception {
+		return getConnectedClient(zookeeperUrl, null, watcher);
+	}
+
+	public static ZkClient getConnectedClient(String zookeeperUrl)
+		throws Exception {
+		return getConnectedClient(zookeeperUrl, null, null);
+	}
+
+	public static ZkClient getDisconnectedClient(String customRootPath, Watcher watcher) {
+
+		ZkClient cli = new ZkClient();
+
+		if (watcher!=null) {
+			cli.watcher = watcher;
+		}
+
+		if (customRootPath != null) {
+			cli.setCustomRootPath(customRootPath);
+		}
+
+		return cli;
+	}
+
+	public static ZkClient getDisconnectedClient(Watcher watcher) {
+		return getDisconnectedClient(null, watcher);
+	}
+
+	public static ZkClient getDisconnectedClient(String customRootPath) {
+		return getDisconnectedClient(customRootPath, null);
+	}
+
+	public static ZkClient getDisconnectedClient() {
+		return getDisconnectedClient(null, null);
 	}
 
 	private void ensureRootAndSubdirsExist() throws Exception {
 
 		// make sure root node exists
-		if (zk.exists(ROOT_PATH, null) == null) {
-			zk.create(ROOT_PATH, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-			logger.info("Created persistent root node: {}", ROOT_PATH);
+		if (zk.exists(getRootPath(), null) == null) {
+			zk.create(getRootPath(), new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+			logger.info("Created persistent root node: {}", getRootPath());
 		}
 
-
 		// make sure peers node exists
-		if (zk.exists(PEERS_PATH, null) == null) {
-			zk.create(PEERS_PATH, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-			logger.info("Created persistent peers node: {}", PEERS_PATH);
+		if (zk.exists(getPeersPath(), null) == null) {
+			zk.create(getPeersPath(), new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+			logger.info("Created persistent peers node: {}", getPeersPath());
 		}
 
 		// make sure logs node exists
-		if (zk.exists(LOGS_PATH, null) == null) {
-			zk.create(LOGS_PATH, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-			logger.info("Created persistent logs node: {}", LOGS_PATH);
+		if (zk.exists(getLogsPath(), null) == null) {
+			zk.create(getLogsPath(), new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+			logger.info("Created persistent logs node: {}", getLogsPath());
 		}
 
 	}
 
 	@Override
 	public void connect(String zookeeperUrl) throws Exception {
+		this.zookeeperUrl = zookeeperUrl;
 		zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, watcher == null ? this : watcher);
 		logger.info("Connected to zookeeper at {}", zookeeperUrl);
 		ensureRootAndSubdirsExist();
@@ -100,7 +136,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public void registerPeer(UUID peerUuid, Properties peerProperties) throws Exception {
 
-		String peerNode = PEERS_PATH + "/" + peerUuid;
+		String peerNode = getPeersPath() + "/" + peerUuid;
 		byte[] data = null;
 
 		if (peerProperties != null && !peerProperties.isEmpty()) {
@@ -123,7 +159,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 	@Override
 	public void unregisterPeer(UUID peerUuid) throws Exception {
-		String peerNode = PEERS_PATH + "/" + peerUuid;
+		String peerNode = getPeersPath() + "/" + peerUuid;
 		if (peerExists(peerUuid)) {
 			zk.delete(peerNode, -1);
 			logger.info("Unregistered (i.e. deleted) peer node with uuid: {}", peerUuid);
@@ -133,7 +169,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public void unregisterAllPeers() throws Exception {
 
-		List<String> peerUuids = zk.getChildren(PEERS_PATH, false);
+		List<String> peerUuids = zk.getChildren(getPeersPath(), false);
 		// loop through all peers
 		int deleted = 0;
 		for (String peerUuid : peerUuids) {
@@ -146,13 +182,13 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 	@Override
 	public boolean peerExists(UUID peerUuid) throws Exception {
-		String peerNode = PEERS_PATH + "/" + peerUuid;
+		String peerNode = getPeersPath() + "/" + peerUuid;
 		return zk.exists(peerNode, null) != null;
 	}
 
 	@Override
 	public LogInfo addLog(String logNamePrefix, String bootstrapServers) throws Exception {
-		String logNodePrefix = LOGS_PATH + "/" + logNamePrefix;
+		String logNodePrefix = getLogsPath() + "/" + logNamePrefix;
 
 		byte[] data = null;
 
@@ -183,7 +219,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	public void addLogRequest(String logName, String requestUuid, StringCallback cb, Object ctx)
 		throws Exception {
 
-		String newRequestNode = String.format("%s/%s/%s", LOGS_PATH, logName, requestUuid);
+		String newRequestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 		if (!logExists(logName)) {
 			throw new IllegalArgumentException(String.format("Node for log: %s does not exist", logName));
 		}
@@ -195,7 +231,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public String addLogRequest(String logName, String requestUuid) throws Exception {
 
-		String newRequestNode = String.format("%s/%s/%s", LOGS_PATH, logName, requestUuid);
+		String newRequestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 		if (!logExists(logName)) {
 			throw new IllegalArgumentException(String.format("Node for log: %s does not exist", logName));
 		}
@@ -216,9 +252,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	public void addLogReply(String logName, LogReply logReply, StringCallback callback) throws Exception {
 
 		String requestUuid = logReply.getReplyTo();
-		String requestNode = String.format("%s/%s/%s", LOGS_PATH, logName, requestUuid);
+		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 
-		String newReplyNode = String.format("%s/%s/%s/%s", LOGS_PATH, logName, requestUuid, logReply.getUuid());
+		String newReplyNode = String.format("%s/%s/%s/%s", getLogsPath(), logName, requestUuid, logReply.getUuid());
 		if (zk.exists(requestNode, false) != null) {
 			// create reply node with message uuid as name and offset as data
 			StringBuffer sb = new StringBuffer();
@@ -242,9 +278,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	public void addLogReply(String logName, LogReply logReply) throws Exception {
 
 		String requestUuid = logReply.getReplyTo();
-		String requestNode = String.format("%s/%s/%s", LOGS_PATH, logName, requestUuid);
+		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 
-		String newReplyNode = String.format("%s/%s/%s/%s", LOGS_PATH, logName, requestUuid, logReply.getUuid());
+		String newReplyNode = String.format("%s/%s/%s/%s", getLogsPath(), logName, requestUuid, logReply.getUuid());
 		if (zk.exists(requestNode, false) != null) {
 			// create reply node with message uuid as name and offset as data
 			StringBuffer sb = new StringBuffer();
@@ -265,7 +301,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public void deleteLogRequest(String logName, String requestUuid) throws Exception {
 
-		String requestNode = String.format("%s/%s/%s", LOGS_PATH, logName, requestUuid);
+		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 		int deleted = 0;
 
 		// delete all reply nodes
@@ -281,7 +317,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public void deleteLogRequests(String logName) throws Exception {
 
-		String logNode = LOGS_PATH + "/" + logName;
+		String logNode = getLogsPath() + "/" + logName;
 		int deleted = 0;
 		for (String reqNode : zk.getChildren(logNode, false)) {
 			deleteLogRequest(logName, reqNode);
@@ -299,7 +335,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			throw new IllegalArgumentException(String.format("Node for log: %s does not exist", logName));
 		}
 
-		String requestNode = String.format("%s/%s/%s", LOGS_PATH, logName, requestUuid);
+		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 		Stat nodeStat;
 		String replyNodePath;
 		Properties props;
@@ -327,7 +363,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public LogReply getLogReply(String logName, String requestUuid, String replyUuid) throws Exception {
 
-		String replyNode = String.format("%s/%s/%s/%s", LOGS_PATH, logName, requestUuid, replyUuid);
+		String replyNode = String.format("%s/%s/%s/%s", getLogsPath(), logName, requestUuid, replyUuid);
 		Stat nodeStat = zk.exists(replyNode, null);
 		Properties props = getProperties(replyNode, nodeStat);
 		return new LogReply(replyUuid, props.getProperty("from"), requestUuid, Long.valueOf(props.getProperty("offset")));
@@ -335,7 +371,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 	public void getChildren(String logName, String requestUuid, Watcher watcher, ChildrenCallback cb, Object ctx) {
 
-		String requestNode = String.format("%s/%s/%s", LOGS_PATH, logName, requestUuid);
+		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 
 		logger.debug("Setting watch on getChildren for new request node: {}", requestNode);
 		zk.getChildren(requestNode, watcher, cb, ctx);
@@ -343,7 +379,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 	public void requestExists(String logName, String requestUuid, Watcher watcher, StatCallback cb) {
 
-		String requestNode = String.format("%s/%s/%s", LOGS_PATH, logName, requestUuid);
+		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 		zk.exists(requestNode, watcher, cb, null);
 	}
 
@@ -354,7 +390,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		}
 
 		// find last
-		List<String> logs = zk.getChildren(LOGS_PATH, false);
+		List<String> logs = zk.getChildren(getLogsPath(), false);
 		long maxLogIndex = 0;
 		String lastLog = null;
 		// loop through all logs
@@ -379,7 +415,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public int getLogCount(String logNamePrefix) throws Exception {
 		int count = 0;
-		List<String> logs = zk.getChildren(LOGS_PATH, false);
+		List<String> logs = zk.getChildren(getLogsPath(), false);
 		for (String log : logs) {
 			if (log.startsWith(logNamePrefix)) {
 				count++;
@@ -391,7 +427,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public Set<LogInfo> getAllLogs() throws Exception {
 		Set<LogInfo> allLogs = new TreeSet();
-		List<String> logs = zk.getChildren(LOGS_PATH, false);
+		List<String> logs = zk.getChildren(getLogsPath(), false);
 		for (String logName : logs) {
 			allLogs.add(getLogInfo(logName));
 		}
@@ -426,7 +462,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		}
 
 		Stat nodeStat = getLogNodeStat(logName);
-		String logNode = LOGS_PATH + "/" + logName;
+		String logNode = getLogsPath() + "/" + logName;
 
 		Properties props = getProperties(logNode, nodeStat);
 		String servers = props.getProperty("bootstrap.servers");
@@ -458,7 +494,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		}
 
 		Stat nodeStat = getPeerNodeStat(peerUuid);
-		String peerNode = PEERS_PATH + "/" + peerUuid;
+		String peerNode = getPeersPath() + "/" + peerUuid;
 
 		return getProperties(peerNode, nodeStat);
 	}
@@ -467,7 +503,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	public int getPeerCount() throws Exception {
 		int count = 0;
 		// find last
-		List<String> peers = zk.getChildren(PEERS_PATH, false);
+		List<String> peers = zk.getChildren(getPeersPath(), false);
 		return peers.size();
 
 	}
@@ -481,7 +517,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		PeerInfo peerInfo = new PeerInfo(peerUuid);
 
 		Stat nodeStat = getPeerNodeStat(peerUuid);
-		String peerNode = PEERS_PATH + "/" + peerUuid;
+		String peerNode = getPeersPath() + "/" + peerUuid;
 
 		Properties props = getProperties(peerNode, nodeStat);
 		String listenAddress = props.getProperty("listenAddress");
@@ -504,7 +540,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	public Set<PeerInfo> getAllPeers() throws Exception {
 
 		Set<PeerInfo> allPeers = new TreeSet();
-		List<String> peers = zk.getChildren(PEERS_PATH, false);
+		List<String> peers = zk.getChildren(getPeersPath(), false);
 		for (String uuid : peers) {
 			allPeers.add(getPeerInfo(uuid));
 		}
@@ -518,7 +554,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			// first delete any children request nodes
 			deleteLogRequests(logName);
 
-			String logNode = LOGS_PATH + "/" + logName;
+			String logNode = getLogsPath() + "/" + logName;
 			zk.delete(logNode, -1);
 			logger.info("Unregistered (i.e. deleted) log node: {}", logName);
 		}
@@ -527,7 +563,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public void deleteAllLogs(String logNamePrefix) throws Exception {
 
-		List<String> logs = zk.getChildren(LOGS_PATH, false);
+		List<String> logs = zk.getChildren(getLogsPath(), false);
 		// loop through all logs
 		int deleted = 0;
 		for (String logName : logs) {
@@ -542,13 +578,25 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 	}
 
+	public void deleteRootPaths() throws Exception {
+
+		zk.delete(getLogsPath(), -1);
+		logger.info("Deleted logs path node {}", getLogsPath());
+
+		zk.delete(getPeersPath(), -1);
+		logger.info("Deleted peers path node {}", getPeersPath());
+
+		zk.delete(getRootPath(), -1);
+		logger.info("Deleted root path node {}", getRootPath());
+	}
+
 	protected Stat getLogNodeStat(String logName) throws Exception {
-		String logNode = LOGS_PATH + "/" + logName;
+		String logNode = getLogsPath() + "/" + logName;
 		return zk.exists(logNode, null);
 	}
 
 	protected Stat getPeerNodeStat(UUID peerUuid) throws Exception {
-		String peerNode = PEERS_PATH + "/" + peerUuid;
+		String peerNode = getPeersPath() + "/" + peerUuid;
 		return zk.exists(peerNode, null);
 	}
 
@@ -560,6 +608,26 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public boolean isConnectionEstablished() throws Exception {
 		return zk != null && zk.getState().equals(ZooKeeper.States.CONNECTED);
+	}
+
+	public String getRootPath() {
+		return customRootPath != null ? customRootPath : DEFAULT_ROOT_PATH;
+	}
+
+	public String getPeersPath() {
+		return getRootPath() + PEERS_SUBPATH;
+	}
+
+	public String getLogsPath() {
+		return getRootPath() + LOGS_SUBPATH;
+	}
+
+	public String getCustomRootPath() {
+		return customRootPath;
+	}
+
+	public void setCustomRootPath(String customRootPath) {
+		this.customRootPath = customRootPath;
 	}
 
 	@Override
