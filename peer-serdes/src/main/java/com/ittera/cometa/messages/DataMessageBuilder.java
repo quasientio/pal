@@ -64,4 +64,6 @@ public interface DataMessageBuilder {
 	DataMessage buildInitializerThrowable(UUID concentratorUuid, StaticPart staticPart, Exception exception);
 
 	DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, String objectKey, boolean isVoid, String followingUuid);
+
+	void resetThreadLocalSequence();
 }

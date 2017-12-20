@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.Concentrator;
+import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -21,16 +22,19 @@ public class PeerMessageInvoker extends Thread {
 	protected AtomicLong requestsDispatched = new AtomicLong(0);
 	protected AtomicLong requestsDismissed = new AtomicLong(0);
 
+	protected DataMessageBuilder dataMessageBuilder;
+
 	// zmq stuff
 	private ZContext zmqContext;
 	private final String dealerAddress;
 	private Socket socket;
 
 	public PeerMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
-														String dealerAddress) {
+														DataMessageBuilder dataMessageBuilder, String dealerAddress) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
 		this.dealerAddress = dealerAddress;
+		this.dataMessageBuilder = dataMessageBuilder;
 		logger.debug("Initialized new peer message invoker thread named: {} with dealerAddress: {}", name, dealerAddress);
 	}
 
@@ -113,6 +117,8 @@ public class PeerMessageInvoker extends Thread {
 		DataMessage replyMsg = Concentrator.incomingCall(requestMsg);
 		logger.debug("Invoker dispatched peer request message uuid: {}, reply uuid: {}", requestMsg.getMessageUuid(),
 			replyMsg.getMessageUuid());
+		requestsDispatched.getAndIncrement();
+		dataMessageBuilder.resetThreadLocalSequence();
 		return replyMsg;
 	}
 }

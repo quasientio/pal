@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.Concentrator;
+import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -26,10 +27,14 @@ public class LogMessageInvoker extends Thread {
 	private final String inLogAddress;
 	private Socket socket;
 
-	public LogMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext, String inLogAddress) {
+	protected DataMessageBuilder dataMessageBuilder;
+
+	public LogMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
+													 DataMessageBuilder dataMessageBuilder, String inLogAddress) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
 		this.inLogAddress = inLogAddress;
+		this.dataMessageBuilder = dataMessageBuilder;
 		logger.debug("Initialized new log message invoker thread named: {} with inLogAddress: {}", name, inLogAddress);
 	}
 
@@ -117,6 +122,7 @@ public class LogMessageInvoker extends Thread {
 		logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",
 			requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());
 		requestsDispatched.getAndIncrement();
+		dataMessageBuilder.resetThreadLocalSequence();
 		return replyMsg;
 	}
 

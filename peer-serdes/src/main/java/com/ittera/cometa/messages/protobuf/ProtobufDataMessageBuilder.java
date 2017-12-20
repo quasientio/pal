@@ -37,17 +37,33 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	protected static final Logger logger = LoggerFactory.getLogger(ProtobufDataMessageBuilder.class);
 
-	private static final ThreadLocal<AtomicLong> threadSequence = new ThreadLocal<AtomicLong>() {
-		@Override
-		protected AtomicLong initialValue() {
-			return new AtomicLong(0);
-		}
-
-	};
-
 	public ProtobufDataMessageBuilder() {
 		logger.info("Initialized message builder");
 	}
+
+	//<editor-fold desc="Thread-local sequence stamping methods">
+
+	private static final ThreadLocal<AtomicLong> threadDispatchSequence = new ThreadLocal<AtomicLong>() {
+		@Override
+		protected AtomicLong initialValue() {
+			return new AtomicLong(1);
+		}
+	};
+
+	private static final ThreadLocal<AtomicLong> threadBuilderSequence = new ThreadLocal<AtomicLong>() {
+		@Override
+		protected AtomicLong initialValue() {
+			return new AtomicLong(1);
+		}
+	};
+
+	@Override
+	public void resetThreadLocalSequence() {
+		threadBuilderSequence.set(new AtomicLong(1));
+		threadDispatchSequence.get().getAndIncrement();
+	}
+
+	//</editor-fold>
 
 	//<editor-fold desc="Private Auxiliary methods">
 
@@ -121,7 +137,8 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 			.setMessageUuid(UUID.randomUUID().toString())
 			.setMsgType(msgType)
 			.setThreadId(Thread.currentThread().getId())
-			.setBuilderSeq(threadSequence.get().incrementAndGet())
+			.setDispatchSeq(threadDispatchSequence.get().longValue())
+			.setBuilderSeq(threadBuilderSequence.get().getAndIncrement())
 			.setCurrentTime(System.currentTimeMillis());
 
 		if (followingUuid != null && !followingUuid.isEmpty()) {
