@@ -8,6 +8,7 @@ import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.DataMessageBuilder;
 
 import java.util.Queue;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
@@ -39,7 +40,8 @@ public class AppRunner {
 	 * Serially sends all requests in a single (ThinPeer) thread.
 	 * Sends 1st req to log and waits for Future reply, then sends all other directly to peer
 	 */
-	protected int runReqsWithSingleClient(String className, String methodName, final int requests) throws Exception {
+	protected int runReqsWithSingleClient(String className, String methodName, List<String> args, final int requests)
+		throws Exception {
 		ThinPeer thinPeer = new ThinPeer("/runner.properties");
 		long start = System.currentTimeMillis();
 		int reqsSent = 0;
@@ -53,6 +55,10 @@ public class AppRunner {
 			parameterTypesNamesArray[i] = parameterTypes[i].getName();
 		}
 		Object[] parameters = new Object[]{new String[]{}};
+		// TODO: generalize this to other methods (non-varargs)
+		if (methodName.equals("main") && !args.isEmpty()) {
+			parameters[0] = args.toArray(new String[0]);
+		}
 
 		// send 1st request
 		DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
@@ -91,7 +97,7 @@ public class AppRunner {
 	 * If sendAndForget=true, it doesn't wait for replies, useful for void methods or any other type of call where
 	 * we don't care about the returned value or thrown exceptions.
 	 */
-	protected int runReqsWithSingleClientAsync(String className, String methodName, final int requests,
+	protected int runReqsWithSingleClientAsync(String className, String methodName, List<String> args, final int requests,
 																						 boolean sendAndForget) throws Exception {
 		ThinPeer thinPeer = new ThinPeer("/runner.properties");
 
@@ -149,6 +155,10 @@ public class AppRunner {
 			parameterTypesNamesArray[i] = parameterTypes[i].getName();
 		}
 		Object[] parameters = new Object[]{new String[]{}};
+		// TODO: generalize this to other methods (non-varargs)
+		if (methodName.equals("main") && !args.isEmpty()) {
+			parameters[0] = args.toArray(new String[0]);
+		}
 
 		// send all requests
 		for (; reqsSent < requests; reqsSent++) {
@@ -184,8 +194,9 @@ public class AppRunner {
 	 * NOTE that this method calls either the runReqsWithSingleClient() or runReqsWithSingleClientAsync()
 	 * methods in parallel threads
 	 */
-	protected int runReqsWithNClients(final String className, final String methodName, int clients, final int requests,
-																		final boolean sendAndForget, final boolean async) throws Exception {
+	protected int runReqsWithNClients(final String className, final String methodName, final List<String> args,
+																		int clients, final int requests, final boolean sendAndForget, final boolean async)
+		throws Exception {
 
 		assert requests > 1;
 		assert clients > 1;
@@ -205,9 +216,9 @@ public class AppRunner {
 					try {
 						int sent = 0;
 						if (async || sendAndForget) {
-							sent = runReqsWithSingleClientAsync(className, methodName, requests, sendAndForget);
+							sent = runReqsWithSingleClientAsync(className, methodName, args, requests, sendAndForget);
 						} else {
-							sent = runReqsWithSingleClient(className, methodName, requests);
+							sent = runReqsWithSingleClient(className, methodName, args, requests);
 						}
 						finishedThreads.getAndIncrement();
 						reqsSent.getAndAdd(sent);
@@ -279,17 +290,18 @@ public class AppRunner {
 			System.exit(1);
 		}
 
-		String className = line.getArgs()[0];
+		List<String> argList = line.getArgList();
+		String className = argList.remove(0);
 
 		AppRunner appRunner = new AppRunner(verbose);
 		if (requests == 1 || clients == 1) {
 			if (async || sendAndForget) {
-				appRunner.runReqsWithSingleClientAsync(className, "main", requests, sendAndForget);
+				appRunner.runReqsWithSingleClientAsync(className, "main", argList, requests, sendAndForget);
 			} else {
-				appRunner.runReqsWithSingleClient(className, "main", requests);
+				appRunner.runReqsWithSingleClient(className, "main", argList, requests);
 			}
 		} else {
-			appRunner.runReqsWithNClients(className, "main", clients, requests, sendAndForget, async);
+			appRunner.runReqsWithNClients(className, "main", argList, clients, requests, sendAndForget, async);
 		}
 	}
 }
