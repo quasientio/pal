@@ -60,6 +60,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 
     // kafka stuff
     private final long pollTimeout;
+    private Long initialOffset;
     private String kafkaTopic;
     private TopicPartition topicPartition;
     private KafkaConsumer<String, String> consumer;
@@ -172,21 +173,21 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     }
 
     @Override
-    public void readFromLastLog(String logNamePrefix) throws Exception {
+    public void readFromLog(String logName, Long initialOffset) throws Exception {
 
-        LogInfo lastLog = peerLogDirectory.getLastLog(logNamePrefix);
-        readFromLog(lastLog.getName());
+        this.kafkaTopic = logName;
+        this.initialOffset = initialOffset;
+        LogInfo logInfo = peerLogDirectory.getLogInfo(logName);
+        this.currentLog = logInfo;
+
+        consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
+        logger.info("Now reading from log: {} and bootstrapServers: {}, starting at offset: {}", logInfo.getName(),
+          logInfo.getBootstrapServers(), initialOffset);
     }
 
     @Override
     public void readFromLog(String logName) throws Exception {
-
-        this.kafkaTopic = logName;
-        LogInfo logInfo = peerLogDirectory.getLogInfo(logName);
-        this.currentLog = logInfo;
-        consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
-        logger.info("Now reading from log: {} and bootstrapServers: {}", logInfo.getName(),
-          logInfo.getBootstrapServers());
+        readFromLog(logName, 0L);
     }
 
     protected void openConnections() {
@@ -195,7 +196,11 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         topicPartition = new TopicPartition(kafkaTopic, 0);
         final List<TopicPartition> topicPartitionList = Arrays.asList(topicPartition);
         consumer.assign(topicPartitionList);
-        consumer.seekToBeginning(topicPartitionList);
+        if (initialOffset == null) {
+            consumer.seekToBeginning(topicPartitionList);
+        } else {
+            consumer.seek(topicPartition, initialOffset);
+        }
 
         logger.info("Initialized kafka consumer");
 

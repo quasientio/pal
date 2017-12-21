@@ -17,4 +17,4 @@ JMX_PROPS="-Dcom.sun.management.jmxremote \
 	-Dcom.sun.management.jmxremote.authenticate=false \
 	-Dcom.sun.management.jmxremote.ssl=false"
 
-java $JMX_PROPS $LTW_OPTS $JVM_OPTS com.ittera.cometa.concentrator.Concentrator
+java $JMX_PROPS $LTW_OPTS $JVM_OPTS com.ittera.cometa.concentrator.Concentrator "$@"

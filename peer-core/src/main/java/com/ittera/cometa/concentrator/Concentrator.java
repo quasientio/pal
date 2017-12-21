@@ -55,6 +55,14 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 public class Concentrator {
 
 	// <editor-fold defaultstate="collapsed" desc="STATIC VARS">
@@ -73,6 +81,8 @@ public class Concentrator {
 	private static final String ZMQ_LINGER_DEFAULT = "1000";
 	private static final String ZMQ_RCVHWM_DEFAULT = "10000";
 	private static final String ZMQ_SNDHWM_DEFAULT = "10000";
+
+	protected static final String DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
 
 	protected static String outCellAddress;
 
@@ -1279,6 +1289,7 @@ public class Concentrator {
 
 	// </editor-fold>
 
+	// <editor-fold defaultstate="collapsed" desc="SOCKET METHODS">
 	private static DataMessage sendAndRecv(DataMessage dataMessage) {
 		logger.trace("in w/ dataMessage with uuid: {}", dataMessage.getMessageUuid());
 		Socket outSocket = threadSocket.get();
@@ -1324,7 +1335,15 @@ public class Concentrator {
 		}
 	}
 
-	private static void registerLogAndSelf(Properties properties, Injector injector) {
+	private static void closeZmqContext() {
+		logger.info("Destroying zmq context");
+		zmqContext.destroy();
+		logger.info("Destroyed zmq context");
+	}
+	// </editor-fold>
+
+	// <editor-fold defaultstate="collapsed" desc="PEER INIT METHODS">
+	private static void registerSelfAsPeer(Properties properties, Injector injector) {
 
 		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
 
@@ -1347,44 +1366,103 @@ public class Concentrator {
 			ex.printStackTrace();
 			System.exit(4);
 		}
+	}
 
+	private static LogInfo registerNewLog(Properties properties, Injector injector) {
+
+		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
 		final String kafkaTopicPrefix = properties.getProperty("kafkaTopic");
 		LogInfo newLogInfo = null;
 
 		// register new log
 		try {
-			newLogInfo = registry.addLog(kafkaTopicPrefix, "localhost:9092");
+			newLogInfo = registry.createLog(kafkaTopicPrefix, DEFAULT_BOOTSTRAP_SERVERS);
 		} catch (Exception ex) {
 			logger.error("Error registering new log", ex);
 			ex.printStackTrace();
 			System.exit(5);
 		}
 
-		// once new log registered, we inform the message reader and writer. This must be done before starting the services.
-		IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
-		KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
+		return newLogInfo;
+	}
+
+	private static LogInfo registerGivenLog(String logName, Injector injector) {
+
+		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
+		LogInfo logInfo = null;
+
+		// register given log if not registered
 		try {
-			kafkaMessageWriter.writeToLog(newLogInfo.getName());
-			incomingMessageDispatcher.readFromLog(newLogInfo.getName());
+			if (registry.logExists(logName)) {
+				logInfo = registry.getLogInfo(logName);
+			} else {
+				logInfo = registry.addGivenLog(logName, DEFAULT_BOOTSTRAP_SERVERS);
+			}
 		} catch (Exception ex) {
-			logger.error("Could not initialize reader/writer to last log. Aborting ...", ex);
+			logger.error("Error registering given log", ex);
+			ex.printStackTrace();
+			System.exit(5);
+		}
+
+		return logInfo;
+	}
+
+	private static void readFromLog(String logName, Injector injector, Long offset) {
+		IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
+		try {
+			incomingMessageDispatcher.readFromLog(logName, offset);
+		} catch (Exception ex) {
+			logger.error("Could not initialize log reader. Aborting ...", ex);
 			ex.printStackTrace();
 			System.exit(6);
 		}
 	}
 
-	private static void closeZmqContext() {
-		logger.info("Destroying zmq context");
-		zmqContext.destroy();
-		logger.info("Destroyed zmq context");
+	private static void writeToLog(String logName, Injector injector) {
+		KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
+		try {
+			kafkaMessageWriter.writeToLog(logName);
+		} catch (Exception ex) {
+			logger.error("Could not initialize log writer. Aborting ...", ex);
+			ex.printStackTrace();
+			System.exit(6);
+		}
 	}
 
-	/**
-	 * The Concentrator takes 1 only argument, which is the location of the configuration (.properties) file
-	 *
-	 * @param args
-	 */
+	private static CommandLine parseOptions(String[] args) {
+		CommandLineParser parser = new DefaultParser();
+		Options options = new Options();
+		options.addOption(Option.builder("rl").required(false).longOpt("read-log").hasArg()
+			.desc("read from log").build());
+		options.addOption(Option.builder("wl").required(false).longOpt("write-log").hasArg()
+			.desc("write to log").build());
+		options.addOption(Option.builder("l").required(false).longOpt("log").hasArg()
+			.desc("read and write from/to log").build());
+		options.addOption(Option.builder("os").required(false).longOpt("offset-start").hasArg()
+			.desc("read log from offset (requires -l or -rl)").build());
+		options.addOption(Option.builder("h").required(false).longOpt("help").desc("print usage").build());
+
+		CommandLine cmdLine = null;
+		try {
+			cmdLine = parser.parse(options, args);
+		} catch (ParseException exp) {
+			System.err.println(exp.getMessage());
+			System.exit(1);
+		}
+
+		if (cmdLine.hasOption("help")) {
+			HelpFormatter formatter = new HelpFormatter();
+			formatter.printHelp("runner", options);
+			System.exit(0);
+		}
+
+		return cmdLine;
+	}
+	// </editor-fold>
+
 	public static void main(final String[] args) {
+
+		CommandLine cmdLine = parseOptions(args);
 
 		AbstractModule module = new AbstractModule() {
 			@Override
@@ -1419,7 +1497,54 @@ public class Concentrator {
 		};
 
 		final Injector injector = Guice.createInjector(module);
-		registerLogAndSelf(properties, injector);
+
+		// register peer
+		registerSelfAsPeer(properties, injector);
+
+		// init log IO
+		boolean readLog = cmdLine.hasOption("read-log") || cmdLine.hasOption("log");
+		boolean writeLog = cmdLine.hasOption("write-log") || cmdLine.hasOption("log");
+		boolean offsetGiven = cmdLine.hasOption("offset-start");
+		String offsetStr = cmdLine.getOptionValue("os");
+		if (offsetGiven && !readLog) {
+			System.err.println("Offset given but no log to read from. Try `runner -h`.");
+			System.exit(1);
+		}
+
+		// parse initial offset
+		Long offset = null;
+		if (offsetGiven && offsetStr != null) {
+			offset = Long.valueOf(offsetStr);
+		}
+
+		// init log reader
+		LogInfo newLog = null;
+		if (readLog) {
+			String logName = cmdLine.getOptionValue("l");
+			if (logName == null) {
+				logName = cmdLine.getOptionValue("rl");
+			}
+			registerGivenLog(logName, injector);
+			readFromLog(logName, injector, offset);
+		} else { // no log given, create new
+			newLog = registerNewLog(properties, injector);
+			readFromLog(newLog.getName(), injector, offset);
+		}
+
+		// init log writer
+		if (writeLog) {
+			String logName = cmdLine.getOptionValue("l");
+			if (logName == null) {
+				logName = cmdLine.getOptionValue("wl");
+			}
+			registerGivenLog(logName, injector);
+			writeToLog(logName, injector);
+		} else { // no log given, create new if not done already
+			if (newLog == null) {
+				newLog = registerNewLog(properties, injector);
+			}
+			writeToLog(newLog.getName(), injector);
+		}
 
 
 		// managed services

@@ -48,7 +48,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 		ZkClient cli = new ZkClient();
 
-		if (watcher!=null) {
+		if (watcher != null) {
 			cli.watcher = watcher;
 		}
 
@@ -80,7 +80,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 		ZkClient cli = new ZkClient();
 
-		if (watcher!=null) {
+		if (watcher != null) {
 			cli.watcher = watcher;
 		}
 
@@ -187,10 +187,10 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	}
 
 	@Override
-	public LogInfo addLog(String logNamePrefix, String bootstrapServers) throws Exception {
+	public LogInfo createLog(String logNamePrefix, String bootstrapServers) throws Exception {
 		String logNodePrefix = getLogsPath() + "/" + logNamePrefix;
 
-		byte[] data = null;
+		byte[] data;
 
 		// create new node
 		StringBuffer sb = new StringBuffer();
@@ -204,6 +204,27 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		LogInfo newLogInfo = getLogInfo(createdLogName);
 		logger.info("Created new log node: {} with bootstrapServers: {} and uuid: {}", createdLogName, bootstrapServers,
 			newLogUuid);
+		return newLogInfo;
+	}
+
+	@Override
+	public LogInfo addGivenLog(String logName, String bootstrapServers) throws Exception {
+		String logNode = getLogsPath() + "/" + logName;
+
+		byte[] data;
+
+		// create new node
+		StringBuffer sb = new StringBuffer();
+		String logUuid = UUID.randomUUID().toString();
+		sb.append("bootstrap.servers").append(PROPERTIES_SEP).append(bootstrapServers.trim()).append('\n');
+		sb.append("uuid").append(PROPERTIES_SEP).append(logUuid).append('\n');
+		data = sb.toString().getBytes();
+		String createdNode = zk.create(logNode, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+
+		String registeredLogName = StringUtils.substringAfterLast(createdNode, "/");
+		LogInfo newLogInfo = getLogInfo(registeredLogName);
+		logger.info("Registered given log node: {} with bootstrapServers: {} and uuid: {}", registeredLogName,
+			bootstrapServers, logUuid);
 		return newLogInfo;
 	}
 
@@ -414,6 +435,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 	@Override
 	public int getLogCount(String logNamePrefix) throws Exception {
+
 		int count = 0;
 		List<String> logs = zk.getChildren(getLogsPath(), false);
 		for (String log : logs) {

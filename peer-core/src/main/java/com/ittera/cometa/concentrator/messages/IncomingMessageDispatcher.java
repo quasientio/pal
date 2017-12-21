@@ -6,5 +6,5 @@ public interface IncomingMessageDispatcher {
 
 	void readFromLog(String logName) throws Exception;
 
-	void readFromLastLog(String logNamePrefix) throws Exception;
+	void readFromLog(String logName, Long initialOffset) throws Exception;
 }

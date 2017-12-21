@@ -44,7 +44,9 @@ public interface PeerLogDirectory {
 	 * LOG METHODS
 	 */
 
-	LogInfo addLog(String logNamePrefix, String bootstrapServers) throws Exception;
+	LogInfo createLog(String logNamePrefix, String bootstrapServers) throws Exception;
+
+	LogInfo addGivenLog(String logName, String bootstrapServers) throws Exception;
 
 	String addLogRequest(String logName, String requestUuid) throws Exception;
 

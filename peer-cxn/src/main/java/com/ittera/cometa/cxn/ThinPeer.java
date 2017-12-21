@@ -282,7 +282,7 @@ public class ThinPeer {
 		final DataMessageFuture messageFuture = new DataMessageFuture(this, peerLogDirectory,
 			singleThreadConsumerExecutor, kafkaTopic, requestMsgUuid);
 
-		// addLog callback
+		// addLogRequest callback
 		StringCallback addLogCallback = new StringCallback() {
 			@Override
 			public void processResult(int rc, String path, Object ctx, String name) {

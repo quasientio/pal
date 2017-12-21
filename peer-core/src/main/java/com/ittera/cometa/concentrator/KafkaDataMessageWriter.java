@@ -203,18 +203,11 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
     }
 
     @Override
-    public void writeToLastLog(String logNamePrefix) throws Exception {
-
-        LogInfo lastLog = peerLogDirectory.getLastLog(logNamePrefix);
-        writeToLog(lastLog.getName());
-    }
-
-    @Override
     public void writeToLog(String logName) throws Exception {
 
-        LogInfo lastLog = peerLogDirectory.getLogInfo(logName);
-        this.kafkaTopic = lastLog.getName();
-        String bootstrapServers = lastLog.getBootstrapServers();
+        LogInfo log = peerLogDirectory.getLogInfo(logName);
+        this.kafkaTopic = log.getName();
+        String bootstrapServers = log.getBootstrapServers();
         producerProperties.put("bootstrap.servers", bootstrapServers);
         // start kafka writer
         this.producer = new KafkaProducer<>(producerProperties);

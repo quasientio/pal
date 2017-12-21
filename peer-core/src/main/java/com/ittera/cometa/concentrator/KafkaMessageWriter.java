@@ -4,6 +4,4 @@ public interface KafkaMessageWriter {
 	void openConnections();
 
 	void writeToLog(String logName) throws Exception;
-
-	void writeToLastLog(String logNamePrefix) throws Exception;
 }
