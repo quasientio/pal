@@ -68,7 +68,7 @@ public class Concentrator {
 	// <editor-fold defaultstate="collapsed" desc="STATIC VARS">
 	protected static final Logger logger = LoggerFactory.getLogger(Concentrator.class);
 
-	public static final UUID uuid = UUID.randomUUID();
+	public static UUID uuid;
 
 	private static final Properties properties = new Properties();
 
@@ -98,9 +98,6 @@ public class Concentrator {
 			e.printStackTrace();
 			System.exit(1);
 		}
-
-		// add our uuid
-		properties.put("id", uuid.toString());
 
 		// initialize zmq context
 		zmqContext = new ZContext();
@@ -1432,14 +1429,16 @@ public class Concentrator {
 	private static CommandLine parseOptions(String[] args) {
 		CommandLineParser parser = new DefaultParser();
 		Options options = new Options();
+		options.addOption(Option.builder("u").required(false).longOpt("use-uuid").hasArg()
+			.desc("use given uuid").build());
 		options.addOption(Option.builder("rl").required(false).longOpt("read-log").hasArg()
-			.desc("read from log").build());
+			.desc("read from given log").build());
 		options.addOption(Option.builder("wl").required(false).longOpt("write-log").hasArg()
-			.desc("write to log").build());
+			.desc("write to given log").build());
 		options.addOption(Option.builder("l").required(false).longOpt("log").hasArg()
-			.desc("read and write from/to log").build());
+			.desc("read and write from/to given log").build());
 		options.addOption(Option.builder("os").required(false).longOpt("offset-start").hasArg()
-			.desc("read log from offset (requires -l or -rl)").build());
+			.desc("read from given offset (requires -l or -rl)").build());
 		options.addOption(Option.builder("h").required(false).longOpt("help").desc("print usage").build());
 
 		CommandLine cmdLine = null;
@@ -1452,9 +1451,17 @@ public class Concentrator {
 
 		if (cmdLine.hasOption("help")) {
 			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("runner", options);
+			formatter.printHelp("peer", options);
 			System.exit(0);
 		}
+
+		// this must be done here or the guice injector will fail
+		if (cmdLine.hasOption("use-uuid")) {
+			uuid = UUID.fromString(cmdLine.getOptionValue("u"));
+		} else {
+			uuid = UUID.randomUUID();
+		}
+		properties.put("id", uuid.toString());
 
 		return cmdLine;
 	}
