@@ -1469,6 +1469,14 @@ public class Concentrator {
 
 	public static void main(final String[] args) {
 
+		if (logger.isInfoEnabled()) {
+			StringBuilder sb = new StringBuilder();
+			for (String arg: args) {
+				sb.append(arg).append(" ");
+			}
+			logger.info("::main called w/args: {}", sb);
+		}
+
 		CommandLine cmdLine = parseOptions(args);
 
 		AbstractModule module = new AbstractModule() {
