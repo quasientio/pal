@@ -7,7 +7,10 @@ JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts
 LTW_OPTS=""
 
 if [[ $1 = '-ltw' ]]; then
-  LTW_OPTS="-javaagent:$ASPECTJ_HOME/lib/aspectjweaver.jar"
+	LTW_OPTS="-javaagent:$ASPECTJ_HOME/lib/aspectjweaver.jar"
+	MAIN_ARGS=${@:2}
+else
+	MAIN_ARGS=$@
 fi
 
 JMX_PROPS="-Dcom.sun.management.jmxremote \
@@ -17,4 +20,4 @@ JMX_PROPS="-Dcom.sun.management.jmxremote \
 	-Dcom.sun.management.jmxremote.authenticate=false \
 	-Dcom.sun.management.jmxremote.ssl=false"
 
-java $JMX_PROPS $LTW_OPTS $JVM_OPTS com.ittera.cometa.concentrator.Concentrator "$@"
+java $JMX_PROPS $LTW_OPTS $JVM_OPTS com.ittera.cometa.concentrator.Concentrator "$MAIN_ARGS"
