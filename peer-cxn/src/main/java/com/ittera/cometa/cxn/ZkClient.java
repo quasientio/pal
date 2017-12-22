@@ -154,6 +154,8 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		if (zk.exists(peerNode, null) == null) {
 			zk.create(peerNode, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 			logger.info("Registered peer node with uuid: {} and properties: {}", peerUuid, peerProperties);
+		} else {
+			logger.info("Skipping registration of existing peer node with uuid: {} and properties: {}", peerUuid, peerProperties);
 		}
 	}
 
