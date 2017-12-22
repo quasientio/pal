@@ -1457,7 +1457,7 @@ public class Concentrator {
 
 		// this must be done here or the guice injector will fail
 		if (cmdLine.hasOption("use-uuid")) {
-			uuid = UUID.fromString(cmdLine.getOptionValue("u"));
+			uuid = UUID.fromString(cmdLine.getOptionValue("u").trim());
 		} else {
 			uuid = UUID.randomUUID();
 		}
