@@ -1,5 +1,6 @@
 package com.ittera.cometa.messages.protobuf;
 
+import java.lang.reflect.Array;
 import java.util.Map;
 
 import com.ittera.cometa.messages.protobuf.data.Primitives;
@@ -11,6 +12,10 @@ import org.apache.commons.lang3.ClassUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * On dynamically creating arrays with generics:
+ * see Rohit Jain answer in https://stackoverflow.com/questions/18581002/how-to-create-a-generic-array
+ */
 public class Unwrapper {
 
 	protected static final Logger logger = LoggerFactory.getLogger(Unwrapper.class);
@@ -28,6 +33,10 @@ public class Unwrapper {
 
 	public static Class getClassForPrimitive(String primitiveType) {
 		return shortPrimitiveNameToClass.get(primitiveType);
+	}
+
+	private static <T> T[] getArrayOf(Class<T> clazz, int length) {
+		return (T[]) Array.newInstance(clazz, length);
 	}
 
 	/**

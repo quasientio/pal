@@ -27,6 +27,16 @@ public final class Wrapper {
 		//avoid instantiation
 	}
 
+	private static boolean implementsCharSequence(Class clazz) {
+		Class[] interfaces = clazz.getInterfaces();
+		for (Class iface : interfaces) {
+			if (iface.equals(CharSequence.class)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Wrapped is the actual value if object is a primitive, a String, or an array of these types
 	 * Objects created by this Concentrator, are expected to be looked up in the object map by their identity hashCode.
@@ -57,8 +67,8 @@ public final class Wrapper {
 
 		if (object != null) {
 			builder.setHash(object.hashCode());
-			if (object instanceof String) {
-				builder.setValue((String) object);
+			if (object instanceof CharSequence) {
+				builder.setValue(((CharSequence) object).toString());
 			} else if (object.getClass().isArray()) {
 				builder.setIsArray(true);
 				//TODO only handles 1-dimensional arrays ?? Check out Arrays.deepToString
@@ -89,16 +99,18 @@ public final class Wrapper {
 
 	/**
 	 * @param object
-	 * @return True if object is either null, a String/primitive/wrapper, or an array of Strings/primitives/wrappers.
+	 * @return True if object is either null, a CharSequence/primitive/wrapper, or an array of CharSequence/primitives/wrappers.
 	 */
 	public static boolean isWrappable(Object object) {
 		return
-			object == null ||
-				object == Void.class ||
+			object == null || object == Void.class || object == void.class ||
 				ClassUtils.isPrimitiveOrWrapper(object.getClass()) ||
-				String.class.equals(object.getClass()) ||
+				(object instanceof CharSequence) ||
 				(object.getClass().isArray() && ClassUtils.isPrimitiveOrWrapper(object.getClass().getComponentType())) ||
-				(object.getClass().isArray() && String.class.equals(object.getClass().getComponentType()));
+				/** String[] will pass the last check so this check is redundant, but they're so common we can optimize a bit
+				 * by checking first for String[] and avoid going through its interfaces as the next check does **/
+				(object.getClass().isArray() && String.class.equals(object.getClass().getComponentType())) ||
+				(object.getClass().isArray() && (implementsCharSequence(object.getClass().getComponentType())));
 	}
 
 	/**
