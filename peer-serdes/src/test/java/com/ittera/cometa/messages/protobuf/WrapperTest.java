@@ -10,10 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
 
+import static java.util.stream.Collectors.toList;
+
 import static org.junit.Assert.*;
 
 import java.lang.reflect.Array;
-import java.util.function.Function;
 
 /**
  * Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior
@@ -69,17 +70,6 @@ public class WrapperTest {
 		Boolean.TRUE, Byte.valueOf("1"), Character.valueOf('a'), Double.valueOf("382.03"), Float.valueOf("393.4"),
 		Integer.valueOf("458"), Long.valueOf("348333"), Short.valueOf("25"));
 
-	// auxiliary generic list mapping -> applies function to all elements in list EXCEPT null
-	private <T, R> List<R> mapList(List<T> list, Function<T, R> function) {
-		List<R> mappedList = new ArrayList<>();
-		for (T t : list) {
-			if (t != null) {
-				mappedList.add(function.apply(t));
-			}
-		}
-		return mappedList;
-	}
-
 	@BeforeClass
 	public static void setupLists() {
 
@@ -106,10 +96,23 @@ public class WrapperTest {
 	}
 
 	@Test
+	public void isWrappable_oneDimArrayOfPrimitive_true() {
+
+		int arraySize = 10;
+
+		for (Class clazz : primitiveClasses) {
+			Object primitiveArray = Array.newInstance(clazz, arraySize);
+			assertTrue(String.format("%s is not wrappable!", primitiveArray), Wrapper.isWrappable(primitiveArray));
+		}
+
+	}
+
+	@Test
 	public void isWrappable_oneDimArrayOfWrapper_true() {
 
 		// create list of 1-dimensional arrays, one for each of primitiveWrapperClasses, with length=10
-		List primitiveArrays = mapList(primitiveWrapperClasses, c -> getArrayOf(c, 10));
+		List primitiveArrays = (List<Object>) primitiveWrapperClasses.stream().map(c -> getArrayOf(c, 10))
+			.collect(toList());
 
 		for (Object array : primitiveArrays) {
 			assertTrue(String.format("Array of type %s is not wrappable", array.getClass().getComponentType()),
@@ -163,7 +166,7 @@ public class WrapperTest {
 	@Test
 	public void getWrappedClass_javaLangOrPrimitiveClassName_wrappedOk() {
 
-		List<String> classNames = mapList(allPrimitiveAndLangClasses, c -> c.getName());
+		List<String> classNames = allPrimitiveAndLangClasses.stream().map(c -> c.getName()).collect(toList());
 
 		for (String classname : classNames) {
 			Primitives.Class wrappedClass = Wrapper.getWrappedClass(classname);
@@ -181,9 +184,10 @@ public class WrapperTest {
 	 * Class of all wrappableObjects must be wrappable as well
 	 */
 	@Test
-	public void getWrappedClass_wrappableObjClass_wrappedOk() {
+	public void getWrappedClass_wrappableClass_wrappedOk() {
 
-		List<Class> classes = mapList(wrappableObjects, o -> o.getClass());
+		List<Class> classes = wrappableObjects.stream().filter(o -> o != null).map(o -> o.getClass())
+			.collect(toList());
 
 		for (Class clazz : classes) {
 			Primitives.Class wrappedClass = Wrapper.getWrappedClass(clazz);
@@ -220,6 +224,41 @@ public class WrapperTest {
 		assertNotNull(field);
 		assertEquals(fieldName, field.getName());
 		assertEquals(className, field.getClass_().getName());
+	}
+
+	@Test
+	public void getWrappedObject_wrappableObjAndClassname_wrappedOk() {
+
+		for (Object obj : wrappableObjects) {
+			Primitives.Object wrappedObj = Wrapper.getWrappedObject(obj, obj == null ? null
+				: obj.getClass().getName(), null);
+
+			assertNotNull(wrappedObj);
+			assertNotNull(wrappedObj.getClass_());
+			assertNotNull(wrappedObj.getClass_().getName());
+			assertFalse(wrappedObj.hasRef());
+
+			if (obj == null) {
+				assertTrue(wrappedObj.getIsNull());
+				assertFalse(wrappedObj.hasValue());
+			} else {
+				assertFalse(wrappedObj.getIsNull());
+				assertTrue(wrappedObj.hasValue());
+			}
+		}
+	}
+
+	@Test
+	public void getWrappedObject_nullObjAndGivenClassname_wrappedOk() {
+
+		Primitives.Object wrappedObj = Wrapper.getWrappedObject(null, "java.lang.String", null);
+
+		assertNotNull(wrappedObj);
+		assertNotNull(wrappedObj.getClass_());
+		assertNotNull(wrappedObj.getClass_().getName());
+		assertFalse(wrappedObj.hasRef());
+		assertTrue(wrappedObj.getIsNull());
+		assertFalse(wrappedObj.hasValue());
 	}
 
 }
