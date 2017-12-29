@@ -227,25 +227,41 @@ public class WrapperTest {
 	}
 
 	@Test
-	public void getWrappedObject_wrappableObjAndClassname_wrappedOk() {
+	public void getWrappedObject_wrappableValuedObj_wrappedWithValue() {
 
-		for (Object obj : wrappableObjects) {
-			Primitives.Object wrappedObj = Wrapper.getWrappedObject(obj, obj == null ? null
-				: obj.getClass().getName(), null);
+		// get all wrappable objects except null & void
+		List<Object> valuedWrappableObjs =
+			wrappableObjects.stream()
+				.filter(o -> o != null && o != void.class && o != Void.class)
+				.collect(toList());
+
+		for (Object obj : valuedWrappableObjs) {
+			Primitives.Object wrappedObj = Wrapper.getWrappedObject(obj, obj.getClass().getName(), null);
 
 			assertNotNull(wrappedObj);
 			assertNotNull(wrappedObj.getClass_());
 			assertNotNull(wrappedObj.getClass_().getName());
-			assertFalse(wrappedObj.hasRef());
 
-			if (obj == null) {
-				assertTrue(wrappedObj.getIsNull());
-				assertFalse(wrappedObj.hasValue());
-			} else {
-				assertFalse(wrappedObj.getIsNull());
-				assertTrue(wrappedObj.hasValue());
-			}
+			assertFalse(wrappedObj.hasRef());
+			assertFalse(wrappedObj.getIsNull());
+			assertTrue(wrappedObj.hasValue());
+			assertFalse(wrappedObj.getIsVoid());
 		}
+	}
+
+	@Test
+	public void getWrappedObject_voidObject_wrappedOk() {
+
+		Primitives.Object wrappedObj = Wrapper.getWrappedObject(void.class, (String) null, null);
+
+		assertNotNull(wrappedObj);
+		assertNotNull(wrappedObj.getClass_());
+		assertNotNull(wrappedObj.getClass_().getName());
+
+		assertFalse(wrappedObj.hasRef());
+		assertFalse(wrappedObj.getIsNull());
+		assertFalse(wrappedObj.hasValue());
+		assertTrue(wrappedObj.getIsVoid());
 	}
 
 	@Test
@@ -256,9 +272,10 @@ public class WrapperTest {
 		assertNotNull(wrappedObj);
 		assertNotNull(wrappedObj.getClass_());
 		assertNotNull(wrappedObj.getClass_().getName());
+
 		assertFalse(wrappedObj.hasRef());
 		assertTrue(wrappedObj.getIsNull());
 		assertFalse(wrappedObj.hasValue());
+		assertFalse(wrappedObj.getIsVoid());
 	}
-
 }

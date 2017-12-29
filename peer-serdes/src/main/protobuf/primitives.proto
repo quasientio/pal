@@ -20,6 +20,7 @@ message Object {
     optional int64 created = 7;
     optional string ref = 8;
     required bool isNull = 9;
+    required bool isVoid = 10 [default = false];
 }
 
 message Class {

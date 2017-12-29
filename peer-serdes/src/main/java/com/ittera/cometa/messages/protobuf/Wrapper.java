@@ -38,10 +38,16 @@ public final class Wrapper {
 	}
 
 	/**
-	 * Wrapped is the actual value if object is a primitive, a String, or an array of these types
-	 * Objects created by this Concentrator, are expected to be looked up in the object map by their identity hashCode.
+	 * Wrappable objects:
+	 * - null, void.class, Void.class
+	 * - all primitive types
+	 * - all wrapper types
+	 * - char sequence types (String, StringBuilder, etc.)
 	 *
+	 * @param builder
 	 * @param object
+	 * @param clazz
+	 * @param objectKey
 	 * @return
 	 */
 	private static Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, Class clazz,
@@ -52,7 +58,10 @@ public final class Wrapper {
 			throw new IllegalArgumentException("Both object and objectKey can't have values");
 		}
 		//value is null if both object and objectKey are null
-		builder.setIsNull((objectKey == null) && (object == null));
+		builder.setIsNull(objectKey == null && object == null);
+
+		//value may also be void
+		builder.setIsVoid(object == void.class || object == Void.class);
 
 		//set required fields (class already set at this point)
 		builder.setIdentityHash(System.identityHashCode(object));
@@ -83,12 +92,7 @@ public final class Wrapper {
 			} else if (ClassUtils.isPrimitiveOrWrapper(object.getClass())) {
 				builder.setValue(String.valueOf(object));
 			} else {
-				/** the object is not primitive, String or Array
-				 *  We set the isRef flag. We assume the object will be found in the objects map keyed with its identityHash,
-				 *  set below
-				 *  TODO: if object not created by this Concentrator, full (deep) serial/deserialization will be required
-				 *  TODO: if it's of type Class, treat differently?
-				 **/
+				logger.warn("Don't know what to do to wrap object: {} of class: {}", object, clazz);
 			}
 		}
 
