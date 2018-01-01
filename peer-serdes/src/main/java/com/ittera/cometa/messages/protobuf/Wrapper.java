@@ -8,6 +8,9 @@ import org.aspectj.lang.JoinPoint.StaticPart;
 
 import java.lang.reflect.Array;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.commons.lang3.ClassUtils;
 
 import org.slf4j.Logger;
@@ -23,18 +26,15 @@ public final class Wrapper {
 
 	private static final Logger logger = LoggerFactory.getLogger(Wrapper.class);
 
+	// we don't include String's here, as we check separately
+	final static List<Class> reconstructableCharSeqClasses = Arrays.asList(StringBuilder.class, StringBuffer.class);
+
 	private Wrapper() {
 		//avoid instantiation
 	}
 
-	private static boolean implementsCharSequence(Class clazz) {
-		Class[] interfaces = clazz.getInterfaces();
-		for (Class iface : interfaces) {
-			if (iface.equals(CharSequence.class)) {
-				return true;
-			}
-		}
-		return false;
+	static boolean isWrappableCharSeqClass(Class clazz) {
+		return reconstructableCharSeqClasses.contains(clazz);
 	}
 
 	/**
@@ -42,7 +42,7 @@ public final class Wrapper {
 	 * - null, void.class, Void.class
 	 * - all primitive types
 	 * - all wrapper types
-	 * - char sequence types (String, StringBuilder, etc.)
+	 * - reconstructable char sequence types: String, StringBuilder, StringBuffer
 	 *
 	 * @param builder
 	 * @param object
@@ -76,8 +76,8 @@ public final class Wrapper {
 
 		if (object != null) {
 			builder.setHash(object.hashCode());
-			if (object instanceof CharSequence) {
-				builder.setValue(((CharSequence) object).toString());
+			if ((object instanceof String) || isWrappableCharSeqClass(clazz)) {
+				builder.setValue(object.toString());
 			} else if (object.getClass().isArray()) {
 				builder.setIsArray(true);
 				//TODO only handles 1-dimensional arrays ?? Check out Arrays.deepToString
@@ -102,19 +102,21 @@ public final class Wrapper {
 	}
 
 	/**
+	 * See getWrappedObjectAux() for a list of valid wrappable types
+	 *
 	 * @param object
-	 * @return True if object is either null, a CharSequence/primitive/wrapper, or an array of CharSequence/primitives/wrappers.
+	 * @return
 	 */
 	public static boolean isWrappable(Object object) {
 		return
 			object == null || object == Void.class || object == void.class ||
 				ClassUtils.isPrimitiveOrWrapper(object.getClass()) ||
-				(object instanceof CharSequence) ||
+				object instanceof String || isWrappableCharSeqClass(object.getClass()) ||
 				(object.getClass().isArray() && ClassUtils.isPrimitiveOrWrapper(object.getClass().getComponentType())) ||
 				/** String[] will pass the last check so this check is redundant, but they're so common we can optimize a bit
 				 * by checking first for String[] and avoid going through its interfaces as the next check does **/
 				(object.getClass().isArray() && String.class.equals(object.getClass().getComponentType())) ||
-				(object.getClass().isArray() && (implementsCharSequence(object.getClass().getComponentType())));
+				(object.getClass().isArray() && isWrappableCharSeqClass(object.getClass().getComponentType()));
 	}
 
 	/**

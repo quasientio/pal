@@ -1,13 +1,17 @@
 package com.ittera.cometa.messages.protobuf;
 
 import java.lang.reflect.Array;
-import java.util.Map;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 
 import com.google.common.collect.ImmutableMap;
 
 import org.apache.commons.lang3.ClassUtils;
+
+import java.util.Optional;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,9 +43,33 @@ public class Unwrapper {
 		return (T[]) Array.newInstance(clazz, length);
 	}
 
+	private static <T> T reconstructCharSequence(T t, Primitives.Object object) {
+		Optional<Class> charSeqClass = Wrapper.reconstructableCharSeqClasses.stream().filter
+			(c -> c.equals(t)).findFirst();
+
+		Constructor c;
+		try {
+			c = charSeqClass.get().getConstructor(String.class);
+		} catch (NoSuchMethodException e) {
+			logger.warn("Couldn't get constructor for char seq object", e);
+			return null;
+		}
+
+
+		T newObject;
+		try {
+			newObject = (T) c.newInstance(object.getValue());
+		} catch (Exception e) {
+			logger.warn("Couldn't insantiate char seq object", e);
+			return null;
+		}
+
+		return newObject;
+	}
+
 	/**
 	 * Returns objects in objectList as Object array with each object typed as its type in classList
-	 * This method undoes the wrapping of objects done in ProtobufDataMessageBuilder.getWrappedValue()
+	 * This method undoes the wrapping of objects done by Wrapper.getWrappedObject()
 	 *
 	 * @param object
 	 * @param clazz
@@ -52,6 +80,19 @@ public class Unwrapper {
 
 		if (object.getIsNull()) {
 			return null;
+		}
+
+		if (object.getIsVoid()) {
+			return void.class;
+		}
+
+		if (clazz == String.class) {
+			//no casting needed
+			return object.getValue();
+		}
+
+		if (Wrapper.isWrappableCharSeqClass(clazz)) {
+			return reconstructCharSequence(clazz, object);
 		}
 
 		//is primitive

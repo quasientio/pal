@@ -59,13 +59,13 @@ public class WrapperTest {
 	/**
 	 * List of objects that should be wrappable
 	 */
-	private static List<Object> wrappableObjects = Arrays.asList(
+	static List<Object> wrappableObjects = Arrays.asList(
 		/** null and void **/
 		null, Void.class, void.class,
 		/** primitives **/
 		false, Byte.parseByte("0"), 'c', 0.43d, 512.5f, Integer.parseInt("4"), 34L, Short.parseShort("10"),
-		/** strings **/
-		String.valueOf("hello"),
+		/** char sequences **/
+		String.valueOf("hello"), new StringBuilder("world"), new StringBuffer("!!"),
 		/** primitive wrappers **/
 		Boolean.TRUE, Byte.valueOf("1"), Character.valueOf('a'), Double.valueOf("382.03"), Float.valueOf("393.4"),
 		Integer.valueOf("458"), Long.valueOf("348333"), Short.valueOf("25"));
@@ -73,11 +73,11 @@ public class WrapperTest {
 	@BeforeClass
 	public static void setupLists() {
 
-		javaLangClasses = new ArrayList();
+		javaLangClasses = new ArrayList<>();
 		javaLangClasses.addAll(primitiveWrapperClasses);
 		javaLangClasses.addAll(nonWrapperJavaLangClasses);
 
-		allPrimitiveAndLangClasses = new ArrayList();
+		allPrimitiveAndLangClasses = new ArrayList<>();
 		allPrimitiveAndLangClasses.addAll(primitiveClasses);
 		allPrimitiveAndLangClasses.addAll(javaLangClasses);
 
@@ -85,6 +85,18 @@ public class WrapperTest {
 
 	private static <T> T[] getArrayOf(Class<T> clazz, int size) {
 		return (T[]) Array.newInstance(clazz, size);
+	}
+
+	// <editor-fold defaultstate="collapsed" desc="isWrappable tests">
+	@Test
+	public void isWrappable_nonWrappableObject_true() {
+
+		List<Object> someNonWrappableObjects = Arrays.asList(new Object(), new java.util.Date(), new ArrayList(),
+			new java.util.HashSet(), new java.util.HashMap(), new java.util.Stack(), new java.util.Random());
+
+		for (Object obj : someNonWrappableObjects) {
+			assertFalse(String.format("%s should not be wrappable!", obj), Wrapper.isWrappable(obj));
+		}
 	}
 
 	@Test
@@ -127,7 +139,6 @@ public class WrapperTest {
 	public void isWrappable_oneDimCharSequenceType_true() {
 
 		List<CharSequence[]> charSeqArrays = new ArrayList<>();
-		charSeqArrays.add(new String[10]);
 		charSeqArrays.add(new StringBuffer[10]);
 		charSeqArrays.add(new StringBuilder[10]);
 
@@ -136,6 +147,24 @@ public class WrapperTest {
 				Wrapper.isWrappable(array));
 		}
 	}
+
+	@Test
+	public void isWrappableCharSeqClass_charSeqClasses_true() {
+
+		assertTrue(Wrapper.isWrappableCharSeqClass(StringBuffer.class));
+		assertTrue(Wrapper.isWrappableCharSeqClass(StringBuilder.class));
+	}
+
+	@Test
+	public void isWrappableCharSeqClass_nonCharSeqClasses_false() {
+
+		assertFalse(Wrapper.isWrappableCharSeqClass(Integer.class));
+		assertFalse(Wrapper.isWrappableCharSeqClass(String.class));
+		assertFalse(Wrapper.isWrappableCharSeqClass(Character.class));
+	}
+	// </editor-fold>
+
+	// <editor-fold defaultstate="collapsed" desc="getWrappedClass tests">
 
 	@Test
 	public void getWrappedClass_nullClass_unknownClassNoName() {
@@ -200,7 +229,9 @@ public class WrapperTest {
 			assertEquals(clazz.getName(), wrappedClass.getName());
 		}
 	}
+	// </editor-fold>
 
+	// <editor-fold defaultstate="collapsed" desc="getWrappedField tests">
 	@Test
 	public void getWrappedField_fieldAndClass_wrappedOk() {
 
@@ -225,18 +256,20 @@ public class WrapperTest {
 		assertEquals(fieldName, field.getName());
 		assertEquals(className, field.getClass_().getName());
 	}
+	// </editor-fold>
 
+	// <editor-fold defaultstate="collapsed" desc="getWrappedObject tests">
 	@Test
 	public void getWrappedObject_wrappableValuedObj_wrappedWithValue() {
 
-		// get all wrappable objects except null & void
+		// test all wrappable objects except null & void
 		List<Object> valuedWrappableObjs =
 			wrappableObjects.stream()
 				.filter(o -> o != null && o != void.class && o != Void.class)
 				.collect(toList());
 
 		for (Object obj : valuedWrappableObjs) {
-			Primitives.Object wrappedObj = Wrapper.getWrappedObject(obj, obj.getClass().getName(), null);
+			Primitives.Object wrappedObj = Wrapper.getWrappedObject(obj, obj.getClass(), null);
 
 			assertNotNull(wrappedObj);
 			assertNotNull(wrappedObj.getClass_());
@@ -252,7 +285,22 @@ public class WrapperTest {
 	@Test
 	public void getWrappedObject_voidObject_wrappedOk() {
 
-		Primitives.Object wrappedObj = Wrapper.getWrappedObject(void.class, (String) null, null);
+		Primitives.Object wrappedObj = Wrapper.getWrappedObject(void.class, void.class.getClass(), null);
+
+		assertNotNull(wrappedObj);
+		assertNotNull(wrappedObj.getClass_());
+		assertNotNull(wrappedObj.getClass_().getName());
+
+		assertFalse(wrappedObj.hasRef());
+		assertFalse(wrappedObj.getIsNull());
+		assertFalse(wrappedObj.hasValue());
+		assertTrue(wrappedObj.getIsVoid());
+	}
+
+	@Test
+	public void getWrappedObject_voidClassObject_wrappedOk() {
+
+		Primitives.Object wrappedObj = Wrapper.getWrappedObject(Void.class, Void.class.getClass(), null);
 
 		assertNotNull(wrappedObj);
 		assertNotNull(wrappedObj.getClass_());
@@ -278,4 +326,5 @@ public class WrapperTest {
 		assertFalse(wrappedObj.hasValue());
 		assertFalse(wrappedObj.getIsVoid());
 	}
+	// </editor-fold>
 }
