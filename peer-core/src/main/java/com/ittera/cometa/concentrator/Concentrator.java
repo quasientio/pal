@@ -1,5 +1,8 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.BiMapObjectService;
+
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.cxn.ZkClient;
@@ -1490,13 +1493,13 @@ public class Concentrator {
 				bind(PeerExecutor.class).to(PeerMessageExecutor.class);
 				bind(LogThreadFactory.class).to(LogExecThreadFactory.class);
 				bind(LogExecutor.class).to(LogMessageExecutor.class);
-				bind(ObjectService.class).to(BiMapObjectService.class);
 				bind(KafkaMessageWriter.class).to(KafkaDataMessageWriter.class);
 				bind(IncomingMessageDispatcher.class).to(KafkaDataMessageReader.class);
 				bind(OutgoingMessageDispatcher.class).to(JeromqOutMessageDispatcher.class);
 				bind(InRequestMessageDispatcher.class).to(JeromqInRequestDispatcher.class);
 
-				// cxn library classes are not annotated with @Singleton
+				// common and cxn library classes are not annotated with @Singleton
+				bind(ObjectService.class).to(BiMapObjectService.class).asEagerSingleton();
 				bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class).asEagerSingleton();
 				bind(PeerLogDirectory.class).to(ZkClient.class).asEagerSingleton();
 

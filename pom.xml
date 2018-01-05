@@ -25,9 +25,10 @@
     </build>
 
     <modules>
-        <module>peer-core</module>
+        <module>peer-common</module>
         <module>peer-serdes</module>
         <module>peer-cxn</module>
+        <module>peer-core</module>
     </modules>
 
 </project>

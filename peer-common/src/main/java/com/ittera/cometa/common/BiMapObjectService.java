@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator;
+package com.ittera.cometa.common;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -8,8 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.google.inject.Singleton;
 
 import com.google.common.util.concurrent.AbstractIdleService;
 
@@ -33,7 +31,6 @@ import com.google.common.util.concurrent.AbstractIdleService;
  * TODO: store objects as WeakReferences -> until then, no objects will get garbage cleaned!
  * TODO: replace trace enter and exit stmts (see issue #5)
  */
-@Singleton
 public final class BiMapObjectService extends AbstractIdleService implements ObjectService {
 
 	private static final Logger logger = LoggerFactory.getLogger(BiMapObjectService.class);

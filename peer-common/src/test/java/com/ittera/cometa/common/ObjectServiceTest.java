@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator;
+package com.ittera.cometa.common;
 
 import org.junit.Before;
 import org.junit.BeforeClass;

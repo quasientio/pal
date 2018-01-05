@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator;
+package com.ittera.cometa.common;
 
 public interface ObjectService {
 
