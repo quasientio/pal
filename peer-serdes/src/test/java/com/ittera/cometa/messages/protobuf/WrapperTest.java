@@ -70,6 +70,15 @@ public class WrapperTest {
 		Boolean.TRUE, Byte.valueOf("1"), Character.valueOf('a'), Double.valueOf("382.03"), Float.valueOf("393.4"),
 		Integer.valueOf("458"), Long.valueOf("348333"), Short.valueOf("25"));
 
+	/**
+	 * List of some objects that should NOT be wrappable
+	 */
+	static List<Object> someNonWrappableObjects = Arrays.asList(
+		Object.class, new Object(),
+		new java.util.Date(), new ArrayList(), new java.util.HashSet(), new java.util.HashMap(), new java.util.Stack(),
+		new java.util.Random(),
+		new Object[1], new Class[1]);
+
 	@BeforeClass
 	public static void setupLists() {
 
@@ -89,10 +98,7 @@ public class WrapperTest {
 
 	// <editor-fold defaultstate="collapsed" desc="isWrappable tests">
 	@Test
-	public void isWrappable_nonWrappableObject_true() {
-
-		List<Object> someNonWrappableObjects = Arrays.asList(new Object(), new java.util.Date(), new ArrayList(),
-			new java.util.HashSet(), new java.util.HashMap(), new java.util.Stack(), new java.util.Random());
+	public void isWrappable_nonWrappableObject_false() {
 
 		for (Object obj : someNonWrappableObjects) {
 			assertFalse(String.format("%s should not be wrappable!", obj), Wrapper.isWrappable(obj));
@@ -108,9 +114,20 @@ public class WrapperTest {
 	}
 
 	@Test
+	public void isWrappable_oneDimArrayOfNonWrappableObject_false() {
+
+		List<Object[]> nonWrappableArrays = someNonWrappableObjects.stream().
+			map(o -> getArrayOf(o.getClass(), 1)).collect(toList());
+
+		for (Object array : nonWrappableArrays) {
+			assertFalse(String.format("%s should not be wrappable!", array), Wrapper.isWrappable(array));
+		}
+	}
+
+	@Test
 	public void isWrappable_oneDimArrayOfPrimitive_true() {
 
-		int arraySize = 10;
+		int arraySize = 1;
 
 		for (Class clazz : primitiveClasses) {
 			Object primitiveArray = Array.newInstance(clazz, arraySize);
@@ -122,13 +139,13 @@ public class WrapperTest {
 	@Test
 	public void isWrappable_oneDimArrayOfWrapper_true() {
 
-		// create list of 1-dimensional arrays, one for each of primitiveWrapperClasses, with length=10
-		List primitiveArrays = (List<Object>) primitiveWrapperClasses.stream().map(c -> getArrayOf(c, 10))
+		// create list of 1-dimensional arrays, one for each of primitiveWrapperClasses, with length=1
+		List wrapperArrays = (List<Object>) primitiveWrapperClasses.stream().map(c -> getArrayOf(c, 1))
 			.collect(toList());
 
-		for (Object array : primitiveArrays) {
-			assertTrue(String.format("Array of type %s is not wrappable", array.getClass().getComponentType()),
-				Wrapper.isWrappable(array));
+		for (Object wrapperArray : wrapperArrays) {
+			assertTrue(String.format("Array of type %s is not wrappable", wrapperArray.getClass().getComponentType()),
+				Wrapper.isWrappable(wrapperArray));
 		}
 	}
 
@@ -136,7 +153,7 @@ public class WrapperTest {
 	 * 1-dimensional CharSequence arrays (String, StringBuffer, StringBuilder)
 	 */
 	@Test
-	public void isWrappable_oneDimCharSequenceType_true() {
+	public void isWrappable_oneDimCharSequenceTypeArray_true() {
 
 		List<CharSequence[]> charSeqArrays = new ArrayList<>();
 		charSeqArrays.add(new StringBuffer[10]);
@@ -147,7 +164,9 @@ public class WrapperTest {
 				Wrapper.isWrappable(array));
 		}
 	}
+	// </editor-fold>
 
+	// <editor-fold defaultstate="collapsed" desc="isWrappableCharSeqClass tests">
 	@Test
 	public void isWrappableCharSeqClass_charSeqClasses_true() {
 
@@ -259,6 +278,20 @@ public class WrapperTest {
 	// </editor-fold>
 
 	// <editor-fold defaultstate="collapsed" desc="getWrappedObject tests">
+
+	@Test
+	public void getWrappedObject_nonWrappableObj_nonWrappableExceptionThrown() {
+
+		for (Object obj : someNonWrappableObjects) {
+			try {
+				Primitives.Object wrappedObj = Wrapper.getWrappedObject(obj, obj.getClass(), null);
+				fail("Should have thrown an exception");
+			} catch (NonWrappableObjectException ex) {
+				// all good
+			}
+		}
+	}
+
 	@Test
 	public void getWrappedObject_wrappableValuedObj_wrappedWithValue() {
 

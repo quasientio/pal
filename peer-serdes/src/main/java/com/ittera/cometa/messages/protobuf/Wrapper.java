@@ -37,6 +37,43 @@ public final class Wrapper {
 		return reconstructableCharSeqClasses.contains(clazz);
 	}
 
+	private static <T> Primitives.Object getWrappedObjectRef(Primitives.Object.Builder builder, T t,
+																													 String objectRef) {
+
+		logger.trace("in with class: {}, objectRef: {}", t, objectRef);
+
+		if (objectRef == null) {
+			throw new NullPointerException("objectRef cannot be null");
+		}
+
+		// we got a class or classname?
+		String className = null;
+		Class clazz = null;
+		if (t instanceof Class) {
+			clazz = (Class) t;
+		} else if (t instanceof String) {
+			className = (String) t;
+		} else {
+			throw new IllegalArgumentException("Type of t parameter is neither Class nor String");
+		}
+
+		//set required fields
+		if (clazz != null) {
+			builder.setClass_(getWrappedClass(clazz));
+			builder.setIsArray(clazz.isArray());
+		} else if (className != null) {
+			builder.setClass_(getWrappedClass(className));
+		}
+		builder.setRef(objectRef);
+		builder.setIsNull(false);
+		builder.setIsVoid(false);
+//		builder.setIdentityHash(System.identityHashCode(object));
+
+		final Primitives.Object builtValue = builder.build();
+		logger.trace("out with wrappedValue: {}", builtValue);
+		return builtValue;
+	}
+
 	/**
 	 * Wrappable objects:
 	 * - null, void.class, Void.class
@@ -46,33 +83,37 @@ public final class Wrapper {
 	 *
 	 * @param builder
 	 * @param object
-	 * @param clazz
-	 * @param objectKey
+	 * @param t
 	 * @return
 	 */
-	private static Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, Class clazz,
-																											 String objectKey) {
-		logger.trace("in with object: {}, class: {}, objectKey: {}", object, clazz, objectKey);
+	private static <T> Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, T t) {
 
-		if (object != null && objectKey != null) {
-			throw new IllegalArgumentException("Both object and objectKey can't have values");
+		logger.trace("in with object: {}, class: {}", object, t);
+
+		// we got a class or classname?
+		String className = null;
+		Class clazz = null;
+		if (t instanceof Class) {
+			clazz = (Class) t;
+		} else if (t instanceof String) {
+			className = (String) t;
+		} else {
+			throw new IllegalArgumentException("Type of t parameter is neither Class nor String");
 		}
-		//value is null if both object and objectKey are null
-		builder.setIsNull(objectKey == null && object == null);
+
+		builder.setIsNull(object == null);
 
 		//value may also be void
 		builder.setIsVoid(object == void.class || object == Void.class);
 
-		//set required fields (class already set at this point)
+		//set required fields
+		if (clazz != null) {
+			builder.setClass_(getWrappedClass(clazz));
+			builder.setIsArray(clazz.isArray());
+		} else if (className != null) {
+			builder.setClass_(getWrappedClass(className));
+		}
 		builder.setIdentityHash(System.identityHashCode(object));
-
-		if (clazz != null && clazz.isArray()) {
-			builder.setIsArray(true);
-		}
-
-		if (objectKey != null) {
-			builder.setRef(objectKey);
-		}
 
 		if (object != null) {
 			builder.setHash(object.hashCode());
@@ -87,12 +128,12 @@ public final class Wrapper {
 				for (int i = 0; i < length; i++) {
 					final Object arrayElem = Array.get(object, i);
 					//wrap and all array elements -- recursive
-					builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(), objectKey));
+					builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(), null));
 				}
 			} else if (ClassUtils.isPrimitiveOrWrapper(object.getClass())) {
 				builder.setValue(String.valueOf(object));
 			} else {
-				logger.warn("Don't know what to do to wrap object: {} of class: {}", object, clazz);
+				logger.warn("Don't know what to do to wrap object: {} of class: {}", object, t);
 			}
 		}
 
@@ -120,39 +161,29 @@ public final class Wrapper {
 	}
 
 	/**
-	 * Called when we have only a class name
-	 *
 	 * @param object
-	 * @param className
-	 * @param objectKey
+	 * @param t
+	 * @param objectRef
+	 * @param <T>
 	 * @return
 	 */
-	static Primitives.Object getWrappedObject(Object object, String className, String objectKey) {
+	static <T> Primitives.Object getWrappedObject(Object object, T t, String objectRef) {
+
 		final Primitives.Object.Builder builder = Primitives.Object.newBuilder();
-		logger.debug("entering (w/ className) for: {}", object);
+		Primitives.Object wrapped = null;
 
-		//set required fields
-		builder.setClass_(getWrappedClass(className));
+		if (objectRef == null) {
+			if (isWrappable(object)) {
+				wrapped = getWrappedObjectAux(builder, object, t);
+			} else {
+				logger.warn("Non wrappable object: {} of class(name): {}", object, t);
+				throw new NonWrappableObjectException(object);
+			}
+		} else {
+			wrapped = getWrappedObjectRef(builder, t, objectRef);
+		}
 
-		return getWrappedObjectAux(builder, object, null, objectKey);
-	}
-
-	/**
-	 * Called when we have a full class object
-	 *
-	 * @param object
-	 * @param clazz
-	 * @param objectKey
-	 * @return
-	 */
-	static Primitives.Object getWrappedObject(Object object, Class clazz, String objectKey) {
-		final Primitives.Object.Builder builder = Primitives.Object.newBuilder();
-		logger.debug("entering (w/ class {}) for: {}", clazz.getName(), object);
-
-		//set required fields
-		builder.setClass_(getWrappedClass(clazz));
-
-		return getWrappedObjectAux(builder, object, clazz, objectKey);
+		return wrapped;
 	}
 
 	static Primitives.Class getWrappedClass(String className) {
@@ -192,12 +223,12 @@ public final class Wrapper {
 		return fieldBuilder.build();
 	}
 
-	static Ctxt.Context getWrappedContext(StaticPart staticPart, Object sender) {
+	static Ctxt.Context getWrappedContext(StaticPart staticPart, Object sender, String senderObjRef) {
 		final Ctxt.Context.Builder ctxtBuilder = Ctxt.Context.newBuilder();
 
 		ctxtBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
 		if (sender != null) {
-			ctxtBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), null));
+			ctxtBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), senderObjRef));
 		}
 		ctxtBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
 		ctxtBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());

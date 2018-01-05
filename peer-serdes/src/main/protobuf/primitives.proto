@@ -13,7 +13,7 @@ option optimize_for = SPEED;
 message Object {
     optional string value = 1;
     optional int32 hash = 2;
-    required int32 identityHash = 3;
+    optional int32 identityHash = 3;
     required Class class = 4;
     optional bool isArray = 5 [default = false];
     repeated Object arrayValue = 6;
