@@ -193,7 +193,7 @@ public class App {
 	}
 
 	static App[] fetchMeAnAppArray() {
-		int arraySize = 8;
+		int arraySize = 2;
 		App[] apps = new App[arraySize];
 		for (int i = 0; i < arraySize; i++) {
 			apps[i] = new App();

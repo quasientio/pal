@@ -79,12 +79,6 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
 
 	}
 
-	/**
-	 * Calling store() twice on the same object throws an IllegalArgumentException.
-	 *
-	 * @param object
-	 * @return
-	 */
 	private String generateObjectRef(Object object) {
 		final Long currentTimeMillis = System.currentTimeMillis();
 		final int identHash = System.identityHashCode(object);

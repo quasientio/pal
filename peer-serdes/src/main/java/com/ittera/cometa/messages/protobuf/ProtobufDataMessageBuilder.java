@@ -2,13 +2,17 @@ package com.ittera.cometa.messages.protobuf;
 
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Exceptions;
 import com.ittera.cometa.messages.protobuf.data.Fields;
 import com.ittera.cometa.messages.protobuf.data.Values;
+import com.ittera.cometa.messages.protobuf.data.Ctxt;
 import com.ittera.cometa.messages.protobuf.data.Fields.*;
 import com.ittera.cometa.messages.protobuf.data.Calls.*;
 import com.ittera.cometa.messages.protobuf.data.Values.*;
 import com.ittera.cometa.messages.DataMessageBuilder;
+
+import com.ittera.cometa.common.ObjectService;
 
 import org.aspectj.runtime.reflect.FieldSignatureImpl;
 import org.aspectj.lang.reflect.CodeSignature;
@@ -30,6 +34,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.Message.Builder;
 
+import javax.inject.Inject;
+
 /**
  * Methods of this class receive aspectj objects (i.e. StaticPart) as arguments as convenience.
  */
@@ -37,20 +43,21 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	protected static final Logger logger = LoggerFactory.getLogger(ProtobufDataMessageBuilder.class);
 
-	public ProtobufDataMessageBuilder() {
-		logger.info("Initialized message builder");
-	}
+	@Inject
+	private ObjectService objectService;
+
+	private boolean storeUncachedObjects = true;
 
 	//<editor-fold desc="Thread-local sequence stamping methods">
 
-	private static final ThreadLocal<AtomicLong> threadDispatchSequence = new ThreadLocal<AtomicLong>() {
+	private final ThreadLocal<AtomicLong> threadDispatchSequence = new ThreadLocal<AtomicLong>() {
 		@Override
 		protected AtomicLong initialValue() {
 			return new AtomicLong(1);
 		}
 	};
 
-	private static final ThreadLocal<AtomicLong> threadBuilderSequence = new ThreadLocal<AtomicLong>() {
+	private final ThreadLocal<AtomicLong> threadBuilderSequence = new ThreadLocal<AtomicLong>() {
 		@Override
 		protected AtomicLong initialValue() {
 			return new AtomicLong(1);
@@ -67,13 +74,14 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Private Auxiliary methods">
 
-	private static Builder addParameter(Builder callBuilder, String parameterType, Object arg, String argObjRef) {
+	private Builder addParameter(Builder callBuilder, String parameterType, Object arg, String argObjRef) {
+
 		if (callBuilder instanceof ConstructorCall.Builder) {
-			((ConstructorCall.Builder) callBuilder).addParameter(Wrapper.getWrappedObject(arg, parameterType, argObjRef));
+			((ConstructorCall.Builder) callBuilder).addParameter(getWrapped(arg, parameterType, argObjRef));
 		} else if (callBuilder instanceof InstanceMethodCall.Builder) {
-			((InstanceMethodCall.Builder) callBuilder).addParameter(Wrapper.getWrappedObject(arg, parameterType, argObjRef));
+			((InstanceMethodCall.Builder) callBuilder).addParameter(getWrapped(arg, parameterType, argObjRef));
 		} else if (callBuilder instanceof ClassMethodCall.Builder) {
-			((ClassMethodCall.Builder) callBuilder).addParameter(Wrapper.getWrappedObject(arg, parameterType, argObjRef));
+			((ClassMethodCall.Builder) callBuilder).addParameter(getWrapped(arg, parameterType, argObjRef));
 		} else {
 			throw new UnsupportedOperationException(String.format("Unsupported Builder class: %s ",
 				callBuilder.getClass().getName()));
@@ -82,8 +90,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		return callBuilder;
 	}
 
-	private static Builder addParameters(Builder callBuilder, String[] parameterTypes, Object[] args, String[] argObjRefs)
-	{
+	private Builder addParameters(Builder callBuilder, String[] parameterTypes, Object[] args, String[] argObjRefs) {
 
 		for (int i = 0; parameterTypes != null && i < parameterTypes.length; i++) {
 			if (argObjRefs[i] != null) { //parameter is an objectref
@@ -98,17 +105,17 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		return callBuilder;
 	}
 
-	private static Builder addNamedParameter(Builder callBuilder, String paramName, String paramType, Object param) {
+	private Builder addNamedParameter(Builder callBuilder, String paramName, String paramType, Object param) {
 		if (callBuilder instanceof ConstructorCall.Builder) {
 			((ConstructorCall.Builder) callBuilder).addParameterName(paramName);
-			((ConstructorCall.Builder) callBuilder).addParameter(Wrapper.getWrappedObject(param, paramType, null));
+			((ConstructorCall.Builder) callBuilder).addParameter(getWrapped(param, paramType, null));
 		} else if (callBuilder instanceof InstanceMethodCall.Builder) {
 			((InstanceMethodCall.Builder) callBuilder).addParameterName(paramName);
-			((InstanceMethodCall.Builder) callBuilder).addParameter(Wrapper.getWrappedObject(param, paramType,
+			((InstanceMethodCall.Builder) callBuilder).addParameter(getWrapped(param, paramType,
 				null));
 		} else if (callBuilder instanceof ClassMethodCall.Builder) {
 			((ClassMethodCall.Builder) callBuilder).addParameterName(paramName);
-			((ClassMethodCall.Builder) callBuilder).addParameter(Wrapper.getWrappedObject(param, paramType, null));
+			((ClassMethodCall.Builder) callBuilder).addParameter(getWrapped(param, paramType, null));
 		} else {
 			throw new UnsupportedOperationException(String.format("Unsupported Builder class: %s ",
 				callBuilder.getClass().getName()));
@@ -117,7 +124,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		return callBuilder;
 	}
 
-	private static Builder addParameters(Builder callBuilder, StaticPart staticPart, Object[] args) {
+	private Builder addParameters(Builder callBuilder, StaticPart staticPart, Object[] args) {
 
 		final CodeSignature codeSignature = (CodeSignature) staticPart.getSignature();
 		for (int i = 0; codeSignature.getParameterTypes() != null && i < args.length; i++) {
@@ -130,7 +137,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	}
 
 
-	private static DataMessage.Builder newWrapperBuilder(Type msgType, UUID concentratorUuid, String followingUuid) {
+	private DataMessage.Builder newWrapperBuilder(Type msgType, UUID concentratorUuid, String followingUuid) {
 
 		DataMessage.Builder msgBuilder = DataMessage.newBuilder()
 			.setConcentratorUuid(concentratorUuid.toString())
@@ -148,8 +155,45 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		return msgBuilder;
 	}
 
-	private static DataMessage.Builder newWrapperBuilder(Type msgType, UUID concentratorUuid) {
+	private DataMessage.Builder newWrapperBuilder(Type msgType, UUID concentratorUuid) {
 		return newWrapperBuilder(msgType, concentratorUuid, null);
+	}
+
+	/**
+	 * Methods delegating to Wrapper
+	 **/
+	private <T> Primitives.Object getWrapped(Object object, T t, String objectRef) {
+
+		if (objectRef == null && object != null) {
+			return Wrapper.getWrappedObject(object, t, storeUncachedObjects ? objectService.storeObject(object) : null);
+		} else {
+			return Wrapper.getWrappedObject(object, t, objectRef);
+		}
+	}
+
+	private Ctxt.Context getWrapped(StaticPart staticPart, Object sender) {
+		if (sender != null) {
+			return Wrapper.getWrappedContext(staticPart, sender,
+				storeUncachedObjects ? objectService.storeObject(sender) : null);
+		} else {
+			return Wrapper.getWrappedContext(staticPart, sender, null);
+		}
+	}
+
+	private Fields.Field getWrapped(Class clazz, String fieldName) {
+		return Wrapper.getWrappedField(clazz, fieldName);
+	}
+
+	private Fields.Field getWrapped(String className, String fieldName) {
+		return Wrapper.getWrappedField(className, fieldName);
+	}
+
+	private Primitives.Class getWrapped(Class clazz) {
+		return Wrapper.getWrappedClass(clazz);
+	}
+
+	private Primitives.Class getWrapped(String className) {
+		return Wrapper.getWrappedClass(className);
 	}
 
 	//</editor-fold>
@@ -161,9 +205,9 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.STATIC_CONSTRUCTOR, concentratorUuid)
 			.setClinitCall(ClInitCall.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(codeSignature.getDeclaringTypeName()))
+				.setClass_(getWrapped(codeSignature.getDeclaringTypeName()))
 				.setModifiers(codeSignature.getModifiers())
-				.setContext(Wrapper.getWrappedContext(staticPart, sender)));
+				.setContext(getWrapped(staticPart, sender)));
 
 		return msgBuilder.build();
 	}
@@ -173,7 +217,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.RETURN_CLASS, concentratorUuid)
 			.setReturnValue(ReturnValue.newBuilder()
 				.setIsClass(true)
-				.setClazz(Wrapper.getWrappedClass(clazz.getName())));
+				.setClazz(getWrapped(clazz.getName())));
 
 		return msgBuilder.build();
 	}
@@ -183,19 +227,19 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	//<editor-fold desc="Constructor messages">
 
 
-	private final static DataMessage buildConstructorMessage(UUID concentratorUuid, String className,
-						StaticPart staticPart, Object sender, String[] parameterTypes, Object[] args, String[] argObjRefs) {
+	private final DataMessage buildConstructorMessage(UUID concentratorUuid, String className,
+																										StaticPart staticPart, Object sender, String[] parameterTypes, Object[] args, String[] argObjRefs) {
 
 		final ConstructorCall.Builder constructorCallBuilder = ConstructorCall.newBuilder();
 		if (staticPart != null) {
 			final ConstructorSignature codeSignature = (ConstructorSignature) staticPart.getSignature();
 			addParameters(constructorCallBuilder, staticPart, args);
 			constructorCallBuilder.setModifiers(codeSignature.getModifiers());
-			constructorCallBuilder.setContext(Wrapper.getWrappedContext(staticPart, sender));
-			constructorCallBuilder.setClass_(Wrapper.getWrappedClass(codeSignature.getDeclaringTypeName()));
+			constructorCallBuilder.setContext(getWrapped(staticPart, sender));
+			constructorCallBuilder.setClass_(getWrapped(codeSignature.getDeclaringTypeName()));
 		} else {
 			addParameters(constructorCallBuilder, parameterTypes, args, argObjRefs);
-			constructorCallBuilder.setClass_(Wrapper.getWrappedClass(className));
+			constructorCallBuilder.setClass_(getWrapped(className));
 		}
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.CONSTRUCTOR, concentratorUuid)
@@ -250,7 +294,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.INSTANCE_METHOD, concentratorUuid)
 			.setInstanceMethodCall(callBuilder
-				.setClass_(Wrapper.getWrappedClass(className))
+				.setClass_(getWrapped(className))
 				.setName(methodName)
 				.setObjectRef(objRef));
 
@@ -268,11 +312,11 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.INSTANCE_METHOD, concentratorUuid)
 			.setInstanceMethodCall(callBuilder
-				.setClass_(Wrapper.getWrappedClass(codeSignature.getDeclaringTypeName()))
+				.setClass_(getWrapped(codeSignature.getDeclaringTypeName()))
 				.setName(codeSignature.getName())
-				.setObject(Wrapper.getWrappedObject(target, codeSignature.getDeclaringTypeName(), null))
+				.setObject(getWrapped(target, codeSignature.getDeclaringTypeName(), null))
 				.setModifiers(codeSignature.getModifiers())
-				.setContext(Wrapper.getWrappedContext(staticPart, sender)));
+				.setContext(getWrapped(staticPart, sender)));
 
 		return msgBuilder.build();
 	}
@@ -291,7 +335,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.CLASS_METHOD, concentratorUuid)
 			.setClassMethodCall(callBuilder
-				.setClass_(Wrapper.getWrappedClass(className))
+				.setClass_(getWrapped(className))
 				.setName(methodName));
 
 		return msgBuilder.build();
@@ -307,8 +351,8 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.CLASS_METHOD, concentratorUuid)
 			.setClassMethodCall(callBuilder
-				.setContext(Wrapper.getWrappedContext(staticPart, sender))
-				.setClass_(Wrapper.getWrappedClass(codeSignature.getDeclaringTypeName()))
+				.setContext(getWrapped(staticPart, sender))
+				.setClass_(getWrapped(codeSignature.getDeclaringTypeName()))
 				.setName(codeSignature.getName())
 				.setModifiers(codeSignature.getModifiers()));
 
@@ -325,8 +369,8 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.GET_STATIC, concentratorUuid)
 			.setStaticFieldGet(StaticFieldGet.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(className))
-				.setField(Wrapper.getWrappedField(className, fieldName)));
+				.setClass_(getWrapped(className))
+				.setField(getWrapped(className, fieldName)));
 
 		return msgBuilder.build();
 	}
@@ -337,10 +381,10 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.GET_STATIC, concentratorUuid)
 			.setStaticFieldGet(StaticFieldGet.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(fieldSignature.getDeclaringTypeName()))
-				.setField(Wrapper.getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName()))
+				.setClass_(getWrapped(fieldSignature.getDeclaringTypeName()))
+				.setField(getWrapped(fieldSignature.getFieldType(), fieldSignature.getName()))
 				.setModifiers(fieldSignature.getModifiers())
-				.setContext(Wrapper.getWrappedContext(staticPart, sender)));
+				.setContext(getWrapped(staticPart, sender)));
 
 		return msgBuilder.build();
 	}
@@ -355,9 +399,9 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.GET_FIELD, concentratorUuid)
 			.setInstanceFieldGet(InstanceFieldGet.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(className))
+				.setClass_(getWrapped(className))
 				.setObjectRef(targetObjRef)
-				.setField(Wrapper.getWrappedField((String) null, fieldName)));
+				.setField(getWrapped((String) null, fieldName)));
 
 		return msgBuilder.build();
 	}
@@ -368,11 +412,11 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.GET_FIELD, concentratorUuid)
 			.setInstanceFieldGet(InstanceFieldGet.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(fieldSignature.getDeclaringTypeName()))
-				.setObject(Wrapper.getWrappedObject(target, fieldSignature.getDeclaringTypeName(), null))
-				.setField(Wrapper.getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName()))
+				.setClass_(getWrapped(fieldSignature.getDeclaringTypeName()))
+				.setObject(getWrapped(target, fieldSignature.getDeclaringTypeName(), null))
+				.setField(getWrapped(fieldSignature.getFieldType(), fieldSignature.getName()))
 				.setModifiers(fieldSignature.getModifiers())
-				.setContext(Wrapper.getWrappedContext(staticPart, sender)));
+				.setContext(getWrapped(staticPart, sender)));
 
 		return msgBuilder.build();
 	}
@@ -388,9 +432,9 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC, concentratorUuid)
 			.setStaticFieldPut(StaticFieldPut.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(className))
-				.setField(Wrapper.getWrappedField((String) null, fieldName))
-				.setObject(Wrapper.getWrappedObject(value, valueClassName, null)));
+				.setClass_(getWrapped(className))
+				.setField(getWrapped((String) null, fieldName))
+				.setObject(getWrapped(value, valueClassName, null)));
 
 		return msgBuilder.build();
 	}
@@ -403,8 +447,8 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC, concentratorUuid)
 			.setStaticFieldPut(StaticFieldPut.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(className))
-				.setField(Wrapper.getWrappedField((String) null, fieldName))
+				.setClass_(getWrapped(className))
+				.setField(getWrapped((String) null, fieldName))
 				.setObjectRef(objectRef));
 
 		return msgBuilder.build();
@@ -416,11 +460,11 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC, concentratorUuid)
 			.setStaticFieldPut(StaticFieldPut.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(fieldSignature.getDeclaringType()))
-				.setField(Wrapper.getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName()))
-				.setObject(Wrapper.getWrappedObject(arg, fieldSignature.getFieldType(), null))
+				.setClass_(getWrapped(fieldSignature.getDeclaringType()))
+				.setField(getWrapped(fieldSignature.getFieldType(), fieldSignature.getName()))
+				.setObject(getWrapped(arg, fieldSignature.getFieldType(), null))
 				.setModifiers(fieldSignature.getModifiers())
-				.setContext(Wrapper.getWrappedContext(staticPart, sender)));
+				.setContext(getWrapped(staticPart, sender)));
 
 		return msgBuilder.build();
 	}
@@ -430,18 +474,18 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	 * Equivalent to the above, for objectRefs
 	 */
 	public DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid,
-																			Fields.StaticFieldPut staticFieldPut, Class fieldType, String followingUuid) {
+																				Fields.StaticFieldPut staticFieldPut, Class fieldType, String followingUuid) {
 
 		final StaticFieldPutDone.Builder fieldBuilder = StaticFieldPutDone.newBuilder();
 		if (staticFieldPut.getField().hasClass_()) {
 			fieldBuilder.setField(staticFieldPut.getField());
 		} else {
-			fieldBuilder.setField(Wrapper.getWrappedField(fieldType, staticFieldPut.getField().getName()));
+			fieldBuilder.setField(getWrapped(fieldType, staticFieldPut.getField().getName()));
 		}
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC_DONE, concentratorUuid, followingUuid)
 			.setStaticFieldPutDone(fieldBuilder
-				.setClass_(Wrapper.getWrappedClass(staticFieldPut.getClass_().getName()))
+				.setClass_(getWrapped(staticFieldPut.getClass_().getName()))
 				.setStaticFieldPutUuid(staticFieldPutUuid));
 
 		return msgBuilder.build();
@@ -454,8 +498,8 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC_DONE, concentratorUuid)
 			.setStaticFieldPutDone(StaticFieldPutDone.newBuilder()
-				.setField(Wrapper.getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName()))
-				.setClass_(Wrapper.getWrappedClass(fieldSignature.getDeclaringType())));
+				.setField(getWrapped(fieldSignature.getFieldType(), fieldSignature.getName()))
+				.setClass_(getWrapped(fieldSignature.getDeclaringType())));
 
 		return msgBuilder.build();
 	}
@@ -472,10 +516,10 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD, concentratorUuid, null)
 			.setInstanceFieldPut(InstanceFieldPut.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(className))
+				.setClass_(getWrapped(className))
 				.setObjectRef(targetObjRef)
-				.setField(Wrapper.getWrappedField((String) null, fieldName))
-				.setValueObject(Wrapper.getWrappedObject(value, valueClassName, null)));
+				.setField(getWrapped((String) null, fieldName))
+				.setValueObject(getWrapped(value, valueClassName, null)));
 
 		return msgBuilder.build();
 	}
@@ -489,9 +533,9 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD, concentratorUuid)
 			.setInstanceFieldPut(InstanceFieldPut.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(className))
+				.setClass_(getWrapped(className))
 				.setObjectRef(targetObjRef)
-				.setField(Wrapper.getWrappedField((String) null, fieldName))
+				.setField(getWrapped((String) null, fieldName))
 				.setValueObjectRef(valueObjRef));
 
 		return msgBuilder.build();
@@ -504,29 +548,29 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD, concentratorUuid)
 			.setInstanceFieldPut(InstanceFieldPut.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(fieldSignature.getDeclaringType()))
-				.setObject(Wrapper.getWrappedObject(target, fieldSignature.getDeclaringType(), null))
-				.setField(Wrapper.getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName()))
-				.setValueObject(Wrapper.getWrappedObject(arg, fieldSignature.getFieldType().getName(), null))
+				.setClass_(getWrapped(fieldSignature.getDeclaringType()))
+				.setObject(getWrapped(target, fieldSignature.getDeclaringType(), null))
+				.setField(getWrapped(fieldSignature.getFieldType(), fieldSignature.getName()))
+				.setValueObject(getWrapped(arg, fieldSignature.getFieldType().getName(), null))
 				.setModifiers(fieldSignature.getModifiers())
-				.setContext(Wrapper.getWrappedContext(staticPart, sender)));
+				.setContext(getWrapped(staticPart, sender)));
 
 		return msgBuilder.build();
 	}
 
 	public DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid,
-														Fields.InstanceFieldPut instanceFieldPut, Class fieldType, String followingUuid) {
+																				Fields.InstanceFieldPut instanceFieldPut, Class fieldType, String followingUuid) {
 
 		final Fields.InstanceFieldPutDone.Builder fieldBuilder = InstanceFieldPutDone.newBuilder();
 		if (instanceFieldPut.getField().hasClass_()) {
 			fieldBuilder.setField(instanceFieldPut.getField());
 		} else {
-			fieldBuilder.setField(Wrapper.getWrappedField(fieldType, instanceFieldPut.getField().getName()));
+			fieldBuilder.setField(getWrapped(fieldType, instanceFieldPut.getField().getName()));
 		}
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD_DONE, concentratorUuid, followingUuid)
 			.setInstanceFieldPutDone(fieldBuilder
-				.setClass_(Wrapper.getWrappedClass(instanceFieldPut.getClass_().getName()))
+				.setClass_(getWrapped(instanceFieldPut.getClass_().getName()))
 				.setInstanceFieldPutUuid(instanceFieldPutUuid));
 
 		return msgBuilder.build();
@@ -539,8 +583,8 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD_DONE, concentratorUuid)
 			.setInstanceFieldPutDone(InstanceFieldPutDone.newBuilder()
-				.setClass_(Wrapper.getWrappedClass(fieldSignature.getDeclaringType()))
-				.setField(Wrapper.getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName())));
+				.setClass_(getWrapped(fieldSignature.getDeclaringType()))
+				.setField(getWrapped(fieldSignature.getFieldType(), fieldSignature.getName())));
 
 		return msgBuilder.build();
 	}
@@ -567,7 +611,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.THROWABLE, concentratorUuid, followingUuid)
 			.setRaisedThrowable(thrBuilder
-				.setClass_(Wrapper.getWrappedClass(exception.getClass().getName()))
+				.setClass_(getWrapped(exception.getClass().getName()))
 				.setThrowable(buildThrowableMessage(exception)));
 
 		return msgBuilder.build();
@@ -578,7 +622,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.THROWABLE, concentratorUuid)
 			.setRaisedThrowable(Exceptions.RaisedThrowable.newBuilder()
 				.setInInitializer(true)
-				.setClass_(Wrapper.getWrappedClass(staticPart.getSignature().getDeclaringTypeName()))
+				.setClass_(getWrapped(staticPart.getSignature().getDeclaringTypeName()))
 				.setModifiers(staticPart.getSignature().getModifiers())
 				.setThrowable(buildThrowableMessage(exception)));
 
@@ -586,7 +630,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	}
 
 
-	private static Exceptions.Throwable.Builder buildThrowableMessage(Throwable throwable) {
+	private Exceptions.Throwable.Builder buildThrowableMessage(Throwable throwable) {
 
 		final Exceptions.Throwable.Builder msgBuilder = Exceptions.Throwable.newBuilder();
 		//type
@@ -618,15 +662,20 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		final ReturnValue.Builder contentBuilder = Values.ReturnValue.newBuilder();
 		if (!isVoid) {
-			((Values.ReturnValue.Builder) contentBuilder).setObject(Wrapper.getWrappedObject(object, type, objectKey));
+			contentBuilder.setObject(getWrapped(object, type, objectKey));
 		}
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.RETURN_VALUE, concentratorUuid, followingUuid)
 			.setReturnValue(contentBuilder
 				.setIsVoid(isVoid)
-				.setClazz(Wrapper.getWrappedClass(type)));
+				.setClazz(getWrapped(type)));
 
 		return msgBuilder.build();
+	}
+
+	@Override
+	public void dontStoreObjects() {
+		this.storeUncachedObjects = false;
 	}
 	//</editor-fold>
 }

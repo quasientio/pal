@@ -50,6 +50,8 @@ public class ThinPeer {
 
 	private UUID peerUuid = UUID.randomUUID();
 
+	private boolean allowP2P;
+
 	// static
 	protected final static Logger logger = LoggerFactory.getLogger(ThinPeer.class);
 	protected final DataMessageBuilder dataMessageBuilder;
@@ -76,11 +78,16 @@ public class ThinPeer {
 	// zookeeper
 	private PeerLogDirectory peerLogDirectory;
 
-	public ThinPeer(String propertiesFile) throws Exception {
-		this(propertiesFile, null, null);
+	public ThinPeer(String propertiesFile, boolean allowP2P) throws Exception {
+		this(propertiesFile, allowP2P, null, null);
 	}
 
-	public ThinPeer(String propertiesFile, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
+	public ThinPeer(String propertiesFile) throws Exception {
+		this(propertiesFile, true, null, null);
+	}
+
+	public ThinPeer(String propertiesFile, boolean allowP2P, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
+		this.allowP2P = allowP2P;
 		currentPeer = initialPeer;
 
 		//load properties
@@ -170,7 +177,7 @@ public class ThinPeer {
 	}
 
 	public DataMessage sendAndReceive(DataMessage message) throws ExecutionException, InterruptedException {
-		if (talkingToPeer) {
+		if (allowP2P && talkingToPeer) {
 			return sendToPeer(message);
 		} else {
 			return sendToLogAndReceive(message);
@@ -316,7 +323,7 @@ public class ThinPeer {
 	private DataMessage sendToLogAndReceive(DataMessage message, boolean consumeLogUntilReply)
 		throws ExecutionException, InterruptedException {
 
-		if (consumeLogUntilReply) {
+		if (!allowP2P || consumeLogUntilReply) {
 			return sendAndReceiveConsumingLog(message);
 		}
 
@@ -370,17 +377,21 @@ public class ThinPeer {
 				long receivedMsgOffset = record.offset();
 				if (dataMessage.hasFollowingUuid() && message.getMessageUuid().equals(dataMessage.getFollowingUuid())) {
 					logger.info("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
-					String concentratorUuid = dataMessage.getConcentratorUuid();
-					PeerInfo newPeer = null;
-					try {
-						// we getPeerProperties and close after since we assume we'll get here only once
-						newPeer = peerLogDirectory.getPeerInfo(concentratorUuid);
-					} catch (Exception ex) {
-						logger.error("Couldn't get peer properties", ex);
+					// try switching to direct peer talk (i.e. p2p)
+					if (allowP2P) {
+						String concentratorUuid = dataMessage.getConcentratorUuid();
+						PeerInfo newPeer = null;
+						try {
+							// we getPeerProperties and close after since we assume we'll get here only once
+							newPeer = peerLogDirectory.getPeerInfo(concentratorUuid);
+						} catch (Exception ex) {
+							logger.error("Couldn't get peer properties", ex);
+						}
+						if (newPeer != null && !newPeer.equals(currentPeer)) {
+							connectToPeer(newPeer);
+						}
 					}
-					if (newPeer != null && !newPeer.equals(currentPeer)) {
-						connectToPeer(newPeer);
-					}
+
 					return dataMessage;
 				} else {
 					logger.debug("Skipping record with offset {}", receivedMsgOffset);

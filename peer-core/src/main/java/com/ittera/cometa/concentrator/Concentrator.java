@@ -281,12 +281,7 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, constructor, exceptionWhileInvoking,
 				followingUuid);
 		} else {
-			if (Wrapper.isWrappable(newObject)) {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, newObject, clazz, null, false,
-					followingUuid);
-			} else {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, clazz, objKey, false, followingUuid);
-			}
+			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, newObject, clazz, objKey, false, followingUuid);
 		}
 
 
@@ -335,13 +330,8 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, constructor, exceptionWhileInvoking,
 				null);
 		} else {
-			if (Wrapper.isWrappable(newObject)) {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, newObject, constructor.getClass(), null,
-					false, null);
-			} else {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, constructor.getClass(), objKey,
-					false, null);
-			}
+			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, newObject, constructor.getClass(), objKey,
+				false, null);
 		}
 
 		/** 6. Send object/exception **/
@@ -459,13 +449,8 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking,
 				null);
 		} else {
-			if (Wrapper.isWrappable(returnValue)) {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null,
-					false, null);
-			} else {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey,
-					false, null);
-			}
+			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), objKey,
+				false, null);
 		}
 
 
@@ -578,13 +563,8 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking,
 				followingUuid);
 		} else {
-			if (Wrapper.isWrappable(returnValue)) {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null,
-					isVoid, followingUuid);
-			} else {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey, isVoid,
-					followingUuid);
-			}
+			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), objKey, isVoid,
+				followingUuid);
 		}
 
 		/** 4. Send object/exception **/
@@ -684,13 +664,8 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking,
 				null);
 		} else {
-			if (Wrapper.isWrappable(returnValue)) {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null,
-					false, null);
-			} else {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey,
-					false, null);
-			}
+			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), objKey, false,
+				null);
 		}
 
 
@@ -792,13 +767,8 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking,
 				followingUuid);
 		} else {
-			if (Wrapper.isWrappable(returnValue)) {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), null,
-					isVoid, followingUuid);
-			} else {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, method.getReturnType(), objKey, isVoid,
-					followingUuid);
-			}
+			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), objKey, isVoid,
+				followingUuid);
 		}
 
 		/** 4. Send object/exception **/
@@ -858,13 +828,8 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking,
 				followingUuid);
 		} else {
-			if (Wrapper.isWrappable(fieldValue)) {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null, false,
-					followingUuid);
-			} else {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false,
-					followingUuid);
-			}
+			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), objKey, false,
+				followingUuid);
 		}
 
 
@@ -910,13 +875,8 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionGettingObject,
 				null);
 		} else {
-			if (Wrapper.isWrappable(fieldValue)) {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null, false,
-					null);
-			} else {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false,
-					null);
-			}
+			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), objKey, false,
+				null);
 		}
 
 		/** 6. Send object/exception **/
@@ -988,13 +948,8 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileInvoking,
 				followingUuid);
 		} else {
-			if (Wrapper.isWrappable(fieldValue)) {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null,
-					false, followingUuid);
-			} else {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false,
-					followingUuid);
-			}
+			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), objKey, false,
+				followingUuid);
 		}
 
 		/** 4. Send object/exception **/
@@ -1039,13 +994,8 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionGettingObject,
 				null);
 		} else {
-			if (Wrapper.isWrappable(fieldValue)) {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), null, false,
-					null);
-			} else {
-				invokedMsg = dataMessageBuilder.buildReturnValue(uuid, null, field.getType(), objKey, false,
-					null);
-			}
+			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), objKey,
+				false, null);
 		}
 
 		/** 6. Send object/exception **/
@@ -1474,7 +1424,7 @@ public class Concentrator {
 
 		if (logger.isInfoEnabled()) {
 			StringBuilder sb = new StringBuilder();
-			for (String arg: args) {
+			for (String arg : args) {
 				sb.append(arg).append(" ");
 			}
 			logger.info("::main called w/args: {}", sb);
@@ -1599,7 +1549,7 @@ public class Concentrator {
 			}
 		}, MoreExecutors.directExecutor());
 
-		/** Add shutdown hook **/
+		// add shutdown hook
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {

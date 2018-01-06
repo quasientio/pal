@@ -65,5 +65,7 @@ public interface DataMessageBuilder {
 
 	DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, String objectKey, boolean isVoid, String followingUuid);
 
+	void dontStoreObjects();
+
 	void resetThreadLocalSequence();
 }

@@ -37,43 +37,6 @@ public final class Wrapper {
 		return reconstructableCharSeqClasses.contains(clazz);
 	}
 
-	private static <T> Primitives.Object getWrappedObjectRef(Primitives.Object.Builder builder, T t,
-																													 String objectRef) {
-
-		logger.trace("in with class: {}, objectRef: {}", t, objectRef);
-
-		if (objectRef == null) {
-			throw new NullPointerException("objectRef cannot be null");
-		}
-
-		// we got a class or classname?
-		String className = null;
-		Class clazz = null;
-		if (t instanceof Class) {
-			clazz = (Class) t;
-		} else if (t instanceof String) {
-			className = (String) t;
-		} else {
-			throw new IllegalArgumentException("Type of t parameter is neither Class nor String");
-		}
-
-		//set required fields
-		if (clazz != null) {
-			builder.setClass_(getWrappedClass(clazz));
-			builder.setIsArray(clazz.isArray());
-		} else if (className != null) {
-			builder.setClass_(getWrappedClass(className));
-		}
-		builder.setRef(objectRef);
-		builder.setIsNull(false);
-		builder.setIsVoid(false);
-//		builder.setIdentityHash(System.identityHashCode(object));
-
-		final Primitives.Object builtValue = builder.build();
-		logger.trace("out with wrappedValue: {}", builtValue);
-		return builtValue;
-	}
-
 	/**
 	 * Wrappable objects:
 	 * - null, void.class, Void.class
@@ -84,11 +47,18 @@ public final class Wrapper {
 	 * @param builder
 	 * @param object
 	 * @param t
+	 * @param objectRef
+	 * @param <T>
 	 * @return
 	 */
-	private static <T> Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, T t) {
+	private static <T> Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, T t,
+																													 String objectRef) {
 
-		logger.trace("in with object: {}, class: {}", object, t);
+		logger.trace("in getWrappedObjectAux with object: {}, class: {}, objectRef: {}", object, t, objectRef);
+
+		if (t == null) {
+			throw new NullPointerException("class(name) parameter cannot be null nor empty");
+		}
 
 		// we got a class or classname?
 		String className = null;
@@ -101,20 +71,22 @@ public final class Wrapper {
 			throw new IllegalArgumentException("Type of t parameter is neither Class nor String");
 		}
 
-		builder.setIsNull(object == null);
-
-		//value may also be void
+		//set required fields
+		builder.setIsNull(object == null && objectRef == null);
 		builder.setIsVoid(object == void.class || object == Void.class);
 
-		//set required fields
 		if (clazz != null) {
 			builder.setClass_(getWrappedClass(clazz));
 			builder.setIsArray(clazz.isArray());
 		} else if (className != null) {
 			builder.setClass_(getWrappedClass(className));
 		}
+		if (objectRef != null) {
+			builder.setRef(objectRef);
+		}
 		builder.setIdentityHash(System.identityHashCode(object));
 
+		// wrap object
 		if (object != null) {
 			builder.setHash(object.hashCode());
 			if ((object instanceof String) || isWrappableCharSeqClass(clazz)) {
@@ -128,7 +100,7 @@ public final class Wrapper {
 				for (int i = 0; i < length; i++) {
 					final Object arrayElem = Array.get(object, i);
 					//wrap and all array elements -- recursive
-					builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(), null));
+					builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(),null));
 				}
 			} else if (ClassUtils.isPrimitiveOrWrapper(object.getClass())) {
 				builder.setValue(String.valueOf(object));
@@ -168,22 +140,16 @@ public final class Wrapper {
 	 * @return
 	 */
 	static <T> Primitives.Object getWrappedObject(Object object, T t, String objectRef) {
+		logger.trace("in getWrappedObject with object: {}, class: {}, objectRef: {}", object, t, objectRef);
 
 		final Primitives.Object.Builder builder = Primitives.Object.newBuilder();
-		Primitives.Object wrapped = null;
+		boolean gotObjectRef = (objectRef != null) && (!objectRef.isEmpty());
 
-		if (objectRef == null) {
-			if (isWrappable(object)) {
-				wrapped = getWrappedObjectAux(builder, object, t);
-			} else {
-				logger.warn("Non wrappable object: {} of class(name): {}", object, t);
-				throw new NonWrappableObjectException(object);
-			}
-		} else {
-			wrapped = getWrappedObjectRef(builder, t, objectRef);
+		if (!gotObjectRef && !isWrappable(object)) {
+			throw new NonWrappableObjectException(object);
 		}
 
-		return wrapped;
+		return getWrappedObjectAux(builder, object, t, objectRef);
 	}
 
 	static Primitives.Class getWrappedClass(String className) {

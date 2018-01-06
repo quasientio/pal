@@ -72,6 +72,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
   public void returnsIntegerSum() throws Exception {
 
     String methodName = "nonVoidSumUpList";
+    String className = "com.ittera.cometa.apps.StaticMethods";
 
     //new ArrayList<Integer>
     DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, "java.util.ArrayList");
@@ -84,7 +85,8 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     //add some int's
     int[] someInts = {39, 5, 58, 32, 70, 42};
     for (int i = 0; i < someInts.length; i++) {
-      requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, "java.util.ArrayList", "add", listObjRef, new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[someInts.length]);
+      requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, "java.util.ArrayList", "add",
+        listObjRef, new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[someInts.length]);
       replyMsg = sendAndReceive(requestMsg);
     }
 
@@ -93,17 +95,17 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     String[] objRefs = new String[]{listObjRef};
     int sum = 0;
     for (int i = 0; i < someInts.length; i++) {
-      sum += (Integer) someInts[i];
+      sum += someInts[i];
     }
     Integer shouldReturn = Integer.valueOf(sum);
 
-    requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, new Object[parameterTypes.length], objRefs);
+    requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes,
+      new Object[parameterTypes.length], objRefs);
     replyMsg = sendAndReceive(requestMsg);
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName());
-
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
@@ -145,7 +147,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, shouldReturn.getClass().getName());
+    assertValueIsArrayOfRightType(retValue, shouldReturn.getClass().getName());
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertArrayEquals(shouldReturn, (char[]) rawObj);
@@ -166,7 +168,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, shouldReturn.getClass().getName());
+    assertValueIsArrayOfRightType(retValue, shouldReturn.getClass().getName());
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertArrayEquals(shouldReturn, (Long[]) rawObj);
@@ -237,7 +239,7 @@ public class NonVoidClassMethodTest extends AbstractConcentratorTest {
     assertEquals(originalValue, rawObj);
   }
 
-  @Test
+//  @Test
   public void returningObjectRefArray() throws Exception {
 
     String methodName = "fetchMeAnAppArray";

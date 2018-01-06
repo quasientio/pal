@@ -47,7 +47,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof boolean[]);
@@ -64,7 +64,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof boolean[]);
@@ -96,7 +96,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof byte[]);
@@ -113,7 +113,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof byte[]);
@@ -145,7 +145,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof short[]);
@@ -162,7 +162,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof short[]);
@@ -194,7 +194,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof char[]);
@@ -211,7 +211,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof char[]);
@@ -243,7 +243,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof int[]);
@@ -260,7 +260,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof int[]);
@@ -292,7 +292,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof long[]);
@@ -309,7 +309,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof long[]);
@@ -341,7 +341,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof float[]);
@@ -358,7 +358,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof float[]);
@@ -390,7 +390,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof double[]);
@@ -407,7 +407,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof double[]);
@@ -441,7 +441,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Boolean[]);
@@ -458,7 +458,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Boolean[]);
@@ -490,7 +490,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Byte[]);
@@ -507,7 +507,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Byte[]);
@@ -539,7 +539,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Short[]);
@@ -556,7 +556,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Short[]);
@@ -588,7 +588,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Character[]);
@@ -605,7 +605,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Character[]);
@@ -637,7 +637,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer[]);
@@ -654,7 +654,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer[]);
@@ -686,7 +686,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Long[]);
@@ -703,7 +703,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Long[]);
@@ -735,7 +735,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Float[]);
@@ -752,7 +752,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Float[]);
@@ -784,7 +784,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Double[]);
@@ -801,7 +801,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Double[]);
@@ -833,7 +833,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String[]);
@@ -850,7 +850,7 @@ public class GetArrayVariableTest extends AbstractConcentratorTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsWrappedArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfRightType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String[]);

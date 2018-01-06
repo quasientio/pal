@@ -47,11 +47,16 @@ public final class ReflectionHelper {
 		}
 
 		// trace params
-		if (parameters != null && logger.isTraceEnabled()) {
-			final StringBuilder stringBuilder = new StringBuilder();
-			for (int i = 0; i < parameters.length; i++) {
-				stringBuilder.append("params[").append(i).append("]=").append(parameters[i]).append(" type:")
-					.append(parameterTypeNames.get(i)).append('\n');
+		if (logger.isTraceEnabled()) {
+			if (parameters == null || parameters.length == 0) {
+				logger.trace("params array null or length=0");
+			} else {
+				final StringBuilder stringBuilder = new StringBuilder();
+				for (int i = 0; i < parameters.length; i++) {
+					stringBuilder.append("params[").append(i).append("]=").append(parameters[i]).append(" type:")
+						.append(parameterTypeNames.get(i)).append('\n');
+				}
+				logger.trace(stringBuilder.toString());
 			}
 		}
 
