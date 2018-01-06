@@ -1,6 +1,7 @@
 package com.ittera.cometa.util;
 
 import com.ittera.cometa.PeerInfo;
+import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.ThinPeer;
 
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -32,6 +33,8 @@ public class AppRunner {
 	protected boolean verbose;
 	protected static final long REPLY_PROCESSOR_SLEEP_MS = 100;
 
+	protected static final String DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
+
 	AppRunner(boolean verbose) {
 		this.verbose = verbose;
 	}
@@ -40,9 +43,16 @@ public class AppRunner {
 	 * Serially sends all requests in a single (ThinPeer) thread.
 	 * Sends 1st req to log and waits for Future reply, then sends all other directly to peer
 	 */
-	protected int runReqsWithSingleClient(String className, String methodName, List<String> args, final int requests)
-		throws Exception {
-		ThinPeer thinPeer = new ThinPeer("/runner.properties");
+	protected int runReqsWithSingleClient(String className, String methodName, List<String> args, String logToUse,
+																				final int requests) throws Exception {
+
+		// init ThinPeer
+		LogInfo logInfo = null;
+		if (logToUse != null && !logToUse.isEmpty()) {
+			logInfo = new LogInfo(logToUse, DEFAULT_BOOTSTRAP_SERVERS);
+		}
+		ThinPeer thinPeer = new ThinPeer("/runner.properties", logInfo);
+
 		long start = System.currentTimeMillis();
 		int reqsSent = 0;
 		DataMessage replyMsg;
@@ -97,9 +107,15 @@ public class AppRunner {
 	 * If sendAndForget=true, it doesn't wait for replies, useful for void methods or any other type of call where
 	 * we don't care about the returned value or thrown exceptions.
 	 */
-	protected int runReqsWithSingleClientAsync(String className, String methodName, List<String> args, final int requests,
-																						 boolean sendAndForget) throws Exception {
-		ThinPeer thinPeer = new ThinPeer("/runner.properties");
+	protected int runReqsWithSingleClientAsync(String className, String methodName, List<String> args, String logToUse,
+																						 final int requests, boolean sendAndForget) throws Exception {
+
+		// init ThinPeer
+		LogInfo logInfo = null;
+		if (logToUse != null && !logToUse.isEmpty()) {
+			logInfo = new LogInfo(logToUse, DEFAULT_BOOTSTRAP_SERVERS);
+		}
+		ThinPeer thinPeer = new ThinPeer("/runner.properties", logInfo);
 
 		long start = System.currentTimeMillis();
 		int reqsSent = 0;
@@ -195,8 +211,8 @@ public class AppRunner {
 	 * methods in parallel threads
 	 */
 	protected int runReqsWithNClients(final String className, final String methodName, final List<String> args,
-																		int clients, final int requests, final boolean sendAndForget, final boolean async)
-		throws Exception {
+																		int clients, String logToUse, final int requests, final boolean sendAndForget,
+																		final boolean async) throws Exception {
 
 		assert requests > 1;
 		assert clients > 1;
@@ -216,9 +232,9 @@ public class AppRunner {
 					try {
 						int sent = 0;
 						if (async || sendAndForget) {
-							sent = runReqsWithSingleClientAsync(className, methodName, args, requests, sendAndForget);
+							sent = runReqsWithSingleClientAsync(className, methodName, args, logToUse, requests, sendAndForget);
 						} else {
-							sent = runReqsWithSingleClient(className, methodName, args, requests);
+							sent = runReqsWithSingleClient(className, methodName, args, logToUse, requests);
 						}
 						finishedThreads.getAndIncrement();
 						reqsSent.getAndAdd(sent);
@@ -256,6 +272,8 @@ public class AppRunner {
 			.desc("number of requests to send").build());
 		options.addOption(Option.builder("c").required(false).longOpt("num-clients").hasArg()
 			.desc("number of clients to use").build());
+		options.addOption(Option.builder("l").required(false).longOpt("log").hasArg()
+			.desc("read and write from/to given log").build());
 		options.addOption(Option.builder("f").required(false).longOpt("forget-reply")
 			.desc("do not wait for replies").build());
 		options.addOption(Option.builder("a").required(false).longOpt("async")
@@ -281,6 +299,10 @@ public class AppRunner {
 
 		int requests = Integer.parseInt(line.getOptionValue("r", "1"));
 		int clients = Integer.parseInt(line.getOptionValue("c", "1"));
+		String givenLog = null;
+		if (line.hasOption("log")) {
+			givenLog = line.getOptionValue("l");
+		}
 		boolean verbose = line.hasOption("v");
 		boolean sendAndForget = line.hasOption("forget-reply");
 		boolean async = line.hasOption("async");
@@ -296,12 +318,14 @@ public class AppRunner {
 		AppRunner appRunner = new AppRunner(verbose);
 		if (requests == 1 || clients == 1) {
 			if (async || sendAndForget) {
-				appRunner.runReqsWithSingleClientAsync(className, "main", argList, requests, sendAndForget);
+				appRunner.runReqsWithSingleClientAsync(className, "main", argList, givenLog, requests,
+					sendAndForget);
 			} else {
-				appRunner.runReqsWithSingleClient(className, "main", argList, requests);
+				appRunner.runReqsWithSingleClient(className, "main", argList, givenLog, requests);
 			}
 		} else {
-			appRunner.runReqsWithNClients(className, "main", argList, clients, requests, sendAndForget, async);
+			appRunner.runReqsWithNClients(className, "main", argList, clients, givenLog, requests,
+				sendAndForget, async);
 		}
 	}
 }
