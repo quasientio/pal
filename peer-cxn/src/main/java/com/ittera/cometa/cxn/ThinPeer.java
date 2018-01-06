@@ -87,6 +87,9 @@ public class ThinPeer {
 	}
 
 	public ThinPeer(String propertiesFile, boolean allowP2P, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
+		logger.info("Initializing ThinPeer with props from: {}, allowP2P: {}, initialPeer: {}, logInfo: {}",
+			propertiesFile, allowP2P, initialPeer, logInfo);
+
 		this.allowP2P = allowP2P;
 		currentPeer = initialPeer;
 

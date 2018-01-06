@@ -61,7 +61,8 @@ public abstract class AbstractConcentratorTest {
 		manager.startAsync();
 
 		// we run tests read-writing exclusively from log (no p2p talk)
-		thinPeer = new ThinPeer("/tests.properties", false);
+		boolean allowP2P = Boolean.parseBoolean(System.getProperty("peer.allowP2P", "true"));
+		thinPeer = new ThinPeer("/tests.properties", allowP2P);
 	}
 
 	protected DataMessage sendAndReceive(DataMessage message) throws Exception {
