@@ -8,9 +8,15 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.DataMessageBuilder;
 
+import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.BiMapObjectService;
+
 import java.util.Queue;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
+
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,13 +29,21 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Injector;
+import com.google.inject.Guice;
+
+import com.google.common.util.concurrent.Service;
+import com.google.common.util.concurrent.ServiceManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class AppRunner {
 
 	protected final static Logger logger = LoggerFactory.getLogger(AppRunner.class);
-	protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
+	protected final DataMessageBuilder dataMessageBuilder;
+	final ServiceManager manager;
 	protected boolean verbose;
 	protected static final long REPLY_PROCESSOR_SLEEP_MS = 100;
 
@@ -37,6 +51,25 @@ public class AppRunner {
 
 	AppRunner(boolean verbose) {
 		this.verbose = verbose;
+
+		// configure wiring
+		AbstractModule module = new AbstractModule() {
+			@Override
+			protected void configure() {
+				bind(ObjectService.class).to(BiMapObjectService.class).asEagerSingleton();
+				bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class).asEagerSingleton();
+			}
+		};
+
+		final Injector injector = Guice.createInjector(module);
+		dataMessageBuilder = injector.getInstance(DataMessageBuilder.class);
+		dataMessageBuilder.dontStoreObjects();
+
+		// configure services
+		final Set<Service> services = new HashSet<>();
+		services.add((Service) injector.getInstance(ObjectService.class));
+		manager = new ServiceManager(services);
+		manager.startAsync();
 	}
 
 	/**
@@ -92,6 +125,7 @@ public class AppRunner {
 		}
 
 		thinPeer.close();
+		manager.stopAsync();
 
 		if (verbose) {
 			System.out.println(String.format("sent and received %s requests in %s ms", reqsSent,
@@ -196,6 +230,7 @@ public class AppRunner {
 		}
 
 		thinPeer.close();
+		manager.stopAsync();
 
 		if (verbose) {
 			System.out.println(String.format("sent and received %s requests in %s ms", reqsSent,
