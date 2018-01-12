@@ -332,11 +332,11 @@ public class AppRunner {
 			System.exit(0);
 		}
 
-		int requests = Integer.parseInt(line.getOptionValue("r", "1"));
-		int clients = Integer.parseInt(line.getOptionValue("c", "1"));
+		int requests = Integer.parseInt(line.getOptionValue("r", "1").trim());
+		int clients = Integer.parseInt(line.getOptionValue("c", "1").trim());
 		String givenLog = null;
 		if (line.hasOption("log")) {
-			givenLog = line.getOptionValue("l");
+			givenLog = line.getOptionValue("l").trim();
 		}
 		boolean verbose = line.hasOption("v");
 		boolean sendAndForget = line.hasOption("forget-reply");

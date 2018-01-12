@@ -1473,7 +1473,7 @@ public class Concentrator {
 		boolean readLog = cmdLine.hasOption("read-log") || cmdLine.hasOption("log");
 		boolean writeLog = cmdLine.hasOption("write-log") || cmdLine.hasOption("log");
 		boolean offsetGiven = cmdLine.hasOption("offset-start");
-		String offsetStr = cmdLine.getOptionValue("os");
+		String offsetStr = cmdLine.getOptionValue("os").trim();
 		if (offsetGiven && !readLog) {
 			System.err.println("Offset given but no log to read from. Try `runner -h`.");
 			System.exit(1);
@@ -1488,9 +1488,9 @@ public class Concentrator {
 		// init log reader
 		LogInfo newLog = null;
 		if (readLog) {
-			String logName = cmdLine.getOptionValue("l");
+			String logName = cmdLine.getOptionValue("l").trim();
 			if (logName == null) {
-				logName = cmdLine.getOptionValue("rl");
+				logName = cmdLine.getOptionValue("rl").trim();
 			}
 			registerGivenLog(logName, injector);
 			readFromLog(logName, injector, offset);
@@ -1501,9 +1501,9 @@ public class Concentrator {
 
 		// init log writer
 		if (writeLog) {
-			String logName = cmdLine.getOptionValue("l");
+			String logName = cmdLine.getOptionValue("l").trim();
 			if (logName == null) {
-				logName = cmdLine.getOptionValue("wl");
+				logName = cmdLine.getOptionValue("wl").trim();
 			}
 			registerGivenLog(logName, injector);
 			writeToLog(logName, injector);
