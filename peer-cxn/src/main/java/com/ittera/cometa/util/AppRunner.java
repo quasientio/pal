@@ -12,7 +12,6 @@ import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.BiMapObjectService;
 
 import java.util.Queue;
-import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.UUID;
@@ -20,14 +19,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
@@ -76,15 +67,13 @@ public class AppRunner {
 	 * Serially sends all requests in a single (ThinPeer) thread.
 	 * Sends 1st req to log and waits for Future reply, then sends all other directly to peer
 	 */
-	protected int runReqsWithSingleClient(String className, String methodName, List<String> args, String logToUse,
-																				final int requests) throws Exception {
+	protected int runReqsWithSingleClient(String className, String methodName, AppRunnerOptions opts) throws Exception {
 
 		// init ThinPeer
-		LogInfo logInfo = null;
-		if (logToUse != null && !logToUse.isEmpty()) {
-			logInfo = new LogInfo(logToUse, DEFAULT_BOOTSTRAP_SERVERS);
-		}
-		ThinPeer thinPeer = new ThinPeer("/runner.properties", logInfo);
+		ThinPeer thinPeer;
+		LogInfo inLog = opts.inLog == null ? null : new LogInfo(opts.inLog, DEFAULT_BOOTSTRAP_SERVERS);
+		LogInfo outLog = opts.outLog == null ? null : new LogInfo(opts.outLog, DEFAULT_BOOTSTRAP_SERVERS);
+		thinPeer = new ThinPeer("/runner.properties", inLog, outLog);
 
 		long start = System.currentTimeMillis();
 		int reqsSent = 0;
@@ -99,8 +88,8 @@ public class AppRunner {
 		}
 		Object[] parameters = new Object[]{new String[]{}};
 		// TODO: generalize this to other methods (non-varargs)
-		if (methodName.equals("main") && !args.isEmpty()) {
-			parameters[0] = args.toArray(new String[0]);
+		if (methodName.equals("main") && !opts.argList.isEmpty()) {
+			parameters[0] = opts.argList.toArray(new String[0]);
 		}
 
 		// send 1st request
@@ -118,7 +107,7 @@ public class AppRunner {
 		thinPeer.connectToPeer(UUID.fromString(concentratorUuid));
 
 		// send rest of requests
-		for (; reqsSent < requests; reqsSent++) {
+		for (; reqsSent < opts.requests; reqsSent++) {
 			requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
 				parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
 			replyMsg = thinPeer.sendAndReceive(requestMsg);
@@ -141,15 +130,14 @@ public class AppRunner {
 	 * If sendAndForget=true, it doesn't wait for replies, useful for void methods or any other type of call where
 	 * we don't care about the returned value or thrown exceptions.
 	 */
-	protected int runReqsWithSingleClientAsync(String className, String methodName, List<String> args, String logToUse,
-																						 final int requests, boolean sendAndForget) throws Exception {
+	protected int runReqsWithSingleClientAsync(String className, String methodName, AppRunnerOptions opts)
+		throws Exception {
 
 		// init ThinPeer
-		LogInfo logInfo = null;
-		if (logToUse != null && !logToUse.isEmpty()) {
-			logInfo = new LogInfo(logToUse, DEFAULT_BOOTSTRAP_SERVERS);
-		}
-		ThinPeer thinPeer = new ThinPeer("/runner.properties", logInfo);
+		ThinPeer thinPeer;
+		LogInfo inLog = opts.inLog == null ? null : new LogInfo(opts.inLog, DEFAULT_BOOTSTRAP_SERVERS);
+		LogInfo outLog = opts.outLog == null ? null : new LogInfo(opts.outLog, DEFAULT_BOOTSTRAP_SERVERS);
+		thinPeer = new ThinPeer("/runner.properties", inLog, outLog);
 
 		long start = System.currentTimeMillis();
 		int reqsSent = 0;
@@ -158,13 +146,13 @@ public class AppRunner {
 		// a queue to store futures (async mode)
 		final Queue<Future<DataMessage>> messageFutureQueue = new ConcurrentLinkedQueue<>();
 		Thread replyProcessorThread = null;
-		if (!sendAndForget) {
+		if (!opts.sendAndForget) {
 			replyProcessorThread = new Thread() {
 				@Override
 				public void run() {
 					int totalProcessed = 0;
 					int processed;
-					while (totalProcessed < requests) {
+					while (totalProcessed < opts.requests) {
 						processed = 0;
 						for (Future<DataMessage> futureReply : messageFutureQueue) {
 							if (futureReply.isDone()) {
@@ -206,15 +194,15 @@ public class AppRunner {
 		}
 		Object[] parameters = new Object[]{new String[]{}};
 		// TODO: generalize this to other methods (non-varargs)
-		if (methodName.equals("main") && !args.isEmpty()) {
-			parameters[0] = args.toArray(new String[0]);
+		if (methodName.equals("main") && !opts.argList.isEmpty()) {
+			parameters[0] = opts.argList.toArray(new String[0]);
 		}
 
 		// send all requests
-		for (; reqsSent < requests; reqsSent++) {
+		for (; reqsSent < opts.requests; reqsSent++) {
 			DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
 				parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
-			if (sendAndForget) {
+			if (opts.sendAndForget) {
 				// send to log and forget
 				thinPeer.sendToLogAndForget(requestMsg);
 			} else {
@@ -225,7 +213,7 @@ public class AppRunner {
 		}
 
 		// wait for background reply processor to be done
-		if (!sendAndForget) {
+		if (!opts.sendAndForget) {
 			replyProcessorThread.join();
 		}
 
@@ -245,14 +233,19 @@ public class AppRunner {
 	 * NOTE that this method calls either the runReqsWithSingleClient() or runReqsWithSingleClientAsync()
 	 * methods in parallel threads
 	 */
-	protected int runReqsWithNClients(final String className, final String methodName, final List<String> args,
-																		int clients, String logToUse, final int requests, final boolean sendAndForget,
-																		final boolean async) throws Exception {
+	protected int runReqsWithNClients(final String className, final String methodName, AppRunnerOptions opts)
+		throws Exception {
 
-		assert requests > 1;
-		assert clients > 1;
+		if (opts.requests <= 1) {
+			throw new IllegalArgumentException(String.format("Method must be called with requests > 1. requests = ",
+				opts.requests));
+		}
+		if (opts.clients <= 1) {
+			throw new IllegalArgumentException(String.format("Method must be called with clients > 1. clients = ",
+				opts.requests));
+		}
 
-		Thread[] clientList = new Thread[clients];
+		Thread[] clientList = new Thread[opts.clients];
 		final AtomicInteger finishedThreads = new AtomicInteger(0);
 		final AtomicInteger reqsSent = new AtomicInteger(0);
 
@@ -260,16 +253,16 @@ public class AppRunner {
 		long start = System.currentTimeMillis();
 
 		// create all threads
-		for (int i = 0; i < clients; i++) {
+		for (int i = 0; i < opts.clients; i++) {
 			Thread client = new Thread() {
 				@Override
 				public void run() {
 					try {
 						int sent = 0;
-						if (async || sendAndForget) {
-							sent = runReqsWithSingleClientAsync(className, methodName, args, logToUse, requests, sendAndForget);
+						if (opts.async || opts.sendAndForget) {
+							sent = runReqsWithSingleClientAsync(className, methodName, opts);
 						} else {
-							sent = runReqsWithSingleClient(className, methodName, args, logToUse, requests);
+							sent = runReqsWithSingleClient(className, methodName, opts);
 						}
 						finishedThreads.getAndIncrement();
 						reqsSent.getAndAdd(sent);
@@ -282,17 +275,17 @@ public class AppRunner {
 		}
 
 		// then start all clients at once
-		for (int i = 0; i < clients; i++) {
+		for (int i = 0; i < opts.clients; i++) {
 			clientList[i].start();
 		}
 
 		// wait for threads to finish
-		while (finishedThreads.get() < clients) {
+		while (finishedThreads.get() < opts.clients) {
 			Thread.sleep(10);
 		}
 
 		if (verbose) {
-			System.out.println(String.format("sent %s requests with %s client(s) in %s ms", reqsSent.get(), clients,
+			System.out.println(String.format("sent %s requests with %s client(s) in %s ms", reqsSent.get(), opts.clients,
 				(System.currentTimeMillis() - start)));
 		}
 
@@ -301,66 +294,24 @@ public class AppRunner {
 
 	public static void main(String[] args) throws Exception {
 
-		CommandLineParser parser = new DefaultParser();
-		Options options = new Options();
-		options.addOption(Option.builder("r").required(false).longOpt("num-requests").hasArg()
-			.desc("number of requests to send").build());
-		options.addOption(Option.builder("c").required(false).longOpt("num-clients").hasArg()
-			.desc("number of clients to use").build());
-		options.addOption(Option.builder("l").required(false).longOpt("log").hasArg()
-			.desc("read and write from/to given log").build());
-		options.addOption(Option.builder("f").required(false).longOpt("forget-reply")
-			.desc("do not wait for replies").build());
-		options.addOption(Option.builder("a").required(false).longOpt("async")
-			.desc("send to log in async mode").build());
-		options.addOption(Option.builder("v").required(false).longOpt("verbose")
-			.desc("print useful info").build());
-		options.addOption(Option.builder("h").required(false).longOpt("help")
-			.desc("print usage").build());
+		AppRunnerOptions opts = AppRunnerOptions.parseFrom(args);
 
-		CommandLine line = null;
-		try {
-			line = parser.parse(options, args);
-		} catch (ParseException exp) {
-			System.err.println(exp.getMessage());
-			System.exit(1);
-		}
-
-		if (line.hasOption("help")) {
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("runner", options);
-			System.exit(0);
-		}
-
-		int requests = Integer.parseInt(line.getOptionValue("r", "1").trim());
-		int clients = Integer.parseInt(line.getOptionValue("c", "1").trim());
-		String givenLog = null;
-		if (line.hasOption("log")) {
-			givenLog = line.getOptionValue("l").trim();
-		}
-		boolean verbose = line.hasOption("v");
-		boolean sendAndForget = line.hasOption("forget-reply");
-		boolean async = line.hasOption("async");
-
-		if (async && sendAndForget) {
+		if (opts.async && opts.sendAndForget) {
 			System.err.println("async (-a) and forget-reply (-f) options are mutually-exclusive");
 			System.exit(1);
 		}
 
-		List<String> argList = line.getArgList();
-		String className = argList.remove(0);
+		String className = opts.argList.remove(0);
 
-		AppRunner appRunner = new AppRunner(verbose);
-		if (requests == 1 || clients == 1) {
-			if (async || sendAndForget) {
-				appRunner.runReqsWithSingleClientAsync(className, "main", argList, givenLog, requests,
-					sendAndForget);
+		AppRunner appRunner = new AppRunner(opts.verbose);
+		if (opts.requests == 1 || opts.clients == 1) {
+			if (opts.async || opts.sendAndForget) {
+				appRunner.runReqsWithSingleClientAsync(className, "main", opts);
 			} else {
-				appRunner.runReqsWithSingleClient(className, "main", argList, givenLog, requests);
+				appRunner.runReqsWithSingleClient(className, "main", opts);
 			}
 		} else {
-			appRunner.runReqsWithNClients(className, "main", argList, clients, givenLog, requests,
-				sendAndForget, async);
+			appRunner.runReqsWithNClients(className, "main", opts);
 		}
 	}
 }

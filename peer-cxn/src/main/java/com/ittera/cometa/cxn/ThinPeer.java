@@ -189,6 +189,10 @@ public class ThinPeer {
 		this(propertiesFile, allowP2P, initialPeer, logInfo, logInfo);
 	}
 
+	public ThinPeer(String propertiesFile, LogInfo inLog, LogInfo outLog) throws Exception {
+		this(propertiesFile, true, null, inLog, outLog);
+	}
+
 	private void connectSocket() {
 		peerSocket.setIdentity(("Dual-Peer-" + peerUuid.toString()).getBytes(ZMQ.CHARSET));
 		peerSocket.connect(currentPeer.getListenAddress());
