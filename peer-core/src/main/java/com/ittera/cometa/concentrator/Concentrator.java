@@ -1382,11 +1382,17 @@ public class Concentrator {
 		}
 
 		PeerOptions options = PeerOptions.parse(args);
-		properties.put("id", uuid.toString());
 		if (options.helpNeeded) {
 			options.printHelp();
 			System.exit(0);
 		}
+		// set uuid
+		if (options.uuid != null) {
+			uuid = options.uuid;
+		} else {
+			uuid = UUID.randomUUID();
+		}
+		properties.put("id", uuid.toString());
 
 		AbstractModule module = new AbstractModule() {
 			@Override
@@ -1438,7 +1444,7 @@ public class Concentrator {
 			readFromLog(options.inLog, injector, options.offset);
 		} else { // no log given, create new
 			newLog = registerNewLog(properties, injector);
-			readFromLog(options.inLog, injector, options.offset);
+			readFromLog(newLog, injector, options.offset);
 		}
 
 		// init log writer
@@ -1449,7 +1455,7 @@ public class Concentrator {
 			if (newLog == null) {
 				newLog = registerNewLog(properties, injector);
 			}
-			writeToLog(options.outLog, injector);
+			writeToLog(newLog, injector);
 		}
 
 
