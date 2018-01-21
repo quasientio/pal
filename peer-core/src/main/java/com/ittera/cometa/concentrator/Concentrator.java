@@ -9,7 +9,6 @@ import com.ittera.cometa.cxn.ZkClient;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.Wrapper;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -57,14 +56,6 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
 import zmq.ZError;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 
 public class Concentrator {
 
@@ -1336,17 +1327,17 @@ public class Concentrator {
 		return newLogInfo;
 	}
 
-	private static LogInfo registerGivenLog(String logName, Injector injector) {
+	private static LogInfo registerGivenLog(LogInfo givenLogInfo, Injector injector) {
 
 		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
 		LogInfo logInfo = null;
 
 		// register given log if not registered
 		try {
-			if (registry.logExists(logName)) {
-				logInfo = registry.getLogInfo(logName);
+			if (registry.logExists(givenLogInfo.getName())) {
+				logInfo = registry.getLogInfo(givenLogInfo.getName());
 			} else {
-				logInfo = registry.addGivenLog(logName, DEFAULT_BOOTSTRAP_SERVERS);
+				logInfo = registry.addGivenLog(givenLogInfo.getName(), DEFAULT_BOOTSTRAP_SERVERS);
 			}
 		} catch (Exception ex) {
 			logger.error("Error registering given log", ex);
@@ -1357,10 +1348,10 @@ public class Concentrator {
 		return logInfo;
 	}
 
-	private static void readFromLog(String logName, Injector injector, Long offset) {
+	private static void readFromLog(LogInfo log, Injector injector, Long offset) {
 		IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
 		try {
-			incomingMessageDispatcher.readFromLog(logName, offset);
+			incomingMessageDispatcher.readFromLog(log.getName(), offset);
 		} catch (Exception ex) {
 			logger.error("Could not initialize log reader. Aborting ...", ex);
 			ex.printStackTrace();
@@ -1368,55 +1359,15 @@ public class Concentrator {
 		}
 	}
 
-	private static void writeToLog(String logName, Injector injector) {
+	private static void writeToLog(LogInfo log, Injector injector) {
 		KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
 		try {
-			kafkaMessageWriter.writeToLog(logName);
+			kafkaMessageWriter.writeToLog(log.getName());
 		} catch (Exception ex) {
 			logger.error("Could not initialize log writer. Aborting ...", ex);
 			ex.printStackTrace();
 			System.exit(6);
 		}
-	}
-
-	private static CommandLine parseOptions(String[] args) {
-		CommandLineParser parser = new DefaultParser();
-		Options options = new Options();
-		options.addOption(Option.builder("u").required(false).longOpt("use-uuid").hasArg()
-			.desc("use given uuid").build());
-		options.addOption(Option.builder("rl").required(false).longOpt("read-log").hasArg()
-			.desc("read from given log").build());
-		options.addOption(Option.builder("wl").required(false).longOpt("write-log").hasArg()
-			.desc("write to given log").build());
-		options.addOption(Option.builder("l").required(false).longOpt("log").hasArg()
-			.desc("read and write from/to given log").build());
-		options.addOption(Option.builder("os").required(false).longOpt("offset-start").hasArg()
-			.desc("read from given offset (requires -l or -rl)").build());
-		options.addOption(Option.builder("h").required(false).longOpt("help").desc("print usage").build());
-
-		CommandLine cmdLine = null;
-		try {
-			cmdLine = parser.parse(options, args);
-		} catch (ParseException exp) {
-			System.err.println(exp.getMessage());
-			System.exit(1);
-		}
-
-		if (cmdLine.hasOption("help")) {
-			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("peer", options);
-			System.exit(0);
-		}
-
-		// this must be done here or the guice injector will fail
-		if (cmdLine.hasOption("use-uuid")) {
-			uuid = UUID.fromString(cmdLine.getOptionValue("u").trim());
-		} else {
-			uuid = UUID.randomUUID();
-		}
-		properties.put("id", uuid.toString());
-
-		return cmdLine;
 	}
 	// </editor-fold>
 
@@ -1430,7 +1381,18 @@ public class Concentrator {
 			logger.info("::main called w/args: {}", sb);
 		}
 
-		CommandLine cmdLine = parseOptions(args);
+		PeerOptions options = PeerOptions.parse(args);
+		if (options.helpNeeded) {
+			options.printHelp();
+			System.exit(0);
+		}
+		// set uuid
+		if (options.uuid != null) {
+			uuid = options.uuid;
+		} else {
+			uuid = UUID.randomUUID();
+		}
+		properties.put("id", uuid.toString());
 
 		AbstractModule module = new AbstractModule() {
 			@Override
@@ -1470,48 +1432,30 @@ public class Concentrator {
 		registerSelfAsPeer(properties, injector);
 
 		// init log IO
-		boolean readLog = cmdLine.hasOption("read-log") || cmdLine.hasOption("log");
-		boolean writeLog = cmdLine.hasOption("write-log") || cmdLine.hasOption("log");
-		boolean offsetGiven = cmdLine.hasOption("offset-start");
-		String offsetStr = offsetGiven ? cmdLine.getOptionValue("os").trim() : null;
-		if (offsetGiven && !readLog) {
+		if (options.offsetGiven && options.inLog == null) {
 			System.err.println("Offset given but no given log to read from. Try `runner -h`.");
 			System.exit(1);
 		}
 
-		// parse initial offset
-		Long offset = null;
-		if (offsetGiven && offsetStr != null) {
-			offset = Long.valueOf(offsetStr);
-		}
-
 		// init log reader
 		LogInfo newLog = null;
-		if (readLog) {
-			String logName = cmdLine.getOptionValue("l").trim();
-			if (logName == null) {
-				logName = cmdLine.getOptionValue("rl").trim();
-			}
-			registerGivenLog(logName, injector);
-			readFromLog(logName, injector, offset);
+		if (options.inLog != null) {
+			registerGivenLog(options.inLog, injector);
+			readFromLog(options.inLog, injector, options.offset);
 		} else { // no log given, create new
 			newLog = registerNewLog(properties, injector);
-			readFromLog(newLog.getName(), injector, offset);
+			readFromLog(newLog, injector, options.offset);
 		}
 
 		// init log writer
-		if (writeLog) {
-			String logName = cmdLine.getOptionValue("l").trim();
-			if (logName == null) {
-				logName = cmdLine.getOptionValue("wl").trim();
-			}
-			registerGivenLog(logName, injector);
-			writeToLog(logName, injector);
+		if (options.outLog != null) {
+			registerGivenLog(options.outLog, injector);
+			writeToLog(options.outLog, injector);
 		} else { // no log given, create new if not done already
 			if (newLog == null) {
 				newLog = registerNewLog(properties, injector);
 			}
-			writeToLog(newLog.getName(), injector);
+			writeToLog(newLog, injector);
 		}
 
 
