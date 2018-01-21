@@ -441,13 +441,10 @@ public class ThinPeer {
 		DataMessage replyMsg = null;
 		try {
 			replyMsg = DataMessage.parseFrom(reply);
+			logger.debug("Got reply message with uuid: {}, waited {} ms", replyMsg.getMessageUuid(), (waitEnd - waitStart));
 		} catch (InvalidProtocolBufferException ipbe) {
-			System.err.println("Caught protobuf exception: " + ipbe.getMessage());
-			ipbe.printStackTrace(System.err);
 			logger.error("Caught protobuf exception", ipbe);
 		}
-
-		logger.debug("Got reply message with uuid: {}, waited {} ms", replyMsg.getMessageUuid(), (waitEnd - waitStart));
 
 		return replyMsg;
 	}
