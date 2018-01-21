@@ -160,14 +160,14 @@ public class ThinPeer {
 		kafkaConsumerProps.put("group.id", peerUuid.toString());
 		kafkaConsumerProps.put("bootstrap.servers", bootstrapServers);
 		consumer = new KafkaConsumer<>(kafkaConsumerProps);
-		logger.debug("Kafka consumer initialized: {}", consumer);
+		logger.info("Kafka consumer initialized: {}", consumer);
 
 		//manual assignment of partition so we can control offset seek
 		topicPartition = new TopicPartition(kafkaTopic, 0);
 		consumer.assign(Arrays.asList(topicPartition));
 
 		// create zmq context
-		logger.debug("Initializing zmq context");
+		logger.info("Initializing zmq context");
 		zmqContext = new ZContext();
 		peerSocket = zmqContext.createSocket(ZMQ.REQ);
 		if (currentPeer != null) {
@@ -192,7 +192,7 @@ public class ThinPeer {
 	}
 
 	public DataMessage waitFor(Wrappers.Type type, String fieldName) {
-		logger.info("Starting wait for type: {} and field name: {}", type, fieldName);
+		logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
 		DataMessage reply = null;
 		// TODO extra param to seek before
 		//consumer.seek(topicPartition, sentRecordOffset);
@@ -205,7 +205,7 @@ public class ThinPeer {
 
 				if (dataMessage.hasStaticFieldPutDone() &&
 					fieldName.equals(dataMessage.getStaticFieldPutDone().getField().getName())) {
-					logger.info("Got matching message with offset {}:\n{}", receivedMsgOffset, dataMessage);
+					logger.debug("Got matching message with offset {}:\n{}", receivedMsgOffset, dataMessage);
 					return dataMessage;
 				} else {
 					logger.debug("Skipping record with offset {}", receivedMsgOffset);
@@ -216,7 +216,7 @@ public class ThinPeer {
 
 	public DataMessage getMessageAtOffset(Long seek) {
 
-		logger.info("Getting message @ offset #{}", seek);
+		logger.debug("Getting message @ offset #{}", seek);
 		consumer.seek(topicPartition, seek);
 
 		DataMessage cachedMsg = getCachedMessageAtOffset(seek);
@@ -255,7 +255,7 @@ public class ThinPeer {
 
 	public List<ConsumerRecord> getMessages(long startOffset, long numMessages) {
 
-		logger.info("Getting {} messages starting @ offset #{}", numMessages, startOffset);
+		logger.debug("Getting {} messages starting @ offset #{}", numMessages, startOffset);
 		consumer.seek(topicPartition, startOffset);
 		List<ConsumerRecord> messages = new ArrayList();
 		boolean gotAllMessages = false;
@@ -383,7 +383,7 @@ public class ThinPeer {
 				final DataMessage dataMessage = (DataMessage) record.value();
 				long receivedMsgOffset = record.offset();
 				if (dataMessage.hasFollowingUuid() && message.getMessageUuid().equals(dataMessage.getFollowingUuid())) {
-					logger.info("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
+					logger.debug("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
 					// try switching to direct peer talk (i.e. p2p)
 					if (allowP2P) {
 						String concentratorUuid = dataMessage.getConcentratorUuid();
