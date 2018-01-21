@@ -117,7 +117,9 @@ public abstract class AbstractConcentratorTest {
 	@AfterClass
 	public static void finalizeStuff() {
 		logger.debug("Finalizing after tests...");
-		thinPeer.close();
+		if (thinPeer != null) {
+			thinPeer.close();
+		}
 	}
 }
 
