@@ -1,6 +1,7 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.PeerInfo;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
@@ -57,8 +58,9 @@ public class ThinPeer {
 	protected final DataMessageBuilder dataMessageBuilder;
 
 	// kafka stuff
-	private final String kafkaTopicPrefix, kafkaTopic;
-	private final TopicPartition topicPartition;
+	private LogInfo inLog, outLog;
+	private final String kafkaTopicPrefix;
+	private final TopicPartition inTopicPartition;
 	private final Long pollTimeout;
 
 	private final Properties kafkaProducerProps = new Properties();
@@ -90,11 +92,13 @@ public class ThinPeer {
 		this(propertiesFile, true, null, logInfo);
 	}
 
-	public ThinPeer(String propertiesFile, boolean allowP2P, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
-		logger.info("Initializing ThinPeer with props from: {}, allowP2P: {}, initialPeer: {}, logInfo: {}",
-			propertiesFile, allowP2P, initialPeer, logInfo);
+	public ThinPeer(String propertiesFile, boolean allowP2P, PeerInfo initialPeer, LogInfo inLog, LogInfo outLog) throws Exception {
+		logger.info("Initializing ThinPeer with props from: {}, allowP2P: {}, initialPeer: {}, inLog: {}, outLog: {}",
+			propertiesFile, allowP2P, initialPeer, inLog, outLog);
 
 		this.allowP2P = allowP2P;
+		this.inLog = inLog;
+		this.outLog = outLog;
 		currentPeer = initialPeer;
 
 		//load properties
@@ -116,19 +120,22 @@ public class ThinPeer {
 			logger.error("Error registering peer", ex);
 		}
 
-		// get log to connect to
-		String bootstrapServers = null;
-		if (logInfo != null) {
-			this.kafkaTopic = logInfo.getName();
-			bootstrapServers = logInfo.getBootstrapServers();
-		} else {
+		// get/set log(s) to connect to
+		LogInfo lastLog = null;
+		if (inLog == null) {
 			// get last log with prefix = kafkaTopic
-			LogInfo lastLog = peerLogDirectory.getLastLog(kafkaTopicPrefix);
-			this.kafkaTopic = lastLog.getName();
-			bootstrapServers = lastLog.getBootstrapServers();
+			lastLog = peerLogDirectory.getLastLog(kafkaTopicPrefix);
+			this.inLog = lastLog;
 		}
 
-		logger.info("Will read and write to log: {}", this.kafkaTopic);
+		if (outLog == null) {
+			if (lastLog == null) {
+				lastLog = peerLogDirectory.getLastLog(kafkaTopicPrefix);
+			}
+			this.outLog = lastLog;
+		}
+
+		logger.info("Will read from log: {} and write to log: {}", this.inLog, this.outLog);
 
 
 		/** Configure and Initialize Kafka Producer **/
@@ -143,9 +150,9 @@ public class ThinPeer {
 		}
 
 		kafkaProducerProps.put("client.id", peerUuid.toString());
-		kafkaProducerProps.put("bootstrap.servers", bootstrapServers);
-		logger.info("Will connect to bootstrap servers: {}", bootstrapServers);
+		kafkaProducerProps.put("bootstrap.servers", this.outLog.getBootstrapServers());
 		producer = new KafkaProducer<>(kafkaProducerProps);
+		logger.info("Kafka producer initialized. Will connect to bootstrap servers: {}", this.outLog.getBootstrapServers());
 
 		/** Configure and Initialize Kafka Consumer **/
 		for (String propKey : properties.stringPropertyNames()) {
@@ -158,13 +165,13 @@ public class ThinPeer {
 		}
 
 		kafkaConsumerProps.put("group.id", peerUuid.toString());
-		kafkaConsumerProps.put("bootstrap.servers", bootstrapServers);
+		kafkaConsumerProps.put("bootstrap.servers", this.inLog.getBootstrapServers());
 		consumer = new KafkaConsumer<>(kafkaConsumerProps);
-		logger.info("Kafka consumer initialized: {}", consumer);
+		logger.info("Kafka consumer initialized. Will connect to bootstrap servers: {}", this.inLog.getBootstrapServers());
 
 		//manual assignment of partition so we can control offset seek
-		topicPartition = new TopicPartition(kafkaTopic, 0);
-		consumer.assign(Arrays.asList(topicPartition));
+		inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
+		consumer.assign(Arrays.asList(inTopicPartition));
 
 		// create zmq context
 		logger.info("Initializing zmq context");
@@ -176,6 +183,10 @@ public class ThinPeer {
 
 		//init msg builder
 		dataMessageBuilder = new ProtobufDataMessageBuilder();
+	}
+
+	public ThinPeer(String propertiesFile, boolean allowP2P, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
+		this(propertiesFile, allowP2P, initialPeer, logInfo, logInfo);
 	}
 
 	private void connectSocket() {
@@ -195,7 +206,7 @@ public class ThinPeer {
 		logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
 		DataMessage reply = null;
 		// TODO extra param to seek before
-		//consumer.seek(topicPartition, sentRecordOffset);
+		//consumer.seek(inTopicPartition, sentRecordOffset);
 
 		while (true) {
 			ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
@@ -217,7 +228,7 @@ public class ThinPeer {
 	public DataMessage getMessageAtOffset(Long seek) {
 
 		logger.debug("Getting message @ offset #{}", seek);
-		consumer.seek(topicPartition, seek);
+		consumer.seek(inTopicPartition, seek);
 
 		DataMessage cachedMsg = getCachedMessageAtOffset(seek);
 		if (cachedMsg != null) {
@@ -256,7 +267,7 @@ public class ThinPeer {
 	public List<ConsumerRecord> getMessages(long startOffset, long numMessages) {
 
 		logger.debug("Getting {} messages starting @ offset #{}", numMessages, startOffset);
-		consumer.seek(topicPartition, startOffset);
+		consumer.seek(inTopicPartition, startOffset);
 		List<ConsumerRecord> messages = new ArrayList();
 		boolean gotAllMessages = false;
 
@@ -281,7 +292,7 @@ public class ThinPeer {
 	public void sendToLogAndForget(DataMessage message) {
 
 		// send to kafka
-		producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
+		producer.send(new ProducerRecord(outLog.getName(), message.getMessageUuid(), message));
 		logger.debug("Message sent to log, and we're done:\n{}", message);
 	}
 
@@ -290,31 +301,36 @@ public class ThinPeer {
 		final String requestMsgUuid = message.getMessageUuid();
 
 		// send to kafka
-		producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
+		producer.send(new ProducerRecord(outLog.getName(), message.getMessageUuid(), message));
 		logger.debug("Message sent to log:\n{}", message);
 
 		final DataMessageFuture messageFuture = new DataMessageFuture(this, peerLogDirectory,
-			singleThreadConsumerExecutor, kafkaTopic, requestMsgUuid);
+			singleThreadConsumerExecutor, outLog.getName(), new LogRequest(requestMsgUuid));
 
 		// addLogRequest callback
-		StringCallback addLogCallback = new StringCallback() {
-			@Override
-			public void processResult(int rc, String path, Object ctx, String name) {
-				switch (Code.get(rc)) {
-					case OK:
-						((ZkClient) peerLogDirectory).getChildren(kafkaTopic, requestMsgUuid, messageFuture, messageFuture,
-							null);
-						break;
-					default:
-						logger.warn("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
-						return;
-				}
+		StringCallback addLogCallback = (rc, path, ctx, name) -> {
+			switch (Code.get(rc)) {
+				case OK:
+					((ZkClient) peerLogDirectory).getChildren(outLog.getName(), requestMsgUuid, messageFuture, messageFuture,
+						null);
+					break;
+				default:
+					logger.warn("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
+					return;
 			}
 		};
 
 		// asynchronously create req node in zk
+		LogRequest logRequest = null;
+		if (!outLog.equals(inLog)) {
+			// if we are reading from a different log, ask for reply to be written to that log (our inLog)
+			logRequest = new LogRequest(requestMsgUuid, inLog);
+		} else {
+			logRequest = new LogRequest(requestMsgUuid);
+		}
+
 		try {
-			((ZkClient) peerLogDirectory).addLogRequest(kafkaTopic, requestMsgUuid, addLogCallback, null);
+			((ZkClient) peerLogDirectory).addLogRequest(outLog.getName(), logRequest, addLogCallback, null);
 		} catch (Exception e) {
 			logger.error("Couldn't add request node to directory", e);
 			return null;
@@ -357,7 +373,7 @@ public class ThinPeer {
 		//send to kafka
 		Long sentRecordOffset;
 		Future<RecordMetadata> recordMetadataFuture =
-			producer.send(new ProducerRecord(kafkaTopic, message.getMessageUuid(), message));
+			producer.send(new ProducerRecord(outLog.getName(), message.getMessageUuid(), message));
 		try {
 			RecordMetadata recordMetadata = recordMetadataFuture.get();
 			if (logger.isDebugEnabled()) {
@@ -371,7 +387,7 @@ public class ThinPeer {
 
 		//now poll to consume
 		logger.debug("Consumer seeking to offset: {}", sentRecordOffset);
-		consumer.seek(topicPartition, sentRecordOffset);
+		consumer.seek(inTopicPartition, sentRecordOffset);
 
 		//wait for the reply to the sent message (reply should contain following = sentRecordOffset in message)
 		while (true) {

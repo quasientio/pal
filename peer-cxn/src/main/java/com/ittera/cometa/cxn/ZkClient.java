@@ -1,8 +1,9 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.LogReply;
 import com.ittera.cometa.PeerInfo;
+import com.ittera.cometa.LogRequest;
+import com.ittera.cometa.LogReply;
 
 import java.util.Set;
 import java.util.TreeSet;
@@ -234,33 +235,33 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	 * Asynchronous version
 	 *
 	 * @param logName
-	 * @param requestUuid
+	 * @param logRequest
 	 * @param cb
 	 * @param ctx
 	 * @throws Exception
 	 */
-	public void addLogRequest(String logName, String requestUuid, StringCallback cb, Object ctx)
+	public void addLogRequest(String logName, LogRequest logRequest, StringCallback cb, Object ctx)
 		throws Exception {
 
-		String newRequestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
+		String newRequestNode = String.format("%s/%s/%s", getLogsPath(), logName, logRequest.getUuid());
 		if (!logExists(logName)) {
 			throw new IllegalArgumentException(String.format("Node for log: %s does not exist", logName));
 		}
 
 		zk.create(newRequestNode, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT, cb, ctx);
-		logger.debug("Async-created new request node uuid: {} for log: {}", requestUuid, logName);
+		logger.debug("Async-created new request node uuid: {} for log: {}", logRequest.getUuid(), logName);
 	}
 
 	@Override
-	public String addLogRequest(String logName, String requestUuid) throws Exception {
+	public String addLogRequest(String logName, LogRequest logRequest) throws Exception {
 
-		String newRequestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
+		String newRequestNode = String.format("%s/%s/%s", getLogsPath(), logName, logRequest.getUuid());
 		if (!logExists(logName)) {
 			throw new IllegalArgumentException(String.format("Node for log: %s does not exist", logName));
 		}
 
 		String createdNode = zk.create(newRequestNode, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-		logger.debug("Created new request node uuid: {} for log: {}", requestUuid, logName);
+		logger.debug("Created new request node uuid: {} for log: {}", logRequest.getUuid(), logName);
 		return createdNode;
 	}
 
@@ -274,7 +275,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	 */
 	public void addLogReply(String logName, LogReply logReply, StringCallback callback) throws Exception {
 
-		String requestUuid = logReply.getReplyTo();
+		String requestUuid = logReply.getIsReplyTo();
 		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 
 		String newReplyNode = String.format("%s/%s/%s/%s", getLogsPath(), logName, requestUuid, logReply.getUuid());
@@ -300,7 +301,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public void addLogReply(String logName, LogReply logReply) throws Exception {
 
-		String requestUuid = logReply.getReplyTo();
+		String requestUuid = logReply.getIsReplyTo();
 		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 
 		String newReplyNode = String.format("%s/%s/%s/%s", getLogsPath(), logName, requestUuid, logReply.getUuid());
@@ -322,9 +323,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	}
 
 	@Override
-	public void deleteLogRequest(String logName, String requestUuid) throws Exception {
+	public void deleteLogRequest(String logName, LogRequest logRequest) throws Exception {
 
-		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
+		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, logRequest.getUuid());
 		int deleted = 0;
 
 		// delete all reply nodes
@@ -334,7 +335,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		}
 
 		zk.delete(requestNode, -1);
-		logger.info("Deleted request node {} and its {} reply nodes, for log: {}", requestUuid, deleted, logName);
+		logger.info("Deleted request node {} and its {} reply nodes, for log: {}", logRequest.getUuid(), deleted, logName);
 	}
 
 	@Override
@@ -343,7 +344,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		String logNode = getLogsPath() + "/" + logName;
 		int deleted = 0;
 		for (String reqNode : zk.getChildren(logNode, false)) {
-			deleteLogRequest(logName, reqNode);
+			deleteLogRequest(logName, new LogRequest(reqNode));
 			deleted++;
 		}
 
@@ -351,14 +352,14 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	}
 
 	@Override
-	public Set<LogReply> getRepliesTo(String logName, String requestUuid) throws Exception {
+	public Set<LogReply> getRepliesTo(String logName, LogRequest logRequest) throws Exception {
 
 		// check log exists
 		if (!logExists(logName)) {
 			throw new IllegalArgumentException(String.format("Node for log: %s does not exist", logName));
 		}
 
-		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
+		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, logRequest.getUuid());
 		Stat nodeStat;
 		String replyNodePath;
 		Properties props;
@@ -366,7 +367,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 		// check req node exists
 		if (zk.exists(requestNode, false) == null) {
-			throw new IllegalArgumentException(String.format("Request node %s for log: %s does not exist", requestUuid,
+			throw new IllegalArgumentException(String.format("Request node %s for log: %s does not exist", logRequest,
 				logName));
 		}
 
@@ -377,7 +378,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			replyNodePath = requestNode + "/" + replyNode;
 			props = getProperties(replyNodePath, nodeStat);
 			replies.add(new LogReply(replyNode, props.getProperty("from"),
-				requestUuid, Long.valueOf(props.getProperty("offset"))));
+				logRequest.getUuid(), Long.valueOf(props.getProperty("offset"))));
 		}
 
 		return replies;

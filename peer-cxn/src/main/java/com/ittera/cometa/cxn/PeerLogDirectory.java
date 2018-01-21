@@ -1,8 +1,9 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.LogReply;
 import com.ittera.cometa.PeerInfo;
+import com.ittera.cometa.LogRequest;
+import com.ittera.cometa.LogReply;
 
 import java.util.Properties;
 import java.util.UUID;
@@ -10,6 +11,9 @@ import java.util.Set;
 
 public interface PeerLogDirectory {
 
+	/**
+	 * CONNECTION METHODS
+	 **/
 	void connect(String url) throws Exception;
 
 	boolean isConnectionEstablished() throws Exception;
@@ -18,10 +22,11 @@ public interface PeerLogDirectory {
 
 	void close();
 
+	void deleteRootPaths() throws Exception;
+
 	/**
 	 * PEER METHODS
-	 */
-
+	 **/
 	void registerPeer(UUID peerUuid, Properties peerProperties) throws Exception;
 
 	void unregisterPeer(UUID peerUuid) throws Exception;
@@ -42,23 +47,10 @@ public interface PeerLogDirectory {
 
 	/**
 	 * LOG METHODS
-	 */
-
+	 **/
 	LogInfo createLog(String logNamePrefix, String bootstrapServers) throws Exception;
 
 	LogInfo addGivenLog(String logName, String bootstrapServers) throws Exception;
-
-	String addLogRequest(String logName, String requestUuid) throws Exception;
-
-	void addLogReply(String logName, LogReply reply) throws Exception;
-
-	void deleteLogRequest(String logName, String requestUuid) throws Exception;
-
-	void deleteLogRequests(String logName) throws Exception;
-
-	Set<LogReply> getRepliesTo(String logName, String requestUuid) throws Exception;
-
-	LogReply getLogReply(String logName, String requestUuid, String replyUuid) throws Exception;
 
 	LogInfo getLastLog(String logNamePrefix) throws Exception;
 
@@ -76,5 +68,19 @@ public interface PeerLogDirectory {
 
 	boolean logExists(String logName) throws Exception;
 
-	void deleteRootPaths() throws Exception;
+	/**
+	 * REQUEST/REPLY METHODS
+	 **/
+	String addLogRequest(String logName, LogRequest logRequest) throws Exception;
+
+	void addLogReply(String logName, LogReply reply) throws Exception;
+
+	void deleteLogRequest(String logName, LogRequest logRequest) throws Exception;
+
+	void deleteLogRequests(String logName) throws Exception;
+
+	Set<LogReply> getRepliesTo(String logName, LogRequest logRequest) throws Exception;
+
+	LogReply getLogReply(String logName, String requestUuid, String replyUuid) throws Exception;
+
 }

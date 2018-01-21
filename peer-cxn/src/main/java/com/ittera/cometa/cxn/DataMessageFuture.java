@@ -1,6 +1,7 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogReply;
+import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.List;
@@ -28,16 +29,17 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 
 	private final ThinPeer thinPeer;
 	private final PeerLogDirectory peerLogDirectory;
-	private final String logName, requestUuid;
+	private final String logName;
+	private final LogRequest logRequest;
 	private final ExecutorService executorService;
 
 	DataMessageFuture(ThinPeer thinPeer, PeerLogDirectory peerLogDirectory,
-										ExecutorService executorService, String logName, String requestUuid) {
+										ExecutorService executorService, String logName, LogRequest logRequest) {
 		this.thinPeer = thinPeer;
 		this.peerLogDirectory = peerLogDirectory;
 		this.executorService = executorService;
 		this.logName = logName;
-		this.requestUuid = requestUuid;
+		this.logRequest = logRequest;
 	}
 
 	// <editor-fold defaultstate="collapsed" desc="FUTURE Interface">
@@ -88,7 +90,7 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 	// <editor-fold defaultstate="collapsed" desc="Zk Watcher Interface">
 	@Override
 	public void process(WatchedEvent evt) {
-		logger.debug("NodeChildrenChanged event for node of request w/uuid: {}", requestUuid);
+		logger.debug("NodeChildrenChanged event for node of request: {}", logRequest);
 
 		if (evt.getType() == Event.EventType.NodeChildrenChanged) {
 			process();
@@ -99,7 +101,7 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 	// <editor-fold defaultstate="collapsed" desc="Zk Callback Interface">
 	@Override
 	public void processResult(int rc, String path, Object ctx, List<String> children) {
-		logger.debug("getChildren returned for request w/uuid: {}, with {} children", requestUuid, children.size());
+		logger.debug("getChildren returned for request: {}, with {} children", logRequest, children.size());
 
 		if (!children.isEmpty()) {
 			process();
@@ -109,13 +111,13 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 
 	@Override
 	public String toString() {
-		return String.format("uuid: %s done: %s cancelled: %s", requestUuid, isDone(), isCancelled());
+		return String.format("uuid: %s done: %s cancelled: %s", logRequest.getUuid(), isDone(), isCancelled());
 	}
 
 	private void process() {
 		final LogReply logReply = getReplyNode();
 		if (logReply == null) {
-			logger.error("Null LogReply object for request msg w/uuid: {}. Cancelling future.", requestUuid);
+			logger.error("Null LogReply object for request: {}. Cancelling future.", logRequest);
 			this.cancel(true);
 			return;
 		}
@@ -139,12 +141,12 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 
 		LogReply logReply = null;
 		try {
-			Set<LogReply> replySet = peerLogDirectory.getRepliesTo(logName, requestUuid);
+			Set<LogReply> replySet = peerLogDirectory.getRepliesTo(logName, logRequest);
 			if (!replySet.isEmpty()) {
 				logReply = (LogReply) replySet.toArray()[0];
 			}
 		} catch (Exception ex) {
-			logger.error("Error getting LogReply object for request msg w/uuid: {}", requestUuid, ex);
+			logger.error("Error getting LogReply object for request: {}", logRequest, ex);
 		}
 
 		return logReply;
@@ -152,9 +154,9 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 
 	private void deleteRequestNode() {
 		try {
-			peerLogDirectory.deleteLogRequest(logName, requestUuid);
+			peerLogDirectory.deleteLogRequest(logName, logRequest);
 		} catch (Exception e) {
-			logger.error("Error deleting directory request node: {} for log: {}", requestUuid, logName);
+			logger.error("Error deleting directory request node: {} for log: {}", logRequest, logName);
 		}
 	}
 }

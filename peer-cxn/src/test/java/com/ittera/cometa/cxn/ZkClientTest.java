@@ -1,8 +1,9 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.LogReply;
 import com.ittera.cometa.PeerInfo;
+import com.ittera.cometa.LogRequest;
+import com.ittera.cometa.LogReply;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.zookeeper.AsyncCallback;
@@ -150,7 +151,7 @@ public class ZkClientTest {
 
 		String someRequestUuid = UUID.randomUUID().toString();
 
-		String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequestUuid);
+		String reqNodeCreated = zkCli.addLogRequest(createdLogName, new LogRequest(someRequestUuid));
 		assertEquals(someRequestUuid, StringUtils.substringAfterLast(reqNodeCreated, "/"));
 	}
 
@@ -163,7 +164,7 @@ public class ZkClientTest {
 		String createdLogName = newLogInfo.getName();
 		createdLogs.add(createdLogName);
 
-		String someRequestUuid = UUID.randomUUID().toString();
+		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
 
 		AsyncCallback.StringCallback cb = new AsyncCallback.StringCallback() {
 			@Override
@@ -179,7 +180,7 @@ public class ZkClientTest {
 		};
 
 		CountDownLatch latch = new CountDownLatch(1);
-		zkCli.addLogRequest(createdLogName, someRequestUuid, cb, latch);
+		zkCli.addLogRequest(createdLogName, someRequest, cb, latch);
 		if (!latch.await(5, TimeUnit.SECONDS)) {
 			fail("Timeout awaiting latch downcount - node not created?");
 		}
@@ -192,7 +193,7 @@ public class ZkClientTest {
 		String someRequestUuid = UUID.randomUUID().toString();
 
 		try {
-			zkCli.addLogRequest(logName, someRequestUuid);
+			zkCli.addLogRequest(logName, new LogRequest(someRequestUuid));
 			fail();
 		} catch (IllegalArgumentException iae) {
 			// OK
@@ -243,11 +244,11 @@ public class ZkClientTest {
 	public void getReplies_noLog_illegalArgument() throws Exception {
 
 		String logName = "someRandomLogName";
-		String someRequestUuid = UUID.randomUUID().toString();
+		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
 
 		// get replies to req
 		try {
-			zkCli.getRepliesTo(logName, someRequestUuid);
+			zkCli.getRepliesTo(logName, someRequest);
 			fail();
 		} catch (IllegalArgumentException iae) {
 			// OK
@@ -264,11 +265,11 @@ public class ZkClientTest {
 		createdLogs.add(createdLogName);
 
 		// we DON'T create req node
-		String someRequestUuid = UUID.randomUUID().toString();
+		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
 
 		// get replies to req
 		try {
-			zkCli.getRepliesTo(createdLogName, someRequestUuid);
+			zkCli.getRepliesTo(createdLogName, someRequest);
 			fail();
 		} catch (IllegalArgumentException iae) {
 			// OK
@@ -286,11 +287,11 @@ public class ZkClientTest {
 		createdLogs.add(createdLogName);
 
 		// create req node
-		String someRequestUuid = UUID.randomUUID().toString();
-		String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequestUuid);
+		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
+		String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequest);
 
 		// get replies to req
-		Set<LogReply> replies = zkCli.getRepliesTo(createdLogName, someRequestUuid);
+		Set<LogReply> replies = zkCli.getRepliesTo(createdLogName, someRequest);
 		assertTrue(replies.isEmpty());
 	}
 
@@ -306,15 +307,15 @@ public class ZkClientTest {
 		createdLogs.add(createdLogName);
 
 		// create req node
-		String someRequestUuid = UUID.randomUUID().toString();
-		String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequestUuid);
+		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
+		String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequest);
 
 		// create rep node
 		String someReplyUuid = UUID.randomUUID().toString();
-		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequestUuid, someOffset));
+		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequest.getUuid(), someOffset));
 
 		// get replies to req
-		Set<LogReply> replies = zkCli.getRepliesTo(createdLogName, someRequestUuid);
+		Set<LogReply> replies = zkCli.getRepliesTo(createdLogName, someRequest);
 		assertFalse(replies.isEmpty());
 	}
 
@@ -331,19 +332,19 @@ public class ZkClientTest {
 		createdLogs.add(createdLogName);
 
 		// create req node
-		String someRequestUuid = UUID.randomUUID().toString();
-		String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequestUuid);
+		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
+		String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequest);
 
 		// create rep node #1
 		String someReplyUuid = UUID.randomUUID().toString();
-		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequestUuid, largeOffset));
+		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequest.getUuid(), largeOffset));
 
 		// create rep node #2 with lower offset then first reply
 		someReplyUuid = UUID.randomUUID().toString();
-		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequestUuid, smallOffset));
+		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequest.getUuid(), smallOffset));
 
 		// get replies to req
-		Set<LogReply> replies = zkCli.getRepliesTo(createdLogName, someRequestUuid);
+		Set<LogReply> replies = zkCli.getRepliesTo(createdLogName, someRequest);
 		assertFalse(replies.isEmpty());
 		assertEquals(2, replies.size());
 		long lastOffset = 0;
