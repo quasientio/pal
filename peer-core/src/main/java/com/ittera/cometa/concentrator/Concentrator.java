@@ -1473,9 +1473,9 @@ public class Concentrator {
 		boolean readLog = cmdLine.hasOption("read-log") || cmdLine.hasOption("log");
 		boolean writeLog = cmdLine.hasOption("write-log") || cmdLine.hasOption("log");
 		boolean offsetGiven = cmdLine.hasOption("offset-start");
-		String offsetStr = cmdLine.getOptionValue("os").trim();
+		String offsetStr = offsetGiven ? cmdLine.getOptionValue("os").trim() : null;
 		if (offsetGiven && !readLog) {
-			System.err.println("Offset given but no log to read from. Try `runner -h`.");
+			System.err.println("Offset given but no given log to read from. Try `runner -h`.");
 			System.exit(1);
 		}
 
