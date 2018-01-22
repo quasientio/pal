@@ -99,7 +99,9 @@ public class AppRunner {
 		reqsSent++;
 
 		// wait for reply (blocking)
+		logger.debug("Waiting for async reply ...");
 		replyMsg = messageFuture.get();
+		logger.debug("Got 1st (future) reply w/uuid: {}", replyMsg.getMessageUuid());
 
 		// switch to direct p2p talk
 		String concentratorUuid = replyMsg.getConcentratorUuid();

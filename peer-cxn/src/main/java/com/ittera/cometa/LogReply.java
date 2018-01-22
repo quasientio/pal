@@ -37,12 +37,7 @@ public class LogReply implements Comparable {
 
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("LogReply {uuid: ").append(getUuid());
-		sb.append(", offset: ").append(getOffset());
-		sb.append(", from-peer: ").append(getPeerUuid());
-		sb.append(", isReplyTo: ").append(getIsReplyTo());
-		sb.append('}');
-		return sb.toString();
+		return "LogReply {uuid: " + getUuid() + ", offset: " + getOffset() + ", from-peer: " + getPeerUuid()
+			+ ", isReplyTo: " + getIsReplyTo() + '}';
 	}
 }

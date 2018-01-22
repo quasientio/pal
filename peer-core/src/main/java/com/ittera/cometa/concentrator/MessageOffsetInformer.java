@@ -1,0 +1,140 @@
+package com.ittera.cometa.concentrator;
+
+import com.ittera.cometa.LogReply;
+import com.ittera.cometa.LogInfo;
+
+import com.ittera.cometa.cxn.PeerLogDirectory;
+import com.ittera.cometa.cxn.ZkClient;
+
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+
+import org.apache.kafka.clients.producer.Callback;
+import org.apache.kafka.clients.producer.RecordMetadata;
+
+import org.apache.zookeeper.AsyncCallback;
+import org.apache.zookeeper.KeeperException.Code;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.WatchedEvent;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.zeromq.ZMQ.Socket;
+
+/**
+ * Helper class used by KafkaDataMessageWriter to relate DataMessage with offset, so that we can asynchronously
+ * write replies' offsets to peerLogDirectory (i.e. zookeeper).
+ * <p>
+ * Implements both Zookeeper Watcher and Kafka Producer Callback interfaces
+ * <p>
+ * NOTE 1: All calls to this class must be made by same thread (kafka's IO thread), unless publishOffsets = false.
+ * The reason is we use zmq to publish received offsets and zmq sockets aren't thread-safe!
+ * NOTE 2: This class writes Reply nodes under the their corresponding Request nodes. That is why we are passing in
+ * `inLog`, since KafkaWriter may be writing to a different log than reading from. This class doesn't use inLog to
+ * directly write to it, but to look for the corresponding Request Node in the peerLogDirectory.
+ * NOTE 3: TODO we shouldn't block kafka's IO thread for too long, or we'll slow down writing of records.
+ * Ideally move work to an Executor class.
+ * <p>
+ */
+class MessageOffsetInformer implements Callback, Watcher {
+	private final DataMessage message;
+	private LogReply logReply;
+	private boolean done;
+	private final boolean publishOffsets;
+	private Throwable lastError;
+	private Socket offsetPublisher;
+	private final PeerLogDirectory peerLogDirectory;
+	private LogInfo inLog;
+
+	protected static final Logger logger = LoggerFactory.getLogger(MessageOffsetInformer.class);
+
+	private final AsyncCallback.StringCallback addReplyCallback = new AsyncCallback.StringCallback() {
+		@Override
+		public void processResult(int rc, String path, Object ctx, String name) {
+			switch (Code.get(rc)) {
+				case OK:
+					logger.debug("reply node created for message w/uuid: {}", message.getMessageUuid());
+					done = true;
+					break;
+				default:
+					logger.warn("reply node NOT created (error code: {}) for message w/uuid: {}", rc,
+						message.getMessageUuid());
+					return;
+			}
+		}
+	};
+
+	private final AsyncCallback.StatCallback statCallback = (rc, path, ctx, stat)
+		-> logger.debug("processResult with rc: {}, path: {}, and stat: {}", rc, path, stat);
+
+	MessageOffsetInformer(DataMessage message, boolean publishOffsets, Socket offsetPublisher,
+												PeerLogDirectory peerLogDirectory, LogInfo inLog) {
+		this.message = message;
+		this.publishOffsets = publishOffsets;
+		this.offsetPublisher = offsetPublisher;
+		this.peerLogDirectory = peerLogDirectory;
+		this.inLog = inLog;
+	}
+
+	boolean isDone() {
+		return done;
+	}
+
+	Throwable getLastError() {
+		return lastError;
+	}
+
+	/**
+	 * Kafka producer Callback interface
+	 *
+	 * @param recordMetadata
+	 * @param e
+	 */
+	@Override
+	public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+
+		// publish new record offset
+		if (publishOffsets) {
+			offsetPublisher.send(String.valueOf(recordMetadata.offset()), 0);
+		}
+		logger.debug("New offset {} for message w/uuid: {}", recordMetadata.offset(), message.getMessageUuid());
+
+		// if message is reply, save offset to zookeeper
+		if (message.hasFollowingUuid()) {
+			this.logReply = new LogReply(message.getMessageUuid(), Concentrator.uuid.toString(),
+				message.getFollowingUuid(), recordMetadata.offset());
+			try {
+				((ZkClient) peerLogDirectory).addLogReply(inLog.getName(), logReply, addReplyCallback);
+			} catch (IllegalArgumentException iae) {
+				// request node probably doesn't exist, add ourselves as watcher
+				((ZkClient) peerLogDirectory).requestExists(inLog.getName(), message.getFollowingUuid(), this,
+					statCallback);
+			} catch (Exception ex) {
+				logger.error("Unhandled error creating reply message offset for request w/uuid: {}. Giving up.",
+					message.getFollowingUuid(), ex);
+				lastError = ex;
+			}
+		}
+	}
+
+	/**
+	 * Zookeeper Watcher interface
+	 * Callback for the times when we want to reply with the offset, but the request node doesn't exist yet
+	 *
+	 * @param watchedEvent
+	 */
+	@Override
+	public void process(WatchedEvent watchedEvent) {
+
+		if (watchedEvent.getType() == Event.EventType.NodeCreated) {
+			logger.debug("node created event: {}, will retry to write add reply node", watchedEvent);
+			try {
+				((ZkClient) peerLogDirectory).addLogReply(inLog.getName(), logReply, addReplyCallback);
+			} catch (Exception ex) {
+				logger.error("Error creating reply message offset for request w/uuid: {}. Giving up.",
+					message.getFollowingUuid(), ex);
+				lastError = ex;
+			}
+		}
+	}
+}

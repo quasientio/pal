@@ -6,11 +6,12 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 public class AppRunnerOptions {
+
+	private Options options;
 
 	// options available
 	int requests, clients;
@@ -19,27 +20,22 @@ public class AppRunnerOptions {
 	// cmd line args after options
 	List<String> argList;
 
+	AppRunnerOptions(Options options) {
+		this.options = options;
+	}
+
 	public static AppRunnerOptions parseFrom(String[] args) {
 		CommandLineParser parser = new DefaultParser();
 		Options options = new Options();
-		options.addOption(Option.builder("r").required(false).longOpt("num-requests").hasArg()
-			.desc("number of requests to send").build());
-		options.addOption(Option.builder("c").required(false).longOpt("num-clients").hasArg()
-			.desc("number of clients to use").build());
-		options.addOption(Option.builder("rl").required(false).longOpt("read-log").hasArg()
-			.desc("read from given log").build());
-		options.addOption(Option.builder("wl").required(false).longOpt("write-log").hasArg()
-			.desc("write to given log").build());
-		options.addOption(Option.builder("l").required(false).longOpt("log").hasArg()
-			.desc("read and write from/to given log").build());
-		options.addOption(Option.builder("f").required(false).longOpt("forget-reply")
-			.desc("do not wait for replies").build());
-		options.addOption(Option.builder("a").required(false).longOpt("async")
-			.desc("send to log in async mode").build());
-		options.addOption(Option.builder("v").required(false).longOpt("verbose")
-			.desc("print useful info").build());
-		options.addOption(Option.builder("h").required(false).longOpt("help")
-			.desc("print usage").build());
+		options.addOption("r", "num-requests", true, "number of requests to send");
+		options.addOption("c", "num-clients", true, "number of clients to use");
+		options.addOption("rl", "read-log", true, "read from given log");
+		options.addOption("wl", "write-log", true, "write to given log");
+		options.addOption("l", "log", true, "read and write from/to given log");
+		options.addOption("f", "forget-reply", false, "do not wait for replies");
+		options.addOption("a", "async", false, "send to log in async mode");
+		options.addOption("v", "verbose", false, "print useful info");
+		options.addOption("h", "help", false, "print usage");
 
 		CommandLine cmdLine = null;
 		try {
@@ -56,7 +52,7 @@ public class AppRunnerOptions {
 		}
 
 		// create and fill runner options
-		AppRunnerOptions opts = new AppRunnerOptions();
+		AppRunnerOptions opts = new AppRunnerOptions(options);
 		opts.requests = Integer.parseInt(cmdLine.getOptionValue("r", "1").trim());
 		opts.clients = Integer.parseInt(cmdLine.getOptionValue("c", "1").trim());
 		opts.verbose = cmdLine.hasOption("v");
