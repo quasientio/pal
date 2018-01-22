@@ -59,6 +59,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     private final AtomicInteger messagesRcvd = new AtomicInteger(0);
 
     // kafka stuff
+    private boolean skipWrittenOffsets;
     private final long pollTimeout;
     private Long initialOffset;
     private String kafkaTopic;
@@ -173,9 +174,10 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     }
 
     @Override
-    public void readFromLog(String logName, Long initialOffset) throws Exception {
+    public void readFromLog(String logName, boolean skipWrittenOffsets, Long initialOffset) throws Exception {
 
         this.kafkaTopic = logName;
+        this.skipWrittenOffsets = skipWrittenOffsets;
         this.initialOffset = initialOffset;
         LogInfo logInfo = peerLogDirectory.getLogInfo(logName);
         this.currentLog = logInfo;
@@ -186,8 +188,8 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
     }
 
     @Override
-    public void readFromLog(String logName) throws Exception {
-        readFromLog(logName, 0L);
+    public void readFromLog(String logName, boolean skipWrittenOffsets) throws Exception {
+        readFromLog(logName, skipWrittenOffsets, 0L);
     }
 
     protected void openConnections() {
@@ -208,13 +210,16 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
         logDealer.bind(inLogAddress);
 
         // subscriber to get the offsets written by the message writer
-        this.offsetSubscriber = zmqContext.createSocket(ZMQ.SUB);
-        offsetSubscriber.connect(offsetPubAddress);
-        offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
-        logger.info("Initialized zmq sockets");
+			  if (skipWrittenOffsets) {
+            this.offsetSubscriber = zmqContext.createSocket(ZMQ.SUB);
+            offsetSubscriber.connect(offsetPubAddress);
+            offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
-        new OffsetUpdater(offsetSubscriber).start();
-        logger.info("Initialized offset notifier thread");
+            new OffsetUpdater(offsetSubscriber).start();
+            logger.info("Initialized offset notifier thread");
+        }
+
+        logger.info("Initialized zmq sockets");
 
         connectionsOpen = true;
         logger.info("All connections open");
@@ -296,12 +301,14 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
                 logger.debug("Dealt new log Data Message with uuid: {}", dataMessage.getMessageUuid());
 
                 // get next offset to poll
-                Long nextOffset = nextOffset();
-                if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
-                    logger.debug("Skipping received records. Jumping from offset: {} to: {}", lastOffsetRead,
-                      nextOffset);
-                    consumer.seek(topicPartition, nextOffset);
-                    break;
+						    if (skipWrittenOffsets) {
+                    Long nextOffset = nextOffset();
+                    if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
+                        logger.debug("Skipping received records. Jumping from offset: {} to: {}", lastOffsetRead,
+                          nextOffset);
+                        consumer.seek(topicPartition, nextOffset);
+                        break;
+                    }
                 }
             }
 
@@ -313,10 +320,12 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
             }
 
             // get next offset to poll
-            Long nextOffset = nextOffset();
-            if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
-                logger.debug("Jumping from offset: {} to: {}", lastOffsetRead, nextOffset);
-                consumer.seek(topicPartition, nextOffset);
+            if (skipWrittenOffsets) {
+                Long nextOffset = nextOffset();
+                if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
+                    logger.debug("Jumping from offset: {} to: {}", lastOffsetRead, nextOffset);
+                    consumer.seek(topicPartition, nextOffset);
+                }
             }
         }
 

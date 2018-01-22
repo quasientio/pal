@@ -4,7 +4,7 @@ public interface IncomingMessageDispatcher {
 
 	void acceptConnections(boolean acceptConnections);
 
-	void readFromLog(String logName) throws Exception;
+	void readFromLog(String logName, boolean skipWrittenOffsets) throws Exception;
 
-	void readFromLog(String logName, Long initialOffset) throws Exception;
+	void readFromLog(String logName, boolean skipWrittenOffsets, Long initialOffset) throws Exception;
 }

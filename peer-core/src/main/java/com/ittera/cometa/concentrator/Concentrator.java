@@ -1348,10 +1348,11 @@ public class Concentrator {
 		return logInfo;
 	}
 
-	private static void readFromLog(LogInfo log, Injector injector, Long offset) {
+	private static void readFromLog(LogInfo log, Injector injector, boolean inAndOutAreSameLog, Long initialOffset) {
 		IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
 		try {
-			incomingMessageDispatcher.readFromLog(log.getName(), offset);
+			boolean skipWrittenOffsets = inAndOutAreSameLog;
+			incomingMessageDispatcher.readFromLog(log.getName(), skipWrittenOffsets, initialOffset);
 		} catch (Exception ex) {
 			logger.error("Could not initialize log reader. Aborting ...", ex);
 			ex.printStackTrace();
@@ -1359,10 +1360,11 @@ public class Concentrator {
 		}
 	}
 
-	private static void writeToLog(LogInfo log, Injector injector) {
+	private static void writeToLog(LogInfo outLog, LogInfo inLog, Injector injector) {
 		KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
 		try {
-			kafkaMessageWriter.writeToLog(log.getName());
+			boolean publishOffsets = outLog.equals(inLog);
+			kafkaMessageWriter.writeToLog(outLog, inLog, publishOffsets);
 		} catch (Exception ex) {
 			logger.error("Could not initialize log writer. Aborting ...", ex);
 			ex.printStackTrace();
@@ -1437,27 +1439,29 @@ public class Concentrator {
 			System.exit(1);
 		}
 
-		// init log reader
-		LogInfo newLog = null;
+		// register log(s)
+		LogInfo inLog, outLog, newLog = null;
+
 		if (options.inLog != null) {
-			registerGivenLog(options.inLog, injector);
-			readFromLog(options.inLog, injector, options.offset);
+			inLog = registerGivenLog(options.inLog, injector);
 		} else { // no log given, create new
-			newLog = registerNewLog(properties, injector);
-			readFromLog(newLog, injector, options.offset);
+			inLog = registerNewLog(properties, injector);
+			newLog = inLog;
 		}
 
-		// init log writer
 		if (options.outLog != null) {
-			registerGivenLog(options.outLog, injector);
-			writeToLog(options.outLog, injector);
+			outLog = registerGivenLog(options.outLog, injector);
 		} else { // no log given, create new if not done already
 			if (newLog == null) {
 				newLog = registerNewLog(properties, injector);
 			}
-			writeToLog(newLog, injector);
+			outLog = newLog;
 		}
 
+		// init log reader+writer
+		boolean inAndOutAreSame = inLog.equals(outLog);
+		readFromLog(inLog, injector, inAndOutAreSame, options.offset);
+		writeToLog(outLog, inLog, injector);
 
 		// managed services
 		final Set<Service> services = new HashSet<>();

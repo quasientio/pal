@@ -118,4 +118,9 @@ public class LogInfo implements Comparable {
 	public boolean equals(Object o) {
 		return name.equals(((LogInfo) o).getName()) && bootstrapServers.equals(((LogInfo) o).getBootstrapServers());
 	}
+
+	@Override
+	public String toString() {
+		return "Log {name: " + getName() + ", bootstrapServers: " + getBootstrapServers() + "}";
+	}
 }
