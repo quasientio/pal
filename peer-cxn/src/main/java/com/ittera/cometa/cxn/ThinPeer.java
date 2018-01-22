@@ -230,14 +230,20 @@ public class ThinPeer {
 	}
 
 	public DataMessage getMessageAtOffset(Long seek) {
+		return getMessageAtOffset(seek, true);
+	}
 
-		logger.debug("Getting message @ offset #{}", seek);
+	public DataMessage getMessageAtOffset(Long seek, boolean lookupCached) {
+
+		logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
 		consumer.seek(inTopicPartition, seek);
 
-		DataMessage cachedMsg = getCachedMessageAtOffset(seek);
-		if (cachedMsg != null) {
-			logger.debug("Got cached record at offset {}", seek);
-			return cachedMsg;
+		if (lookupCached) {
+			DataMessage cachedMsg = getCachedMessageAtOffset(seek);
+			if (cachedMsg != null) {
+				logger.debug("Got cached record at offset {}", seek);
+				return cachedMsg;
+			}
 		}
 
 		Map recordsRead = new HashMap<Long, ConsumerRecord>();
