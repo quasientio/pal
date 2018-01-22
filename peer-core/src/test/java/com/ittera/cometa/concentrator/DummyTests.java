@@ -8,12 +8,12 @@ import static org.junit.Assert.*;
 
 public class DummyTests {
 
-  @Test
-  public void someTest() {
-    Object obj = new Integer(3);
-    assertTrue(ClassUtils.isPrimitiveOrWrapper(obj.getClass()));
-    obj = new Integer[]{1, 2, 3};
-    assertTrue(ClassUtils.isPrimitiveOrWrapper(obj.getClass().getComponentType()));
-    assertTrue(obj.getClass().isArray());
-  }
+	@Test
+	public void someTest() {
+		Object obj = new Integer(3);
+		assertTrue(ClassUtils.isPrimitiveOrWrapper(obj.getClass()));
+		obj = new Integer[]{1, 2, 3};
+		assertTrue(ClassUtils.isPrimitiveOrWrapper(obj.getClass().getComponentType()));
+		assertTrue(obj.getClass().isArray());
+	}
 }

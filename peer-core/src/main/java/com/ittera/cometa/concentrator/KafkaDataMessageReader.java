@@ -41,359 +41,359 @@ import zmq.ZError;
 @Singleton
 public class KafkaDataMessageReader extends AbstractExecutionThreadService implements IncomingMessageDispatcher {
 
-    protected static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageReader.class);
+	protected static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageReader.class);
 
-    private volatile boolean acceptingConnections = false;
-    private volatile boolean connectionsOpen = false;
+	private volatile boolean acceptingConnections = false;
+	private volatile boolean connectionsOpen = false;
 
-    // zmq stuff
-    @Inject
-    private ZContext zmqContext;
-    private Socket logDealer;
-    private Socket offsetSubscriber;
-    private final String inLogAddress, offsetPubAddress;
+	// zmq stuff
+	@Inject
+	private ZContext zmqContext;
+	private Socket logDealer;
+	private Socket offsetSubscriber;
+	private final String inLogAddress, offsetPubAddress;
 
-    // counters
-    private final AtomicLong totalPollingNanos = new AtomicLong(0);
-    private final AtomicInteger totalPolls = new AtomicInteger(0);
-    private final AtomicInteger messagesRcvd = new AtomicInteger(0);
+	// counters
+	private final AtomicLong totalPollingNanos = new AtomicLong(0);
+	private final AtomicInteger totalPolls = new AtomicInteger(0);
+	private final AtomicInteger messagesRcvd = new AtomicInteger(0);
 
-    // kafka stuff
-    private boolean skipWrittenOffsets;
-    private final long pollTimeout;
-    private Long initialOffset;
-    private String kafkaTopic;
-    private TopicPartition topicPartition;
-    private KafkaConsumer<String, String> consumer;
-    private final Properties consumerProperties = new Properties();
-    private volatile long lastOffsetRead = -1;
-    private LogInfo currentLog;
+	// kafka stuff
+	private boolean skipWrittenOffsets;
+	private final long pollTimeout;
+	private Long initialOffset;
+	private String kafkaTopic;
+	private TopicPartition topicPartition;
+	private KafkaConsumer<String, String> consumer;
+	private final Properties consumerProperties = new Properties();
+	private volatile long lastOffsetRead = -1;
+	private LogInfo currentLog;
 
-    // zookeeper
-    @Inject
-    private PeerLogDirectory peerLogDirectory;
+	// zookeeper
+	@Inject
+	private PeerLogDirectory peerLogDirectory;
 
-    // shared by threads OffsetUpdater and KafkaDataMessageReader: TODO avoid sharing
-    final private AbstractQueue<Long> skipOffsets = new ConcurrentLinkedQueue<>();
+	// shared by threads OffsetUpdater and KafkaDataMessageReader: TODO avoid sharing
+	final private AbstractQueue<Long> skipOffsets = new ConcurrentLinkedQueue<>();
 
-    private final class OffsetUpdater extends Thread {
+	private final class OffsetUpdater extends Thread {
 
-        private Socket offsetSubscriber;
+		private Socket offsetSubscriber;
 
-        OffsetUpdater(Socket offsetSubscriber) {
-            super("Offset informer");
-            this.offsetSubscriber = offsetSubscriber;
-        }
+		OffsetUpdater(Socket offsetSubscriber) {
+			super("Offset informer");
+			this.offsetSubscriber = offsetSubscriber;
+		}
 
-        @Override
-        public void run() {
-            logger.debug("Offset informer running");
+		@Override
+		public void run() {
+			logger.debug("Offset informer running");
 
-            String rcvd;
-            boolean breakOut = false;
+			String rcvd;
+			boolean breakOut = false;
 
-            while (!Thread.interrupted() && !breakOut) {
-                rcvd = null;
-                try {
-                    rcvd = offsetSubscriber.recvStr();
-                } catch (ZMQException ex) {
-                  int errorCode = ex.getErrorCode();
-                  if (errorCode == ZError.ETERM) {
-                      logger.debug("Caught ETERM during blocking read. Breaking out.");
-                      break;
-                  } else if (errorCode == ZError.EINTR) {
-                      logger.debug("Caught EINTR during blocking read. Breaking out.");
-                      break;
-                  } else {
-                      throw ex;
-                  }
-                }
+			while (!Thread.interrupted() && !breakOut) {
+				rcvd = null;
+				try {
+					rcvd = offsetSubscriber.recvStr();
+				} catch (ZMQException ex) {
+					int errorCode = ex.getErrorCode();
+					if (errorCode == ZError.ETERM) {
+						logger.debug("Caught ETERM during blocking read. Breaking out.");
+						break;
+					} else if (errorCode == ZError.EINTR) {
+						logger.debug("Caught EINTR during blocking read. Breaking out.");
+						break;
+					} else {
+						throw ex;
+					}
+				}
 
-                while (rcvd != null) {
-                    long offset = Long.valueOf(rcvd);
-                    rcvd = null;
-                    skipOffsets.add(offset);
-                    try {
-                        rcvd = offsetSubscriber.recvStr();
-                    } catch (ZMQException ex) {
-                      int errorCode = ex.getErrorCode();
-                      if (errorCode == ZError.ETERM) {
-                          logger.debug("Caught ETERM during blocking read. Breaking out.");
-                          breakOut = true;
-                          break;
-                      } else if (errorCode == ZError.EINTR) {
-                          logger.debug("Caught EINTR during blocking read. Breaking out.");
-                          break;
-                      } else {
-                          throw ex;
-                      }
-                    }
-                }
+				while (rcvd != null) {
+					long offset = Long.valueOf(rcvd);
+					rcvd = null;
+					skipOffsets.add(offset);
+					try {
+						rcvd = offsetSubscriber.recvStr();
+					} catch (ZMQException ex) {
+						int errorCode = ex.getErrorCode();
+						if (errorCode == ZError.ETERM) {
+							logger.debug("Caught ETERM during blocking read. Breaking out.");
+							breakOut = true;
+							break;
+						} else if (errorCode == ZError.EINTR) {
+							logger.debug("Caught EINTR during blocking read. Breaking out.");
+							break;
+						} else {
+							throw ex;
+						}
+					}
+				}
 
-                // short pause, not to be eager
-                try {
-                    Thread.sleep(1);
-                } catch (InterruptedException e) {
-                    logger.error("Interrupted in sleep", e);
-                }
-            }
-        }
-    }
+				// short pause, not to be eager
+				try {
+					Thread.sleep(1);
+				} catch (InterruptedException e) {
+					logger.error("Interrupted in sleep", e);
+				}
+			}
+		}
+	}
 
-    @Inject
-    public KafkaDataMessageReader(@Named("key.deserializer") String keyDeserializer,
-                                  @Named("value.deserializer") String valueDeserializer,
-                                  @Named("enable.auto.commit") String autoCommit,
-                                  @Named("auto.commit.interval.ms") String autoCommitInterval,
-                                  @Named("auto.offset.reset") String autoOffsetReset,
-                                  @Named("session.timeout.ms") String sessionTimeout,
-                                  @Named("id") String concentratorId,
-                                  @Named("pollTimeout") String pollTimeout,
-                                  @Named("in.log") String inLogAddress,
-                                  @Named("offset.pub") String offsetPubAddress) {
-        this.inLogAddress = inLogAddress;
-        this.offsetPubAddress = offsetPubAddress;
-        this.pollTimeout = Long.parseLong(pollTimeout);
-        // prepare Kafka consumer
-        consumerProperties.put("group.id", concentratorId);
-        consumerProperties.put("key.deserializer", keyDeserializer);
-        consumerProperties.put("value.deserializer", valueDeserializer);
-        consumerProperties.put("enable.auto.commit", autoCommit);
-        consumerProperties.put("auto.commit.interval.ms", autoCommitInterval);
-        consumerProperties.put("auto.offset.reset", autoOffsetReset);
-        consumerProperties.put("session.timeout.ms", sessionTimeout);
+	@Inject
+	public KafkaDataMessageReader(@Named("key.deserializer") String keyDeserializer,
+																@Named("value.deserializer") String valueDeserializer,
+																@Named("enable.auto.commit") String autoCommit,
+																@Named("auto.commit.interval.ms") String autoCommitInterval,
+																@Named("auto.offset.reset") String autoOffsetReset,
+																@Named("session.timeout.ms") String sessionTimeout,
+																@Named("id") String concentratorId,
+																@Named("pollTimeout") String pollTimeout,
+																@Named("in.log") String inLogAddress,
+																@Named("offset.pub") String offsetPubAddress) {
+		this.inLogAddress = inLogAddress;
+		this.offsetPubAddress = offsetPubAddress;
+		this.pollTimeout = Long.parseLong(pollTimeout);
+		// prepare Kafka consumer
+		consumerProperties.put("group.id", concentratorId);
+		consumerProperties.put("key.deserializer", keyDeserializer);
+		consumerProperties.put("value.deserializer", valueDeserializer);
+		consumerProperties.put("enable.auto.commit", autoCommit);
+		consumerProperties.put("auto.commit.interval.ms", autoCommitInterval);
+		consumerProperties.put("auto.offset.reset", autoOffsetReset);
+		consumerProperties.put("session.timeout.ms", sessionTimeout);
 
-        if (logger.isInfoEnabled()) {
-            StringBuffer propsStr = new StringBuffer(50);
-            for (String propKey : consumerProperties.stringPropertyNames()) {
-                propsStr.append(propKey).append('=').append(consumerProperties.getProperty(propKey)).append(", ");
-            }
-            logger.info("Initialized kafka publisher for concentrator with id '{}' and properties: [{}]",
-              concentratorId, propsStr.toString());
-        }
-    }
+		if (logger.isInfoEnabled()) {
+			StringBuffer propsStr = new StringBuffer(50);
+			for (String propKey : consumerProperties.stringPropertyNames()) {
+				propsStr.append(propKey).append('=').append(consumerProperties.getProperty(propKey)).append(", ");
+			}
+			logger.info("Initialized kafka publisher for concentrator with id '{}' and properties: [{}]",
+				concentratorId, propsStr.toString());
+		}
+	}
 
-    @Override
-    public void readFromLog(String logName, boolean skipWrittenOffsets, Long initialOffset) throws Exception {
+	@Override
+	public void readFromLog(String logName, boolean skipWrittenOffsets, Long initialOffset) throws Exception {
 
-        this.kafkaTopic = logName;
-        this.skipWrittenOffsets = skipWrittenOffsets;
-        this.initialOffset = initialOffset;
-        LogInfo logInfo = peerLogDirectory.getLogInfo(logName);
-        this.currentLog = logInfo;
+		this.kafkaTopic = logName;
+		this.skipWrittenOffsets = skipWrittenOffsets;
+		this.initialOffset = initialOffset;
+		LogInfo logInfo = peerLogDirectory.getLogInfo(logName);
+		this.currentLog = logInfo;
 
-        consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
-        logger.info("Now reading from log: {} and bootstrapServers: {}, starting at offset: {}", logInfo.getName(),
-          logInfo.getBootstrapServers(), initialOffset);
-    }
+		consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
+		logger.info("Now reading from log: {} and bootstrapServers: {}, starting at offset: {}", logInfo.getName(),
+			logInfo.getBootstrapServers(), initialOffset);
+	}
 
-    @Override
-    public void readFromLog(String logName, boolean skipWrittenOffsets) throws Exception {
-        readFromLog(logName, skipWrittenOffsets, 0L);
-    }
+	@Override
+	public void readFromLog(String logName, boolean skipWrittenOffsets) throws Exception {
+		readFromLog(logName, skipWrittenOffsets, 0L);
+	}
 
-    protected void openConnections() {
-        this.consumer = new KafkaConsumer<>(consumerProperties);
-        //manual assignment of partition so we can control offset seek
-        topicPartition = new TopicPartition(kafkaTopic, 0);
-        final List<TopicPartition> topicPartitionList = Arrays.asList(topicPartition);
-        consumer.assign(topicPartitionList);
-        if (initialOffset == null) {
-            consumer.seekToBeginning(topicPartitionList);
-        } else {
-            consumer.seek(topicPartition, initialOffset);
-        }
+	protected void openConnections() {
+		this.consumer = new KafkaConsumer<>(consumerProperties);
+		//manual assignment of partition so we can control offset seek
+		topicPartition = new TopicPartition(kafkaTopic, 0);
+		final List<TopicPartition> topicPartitionList = Arrays.asList(topicPartition);
+		consumer.assign(topicPartitionList);
+		if (initialOffset == null) {
+			consumer.seekToBeginning(topicPartitionList);
+		} else {
+			consumer.seek(topicPartition, initialOffset);
+		}
 
-        logger.info("Initialized kafka consumer");
+		logger.info("Initialized kafka consumer");
 
-        this.logDealer = zmqContext.createSocket(ZMQ.DEALER);
-        logDealer.bind(inLogAddress);
+		this.logDealer = zmqContext.createSocket(ZMQ.DEALER);
+		logDealer.bind(inLogAddress);
 
-        // subscriber to get the offsets written by the message writer
-			  if (skipWrittenOffsets) {
-            this.offsetSubscriber = zmqContext.createSocket(ZMQ.SUB);
-            offsetSubscriber.connect(offsetPubAddress);
-            offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
+		// subscriber to get the offsets written by the message writer
+		if (skipWrittenOffsets) {
+			this.offsetSubscriber = zmqContext.createSocket(ZMQ.SUB);
+			offsetSubscriber.connect(offsetPubAddress);
+			offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
-            new OffsetUpdater(offsetSubscriber).start();
-            logger.info("Initialized offset notifier thread");
-        }
+			new OffsetUpdater(offsetSubscriber).start();
+			logger.info("Initialized offset notifier thread");
+		}
 
-        logger.info("Initialized zmq sockets");
+		logger.info("Initialized zmq sockets");
 
-        connectionsOpen = true;
-        logger.info("All connections open");
-    }
+		connectionsOpen = true;
+		logger.info("All connections open");
+	}
 
-    protected void closeConnections() {
+	protected void closeConnections() {
 
-        if (consumer != null) {
-            consumer.close();
-            logger.info("Closed kafka consumer");
-        }
+		if (consumer != null) {
+			consumer.close();
+			logger.info("Closed kafka consumer");
+		}
 
-        if (logDealer != null) {
-            logDealer.close();
-        }
+		if (logDealer != null) {
+			logDealer.close();
+		}
 
-        if (offsetSubscriber != null) {
-            offsetSubscriber.close();
-        }
+		if (offsetSubscriber != null) {
+			offsetSubscriber.close();
+		}
 
-        logger.info("All connections closed");
-    }
+		logger.info("All connections closed");
+	}
 
-    @Override
-    public final void run() {
+	@Override
+	public final void run() {
 
-        long iterations = 0;
+		long iterations = 0;
 
-        //wait for connections established
-        while (!connectionsOpen) {
-            try {
-                Thread.sleep(300);
-            } catch (InterruptedException e) {
-                //what to do
-            }
-        }
+		//wait for connections established
+		while (!connectionsOpen) {
+			try {
+				Thread.sleep(300);
+			} catch (InterruptedException e) {
+				//what to do
+			}
+		}
 
-        ConsumerRecords<String, String> records;
-        long t0;
+		ConsumerRecords<String, String> records;
+		long t0;
 
-        while (isRunning() && !Thread.interrupted()) {
+		while (isRunning() && !Thread.interrupted()) {
 
-            if (!acceptingConnections) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    break;
-                }
-            }
+			if (!acceptingConnections) {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					break;
+				}
+			}
 
-            // read from kafka
-            t0 = System.nanoTime();
-            records = consumer.poll(pollTimeout);
-            totalPollingNanos.getAndAdd(System.nanoTime() - t0);
-            totalPolls.getAndIncrement();
+			// read from kafka
+			t0 = System.nanoTime();
+			records = consumer.poll(pollTimeout);
+			totalPollingNanos.getAndAdd(System.nanoTime() - t0);
+			totalPolls.getAndIncrement();
 
-            if (logger.isDebugEnabled() && records.count() > 0) {
-                logger.debug("Records read: {}", records.count());
-            }
+			if (logger.isDebugEnabled() && records.count() > 0) {
+				logger.debug("Records read: {}", records.count());
+			}
 
-            // process records if any
-            for (ConsumerRecord record : records) {
+			// process records if any
+			for (ConsumerRecord record : records) {
 
-                messagesRcvd.getAndIncrement();
+				messagesRcvd.getAndIncrement();
 
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Processing received record # {} with offset {} :\n {}", messagesRcvd, record.offset(),
-                      record);
-                }
+				if (logger.isDebugEnabled()) {
+					logger.debug("Processing received record # {} with offset {} :\n {}", messagesRcvd, record.offset(),
+						record);
+				}
 
-                final DataMessage dataMessage = (DataMessage) record.value();
-                final long messageOffset = record.offset();
-                lastOffsetRead = messageOffset;
+				final DataMessage dataMessage = (DataMessage) record.value();
+				final long messageOffset = record.offset();
+				lastOffsetRead = messageOffset;
 
-                // send request to DEALER socket
-                logDealer.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
-                logDealer.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
-                logDealer.send(dataMessage.toByteArray(), 0);
-                logger.debug("Dealt new log Data Message with uuid: {}", dataMessage.getMessageUuid());
+				// send request to DEALER socket
+				logDealer.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
+				logDealer.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
+				logDealer.send(dataMessage.toByteArray(), 0);
+				logger.debug("Dealt new log Data Message with uuid: {}", dataMessage.getMessageUuid());
 
-                // get next offset to poll
-						    if (skipWrittenOffsets) {
-                    Long nextOffset = nextOffset();
-                    if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
-                        logger.debug("Skipping received records. Jumping from offset: {} to: {}", lastOffsetRead,
-                          nextOffset);
-                        consumer.seek(topicPartition, nextOffset);
-                        break;
-                    }
-                }
-            }
+				// get next offset to poll
+				if (skipWrittenOffsets) {
+					Long nextOffset = nextOffset();
+					if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
+						logger.debug("Skipping received records. Jumping from offset: {} to: {}", lastOffsetRead,
+							nextOffset);
+						consumer.seek(topicPartition, nextOffset);
+						break;
+					}
+				}
+			}
 
-            // short pause, not to be eager
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-              break;
-            }
+			// short pause, not to be eager
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				break;
+			}
 
-            // get next offset to poll
-            if (skipWrittenOffsets) {
-                Long nextOffset = nextOffset();
-                if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
-                    logger.debug("Jumping from offset: {} to: {}", lastOffsetRead, nextOffset);
-                    consumer.seek(topicPartition, nextOffset);
-                }
-            }
-        }
+			// get next offset to poll
+			if (skipWrittenOffsets) {
+				Long nextOffset = nextOffset();
+				if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
+					logger.debug("Jumping from offset: {} to: {}", lastOffsetRead, nextOffset);
+					consumer.seek(topicPartition, nextOffset);
+				}
+			}
+		}
 
-        closeConnections();
-    }
+		closeConnections();
+	}
 
-    private Long nextOffset() {
-        if (logger.isTraceEnabled()) {
-            final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
-            logger.trace("in w/ lastOffsetRead = {}, and queue: {}", lastOffsetRead, queueStr);
-        }
+	private Long nextOffset() {
+		if (logger.isTraceEnabled()) {
+			final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
+			logger.trace("in w/ lastOffsetRead = {}, and queue: {}", lastOffsetRead, queueStr);
+		}
 
-        // initial candidate == last read + 1
-        Long nextToRead = lastOffsetRead + 1;
+		// initial candidate == last read + 1
+		Long nextToRead = lastOffsetRead + 1;
 
-        Long nextOffsetToSkip = skipOffsets.peek();
+		Long nextOffsetToSkip = skipOffsets.peek();
 
-        // clean up all possible offsets up to and including last read
-        while ((nextOffsetToSkip != null) && (nextOffsetToSkip < nextToRead)) {
-            skipOffsets.poll();
-            nextOffsetToSkip = skipOffsets.peek();
-        }
+		// clean up all possible offsets up to and including last read
+		while ((nextOffsetToSkip != null) && (nextOffsetToSkip < nextToRead)) {
+			skipOffsets.poll();
+			nextOffsetToSkip = skipOffsets.peek();
+		}
 
-        // while queue not empty, pop next offsets in sequence
-        while (nextToRead.equals(nextOffsetToSkip)) {
-            skipOffsets.poll();
-            nextToRead++;
-            nextOffsetToSkip = skipOffsets.peek();
-        }
+		// while queue not empty, pop next offsets in sequence
+		while (nextToRead.equals(nextOffsetToSkip)) {
+			skipOffsets.poll();
+			nextToRead++;
+			nextOffsetToSkip = skipOffsets.peek();
+		}
 
-        if (logger.isTraceEnabled()) {
-            final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
-            logger.trace("out w/ nextToRead = {} with lastOffsetRead = {}, and final queue: {}",
-                    nextToRead, lastOffsetRead, queueStr);
-        }
-        return nextToRead;
-    }
+		if (logger.isTraceEnabled()) {
+			final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
+			logger.trace("out w/ nextToRead = {} with lastOffsetRead = {}, and final queue: {}",
+				nextToRead, lastOffsetRead, queueStr);
+		}
+		return nextToRead;
+	}
 
-    @Override
-    protected void startUp() throws Exception {
-        openConnections();
-    }
+	@Override
+	protected void startUp() throws Exception {
+		openConnections();
+	}
 
-    @Override
-    protected void triggerShutdown() {
+	@Override
+	protected void triggerShutdown() {
 
-        logger.info("Data message reader shutting down.");
+		logger.info("Data message reader shutting down.");
 
-        //TODO: clean up, send uncommitted offset, etc.
-        acceptingConnections = false;
-    }
+		//TODO: clean up, send uncommitted offset, etc.
+		acceptingConnections = false;
+	}
 
-    @Override
-    protected void shutDown() {
+	@Override
+	protected void shutDown() {
 
-        logger.info("Data message reader shut down.");
-    }
+		logger.info("Data message reader shut down.");
+	}
 
-    protected void printDebugStats() {
-        logger.debug("--------STATS--------");
-        logger.debug("# of messages received from k-log: {}", messagesRcvd.get());
-        logger.debug("# polling nanoseconds: {}", totalPollingNanos.get());
-        logger.debug("# polls: {}", totalPolls.get());
-        logger.debug("-----END OF STATS-----");
-    }
+	protected void printDebugStats() {
+		logger.debug("--------STATS--------");
+		logger.debug("# of messages received from k-log: {}", messagesRcvd.get());
+		logger.debug("# polling nanoseconds: {}", totalPollingNanos.get());
+		logger.debug("# polls: {}", totalPolls.get());
+		logger.debug("-----END OF STATS-----");
+	}
 
-    @Override
-    public void acceptConnections(boolean acceptConnections) {
-        this.acceptingConnections = acceptConnections;
-    }
+	@Override
+	public void acceptConnections(boolean acceptConnections) {
+		this.acceptingConnections = acceptConnections;
+	}
 }

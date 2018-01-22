@@ -31,161 +31,161 @@ import zmq.ZError;
 @Singleton
 public class KafkaDataMessageWriter extends AbstractExecutionThreadService implements KafkaMessageWriter {
 
-    protected static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageWriter.class);
+	protected static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageWriter.class);
 
-    // kafka stuff
-    private KafkaProducer producer;
-    private final Properties producerProperties = new Properties();
+	// kafka stuff
+	private KafkaProducer producer;
+	private final Properties producerProperties = new Properties();
 
-    // zmq stuff
-    @Inject
-    private ZContext zmqContext;
-    private Socket subscriber;
-    private Socket offsetPublisher;
-    private final String outPubAddress, offsetPubAddress;
+	// zmq stuff
+	@Inject
+	private ZContext zmqContext;
+	private Socket subscriber;
+	private Socket offsetPublisher;
+	private final String outPubAddress, offsetPubAddress;
 
-    // zookeeper
-    @Inject
-    private PeerLogDirectory peerLogDirectory;
+	// zookeeper
+	@Inject
+	private PeerLogDirectory peerLogDirectory;
 
-    private boolean publishOffsets;
-    private LogInfo outLog, inLog;
-    private volatile boolean connectionsOpen = false;
-    private final AtomicInteger messagesSent = new AtomicInteger(0);
+	private boolean publishOffsets;
+	private LogInfo outLog, inLog;
+	private volatile boolean connectionsOpen = false;
+	private final AtomicInteger messagesSent = new AtomicInteger(0);
 
-    @Inject
-    public KafkaDataMessageWriter(@Named("key.serializer") String keySerializer,
-                                  @Named("value.serializer") String valueSerializer,
-                                  @Named("out.pub") String outPubAddress,
-                                  @Named("offset.pub") String offsetPubAddress) {
-        this.outPubAddress = outPubAddress;
-        this.offsetPubAddress = offsetPubAddress;
-        producerProperties.put("key.serializer", keySerializer);
-        producerProperties.put("value.serializer", valueSerializer);
-        logger.info("Initialized kafka message writer");
-    }
+	@Inject
+	public KafkaDataMessageWriter(@Named("key.serializer") String keySerializer,
+																@Named("value.serializer") String valueSerializer,
+																@Named("out.pub") String outPubAddress,
+																@Named("offset.pub") String offsetPubAddress) {
+		this.outPubAddress = outPubAddress;
+		this.offsetPubAddress = offsetPubAddress;
+		producerProperties.put("key.serializer", keySerializer);
+		producerProperties.put("value.serializer", valueSerializer);
+		logger.info("Initialized kafka message writer");
+	}
 
-    public void openConnections() {
+	public void openConnections() {
 
-        // start subscriber
-        this.subscriber = zmqContext.createSocket(ZMQ.SUB);
-        subscriber.bind(outPubAddress);
-        subscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
-        logger.info("Subscriber connected");
+		// start subscriber
+		this.subscriber = zmqContext.createSocket(ZMQ.SUB);
+		subscriber.bind(outPubAddress);
+		subscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
+		logger.info("Subscriber connected");
 
-        // start offsets publisher
-        if (publishOffsets) {
-            this.offsetPublisher = zmqContext.createSocket(ZMQ.PUB);
-            offsetPublisher.bind(offsetPubAddress);
-            logger.info("Publisher connected");
-        }
+		// start offsets publisher
+		if (publishOffsets) {
+			this.offsetPublisher = zmqContext.createSocket(ZMQ.PUB);
+			offsetPublisher.bind(offsetPubAddress);
+			logger.info("Publisher connected");
+		}
 
-        connectionsOpen = true;
-        logger.info("All connections open - except kafka producer");
-    }
+		connectionsOpen = true;
+		logger.info("All connections open - except kafka producer");
+	}
 
-    protected void closeConnections() {
-        if (producer != null) {
-            producer.close();
-        }
+	protected void closeConnections() {
+		if (producer != null) {
+			producer.close();
+		}
 
-        if (subscriber != null) {
-            subscriber.close();
-        }
+		if (subscriber != null) {
+			subscriber.close();
+		}
 
-        if (offsetPublisher != null) {
-            offsetPublisher.close();
-        }
+		if (offsetPublisher != null) {
+			offsetPublisher.close();
+		}
 
-        logger.info("All connections closed");
-    }
+		logger.info("All connections closed");
+	}
 
-    @Override
-    public void writeToLog(LogInfo outLog, LogInfo inLog, boolean publishOffsets) throws Exception {
+	@Override
+	public void writeToLog(LogInfo outLog, LogInfo inLog, boolean publishOffsets) throws Exception {
 
-        this.outLog = outLog;
-        this.inLog = inLog;
-        this.publishOffsets = publishOffsets;
-        producerProperties.put("bootstrap.servers", outLog.getBootstrapServers());
-        // start kafka writer
-        this.producer = new KafkaProducer<>(producerProperties);
-        logger.info("Will write to log: {}", outLog);
-    }
+		this.outLog = outLog;
+		this.inLog = inLog;
+		this.publishOffsets = publishOffsets;
+		producerProperties.put("bootstrap.servers", outLog.getBootstrapServers());
+		// start kafka writer
+		this.producer = new KafkaProducer<>(producerProperties);
+		logger.info("Will write to log: {}", outLog);
+	}
 
-    @Override
-    public void run() {
+	@Override
+	public void run() {
 
-        //wait for connections established
-        while (!connectionsOpen) {
-            try {
-                Thread.sleep(300);
-            } catch (InterruptedException e) {
-                //what to do
-            }
-        }
+		//wait for connections established
+		while (!connectionsOpen) {
+			try {
+				Thread.sleep(300);
+			} catch (InterruptedException e) {
+				//what to do
+			}
+		}
 
-        logger.debug("Starting to dispatch messages to kafka");
+		logger.debug("Starting to dispatch messages to kafka");
 
-        while (isRunning() && !Thread.interrupted()) {
+		while (isRunning() && !Thread.interrupted()) {
 
-            byte[] msg = null;
-            try {
-                msg = subscriber.recv();
-            } catch (ZMQException ex) {
-                int errorCode = ex.getErrorCode();
-                if (errorCode == ZError.ETERM) {
-                    logger.debug("Caught ETERM during blocking read. Breaking out.");
-                    break;
-                } else if (errorCode == ZError.EINTR) {
-                    logger.debug("Caught EINTR during blocking read. Breaking out.");
-                    break;
-                } else {
-                    throw ex;
-                }
-            }
+			byte[] msg = null;
+			try {
+				msg = subscriber.recv();
+			} catch (ZMQException ex) {
+				int errorCode = ex.getErrorCode();
+				if (errorCode == ZError.ETERM) {
+					logger.debug("Caught ETERM during blocking read. Breaking out.");
+					break;
+				} else if (errorCode == ZError.EINTR) {
+					logger.debug("Caught EINTR during blocking read. Breaking out.");
+					break;
+				} else {
+					throw ex;
+				}
+			}
 
-            DataMessage dataMessage = null;
-            try {
-                dataMessage = DataMessage.parseFrom(msg);
-            } catch (Exception e) {
-                logger.error("Caught exception parsing message", e);
-            }
+			DataMessage dataMessage = null;
+			try {
+				dataMessage = DataMessage.parseFrom(msg);
+			} catch (Exception e) {
+				logger.error("Caught exception parsing message", e);
+			}
 
-            // got a message
-            if (dataMessage != null) {
+			// got a message
+			if (dataMessage != null) {
 
-                // send to kafka immediately
-                sendToKafka(dataMessage);
-            }
-        }
+				// send to kafka immediately
+				sendToKafka(dataMessage);
+			}
+		}
 
-        closeConnections();
-    }
+		closeConnections();
+	}
 
-    private void sendToKafka(DataMessage message) {
-        logger.debug("sending new message with uuid: {}", message.getMessageUuid());
-        ProducerRecord newRecord = new ProducerRecord(outLog.getName(), message);
-        producer.send(newRecord, new MessageOffsetInformer(message, publishOffsets, offsetPublisher,
-          peerLogDirectory, inLog));
-        messagesSent.getAndIncrement();
-        logger.debug("new message sent with uuid: {} replying to message uuid: {}", message.getMessageUuid(),
-                message.getFollowingUuid());
-    }
+	private void sendToKafka(DataMessage message) {
+		logger.debug("sending new message with uuid: {}", message.getMessageUuid());
+		ProducerRecord newRecord = new ProducerRecord(outLog.getName(), message);
+		producer.send(newRecord, new MessageOffsetInformer(message, publishOffsets, offsetPublisher,
+			peerLogDirectory, inLog));
+		messagesSent.getAndIncrement();
+		logger.debug("new message sent with uuid: {} replying to message uuid: {}", message.getMessageUuid(),
+			message.getFollowingUuid());
+	}
 
-    @Override
-    protected void triggerShutdown() {
+	@Override
+	protected void triggerShutdown() {
 
-        logger.info("Data message writer shutting down.");
-    }
+		logger.info("Data message writer shutting down.");
+	}
 
-    @Override
-    protected void shutDown() throws Exception {
+	@Override
+	protected void shutDown() throws Exception {
 
-        logger.info("Data message writer shut down.");
-    }
+		logger.info("Data message writer shut down.");
+	}
 
-    @Override
-    protected void startUp() throws Exception {
-        openConnections();
-    }
+	@Override
+	protected void startUp() throws Exception {
+		openConnections();
+	}
 }
