@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator.messages.incoming;
+package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
@@ -23,7 +23,7 @@ import static org.junit.Assert.*;
  * - arrays
  * - objectrefs
  */
-public class SetInstanceVariableTest extends AbstractConcentratorTest {
+public class SetInstanceVariableMessageIT extends AbstractConcentratorTest {
 
   protected final String className = "com.ittera.cometa.apps.App";
 

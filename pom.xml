@@ -29,6 +29,7 @@
         <module>peer-serdes</module>
         <module>peer-cxn</module>
         <module>peer-core</module>
+        <module>peer-itt</module>
     </modules>
 
 </project>
