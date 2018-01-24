@@ -1,6 +1,5 @@
-package com.ittera.cometa.concentrator.messages.incoming;
+package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.messages.protobuf.data.Values;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -22,7 +21,7 @@ import static org.junit.Assert.*;
  * - varargs
  * - invoke constructor using constructor-ref (requires [ticket:15])
  */
-public class ConstructorTest extends AbstractConcentratorTest {
+public class ConstructorMessageIT extends AbstractConcentratorTest {
 
   protected final String className = "com.ittera.cometa.apps.App";
 

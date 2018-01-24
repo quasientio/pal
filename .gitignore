@@ -1,5 +1,6 @@
 /backup*
 files2backup
 target/
+codebase/
 .idea/
 *.iml

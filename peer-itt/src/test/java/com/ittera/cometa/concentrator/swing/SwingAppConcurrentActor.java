@@ -1,4 +1,4 @@
-package com.ittera.cometa;
+package com.ittera.cometa.concentrator.swing;
 
 import com.ittera.cometa.cxn.ThinPeer;
 import com.ittera.cometa.messages.DataMessageBuilder;

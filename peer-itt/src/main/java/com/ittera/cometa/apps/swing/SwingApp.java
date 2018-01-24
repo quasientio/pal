@@ -1,4 +1,4 @@
-package com.ittera.cometa.apps;
+package com.ittera.cometa.apps.swing;
 
 import javax.swing.*;
 

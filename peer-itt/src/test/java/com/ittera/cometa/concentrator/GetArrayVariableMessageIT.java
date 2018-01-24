@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator.messages.incoming;
+package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
@@ -20,7 +20,7 @@ import static org.junit.Assert.*;
  * TODO: introduce null values in 3rd test
  */
 
-public class GetArrayVariableTest extends AbstractConcentratorTest {
+public class GetArrayVariableMessageIT extends AbstractConcentratorTest {
 
   protected final String className = "com.ittera.cometa.apps.ArrayVars";
 
