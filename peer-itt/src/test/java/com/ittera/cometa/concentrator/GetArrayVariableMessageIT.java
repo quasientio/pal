@@ -1,6 +1,5 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Values;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -20,7 +19,7 @@ import static org.junit.Assert.*;
  * TODO: introduce null values in 3rd test
  */
 
-public class GetArrayVariableMessageIT extends AbstractConcentratorTest {
+public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
 
   protected final String className = "com.ittera.cometa.apps.ArrayVars";
 

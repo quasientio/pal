@@ -1,6 +1,5 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Values;
@@ -23,7 +22,7 @@ import static org.junit.Assert.*;
  * TODO:
  * - arrays
  */
-public class NonVoidInstanceMethodMessageIT extends AbstractConcentratorTest {
+public class NonVoidInstanceMethodMessageIT extends AbstractPeerIntegrationTest {
 
   protected final String className = "com.ittera.cometa.apps.App";
 
@@ -75,7 +74,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsObjectRefOfRightType(retValue, "java.util.List");
     //assertValueIsObjectRefOfRightType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
-    //TODO assert method in AbstractConcentratorTest should check also for interfaces
+    //TODO assert method in AbstractPeerIntegrationTest should check also for interfaces
 
     //TODO iterate through list and check values
 //    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
@@ -106,7 +105,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractConcentratorTest {
     Values.ReturnValue retValue = replyMsg.getReturnValue();
     assertValueIsObjectRefOfRightType(retValue, "java.util.List");
     //assertValueIsObjectRefOfRightType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
-    //TODO assert method in AbstractConcentratorTest should check also for interfaces
+    //TODO assert method in AbstractPeerIntegrationTest should check also for interfaces
 
     //TODO iterate through list and check values
 //    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());

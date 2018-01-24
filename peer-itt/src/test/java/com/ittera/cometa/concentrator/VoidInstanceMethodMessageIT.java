@@ -1,6 +1,5 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -20,7 +19,7 @@ import static org.junit.Assert.*;
  * - arrays
  *
  */
-public class VoidInstanceMethodMessageIT extends AbstractConcentratorTest {
+public class VoidInstanceMethodMessageIT extends AbstractPeerIntegrationTest {
 
   protected final String className = "com.ittera.cometa.apps.App";
 

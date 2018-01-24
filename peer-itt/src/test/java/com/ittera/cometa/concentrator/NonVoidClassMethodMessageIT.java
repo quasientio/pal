@@ -1,6 +1,5 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Values;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -23,7 +22,7 @@ import static org.junit.Assert.*;
  * - returns an array of objectRef's (of App'js)
  */
 
-public class NonVoidClassMethodMessageIT extends AbstractConcentratorTest {
+public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
   protected final String className = "com.ittera.cometa.apps.App";
 

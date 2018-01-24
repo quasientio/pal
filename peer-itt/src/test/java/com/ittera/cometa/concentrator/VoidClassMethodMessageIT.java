@@ -1,6 +1,5 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.junit.Test;
@@ -16,7 +15,7 @@ import static org.junit.Assert.*;
  * - with objectRef as arg
  * TODO we should check the calls worked: As these methods are void, we should store some value in a field of the target object and check it (+ revert it)
  */
-public class VoidClassMethodMessageIT extends AbstractConcentratorTest {
+public class VoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
   protected final String className = "com.ittera.cometa.apps.App";
 
