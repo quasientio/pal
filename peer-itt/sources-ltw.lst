@@ -1,4 +1,4 @@
 -sourceroots
 src/main/aspectj/com/ittera/cometa
 -d
-target/classes
+../codebase

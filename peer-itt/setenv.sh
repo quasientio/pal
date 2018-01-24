@@ -1,0 +1,4 @@
+WORKING_DIR=`pwd`
+
+export CLASSPATH
+export PATH=$WORKING_DIR/bin:$PATH

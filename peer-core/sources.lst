@@ -1,4 +1,0 @@
--sourceroots
-src/main/aspectj/com/ittera/cometa:src/test/java/com/ittera/cometa/apps
--d
-target/classes
