@@ -33,7 +33,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -46,7 +46,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof boolean[]);
@@ -63,7 +63,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof boolean[]);
@@ -82,7 +82,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -95,7 +95,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof byte[]);
@@ -112,7 +112,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof byte[]);
@@ -131,7 +131,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -144,7 +144,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof short[]);
@@ -161,7 +161,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof short[]);
@@ -180,7 +180,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -193,7 +193,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof char[]);
@@ -210,7 +210,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof char[]);
@@ -229,7 +229,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -242,7 +242,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof int[]);
@@ -259,7 +259,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof int[]);
@@ -278,7 +278,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -291,7 +291,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof long[]);
@@ -308,7 +308,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof long[]);
@@ -327,7 +327,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -340,7 +340,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof float[]);
@@ -357,7 +357,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof float[]);
@@ -376,7 +376,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -389,7 +389,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof double[]);
@@ -406,7 +406,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof double[]);
@@ -427,7 +427,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -440,7 +440,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Boolean[]);
@@ -457,7 +457,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Boolean[]);
@@ -476,7 +476,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -489,7 +489,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Byte[]);
@@ -506,7 +506,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Byte[]);
@@ -525,7 +525,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -538,7 +538,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Short[]);
@@ -555,7 +555,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Short[]);
@@ -574,7 +574,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -587,7 +587,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Character[]);
@@ -604,7 +604,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Character[]);
@@ -623,7 +623,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -636,7 +636,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer[]);
@@ -653,7 +653,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer[]);
@@ -672,7 +672,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -685,7 +685,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Long[]);
@@ -702,7 +702,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Long[]);
@@ -721,7 +721,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -734,7 +734,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Float[]);
@@ -751,7 +751,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Float[]);
@@ -770,7 +770,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -783,7 +783,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Double[]);
@@ -800,7 +800,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Double[]);
@@ -819,7 +819,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, fieldClassName);
+    assertValueIsNullArrayOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -832,7 +832,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String[]);
@@ -849,7 +849,7 @@ public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, fieldClassName);
+    assertValueIsArrayOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String[]);

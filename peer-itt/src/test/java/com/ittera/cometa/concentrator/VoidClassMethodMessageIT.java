@@ -100,7 +100,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
     String listObjRef = replyMsg.getReturnValue().getObject().getRef();
 
     assertTrue(replyMsg.hasReturnValue());
-    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), "java.util.ArrayList");
+    assertValueIsObjectRefOfType(replyMsg.getReturnValue(), "java.util.ArrayList");
 
     //add some int's
     int[] someInts = {39,5,58,32,70, 42};

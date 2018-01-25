@@ -41,7 +41,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, param.getClass().getName());
+    assertValueIsObjectOfType(retValue, param.getClass().getName());
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
@@ -61,7 +61,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName());
+    assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
@@ -79,7 +79,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
     String listObjRef = replyMsg.getReturnValue().getObject().getRef();
 
     assertTrue(replyMsg.hasReturnValue());
-    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), "java.util.ArrayList");
+    assertValueIsObjectRefOfType(replyMsg.getReturnValue(), "java.util.ArrayList");
 
     //add some int's
     int[] someInts = {39, 5, 58, 32, 70, 42};
@@ -104,7 +104,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName());
+    assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
@@ -125,7 +125,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullObjectOfRightType(retValue, "java.lang.Object");
+    assertValueIsNullObjectOfType(retValue, "java.lang.Object");
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
@@ -146,7 +146,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, shouldReturn.getClass().getName());
+    assertValueIsArrayOfType(retValue, shouldReturn.getClass().getName());
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertArrayEquals(shouldReturn, (char[]) rawObj);
@@ -167,7 +167,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, shouldReturn.getClass().getName());
+    assertValueIsArrayOfType(retValue, shouldReturn.getClass().getName());
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertArrayEquals(shouldReturn, (Long[]) rawObj);
@@ -187,7 +187,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfRightType(retValue, "[Ljava.lang.Boolean;");
+    assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Boolean;");
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertArrayEquals(shouldReturn, (Boolean[]) rawObj);
@@ -206,7 +206,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectRefOfRightType(retValue, className);
+    assertValueIsObjectRefOfType(retValue, className);
 
     //with a 2nd call we should get the same App instance objectRef, let's make sure
     String appRef = retValue.getObject().getRef();
@@ -216,7 +216,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
     assertTrue(replyMsg.hasReturnValue());
     retValue = replyMsg.getReturnValue();
-    assertValueIsObjectRefOfRightType(retValue, className);
+    assertValueIsObjectRefOfType(retValue, className);
 
     String secondAppRef = retValue.getObject().getRef();
     assertEquals(appRef, secondAppRef);
@@ -231,7 +231,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer);
@@ -251,7 +251,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfRightType(retValue, String.format("[L%s;", className));
+    assertValueIsArrayOfType(retValue, String.format("[L%s;", className));
 
     //TODO make sure each element is an objectRef, and compare values of two of them
 

@@ -55,7 +55,7 @@ public class SetClassVariableMessageIT extends AbstractPeerIntegrationTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfType(retValue, fieldClassName);
 
     rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer);
@@ -104,7 +104,7 @@ public class SetClassVariableMessageIT extends AbstractPeerIntegrationTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfType(retValue, fieldClassName);
 
     rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String);

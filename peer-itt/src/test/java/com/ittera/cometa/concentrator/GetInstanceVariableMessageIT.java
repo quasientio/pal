@@ -50,7 +50,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerIntegrationTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer);
@@ -72,7 +72,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerIntegrationTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
+    assertValueIsNullObjectOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -91,7 +91,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerIntegrationTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String);
@@ -114,7 +114,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerIntegrationTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
+    assertValueIsNullObjectOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -132,7 +132,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerIntegrationTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
+    assertValueIsNullObjectOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -151,7 +151,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerIntegrationTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Boolean);
@@ -174,7 +174,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerIntegrationTest {
     replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Short);

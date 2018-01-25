@@ -46,7 +46,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerIntegrationTest 
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName());
+    assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
@@ -72,8 +72,8 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerIntegrationTest 
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectRefOfRightType(retValue, "java.util.List");
-    //assertValueIsObjectRefOfRightType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
+    assertValueIsObjectRefOfType(retValue, "java.util.List");
+    //assertValueIsObjectRefOfType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
     //TODO assert method in AbstractPeerIntegrationTest should check also for interfaces
 
     //TODO iterate through list and check values
@@ -103,8 +103,8 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerIntegrationTest 
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectRefOfRightType(retValue, "java.util.List");
-    //assertValueIsObjectRefOfRightType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
+    assertValueIsObjectRefOfType(retValue, "java.util.List");
+    //assertValueIsObjectRefOfType(retValue, shouldReturn.getClass().getName()); <-- fails because it returns List<>, not ArrayList<>
     //TODO assert method in AbstractPeerIntegrationTest should check also for interfaces
 
     //TODO iterate through list and check values
@@ -123,7 +123,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerIntegrationTest 
     String listObjRef = replyMsg.getReturnValue().getObject().getRef();
 
     assertTrue(replyMsg.hasReturnValue());
-    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), "java.util.ArrayList");
+    assertValueIsObjectRefOfType(replyMsg.getReturnValue(), "java.util.ArrayList");
 
     //add some int's to the list
     int[] someInts = {1, 2, 3, 5, 7, 9};
@@ -153,7 +153,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerIntegrationTest 
 
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, shouldReturn.getClass().getName());
+    assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
 
     //assert the value returned is correct
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());

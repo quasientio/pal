@@ -8,8 +8,7 @@ import static org.junit.Assert.*;
 public class PeerMessageAssertions {
 
 	/**
-	 * Helper assertion methods
-	 * This method is also useful as it encapsulates details of the protobuf serialization
+	 * Helper assertion methods. Encapsulates details of the protobuf serialization.
 	 *
 	 * @param returnValue
 	 * @param className
@@ -17,7 +16,8 @@ public class PeerMessageAssertions {
 	 * @param isNull
 	 * @param isArray
 	 */
-	private void isObjectOfRightType(ReturnValue returnValue, String className, boolean hasObjRef, boolean isNull, boolean isArray) {
+	private void assertIsObjectOfType(ReturnValue returnValue, String className, boolean hasObjRef, boolean isNull,
+																		boolean isArray) {
 		assertFalse(returnValue.getIsVoid());
 		assertFalse(returnValue.getIsClass());
 		assertTrue(returnValue.hasClazz());
@@ -34,24 +34,24 @@ public class PeerMessageAssertions {
 
 	}
 
-	protected void assertValueIsObjectOfRightType(ReturnValue returnValue, String className) {
-		isObjectOfRightType(returnValue, className, true, false, false);
+	protected void assertValueIsObjectOfType(ReturnValue returnValue, String className) {
+		assertIsObjectOfType(returnValue, className, true, false, false);
 	}
 
-	protected void assertValueIsObjectRefOfRightType(ReturnValue returnValue, String className) {
-		isObjectOfRightType(returnValue, className, true, false, false);
+	protected void assertValueIsObjectRefOfType(ReturnValue returnValue, String className) {
+		assertIsObjectOfType(returnValue, className, true, false, false);
 	}
 
-	protected void assertValueIsArrayOfRightType(ReturnValue returnValue, String className) {
-		isObjectOfRightType(returnValue, className, true, false, true);
+	protected void assertValueIsArrayOfType(ReturnValue returnValue, String className) {
+		assertIsObjectOfType(returnValue, className, true, false, true);
 	}
 
-	protected void assertValueIsNullObjectOfRightType(ReturnValue returnValue, String className) {
-		isObjectOfRightType(returnValue, className, false, true, false);
+	protected void assertValueIsNullObjectOfType(ReturnValue returnValue, String className) {
+		assertIsObjectOfType(returnValue, className, false, true, false);
 	}
 
-	protected void assertValueIsNullArrayOfRightType(ReturnValue returnValue, String className) {
-		isObjectOfRightType(returnValue, className, false, true, true);
+	protected void assertValueIsNullArrayOfType(ReturnValue returnValue, String className) {
+		assertIsObjectOfType(returnValue, className, false, true, true);
 	}
 
 }

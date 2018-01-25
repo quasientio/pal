@@ -39,7 +39,7 @@ public class GetClassVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof String);
@@ -56,7 +56,7 @@ public class GetClassVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
+    assertValueIsNullObjectOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -70,7 +70,7 @@ public class GetClassVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Integer);
@@ -87,7 +87,7 @@ public class GetClassVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
+    assertValueIsNullObjectOfType(retValue, fieldClassName);
   }
 
   @Test
@@ -101,7 +101,7 @@ public class GetClassVariableMessageIT extends AbstractPeerIntegrationTest {
     DataMessage replyMsg = sendAndReceive(requestMsg);
     assertTrue(replyMsg.hasReturnValue());
     Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+    assertValueIsObjectOfType(retValue, fieldClassName);
 
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(rawObj instanceof Boolean);
