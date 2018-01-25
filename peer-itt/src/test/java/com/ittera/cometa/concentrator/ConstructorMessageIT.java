@@ -1,6 +1,5 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.messages.protobuf.data.Values;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import com.ittera.cometa.apps.Constructors;
@@ -11,18 +10,46 @@ import static org.junit.Assert.*;
 
 /**
  * Naming convention to use: methodName_stateUnderTest_expectedBehavior
- *
- * <p>
- * TODO
+ * TODO:
  * - varargs constructor
  * - constructor that takes Object, passing a Constructors instance. This will test ReflectionHelper,
- *   as it should invoke the more specific constructor (the one taking Constructors type, not Object type)
+ * as it should invoke the more specific constructor (the one taking Constructors type, not Object type)
  * - invoke constructor using constructor-ref (requires [ticket:15])
  * - constructor throwing exception
+ * - inner constructor (commented out below), if it makes sense
  */
 public class ConstructorMessageIT extends AbstractPeerIntegrationTest {
 
 	protected final String className = "com.ittera.cometa.apps.Constructors";
+
+	private DataMessage callConstructor(String className, Class[] parameterTypes, Object[] args,
+																			String[] argObjRefs) throws Exception {
+
+		String[] parameterTypesNamesArray = new String[parameterTypes.length];
+		for (int i = 0; i < parameterTypes.length; i++) {
+			parameterTypesNamesArray[i] = parameterTypes[i].getName();
+		}
+
+		DataMessage replyMsg = sendAndReceive(dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray,
+			args, argObjRefs));
+
+		// basic assertions
+		assertTrue(replyMsg.hasReturnValue());
+		assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
+
+		return replyMsg;
+	}
+
+	private DataMessage callConstructor(String className) throws Exception {
+
+		DataMessage replyMsg = sendAndReceive(dataMessageBuilder.buildEmptyConstructor(clientId, className));
+
+		// basic assertions
+		assertTrue(replyMsg.hasReturnValue());
+		assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
+
+		return replyMsg;
+	}
 
 	/**
 	 * Explained here why won't pass
@@ -32,21 +59,13 @@ public class ConstructorMessageIT extends AbstractPeerIntegrationTest {
 	public void innerConstructor() throws Exception {
 
 		String className = "com.ittera.cometa.apps.Constructors$Empty";
-		DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
-
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
+		callConstructor(className);
 	}
 
 	@Test
 	public void constructor_publicNoArgs_newObjectReturned() throws Exception {
 
-		DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
-
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
+		callConstructor(className);
 	}
 
 	@Test
@@ -56,16 +75,7 @@ public class ConstructorMessageIT extends AbstractPeerIntegrationTest {
 		String[] argRefs = {null};
 		Class[] parameterTypes = new Class[]{Integer.class};
 
-		String[] parameterTypesNamesArray = new String[parameterTypes.length];
-		for (int i = 0; i < parameterTypes.length; i++) {
-			parameterTypesNamesArray[i] = parameterTypes[i].getName();
-		}
-
-		DataMessage requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
-
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
+		callConstructor(className, parameterTypes, args, argRefs);
 	}
 
 	@Test
@@ -75,16 +85,7 @@ public class ConstructorMessageIT extends AbstractPeerIntegrationTest {
 		String[] argRefs = {null, null};
 		Class[] parameterTypes = new Class[]{String.class, Integer.class};
 
-		String[] parameterTypesNamesArray = new String[parameterTypes.length];
-		for (int i = 0; i < parameterTypes.length; i++) {
-			parameterTypesNamesArray[i] = parameterTypes[i].getName();
-		}
-
-		DataMessage requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
-
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
+		callConstructor(className, parameterTypes, args, argRefs);
 	}
 
 	@Test
@@ -94,17 +95,7 @@ public class ConstructorMessageIT extends AbstractPeerIntegrationTest {
 		String[] argRefs = {null};
 		Class[] parameterTypes = new Class[]{Integer.class};
 
-		String[] parameterTypesNamesArray = new String[parameterTypes.length];
-
-		for (int i = 0; i < parameterTypes.length; i++) {
-			parameterTypesNamesArray[i] = parameterTypes[i].getName();
-		}
-
-		DataMessage requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
-
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
+		callConstructor(className, parameterTypes, args, argRefs);
 	}
 
 	@Test
@@ -114,46 +105,23 @@ public class ConstructorMessageIT extends AbstractPeerIntegrationTest {
 		String[] argRefs = {null};
 		Class[] parameterTypes = new Class[]{String[].class};
 
-		String[] parameterTypesNamesArray = new String[parameterTypes.length];
-		for (int i = 0; i < parameterTypes.length; i++) {
-			parameterTypesNamesArray[i] = parameterTypes[i].getName();
-		}
-
-		DataMessage requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
-
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
+		callConstructor(className, parameterTypes, args, argRefs);
 	}
 
 	@Test
 	public void constructor_protectedOneArgRef_newObjectReturned() throws Exception {
 
 		//1. Construct an instance calling no-args constructor
-		DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
+		DataMessage replyMsg = callConstructor(className);
 
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
-		Values.ReturnValue retValue = replyMsg.getReturnValue();
-		String newObjRef = retValue.getObject().getRef();
+		String newObjRef = replyMsg.getReturnValue().getObject().getRef();
 
 		//2. Construct an instance calling the constructor that takes another instance as arg
-
 		Object[] args = {null};
 		String[] argRefs = {newObjRef};
 		Class[] parameterTypes = new Class[]{Constructors.class};
 
-		String[] parameterTypesNamesArray = new String[parameterTypes.length];
-		for (int i = 0; i < parameterTypes.length; i++) {
-			parameterTypesNamesArray[i] = parameterTypes[i].getName();
-		}
-
-		requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
-		replyMsg = sendAndReceive(requestMsg);
-
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
+		callConstructor(className, parameterTypes, args, argRefs);
 	}
 
 }
