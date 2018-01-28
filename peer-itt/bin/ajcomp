@@ -6,4 +6,4 @@ if [[ $1 = '-ltw' ]]; then
 	SOURCES=sources-ltw.lst
 fi
 
-ajc -1.7 -argfile $SOURCES
+ajc -1.8 -argfile $SOURCES
