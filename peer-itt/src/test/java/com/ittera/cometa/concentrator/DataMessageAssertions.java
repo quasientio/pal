@@ -5,7 +5,7 @@ import com.ittera.cometa.messages.protobuf.data.Primitives;
 
 import static org.junit.Assert.*;
 
-public class PeerMessageAssertions {
+public class DataMessageAssertions {
 
 	/**
 	 * Helper assertion methods. Encapsulates details of the protobuf serialization.

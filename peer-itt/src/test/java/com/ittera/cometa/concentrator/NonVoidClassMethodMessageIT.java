@@ -1,261 +1,197 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Values;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.junit.Test;
+
+import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
 /**
- * Coverage:
- * ---------
- * - private with arg, returns String
- * - protected with no args, returns Integer
- * - public with List as arg, returns Integer
- * - public returns null Object
- * - package returns char (primitive) array
- * - returns an empty Long array
- * - returns a null Boolean array
- * - returns an objectRef (of App)
- * - returns an array of objectRef's (of App'js)
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * <p>
+ * TODO:
+ * - returningObjectRefArray() commented out below
  */
+public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
+
+	protected final String className = "com.ittera.cometa.apps.NonVoidStaticMethods";
+
+	@Test
+	public void privateWithArg() throws Exception {
 
-public class NonVoidClassMethodMessageIT extends AbstractPeerIntegrationTest {
+		String methodName = "testNonVoidStatic";
 
-  protected final String className = "com.ittera.cometa.apps.App";
+		String param = "GIVE ME THIS IN LOWERCASE";
+		Object[] parameters = new Object[]{param};
+		String[] parameterTypes = new String[]{param.getClass().getName()};
+		String[] paramObjRefs = new String[parameters.length];
+		String shouldReturn = param.toLowerCase();
 
-  @Test
-  public void privateWithArg() throws Exception {
+		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs);
 
-    String methodName = "testNonVoidStatic";
+		// test returned value
+		assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertEquals(shouldReturn, rawObj);
+	}
+
+	@Test
+	public void protectedNoArgs() throws Exception {
+
+		String methodName = "highFive";
 
-    String param = "GIVE ME THIS IN LOWERCASE";
-    Object[] parameters = new Object[]{param};
-    String[] parameterTypes = new String[]{param.getClass().getName()};
-    String shouldReturn = param.toLowerCase();
+		String[] parameterTypes = new String[]{};
+		Object[] parameters = new Object[]{};
+		String[] paramObjRefs = new String[parameters.length];
+		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs);
 
-    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
+		// test returned value
+		Integer shouldReturn = 5;
+		assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertEquals(shouldReturn, rawObj);
+	}
+
+	@Test
+	public void returnsIntegerSum() throws Exception {
+
+		String methodName = "nonVoidSumUpList";
 
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfType(retValue, param.getClass().getName());
+		// new ArrayList<Integer>
+		String listObjRef = callConstructor("java.util.ArrayList").getObject().getRef();
 
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertEquals(shouldReturn, rawObj);
-  }
+		// add some int's
+		int[] someInts = {39, 5, 58, 32, 70, 42};
+		for (int i = 0; i < someInts.length; i++) {
+			callInstanceMethod("java.util.ArrayList", "add", listObjRef,
+				new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[someInts.length]);
+		}
 
-  @Test
-  public void protectedNoArgs() throws Exception {
+		// call method
+		String[] parameterTypes = new String[]{"java.util.ArrayList"};
+		Object[] params = new Object[parameterTypes.length];
+		String[] objRefs = new String[]{listObjRef};
+		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, params, objRefs);
 
-    String methodName = "highFive";
+		// test returned value
+		Integer shouldReturn = Arrays.stream(someInts).reduce(0, Integer::sum);
+		assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertEquals(shouldReturn, rawObj);
+	}
 
-    String[] parameterTypes = new String[]{};
-    Object[] parameters = new Object[]{};
-    Integer shouldReturn = 5;
 
-    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
+	@Test
+	public void returningNullObject() throws Exception {
 
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
+		String methodName = "giveMeANull";
 
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertEquals(shouldReturn, rawObj);
-  }
+		// call method
+		String[] parameterTypes = new String[]{};
+		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes,
+			new Object[parameterTypes.length], new String[parameterTypes.length]);
 
-  @Test
-  public void returnsIntegerSum() throws Exception {
+		// test returned value
+		assertValueIsNullObjectOfType(retValue, "java.lang.Object");
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertEquals(null, rawObj);
+	}
 
-    String methodName = "nonVoidSumUpList";
-    String className = "com.ittera.cometa.apps.StaticMethods";
+	@Test
+	public void returningCharArray() throws Exception {
 
-    //new ArrayList<Integer>
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, "java.util.ArrayList");
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    String listObjRef = replyMsg.getReturnValue().getObject().getRef();
+		String methodName = "toCharArray";
 
-    assertTrue(replyMsg.hasReturnValue());
-    assertValueIsObjectRefOfType(replyMsg.getReturnValue(), "java.util.ArrayList");
+		// call method
+		String param = "split me up";
+		String[] parameterTypes = new String[]{param.getClass().getName()};
+		Object[] parameters = new Object[]{param};
+		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters,
+			new String[parameterTypes.length]);
 
-    //add some int's
-    int[] someInts = {39, 5, 58, 32, 70, 42};
-    for (int i = 0; i < someInts.length; i++) {
-      requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, "java.util.ArrayList", "add",
-        listObjRef, new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[someInts.length]);
-      replyMsg = sendAndReceive(requestMsg);
-    }
+		// test returned value
+		char[] shouldReturn = param.toCharArray();
+		assertValueIsArrayOfType(retValue, shouldReturn.getClass().getName());
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertArrayEquals(shouldReturn, (char[]) rawObj);
+	}
 
-    //call method
-    String[] parameterTypes = new String[]{"java.util.ArrayList"};
-    String[] objRefs = new String[]{listObjRef};
-    int sum = 0;
-    for (int i = 0; i < someInts.length; i++) {
-      sum += someInts[i];
-    }
-    Integer shouldReturn = Integer.valueOf(sum);
 
-    requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes,
-      new Object[parameterTypes.length], objRefs);
-    replyMsg = sendAndReceive(requestMsg);
+	@Test
+	public void returningEmptyArray() throws Exception {
 
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
+		String methodName = "giveMeAnEmptyLongArray";
 
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertEquals(shouldReturn, rawObj);
-  }
+		// call method
+		String[] parameterTypes = new String[]{};
+		Object[] parameters = new Object[]{};
+		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters,
+			new String[parameterTypes.length]);
 
+		// test returned value
+		Long[] shouldReturn = new Long[]{};
+		assertValueIsArrayOfType(retValue, shouldReturn.getClass().getName());
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertArrayEquals(shouldReturn, (Long[]) rawObj);
+	}
 
-  @Test
-  public void returningNullObject() throws Exception {
+	@Test
+	public void returningNullArray() throws Exception {
 
-    String methodName = "giveMeANull";
+		String methodName = "giveMeANullBoolArray";
 
-    String[] parameterTypes = new String[]{};
-    Object[] parameters = new Object[]{};
-    Object shouldReturn = null;
+		// call method
+		String[] parameterTypes = new String[]{};
+		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes,
+			new Object[parameterTypes.length], new String[parameterTypes.length]);
 
-    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
+		// test returned value
+		Boolean[] shouldReturn = null;
+		assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Boolean;");
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertArrayEquals(shouldReturn, (Boolean[]) rawObj);
+	}
 
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullObjectOfType(retValue, "java.lang.Object");
+	@Test
+	public void returningObjectRef() throws Exception {
 
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertEquals(shouldReturn, rawObj);
-  }
+		String methodName = "fetchMeAThreadSingleton";
 
-  @Test
-  public void returningCharArray() throws Exception {
+		String[] parameterTypes = new String[]{};
+		Object[] parameters = new Object[]{};
 
-    String methodName = "toCharArray";
+		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters,
+			new String[parameterTypes.length]);
 
-    String param = "split me up";
-    String[] parameterTypes = new String[]{param.getClass().getName()};
-    Object[] parameters = new Object[]{param};
-    char[] shouldReturn = param.toCharArray();
+		// test returned value
+		assertValueIsObjectRefOfType(retValue, "java.lang.Thread");
 
-    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
+		// because field is a singleton, with a 2nd call we should get the same instance objectRef, let's make sure
+		String appRef = retValue.getObject().getRef();
 
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, shouldReturn.getClass().getName());
+		retValue = callClassMethod(className, methodName, parameterTypes, parameters,
+			new String[parameterTypes.length]);
 
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertArrayEquals(shouldReturn, (char[]) rawObj);
-  }
+		// test returned value
+		assertValueIsObjectRefOfType(retValue, "java.lang.Thread");
+		String secondAppRef = retValue.getObject().getRef();
+		assertEquals(appRef, secondAppRef);
+	}
 
+	//	@Test
+	public void returningObjectRefArray() throws Exception {
 
-  @Test
-  public void returningEmptyArray() throws Exception {
+		String methodName = "fetchMeAThreadArray";
 
-    String methodName = "giveMeAnEmptyLongArray";
+		String[] parameterTypes = new String[]{};
 
-    String[] parameterTypes = new String[]{};
-    Object[] parameters = new Object[]{};
-    Long[] shouldReturn = new Long[]{};
+		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes,
+			new Object[parameterTypes.length], new String[parameterTypes.length]);
 
-    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, shouldReturn.getClass().getName());
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertArrayEquals(shouldReturn, (Long[]) rawObj);
-  }
-
-  @Test
-  public void returningNullArray() throws Exception {
-
-    String methodName = "giveMeANullBoolArray";
-
-    String[] parameterTypes = new String[]{};
-    Object[] parameters = new Object[]{};
-    Boolean[] shouldReturn = (Boolean[]) null;
-
-    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Boolean;");
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertArrayEquals(shouldReturn, (Boolean[]) rawObj);
-  }
-
-  @Test
-  public void returningObjectRef() throws Exception {
-
-    String methodName = "fetchMeAnApp";
-
-    String[] parameterTypes = new String[]{};
-    Object[] parameters = new Object[]{};
-
-    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectRefOfType(retValue, className);
-
-    //with a 2nd call we should get the same App instance objectRef, let's make sure
-    String appRef = retValue.getObject().getRef();
-
-    requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
-    replyMsg = sendAndReceive(requestMsg);
-
-    assertTrue(replyMsg.hasReturnValue());
-    retValue = replyMsg.getReturnValue();
-    assertValueIsObjectRefOfType(retValue, className);
-
-    String secondAppRef = retValue.getObject().getRef();
-    assertEquals(appRef, secondAppRef);
-
-    //OK, so we got an App instance objref, let's get some field value
-
-    String fieldName = "anInt";
-    String fieldClassName = "java.lang.Integer";
-    Integer originalValue = 4;
-
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, appRef);
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Integer);
-    assertEquals(originalValue, rawObj);
-  }
-
-//  @Test
-  public void returningObjectRefArray() throws Exception {
-
-    String methodName = "fetchMeAnAppArray";
-
-    String[] parameterTypes = new String[]{};
-    Object[] parameters = new Object[]{};
-
-    DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, String.format("[L%s;", className));
-
-    //TODO make sure each element is an objectRef, and compare values of two of them
-
-  }
-
+		assertValueIsArrayOfType(retValue, String.format("[L%s;", "java.lang.Thread"));
+	}
 }
 

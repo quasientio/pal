@@ -9,6 +9,8 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ *
  * Coverage:
  * ---------
  * Arrays of Primitives. For each type, there are 3 tests:
@@ -19,7 +21,7 @@ import static org.junit.Assert.*;
  * TODO: introduce null values in 3rd test
  */
 
-public class GetArrayVariableMessageIT extends AbstractPeerIntegrationTest {
+public class GetArrayVariableMessageIT extends AbstractPeerMessageIT {
 
   protected final String className = "com.ittera.cometa.apps.ArrayVars";
 

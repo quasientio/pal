@@ -1,15 +1,12 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
-
 import com.ittera.cometa.apps.Constructors;
 
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
 /**
  * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * <p>
  * TODO:
  * - varargs constructor
  * - constructor that takes Object, passing a Constructors instance. This will test ReflectionHelper,
@@ -18,38 +15,9 @@ import static org.junit.Assert.*;
  * - constructor throwing exception
  * - inner constructor (commented out below), if it makes sense
  */
-public class ConstructorMessageIT extends AbstractPeerIntegrationTest {
+public class ConstructorMessageIT extends AbstractPeerMessageIT {
 
 	protected final String className = "com.ittera.cometa.apps.Constructors";
-
-	private DataMessage callConstructor(String className, Class[] parameterTypes, Object[] args,
-																			String[] argObjRefs) throws Exception {
-
-		String[] parameterTypesNamesArray = new String[parameterTypes.length];
-		for (int i = 0; i < parameterTypes.length; i++) {
-			parameterTypesNamesArray[i] = parameterTypes[i].getName();
-		}
-
-		DataMessage replyMsg = sendAndReceive(dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray,
-			args, argObjRefs));
-
-		// basic assertions
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
-
-		return replyMsg;
-	}
-
-	private DataMessage callConstructor(String className) throws Exception {
-
-		DataMessage replyMsg = sendAndReceive(dataMessageBuilder.buildEmptyConstructor(clientId, className));
-
-		// basic assertions
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
-
-		return replyMsg;
-	}
 
 	/**
 	 * Explained here why won't pass
@@ -112,9 +80,7 @@ public class ConstructorMessageIT extends AbstractPeerIntegrationTest {
 	public void constructor_protectedOneArgRef_newObjectReturned() throws Exception {
 
 		//1. Construct an instance calling no-args constructor
-		DataMessage replyMsg = callConstructor(className);
-
-		String newObjRef = replyMsg.getReturnValue().getObject().getRef();
+		String newObjRef = callConstructor(className).getObject().getRef();
 
 		//2. Construct an instance calling the constructor that takes another instance as arg
 		Object[] args = {null};
@@ -123,5 +89,4 @@ public class ConstructorMessageIT extends AbstractPeerIntegrationTest {
 
 		callConstructor(className, parameterTypes, args, argRefs);
 	}
-
 }
