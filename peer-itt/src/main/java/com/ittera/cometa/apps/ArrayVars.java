@@ -1,9 +1,7 @@
 package com.ittera.cometa.apps;
 
 /**
- * NOTE THAT UNIT TESTS in com.ittera.cometa.concentrator.messages.incoming are dependant on this class and
- * some tests have hard-coded some of the values in this class, so corresponding tests must be KEPT IN SYNC
- * when applying changes here.
+ * NOTE THAT INTEGRATION TESTS are dependant on this class
  */
 public class ArrayVars {
 

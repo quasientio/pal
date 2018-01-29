@@ -1,121 +1,92 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.messages.protobuf.data.Values;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
-
-import com.ittera.cometa.apps.App;
+import com.ittera.cometa.apps.Constructors;
 
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
- * Coverage:
- * ---------
- * - public no args
- * - public with args
- * - null as arg
- * - objectref as arg
- * - private with array as arg
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior
  * <p>
- * TODO
- * - varargs
+ * TODO:
+ * - varargs constructor
+ * - constructor that takes Object, passing a Constructors instance. This will test ReflectionHelper,
+ * as it should invoke the more specific constructor (the one taking Constructors type, not Object type)
  * - invoke constructor using constructor-ref (requires [ticket:15])
+ * - constructor throwing exception
+ * - inner constructor (commented out below), if it makes sense
  */
-public class ConstructorMessageIT extends AbstractConcentratorTest {
+public class ConstructorMessageIT extends AbstractPeerMessageIT {
 
-  protected final String className = "com.ittera.cometa.apps.App";
+	protected final String className = "com.ittera.cometa.apps.Constructors";
 
-  @Test
-  public void publicEmptyConstructor() throws Exception {
+	/**
+	 * Explained here why won't pass
+	 * https://stackoverflow.com/questions/32301892/nosuchmethodexception-for-public-no-argument-constructor-in-inner-class
+	 */
+	//@Test
+	public void innerConstructor() throws Exception {
 
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
+		String className = "com.ittera.cometa.apps.Constructors$Empty";
+		callConstructor(className);
+	}
 
-    assertTrue(replyMsg.hasReturnValue());
-    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
-  }
+	@Test
+	public void constructor_publicNoArgs_newObjectReturned() throws Exception {
 
-  @Test
-  public void publicNonEmptyConstructor() throws Exception {
+		callConstructor(className);
+	}
 
-    Object[] args = {"Constructing an app", Integer.valueOf(5)};
-    String[] argRefs = {null, null};
-    Class[] parameterTypes = new Class[]{String.class, Integer.class};
-    String[] parameterTypesNamesArray = new String[parameterTypes.length];
-    for (int i = 0; i < parameterTypes.length; i++) {
-      parameterTypesNamesArray[i] = parameterTypes[i].getName();
-    }
+	@Test
+	public void constructor_publicOneArg_newObjectReturned() throws Exception {
 
-    DataMessage requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
+		Object[] args = {Integer.valueOf(5)};
+		String[] argRefs = {null};
+		Class[] parameterTypes = new Class[]{Integer.class};
 
-    assertTrue(replyMsg.hasReturnValue());
-    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
-  }
+		callConstructor(className, parameterTypes, args, argRefs);
+	}
 
-  @Test
-  public void publicNonEmptyConstructorNullArg() throws Exception {
+	@Test
+	public void constructor_packageVisibleTwoArgs_newObjectReturned() throws Exception {
 
-    Object[] args = {null};
-    String[] argRefs = {null};
-    Class[] parameterTypes = new Class[]{Integer.class};
-    String[] parameterTypesNamesArray = new String[parameterTypes.length];
-    for (int i = 0; i < parameterTypes.length; i++) {
-      parameterTypesNamesArray[i] = parameterTypes[i].getName();
-    }
+		Object[] args = {"Constructing an app", Integer.valueOf(5)};
+		String[] argRefs = {null, null};
+		Class[] parameterTypes = new Class[]{String.class, Integer.class};
 
-    DataMessage requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
+		callConstructor(className, parameterTypes, args, argRefs);
+	}
 
-    assertTrue(replyMsg.hasReturnValue());
-    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
-  }
+	@Test
+	public void constructor_publicOneArgNull_newObjectReturned() throws Exception {
 
-  @Test
-  public void privateNonEmptyConstructorArrayArg() throws Exception {
+		Object[] args = {null};
+		String[] argRefs = {null};
+		Class[] parameterTypes = new Class[]{Integer.class};
 
-    Object[] args = {new String[]{"Aa", "Bb", "Cc"}};
-    String[] argRefs = {null};
-    Class[] parameterTypes = new Class[]{String[].class};
-    String[] parameterTypesNamesArray = new String[parameterTypes.length];
-    for (int i = 0; i < parameterTypes.length; i++) {
-      parameterTypesNamesArray[i] = parameterTypes[i].getName();
-    }
+		callConstructor(className, parameterTypes, args, argRefs);
+	}
 
-    DataMessage requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
+	@Test
+	public void constructor_privateOneArgArray_newObjectReturned() throws Exception {
 
-    assertTrue(replyMsg.hasReturnValue());
-    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
-  }
+		Object[] args = {new String[]{"Aa", "Bb", "Cc"}};
+		String[] argRefs = {null};
+		Class[] parameterTypes = new Class[]{String[].class};
 
-  @Test
-  public void publicConstructorObjectrefArg() throws Exception {
+		callConstructor(className, parameterTypes, args, argRefs);
+	}
 
-    //1. Construct an App calling no-args constructor
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
+	@Test
+	public void constructor_protectedOneArgRef_newObjectReturned() throws Exception {
 
-    assertTrue(replyMsg.hasReturnValue());
-    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    String newAppRef = retValue.getObject().getRef();
+		//1. Construct an instance calling no-args constructor
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-    //2. Construct an App calling the constructor that takes another App as arg
+		//2. Construct an instance calling the constructor that takes another instance as arg
+		Object[] args = {null};
+		String[] argRefs = {newObjRef};
+		Class[] parameterTypes = new Class[]{Constructors.class};
 
-    Object[] args = {null};
-    String[] argRefs = {newAppRef};
-    Class[] parameterTypes = new Class[]{App.class};
-    String[] parameterTypesNamesArray = new String[parameterTypes.length];
-    for (int i = 0; i < parameterTypes.length; i++) {
-      parameterTypesNamesArray[i] = parameterTypes[i].getName();
-    }
-
-    requestMsg = dataMessageBuilder.buildNonEmptyConstructor(clientId, className, parameterTypesNamesArray, args, argRefs);
-    replyMsg = sendAndReceive(requestMsg);
-
-    assertTrue(replyMsg.hasReturnValue());
-    assertValueIsObjectRefOfRightType(replyMsg.getReturnValue(), className);
-  }
-
+		callConstructor(className, parameterTypes, args, argRefs);
+	}
 }

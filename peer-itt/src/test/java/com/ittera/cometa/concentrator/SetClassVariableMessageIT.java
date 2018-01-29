@@ -1,19 +1,14 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Fields;
-import com.ittera.cometa.messages.protobuf.data.Values;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 /**
- * Coverage:
- * ---------
- * - package-visible int with non-null value
- * - public string with non-null value
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior
  * <p>
  * TODO:
  * - null value
@@ -22,106 +17,74 @@ import static org.junit.Assert.*;
  * - arrays
  * - objectrefs
  */
-public class SetClassVariableMessageIT extends AbstractConcentratorTest {
+public class SetClassVariableMessageIT extends AbstractPeerMessageIT {
 
-  protected final String className = "com.ittera.cometa.apps.App";
+	protected final String className = "com.ittera.cometa.apps.StaticVars";
 
-  @Test
-  public void testPutStaticIntegerNotNull() throws Exception {
+	@Test
+	public void putStatic_integerNotNull_ok() throws Exception {
 
-    String fieldName = "aStaticInteger";
-    String fieldClassName = "int";
-    Integer originalValue = 3000;
-    Integer newValue = 3200;
+		String fieldName = "aStaticInteger";
+		String fieldClassName = "int";
 
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
+		Integer originalValue = 3000;
+		Integer newValue = 3200;
 
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Integer);
-    assertEquals(originalValue, rawObj);
+		try {
+			// get field
+			ReturnValue retValue = callGetStatic(className, fieldName);
 
-    //set a new value
-    requestMsg = dataMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, newValue);
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasStaticFieldPutDone());
-    assertFalse(replyMsg.hasReturnValue());
-    Fields.StaticFieldPutDone staticFieldPutDone = replyMsg.getStaticFieldPutDone();
-    assertEquals(staticFieldPutDone.getField().getName(), fieldName);
+			// test returned (original) value
+			Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+			assertTrue(rawObj instanceof Integer);
+			assertEquals(originalValue, rawObj);
 
+			// set a new value
+			callPutStatic(className, fieldName, fieldClassName, newValue);
 
-    //test that the field has now the new value
-    requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+			// get again and test
+			retValue = callGetStatic(className, fieldName);
+			assertValueIsObjectOfType(retValue, fieldClassName);
+			rawObj = Unwrapper.unwrapObject(retValue.getObject());
+			assertTrue(rawObj instanceof Integer);
+			assertEquals(newValue, rawObj);
+		} finally {
+			//now revert changed value to original (otherwise other tests may fail after a 1st run)
+			callPutStatic(className, fieldName, fieldClassName, originalValue);
+		}
+	}
 
-    rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Integer);
-    assertEquals(newValue, rawObj);
+	@Test
+	public void putStatic_stringNotNull_ok() throws Exception {
 
-    //end of test
+		//test with a non null String
+		String fieldName = "aClassString";
+		String fieldClassName = "java.lang.String";
 
-    //now revert changed value to original (otherwise other tests may fail after a 1st run)
+		String originalValue = "I'm classy";
+		String newValue = "New dummy str";
 
-    requestMsg = dataMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, originalValue);
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasStaticFieldPutDone());
-    assertFalse(replyMsg.hasReturnValue());
-    staticFieldPutDone = replyMsg.getStaticFieldPutDone();
-    assertEquals(staticFieldPutDone.getField().getName(), fieldName);
-  }
+		try {
+			// get field
+			ReturnValue retValue = callGetStatic(className, fieldName);
 
-  @Test
-  public void testPutStaticStringNotNull() throws Exception {
+			// test returned (original) value
+			Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+			assertTrue(rawObj instanceof String);
+			assertEquals(originalValue, rawObj);
 
-    //test with a non null String
-    String fieldName = "aClassString";
-    String fieldClassName = "java.lang.String";
-    String originalValue = "I'm classy";
-    String newValue = "New dummy str";
+			// set a new value
+			callPutStatic(className, fieldName, fieldClassName, newValue);
 
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof String);
-    assertEquals(originalValue, rawObj);
-
-    //set a new value
-    requestMsg = dataMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, newValue);
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasStaticFieldPutDone());
-    assertFalse(replyMsg.hasReturnValue());
-    Fields.StaticFieldPutDone staticFieldPutDone = replyMsg.getStaticFieldPutDone();
-    assertEquals(staticFieldPutDone.getField().getName(), fieldName);
-
-
-    //test that the field has now the new value
-    requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
-
-    rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof String);
-    assertEquals(newValue, rawObj);
-
-    //end of test
-
-    //now revert changed value to original (otherwise other tests may fail after a 1st run)
-
-    //set a new value
-    requestMsg = dataMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, originalValue);
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasStaticFieldPutDone());
-    assertFalse(replyMsg.hasReturnValue());
-    staticFieldPutDone = replyMsg.getStaticFieldPutDone();
-    assertEquals(staticFieldPutDone.getField().getName(), fieldName);
-  }
-
+			//test that the field has now the new value
+			retValue = callGetStatic(className, fieldName);
+			assertValueIsObjectOfType(retValue, fieldClassName);
+			rawObj = Unwrapper.unwrapObject(retValue.getObject());
+			assertTrue(rawObj instanceof String);
+			assertEquals(newValue, rawObj);
+		} finally {
+			//now revert changed value to original (otherwise other tests may fail after a 1st run)
+			callPutStatic(className, fieldName, fieldClassName, originalValue);
+		}
+	}
 }

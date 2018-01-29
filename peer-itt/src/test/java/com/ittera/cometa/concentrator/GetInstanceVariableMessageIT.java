@@ -1,185 +1,117 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Values;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 /**
- * Coverage:
- * ---------
- * This class should only test access to instance variables.
- * <p>
- * Regardless of their type and visibility.
- * <p>
- * - public Integer with non-null value
- * - private Integer with null value
- * - protected String with non-null value
- * - public String with null value
- * - package-visible Boolean with null value
- * - public boolean with non-null value
- * - private short (primitive) non-zero
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior
  * <p>
  * TODO
  * arrays
  * objectrefs
  * rest of primitive types (?)
  */
-public class GetInstanceVariableMessageIT extends AbstractConcentratorTest {
+public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 
-  protected final String className = "com.ittera.cometa.apps.App";
+	protected final String className = "com.ittera.cometa.apps.InstanceVars";
 
-  @Test
-  public void getIntegerPublicNotNull() throws Exception {
-    //TODO have a native instance at hand for comparisons: the problem is that we need it in another path (not weaved) or loaded by another classloader!!
-//    App app = new App();
+	@Test
+	public void getInstanceVariable_publicIntegerNotNull_intReturned() throws Exception {
 
-    String fieldName = "anInt";
-    String fieldClassName = "java.lang.Integer";
-    Integer originalValue = 4;
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-    //must call new first
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
+		// now get instance variable
+		ReturnValue retValue = callGetInstanceVar(className, "anInt", newObjRef);
 
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, newObj.getRef());
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+		assertValueIsObjectOfType(retValue, "java.lang.Integer");
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof Integer);
+		assertEquals(4, rawObj);
+	}
 
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Integer);
-    assertEquals(originalValue, rawObj);
-  }
+	@Test
+	public void getInstanceVariable_privateNullInteger_nullIntReturned() throws Exception {
 
-  @Test
-  public void getIntegerPrivateNull() throws Exception {
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-    String fieldName = "aNullInt";
-    String fieldClassName = "java.lang.Integer";
+		// now get instance variable
+		ReturnValue retValue = callGetInstanceVar(className, "aNullInt", newObjRef);
 
-    //must call new first
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
+		assertValueIsNullObjectOfType(retValue, "java.lang.Integer");
+	}
 
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, newObj.getRef());
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
-  }
+	@Test
+	public void getInstanceVariable_protectedStringNotNull_stringReturned() throws Exception {
 
-  @Test
-  public void getStringProtectedNotNull() throws Exception {
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-    String fieldName = "someString";
-    String fieldClassName = "java.lang.String";
-    String originalValue = "I'm blank";
+		// now get instance variable
+		ReturnValue retValue = callGetInstanceVar(className, "someString", newObjRef);
 
-    //must call new first
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
+		assertValueIsObjectOfType(retValue, "java.lang.String");
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof String);
+		assertEquals("I'm not blank", rawObj);
+	}
 
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, newObj.getRef());
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+	@Test
+	public void getInstanceVariable_getPublicStringNull_nullStringReturned() throws Exception {
 
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof String);
-    assertEquals(originalValue, rawObj);
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-  }
+		// now get instance variable
+		ReturnValue retValue = callGetInstanceVar(className, "aNullStr", newObjRef);
 
-  @Test
-  public void getStringPublicNull() throws Exception {
+		assertValueIsNullObjectOfType(retValue, "java.lang.String");
+	}
 
-    String fieldName = "aNullStr";
-    String fieldClassName = "java.lang.String";
+	@Test
+	public void getInstanceVariable_packageVisibleBooleanNull_nullBoolReturned() throws Exception {
 
-    //must call new first
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, newObj.getRef());
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
-  }
+		// now get instance variable
+		ReturnValue retValue = callGetInstanceVar(className, "aNullBool", newObjRef);
 
-  @Test
-  public void getBooleanPackageVisibleNull() throws Exception {
+		assertValueIsNullObjectOfType(retValue, "java.lang.Boolean");
+	}
 
-    String fieldName = "aNullBool";
-    String fieldClassName = "java.lang.Boolean";
+	@Test
+	public void getInstanceVariable_publicBoolNotNull_boolReturned() throws Exception {
 
-    //must call new first
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, newObj.getRef());
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
-  }
+		// now get instance variable
+		ReturnValue retValue = callGetInstanceVar(className, "aBool", newObjRef);
 
-  @Test
-  public void getBooleanPublicNotNull() throws Exception {
+		assertValueIsObjectOfType(retValue, "boolean");
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof Boolean);
+		assertEquals(true, rawObj);
+	}
 
-    String fieldName = "aBool";
-    String fieldClassName = "boolean";
-    boolean originalValue = true;
+	@Test
+	public void getInstanceVariable_privateShortNotZero_shortReturned() throws Exception {
 
-    //must call new first
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, newObj.getRef());
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+		// now get instance variable
+		ReturnValue retValue = callGetInstanceVar(className, "someShort", newObjRef);
 
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Boolean);
-    assertEquals(originalValue, rawObj);
-  }
-
-  @Test
-  public void getShortPrivateNotZero() throws Exception {
-
-    String fieldName = "someShort";
-    String fieldClassName = "short";
-    short originalValue = 233;
-
-    //must call new first
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
-
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, newObj.getRef());
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Short);
-    assertEquals(originalValue, rawObj);
-  }
-
+		assertValueIsObjectOfType(retValue, "short");
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof Short);
+		assertEquals((short) 233, rawObj);
+	}
 }

@@ -1,96 +1,58 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.AbstractConcentratorTest;
-import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
-
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
- * Coverage:
- * ---------
- *
- * - package visible with no args
- * - private with 1 (primitive) arg
- * - protected no args
- *
- *
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * <p>
  * TODO
  * - arrays
- *
  */
-public class VoidInstanceMethodMessageIT extends AbstractConcentratorTest {
+public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 
-  protected final String className = "com.ittera.cometa.apps.App";
+	protected final String className = "com.ittera.cometa.apps.VoidInstanceMethods";
 
-  @Test
-  public void packageVisibleNoArgs() throws Exception {
+	@Test
+	public void callInstanceMethod_packageVisibleNoArgs_void() throws Exception {
 
-    String methodName = "doSomething";
+		String methodName = "doSomething";
 
-    Object[] parameters = new Object[]{};
-    String[] parameterTypes = new String[]{};
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-    //we need an App instance
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object myApp = replyMsg.getReturnValue().getObject();
+		// now call the method
+		String[] parameterTypes = new String[]{};
+		callVoidInstanceMethod(className, methodName, newObjRef, parameterTypes, new Object[parameterTypes.length],
+			new String[parameterTypes.length]);
+	}
 
-    //now call the method
-    requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
-    replyMsg = sendAndReceive(requestMsg);
+	@Test
+	public void callInstanceMethod_privateWithArg_void() throws Exception {
 
-    assertTrue(replyMsg.hasReturnValue());
-    assertNotNull(replyMsg.getReturnValue());
-    assertTrue(replyMsg.getReturnValue().getIsVoid());
+		String methodName = "testArg";
 
-  }
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-  @Test
-  public void privateWithArg() throws Exception {
+		// now call the method
+		String param = "testing testing 1 2 3";
+		Object[] parameters = new Object[]{param};
+		String[] parameterTypes = new String[]{param.getClass().getName()};
+		callVoidInstanceMethod(className, methodName, newObjRef, parameterTypes, parameters,
+			new String[parameterTypes.length]);
+	}
 
-    String methodName = "testArg";
+	@Test
+	public void callInstanceMethod_protectedNoArgs_void() throws Exception {
 
-    String param = "testing testing 1 2 3";
-    Object[] parameters = new Object[]{param};
-    String[] parameterTypes = new String[]{param.getClass().getName()};
+		String methodName = "printDate";
 
-    //we need an App instance
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object myApp = replyMsg.getReturnValue().getObject();
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-    //now call the method
-    requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
-    replyMsg = sendAndReceive(requestMsg);
-
-    assertTrue(replyMsg.hasReturnValue());
-    assertNotNull(replyMsg.getReturnValue());
-    assertTrue(replyMsg.getReturnValue().getIsVoid());
-
-  }
-
-  @Test
-  public void protectedNoArgs() throws Exception {
-
-    String methodName = "printDate";
-
-    Object[] parameters = new Object[]{};
-    String[] parameterTypes = new String[]{};
-
-    //we need an App instance
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object myApp = replyMsg.getReturnValue().getObject();
-
-    //now call the method
-    requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName,myApp.getRef(), parameterTypes, parameters, new String[parameters.length]);
-    replyMsg = sendAndReceive(requestMsg);
-
-    assertTrue(replyMsg.hasReturnValue());
-    assertNotNull(replyMsg.getReturnValue());
-    assertTrue(replyMsg.getReturnValue().getIsVoid());
-
-  }
+		// now call the method
+		String[] parameterTypes = new String[]{};
+		callVoidInstanceMethod(className, methodName, newObjRef, parameterTypes, new Object[parameterTypes.length],
+			new String[parameterTypes.length]);
+	}
 }

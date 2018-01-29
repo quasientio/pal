@@ -1,21 +1,15 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.AbstractConcentratorTest;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Fields;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Values;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 /**
- * Coverage:
- * ---------
- * - public integer with non-null value
- * - public integer with non-null value set null
- * - null value
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior
  * <p>
  * TODO:
  * - private, protected, package-visible
@@ -23,96 +17,67 @@ import static org.junit.Assert.*;
  * - arrays
  * - objectrefs
  */
-public class SetInstanceVariableMessageIT extends AbstractConcentratorTest {
+public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 
-  protected final String className = "com.ittera.cometa.apps.App";
+	protected final String className = "com.ittera.cometa.apps.InstanceVars";
 
-  @Test
-  public void testPutInteger() throws Exception {
+	@Test
+	public void putField_integer_ok() throws Exception {
 
-    String fieldName = "anInt";
-    String fieldClassName = "java.lang.Integer";
-    Integer originalValue = 4;
-    Integer newValue = 500;
+		String fieldName = "anInt";
+		String fieldClassName = "java.lang.Integer";
 
-    //must call new first
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object newObj = replyMsg.getReturnValue().getObject();
+		Integer originalValue = 4;
+		Integer newValue = 500;
 
-    //test with a non null integer
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, newObj.getRef());
-    replyMsg = sendAndReceive(requestMsg);
-    assertNotNull(replyMsg.getReturnValue().getObject());
-    Primitives.Object retObj = replyMsg.getReturnValue().getObject();
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-    Object rawObj = Unwrapper.unwrapObject(retObj);
+		// get instance variable, assert original value
+		ReturnValue retValue = callGetInstanceVar(className, fieldName, newObjRef);
+		Primitives.Object retObj = retValue.getObject();
+		assertValueIsObjectOfType(retValue, fieldClassName);
+		Object rawObj = Unwrapper.unwrapObject(retObj);
+		assertTrue(rawObj instanceof Integer);
+		assertEquals(originalValue, rawObj);
 
-    assertTrue(rawObj instanceof Integer);
-    assertEquals(originalValue, rawObj);
+		// now call set to modify
+		callPutField(className, fieldName, newObjRef, fieldClassName, newValue);
 
-    //set integer
-    requestMsg = dataMessageBuilder.buildPutObject(clientId, className, fieldName, newObj.getRef(), fieldClassName, newValue);
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasInstanceFieldPutDone());
-    assertFalse(replyMsg.hasReturnValue());
-    Fields.InstanceFieldPutDone fieldPutDone = replyMsg.getInstanceFieldPutDone();
-    assertEquals(fieldPutDone.getField().getName(), fieldName);
+		// now get to test if set took place
+		retValue = callGetInstanceVar(className, fieldName, newObjRef);
+		rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof Integer);
+		assertEquals(newValue, rawObj);
+	}
 
+	@Test
+	public void putField_integerSetNull_ok() throws Exception {
 
-    //now get to test if set took place
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, newObj.getRef());
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsObjectOfRightType(retValue, fieldClassName);
+		String fieldName = "anotherInt";
+		String fieldClassName = "java.lang.Integer";
 
-    rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Integer);
-    assertEquals(newValue, rawObj);
-  }
+		Integer originalValue = 1;
+		Integer newValue = null;
 
-  @Test
-  public void testPutIntegerSetNull() throws Exception {
+		// create new instance
+		String newObjRef = callConstructor(className).getObject().getRef();
 
-    String fieldName = "anotherInt";
-    String fieldClassName = "java.lang.Integer";
-    Integer originalValue = 1;
-    Integer newValue = null;
+		// test with a non null integer
+		ReturnValue retValue = callGetInstanceVar(className, fieldName, newObjRef);
+		Primitives.Object retObj = retValue.getObject();
+		assertValueIsObjectOfType(retValue, fieldClassName);
+		Object rawObj = Unwrapper.unwrapObject(retObj);
+		assertTrue(rawObj instanceof Integer);
+		assertEquals(originalValue, rawObj);
 
-    //must call new first
-    DataMessage requestMsg = dataMessageBuilder.buildEmptyConstructor(clientId, className);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    Primitives.Object fieldObj = replyMsg.getReturnValue().getObject();
+		// set integer to null
+		callPutField(className, fieldName, newObjRef, fieldClassName, newValue);
 
-    //test with a non null integer
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, fieldObj.getRef());
-    replyMsg = sendAndReceive(requestMsg);
-    assertNotNull(replyMsg.getReturnValue().getObject());
-    Primitives.Object retObj = replyMsg.getReturnValue().getObject();
-
-    Object rawObj = Unwrapper.unwrapObject(retObj);
-
-    assertTrue(rawObj instanceof Integer);
-    assertEquals(originalValue, rawObj);
-
-    //set integer to null
-    requestMsg = dataMessageBuilder.buildPutObject(clientId, className, fieldName, fieldObj.getRef(), fieldClassName, newValue);
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasInstanceFieldPutDone());
-    assertFalse(replyMsg.hasReturnValue());
-    Fields.InstanceFieldPutDone fieldPutDone = replyMsg.getInstanceFieldPutDone();
-    assertEquals(fieldPutDone.getField().getName(), fieldName);
-
-
-    //now get to test if set took place
-    requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, fieldObj.getRef());
-    replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullObjectOfRightType(retValue, fieldClassName);
-
-    rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertEquals(newValue, rawObj);
-  }
+		// now get to test if set took place
+		retValue = callGetInstanceVar(className, fieldName, newObjRef);
+		assertValueIsNullObjectOfType(retValue, fieldClassName);
+		rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertEquals(newValue, rawObj);
+	}
 }
