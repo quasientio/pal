@@ -13,7 +13,7 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 	protected final String className = "com.ittera.cometa.apps.VoidInstanceMethods";
 
 	@Test
-	public void packageVisibleNoArgs() throws Exception {
+	public void callInstanceMethod_packageVisibleNoArgs_void() throws Exception {
 
 		String methodName = "doSomething";
 
@@ -27,7 +27,7 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void privateWithArg() throws Exception {
+	public void callInstanceMethod_privateWithArg_void() throws Exception {
 
 		String methodName = "testArg";
 
@@ -43,7 +43,7 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void protectedNoArgs() throws Exception {
+	public void callInstanceMethod_protectedNoArgs_void() throws Exception {
 
 		String methodName = "printDate";
 

@@ -22,7 +22,7 @@ public class SetClassVariableMessageIT extends AbstractPeerMessageIT {
 	protected final String className = "com.ittera.cometa.apps.StaticVars";
 
 	@Test
-	public void testPutStaticIntegerNotNull() throws Exception {
+	public void putStatic_integerNotNull_ok() throws Exception {
 
 		String fieldName = "aStaticInteger";
 		String fieldClassName = "int";
@@ -30,32 +30,32 @@ public class SetClassVariableMessageIT extends AbstractPeerMessageIT {
 		Integer originalValue = 3000;
 		Integer newValue = 3200;
 
-		// get field
-		ReturnValue retValue = callGetStatic(className, fieldName);
+		try {
+			// get field
+			ReturnValue retValue = callGetStatic(className, fieldName);
 
-		// test returned (original) value
-		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-		assertTrue(rawObj instanceof Integer);
-		assertEquals(originalValue, rawObj);
+			// test returned (original) value
+			Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+			assertTrue(rawObj instanceof Integer);
+			assertEquals(originalValue, rawObj);
 
-		// set a new value
-		callPutStatic(className, fieldName, fieldClassName, newValue);
+			// set a new value
+			callPutStatic(className, fieldName, fieldClassName, newValue);
 
-		// get again and test
-		retValue = callGetStatic(className, fieldName);
-		assertValueIsObjectOfType(retValue, fieldClassName);
-		rawObj = Unwrapper.unwrapObject(retValue.getObject());
-		assertTrue(rawObj instanceof Integer);
-		assertEquals(newValue, rawObj);
-
-		//END OF TEST
-
-		//now revert changed value to original (otherwise other tests may fail after a 1st run)
-		callPutStatic(className, fieldName, fieldClassName, originalValue);
+			// get again and test
+			retValue = callGetStatic(className, fieldName);
+			assertValueIsObjectOfType(retValue, fieldClassName);
+			rawObj = Unwrapper.unwrapObject(retValue.getObject());
+			assertTrue(rawObj instanceof Integer);
+			assertEquals(newValue, rawObj);
+		} finally {
+			//now revert changed value to original (otherwise other tests may fail after a 1st run)
+			callPutStatic(className, fieldName, fieldClassName, originalValue);
+		}
 	}
 
 	@Test
-	public void testPutStaticStringNotNull() throws Exception {
+	public void putStatic_stringNotNull_ok() throws Exception {
 
 		//test with a non null String
 		String fieldName = "aClassString";
@@ -64,28 +64,27 @@ public class SetClassVariableMessageIT extends AbstractPeerMessageIT {
 		String originalValue = "I'm classy";
 		String newValue = "New dummy str";
 
-		// get field
-		ReturnValue retValue = callGetStatic(className, fieldName);
+		try {
+			// get field
+			ReturnValue retValue = callGetStatic(className, fieldName);
 
-		// test returned (original) value
-		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-		assertTrue(rawObj instanceof String);
-		assertEquals(originalValue, rawObj);
+			// test returned (original) value
+			Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+			assertTrue(rawObj instanceof String);
+			assertEquals(originalValue, rawObj);
 
-		// set a new value
-		callPutStatic(className, fieldName, fieldClassName, newValue);
+			// set a new value
+			callPutStatic(className, fieldName, fieldClassName, newValue);
 
-		//test that the field has now the new value
-		retValue = callGetStatic(className, fieldName);
-		assertValueIsObjectOfType(retValue, fieldClassName);
-		rawObj = Unwrapper.unwrapObject(retValue.getObject());
-		assertTrue(rawObj instanceof String);
-		assertEquals(newValue, rawObj);
-
-		//END OF TEST
-
-		//now revert changed value to original (otherwise other tests may fail after a 1st run)
-		callPutStatic(className, fieldName, fieldClassName, originalValue);
+			//test that the field has now the new value
+			retValue = callGetStatic(className, fieldName);
+			assertValueIsObjectOfType(retValue, fieldClassName);
+			rawObj = Unwrapper.unwrapObject(retValue.getObject());
+			assertTrue(rawObj instanceof String);
+			assertEquals(newValue, rawObj);
+		} finally {
+			//now revert changed value to original (otherwise other tests may fail after a 1st run)
+			callPutStatic(className, fieldName, fieldClassName, originalValue);
+		}
 	}
-
 }

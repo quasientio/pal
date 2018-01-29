@@ -13,7 +13,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 	protected final String className = "com.ittera.cometa.apps.VoidStaticMethods";
 
 	@Test
-	public void privateWithArg() throws Exception {
+	public void callClassMethod_privateWithArg_void() throws Exception {
 
 		String methodName = "testVoidStatic";
 
@@ -25,7 +25,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void privateWithPrimitiveAndWrapperArgs() throws Exception {
+	public void callClassMethod_privateWithPrimitiveAndWrapperArgs_void() throws Exception {
 
 		String methodName = "printArg";
 
@@ -37,7 +37,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void packageWithNoArgs() throws Exception {
+	public void callClassMethod_packageWithNoArgs_void() throws Exception {
 
 		String methodName = "doSomethingStatically";
 
@@ -50,7 +50,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 
 	@Test
-	public void publicStaticVoidMain() throws Exception {
+	public void callClassMethod_publicStaticVoidMain_void() throws Exception {
 
 		//test main
 		String methodName = "main";
@@ -63,7 +63,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void withObjectrefAsArg() throws Exception {
+	public void callClassMethod_withObjectrefAsArg_void() throws Exception {
 
 		String methodName = "sumUpList";
 

@@ -20,7 +20,7 @@ public class GetClassVariableMessageIT extends AbstractPeerMessageIT {
 	protected final String className = "com.ittera.cometa.apps.StaticVars";
 
 	@Test
-	public void getClassVar_publicStringNotNull_varReturned() throws Exception {
+	public void getClassVariable_publicStringNotNull_varReturned() throws Exception {
 
 		ReturnValue retValue = callGetStatic(className, "aClassString");
 		assertValueIsObjectOfType(retValue, "java.lang.String");
@@ -31,14 +31,14 @@ public class GetClassVariableMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void getClassVar_publicStringNull_nullStringReturned() throws Exception {
+	public void getClassVariable_publicStringNull_nullStringReturned() throws Exception {
 
 		ReturnValue retValue = callGetStatic(className, "aNullStaticStr");
 		assertValueIsNullObjectOfType(retValue, "java.lang.String");
 	}
 
 	@Test
-	public void getClassVar_privateIntegerNotNull_intReturned() throws Exception {
+	public void getClassVariable_privateIntegerNotNull_intReturned() throws Exception {
 
 		ReturnValue retValue = callGetStatic(className, "aPrivateClassInt");
 		assertValueIsObjectOfType(retValue, "java.lang.Integer");
@@ -49,14 +49,14 @@ public class GetClassVariableMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void getClassVar_protectedBoolNull_nullBoolReturned() throws Exception {
+	public void getClassVariable_protectedBoolNull_nullBoolReturned() throws Exception {
 
 		ReturnValue retValue = callGetStatic(className, "aProtectedBool");
 		assertValueIsNullObjectOfType(retValue, "java.lang.Boolean");
 	}
 
 	@Test
-	public void getClassVar_PackageVisibleBoolNotNull_boolReturned() throws Exception {
+	public void getClassVariable_packageVisibleBoolNotNull_boolReturned() throws Exception {
 
 		ReturnValue retValue = callGetStatic(className, "aPackageVisibleBool");
 		assertValueIsObjectOfType(retValue, "boolean");

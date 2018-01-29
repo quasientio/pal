@@ -20,7 +20,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 	protected final String className = "com.ittera.cometa.apps.NonVoidStaticMethods";
 
 	@Test
-	public void privateWithArg() throws Exception {
+	public void callClassMethod_privateWithArg_retValue() throws Exception {
 
 		String methodName = "testNonVoidStatic";
 
@@ -28,18 +28,18 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		Object[] parameters = new Object[]{param};
 		String[] parameterTypes = new String[]{param.getClass().getName()};
 		String[] paramObjRefs = new String[parameters.length];
-		String shouldReturn = param.toLowerCase();
 
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs);
 
 		// test returned value
+		String shouldReturn = param.toLowerCase();
 		assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
 		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
 		assertEquals(shouldReturn, rawObj);
 	}
 
 	@Test
-	public void protectedNoArgs() throws Exception {
+	public void callClassMethod_protectedNoArgs_retValue() throws Exception {
 
 		String methodName = "highFive";
 
@@ -56,7 +56,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void returnsIntegerSum() throws Exception {
+	public void callClassMethod_returnsIntegerSum_retValue() throws Exception {
 
 		String methodName = "nonVoidSumUpList";
 
@@ -85,7 +85,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 
 	@Test
-	public void returningNullObject() throws Exception {
+	public void callClassMethod_returningNullObject_nullRetValue() throws Exception {
 
 		String methodName = "giveMeANull";
 
@@ -101,7 +101,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void returningCharArray() throws Exception {
+	public void callClassMethod_returningCharArray_retValue() throws Exception {
 
 		String methodName = "toCharArray";
 
@@ -121,7 +121,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 
 	@Test
-	public void returningEmptyArray() throws Exception {
+	public void callClassMethod_returningEmptyArray_retValue() throws Exception {
 
 		String methodName = "giveMeAnEmptyLongArray";
 
@@ -139,7 +139,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void returningNullArray() throws Exception {
+	public void callClassMethod_returningNullArray_nullRetValue() throws Exception {
 
 		String methodName = "giveMeANullBoolArray";
 
@@ -156,7 +156,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void returningObjectRef() throws Exception {
+	public void callClassMethod_returningObjectRef_refRetValue() throws Exception {
 
 		String methodName = "fetchMeAThreadSingleton";
 
@@ -182,7 +182,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	//	@Test
-	public void returningObjectRefArray() throws Exception {
+	public void callClassMethod_returningObjectRefArray_refRetValue() throws Exception {
 
 		String methodName = "fetchMeAThreadArray";
 

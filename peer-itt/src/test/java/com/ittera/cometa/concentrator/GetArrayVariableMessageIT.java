@@ -1,8 +1,7 @@
 package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Values;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 
 import org.junit.Test;
 
@@ -10,854 +9,495 @@ import static org.junit.Assert.*;
 
 /**
  * Naming convention to use: methodName_stateUnderTest_expectedBehavior
- *
+ * <p>
  * Coverage:
  * ---------
- * Arrays of Primitives. For each type, there are 3 tests:
+ * Arrays of Primitives & Wrappers. For each type, there are 3 tests:
  * - a null (non-initialized) array
  * - an empty array
  * - an array initialized with some values of the right type
  * <p>
- * TODO: introduce null values in 3rd test
+ * TODO: introduce null values
  */
 
 public class GetArrayVariableMessageIT extends AbstractPeerMessageIT {
 
-  protected final String className = "com.ittera.cometa.apps.ArrayVars";
-
-  @Test
-  public void getStaticPrivate_booleanArrayNull() throws Exception {
-
-    String fieldName = "aNull_booleanArray";
-    String fieldClassName = "[Z";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivate_booleanArrayEmpty() throws Exception {
-    String fieldName = "anEmpty_booleanArray";
-    String fieldClassName = "[Z";
-    boolean[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof boolean[]);
-    assertEquals(actualArray.length, ((boolean[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivate_booleanArrayNotNull() throws Exception {
-    String fieldName = "a_booleanArray";
-    String fieldClassName = "[Z";
-    boolean[] actualArray = {false, false, true};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof boolean[]);
-    assertEquals(actualArray.length, ((boolean[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((boolean[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivate_byteArrayNull() throws Exception {
-    String fieldName = "aNull_byteArray";
-    String fieldClassName = "[B";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivate_byteArrayEmpty() throws Exception {
-    String fieldName = "anEmpty_byteArray";
-    String fieldClassName = "[B";
-    byte[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof byte[]);
-    assertEquals(actualArray.length, ((byte[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivate_byteArrayNotNull() throws Exception {
-    String fieldName = "a_byteArray";
-    String fieldClassName = "[B";
-    byte[] actualArray = {0, 1, 2, 3, 4, 5, 6};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof byte[]);
-    assertEquals(actualArray.length, ((byte[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((byte[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivate_shortArrayNull() throws Exception {
-    String fieldName = "aNull_shortArray";
-    String fieldClassName = "[S";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivate_shortArrayEmpty() throws Exception {
-    String fieldName = "anEmpty_shortArray";
-    String fieldClassName = "[S";
-    short[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof short[]);
-    assertEquals(actualArray.length, ((short[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivate_shortArrayNotNull() throws Exception {
-    String fieldName = "a_shortArray";
-    String fieldClassName = "[S";
-    short[] actualArray = {-200, -100, 0, 100, 200, 300, 400, 500, 600};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof short[]);
-    assertEquals(actualArray.length, ((short[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((short[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivate_charArrayNull() throws Exception {
-    String fieldName = "aNull_charArray";
-    String fieldClassName = "[C";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivate_charArrayEmpty() throws Exception {
-    String fieldName = "anEmpty_charArray";
-    String fieldClassName = "[C";
-    char[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof char[]);
-    assertEquals(actualArray.length, ((char[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivate_charArrayNotNull() throws Exception {
-    String fieldName = "a_charArray";
-    String fieldClassName = "[C";
-    char[] actualArray = {'a', 'r', 'r', 'a', 'y'};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof char[]);
-    assertEquals(actualArray.length, ((char[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((char[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivate_intArrayNull() throws Exception {
-    String fieldName = "aNull_intArray";
-    String fieldClassName = "[I";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivate_intArrayEmpty() throws Exception {
-    String fieldName = "anEmpty_intArray";
-    String fieldClassName = "[I";
-    int[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof int[]);
-    assertEquals(actualArray.length, ((int[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivate_intArrayNotNull() throws Exception {
-    String fieldName = "an_intArray";
-    String fieldClassName = "[I";
-    int[] actualArray = {2333, -2, 0, 892, 9381};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof int[]);
-    assertEquals(actualArray.length, ((int[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((int[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivate_longArrayNull() throws Exception {
-    String fieldName = "aNull_longArray";
-    String fieldClassName = "[J";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivate_longArrayEmpty() throws Exception {
-    String fieldName = "anEmpty_longArray";
-    String fieldClassName = "[J";
-    long[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof long[]);
-    assertEquals(actualArray.length, ((long[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivate_longArrayNotNull() throws Exception {
-    String fieldName = "a_longArray";
-    String fieldClassName = "[J";
-    long[] actualArray = {23230233L, -8929381L, 0L};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof long[]);
-    assertEquals(actualArray.length, ((long[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((long[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivate_floatArrayNull() throws Exception {
-    String fieldName = "aNull_floatArray";
-    String fieldClassName = "[F";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivate_floatArrayEmpty() throws Exception {
-    String fieldName = "anEmpty_floatArray";
-    String fieldClassName = "[F";
-    float[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof float[]);
-    assertEquals(actualArray.length, ((float[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivate_floatArrayNotNull() throws Exception {
-    String fieldName = "a_floatArray";
-    String fieldClassName = "[F";
-    float[] actualArray = {23.3f, 0f, -763.03f, 892.938f};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof float[]);
-    assertEquals(actualArray.length, ((float[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((float[]) rawObj)[i], 0);
-    }
-  }
-
-  @Test
-  public void getStaticPrivate_doubleArrayNull() throws Exception {
-    String fieldName = "aNull_doubleArray";
-    String fieldClassName = "[D";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivate_doubleArrayEmpty() throws Exception {
-    String fieldName = "anEmpty_doubleArray";
-    String fieldClassName = "[D";
-    double[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof double[]);
-    assertEquals(actualArray.length, ((double[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivate_doubleArrayNotNull() throws Exception {
-    String fieldName = "a_doubleArray";
-    String fieldClassName = "[D";
-    double[] actualArray = {383239.3d, 0d, -239923.4038d};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof double[]);
-    assertEquals(actualArray.length, ((double[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((double[]) rawObj)[i], 0);
-    }
-  }
-
-  //WRAPPERS
-  @Test
-  public void getStaticPrivateBooleanArrayNull() throws Exception {
-
-    String fieldName = "aNullBooleanArray";
-    String fieldClassName = "[Ljava.lang.Boolean;";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivateBooleanArrayEmpty() throws Exception {
-    String fieldName = "anEmptyBooleanArray";
-    String fieldClassName = "[Ljava.lang.Boolean;";
-    Boolean[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Boolean[]);
-    assertEquals(actualArray.length, ((Boolean[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivateBooleanArrayNotNull() throws Exception {
-    String fieldName = "aBooleanArray";
-    String fieldClassName = "[Ljava.lang.Boolean;";
-    Boolean[] actualArray = {false, false, true};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Boolean[]);
-    assertEquals(actualArray.length, ((Boolean[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((Boolean[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivateByteArrayNull() throws Exception {
-    String fieldName = "aNullByteArray";
-    String fieldClassName = "[Ljava.lang.Byte;";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivateByteArrayEmpty() throws Exception {
-    String fieldName = "anEmptyByteArray";
-    String fieldClassName = "[Ljava.lang.Byte;";
-    byte[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Byte[]);
-    assertEquals(actualArray.length, ((Byte[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivateByteArrayNotNull() throws Exception {
-    String fieldName = "aByteArray";
-    String fieldClassName = "[Ljava.lang.Byte;";
-    Byte[] actualArray = {0, 1, 2, 3, 4, 5, 6};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Byte[]);
-    assertEquals(actualArray.length, ((Byte[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((Byte[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivateShortArrayNull() throws Exception {
-    String fieldName = "aNullShortArray";
-    String fieldClassName = "[Ljava.lang.Short;";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivateShortArrayEmpty() throws Exception {
-    String fieldName = "anEmptyShortArray";
-    String fieldClassName = "[Ljava.lang.Short;";
-    Short[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Short[]);
-    assertEquals(actualArray.length, ((Short[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivateShortArrayNotNull() throws Exception {
-    String fieldName = "aShortArray";
-    String fieldClassName = "[Ljava.lang.Short;";
-    Short[] actualArray = {-200, -100, 0, 100, 200, 300, 400, 500, 600};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Short[]);
-    assertEquals(actualArray.length, ((Short[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((Short[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivateCharacterArrayNull() throws Exception {
-    String fieldName = "aNullCharArray";
-    String fieldClassName = "[Ljava.lang.Character;";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivateCharacterArrayEmpty() throws Exception {
-    String fieldName = "anEmptyCharArray";
-    String fieldClassName = "[Ljava.lang.Character;";
-    Character[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Character[]);
-    assertEquals(actualArray.length, ((Character[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivateCharacterArrayNotNull() throws Exception {
-    String fieldName = "aCharArray";
-    String fieldClassName = "[Ljava.lang.Character;";
-    Character[] actualArray = {'a', 'r', 'r', 'a', 'y'};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Character[]);
-    assertEquals(actualArray.length, ((Character[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((Character[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivateIntegerArrayNull() throws Exception {
-    String fieldName = "aNullIntArray";
-    String fieldClassName = "[Ljava.lang.Integer;";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivateIntegerArrayEmpty() throws Exception {
-    String fieldName = "anEmptyIntArray";
-    String fieldClassName = "[Ljava.lang.Integer;";
-    Integer[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Integer[]);
-    assertEquals(actualArray.length, ((Integer[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivateIntegerArrayNotNull() throws Exception {
-    String fieldName = "anIntArray";
-    String fieldClassName = "[Ljava.lang.Integer;";
-    Integer[] actualArray = {2333, -2, 0, 892, 9381};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Integer[]);
-    assertEquals(actualArray.length, ((Integer[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((Integer[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivateLongArrayNull() throws Exception {
-    String fieldName = "aNullLongArray";
-    String fieldClassName = "[Ljava.lang.Long;";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivateLongArrayEmpty() throws Exception {
-    String fieldName = "anEmptyLongArray";
-    String fieldClassName = "[Ljava.lang.Long;";
-    Long[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Long[]);
-    assertEquals(actualArray.length, ((Long[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivateLongArrayNotNull() throws Exception {
-    String fieldName = "aLongArray";
-    String fieldClassName = "[Ljava.lang.Long;";
-    Long[] actualArray = {23230233L, -8929381L, 0L};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Long[]);
-    assertEquals(actualArray.length, ((Long[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((Long[]) rawObj)[i]);
-    }
-  }
-
-  @Test
-  public void getStaticPrivateFloatArrayNull() throws Exception {
-    String fieldName = "aNullFloatArray";
-    String fieldClassName = "[Ljava.lang.Float;";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivateFloatArrayEmpty() throws Exception {
-    String fieldName = "anEmptyFloatArray";
-    String fieldClassName = "[Ljava.lang.Float;";
-    Float[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Float[]);
-    assertEquals(actualArray.length, ((Float[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivateFloatArrayNotNull() throws Exception {
-    String fieldName = "aFloatArray";
-    String fieldClassName = "[Ljava.lang.Float;";
-    Float[] actualArray = {23.3f, 0f, -763.03f, 892.938f};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Float[]);
-    assertEquals(actualArray.length, ((Float[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((Float[]) rawObj)[i], 0);
-    }
-  }
-
-  @Test
-  public void getStaticPrivateDoubleArrayNull() throws Exception {
-    String fieldName = "aNullDoubleArray";
-    String fieldClassName = "[Ljava.lang.Double;";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivateDoubleArrayEmpty() throws Exception {
-    String fieldName = "anEmptyDoubleArray";
-    String fieldClassName = "[Ljava.lang.Double;";
-    Double[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Double[]);
-    assertEquals(actualArray.length, ((Double[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivateDoubleArrayNotNull() throws Exception {
-    String fieldName = "aDoubleArray";
-    String fieldClassName = "[Ljava.lang.Double;";
-    Double[] actualArray = {383239.3d, 0d, -239923.4038d};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof Double[]);
-    assertEquals(actualArray.length, ((Double[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((Double[]) rawObj)[i], 0);
-    }
-  }
-
-  @Test
-  public void getStaticPrivateStringArrayNull() throws Exception {
-    String fieldName = "aNullStringArray";
-    String fieldClassName = "[Ljava.lang.String;";
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsNullArrayOfType(retValue, fieldClassName);
-  }
-
-  @Test
-  public void getStaticPrivateStringArrayEmpty() throws Exception {
-    String fieldName = "anEmptyStringArray";
-    String fieldClassName = "[Ljava.lang.String;";
-    String[] actualArray = {};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof String[]);
-    assertEquals(actualArray.length, ((String[]) rawObj).length);
-  }
-
-  @Test
-  public void getStaticPrivateStringArrayNotNull() throws Exception {
-    String fieldName = "aStringArray";
-    String fieldClassName = "[Ljava.lang.String;";
-    String[] actualArray = {"hello", "world", "!"};
-
-    DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-    DataMessage replyMsg = sendAndReceive(requestMsg);
-    assertTrue(replyMsg.hasReturnValue());
-    Values.ReturnValue retValue = replyMsg.getReturnValue();
-    assertValueIsArrayOfType(retValue, fieldClassName);
-
-    Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertTrue(rawObj instanceof String[]);
-    assertEquals(actualArray.length, ((String[]) rawObj).length);
-    for (int i = 0; i < actualArray.length; i++) {
-      assertEquals(actualArray[i], ((String[]) rawObj)[i]);
-    }
-  }
+	protected final String className = "com.ittera.cometa.apps.ArrayVars";
+
+
+	// <editor-fold defaultstate="collapsed" desc="primitive array tests">
+	@Test
+	public void getStatic_booleanArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNull_booleanArray");
+		assertValueIsNullArrayOfType(retValue, "[Z");
+	}
+
+	@Test
+	public void getStatic_booleanArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmpty_booleanArray");
+		assertValueIsArrayOfType(retValue, "[Z");
+
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof boolean[]);
+		assertEquals(0, ((boolean[]) rawObj).length);
+	}
+
+	@Test
+	public void getStatic_booleanArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "a_booleanArray");
+		assertValueIsArrayOfType(retValue, "[Z");
+
+		boolean[] actualArray = {false, false, true};
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof boolean[]);
+		assertEquals(actualArray.length, ((boolean[]) rawObj).length);
+		for (int i = 0; i < actualArray.length; i++) {
+			assertEquals(actualArray[i], ((boolean[]) rawObj)[i]);
+		}
+	}
+
+	@Test
+	public void getStatic_byteArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNull_byteArray");
+		assertValueIsNullArrayOfType(retValue, "[B");
+	}
+
+	@Test
+	public void getStatic_byteArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmpty_byteArray");
+		assertValueIsArrayOfType(retValue, "[B");
+
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof byte[]);
+		assertEquals(0, ((byte[]) rawObj).length);
+	}
+
+	@Test
+	public void getStatic_byteArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "a_byteArray");
+		assertValueIsArrayOfType(retValue, "[B");
+
+		byte[] actualArray = {0, 1, 2, 3, 4, 5, 6};
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof byte[]);
+		assertEquals(actualArray.length, ((byte[]) rawObj).length);
+		for (int i = 0; i < actualArray.length; i++) {
+			assertEquals(actualArray[i], ((byte[]) rawObj)[i]);
+		}
+	}
+
+	@Test
+	public void getStatic_shortArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNull_shortArray");
+		assertValueIsNullArrayOfType(retValue, "[S");
+	}
+
+	@Test
+	public void getStatic_shortArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmpty_shortArray");
+		assertValueIsArrayOfType(retValue, "[S");
+
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof short[]);
+		assertEquals(0, ((short[]) rawObj).length);
+	}
+
+	@Test
+	public void getStatic_shortArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "a_shortArray");
+		assertValueIsArrayOfType(retValue, "[S");
+
+		short[] actualArray = {-200, -100, 0, 100, 200, 300, 400, 500, 600};
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof short[]);
+		assertEquals(actualArray.length, ((short[]) rawObj).length);
+		for (int i = 0; i < actualArray.length; i++) {
+			assertEquals(actualArray[i], ((short[]) rawObj)[i]);
+		}
+	}
+
+	@Test
+	public void getStatic_charArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNull_charArray");
+		assertValueIsNullArrayOfType(retValue, "[C");
+	}
+
+	@Test
+	public void getStatic_charArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmpty_charArray");
+		assertValueIsArrayOfType(retValue, "[C");
+
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof char[]);
+		assertEquals(0, ((char[]) rawObj).length);
+	}
+
+	@Test
+	public void getStatic_charArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "a_charArray");
+		assertValueIsArrayOfType(retValue, "[C");
+
+		char[] actualArray = {'a', 'r', 'r', 'a', 'y'};
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof char[]);
+		assertEquals(actualArray.length, ((char[]) rawObj).length);
+		for (int i = 0; i < actualArray.length; i++) {
+			assertEquals(actualArray[i], ((char[]) rawObj)[i]);
+		}
+	}
+
+	@Test
+	public void getStatic_intArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNull_intArray");
+		assertValueIsNullArrayOfType(retValue, "[I");
+	}
+
+	@Test
+	public void getStatic_intArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmpty_intArray");
+		assertValueIsArrayOfType(retValue, "[I");
+
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof int[]);
+		assertEquals(0, ((int[]) rawObj).length);
+	}
+
+	@Test
+	public void getStatic_intArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "an_intArray");
+		assertValueIsArrayOfType(retValue, "[I");
+
+		int[] actualArray = {2333, -2, 0, 892, 9381};
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof int[]);
+		assertEquals(actualArray.length, ((int[]) rawObj).length);
+		for (int i = 0; i < actualArray.length; i++) {
+			assertEquals(actualArray[i], ((int[]) rawObj)[i]);
+		}
+	}
+
+	@Test
+	public void getStatic_longArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNull_longArray");
+		assertValueIsNullArrayOfType(retValue, "[J");
+	}
+
+	@Test
+	public void getStatic_longArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmpty_longArray");
+		assertValueIsArrayOfType(retValue, "[J");
+
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof long[]);
+		assertEquals(0, ((long[]) rawObj).length);
+	}
+
+	@Test
+	public void getStatic_longArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "a_longArray");
+		assertValueIsArrayOfType(retValue, "[J");
+
+		long[] actualArray = {23230233L, -8929381L, 0L};
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof long[]);
+		assertEquals(actualArray.length, ((long[]) rawObj).length);
+		for (int i = 0; i < actualArray.length; i++) {
+			assertEquals(actualArray[i], ((long[]) rawObj)[i]);
+		}
+	}
+
+	@Test
+	public void getStatic_floatArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNull_floatArray");
+		assertValueIsNullArrayOfType(retValue, "[F");
+	}
+
+	@Test
+	public void getStatic_floatArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmpty_floatArray");
+		assertValueIsArrayOfType(retValue, "[F");
+
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof float[]);
+		assertEquals(0, ((float[]) rawObj).length);
+	}
+
+	@Test
+	public void getStatic_floatArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "a_floatArray");
+		assertValueIsArrayOfType(retValue, "[F");
+
+		float[] actualArray = {23.3f, 0f, -763.03f, 892.938f};
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof float[]);
+		assertEquals(actualArray.length, ((float[]) rawObj).length);
+		for (int i = 0; i < actualArray.length; i++) {
+			assertEquals(actualArray[i], ((float[]) rawObj)[i], 0);
+		}
+	}
+
+	@Test
+	public void getStatic_doubleArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNull_doubleArray");
+		assertValueIsNullArrayOfType(retValue, "[D");
+	}
+
+	@Test
+	public void getStatic_doubleArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmpty_doubleArray");
+		assertValueIsArrayOfType(retValue, "[D");
+
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof double[]);
+		assertEquals(0, ((double[]) rawObj).length);
+	}
+
+	@Test
+	public void getStatic_doubleArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "a_doubleArray");
+		assertValueIsArrayOfType(retValue, "[D");
+
+		double[] actualArray = {383239.3d, 0d, -239923.4038d};
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(rawObj instanceof double[]);
+		assertEquals(actualArray.length, ((double[]) rawObj).length);
+		for (int i = 0; i < actualArray.length; i++) {
+			assertEquals(actualArray[i], ((double[]) rawObj)[i], 0);
+		}
+	}
+	// </editor-fold>
+
+	// <editor-fold defaultstate="collapsed" desc="primitive wrapper array tests">
+	@Test
+	public void getStatic_BooleanArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNullBooleanArray");
+		assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Boolean;");
+	}
+
+	@Test
+	public void getStatic_BooleanArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmptyBooleanArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Boolean;");
+		assertValueEqualsArray(new Boolean[0], retValue);
+	}
+
+	@Test
+	public void getStatic_BooleanArrayNotNull() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aBooleanArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Boolean;");
+		assertValueEqualsArray(new Boolean[]{false, false, true}, retValue);
+	}
+
+	@Test
+	public void getStatic_ByteArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNullByteArray");
+		assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Byte;");
+	}
+
+	@Test
+	public void getStatic_ByteArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmptyByteArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Byte;");
+		assertValueEqualsArray(new Byte[0], retValue);
+	}
+
+	@Test
+	public void getStatic_ByteArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aByteArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Byte;");
+		assertValueEqualsArray(new Byte[]{0, 1, 2, 3, 4, 5, 6}, retValue);
+	}
+
+	@Test
+	public void getStatic_ShortArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNullShortArray");
+		assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Short;");
+	}
+
+	@Test
+	public void getStatic_ShortArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmptyShortArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Short;");
+		assertValueEqualsArray(new Short[0], retValue);
+	}
+
+	@Test
+	public void getStatic_ShortArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aShortArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Short;");
+		assertValueEqualsArray(new Short[]{-200, -100, 0, 100, 200, 300, 400, 500, 600}, retValue);
+	}
+
+	@Test
+	public void getStatic_CharacterArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNullCharArray");
+		assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Character;");
+	}
+
+	@Test
+	public void getStatic_CharacterArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmptyCharArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Character;");
+		assertValueEqualsArray(new Character[0], retValue);
+	}
+
+	@Test
+	public void getStatic_CharacterArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aCharArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Character;");
+		assertValueEqualsArray(new Character[]{'a', 'r', 'r', 'a', 'y'}, retValue);
+	}
+
+	@Test
+	public void getStatic_IntegerArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNullIntArray");
+		assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Integer;");
+	}
+
+	@Test
+	public void getStatic_IntegerArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmptyIntArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Integer;");
+		assertValueEqualsArray(new Integer[0], retValue);
+	}
+
+	@Test
+	public void getStatic_IntegerArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anIntArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Integer;");
+		assertValueEqualsArray(new Integer[]{2333, -2, 0, 892, 9381}, retValue);
+	}
+
+	@Test
+	public void getStatic_LongArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNullLongArray");
+		assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Long;");
+	}
+
+	@Test
+	public void getStatic_LongArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmptyLongArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Long;");
+		assertValueEqualsArray(new Long[0], retValue);
+	}
+
+	@Test
+	public void getStatic_LongArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aLongArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Long;");
+		assertValueEqualsArray(new Long[]{23230233L, -8929381L, 0L}, retValue);
+	}
+
+	@Test
+	public void getStatic_FloatArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNullFloatArray");
+		assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Float;");
+	}
+
+	@Test
+	public void getStatic_FloatArrayEmpty_emptyArray() throws Exception {
+
+
+		ReturnValue retValue = callGetStatic(className, "anEmptyFloatArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Float;");
+		assertValueEqualsArray(new Float[0], retValue);
+	}
+
+	@Test
+	public void getStatic_FloatArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aFloatArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Float;");
+		assertValueEqualsArray(new Float[]{23.3f, 0f, -763.03f, 892.938f}, retValue);
+	}
+
+	@Test
+	public void getStatic_DoubleArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNullDoubleArray");
+		assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Double;");
+	}
+
+	@Test
+	public void getStatic_DoubleArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmptyDoubleArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Double;");
+		assertValueEqualsArray(new Double[0], retValue);
+	}
+
+	@Test
+	public void getStatic_DoubleArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aDoubleArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.Double;");
+		assertValueEqualsArray(new Double[]{383239.3d, 0d, -239923.4038d}, retValue);
+	}
+
+	@Test
+	public void getStatic_StringArrayNull_nullArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aNullStringArray");
+		assertValueIsNullArrayOfType(retValue, "[Ljava.lang.String;");
+	}
+
+	@Test
+	public void getStatic_StringArrayEmpty_emptyArray() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "anEmptyStringArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.String;");
+		assertValueEqualsArray(new String[0], retValue);
+	}
+
+	@Test
+	public void getStatic_StringArrayNotNull_array() throws Exception {
+
+		ReturnValue retValue = callGetStatic(className, "aStringArray");
+		assertValueIsArrayOfType(retValue, "[Ljava.lang.String;");
+		assertValueEqualsArray(new String[]{"hello", "world", "!"}, retValue);
+	}
+	// </editor-fold>
 }

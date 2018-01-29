@@ -18,7 +18,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 	protected final String className = "com.ittera.cometa.apps.NonVoidInstanceMethods";
 
 	@Test
-	public void packageVisibleNoArgs() throws Exception {
+	public void callInstanceMethod_packageVisibleNoArgs_retValue() throws Exception {
 
 		String methodName = "giveMeX";
 
@@ -39,7 +39,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 
 
 	@Test
-	public void publicReturnsListAsRef() throws Exception {
+	public void callInstanceMethod_publicReturnsListAsRef_retValue() throws Exception {
 
 		String methodName = "getListOfStrings";
 
@@ -56,7 +56,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void publicReturnsNativelyInitListAsRef() throws Exception {
+	public void callInstanceMethod_publicReturnsNativelyInitListAsRef_retValue() throws Exception {
 		String methodName = "getListOfStringsShorthand";
 
 		// create new instance
@@ -72,7 +72,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void withObjectsAndObjectrefsAsArgs() throws Exception {
+	public void callInstanceMethod_withObjectsAndObjectrefsAsArgs_retValue() throws Exception {
 
 		String methodName = "addOffsetToListAndSumUp";
 

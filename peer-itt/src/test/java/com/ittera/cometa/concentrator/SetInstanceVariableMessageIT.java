@@ -22,7 +22,7 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	protected final String className = "com.ittera.cometa.apps.InstanceVars";
 
 	@Test
-	public void testPutInteger() throws Exception {
+	public void putField_integer_ok() throws Exception {
 
 		String fieldName = "anInt";
 		String fieldClassName = "java.lang.Integer";
@@ -52,7 +52,7 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void testPutIntegerSetNull() throws Exception {
+	public void putField_integerSetNull_ok() throws Exception {
 
 		String fieldName = "anotherInt";
 		String fieldClassName = "java.lang.Integer";

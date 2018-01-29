@@ -2,6 +2,7 @@ package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
+import com.ittera.cometa.messages.protobuf.Unwrapper;
 
 import static org.junit.Assert.*;
 
@@ -52,6 +53,22 @@ public class DataMessageAssertions {
 
 	protected void assertValueIsNullArrayOfType(ReturnValue returnValue, String className) {
 		assertIsObjectOfType(returnValue, className, false, true, true);
+	}
+
+	protected <T> void assertValueEqualsArray(T[] actualArray, ReturnValue retValue) throws Exception {
+
+		// check array type
+		Class classOfArray = actualArray.getClass();
+		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
+		assertTrue(classOfArray.isInstance(rawObj));
+
+		// check length
+		assertEquals(actualArray.length, ((T[]) rawObj).length);
+
+		// check contents equal
+		for (int i = 0; i < actualArray.length; i++) {
+			assertEquals(actualArray[i], ((T[]) rawObj)[i]);
+		}
 	}
 
 }

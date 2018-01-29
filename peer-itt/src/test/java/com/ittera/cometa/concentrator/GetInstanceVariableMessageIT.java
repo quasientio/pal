@@ -20,7 +20,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	protected final String className = "com.ittera.cometa.apps.InstanceVars";
 
 	@Test
-	public void getInstanceVar_publicIntegerNotNull_intReturned() throws Exception {
+	public void getInstanceVariable_publicIntegerNotNull_intReturned() throws Exception {
 
 		// create new instance
 		String newObjRef = callConstructor(className).getObject().getRef();
@@ -35,7 +35,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void getInstanceVar_privateNullInteger_nullIntReturned() throws Exception {
+	public void getInstanceVariable_privateNullInteger_nullIntReturned() throws Exception {
 
 		// create new instance
 		String newObjRef = callConstructor(className).getObject().getRef();
@@ -47,7 +47,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void getInstanceVar_protectedStringNotNull_stringReturned() throws Exception {
+	public void getInstanceVariable_protectedStringNotNull_stringReturned() throws Exception {
 
 		// create new instance
 		String newObjRef = callConstructor(className).getObject().getRef();
@@ -62,7 +62,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void getInstanceVar_getPublicStringNull_nullStringReturned() throws Exception {
+	public void getInstanceVariable_getPublicStringNull_nullStringReturned() throws Exception {
 
 		// create new instance
 		String newObjRef = callConstructor(className).getObject().getRef();
@@ -74,7 +74,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void getInstanceVar_packageVisibleBooleanNull_nullBoolReturned() throws Exception {
+	public void getInstanceVariable_packageVisibleBooleanNull_nullBoolReturned() throws Exception {
 
 		// create new instance
 		String newObjRef = callConstructor(className).getObject().getRef();
@@ -86,7 +86,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void getInstanceVar_publicBoolNotNull_boolReturned() throws Exception {
+	public void getInstanceVariable_publicBoolNotNull_boolReturned() throws Exception {
 
 		// create new instance
 		String newObjRef = callConstructor(className).getObject().getRef();
@@ -101,7 +101,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
-	public void getInstanceVar_privateShortNotZero_shortReturned() throws Exception {
+	public void getInstanceVariable_privateShortNotZero_shortReturned() throws Exception {
 
 		// create new instance
 		String newObjRef = callConstructor(className).getObject().getRef();
