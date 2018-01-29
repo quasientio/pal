@@ -1,20 +1,22 @@
 package com.ittera.cometa;
 
+import java.util.UUID;
+
 public class LogRequest implements Comparable {
 
-	private String uuid;
+	private UUID uuid;
 	private LogInfo outputLog;
 
-	public LogRequest(String uuid) {
+	public LogRequest(UUID uuid) {
 		this.uuid = uuid;
 	}
 
-	public LogRequest(String uuid, LogInfo outputLog) {
+	public LogRequest(UUID uuid, LogInfo outputLog) {
 		this(uuid);
 		this.outputLog = outputLog;
 	}
 
-	public String getUuid() {
+	public UUID getUuid() {
 		return uuid;
 	}
 
@@ -24,7 +26,7 @@ public class LogRequest implements Comparable {
 
 	@Override
 	public int compareTo(Object o) {
-		return uuid.compareTo((String) o);
+		return getUuid().compareTo(((LogRequest) o).getUuid());
 	}
 
 	@Override

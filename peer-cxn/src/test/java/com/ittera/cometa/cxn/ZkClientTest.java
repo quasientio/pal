@@ -149,10 +149,10 @@ public class ZkClientTest {
 		String createdLogName = newLogInfo.getName();
 		createdLogs.add(createdLogName);
 
-		String someRequestUuid = UUID.randomUUID().toString();
+		UUID someRequestUuid = UUID.randomUUID();
 
 		String reqNodeCreated = zkCli.addLogRequest(createdLogName, new LogRequest(someRequestUuid));
-		assertEquals(someRequestUuid, StringUtils.substringAfterLast(reqNodeCreated, "/"));
+		assertEquals(someRequestUuid, UUID.fromString(StringUtils.substringAfterLast(reqNodeCreated, "/")));
 	}
 
 	@Test
@@ -164,7 +164,7 @@ public class ZkClientTest {
 		String createdLogName = newLogInfo.getName();
 		createdLogs.add(createdLogName);
 
-		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
+		LogRequest someRequest = new LogRequest(UUID.randomUUID());
 
 		AsyncCallback.StringCallback cb = new AsyncCallback.StringCallback() {
 			@Override
@@ -190,7 +190,7 @@ public class ZkClientTest {
 	public void addLogRequest_noLog_illegalArgument() throws Exception {
 
 		String logName = "someRandomLogName";
-		String someRequestUuid = UUID.randomUUID().toString();
+		UUID someRequestUuid = UUID.randomUUID();
 
 		try {
 			zkCli.addLogRequest(logName, new LogRequest(someRequestUuid));
@@ -204,12 +204,12 @@ public class ZkClientTest {
 	public void addLogReply_noLog_illegalArgument() throws Exception {
 
 		String logName = "someRandomLogName";
-		String someRequestUuid = UUID.randomUUID().toString();
+		UUID someRequestUuid = UUID.randomUUID();
+		UUID somePeerUuid = UUID.randomUUID();
 		long someOffset = 32384893;
 
 		try {
-			zkCli.addLogReply(logName, new LogReply(UUID.randomUUID().toString(), null, someRequestUuid,
-				someOffset));
+			zkCli.addLogReply(logName, new LogReply(UUID.randomUUID(), somePeerUuid, someRequestUuid, someOffset));
 			fail();
 		} catch (IllegalArgumentException iae) {
 			// OK
@@ -228,12 +228,12 @@ public class ZkClientTest {
 		createdLogs.add(createdLogName);
 
 		// we DON'T create req node
-		String someRequestUuid = UUID.randomUUID().toString();
+		UUID someRequestUuid = UUID.randomUUID();
+		UUID somePeerUuid = UUID.randomUUID();
 
 		// create rep node
 		try {
-			zkCli.addLogReply(createdLogName, new LogReply(UUID.randomUUID().toString(), null, someRequestUuid,
-				someOffset));
+			zkCli.addLogReply(createdLogName, new LogReply(UUID.randomUUID(), somePeerUuid, someRequestUuid, someOffset));
 			fail();
 		} catch (IllegalArgumentException iae) {
 			// OK
@@ -244,7 +244,7 @@ public class ZkClientTest {
 	public void getReplies_noLog_illegalArgument() throws Exception {
 
 		String logName = "someRandomLogName";
-		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
+		LogRequest someRequest = new LogRequest(UUID.randomUUID());
 
 		// get replies to req
 		try {
@@ -265,7 +265,7 @@ public class ZkClientTest {
 		createdLogs.add(createdLogName);
 
 		// we DON'T create req node
-		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
+		LogRequest someRequest = new LogRequest(UUID.randomUUID());
 
 		// get replies to req
 		try {
@@ -287,7 +287,7 @@ public class ZkClientTest {
 		createdLogs.add(createdLogName);
 
 		// create req node
-		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
+		LogRequest someRequest = new LogRequest(UUID.randomUUID());
 		String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequest);
 
 		// get replies to req
@@ -307,12 +307,13 @@ public class ZkClientTest {
 		createdLogs.add(createdLogName);
 
 		// create req node
-		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
+		LogRequest someRequest = new LogRequest(UUID.randomUUID());
 		String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequest);
 
 		// create rep node
-		String someReplyUuid = UUID.randomUUID().toString();
-		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequest.getUuid(), someOffset));
+		UUID someReplyUuid = UUID.randomUUID();
+		UUID somePeerUuid = UUID.randomUUID();
+		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, somePeerUuid, someRequest.getUuid(), someOffset));
 
 		// get replies to req
 		Set<LogReply> replies = zkCli.getRepliesTo(createdLogName, someRequest);
@@ -332,16 +333,17 @@ public class ZkClientTest {
 		createdLogs.add(createdLogName);
 
 		// create req node
-		LogRequest someRequest = new LogRequest(UUID.randomUUID().toString());
+		LogRequest someRequest = new LogRequest(UUID.randomUUID());
+		UUID somePeerUuid = UUID.randomUUID();
 		String reqNodeCreated = zkCli.addLogRequest(createdLogName, someRequest);
 
 		// create rep node #1
-		String someReplyUuid = UUID.randomUUID().toString();
-		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequest.getUuid(), largeOffset));
+		UUID someReplyUuid = UUID.randomUUID();
+		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, somePeerUuid, someRequest.getUuid(), largeOffset));
 
 		// create rep node #2 with lower offset then first reply
-		someReplyUuid = UUID.randomUUID().toString();
-		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, null, someRequest.getUuid(), smallOffset));
+		someReplyUuid = UUID.randomUUID();
+		zkCli.addLogReply(createdLogName, new LogReply(someReplyUuid, somePeerUuid, someRequest.getUuid(), smallOffset));
 
 		// get replies to req
 		Set<LogReply> replies = zkCli.getRepliesTo(createdLogName, someRequest);

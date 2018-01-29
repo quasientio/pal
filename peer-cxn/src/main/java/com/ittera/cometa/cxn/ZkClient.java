@@ -10,6 +10,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.Properties;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -172,11 +173,13 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public void unregisterAllPeers() throws Exception {
 
-		List<String> peerUuids = zk.getChildren(getPeersPath(), false);
+		List<UUID> peerUuids = zk.getChildren(getPeersPath(), false).stream().map(UUID::fromString)
+			.collect(Collectors.toList());
+
 		// loop through all peers
 		int deleted = 0;
-		for (String peerUuid : peerUuids) {
-			unregisterPeer(UUID.fromString(peerUuid));
+		for (UUID peerUuid : peerUuids) {
+			unregisterPeer(peerUuid);
 			deleted++;
 		}
 
@@ -275,7 +278,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	 */
 	public void addLogReply(String logName, LogReply logReply, StringCallback callback) throws Exception {
 
-		String requestUuid = logReply.getIsReplyTo();
+		UUID requestUuid = logReply.getIsReplyTo();
 		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 
 		String newReplyNode = String.format("%s/%s/%s/%s", getLogsPath(), logName, requestUuid, logReply.getUuid());
@@ -301,7 +304,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public void addLogReply(String logName, LogReply logReply) throws Exception {
 
-		String requestUuid = logReply.getIsReplyTo();
+		UUID requestUuid = logReply.getIsReplyTo();
 		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 
 		String newReplyNode = String.format("%s/%s/%s/%s", getLogsPath(), logName, requestUuid, logReply.getUuid());
@@ -344,7 +347,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		String logNode = getLogsPath() + "/" + logName;
 		int deleted = 0;
 		for (String reqNode : zk.getChildren(logNode, false)) {
-			deleteLogRequest(logName, new LogRequest(reqNode));
+			deleteLogRequest(logName, new LogRequest(UUID.fromString(reqNode)));
 			deleted++;
 		}
 
@@ -377,7 +380,8 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			nodeStat = zk.exists(requestNode + "/" + replyNode, null);
 			replyNodePath = requestNode + "/" + replyNode;
 			props = getProperties(replyNodePath, nodeStat);
-			replies.add(new LogReply(replyNode, props.getProperty("from"),
+			replies.add(new LogReply(UUID.fromString(replyNode),
+				props.getProperty("from") == null ? null : UUID.fromString(props.getProperty("from")),
 				logRequest.getUuid(), Long.valueOf(props.getProperty("offset"))));
 		}
 
@@ -385,15 +389,16 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	}
 
 	@Override
-	public LogReply getLogReply(String logName, String requestUuid, String replyUuid) throws Exception {
+	public LogReply getLogReply(String logName, UUID requestUuid, UUID replyUuid) throws Exception {
 
 		String replyNode = String.format("%s/%s/%s/%s", getLogsPath(), logName, requestUuid, replyUuid);
 		Stat nodeStat = zk.exists(replyNode, null);
 		Properties props = getProperties(replyNode, nodeStat);
-		return new LogReply(replyUuid, props.getProperty("from"), requestUuid, Long.valueOf(props.getProperty("offset")));
+		return new LogReply(replyUuid, UUID.fromString(props.getProperty("from")), requestUuid,
+			Long.valueOf(props.getProperty("offset")));
 	}
 
-	public void getChildren(String logName, String requestUuid, Watcher watcher, ChildrenCallback cb, Object ctx) {
+	public void getChildren(String logName, UUID requestUuid, Watcher watcher, ChildrenCallback cb, Object ctx) {
 
 		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 
@@ -401,7 +406,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		zk.getChildren(requestNode, watcher, cb, ctx);
 	}
 
-	public void requestExists(String logName, String requestUuid, Watcher watcher, StatCallback cb) {
+	public void requestExists(String logName, UUID requestUuid, Watcher watcher, StatCallback cb) {
 
 		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 		zk.exists(requestNode, watcher, cb, null);
@@ -491,7 +496,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 		Properties props = getProperties(logNode, nodeStat);
 		String servers = props.getProperty("bootstrap.servers");
-		String uuid = props.getProperty("uuid");
+		UUID uuid = UUID.fromString(props.getProperty("uuid"));
 
 		// fill stat info
 		LogInfo logInfo = new LogInfo(logName, servers, uuid);
@@ -504,7 +509,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	public LogInfo getLogInfo(UUID uuid) throws Exception {
 		Set<LogInfo> allLogs = getAllLogs();
 		for (LogInfo logInfo : allLogs) {
-			if (logInfo.getUuid().equalsIgnoreCase(uuid.toString())) {
+			if (logInfo.getUuid().equals(uuid)) {
 				return logInfo;
 			}
 		}
@@ -557,17 +562,12 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	}
 
 	@Override
-	public PeerInfo getPeerInfo(String peerUuid) throws Exception {
-		return getPeerInfo(UUID.fromString(peerUuid));
-	}
-
-	@Override
 	public Set<PeerInfo> getAllPeers() throws Exception {
 
 		Set<PeerInfo> allPeers = new TreeSet();
 		List<String> peers = zk.getChildren(getPeersPath(), false);
 		for (String uuid : peers) {
-			allPeers.add(getPeerInfo(uuid));
+			allPeers.add(getPeerInfo(UUID.fromString(uuid)));
 		}
 
 		return allPeers;

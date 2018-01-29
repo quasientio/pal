@@ -17,10 +17,6 @@ public class PeerInfo implements Comparable {
 		setUuid(uuid);
 	}
 
-	public PeerInfo(String uuid) {
-		this(UUID.fromString(uuid));
-	}
-
 	public UUID getUuid() {
 		return uuid;
 	}

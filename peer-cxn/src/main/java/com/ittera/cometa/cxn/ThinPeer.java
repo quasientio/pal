@@ -308,7 +308,7 @@ public class ThinPeer {
 
 	public Future<DataMessage> sendToLogAsync(DataMessage message) {
 
-		final String requestMsgUuid = message.getMessageUuid();
+		final UUID requestMsgUuid = UUID.fromString(message.getMessageUuid());
 
 		// send to kafka
 		producer.send(new ProducerRecord(outLog.getName(), message.getMessageUuid(), message));
@@ -412,7 +412,7 @@ public class ThinPeer {
 					logger.debug("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
 					// try switching to direct peer talk (i.e. p2p)
 					if (allowP2P) {
-						String concentratorUuid = dataMessage.getConcentratorUuid();
+						UUID concentratorUuid = UUID.fromString(dataMessage.getConcentratorUuid());
 						PeerInfo newPeer = null;
 						try {
 							// we getPeerProperties and close after since we assume we'll get here only once

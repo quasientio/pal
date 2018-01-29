@@ -2,6 +2,8 @@ package com.ittera.cometa;
 
 import com.ittera.cometa.util.ByteSizeConverter;
 
+import java.util.UUID;
+
 public class LogInfo implements Comparable {
 
 	// name of node in zk
@@ -12,7 +14,7 @@ public class LogInfo implements Comparable {
 
 	// in zk node data
 	private String bootstrapServers;
-	private String uuid;
+	private UUID uuid;
 
 	// to be filled from (kafka) mbeans via jmx
 	private long startOffset;
@@ -30,7 +32,7 @@ public class LogInfo implements Comparable {
 		this.bootstrapServers = bootstrapServers;
 	}
 
-	public LogInfo(String name, String bootstrapServers, String uuid) {
+	public LogInfo(String name, String bootstrapServers, UUID uuid) {
 		this(name, bootstrapServers);
 		this.uuid = uuid;
 	}
@@ -39,11 +41,11 @@ public class LogInfo implements Comparable {
 		return name;
 	}
 
-	public void setUuid(String uuid) {
+	public void setUuid(UUID uuid) {
 		this.uuid = uuid;
 	}
 
-	public String getUuid() {
+	public UUID getUuid() {
 		return uuid;
 	}
 

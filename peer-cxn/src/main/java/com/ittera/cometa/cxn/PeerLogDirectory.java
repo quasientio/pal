@@ -41,8 +41,6 @@ public interface PeerLogDirectory {
 
 	PeerInfo getPeerInfo(UUID peerUuid) throws Exception;
 
-	PeerInfo getPeerInfo(String peerUuid) throws Exception;
-
 	Set<PeerInfo> getAllPeers() throws Exception;
 
 	/**
@@ -81,6 +79,6 @@ public interface PeerLogDirectory {
 
 	Set<LogReply> getRepliesTo(String logName, LogRequest logRequest) throws Exception;
 
-	LogReply getLogReply(String logName, String requestUuid, String replyUuid) throws Exception;
+	LogReply getLogReply(String logName, UUID requestUuid, UUID replyUuid) throws Exception;
 
 }

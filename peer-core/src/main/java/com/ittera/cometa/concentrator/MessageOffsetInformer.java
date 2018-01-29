@@ -21,6 +21,8 @@ import org.slf4j.LoggerFactory;
 
 import org.zeromq.ZMQ.Socket;
 
+import java.util.UUID;
+
 /**
  * Helper class used by KafkaDataMessageWriter to relate DataMessage with offset, so that we can asynchronously
  * write replies' offsets to peerLogDirectory (i.e. zookeeper).
@@ -101,14 +103,14 @@ class MessageOffsetInformer implements Callback, Watcher {
 
 		// if message is reply, save offset to zookeeper
 		if (message.hasFollowingUuid()) {
-			this.logReply = new LogReply(message.getMessageUuid(), Concentrator.uuid.toString(),
-				message.getFollowingUuid(), recordMetadata.offset());
+			this.logReply = new LogReply(UUID.fromString(message.getMessageUuid()), Concentrator.uuid,
+				UUID.fromString(message.getFollowingUuid()), recordMetadata.offset());
 			try {
 				((ZkClient) peerLogDirectory).addLogReply(inLog.getName(), logReply, addReplyCallback);
 			} catch (IllegalArgumentException iae) {
 				// request node probably doesn't exist, add ourselves as watcher
-				((ZkClient) peerLogDirectory).requestExists(inLog.getName(), message.getFollowingUuid(), this,
-					statCallback);
+				((ZkClient) peerLogDirectory).requestExists(inLog.getName(), UUID.fromString(message.getFollowingUuid()),
+					this, statCallback);
 			} catch (Exception ex) {
 				logger.error("Unhandled error creating reply message offset for request w/uuid: {}. Giving up.",
 					message.getFollowingUuid(), ex);

@@ -1,20 +1,22 @@
 package com.ittera.cometa;
 
+import java.util.UUID;
+
 public class LogReply implements Comparable {
 
-	private String uuid;
-	private String peerUuid;
-	private String isReplyTo;
+	private UUID uuid;
+	private UUID peerUuid;
+	private UUID isReplyTo;
 	private long offset;
 
-	public LogReply(String uuid, String peerUuid, String isReplyTo, long offset) {
+	public LogReply(UUID uuid, UUID peerUuid, UUID isReplyTo, long offset) {
 		this.uuid = uuid;
 		this.peerUuid = peerUuid;
 		this.isReplyTo = isReplyTo;
 		this.offset = offset;
 	}
 
-	public String getUuid() {
+	public UUID getUuid() {
 		return uuid;
 	}
 
@@ -22,11 +24,11 @@ public class LogReply implements Comparable {
 		return offset;
 	}
 
-	public String getIsReplyTo() {
+	public UUID getIsReplyTo() {
 		return isReplyTo;
 	}
 
-	public String getPeerUuid() {
+	public UUID getPeerUuid() {
 		return peerUuid;
 	}
 
