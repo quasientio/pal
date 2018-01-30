@@ -187,7 +187,7 @@ public class ZkClientTest {
 	}
 
 	@Test
-	public void addLogRequest_noLog_illegalArgument() throws Exception {
+	public void addLogRequest_noLog_noLogInfoNodeException() throws Exception {
 
 		String logName = "someRandomLogName";
 		UUID someRequestUuid = UUID.randomUUID();
@@ -195,13 +195,13 @@ public class ZkClientTest {
 		try {
 			zkCli.addLogRequest(logName, new LogRequest(someRequestUuid));
 			fail();
-		} catch (IllegalArgumentException iae) {
+		} catch (NoLogInfoNodeException nne) {
 			// OK
 		}
 	}
 
 	@Test
-	public void addLogReply_noLog_illegalArgument() throws Exception {
+	public void addLogReply_noLog_noLogInfoNodeException() throws Exception {
 
 		String logName = "someRandomLogName";
 		UUID someRequestUuid = UUID.randomUUID();
@@ -211,13 +211,13 @@ public class ZkClientTest {
 		try {
 			zkCli.addLogReply(logName, new LogReply(UUID.randomUUID(), somePeerUuid, someRequestUuid, someOffset));
 			fail();
-		} catch (IllegalArgumentException iae) {
+		} catch (NoLogInfoNodeException nne) {
 			// OK
 		}
 	}
 
 	@Test
-	public void addLogReply_noReq_illegalArgument() throws Exception {
+	public void addLogReply_noReq_noLogRequestNodeException() throws Exception {
 
 		String logNamePrefix = "test.topic";
 		long someOffset = 32384893;
@@ -235,13 +235,13 @@ public class ZkClientTest {
 		try {
 			zkCli.addLogReply(createdLogName, new LogReply(UUID.randomUUID(), somePeerUuid, someRequestUuid, someOffset));
 			fail();
-		} catch (IllegalArgumentException iae) {
+		} catch (NoLogRequestNodeException nne) {
 			// OK
 		}
 	}
 
 	@Test
-	public void getReplies_noLog_illegalArgument() throws Exception {
+	public void getReplies_noLog_noLogInfoNodeException() throws Exception {
 
 		String logName = "someRandomLogName";
 		LogRequest someRequest = new LogRequest(UUID.randomUUID());
@@ -250,13 +250,13 @@ public class ZkClientTest {
 		try {
 			zkCli.getRepliesTo(logName, someRequest);
 			fail();
-		} catch (IllegalArgumentException iae) {
+		} catch (NoLogInfoNodeException nne) {
 			// OK
 		}
 	}
 
 	@Test
-	public void getReplies_noReq_illegalArgument() throws Exception {
+	public void getReplies_noReq_noLogRequestNodeException() throws Exception {
 		String logNamePrefix = "someRandomLogName";
 
 		// create log
@@ -271,7 +271,7 @@ public class ZkClientTest {
 		try {
 			zkCli.getRepliesTo(createdLogName, someRequest);
 			fail();
-		} catch (IllegalArgumentException iae) {
+		} catch (NoLogRequestNodeException nne) {
 			// OK
 		}
 	}

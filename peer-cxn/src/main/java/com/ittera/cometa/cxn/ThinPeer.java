@@ -318,14 +318,15 @@ public class ThinPeer {
 			singleThreadConsumerExecutor, outLog.getName(), new LogRequest(requestMsgUuid));
 
 		// addLogRequest callback
-		StringCallback addLogCallback = (rc, path, ctx, name) -> {
+		StringCallback addLogRequestCallback = (rc, path, ctx, name) -> {
 			switch (Code.get(rc)) {
 				case OK:
+					// set watch to get notified about changes to children
 					((ZkClient) peerLogDirectory).getChildren(outLog.getName(), requestMsgUuid, messageFuture, messageFuture,
 						null);
 					break;
 				default:
-					logger.warn("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
+					logger.error("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
 					return;
 			}
 		};
@@ -340,7 +341,7 @@ public class ThinPeer {
 		}
 
 		try {
-			((ZkClient) peerLogDirectory).addLogRequest(outLog.getName(), logRequest, addLogCallback, null);
+			((ZkClient) peerLogDirectory).addLogRequest(outLog.getName(), logRequest, addLogRequestCallback, null);
 		} catch (Exception e) {
 			logger.error("Couldn't add request node to directory", e);
 			return null;

@@ -104,6 +104,11 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 		logger.debug("getChildren returned for request: {}, with {} children", logRequest, children.size());
 
 		if (!children.isEmpty()) {
+			if (logger.isDebugEnabled()) {
+				StringBuilder sb = new StringBuilder("children:\n");
+				children.stream().forEach(s -> sb.append(s).append('\n'));
+				logger.debug(sb.toString());
+			}
 			process();
 		}
 	}
@@ -115,11 +120,11 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 	}
 
 	private void process() {
+
 		final LogReply logReply = getReplyNode();
+
 		if (logReply == null) {
-			logger.error("Null LogReply object for request: {}. Cancelling future.", logRequest);
-			this.cancel(true);
-			return;
+			logger.warn("Null reply for request node {}. May haven been already processed -> ignoring.", logRequest);
 		}
 
 		// let the executor service fetch the message from the log
@@ -146,7 +151,7 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 				logReply = (LogReply) replySet.toArray()[0];
 			}
 		} catch (Exception ex) {
-			logger.error("Error getting LogReply object for request: {}", logRequest, ex);
+			logger.warn("Error getting LogReply object for request: {}", logRequest, ex);
 		}
 
 		return logReply;

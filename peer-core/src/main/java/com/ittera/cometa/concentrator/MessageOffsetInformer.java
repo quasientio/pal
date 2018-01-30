@@ -3,6 +3,7 @@ package com.ittera.cometa.concentrator;
 import com.ittera.cometa.LogReply;
 import com.ittera.cometa.LogInfo;
 
+import com.ittera.cometa.cxn.NoLogRequestNodeException;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.cxn.ZkClient;
 
@@ -16,6 +17,7 @@ import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,15 +61,29 @@ class MessageOffsetInformer implements Callback, Watcher {
 					done = true;
 					break;
 				default:
-					logger.warn("reply node NOT created (error code: {}) for message w/uuid: {}", rc,
+					logger.error("reply node NOT created (error code: {}) for message w/uuid: {}", rc,
 						message.getMessageUuid());
 					return;
 			}
 		}
 	};
 
-	private final AsyncCallback.StatCallback statCallback = (rc, path, ctx, stat)
-		-> logger.debug("processResult with rc: {}, path: {}, and stat: {}", rc, path, stat);
+	private final AsyncCallback.StatCallback statCallback = new AsyncCallback.StatCallback() {
+		@Override
+		public void processResult(int rc, String path, Object ctx, Stat stat) {
+			logger.debug("processResult with rc: {}, path: {}, and stat: {}", rc, path, stat);
+			if (Code.get(rc) == Code.OK && stat != null) {
+				logger.debug("node exists now: will retry to write reply node");
+				try {
+					((ZkClient) peerLogDirectory).addLogReply(inLog.getName(), logReply, addReplyCallback);
+				} catch (Exception ex) {
+					logger.error("Unhandled error creating reply message offset for request w/uuid: {}. Giving up.",
+						message.getFollowingUuid(), ex);
+					lastError = ex;
+				}
+			}
+		}
+	};
 
 	MessageOffsetInformer(DataMessage message, boolean publishOffsets, Socket offsetPublisher,
 												PeerLogDirectory peerLogDirectory, LogInfo inLog) {
@@ -107,8 +123,9 @@ class MessageOffsetInformer implements Callback, Watcher {
 				UUID.fromString(message.getFollowingUuid()), recordMetadata.offset());
 			try {
 				((ZkClient) peerLogDirectory).addLogReply(inLog.getName(), logReply, addReplyCallback);
-			} catch (IllegalArgumentException iae) {
-				// request node probably doesn't exist, add ourselves as watcher
+			} catch (NoLogRequestNodeException nrne) {
+				logger.debug("Log request node {} does not exist, will add ourselves as watcher and wait", nrne.getLogRequest());
+				// request node doesn't exist yet, add ourselves as watcher to get notified when created
 				((ZkClient) peerLogDirectory).requestExists(inLog.getName(), UUID.fromString(message.getFollowingUuid()),
 					this, statCallback);
 			} catch (Exception ex) {
@@ -127,9 +144,10 @@ class MessageOffsetInformer implements Callback, Watcher {
 	 */
 	@Override
 	public void process(WatchedEvent watchedEvent) {
+		logger.debug("Received watchedEvent relating replyNode {}: {}", logReply, watchedEvent);
 
 		if (watchedEvent.getType() == Event.EventType.NodeCreated) {
-			logger.debug("node created event: {}, will retry to write add reply node", watchedEvent);
+			logger.debug("node created event: {}, will retry to write reply node", watchedEvent);
 			try {
 				((ZkClient) peerLogDirectory).addLogReply(inLog.getName(), logReply, addReplyCallback);
 			} catch (Exception ex) {

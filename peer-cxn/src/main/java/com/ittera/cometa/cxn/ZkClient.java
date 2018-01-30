@@ -248,7 +248,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 		String newRequestNode = String.format("%s/%s/%s", getLogsPath(), logName, logRequest.getUuid());
 		if (!logExists(logName)) {
-			throw new IllegalArgumentException(String.format("Node for log: %s does not exist", logName));
+			throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
 		}
 
 		zk.create(newRequestNode, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT, cb, ctx);
@@ -260,7 +260,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 		String newRequestNode = String.format("%s/%s/%s", getLogsPath(), logName, logRequest.getUuid());
 		if (!logExists(logName)) {
-			throw new IllegalArgumentException(String.format("Node for log: %s does not exist", logName));
+			throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
 		}
 
 		String createdNode = zk.create(newRequestNode, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -293,9 +293,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 				logName);
 		} else {
 			if (!logExists(logName)) {
-				throw new IllegalArgumentException(String.format("Node for log: %s does not exist", logName));
+				throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
 			} else {
-				throw new IllegalArgumentException(String.format("Request node %s for log: %s does not exist", requestUuid,
+				throw new NoLogRequestNodeException(String.format("Request node %s for log: %s does not exist", requestUuid,
 					logName));
 			}
 		}
@@ -317,9 +317,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			zk.create(newReplyNode, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		} else {
 			if (!logExists(logName)) {
-				throw new IllegalArgumentException(String.format("Node for log: %s does not exist", logName));
+				throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
 			} else {
-				throw new IllegalArgumentException(String.format("Request node %s for log: %s does not exist", requestUuid,
+				throw new NoLogRequestNodeException(String.format("Request node %s for log: %s does not exist", requestUuid,
 					logName));
 			}
 		}
@@ -359,7 +359,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 		// check log exists
 		if (!logExists(logName)) {
-			throw new IllegalArgumentException(String.format("Node for log: %s does not exist", logName));
+			throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
 		}
 
 		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, logRequest.getUuid());
@@ -370,7 +370,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 		// check req node exists
 		if (zk.exists(requestNode, false) == null) {
-			throw new IllegalArgumentException(String.format("Request node %s for log: %s does not exist", logRequest,
+			throw new NoLogRequestNodeException(String.format("Request node %s for log: %s does not exist", logRequest,
 				logName));
 		}
 
