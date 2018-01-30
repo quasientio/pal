@@ -25,7 +25,7 @@ public class ObjectServiceTest {
   @BeforeClass
   public static void initService() {
     objectService = new BiMapObjectService();
-    final ServiceManager manager = new ServiceManager(Arrays.asList((Service) objectService));
+    final ServiceManager manager = new ServiceManager(Collections.singletonList((Service) objectService));
 
     //start services
     manager.startAsync();
@@ -68,8 +68,8 @@ public class ObjectServiceTest {
   public void storeObject_differentObjsStored_sizeAsExpected() throws Exception {
 
     objectService.storeObject(new ArrayList());
-    objectService.storeObject(Integer.valueOf(34182));
-    objectService.storeObject(new String("some chars"));
+    objectService.storeObject(34182);
+    objectService.storeObject("some chars");
 
     int objectsStored = objectService.size();
     assertEquals(3, objectsStored);
@@ -259,7 +259,7 @@ public class ObjectServiceTest {
   @Test
   public void remove_storedObjectRef_intObject() throws Exception {
 
-    Integer anInt = Integer.valueOf(34182);
+    Integer anInt = 34182;
     String objectRef = objectService.storeObject(anInt);
 
     assertEquals(1, objectService.size());
@@ -271,7 +271,7 @@ public class ObjectServiceTest {
   @Test
   public void remove_storedObjectRef_stringObject() throws Exception {
 
-    String aString = new String("just a string");
+    String aString = "just a string";
     String objectRef = objectService.storeObject(aString);
 
     assertEquals(aString, objectService.remove(objectRef));
@@ -281,7 +281,7 @@ public class ObjectServiceTest {
   @Test
   public void remove_alreadyRemoved_null() throws Exception {
 
-    String aString = new String("just a string");
+    String aString = "just another string";
     String objectRef = objectService.storeObject(aString);
 
     assertEquals(aString, objectService.remove(objectRef));

@@ -142,7 +142,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		byte[] data = null;
 
 		if (peerProperties != null && !peerProperties.isEmpty()) {
-			StringBuffer sb = new StringBuffer();
+			StringBuilder sb = new StringBuilder();
 			int propIdx = 1;
 			for (String propKey : peerProperties.stringPropertyNames()) {
 				sb.append(propKey.trim()).append(PROPERTIES_SEP).append(peerProperties.getProperty(propKey).trim());
@@ -199,7 +199,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		byte[] data;
 
 		// create new node
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		String newLogUuid = UUID.randomUUID().toString();
 		sb.append("bootstrap.servers").append(PROPERTIES_SEP).append(bootstrapServers.trim()).append('\n');
 		sb.append("uuid").append(PROPERTIES_SEP).append(newLogUuid).append('\n');
@@ -220,7 +220,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		byte[] data;
 
 		// create new node
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		String logUuid = UUID.randomUUID().toString();
 		sb.append("bootstrap.servers").append(PROPERTIES_SEP).append(bootstrapServers.trim()).append('\n');
 		sb.append("uuid").append(PROPERTIES_SEP).append(logUuid).append('\n');
@@ -284,10 +284,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		String newReplyNode = String.format("%s/%s/%s/%s", getLogsPath(), logName, requestUuid, logReply.getUuid());
 		if (zk.exists(requestNode, false) != null) {
 			// create reply node with message uuid as name and offset as data
-			StringBuffer sb = new StringBuffer();
-			sb.append("from").append(PROPERTIES_SEP).append(logReply.getPeerUuid()).append('\n');
-			sb.append("offset").append(PROPERTIES_SEP).append(logReply.getOffset()).append('\n');
-			byte[] data = sb.toString().getBytes();
+			String sb = "from" + PROPERTIES_SEP + logReply.getPeerUuid() +
+				'\n' + "offset" + PROPERTIES_SEP + logReply.getOffset() + '\n';
+			byte[] data = sb.getBytes();
 			zk.create(newReplyNode, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT, callback, null);
 			logger.debug("Async-created new reply node uuid: {} for request: {}, log: {}", logReply.getUuid(), requestUuid,
 				logName);
@@ -310,10 +309,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		String newReplyNode = String.format("%s/%s/%s/%s", getLogsPath(), logName, requestUuid, logReply.getUuid());
 		if (zk.exists(requestNode, false) != null) {
 			// create reply node with message uuid as name and offset as data
-			StringBuffer sb = new StringBuffer();
-			sb.append("from").append(PROPERTIES_SEP).append(logReply.getPeerUuid()).append('\n');
-			sb.append("offset").append(PROPERTIES_SEP).append(logReply.getOffset()).append('\n');
-			byte[] data = sb.toString().getBytes();
+			String sb = "from" + PROPERTIES_SEP + logReply.getPeerUuid() + '\n' +
+				"offset" + PROPERTIES_SEP + logReply.getOffset() + '\n';
+			byte[] data = sb.getBytes();
 			zk.create(newReplyNode, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		} else {
 			if (!logExists(logName)) {
@@ -475,9 +473,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		if (data != null) {
 			String nodeData = new String(zk.getData(node, false, nodeStat));
 			String[] lines = nodeData.split("\n");
-			for (int i = 0; i < lines.length; i++) {
-				String key = StringUtils.substringBefore(lines[i], PROPERTIES_SEP);
-				String value = StringUtils.substringAfter(lines[i], PROPERTIES_SEP);
+			for (String line : lines) {
+				String key = StringUtils.substringBefore(line, PROPERTIES_SEP);
+				String value = StringUtils.substringAfter(line, PROPERTIES_SEP);
 				properties.put(key, value);
 			}
 		}
@@ -631,7 +629,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	}
 
 	@Override
-	public boolean isConnectionEstablished() throws Exception {
+	public boolean isConnectionEstablished() {
 		return zk != null && zk.getState().equals(ZooKeeper.States.CONNECTED);
 	}
 

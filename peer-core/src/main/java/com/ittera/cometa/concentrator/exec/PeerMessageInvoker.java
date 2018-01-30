@@ -19,13 +19,13 @@ public class PeerMessageInvoker extends Thread {
 
 	protected static final Logger logger = LoggerFactory.getLogger(PeerMessageInvoker.class);
 
-	protected AtomicLong requestsDispatched = new AtomicLong(0);
-	protected AtomicLong requestsDismissed = new AtomicLong(0);
+	protected final AtomicLong requestsDispatched = new AtomicLong(0);
+	protected final AtomicLong requestsDismissed = new AtomicLong(0);
 
-	protected DataMessageBuilder dataMessageBuilder;
+	protected final DataMessageBuilder dataMessageBuilder;
 
 	// zmq stuff
-	private ZContext zmqContext;
+	private final ZContext zmqContext;
 	private final String dealerAddress;
 	private Socket socket;
 
@@ -81,7 +81,7 @@ public class PeerMessageInvoker extends Thread {
 				logger.error("Caught exception parsing message", e);
 			}
 
-			logger.debug("Received req message with uuid: {}", requestMsg.getMessageUuid());
+			logger.debug("Received req message with uuid: {}", requestMsg != null ? requestMsg.getMessageUuid() : null);
 
 			if (requestMsg != null) {
 

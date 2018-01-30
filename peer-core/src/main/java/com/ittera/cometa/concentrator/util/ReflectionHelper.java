@@ -22,7 +22,7 @@ public final class ReflectionHelper {
 
 	protected static final Logger logger = LoggerFactory.getLogger(ReflectionHelper.class);
 
-	private static Map<String, Method> matchedMethodsCache = new ConcurrentHashMap<>();
+	private static final Map<String, Method> matchedMethodsCache = new ConcurrentHashMap<>();
 
 	private ReflectionHelper() {
 		//avoid instantiation
@@ -48,8 +48,8 @@ public final class ReflectionHelper {
 
 		// trace params
 		if (logger.isTraceEnabled()) {
-			if (parameters == null || parameters.length == 0) {
-				logger.trace("params array null or length=0");
+			if (parameters.length == 0) {
+				logger.trace("params of length=0");
 			} else {
 				final StringBuilder stringBuilder = new StringBuilder();
 				for (int i = 0; i < parameters.length; i++) {
@@ -150,7 +150,7 @@ public final class ReflectionHelper {
 	}
 
 	private static String buildKey(Class clazz, String methodName, List<Primitives.Object> parameterTypeNames) {
-		StringBuffer keyBuilder = new StringBuffer(methodName);
+		StringBuilder keyBuilder = new StringBuilder(methodName);
 		ClassLoader cl = clazz.getClassLoader();
 		keyBuilder.append(cl == null ? "bootstrapCL" : cl.toString());
 		keyBuilder.append(clazz.getName());

@@ -4,7 +4,7 @@ import java.util.UUID;
 
 public class LogRequest implements Comparable {
 
-	private UUID uuid;
+	private final UUID uuid;
 	private LogInfo outputLog;
 
 	public LogRequest(UUID uuid) {

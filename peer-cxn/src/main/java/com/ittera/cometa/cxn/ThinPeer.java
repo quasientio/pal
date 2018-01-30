@@ -30,13 +30,14 @@ import org.zeromq.ZMQ.Socket;
 
 import java.io.InputStream;
 
-import java.util.Arrays;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Collections;
+
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutorService;
@@ -49,9 +50,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
  */
 public class ThinPeer {
 
-	private UUID peerUuid = UUID.randomUUID();
+	private final UUID peerUuid = UUID.randomUUID();
 
-	private boolean allowP2P;
+	private final boolean allowP2P;
 
 	// static
 	protected final static Logger logger = LoggerFactory.getLogger(ThinPeer.class);
@@ -59,14 +60,11 @@ public class ThinPeer {
 
 	// kafka stuff
 	private LogInfo inLog, outLog;
-	private final String kafkaTopicPrefix;
 	private final TopicPartition inTopicPartition;
 	private final Long pollTimeout;
 
-	private final Properties kafkaProducerProps = new Properties();
 	private final KafkaProducer producer;
 	private final KafkaConsumer<String, String> consumer;
-	private final Properties kafkaConsumerProps = new Properties();
 
 	private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap();
 	private final ExecutorService singleThreadConsumerExecutor = Executors.newSingleThreadExecutor();
@@ -107,7 +105,7 @@ public class ThinPeer {
 			properties.load(stream);
 		}
 
-		kafkaTopicPrefix = properties.getProperty("kafkaTopicPrefix");
+		String kafkaTopicPrefix = properties.getProperty("kafkaTopicPrefix");
 		pollTimeout = Long.parseLong(properties.getProperty("pollTimeout"));
 
 		// connect to log and peer directory
@@ -139,6 +137,7 @@ public class ThinPeer {
 
 
 		/** Configure and Initialize Kafka Producer **/
+		Properties kafkaProducerProps = new Properties();
 		for (String propKey : properties.stringPropertyNames()) {
 			if (propKey.startsWith("kafka.producer.")) {
 				kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka.producer."),
@@ -155,6 +154,7 @@ public class ThinPeer {
 		logger.info("Kafka producer initialized. Will connect to bootstrap servers: {}", this.outLog.getBootstrapServers());
 
 		/** Configure and Initialize Kafka Consumer **/
+		Properties kafkaConsumerProps = new Properties();
 		for (String propKey : properties.stringPropertyNames()) {
 			if (propKey.startsWith("kafka.consumer.")) {
 				kafkaConsumerProps.put(StringUtils.substringAfter(propKey, "kafka.consumer."),
@@ -171,7 +171,7 @@ public class ThinPeer {
 
 		//manual assignment of partition so we can control offset seek
 		inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
-		consumer.assign(Arrays.asList(inTopicPartition));
+		consumer.assign(Collections.singletonList(inTopicPartition));
 
 		// create zmq context
 		logger.info("Initializing zmq context");
@@ -327,12 +327,11 @@ public class ThinPeer {
 					break;
 				default:
 					logger.error("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
-					return;
 			}
 		};
 
 		// asynchronously create req node in zk
-		LogRequest logRequest = null;
+		LogRequest logRequest;
 		if (!outLog.equals(inLog)) {
 			// if we are reading from a different log, ask for reply to be written to that log (our inLog)
 			logRequest = new LogRequest(requestMsgUuid, inLog);
@@ -477,15 +476,13 @@ public class ThinPeer {
 	}
 
 	private static String getRecordInfo(RecordMetadata recordMetadata) {
-		StringBuilder builder = new StringBuilder();
-		builder.append("{\n checksum: ").append('\n').append(
-			" timestamp: ").append(recordMetadata.timestamp()).append('\n').append(
-			" offset: ").append(recordMetadata.offset()).append('\n').append(
-			" #bytes in value: ").append(recordMetadata.serializedValueSize()).append("\n}");
 
-		return builder.toString();
+		String builder = "{\n checksum: " + '\n' +
+			" timestamp: " + recordMetadata.timestamp() + '\n' +
+			" offset: " + recordMetadata.offset() + '\n' +
+			" #bytes in value: " + recordMetadata.serializedValueSize() + "\n}";
+		return builder;
 	}
-
 
 	public void close() {
 

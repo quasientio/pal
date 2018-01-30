@@ -9,8 +9,8 @@ public class NonVoidStaticMethods {
 	public static Integer nonVoidSumUpList(ArrayList<Integer> listOfInts) {
 		int sum = 0;
 		if (listOfInts != null) {
-			for (int i = 0; i < listOfInts.size(); i++) {
-				sum += listOfInts.get(i);
+			for (Integer listOfInt : listOfInts) {
+				sum += listOfInt;
 			}
 		}
 		return sum;
@@ -37,7 +37,7 @@ public class NonVoidStaticMethods {
 	}
 
 	public static Boolean[] giveMeANullBoolArray() {
-		return (Boolean[]) null;
+		return null;
 	}
 
 	static Thread fetchMeAThreadSingleton() {

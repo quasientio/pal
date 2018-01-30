@@ -101,7 +101,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 	}
 
 	@Override
-	public void writeToLog(LogInfo outLog, LogInfo inLog, boolean publishOffsets) throws Exception {
+	public void writeToLog(LogInfo outLog, LogInfo inLog, boolean publishOffsets) {
 
 		this.outLog = outLog;
 		this.inLog = inLog;
@@ -128,7 +128,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 
 		while (isRunning() && !Thread.interrupted()) {
 
-			byte[] msg = null;
+			byte[] msg;
 			try {
 				msg = subscriber.recv();
 			} catch (ZMQException ex) {
@@ -179,13 +179,13 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 	}
 
 	@Override
-	protected void shutDown() throws Exception {
+	protected void shutDown() {
 
 		logger.info("Data message writer shut down.");
 	}
 
 	@Override
-	protected void startUp() throws Exception {
+	protected void startUp() {
 		openConnections();
 	}
 }

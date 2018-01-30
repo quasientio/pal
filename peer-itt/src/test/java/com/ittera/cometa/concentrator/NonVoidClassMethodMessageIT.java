@@ -65,9 +65,9 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		// add some int's
 		int[] someInts = {39, 5, 58, 32, 70, 42};
-		for (int i = 0; i < someInts.length; i++) {
+		for (int someInt : someInts) {
 			callInstanceMethod("java.util.ArrayList", "add", listObjRef,
-				new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[someInts.length]);
+				new String[]{"java.lang.Integer"}, new Object[]{someInt}, new String[someInts.length]);
 		}
 
 		// call method

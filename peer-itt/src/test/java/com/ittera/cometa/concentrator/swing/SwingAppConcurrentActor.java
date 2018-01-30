@@ -9,7 +9,7 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
 public class SwingAppConcurrentActor {
 
-	protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
+	protected static final DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
 
 	protected static final String swingAppClassName = "com.ittera.cometa.apps.SwingApp";
 
@@ -49,7 +49,7 @@ public class SwingAppConcurrentActor {
 			requestMsg = dataMessageBuilder.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
 				methodName, jframeRef, parameterTypesNamesArray, parameters, new String[parameters.length]);
 			try {
-				replyMsg = thinPeer.sendAndReceive(requestMsg);
+				thinPeer.sendAndReceive(requestMsg);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -83,13 +83,7 @@ public class SwingAppConcurrentActor {
 			swingAppClassName, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
 
 		// start the swingapp by calling main in background
-		Thread asyncSend = new Thread() {
-			@Override
-			public void run() {
-				thinPeer.sendToLogAndForget(mainRequest);
-			}
-		};
-		asyncSend.start();
+		new Thread(() -> thinPeer.sendToLogAndForget(mainRequest)).start();
 
 		// wait for put of JFrame field;
 		String fieldName = "frame";

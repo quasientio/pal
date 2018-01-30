@@ -64,7 +64,7 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService im
 	}
 
 	@Override
-	protected void startUp() throws Exception {
+	protected void startUp() {
 		openConnections();
 
 		logger.info("Initialized IN message dispatcher");
@@ -79,7 +79,7 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService im
 	}
 
 	@Override
-	protected void shutDown() throws Exception {
+	protected void shutDown() {
 
 		logger.info("IN Message dispatcher shut down");
 	}

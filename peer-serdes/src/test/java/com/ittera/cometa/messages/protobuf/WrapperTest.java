@@ -15,16 +15,16 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.*;
 
 import java.lang.reflect.Array;
+import java.util.Objects;
 
 /**
  * Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior
  */
 public class WrapperTest {
 
-	private static List<Class> javaLangClasses;
 	private static List<Class> allPrimitiveAndLangClasses;
 
-	private static List<Class> primitiveClasses = Arrays.asList(
+	private static final List<Class> primitiveClasses = Arrays.asList(
 		boolean.class,
 		byte.class,
 		char.class,
@@ -35,7 +35,7 @@ public class WrapperTest {
 		short.class
 	);
 
-	private static List<Class> primitiveWrapperClasses = Arrays.asList(
+	private static final List<Class> primitiveWrapperClasses = Arrays.asList(
 		Boolean.class,
 		Byte.class,
 		Character.class,
@@ -49,7 +49,7 @@ public class WrapperTest {
 	/**
 	 * Comprehensive list of all java.lang(8) classes
 	 */
-	private static List<Class> nonWrapperJavaLangClasses = Arrays.asList(
+	private static final List<Class> nonWrapperJavaLangClasses = Arrays.asList(
 		Character.Subset.class, Character.UnicodeBlock.class, Class.class, ClassLoader.class, ClassValue.class,
 		Compiler.class, Enum.class, InheritableThreadLocal.class, Math.class, Number.class, Object.class, Package.class,
 		Process.class, ProcessBuilder.class, ProcessBuilder.Redirect.class, Runtime.class, RuntimePermission.class,
@@ -59,7 +59,7 @@ public class WrapperTest {
 	/**
 	 * List of objects that should be wrappable
 	 */
-	static List<Object> wrappableObjects = Arrays.asList(
+	static final List<Object> wrappableObjects = Arrays.asList(
 		/** null and void **/
 		null, Void.class, void.class,
 		/** primitives **/
@@ -73,7 +73,7 @@ public class WrapperTest {
 	/**
 	 * List of some objects that should NOT be wrappable
 	 */
-	static List<Object> someNonWrappableObjects = Arrays.asList(
+	static final List<Object> someNonWrappableObjects = Arrays.asList(
 		Object.class, new Object(),
 		new java.util.Date(), new ArrayList(), new java.util.HashSet(), new java.util.HashMap(), new java.util.Stack(),
 		new java.util.Random(),
@@ -82,7 +82,7 @@ public class WrapperTest {
 	@BeforeClass
 	public static void setupLists() {
 
-		javaLangClasses = new ArrayList<>();
+		List<Class> javaLangClasses = new ArrayList<>();
 		javaLangClasses.addAll(primitiveWrapperClasses);
 		javaLangClasses.addAll(nonWrapperJavaLangClasses);
 
@@ -214,7 +214,7 @@ public class WrapperTest {
 	@Test
 	public void getWrappedClass_javaLangOrPrimitiveClassName_wrappedOk() {
 
-		List<String> classNames = allPrimitiveAndLangClasses.stream().map(c -> c.getName()).collect(toList());
+		List<String> classNames = allPrimitiveAndLangClasses.stream().map(Class::getName).collect(toList());
 
 		for (String classname : classNames) {
 			Primitives.Class wrappedClass = Wrapper.getWrappedClass(classname);
@@ -234,8 +234,7 @@ public class WrapperTest {
 	@Test
 	public void getWrappedClass_wrappableClass_wrappedOk() {
 
-		List<Class> classes = wrappableObjects.stream().filter(o -> o != null).map(o -> o.getClass())
-			.collect(toList());
+		List<Class> classes = wrappableObjects.stream().filter(Objects::nonNull).map(Object::getClass).collect(toList());
 
 		for (Class clazz : classes) {
 			Primitives.Class wrappedClass = Wrapper.getWrappedClass(clazz);

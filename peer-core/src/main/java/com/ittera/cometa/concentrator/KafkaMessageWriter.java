@@ -6,5 +6,5 @@ public interface KafkaMessageWriter {
 
 	void openConnections();
 
-	void writeToLog(LogInfo outLog, LogInfo inLog, boolean publishOffsets) throws Exception;
+	void writeToLog(LogInfo outLog, LogInfo inLog, boolean publishOffsets);
 }

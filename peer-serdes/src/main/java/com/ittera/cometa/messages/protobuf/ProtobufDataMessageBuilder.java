@@ -50,19 +50,9 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Thread-local sequence stamping methods">
 
-	private final ThreadLocal<AtomicLong> threadDispatchSequence = new ThreadLocal<AtomicLong>() {
-		@Override
-		protected AtomicLong initialValue() {
-			return new AtomicLong(1);
-		}
-	};
+	private final ThreadLocal<AtomicLong> threadDispatchSequence = ThreadLocal.withInitial(() -> new AtomicLong(1));
 
-	private final ThreadLocal<AtomicLong> threadBuilderSequence = new ThreadLocal<AtomicLong>() {
-		@Override
-		protected AtomicLong initialValue() {
-			return new AtomicLong(1);
-		}
-	};
+	private final ThreadLocal<AtomicLong> threadBuilderSequence = ThreadLocal.withInitial(() -> new AtomicLong(1));
 
 	@Override
 	public void resetThreadLocalSequence() {
@@ -94,11 +84,11 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		for (int i = 0; parameterTypes != null && i < parameterTypes.length; i++) {
 			if (argObjRefs[i] != null) { //parameter is an objectref
-				addParameter(callBuilder, parameterTypes[i], (Object) null, argObjRefs[i]);
+				addParameter(callBuilder, parameterTypes[i], null, argObjRefs[i]);
 			} else if (args[i] != null) { //parameter is string, primitive or wrapper
-				addParameter(callBuilder, parameterTypes[i], args[i], (String) null);
+				addParameter(callBuilder, parameterTypes[i], args[i], null);
 			} else { //parameter is null
-				addParameter(callBuilder, parameterTypes[i], (Object) null, (String) null);
+				addParameter(callBuilder, parameterTypes[i], null, null);
 			}
 		}
 
@@ -176,7 +166,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 			return Wrapper.getWrappedContext(staticPart, sender,
 				storeUncachedObjects ? objectService.storeObject(sender) : null);
 		} else {
-			return Wrapper.getWrappedContext(staticPart, sender, null);
+			return Wrapper.getWrappedContext(staticPart, null, null);
 		}
 	}
 
@@ -227,8 +217,8 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	//<editor-fold desc="Constructor messages">
 
 
-	private final DataMessage buildConstructorMessage(UUID concentratorUuid, String className,
-																										StaticPart staticPart, Object sender, String[] parameterTypes, Object[] args, String[] argObjRefs) {
+	private DataMessage buildConstructorMessage(UUID concentratorUuid, String className,
+																							StaticPart staticPart, Object sender, String[] parameterTypes, Object[] args, String[] argObjRefs) {
 
 		final ConstructorCall.Builder constructorCallBuilder = ConstructorCall.newBuilder();
 		if (staticPart != null) {

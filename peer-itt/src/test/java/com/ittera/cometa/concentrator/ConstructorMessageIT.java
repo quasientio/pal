@@ -39,7 +39,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 	@Test
 	public void constructor_publicOneArg_newObjectReturned() throws Exception {
 
-		Object[] args = {Integer.valueOf(5)};
+		Object[] args = {5};
 		String[] argRefs = {null};
 		Class[] parameterTypes = new Class[]{Integer.class};
 
@@ -49,7 +49,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 	@Test
 	public void constructor_packageVisibleTwoArgs_newObjectReturned() throws Exception {
 
-		Object[] args = {"Constructing an app", Integer.valueOf(5)};
+		Object[] args = {"Constructing an app", 5};
 		String[] argRefs = {null, null};
 		Class[] parameterTypes = new Class[]{String.class, Integer.class};
 

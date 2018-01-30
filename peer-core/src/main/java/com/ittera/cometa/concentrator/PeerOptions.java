@@ -13,7 +13,7 @@ import java.util.UUID;
 
 public class PeerOptions {
 
-	private Options options;
+	private final Options options;
 
 	// peer cmd-line options
 	LogInfo inLog;

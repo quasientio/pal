@@ -166,16 +166,12 @@ public class ZkClientTest {
 
 		LogRequest someRequest = new LogRequest(UUID.randomUUID());
 
-		AsyncCallback.StringCallback cb = new AsyncCallback.StringCallback() {
-			@Override
-			public void processResult(int rc, String path, Object ctx, String name) {
-				switch (Code.get(rc)) {
-					case OK:
-						((CountDownLatch) ctx).countDown();
-						break;
-					default:
-						return;
-				}
+		AsyncCallback.StringCallback cb = (rc, path, ctx, name) -> {
+			switch (Code.get(rc)) {
+				case OK:
+					((CountDownLatch) ctx).countDown();
+					break;
+				default:
 			}
 		};
 

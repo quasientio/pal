@@ -11,18 +11,12 @@ import org.apache.commons.cli.ParseException;
 
 public class AppRunnerOptions {
 
-	private Options options;
-
 	// options available
 	int requests, clients;
 	String inLog, outLog;
 	boolean async, sendAndForget, verbose;
 	// cmd line args after options
 	List<String> argList;
-
-	AppRunnerOptions(Options options) {
-		this.options = options;
-	}
 
 	public static AppRunnerOptions parseFrom(String[] args) {
 		CommandLineParser parser = new DefaultParser();
@@ -52,7 +46,7 @@ public class AppRunnerOptions {
 		}
 
 		// create and fill runner options
-		AppRunnerOptions opts = new AppRunnerOptions(options);
+		AppRunnerOptions opts = new AppRunnerOptions();
 		opts.requests = Integer.parseInt(cmdLine.getOptionValue("r", "1").trim());
 		opts.clients = Integer.parseInt(cmdLine.getOptionValue("c", "1").trim());
 		opts.verbose = cmdLine.hasOption("v");

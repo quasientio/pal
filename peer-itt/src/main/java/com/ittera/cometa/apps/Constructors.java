@@ -21,8 +21,8 @@ public class Constructors {
 	private Constructors(String[] aStringArrayParam) {
 
 		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < aStringArrayParam.length; i++) {
-			sb.append(aStringArrayParam[i]).append(",");
+		for (String anAStringArrayParam : aStringArrayParam) {
+			sb.append(anAStringArrayParam).append(",");
 		}
 	}
 

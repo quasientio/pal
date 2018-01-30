@@ -7,7 +7,7 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.concentrator.messages.IncomingMessageDispatcher;
 
 import java.util.Properties;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.AbstractQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -67,7 +67,6 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 	private KafkaConsumer<String, String> consumer;
 	private final Properties consumerProperties = new Properties();
 	private volatile long lastOffsetRead = -1;
-	private LogInfo currentLog;
 
 	// zookeeper
 	@Inject
@@ -78,7 +77,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 
 	private final class OffsetUpdater extends Thread {
 
-		private Socket offsetSubscriber;
+		private final Socket offsetSubscriber;
 
 		OffsetUpdater(Socket offsetSubscriber) {
 			super("Offset informer");
@@ -164,7 +163,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 		consumerProperties.put("session.timeout.ms", sessionTimeout);
 
 		if (logger.isInfoEnabled()) {
-			StringBuffer propsStr = new StringBuffer(50);
+			StringBuilder propsStr = new StringBuilder();
 			for (String propKey : consumerProperties.stringPropertyNames()) {
 				propsStr.append(propKey).append('=').append(consumerProperties.getProperty(propKey)).append(", ");
 			}
@@ -180,7 +179,6 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 		this.skipWrittenOffsets = skipWrittenOffsets;
 		this.initialOffset = initialOffset;
 		LogInfo logInfo = peerLogDirectory.getLogInfo(logName);
-		this.currentLog = logInfo;
 
 		consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
 		logger.info("Now reading from log: {} and bootstrapServers: {}, starting at offset: {}", logInfo.getName(),
@@ -196,7 +194,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 		this.consumer = new KafkaConsumer<>(consumerProperties);
 		//manual assignment of partition so we can control offset seek
 		topicPartition = new TopicPartition(kafkaTopic, 0);
-		final List<TopicPartition> topicPartitionList = Arrays.asList(topicPartition);
+		final List<TopicPartition> topicPartitionList = Collections.singletonList(topicPartition);
 		consumer.assign(topicPartitionList);
 		if (initialOffset == null) {
 			consumer.seekToBeginning(topicPartitionList);
@@ -365,7 +363,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 	}
 
 	@Override
-	protected void startUp() throws Exception {
+	protected void startUp() {
 		openConnections();
 	}
 

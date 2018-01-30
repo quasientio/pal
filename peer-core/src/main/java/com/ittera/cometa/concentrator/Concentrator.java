@@ -113,12 +113,7 @@ public class Concentrator {
 	};
 
 	// flag to avoid creating the threadLocal socket when we're trying to close it and it hasn't been created yet.
-	private static final ThreadLocal<Boolean> threadSocketCreated = new ThreadLocal<Boolean>() {
-		@Override
-		protected Boolean initialValue() {
-			return false;
-		}
-	};
+	private static final ThreadLocal<Boolean> threadSocketCreated = ThreadLocal.withInitial(() -> false);
 
 	// shared by threads - possible sources of contention
 
@@ -156,8 +151,8 @@ public class Concentrator {
 			final InstanceFieldPut instanceFieldPut = dataMessage.getInstanceFieldPut();
 			return incomingPutField(dataMessage.getMessageUuid(), instanceFieldPut, dataMessage.getMessageUuid());
 		} else {
-			throw new IllegalArgumentException(String.format("Incoming message with uuid {} ignored - no handler:\n{}",
-				dataMessage.getMessageUuid()));
+			throw new IllegalArgumentException(String.format("Incoming message with uuid ignored - no handler:\n%s",
+				dataMessage));
 		}
 	}
 
@@ -315,7 +310,7 @@ public class Concentrator {
 		}
 
 		/** 5. Wrap new object or exception **/
-		DataMessage invokedMsg = null;
+		DataMessage invokedMsg;
 
 		if (exceptionWhileInvoking != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, constructor, exceptionWhileInvoking,
@@ -397,7 +392,6 @@ public class Concentrator {
 		}
 
 		logger.trace("out");
-		return;
 	}
 
 	public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args)
@@ -508,7 +502,7 @@ public class Concentrator {
 				}
 			}
 			try {
-				Object target = null;
+				Object target;
 				if (instanceMethodCall.hasObject()) {
 					Class objClass = Class.forName(instanceMethodCall.getClass_().getName());
 					target = Unwrapper.unwrapObject(instanceMethodCall.getObject(), objClass);
@@ -614,7 +608,6 @@ public class Concentrator {
 		}
 
 		logger.trace("out");
-		return;
 	}
 
 	public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
@@ -779,7 +772,7 @@ public class Concentrator {
 			followingUuid);
 
 		/** 1. Get Object **/
-		Class clazz = null;
+		Class clazz;
 		Field field = null;
 		Exception exceptionWhileLoading = null;
 		try {
@@ -811,7 +804,7 @@ public class Concentrator {
 		}
 
 		/** 3. Wrap return value or exception **/
-		DataMessage invokedMsg = null;
+		DataMessage invokedMsg;
 
 		if (exceptionWhileLoading != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, followingUuid);
@@ -861,7 +854,7 @@ public class Concentrator {
 		}
 
 		/** 5. Wrap exception if any **/
-		DataMessage invokedMsg = null;
+		DataMessage invokedMsg;
 		if (exceptionGettingObject != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionGettingObject,
 				null);
@@ -888,7 +881,7 @@ public class Concentrator {
 			followingUuid);
 
 		/** 1. Get Object **/
-		Class clazz = null;
+		Class clazz;
 		Field field = null;
 		Exception exceptionWhileLoading = null;
 		try {
@@ -907,7 +900,7 @@ public class Concentrator {
 		if (exceptionWhileLoading == null) {
 			field.setAccessible(true);
 			try {
-				Object target = null;
+				Object target;
 				if (instanceFieldGet.hasObject()) {
 					Class objClass = Class.forName(instanceFieldGet.getClass_().getName());
 					target = Unwrapper.unwrapObject(instanceFieldGet.getObject(), objClass);
@@ -931,7 +924,7 @@ public class Concentrator {
 		}
 
 		/** 3. Wrap return value or exception **/
-		DataMessage invokedMsg = null;
+		DataMessage invokedMsg;
 
 		if (exceptionWhileLoading != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, followingUuid);
@@ -980,7 +973,7 @@ public class Concentrator {
 		}
 
 		/** 5. Wrap exception if any **/
-		DataMessage invokedMsg = null;
+		DataMessage invokedMsg;
 		if (exceptionGettingObject != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionGettingObject,
 				null);
@@ -1043,7 +1036,7 @@ public class Concentrator {
 
 
 		/** 3. Wrap return value or exception **/
-		DataMessage invokedMsg = null;
+		DataMessage invokedMsg;
 
 		if (exceptionWhileLoading != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading, followingUuid);
@@ -1088,7 +1081,7 @@ public class Concentrator {
 		}
 
 		/** 5. Wrap exception if any **/
-		DataMessage invokedMsg = null;
+		DataMessage invokedMsg;
 		if (exceptionSettingObject != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionSettingObject,
 				null);
@@ -1105,7 +1098,6 @@ public class Concentrator {
 		}
 
 		logger.trace("out");
-		return;
 	}
 
 	public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args)
@@ -1134,7 +1126,7 @@ public class Concentrator {
 		}
 
 		/** 5. Wrap exception if any **/
-		DataMessage invokedMsg = null;
+		DataMessage invokedMsg;
 		if (exceptionSettingObject != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionSettingObject,
 				null);
@@ -1151,7 +1143,6 @@ public class Concentrator {
 		}
 
 		logger.trace("out");
-		return;
 	}
 
 	public static DataMessage incomingPutField(String messageUuid, InstanceFieldPut instanceFieldPut,
@@ -1206,7 +1197,7 @@ public class Concentrator {
 		}
 
 		/** 3. Wrap return value or exception **/
-		DataMessage invokedMsg = null;
+		DataMessage invokedMsg;
 
 		if (exceptionWhileLoading != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionWhileLoading,
@@ -1351,7 +1342,7 @@ public class Concentrator {
 	private static void readFromLog(LogInfo log, Injector injector, boolean inAndOutAreSameLog, Long initialOffset) {
 		IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
 		try {
-			boolean skipWrittenOffsets = inAndOutAreSameLog;
+			boolean skipWrittenOffsets = inAndOutAreSameLog; // for clarity
 			incomingMessageDispatcher.readFromLog(log.getName(), skipWrittenOffsets, initialOffset);
 		} catch (Exception ex) {
 			logger.error("Could not initialize log reader. Aborting ...", ex);

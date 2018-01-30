@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class ExecThreadFactory {
 
-	private List<Thread> createdThreads = new ArrayList<>();
+	private final List<Thread> createdThreads = new ArrayList<>();
 
 	protected ThreadGroup threadGroup;
 	protected final AtomicInteger threadCounter = new AtomicInteger(0);

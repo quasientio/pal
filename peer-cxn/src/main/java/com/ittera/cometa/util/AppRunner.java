@@ -35,7 +35,7 @@ public class AppRunner {
 	protected final static Logger logger = LoggerFactory.getLogger(AppRunner.class);
 	protected final DataMessageBuilder dataMessageBuilder;
 	final ServiceManager manager;
-	protected boolean verbose;
+	protected final boolean verbose;
 	protected static final long REPLY_PROCESSOR_SLEEP_MS = 100;
 
 	protected static final String DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
@@ -112,7 +112,7 @@ public class AppRunner {
 		for (; reqsSent < opts.requests; reqsSent++) {
 			requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
 				parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
-			replyMsg = thinPeer.sendAndReceive(requestMsg);
+			thinPeer.sendAndReceive(requestMsg);
 		}
 
 		thinPeer.close();
@@ -149,39 +149,36 @@ public class AppRunner {
 		final Queue<Future<DataMessage>> messageFutureQueue = new ConcurrentLinkedQueue<>();
 		Thread replyProcessorThread = null;
 		if (!opts.sendAndForget) {
-			replyProcessorThread = new Thread() {
-				@Override
-				public void run() {
-					int totalProcessed = 0;
-					int processed;
-					while (totalProcessed < opts.requests) {
-						processed = 0;
-						for (Future<DataMessage> futureReply : messageFutureQueue) {
-							if (futureReply.isDone()) {
-								messageFutureQueue.remove(futureReply);
-								processed++;
-							}
-						}
-						totalProcessed += processed;
-						if (logger.isDebugEnabled()) {
-							int queueSize = messageFutureQueue.size();
-							logger.debug("processed {} records, total so far: {}, size of queue: {}", processed, totalProcessed,
-								queueSize);
-							if (logger.isTraceEnabled() && queueSize > 0) {
-								logger.trace("PENDING:");
-								for (Future<DataMessage> futureReply : messageFutureQueue) {
-									logger.trace(futureReply.toString());
-								}
-							}
-						}
-						try {
-							Thread.sleep(REPLY_PROCESSOR_SLEEP_MS);
-						} catch (InterruptedException e) {
-							// what to do
+			replyProcessorThread = new Thread(() -> {
+				int totalProcessed = 0;
+				int processed;
+				while (totalProcessed < opts.requests) {
+					processed = 0;
+					for (Future<DataMessage> futureReply : messageFutureQueue) {
+						if (futureReply.isDone()) {
+							messageFutureQueue.remove(futureReply);
+							processed++;
 						}
 					}
+					totalProcessed += processed;
+					if (logger.isDebugEnabled()) {
+						int queueSize = messageFutureQueue.size();
+						logger.debug("processed {} records, total so far: {}, size of queue: {}", processed, totalProcessed,
+							queueSize);
+						if (logger.isTraceEnabled() && queueSize > 0) {
+							logger.trace("PENDING:");
+							for (Future<DataMessage> futureReply : messageFutureQueue) {
+								logger.trace(futureReply.toString());
+							}
+						}
+					}
+					try {
+						Thread.sleep(REPLY_PROCESSOR_SLEEP_MS);
+					} catch (InterruptedException e) {
+						// what to do
+					}
 				}
-			};
+			});
 
 			// start background reply processor
 			replyProcessorThread.setDaemon(true);
@@ -235,16 +232,14 @@ public class AppRunner {
 	 * NOTE that this method calls either the runReqsWithSingleClient() or runReqsWithSingleClientAsync()
 	 * methods in parallel threads
 	 */
-	protected int runReqsWithNClients(final String className, final String methodName, AppRunnerOptions opts)
+	protected void runReqsWithNClients(final String className, final String methodName, AppRunnerOptions opts)
 		throws Exception {
 
 		if (opts.requests <= 1) {
-			throw new IllegalArgumentException(String.format("Method must be called with requests > 1. requests = ",
-				opts.requests));
+			throw new IllegalArgumentException("Method must be called with requests > 1. requests = " + opts.requests);
 		}
 		if (opts.clients <= 1) {
-			throw new IllegalArgumentException(String.format("Method must be called with clients > 1. clients = ",
-				opts.requests));
+			throw new IllegalArgumentException("Method must be called with clients > 1. clients = " + opts.clients);
 		}
 
 		Thread[] clientList = new Thread[opts.clients];
@@ -256,23 +251,20 @@ public class AppRunner {
 
 		// create all threads
 		for (int i = 0; i < opts.clients; i++) {
-			Thread client = new Thread() {
-				@Override
-				public void run() {
-					try {
-						int sent = 0;
-						if (opts.async || opts.sendAndForget) {
-							sent = runReqsWithSingleClientAsync(className, methodName, opts);
-						} else {
-							sent = runReqsWithSingleClient(className, methodName, opts);
-						}
-						finishedThreads.getAndIncrement();
-						reqsSent.getAndAdd(sent);
-					} catch (Exception e) {
-						logger.error("Caught error running requests", e);
+			Thread client = new Thread(() -> {
+				try {
+					int sent;
+					if (opts.async || opts.sendAndForget) {
+						sent = runReqsWithSingleClientAsync(className, methodName, opts);
+					} else {
+						sent = runReqsWithSingleClient(className, methodName, opts);
 					}
+					finishedThreads.getAndIncrement();
+					reqsSent.getAndAdd(sent);
+				} catch (Exception e) {
+					logger.error("Caught error running requests", e);
 				}
-			};
+			});
 			clientList[i] = client;
 		}
 
@@ -291,7 +283,6 @@ public class AppRunner {
 				(System.currentTimeMillis() - start)));
 		}
 
-		return reqsSent.get();
 	}
 
 	public static void main(String[] args) throws Exception {

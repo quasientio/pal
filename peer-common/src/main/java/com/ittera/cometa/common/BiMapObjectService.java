@@ -68,13 +68,13 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
 	}
 
 	@Override
-	protected void startUp() throws Exception {
+	protected void startUp() {
 		//TODO initialize internal queues, etc.
 
 	}
 
 	@Override
-	protected void shutDown() throws Exception {
+	protected void shutDown() {
 		//TODO call the executor's shutdown() or shutdownNow()
 
 	}

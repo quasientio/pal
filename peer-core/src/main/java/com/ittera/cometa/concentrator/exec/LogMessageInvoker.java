@@ -19,15 +19,15 @@ public class LogMessageInvoker extends Thread {
 
 	protected static final Logger logger = LoggerFactory.getLogger(LogMessageInvoker.class);
 
-	protected AtomicLong requestsDispatched = new AtomicLong(0);
-	protected AtomicLong requestsDismissed = new AtomicLong(0);
+	protected final AtomicLong requestsDispatched = new AtomicLong(0);
+	protected final AtomicLong requestsDismissed = new AtomicLong(0);
 
 	// zmq stuff
-	private ZContext zmqContext;
+	private final ZContext zmqContext;
 	private final String inLogAddress;
 	private Socket socket;
 
-	protected DataMessageBuilder dataMessageBuilder;
+	protected final DataMessageBuilder dataMessageBuilder;
 
 	public LogMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
 													 DataMessageBuilder dataMessageBuilder, String inLogAddress) {
@@ -83,7 +83,7 @@ public class LogMessageInvoker extends Thread {
 				logger.error("Caught exception parsing message", e);
 			}
 
-			logger.debug("Received req message with uuid: {}", requestMsg.getMessageUuid());
+			logger.debug("Received req message with uuid: {}", requestMsg != null ? requestMsg.getMessageUuid() : null);
 
 			// dispatch it
 			if (requestMsg != null) {
@@ -117,13 +117,12 @@ public class LogMessageInvoker extends Thread {
 		Concentrator.closeThreadLocalSocket();
 	}
 
-	private DataMessage dispatch(DataMessage requestMsg, long recordOffset) {
+	private void dispatch(DataMessage requestMsg, long recordOffset) {
 		DataMessage replyMsg = Concentrator.incomingCall(requestMsg);
 		logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",
 			requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());
 		requestsDispatched.getAndIncrement();
 		dataMessageBuilder.resetThreadLocalSequence();
-		return replyMsg;
 	}
 
 }

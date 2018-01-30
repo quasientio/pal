@@ -74,7 +74,7 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService i
 	public final void run() {
 		while (isRunning() && !Thread.interrupted()) {
 
-			byte[] req = null;
+			byte[] req;
 
 			try {
 				req = broker.recv();
@@ -127,12 +127,12 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService i
 	}
 
 	@Override
-	protected void startUp() throws Exception {
+	protected void startUp() {
 		openConnections();
 	}
 
 	@Override
-	protected void shutDown() throws Exception {
+	protected void shutDown() {
 
 		logger.info("OUT Message dispatcher shut down");
 	}

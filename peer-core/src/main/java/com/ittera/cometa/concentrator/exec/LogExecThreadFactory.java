@@ -19,10 +19,10 @@ public class LogExecThreadFactory extends ExecThreadFactory implements LogThread
 	private static final String THREAD_GROUP_NAME = "Log Executor Group";
 	private static final String THREAD_BASE_NAME = "Log Executor";
 
-	private DataMessageBuilder dataMessageBuilder;
+	private final DataMessageBuilder dataMessageBuilder;
 
 	// zmq stuff
-	private ZContext zmqContext;
+	private final ZContext zmqContext;
 	private final String inLogAddress;
 
 	@Inject
@@ -45,12 +45,8 @@ public class LogExecThreadFactory extends ExecThreadFactory implements LogThread
 			inLogAddress);
 		thread.setPriority(THREAD_PRIORITY);
 		thread.setDaemon(THREAD_IS_DAEMON);
-		thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-			@Override
-			public void uncaughtException(Thread t, Throwable e) {
-				logger.error("Uncaught exception in log exec thread: {}", newThreadName, e);
-			}
-		});
+		thread.setUncaughtExceptionHandler((t, e) -> logger.error("Uncaught exception in log exec thread: {}",
+			newThreadName, e));
 		addCreatedThread(thread);
 		logger.debug("Created new log executor thread with name: '{}' and id: {}", newThreadName, thread.getId());
 		return thread;

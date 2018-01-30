@@ -22,6 +22,6 @@ public class LogMessageExecutor extends ExtendedThreadPoolExecutor implements Lo
 														LogThreadFactory threadFactory) {
 
 		super(Integer.valueOf(corePoolSize), Integer.valueOf(maximumPoolSize), Integer.valueOf(keepAliveSeconds),
-			TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), threadFactory);
+			TimeUnit.SECONDS, new SynchronousQueue<>(), threadFactory);
 	}
 }

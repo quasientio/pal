@@ -19,10 +19,10 @@ public class PeerExecThreadFactory extends ExecThreadFactory implements PeerThre
 	private static final String THREAD_GROUP_NAME = "Peer Executor Group";
 	private static final String THREAD_BASE_NAME = "Peer Executor";
 
-	private DataMessageBuilder dataMessageBuilder;
+	private final DataMessageBuilder dataMessageBuilder;
 
 	// zmq stuff
-	private ZContext zmqContext;
+	private final ZContext zmqContext;
 	private final String dealerAddress;
 
 	@Inject
@@ -45,12 +45,8 @@ public class PeerExecThreadFactory extends ExecThreadFactory implements PeerThre
 			dealerAddress);
 		thread.setPriority(THREAD_PRIORITY);
 		thread.setDaemon(THREAD_IS_DAEMON);
-		thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-			@Override
-			public void uncaughtException(Thread t, Throwable e) {
-				logger.error("Uncaught exception in peer exec thread: {}", newThreadName, e);
-			}
-		});
+		thread.setUncaughtExceptionHandler((t, e) -> logger.error("Uncaught exception in peer exec thread: {}",
+			newThreadName, e));
 		addCreatedThread(thread);
 		logger.debug("Created new peer executor thread with name: '{}' and id: {}", newThreadName, thread.getId());
 		return thread;

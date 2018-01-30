@@ -81,9 +81,9 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 
 		// add some int's to the list
 		int[] someInts = {1, 2, 3, 5, 7, 9};
-		for (int i = 0; i < someInts.length; i++) {
+		for (int someInt : someInts) {
 			callInstanceMethod("java.util.ArrayList", "add", listObjRef,
-				new String[]{"java.lang.Integer"}, new Object[]{someInts[i]}, new String[someInts.length]);
+				new String[]{"java.lang.Integer"}, new Object[]{someInt}, new String[someInts.length]);
 		}
 
 		// create new instance
@@ -101,8 +101,8 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 
 		// test returned value
 		Integer shouldReturn = 0;
-		for (int i = 0; i < someInts.length; i++) {
-			shouldReturn += someInts[i] + offsetParam;
+		for (int someInt : someInts) {
+			shouldReturn += someInt + offsetParam;
 		}
 		assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
 		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());

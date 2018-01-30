@@ -6,14 +6,14 @@ import java.util.ArrayList;
 
 public class NonVoidInstanceMethods {
 
-	public Integer anInt = 4;
+	public final Integer anInt = 4;
 
 	Integer giveMeX() {
 		return anInt;
 	}
 
 	public List<String> getListOfStrings() {
-		List<String> aList = new ArrayList<String>();
+		List<String> aList = new ArrayList<>();
 		aList.add("hello");
 		aList.add(" ");
 		aList.add("world");
@@ -22,8 +22,7 @@ public class NonVoidInstanceMethods {
 	}
 
 	public List<String> getListOfStringsShorthand() {
-		List<String> aList = Arrays.asList("hello", " ", "world", "!");
-		return aList;
+		return Arrays.asList("hello", " ", "world", "!");
 	}
 
 	protected Integer addOffsetToListAndSumUp(int offset, ArrayList<Integer> listOfInts) {
@@ -33,7 +32,6 @@ public class NonVoidInstanceMethods {
 			}
 		}
 
-		int sum = listOfInts.stream().reduce(0, Integer::sum);
-		return sum;
+		return listOfInts.stream().reduce(0, Integer::sum);
 	}
 }

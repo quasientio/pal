@@ -46,7 +46,7 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 	@Override
 	public boolean cancel(boolean mayInterruptIfRunning) {
 		cancelled = true;
-		return cancelled;
+		return true;
 	}
 
 	@Override
@@ -128,17 +128,14 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 		}
 
 		// let the executor service fetch the message from the log
-		executorService.submit(new Runnable() {
-			@Override
-			public void run() {
-				// set msg value to complete future
-				DataMessage messageReply = thinPeer.getMessageAtOffset(logReply.getOffset());
-				logger.debug("completing future reply msg w/uuid: {} for request w/uuid: {}",
-					messageReply.getMessageUuid(), messageReply.getFollowingUuid());
-				DataMessageFuture.this.put(messageReply);
-				// delete request and reply nodes
-				deleteRequestNode();
-			}
+		executorService.submit(() -> {
+			// set msg value to complete future
+			DataMessage messageReply = thinPeer.getMessageAtOffset(logReply.getOffset());
+			logger.debug("completing future reply msg w/uuid: {} for request w/uuid: {}",
+				messageReply.getMessageUuid(), messageReply.getFollowingUuid());
+			DataMessageFuture.this.put(messageReply);
+			// delete request and reply nodes
+			deleteRequestNode();
 		});
 	}
 

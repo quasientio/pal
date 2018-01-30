@@ -118,7 +118,8 @@ public class LogInfo implements Comparable {
 
 	@Override
 	public boolean equals(Object o) {
-		return name.equals(((LogInfo) o).getName()) && bootstrapServers.equals(((LogInfo) o).getBootstrapServers());
+		return (o instanceof LogInfo) && name.equals(((LogInfo) o).getName())
+			&& bootstrapServers.equals(((LogInfo) o).getBootstrapServers());
 	}
 
 	@Override

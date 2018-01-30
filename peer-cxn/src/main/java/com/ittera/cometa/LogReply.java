@@ -4,10 +4,10 @@ import java.util.UUID;
 
 public class LogReply implements Comparable {
 
-	private UUID uuid;
-	private UUID peerUuid;
-	private UUID isReplyTo;
-	private long offset;
+	private final UUID uuid;
+	private final UUID peerUuid;
+	private final UUID isReplyTo;
+	private final long offset;
 
 	public LogReply(UUID uuid, UUID peerUuid, UUID isReplyTo, long offset) {
 		this.uuid = uuid;
@@ -34,7 +34,7 @@ public class LogReply implements Comparable {
 
 	@Override
 	public int compareTo(Object o) {
-		return Long.valueOf(getOffset()).compareTo(Long.valueOf(((LogReply) o).getOffset()));
+		return Long.compare(getOffset(), ((LogReply) o).getOffset());
 	}
 
 	@Override

@@ -16,7 +16,7 @@ public interface PeerLogDirectory {
 	 **/
 	void connect(String url) throws Exception;
 
-	boolean isConnectionEstablished() throws Exception;
+	boolean isConnectionEstablished();
 
 	String getUrl();
 

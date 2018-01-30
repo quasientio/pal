@@ -46,9 +46,9 @@ class MessageOffsetInformer implements Callback, Watcher {
 	private boolean done;
 	private final boolean publishOffsets;
 	private Throwable lastError;
-	private Socket offsetPublisher;
+	private final Socket offsetPublisher;
 	private final PeerLogDirectory peerLogDirectory;
-	private LogInfo inLog;
+	private final LogInfo inLog;
 
 	protected static final Logger logger = LoggerFactory.getLogger(MessageOffsetInformer.class);
 
@@ -63,7 +63,6 @@ class MessageOffsetInformer implements Callback, Watcher {
 				default:
 					logger.error("reply node NOT created (error code: {}) for message w/uuid: {}", rc,
 						message.getMessageUuid());
-					return;
 			}
 		}
 	};

@@ -58,8 +58,6 @@ public class PeerInfo implements Comparable {
 
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("peer uuid: ").append(getUuid()).append(" listen-addr: ").append(getListenAddress());
-		return sb.toString();
+		return "peer uuid: " + getUuid() + " listen-addr: " + getListenAddress();
 	}
 }

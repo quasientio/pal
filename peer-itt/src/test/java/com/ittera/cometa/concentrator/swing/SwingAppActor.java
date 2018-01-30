@@ -9,7 +9,7 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
 public class SwingAppActor {
 
-	protected static DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
+	protected static final DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
 
 	protected static final String swingAppClassName = "com.ittera.cometa.apps.SwingApp";
 
@@ -31,13 +31,7 @@ public class SwingAppActor {
 			swingAppClassName, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
 
 		// start the swingapp by calling main in background
-		Thread asyncSend = new Thread() {
-			@Override
-			public void run() {
-				thinPeer.sendToLogAndForget(mainRequest);
-			}
-		};
-		asyncSend.start();
+		new Thread(() -> thinPeer.sendToLogAndForget(mainRequest)).start();
 
 		// wait for put of JFrame field;
 		String fieldName = "frame";
@@ -58,7 +52,7 @@ public class SwingAppActor {
 			parameterTypesNamesArray = new String[]{"boolean"};
 			requestMsg = dataMessageBuilder.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
 				methodName, myFrame.getRef(), parameterTypesNamesArray, parameters, new String[parameters.length]);
-			replyMsg = thinPeer.sendAndReceive(requestMsg);
+			thinPeer.sendAndReceive(requestMsg);
 
 			sleep(1);
 
@@ -66,7 +60,7 @@ public class SwingAppActor {
 			parameters = new Object[]{Boolean.TRUE};
 			requestMsg = dataMessageBuilder.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
 				methodName, myFrame.getRef(), parameterTypesNamesArray, parameters, new String[parameters.length]);
-			replyMsg = thinPeer.sendAndReceive(requestMsg);
+			thinPeer.sendAndReceive(requestMsg);
 		}
 
 		// finalize
