@@ -158,6 +158,14 @@ public class Concentrator {
 
 	// <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
 
+	/**
+	 * This method is currently not being weaved-in. See ConcentrateAspect
+	 *
+	 * @param staticPart
+	 * @param sender
+	 * @return
+	 * @throws ClassNotFoundException
+	 */
 	public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
 		logger.trace("in w/ staticPart: {}, sender: {}", staticPart.getSignature(), sender);
 
@@ -167,7 +175,7 @@ public class Concentrator {
 		/** 2. Send message **/
 		DataMessage rcvdMsg = sendAndRecv(msg);
 
-		/** 4. Load and initialize class  -  WARNING: For some reason the class is not being initialized! **/
+		/** 3. Load and initialize class  -  WARNING: For some reason the class is not being initialized! **/
 		Class clazz = null;
 		ClassNotFoundException exceptionWhileLoadingClass = null;
 		try {
@@ -178,7 +186,7 @@ public class Concentrator {
 			logger.error("Caught and assigned to exceptionWhileLoadingClass", cnfe);
 		}
 
-		/** 5. Wrap class/exception if any **/
+		/** 4. Wrap class/exception if any **/
 		String objKey = null;
 		final DataMessage invokedMsg;
 		if (exceptionWhileLoadingClass != null) {
@@ -187,10 +195,10 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildLoadedClass(uuid, clazz);
 		}
 
-		/** 6. Send object/exception **/
+		/** 5. Send object/exception **/
 		rcvdMsg = sendAndRecv(invokedMsg);
 
-		/** 8. Return or re-raise exception **/
+		/** 6. Return or re-raise exception **/
 		if (exceptionWhileLoadingClass != null) {
 			throw exceptionWhileLoadingClass;
 		}
@@ -278,182 +286,9 @@ public class Concentrator {
 		return rcvdMsg;
 	}
 
-	public static Object constructor(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-		logger.trace("in w/ staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
-
-		final ConstructorSignature constructorSignature = (ConstructorSignature) staticPart.getSignature();
-
-		/** 1. Wrap message **/
-		final DataMessage callMsg = dataMessageBuilder.buildConstructor(uuid, staticPart, sender, args);
-
-		/** 2. Send message **/
-		DataMessage rcvdMsg = sendAndRecv(callMsg);
-
-		/** 4. Invoke constructor **/
-
-		Constructor constructor = constructorSignature.getConstructor();
-
-		Object newObject = null;
-		Exception exceptionWhileInvoking = null;
-		constructor.setAccessible(true);
-		String objKey = null;
-		try {
-			newObject = constructor.newInstance(args);
-		} catch (Exception ite) {
-			exceptionWhileInvoking = ite;
-			logger.error("Caught and assigned to exceptionWhileInvoking", ite);
-		}
-
-		//store in object map
-		if (newObject != null) {
-			objKey = objectService.storeObject(newObject);
-		}
-
-		/** 5. Wrap new object or exception **/
-		DataMessage invokedMsg;
-
-		if (exceptionWhileInvoking != null) {
-			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, constructor, exceptionWhileInvoking,
-				null);
-		} else {
-			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, newObject, constructor.getClass(), objKey,
-				false, null);
-		}
-
-		/** 6. Send object/exception **/
-		rcvdMsg = sendAndRecv(invokedMsg);
-
-		/** 8. Return object or re-raise exception **/
-		if (exceptionWhileInvoking != null) {
-			if (exceptionWhileInvoking instanceof InvocationTargetException) {
-				throw exceptionWhileInvoking.getCause();
-			} else {
-				throw exceptionWhileInvoking;
-			}
-		}
-
-		logger.trace("out w/ new object: {}", newObject);
-		return newObject;
-	}
 	// </editor-fold>
 
 	// <editor-fold defaultstate="collapsed" desc="METHOD CALLS">
-
-	public static void voidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args)
-		throws Throwable {
-		logger.trace("in w/ staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target,
-			args);
-
-		final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
-
-		/** 1. Wrap message **/
-		final DataMessage msg = dataMessageBuilder.buildInstanceMethod(uuid, staticPart, sender, target, args);
-
-
-		/** 2. Send message **/
-		DataMessage rcvdMsg = sendAndRecv(msg);
-
-		/** 4. Invoke method **/
-
-		Method method = methodSignature.getMethod();
-
-		Exception exceptionWhileInvoking = null;
-		method.setAccessible(true);
-		try {
-			method.invoke(target, args);
-		} catch (Exception e) {
-			exceptionWhileInvoking = e;
-			logger.error("Caught and assigned to exceptionWhileInvoking", e);
-		}
-
-		/** 5. Wrap new object or exception **/
-		final DataMessage invokedMsg;
-
-		if (exceptionWhileInvoking != null) {
-			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking,
-				null);
-		} else {
-			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, Void.class, method.getReturnType(), null,
-				true, null);
-		}
-
-
-		/** 6. Send object/exception **/
-		rcvdMsg = sendAndRecv(invokedMsg);
-
-
-		/** 8. Return object or re-raise exception **/
-		if (exceptionWhileInvoking != null) {
-			if (exceptionWhileInvoking instanceof InvocationTargetException) {
-				throw exceptionWhileInvoking.getCause();
-			} else {
-				throw exceptionWhileInvoking;
-			}
-		}
-
-		logger.trace("out");
-	}
-
-	public static Object nonVoidInstanceMethod(StaticPart staticPart, Object sender, Object target, Object[] args)
-		throws Throwable {
-		logger.trace("in w/ staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target,
-			args);
-
-		final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
-
-		/** 1. Wrap message **/
-		final DataMessage msg = dataMessageBuilder.buildInstanceMethod(uuid, staticPart, sender, target, args);
-
-
-		/** 2. Send message **/
-		DataMessage rcvdMsg = sendAndRecv(msg);
-
-		/** 4. Invoke method **/
-
-		Method method = methodSignature.getMethod();
-		Object returnValue = null;
-		Exception exceptionWhileInvoking = null;
-		method.setAccessible(true);
-		String objKey = null;
-		try {
-			returnValue = method.invoke(target, args);
-		} catch (Exception e) {
-			exceptionWhileInvoking = e;
-			logger.error("Caught and assigned to exceptionWhileInvoking", e);
-		}
-
-		//store in object map
-		if (returnValue != null) {
-			objKey = objectService.storeObject(returnValue);
-		}
-
-		/** 5. Wrap new object or exception **/
-		final DataMessage invokedMsg;
-
-		if (exceptionWhileInvoking != null) {
-			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking,
-				null);
-		} else {
-			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), objKey,
-				false, null);
-		}
-
-
-		/** 6. Send object/exception **/
-		rcvdMsg = sendAndRecv(invokedMsg);
-
-		/** 8. Return object or re-raise exception **/
-		if (exceptionWhileInvoking != null) {
-			if (exceptionWhileInvoking instanceof InvocationTargetException) {
-				throw exceptionWhileInvoking.getCause();
-			} else {
-				throw exceptionWhileInvoking;
-			}
-		}
-
-		logger.trace("out w/ return value: {}", returnValue);
-		return returnValue;
-	}
 
 	/**
 	 * This method currently only support calling method whose value is fully contained in the msg.
@@ -558,117 +393,6 @@ public class Concentrator {
 		logger.trace("out w/ {}", rcvdMsg);
 		return rcvdMsg;
 	}
-
-	public static void voidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-		logger.trace("in w/ staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
-
-		final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
-
-		/** 1. Wrap message **/
-		final DataMessage msg = dataMessageBuilder.buildClassMethod(uuid, staticPart, sender, args);
-
-
-		/** 2. Send message **/
-		DataMessage rcvdMsg = sendAndRecv(msg);
-
-		/** 4. Invoke method **/
-
-		Method method = methodSignature.getMethod();
-		Exception exceptionWhileInvoking = null;
-		method.setAccessible(true);
-		try {
-			method.invoke(null, args);
-		} catch (Exception e) {
-			exceptionWhileInvoking = e;
-			logger.error("Caught and assigned to exceptionWhileInvoking", e);
-		}
-
-		/** 5. Wrap new object or exception **/
-		final DataMessage invokedMsg;
-
-		if (exceptionWhileInvoking != null) {
-			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking,
-				null);
-		} else {
-			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, Void.class, method.getReturnType(), null,
-				true, null);
-		}
-
-
-		/** 6. Send object/exception **/
-		rcvdMsg = sendAndRecv(invokedMsg);
-
-		/** 8. Return object or re-raise exception **/
-		if (exceptionWhileInvoking != null) {
-			if (exceptionWhileInvoking instanceof InvocationTargetException) {
-				throw exceptionWhileInvoking.getCause();
-			} else {
-				throw exceptionWhileInvoking;
-			}
-		}
-
-		logger.trace("out");
-	}
-
-	public static Object nonVoidClassMethod(StaticPart staticPart, Object sender, Object[] args) throws Throwable {
-		logger.trace("in w/ staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
-
-		final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
-
-		/** 1. Wrap message **/
-		final DataMessage msg = dataMessageBuilder.buildClassMethod(uuid, staticPart, sender, args);
-
-
-		/** 2. Send message **/
-		DataMessage rcvdMsg = sendAndRecv(msg);
-
-		/** 4. Invoke method **/
-
-		Method method = methodSignature.getMethod();
-		Object returnValue = null;
-		String objKey = null;
-		Exception exceptionWhileInvoking = null;
-		method.setAccessible(true);
-		try {
-			returnValue = method.invoke(null, args);
-		} catch (Exception e) {
-			exceptionWhileInvoking = e;
-			logger.error("Caught and assigned to exceptionWhileInvoking", e);
-		}
-
-		//store in object map
-		if (returnValue != null) {
-			objKey = objectService.storeObject(returnValue);
-		}
-
-		/** 5. Wrap new object or exception **/
-		final DataMessage invokedMsg;
-
-		if (exceptionWhileInvoking != null) {
-			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, method, exceptionWhileInvoking,
-				null);
-		} else {
-			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, returnValue, method.getReturnType(), objKey, false,
-				null);
-		}
-
-
-		/** 6. Send object/exception **/
-		rcvdMsg = sendAndRecv(invokedMsg);
-
-		/** 8. Return object or re-raise exception **/
-		if (exceptionWhileInvoking != null) {
-			if (exceptionWhileInvoking instanceof InvocationTargetException) {
-				throw exceptionWhileInvoking.getCause();
-			} else {
-				throw exceptionWhileInvoking;
-			}
-		}
-
-		logger.trace("out w/ return value: {}", returnValue);
-		return returnValue;
-	}
-
 
 	/**
 	 * This method currently only support calling method whose value is fully contained in the msg.
@@ -834,8 +558,7 @@ public class Concentrator {
 		/** 2. Send message **/
 		DataMessage rcvdMsg = sendAndRecv(msg);
 
-		/** 4. Get Object **/
-
+		/** 3. Get Object **/
 		Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
 		field.setAccessible(true);
 
@@ -848,12 +571,13 @@ public class Concentrator {
 			exceptionGettingObject = iae;
 			logger.error("Caught and assigned to exceptionGettingObject", iae);
 		}
-		//store in object map
+
+		/** 4. Store in object map **/
 		if (fieldValue != null) {
 			objKey = objectService.storeObject(fieldValue);
 		}
 
-		/** 5. Wrap exception if any **/
+		/** 5. Wrap new object or exception **/
 		DataMessage invokedMsg;
 		if (exceptionGettingObject != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionGettingObject,
@@ -866,7 +590,7 @@ public class Concentrator {
 		/** 6. Send object/exception **/
 		rcvdMsg = sendAndRecv(invokedMsg);
 
-		/** 8. Return or re-raise exception **/
+		/** 7. Return object or re-raise exception **/
 		if (exceptionGettingObject != null) {
 			throw exceptionGettingObject;
 		}
@@ -953,8 +677,7 @@ public class Concentrator {
 		/** 2. Send message **/
 		DataMessage rcvdMsg = sendAndRecv(msg);
 
-		/** 4. Get Object **/
-
+		/** 3. Get Object **/
 		Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
 		field.setAccessible(true);
 
@@ -967,12 +690,13 @@ public class Concentrator {
 			exceptionGettingObject = iae;
 			logger.error("Caught and assigned to exceptionGettingObject", iae);
 		}
-		//store in object map
+
+		/** 4. Store in object map **/
 		if (fieldValue != null) {
 			objKey = objectService.storeObject(fieldValue);
 		}
 
-		/** 5. Wrap exception if any **/
+		/** 5. Wrap object or exception **/
 		DataMessage invokedMsg;
 		if (exceptionGettingObject != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionGettingObject,
@@ -985,7 +709,7 @@ public class Concentrator {
 		/** 6. Send object/exception **/
 		rcvdMsg = sendAndRecv(invokedMsg);
 
-		/** 8. Return or re-raise exception **/
+		/** 7. Return object or re-raise exception **/
 		if (exceptionGettingObject != null) {
 			throw exceptionGettingObject;
 		}
@@ -1066,8 +790,7 @@ public class Concentrator {
 		/** 2. Send message **/
 		DataMessage rcvdMsg = sendAndRecv(msg);
 
-		/** 4. Put Object **/
-
+		/** 3. Put Object **/
 		Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
 		field.setAccessible(true);
 
@@ -1080,7 +803,7 @@ public class Concentrator {
 			logger.error("Caught and assigned to exceptionSettingObject", iae);
 		}
 
-		/** 5. Wrap exception if any **/
+		/** 4. Wrap exception if any **/
 		DataMessage invokedMsg;
 		if (exceptionSettingObject != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionSettingObject,
@@ -1089,10 +812,10 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildPutStaticDone(uuid, staticPart, sender, args[0]);
 		}
 
-		/** 6. Send object/exception **/
+		/** 5. Send PutStaticDone/exception **/
 		rcvdMsg = sendAndRecv(invokedMsg);
 
-		/** 8. Return or re-raise exception **/
+		/** 6. Return or re-raise exception **/
 		if (exceptionSettingObject != null) {
 			throw exceptionSettingObject;
 		}
@@ -1111,8 +834,7 @@ public class Concentrator {
 		/** 2. Send message **/
 		DataMessage rcvdMsg = sendAndRecv(msg);
 
-		/** 4. Put Object **/
-
+		/** 3. Put Object **/
 		Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
 		field.setAccessible(true);
 
@@ -1125,7 +847,7 @@ public class Concentrator {
 			logger.error("Caught and assigned to exceptionSettingObject", iae);
 		}
 
-		/** 5. Wrap exception if any **/
+		/** 4. Wrap exception if any **/
 		DataMessage invokedMsg;
 		if (exceptionSettingObject != null) {
 			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionSettingObject,
@@ -1134,10 +856,10 @@ public class Concentrator {
 			invokedMsg = dataMessageBuilder.buildPutObjectDone(uuid, staticPart, sender, target, args[0]);
 		}
 
-		/** 6. Send object/exception **/
+		/** 5. Send object/exception **/
 		rcvdMsg = sendAndRecv(invokedMsg);
 
-		/** 8. Return or re-raise exception **/
+		/** 6. Return or re-raise exception **/
 		if (exceptionSettingObject != null) {
 			throw exceptionSettingObject;
 		}
