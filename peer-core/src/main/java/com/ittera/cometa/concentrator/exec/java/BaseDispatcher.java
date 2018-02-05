@@ -9,6 +9,7 @@ import org.aspectj.lang.JoinPoint.StaticPart;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
@@ -21,9 +22,9 @@ import zmq.ZError;
 
 import javax.inject.Inject;
 
-public abstract class JavaDispatcher {
+public abstract class BaseDispatcher {
 
-	protected static final Logger logger = LoggerFactory.getLogger(JavaDispatcher.class);
+	protected static final Logger logger = LoggerFactory.getLogger(BaseDispatcher.class);
 
 	@Inject
 	protected UUID peerUuid;
@@ -145,10 +146,14 @@ public abstract class JavaDispatcher {
 
 	// TODO generalize this method, using a Builder method taking Executable's
 	// TODO create a Builder.buildVoidReturnValue() method
-	abstract protected DataMessage wrapAfterExecMessage(StaticPart staticPart, Object returnValue, String objectRef);
+	abstract protected DataMessage wrapAfterExecMessage(StaticPart staticPart, Object value, String objectRef);
 
 	abstract protected Object invoke(StaticPart staticPart, Object sender, Object target, Object[] args);
 
 	abstract protected boolean returnsVoid();
+
+	abstract protected Type getBeforeExecMessageType();
+
+	abstract protected Type getAfterExecMessageType();
 
 }

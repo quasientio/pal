@@ -1,36 +1,37 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
 import java.lang.reflect.Method;
 
 import org.aspectj.lang.JoinPoint.StaticPart;
 import org.aspectj.lang.reflect.MethodSignature;
 
-public abstract class InstanceMethodDispatcher extends JavaDispatcher {
+public abstract class InstanceMethodDispatcher extends MethodDispatcher {
 
 	@Override
-	protected DataMessage wrapBeforeExecMessage(StaticPart staticPart, Object sender, Object target, Object[] args) {
+	protected final DataMessage wrapBeforeExecMessage(StaticPart staticPart, Object sender, Object target, Object[] args) {
 
 		return messageBuilder.buildInstanceMethod(peerUuid, staticPart, sender, target, args);
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(StaticPart staticPart, Object returnValue, String objectRef) {
+	protected DataMessage wrapAfterExecMessage(StaticPart staticPart, Object value, String objectRef) {
 
 		final Method method = ((MethodSignature) staticPart.getSignature()).getMethod();
-		if (returnValue instanceof InvocationException) {
-			Exception invocationException = ((InvocationException) returnValue).getException();
+		if (value instanceof InvocationException) {
+			Exception invocationException = ((InvocationException) value).getException();
 			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, invocationException, null);
 		} else {
-			return messageBuilder.buildReturnValue(peerUuid, returnValue, method.getClass(), objectRef, returnsVoid(),
+			return messageBuilder.buildReturnValue(peerUuid, value, method.getClass(), objectRef, returnsVoid(),
 				null);
 		}
 
 	}
 
 	@Override
-	protected Object invoke(StaticPart staticPart, Object sender, Object target, Object[] args) {
+	protected final Object invoke(StaticPart staticPart, Object sender, Object target, Object[] args) {
 
 		final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
 		Method method = methodSignature.getMethod();
@@ -49,5 +50,10 @@ public abstract class InstanceMethodDispatcher extends JavaDispatcher {
 		} else {
 			return returnValue;
 		}
+	}
+
+	@Override
+	protected final Type getBeforeExecMessageType() {
+		return Type.INSTANCE_METHOD;
 	}
 }

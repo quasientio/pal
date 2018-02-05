@@ -1,6 +1,7 @@
 package com.ittera.cometa.messages;
 
 import com.ittera.cometa.messages.protobuf.data.Fields;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.aspectj.lang.JoinPoint.StaticPart;
@@ -31,6 +32,8 @@ public interface DataMessageBuilder {
 
 	DataMessage buildClassMethod(UUID concentratorUuid, StaticPart staticPart, Object sender, Object[] args);
 
+	DataMessage buildFieldOp(UUID concentratorUuid, StaticPart staticPart, Type type, Object sender, Object target, Object arg);
+
 	DataMessage buildGetStatic(UUID concentratorUuid, String className, String fieldName);
 
 	DataMessage buildGetStatic(UUID concentratorUuid, StaticPart staticPart, Object sender);
@@ -41,17 +44,15 @@ public interface DataMessageBuilder {
 
 	DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueClassName, Object value);
 
-	DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String objectRef);
-
 	DataMessage buildPutStatic(UUID concentratorUuid, StaticPart staticPart, Object sender, Object arg);
+
+	DataMessage buildFieldOpDone(UUID concentratorUuid, StaticPart staticPart, Type type);
 
 	DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid, Fields.StaticFieldPut staticFieldPut, Class fieldType, String followingUuid);
 
 	DataMessage buildPutStaticDone(UUID concentratorUuid, StaticPart staticPart, Object sender, Object arg);
 
 	DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef, String valueClassName, Object value);
-
-	DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef, String valueObjRef);
 
 	DataMessage buildPutObject(UUID concentratorUuid, StaticPart staticPart, Object sender, Object target, Object arg);
 

@@ -350,6 +350,83 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	}
 	//</editor-fold>
 
+	@Override
+	public DataMessage buildFieldOp(UUID concentratorUuid, StaticPart staticPart, Type type, Object sender,
+																	Object target, Object arg) {
+
+		final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
+
+		Primitives.Class clazz = getWrapped(fieldSignature.getDeclaringType());
+		Primitives.Object targetObj = getWrapped(target, fieldSignature.getDeclaringType(), null);
+		Fields.Field field = getWrapped(fieldSignature.getFieldType(), fieldSignature.getName());
+		int modifiers = fieldSignature.getModifiers();
+		Ctxt.Context context = getWrapped(staticPart, sender);
+
+
+		final DataMessage.Builder msgBuilder = newWrapperBuilder(type, concentratorUuid);
+		switch (type) {
+			case GET_FIELD:
+				msgBuilder.setInstanceFieldGet(InstanceFieldGet.newBuilder()
+					.setClass_(clazz)
+					.setObject(targetObj)
+					.setField(field)
+					.setModifiers(modifiers)
+					.setContext(context));
+				break;
+			case PUT_FIELD:
+				msgBuilder.setInstanceFieldPut(InstanceFieldPut.newBuilder()
+					.setClass_(clazz)
+					.setObject(targetObj)
+					.setField(field)
+					.setValueObject(getWrapped(arg, fieldSignature.getFieldType().getName(), null))
+					.setModifiers(modifiers)
+					.setContext(context));
+				break;
+			case GET_STATIC:
+				msgBuilder.setStaticFieldGet(StaticFieldGet.newBuilder()
+					.setClass_(clazz)
+					.setField(field)
+					.setModifiers(modifiers)
+					.setContext(context));
+				break;
+			case PUT_STATIC:
+				msgBuilder.setStaticFieldPut(StaticFieldPut.newBuilder()
+					.setClass_(clazz)
+					.setObject(getWrapped(arg, fieldSignature.getFieldType(), null))
+					.setField(field)
+					.setModifiers(modifiers)
+					.setContext(context));
+				break;
+			default:
+				throw new IllegalArgumentException("Unexpected field op type: " + type);
+		}
+
+		return msgBuilder.build();
+	}
+
+	public DataMessage buildFieldOpDone(UUID concentratorUuid, StaticPart staticPart, Type type) {
+
+		final FieldSignatureImpl fieldSignature = (FieldSignatureImpl) staticPart.getSignature();
+
+		final DataMessage.Builder msgBuilder = newWrapperBuilder(type, concentratorUuid);
+		switch (type) {
+			case PUT_FIELD_DONE:
+				msgBuilder.setInstanceFieldPutDone(InstanceFieldPutDone.newBuilder()
+					.setClass_(getWrapped(fieldSignature.getDeclaringType()))
+					.setField(getWrapped(fieldSignature.getFieldType(), fieldSignature.getName())));
+				break;
+			case PUT_STATIC_DONE:
+				msgBuilder.setStaticFieldPutDone(StaticFieldPutDone.newBuilder()
+					.setField(getWrapped(fieldSignature.getFieldType(), fieldSignature.getName()))
+					.setClass_(getWrapped(fieldSignature.getDeclaringType())));
+				break;
+			default:
+				throw new IllegalArgumentException("Unexpected field op done type: " + type);
+		}
+
+		return msgBuilder.build();
+	}
+
 	//<editor-fold desc="Static field get messages">
 
 	/**
@@ -378,6 +455,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		return msgBuilder.build();
 	}
+
 	//</editor-fold>
 
 	//<editor-fold desc="Instance field get messages">
@@ -425,21 +503,6 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 				.setClass_(getWrapped(className))
 				.setField(getWrapped((String) null, fieldName))
 				.setObject(getWrapped(value, valueClassName, null)));
-
-		return msgBuilder.build();
-	}
-
-	/**
-	 * This method is to be called when no joinpoint context is available.
-	 * Equivalent to the above, for objectRefs
-	 */
-	public DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String objectRef) {
-
-		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC, concentratorUuid)
-			.setStaticFieldPut(StaticFieldPut.newBuilder()
-				.setClass_(getWrapped(className))
-				.setField(getWrapped((String) null, fieldName))
-				.setObjectRef(objectRef));
 
 		return msgBuilder.build();
 	}
@@ -510,23 +573,6 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 				.setObjectRef(targetObjRef)
 				.setField(getWrapped((String) null, fieldName))
 				.setValueObject(getWrapped(value, valueClassName, null)));
-
-		return msgBuilder.build();
-	}
-
-	/**
-	 * This method is to be called when no joinpoint context is available.
-	 * Equivalent to the above, for objectRefs
-	 */
-	public DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef,
-																		String valueObjRef) {
-
-		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD, concentratorUuid)
-			.setInstanceFieldPut(InstanceFieldPut.newBuilder()
-				.setClass_(getWrapped(className))
-				.setObjectRef(targetObjRef)
-				.setField(getWrapped((String) null, fieldName))
-				.setValueObjectRef(valueObjRef));
 
 		return msgBuilder.build();
 	}

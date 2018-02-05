@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator.exec.java;
 
+import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.lang.reflect.Constructor;
@@ -9,35 +10,35 @@ import org.aspectj.lang.reflect.ConstructorSignature;
 
 import javax.inject.Singleton;
 
-public class ConstructorDispatcher extends JavaDispatcher {
+public class ConstructorDispatcher extends BaseDispatcher {
 
 	@Singleton
 	public ConstructorDispatcher() {
 	}
 
 	@Override
-	protected DataMessage wrapBeforeExecMessage(StaticPart staticPart, Object sender, Object target, Object[] args) {
+	protected final DataMessage wrapBeforeExecMessage(StaticPart staticPart, Object sender, Object target, Object[] args) {
 
 		return messageBuilder.buildConstructor(peerUuid, staticPart, sender, args);
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(StaticPart staticPart, Object returnValue, String objectRef) {
+	protected final DataMessage wrapAfterExecMessage(StaticPart staticPart, Object value, String objectRef) {
 
 		final Constructor constructor = ((ConstructorSignature) staticPart.getSignature()).getConstructor();
 
-		if (returnValue instanceof InvocationException) {
-			Exception invocationException = ((InvocationException) returnValue).getException();
+		if (value instanceof InvocationException) {
+			Exception invocationException = ((InvocationException) value).getException();
 			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, constructor, invocationException,
 				null);
 		} else {
-			return messageBuilder.buildReturnValue(peerUuid, returnValue, constructor.getClass(), objectRef, false,
+			return messageBuilder.buildReturnValue(peerUuid, value, constructor.getClass(), objectRef, false,
 				null);
 		}
 	}
 
 	@Override
-	protected Object invoke(StaticPart staticPart, Object sender, Object target, Object[] args) {
+	protected final Object invoke(StaticPart staticPart, Object sender, Object target, Object[] args) {
 
 		final Constructor constructor = ((ConstructorSignature) staticPart.getSignature()).getConstructor();
 
@@ -54,7 +55,17 @@ public class ConstructorDispatcher extends JavaDispatcher {
 	}
 
 	@Override
-	protected boolean returnsVoid() {
+	protected final boolean returnsVoid() {
 		return false;
+	}
+
+	@Override
+	protected final Type getBeforeExecMessageType() {
+		return Type.CONSTRUCTOR;
+	}
+
+	@Override
+	protected final Type getAfterExecMessageType() {
+		return Type.RETURN_VALUE;
 	}
 }

@@ -4,19 +4,24 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
 import javax.inject.Singleton;
 
-public class VoidClassMethodDispatcher extends ClassMethodDispatcher {
+public class GetInstanceVariableDispatcher extends FieldOpDispatcher {
 
 	@Singleton
-	public VoidClassMethodDispatcher() {
+	public GetInstanceVariableDispatcher() {
 	}
 
 	@Override
 	protected final boolean returnsVoid() {
-		return true;
+		return false;
+	}
+
+	@Override
+	protected final Type getBeforeExecMessageType() {
+		return Type.GET_FIELD;
 	}
 
 	@Override
 	protected final Type getAfterExecMessageType() {
-		return Type.VOID;
+		return Type.RETURN_VALUE;
 	}
 }
