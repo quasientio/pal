@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator.exec.java.reflect;
+package com.ittera.cometa.common.lang.reflect;
 
 public abstract class Signature {
 
@@ -12,5 +12,21 @@ public abstract class Signature {
 		this.declaringTypeName = declaringTypeName;
 		this.modifiers = modifiers;
 		this.name = name;
+	}
+
+	public Class getDeclaringType() {
+		return declaringType;
+	}
+
+	public String getDeclaringTypeName() {
+		return declaringTypeName;
+	}
+
+	public int getModifiers() {
+		return modifiers;
+	}
+
+	public String getName() {
+		return name;
 	}
 }

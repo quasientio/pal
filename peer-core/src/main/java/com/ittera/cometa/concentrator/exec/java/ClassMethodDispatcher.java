@@ -1,25 +1,24 @@
 package com.ittera.cometa.concentrator.exec.java;
 
+import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.reflect.MethodSignature;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
 import java.lang.reflect.Method;
 
-import org.aspectj.lang.JoinPoint.StaticPart;
-import org.aspectj.lang.reflect.MethodSignature;
-
 public abstract class ClassMethodDispatcher extends MethodDispatcher {
 
 	@Override
-	protected final DataMessage wrapBeforeExecMessage(StaticPart staticPart, Object sender, Object target, Object[] args) {
+	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
 
-		return messageBuilder.buildClassMethod(peerUuid, staticPart, sender, args);
+		return messageBuilder.buildClassMethod(peerUuid, ctxt, sender, args);
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(StaticPart staticPart, Object value, String objectRef) {
+	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef) {
 
-		final Method method = ((MethodSignature) staticPart.getSignature()).getMethod();
+		final Method method = ((MethodSignature) ctxt.getSignature()).getMethod();
 
 		if (value instanceof InvocationException) {
 			Exception invocationException = ((InvocationException) value).getException();
@@ -31,9 +30,9 @@ public abstract class ClassMethodDispatcher extends MethodDispatcher {
 	}
 
 	@Override
-	protected final Object invoke(StaticPart staticPart, Object sender, Object target, Object[] args) {
+	protected final Object invoke(Context ctxt, Object sender, Object target, Object[] args) {
 
-		final MethodSignature methodSignature = (MethodSignature) staticPart.getSignature();
+		final MethodSignature methodSignature = (MethodSignature) ctxt.getSignature();
 		Method method = methodSignature.getMethod();
 
 		Object returnValue;

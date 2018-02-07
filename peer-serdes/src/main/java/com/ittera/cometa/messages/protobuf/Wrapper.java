@@ -1,10 +1,10 @@
 package com.ittera.cometa.messages.protobuf;
 
+import com.ittera.cometa.common.lang.Context;
+
 import com.ittera.cometa.messages.protobuf.data.Fields.Field;
 import com.ittera.cometa.messages.protobuf.data.Ctxt;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
-
-import org.aspectj.lang.JoinPoint.StaticPart;
 
 import java.lang.reflect.Array;
 
@@ -100,7 +100,7 @@ public final class Wrapper {
 				for (int i = 0; i < length; i++) {
 					final Object arrayElem = Array.get(object, i);
 					//wrap and all array elements -- recursive
-					builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(),null));
+					builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(), null));
 				}
 			} else if (ClassUtils.isPrimitiveOrWrapper(object.getClass())) {
 				builder.setValue(String.valueOf(object));
@@ -189,16 +189,16 @@ public final class Wrapper {
 		return fieldBuilder.build();
 	}
 
-	static Ctxt.Context getWrappedContext(StaticPart staticPart, Object sender, String senderObjRef) {
+	static Ctxt.Context getWrappedContext(Context context, Object sender, String senderObjRef) {
 		final Ctxt.Context.Builder ctxtBuilder = Ctxt.Context.newBuilder();
 
-		ctxtBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+		ctxtBuilder.setSenderClass(getWrappedClass(context.getWithinType()));
 		if (sender != null) {
-			ctxtBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), senderObjRef));
+			ctxtBuilder.setSender(getWrappedObject(sender, context.getWithinType(), senderObjRef));
 		}
-		ctxtBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
-		ctxtBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
-		ctxtBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getName());
+		ctxtBuilder.setSourceLocationFile(context.getFileName());
+		ctxtBuilder.setSourceLocationLine(context.getSourceLine());
+		ctxtBuilder.setSourceLocationType(context.getWithinType().getName());
 
 		return ctxtBuilder.build();
 	}

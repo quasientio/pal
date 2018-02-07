@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator.exec.java.reflect;
+package com.ittera.cometa.common.lang.reflect;
 
 import java.lang.reflect.Field;
 

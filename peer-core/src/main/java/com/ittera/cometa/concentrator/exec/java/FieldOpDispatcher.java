@@ -1,27 +1,25 @@
 package com.ittera.cometa.concentrator.exec.java;
 
+import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.reflect.FieldSignature;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.lang.reflect.Field;
 
-import org.aspectj.lang.JoinPoint;
-import org.aspectj.runtime.reflect.FieldSignatureImpl;
-
 public abstract class FieldOpDispatcher extends BaseDispatcher {
 
 	@Override
-	protected final DataMessage wrapBeforeExecMessage(JoinPoint.StaticPart staticPart, Object sender, Object target,
+	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target,
 																										Object[] args) {
 
 		Object parameter = (args == null || args.length == 0) ? null : args[0];
-		return messageBuilder.buildFieldOp(peerUuid, staticPart, getBeforeExecMessageType(), sender, target, parameter);
+		return messageBuilder.buildFieldOp(peerUuid, ctxt, getBeforeExecMessageType(), sender, target, parameter);
 	}
 
 	@Override
-	protected final DataMessage wrapAfterExecMessage(JoinPoint.StaticPart staticPart, Object value,
-																									 String objectRef) {
+	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef) {
 
-		Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
+		Field field = ((FieldSignature) ctxt.getSignature()).getField();
 
 		if (value instanceof InvocationException) {
 			Exception invocationException = ((InvocationException) value).getException();
@@ -30,15 +28,15 @@ public abstract class FieldOpDispatcher extends BaseDispatcher {
 			if (!returnsVoid()) {
 				return messageBuilder.buildReturnValue(peerUuid, value, field.getType(), objectRef, false, null);
 			} else {
-				return messageBuilder.buildFieldOpDone(peerUuid, staticPart, getAfterExecMessageType());
+				return messageBuilder.buildFieldOpDone(peerUuid, ctxt, getAfterExecMessageType());
 			}
 		}
 	}
 
 	@Override
-	protected final Object invoke(JoinPoint.StaticPart staticPart, Object sender, Object target, Object[] args) {
+	protected final Object invoke(Context ctxt, Object sender, Object target, Object[] args) {
 
-		Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
+		Field field = ((FieldSignature) ctxt.getSignature()).getField();
 		field.setAccessible(true);
 
 		Object fieldValue;

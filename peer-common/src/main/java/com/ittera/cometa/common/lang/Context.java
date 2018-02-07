@@ -1,19 +1,18 @@
-package com.ittera.cometa.concentrator.exec.java;
+package com.ittera.cometa.common.lang;
 
-import com.ittera.cometa.concentrator.exec.java.reflect.ConstructorSignature;
-import com.ittera.cometa.concentrator.exec.java.reflect.FieldSignature;
-import com.ittera.cometa.concentrator.exec.java.reflect.MethodSignature;
-import com.ittera.cometa.concentrator.exec.java.reflect.Signature;
+import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
+import com.ittera.cometa.common.lang.reflect.FieldSignature;
+import com.ittera.cometa.common.lang.reflect.MethodSignature;
+import com.ittera.cometa.common.lang.reflect.Signature;
+
 import org.aspectj.lang.JoinPoint;
-
-import java.lang.reflect.Constructor;
 
 /**
  * This class (and the ones under .reflect subpackage) partly hold info that will be extracted
  * from aspectj's JoinPoint.StaticPart, allowing us to construct instances for unit-testing,
  * and adding more useful contextual information.
  */
-class Context {
+public class Context {
 
 	private final String sourceFilename;
 	private final int sourceLine;
@@ -27,23 +26,23 @@ class Context {
 		this.signature = signature;
 	}
 
-	String getFileName() {
+	public String getFileName() {
 		return sourceFilename;
 	}
 
-	int getSourceLine() {
+	public int getSourceLine() {
 		return sourceLine;
 	}
 
-	Class getWithinType() {
+	public Class getWithinType() {
 		return withinType;
 	}
 
-	Signature getSignature() {
+	public Signature getSignature() {
 		return signature;
 	}
 
-	Context parseFrom(final JoinPoint.StaticPart staticPart) {
+	public Context parseFrom(final JoinPoint.StaticPart staticPart) {
 		final String filename = staticPart.getSourceLocation().getFileName();
 		final int sourceLine = staticPart.getSourceLocation().getLine();
 		final Class withinType = staticPart.getSourceLocation().getWithinType();
@@ -82,7 +81,8 @@ class Context {
 		}  // pull out specific fields of FieldSignature
 		else if (ajSig instanceof org.aspectj.lang.reflect.FieldSignature) {
 			org.aspectj.lang.reflect.FieldSignature ajFieldSig = (org.aspectj.lang.reflect.FieldSignature) ajSig;
-			signature = new FieldSignature(declaringType, declaringTypeName, modifiers, name, ajFieldSig.getField(), ajFieldSig.getFieldType());
+			signature = new FieldSignature(declaringType, declaringTypeName, modifiers, name, ajFieldSig.getField(),
+				ajFieldSig.getFieldType());
 		} else {
 			throw new IllegalArgumentException("Cannot handle signature of type: " + ajSig.getClass().getName());
 		}

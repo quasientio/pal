@@ -159,58 +159,6 @@ public class Concentrator {
 	// <editor-fold defaultstate="collapsed" desc="CONSTRUCTORS">
 
 	/**
-	 * This method is currently not being weaved-in. See ConcentrateAspect
-	 *
-	 * @param staticPart
-	 * @param sender
-	 * @return
-	 * @throws ClassNotFoundException
-	 */
-	public static boolean classConstructor(StaticPart staticPart, Object sender) throws ClassNotFoundException {
-		logger.trace("in w/ staticPart: {}, sender: {}", staticPart.getSignature(), sender);
-
-		/** 1. Wrap message **/
-		final DataMessage msg = dataMessageBuilder.buildClassInitializer(uuid, staticPart, sender);
-
-		/** 2. Send message **/
-		DataMessage rcvdMsg = sendAndRecv(msg);
-
-		/** 3. Load and initialize class  -  WARNING: For some reason the class is not being initialized! **/
-		Class clazz = null;
-		ClassNotFoundException exceptionWhileLoadingClass = null;
-		try {
-			clazz = Class.forName(staticPart.getSignature().getDeclaringType().getName());
-			//Class.forName(codeSignature.getDeclaringTypeName(),true, Concentrator.class.getClassLoader());
-		} catch (ClassNotFoundException cnfe) {
-			exceptionWhileLoadingClass = cnfe;
-			logger.error("Caught and assigned to exceptionWhileLoadingClass", cnfe);
-		}
-
-		/** 4. Wrap class/exception if any **/
-		String objKey = null;
-		final DataMessage invokedMsg;
-		if (exceptionWhileLoadingClass != null) {
-			invokedMsg = dataMessageBuilder.buildInitializerThrowable(uuid, staticPart, exceptionWhileLoadingClass);
-		} else {
-			invokedMsg = dataMessageBuilder.buildLoadedClass(uuid, clazz);
-		}
-
-		/** 5. Send object/exception **/
-		rcvdMsg = sendAndRecv(invokedMsg);
-
-		/** 6. Return or re-raise exception **/
-		if (exceptionWhileLoadingClass != null) {
-			throw exceptionWhileLoadingClass;
-		}
-
-		//Since class initialization is not working, we will return false if we want to aspectj to proceed(),
-		// indicating class isn't initialized
-		boolean returnValue = false;
-		logger.trace("out w/ return bool: {}", returnValue);
-		return returnValue;
-	}
-
-	/**
 	 * @param constructorCall
 	 * @throws Throwable
 	 */
@@ -549,56 +497,6 @@ public class Concentrator {
 
 	}
 
-	public static Object getStatic(StaticPart staticPart, Object sender) throws IllegalAccessException {
-		logger.trace("in w/ staticPart: {}, sender: {}", staticPart.getSignature(), sender);
-
-		/** 1. Wrap message **/
-		final DataMessage msg = dataMessageBuilder.buildGetStatic(uuid, staticPart, sender);
-
-		/** 2. Send message **/
-		DataMessage rcvdMsg = sendAndRecv(msg);
-
-		/** 3. Get Object **/
-		Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
-		field.setAccessible(true);
-
-		IllegalAccessException exceptionGettingObject = null;
-		Object fieldValue = null;
-		String objKey = null;
-		try {
-			fieldValue = field.get(null);
-		} catch (IllegalAccessException iae) {
-			exceptionGettingObject = iae;
-			logger.error("Caught and assigned to exceptionGettingObject", iae);
-		}
-
-		/** 4. Store in object map **/
-		if (fieldValue != null) {
-			objKey = objectService.storeObject(fieldValue);
-		}
-
-		/** 5. Wrap new object or exception **/
-		DataMessage invokedMsg;
-		if (exceptionGettingObject != null) {
-			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionGettingObject,
-				null);
-		} else {
-			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), objKey, false,
-				null);
-		}
-
-		/** 6. Send object/exception **/
-		rcvdMsg = sendAndRecv(invokedMsg);
-
-		/** 7. Return object or re-raise exception **/
-		if (exceptionGettingObject != null) {
-			throw exceptionGettingObject;
-		}
-
-		logger.trace("out w/ fieldValue: {}", fieldValue);
-		return fieldValue;
-	}
-
 	public static DataMessage incomingGetObject(String messageUuid, InstanceFieldGet instanceFieldGet,
 																							String followingUuid) {
 		logger.trace("in w/ instanceFieldGet: {}, messageUuid: {}, following uuid: {}", instanceFieldGet, messageUuid,
@@ -668,56 +566,6 @@ public class Concentrator {
 
 	}
 
-	public static Object getObject(StaticPart staticPart, Object sender, Object target) throws IllegalAccessException {
-		logger.trace("in w/ staticPart: {}, sender: {}, target: {}", staticPart.getSignature(), sender, target);
-
-		/** 1. Wrap message **/
-		final DataMessage msg = dataMessageBuilder.buildGetObject(uuid, staticPart, sender, target);
-
-		/** 2. Send message **/
-		DataMessage rcvdMsg = sendAndRecv(msg);
-
-		/** 3. Get Object **/
-		Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
-		field.setAccessible(true);
-
-		IllegalAccessException exceptionGettingObject = null;
-		Object fieldValue = null;
-		String objKey = null;
-		try {
-			fieldValue = field.get(target);
-		} catch (IllegalAccessException iae) {
-			exceptionGettingObject = iae;
-			logger.error("Caught and assigned to exceptionGettingObject", iae);
-		}
-
-		/** 4. Store in object map **/
-		if (fieldValue != null) {
-			objKey = objectService.storeObject(fieldValue);
-		}
-
-		/** 5. Wrap object or exception **/
-		DataMessage invokedMsg;
-		if (exceptionGettingObject != null) {
-			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionGettingObject,
-				null);
-		} else {
-			invokedMsg = dataMessageBuilder.buildReturnValue(uuid, fieldValue, field.getType(), objKey,
-				false, null);
-		}
-
-		/** 6. Send object/exception **/
-		rcvdMsg = sendAndRecv(invokedMsg);
-
-		/** 7. Return object or re-raise exception **/
-		if (exceptionGettingObject != null) {
-			throw exceptionGettingObject;
-		}
-
-		logger.trace("out w/ fieldValue: {}", fieldValue);
-		return fieldValue;
-	}
-
 	public static DataMessage incomingPutStatic(String messageUuid, StaticFieldPut staticFieldPut, String followingUuid) {
 		logger.trace("in w/ staticFieldPut: {}, messageUuid: {}, following uuid: {}", staticFieldPut, messageUuid,
 			followingUuid);
@@ -779,92 +627,6 @@ public class Concentrator {
 		logger.trace("out w/ {}", rcvdMsg);
 		return rcvdMsg;
 
-	}
-
-	public static void putStatic(StaticPart staticPart, Object sender, Object[] args) throws IllegalAccessException {
-		logger.trace("in w/ staticPart: {}, sender: {}, args: {}", staticPart.getSignature(), sender, args);
-
-		/** 1. Wrap message **/
-		final DataMessage msg = dataMessageBuilder.buildPutStatic(uuid, staticPart, sender, args[0]);
-
-		/** 2. Send message **/
-		DataMessage rcvdMsg = sendAndRecv(msg);
-
-		/** 3. Put Object **/
-		Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
-		field.setAccessible(true);
-
-		IllegalAccessException exceptionSettingObject = null;
-		try {
-			//invoke set
-			field.set(null, args[0]);
-		} catch (IllegalAccessException iae) {
-			exceptionSettingObject = iae;
-			logger.error("Caught and assigned to exceptionSettingObject", iae);
-		}
-
-		/** 4. Wrap exception if any **/
-		DataMessage invokedMsg;
-		if (exceptionSettingObject != null) {
-			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionSettingObject,
-				null);
-		} else {
-			invokedMsg = dataMessageBuilder.buildPutStaticDone(uuid, staticPart, sender, args[0]);
-		}
-
-		/** 5. Send PutStaticDone/exception **/
-		rcvdMsg = sendAndRecv(invokedMsg);
-
-		/** 6. Return or re-raise exception **/
-		if (exceptionSettingObject != null) {
-			throw exceptionSettingObject;
-		}
-
-		logger.trace("out");
-	}
-
-	public static void putField(StaticPart staticPart, Object sender, Object target, Object[] args)
-		throws IllegalAccessException {
-		logger.trace("in w/ staticPart: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender, target,
-			args);
-
-		/** 1. Wrap message **/
-		final DataMessage msg = dataMessageBuilder.buildPutObject(uuid, staticPart, sender, target, args[0]);
-
-		/** 2. Send message **/
-		DataMessage rcvdMsg = sendAndRecv(msg);
-
-		/** 3. Put Object **/
-		Field field = ((FieldSignatureImpl) staticPart.getSignature()).getField();
-		field.setAccessible(true);
-
-		IllegalAccessException exceptionSettingObject = null;
-		try {
-			//invoke set
-			field.set(target, args[0]);
-		} catch (IllegalAccessException iae) {
-			exceptionSettingObject = iae;
-			logger.error("Caught and assigned to exceptionSettingObject", iae);
-		}
-
-		/** 4. Wrap exception if any **/
-		DataMessage invokedMsg;
-		if (exceptionSettingObject != null) {
-			invokedMsg = dataMessageBuilder.buildAccessibleObjectThrowable(uuid, field, exceptionSettingObject,
-				null);
-		} else {
-			invokedMsg = dataMessageBuilder.buildPutObjectDone(uuid, staticPart, sender, target, args[0]);
-		}
-
-		/** 5. Send object/exception **/
-		rcvdMsg = sendAndRecv(invokedMsg);
-
-		/** 6. Return or re-raise exception **/
-		if (exceptionSettingObject != null) {
-			throw exceptionSettingObject;
-		}
-
-		logger.trace("out");
 	}
 
 	public static DataMessage incomingPutField(String messageUuid, InstanceFieldPut instanceFieldPut,

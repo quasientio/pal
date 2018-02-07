@@ -4,9 +4,9 @@ import java.util.UUID;
 
 import java.lang.reflect.InvocationTargetException;
 
-import org.aspectj.lang.JoinPoint.StaticPart;
-
 import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.lang.Context;
+
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
@@ -56,21 +56,21 @@ public abstract class BaseDispatcher {
 		}
 	};
 
-	public final Object dispatch(StaticPart staticPart, Object sender, Object target, Object[] args)
+	public final Object dispatch(Context ctxt, Object sender, Object target, Object[] args)
 		throws Throwable {
 
-		logger.trace("dispatch:in w/ signature: {}, sender: {}, target: {}, args: {}", staticPart.getSignature(), sender,
+		logger.trace("dispatch:in w/ signature: {}, sender: {}, target: {}, args: {}", ctxt.getSignature(), sender,
 			target, args);
 
 		// 1. Wrap message
-		final DataMessage beforeExecMsg = wrapBeforeExecMessage(staticPart, sender, target, args);
+		final DataMessage beforeExecMsg = wrapBeforeExecMessage(ctxt, sender, target, args);
 
 		// 2. Send message
 		final DataMessage beforeExecReplyMsg = sendAndRecv(beforeExecMsg);
 
 		// 3. Invoke
 		// TODO if beforeExecReplyMsg != beforeExecMsg, unpack and exec reply msg
-		Object returnValue = invoke(staticPart, sender, target, args);
+		Object returnValue = invoke(ctxt, sender, target, args);
 
 		// 4. Store? object in object map
 		String objectRef = null;
@@ -79,7 +79,7 @@ public abstract class BaseDispatcher {
 		}
 
 		// 5. Wrap object or exception
-		final DataMessage afterExecMsg = wrapAfterExecMessage(staticPart, returnValue, objectRef);
+		final DataMessage afterExecMsg = wrapAfterExecMessage(ctxt, returnValue, objectRef);
 
 		// 6. Send object or exception
 		final DataMessage afterExecReplyMsg = sendAndRecv(afterExecMsg);
@@ -141,14 +141,14 @@ public abstract class BaseDispatcher {
 		return object != null ? objectService.storeObject(object) : null;
 	}
 
-	abstract protected DataMessage wrapBeforeExecMessage(StaticPart staticPart, Object sender, Object target,
+	abstract protected DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target,
 																											 Object[] args);
 
 	// TODO generalize this method, using a Builder method taking Executable's
 	// TODO create a Builder.buildVoidReturnValue() method
-	abstract protected DataMessage wrapAfterExecMessage(StaticPart staticPart, Object value, String objectRef);
+	abstract protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef);
 
-	abstract protected Object invoke(StaticPart staticPart, Object sender, Object target, Object[] args);
+	abstract protected Object invoke(Context ctxt, Object sender, Object target, Object[] args);
 
 	abstract protected boolean returnsVoid();
 

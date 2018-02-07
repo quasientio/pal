@@ -1,12 +1,11 @@
 package com.ittera.cometa.concentrator.exec.java;
 
+import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.lang.reflect.Constructor;
-
-import org.aspectj.lang.JoinPoint.StaticPart;
-import org.aspectj.lang.reflect.ConstructorSignature;
 
 import javax.inject.Singleton;
 
@@ -17,15 +16,15 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected final DataMessage wrapBeforeExecMessage(StaticPart staticPart, Object sender, Object target, Object[] args) {
+	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
 
-		return messageBuilder.buildConstructor(peerUuid, staticPart, sender, args);
+		return messageBuilder.buildConstructor(peerUuid, ctxt, sender, args);
 	}
 
 	@Override
-	protected final DataMessage wrapAfterExecMessage(StaticPart staticPart, Object value, String objectRef) {
+	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef) {
 
-		final Constructor constructor = ((ConstructorSignature) staticPart.getSignature()).getConstructor();
+		final Constructor constructor = ((ConstructorSignature) ctxt.getSignature()).getConstructor();
 
 		if (value instanceof InvocationException) {
 			Exception invocationException = ((InvocationException) value).getException();
@@ -38,9 +37,9 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected final Object invoke(StaticPart staticPart, Object sender, Object target, Object[] args) {
+	protected final Object invoke(Context ctxt, Object sender, Object target, Object[] args) {
 
-		final Constructor constructor = ((ConstructorSignature) staticPart.getSignature()).getConstructor();
+		final Constructor constructor = ((ConstructorSignature) ctxt.getSignature()).getConstructor();
 
 		Object newObject;
 		constructor.setAccessible(true);
