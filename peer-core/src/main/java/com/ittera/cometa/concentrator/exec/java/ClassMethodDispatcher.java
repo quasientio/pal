@@ -11,7 +11,6 @@ public abstract class ClassMethodDispatcher extends MethodDispatcher {
 
 	@Override
 	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
-
 		return messageBuilder.buildClassMethod(peerUuid, ctxt, sender, args);
 	}
 

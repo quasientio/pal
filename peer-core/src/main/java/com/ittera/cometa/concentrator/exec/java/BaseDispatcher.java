@@ -7,6 +7,7 @@ import java.lang.reflect.InvocationTargetException;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
 
+import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
@@ -14,48 +15,18 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
-import org.zeromq.ZMQ;
-import org.zeromq.ZMQ.Socket;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQException;
-import zmq.ZError;
-
 import javax.inject.Inject;
 
-public abstract class BaseDispatcher {
+public abstract class BaseDispatcher implements Dispatcher {
 
-	protected static final Logger logger = LoggerFactory.getLogger(BaseDispatcher.class);
+	protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-	@Inject
 	protected UUID peerUuid;
+	protected DataMessageBuilder messageBuilder;
+	protected ObjectService objectService;
+	protected DispatcherConnector connector;
 
-	@Inject
-	DataMessageBuilder messageBuilder;
-
-	@Inject
-	protected String outCellAddress;
-
-	@Inject
-	protected ZContext zmqContext;
-
-	@Inject
-	protected static ObjectService objectService;
-
-	// flag to avoid creating the threadLocal socket when we're trying to close it before having been created
-	private final ThreadLocal<Boolean> threadSocketCreated = ThreadLocal.withInitial(() -> false);
-
-	// per-thread REP socket to send out messages
-	private final ThreadLocal<Socket> threadSocket = new ThreadLocal<Socket>() {
-		@Override
-		protected Socket initialValue() {
-			Socket worker = zmqContext.createSocket(ZMQ.REQ);
-			worker.connect(outCellAddress);
-			logger.debug("Created and connected REQ new socket to outCellAddress: {}", outCellAddress);
-			threadSocketCreated.set(true);
-			return worker;
-		}
-	};
-
+	@Override
 	public final Object dispatch(Context ctxt, Object sender, Object target, Object[] args)
 		throws Throwable {
 
@@ -66,7 +37,7 @@ public abstract class BaseDispatcher {
 		final DataMessage beforeExecMsg = wrapBeforeExecMessage(ctxt, sender, target, args);
 
 		// 2. Send message
-		final DataMessage beforeExecReplyMsg = sendAndRecv(beforeExecMsg);
+		final DataMessage beforeExecReplyMsg = connector.sendAndRecv(beforeExecMsg);
 
 		// 3. Invoke
 		// TODO if beforeExecReplyMsg != beforeExecMsg, unpack and exec reply msg
@@ -82,7 +53,7 @@ public abstract class BaseDispatcher {
 		final DataMessage afterExecMsg = wrapAfterExecMessage(ctxt, returnValue, objectRef);
 
 		// 6. Send object or exception
-		final DataMessage afterExecReplyMsg = sendAndRecv(afterExecMsg);
+		final DataMessage afterExecReplyMsg = connector.sendAndRecv(afterExecMsg);
 
 		// 7. Return object or re-raise exception
 		// TODO if afterExecReplyMsg != afterExecMsg, unpack exception or return value
@@ -100,40 +71,6 @@ public abstract class BaseDispatcher {
 		// TODO return Optional? for dispatch of voids, OR have our own Void class
 
 		logger.trace("dispatch:out returning object: {}", returnValue);
-		return returnValue;
-	}
-
-	private final DataMessage sendAndRecv(DataMessage message) {
-		logger.trace("sendAndRecv:in w/ message with uuid: {}", message.getMessageUuid());
-		Socket outSocket = threadSocket.get();
-		outSocket.send(message.toByteArray());
-
-		String rcvdString = null;
-		try {
-			rcvdString = outSocket.recvStr();
-		} catch (ZMQException ex) {
-			int errorCode = ex.getErrorCode();
-			if (errorCode == ZError.ETERM) {
-				logger.warn("Caught ETERM during blocking read. Will close socket");
-				outSocket.close();
-				return null;
-			} else if (errorCode == ZError.EINTR) {
-				logger.warn("Caught EINTR during blocking read. Will close socket.");
-				outSocket.close();
-				return null;
-			}
-		}
-
-		DataMessage returnValue;
-		if ("0".equals(rcvdString)) {
-			logger.debug("0 means return same message");
-			returnValue = message;
-		} else {
-			logger.error("We should not get here");
-			returnValue = null;
-		}
-
-		logger.trace("out w/ {}", returnValue);
 		return returnValue;
 	}
 
@@ -155,5 +92,25 @@ public abstract class BaseDispatcher {
 	abstract protected Type getBeforeExecMessageType();
 
 	abstract protected Type getAfterExecMessageType();
+
+	@Inject
+	protected void setPeerUuid(UUID peerUuid) {
+		this.peerUuid = peerUuid;
+	}
+
+	@Inject
+	protected void setMessageBuilder(DataMessageBuilder messageBuilder) {
+		this.messageBuilder = messageBuilder;
+	}
+
+	@Inject
+	protected void setObjectService(ObjectService objectService) {
+		this.objectService = objectService;
+	}
+
+	@Inject
+	protected void setConnector(DispatcherConnector connector) {
+		this.connector = connector;
+	}
 
 }

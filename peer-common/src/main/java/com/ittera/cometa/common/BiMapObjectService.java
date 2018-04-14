@@ -31,7 +31,7 @@ import com.google.common.util.concurrent.AbstractIdleService;
  * TODO: store objects as WeakReferences -> until then, no objects will get garbage cleaned!
  * TODO: replace trace enter and exit stmts (see issue #5)
  */
-public final class BiMapObjectService extends AbstractIdleService implements ObjectService {
+public final class BiMapObjectService implements ObjectService {
 
 	private static final Logger logger = LoggerFactory.getLogger(BiMapObjectService.class);
 
@@ -67,18 +67,6 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
 		}
 	}
 
-	@Override
-	protected void startUp() {
-		//TODO initialize internal queues, etc.
-
-	}
-
-	@Override
-	protected void shutDown() {
-		//TODO call the executor's shutdown() or shutdownNow()
-
-	}
-
 	private String generateObjectRef(Object object) {
 		final Long currentTimeMillis = System.currentTimeMillis();
 		final int identHash = System.identityHashCode(object);
@@ -87,9 +75,6 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
 
 	public String storeObject(Object object) {
 		logger.trace("in w/ object: {}", object);
-		if (!isRunning()) {
-			throw new IllegalStateException("Service not running");
-		}
 		if (object == null) {
 			throw new NullPointerException("object cannot be null");
 		}
@@ -110,9 +95,6 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
 
 	public Object lookupObject(String objectRef) {
 		logger.trace("in w/ objectRef: {}", objectRef);
-		if (!isRunning()) {
-			throw new IllegalStateException("Service not running");
-		}
 		if (objectRef == null) {
 			throw new NullPointerException("objectRef cannot be null");
 		}
@@ -127,9 +109,6 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
 
 	public String lookupObjectRef(Object object) {
 		logger.trace("in w/ object: {}", object);
-		if (!isRunning()) {
-			throw new IllegalStateException("Service not running");
-		}
 		if (object == null) {
 			throw new NullPointerException("object cannot be null");
 		}
@@ -139,31 +118,19 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
 	}
 
 	public void clear() {
-		if (!isRunning()) {
-			throw new IllegalStateException("Service not running");
-		}
 		syncdObjectMap.clear();
 	}
 
 	public int size() {
-		if (!isRunning()) {
-			throw new IllegalStateException("Service not running");
-		}
 		return syncdObjectMap.size();
 	}
 
 	public boolean isEmpty() {
-		if (!isRunning()) {
-			throw new IllegalStateException("Service not running");
-		}
 		return size() == 0;
 	}
 
 	public boolean containsValue(Object object) {
 		logger.trace("in w/ object: {}", object);
-		if (!isRunning()) {
-			throw new IllegalStateException("Service not running");
-		}
 		if (object == null) {
 			throw new NullPointerException("object cannot be null");
 		}
@@ -174,9 +141,6 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
 
 	public boolean containsObjectRef(String objectRef) {
 		logger.trace("in w/ objectRef: {}", objectRef);
-		if (!isRunning()) {
-			throw new IllegalStateException("Service not running");
-		}
 		if (objectRef == null) {
 			throw new NullPointerException("objectRef cannot be null");
 		}
@@ -187,9 +151,6 @@ public final class BiMapObjectService extends AbstractIdleService implements Obj
 
 	public Object remove(String objectRef) {
 		logger.trace("in w/ objectRef: {}", objectRef);
-		if (!isRunning()) {
-			throw new IllegalStateException("Service not running");
-		}
 		if (objectRef == null) {
 			throw new NullPointerException("objectRef cannot be null");
 		}

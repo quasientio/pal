@@ -196,9 +196,16 @@ public final class Wrapper {
 		if (sender != null) {
 			ctxtBuilder.setSender(getWrappedObject(sender, context.getWithinType(), senderObjRef));
 		}
-		ctxtBuilder.setSourceLocationFile(context.getFileName());
+
+		if (context.getFileName() != null) {
+			ctxtBuilder.setSourceLocationFile(context.getFileName());
+		}
+
 		ctxtBuilder.setSourceLocationLine(context.getSourceLine());
-		ctxtBuilder.setSourceLocationType(context.getWithinType().getName());
+
+		if (context.getWithinType() != null) {
+			ctxtBuilder.setSourceLocationType(context.getWithinType().getName());
+		}
 
 		return ctxtBuilder.build();
 	}

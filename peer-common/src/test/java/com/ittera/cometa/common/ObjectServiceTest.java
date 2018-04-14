@@ -8,9 +8,6 @@ import java.util.*;
 
 import static org.junit.Assert.*;
 
-import com.google.common.util.concurrent.Service;
-import com.google.common.util.concurrent.ServiceManager;
-
 /**
  * Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior
  * <p>
@@ -25,10 +22,6 @@ public class ObjectServiceTest {
   @BeforeClass
   public static void initService() {
     objectService = new BiMapObjectService();
-    final ServiceManager manager = new ServiceManager(Collections.singletonList((Service) objectService));
-
-    //start services
-    manager.startAsync();
   }
 
 

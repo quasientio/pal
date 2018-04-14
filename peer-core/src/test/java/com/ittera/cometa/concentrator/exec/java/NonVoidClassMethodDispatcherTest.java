@@ -11,26 +11,28 @@ import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public class VoidClassMethodDispatcherTest extends AbstractDispatcherTest {
+public class NonVoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 
-	private Dispatcher dispatcher = new VoidClassMethodDispatcher(peerUuid, messageBuilder,
-		dispatcherConnector, objectService);
+	private Dispatcher dispatcher = new NonVoidClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector,
+		objectService);
 
 	@Test
 	public void dispatch() throws Throwable {
 
 		String sourceFilename = null;
-		int sourceLine = -1;
-		Class targetClass = Thread.class;
-		String methodName = "sleep";
-		Class[] parameterTypes = new Class[]{long.class};
+		int sourceLine = 10;
+		Class targetClass = Math.class;
+		String methodName = "max";
+		Class[] parameterTypes = new Class[]{double.class, double.class};
 		Signature signature = new MethodSignature(targetClass, methodName, parameterTypes);
 		Context ctxt =  new Context(sourceFilename, sourceLine, targetClass, signature);
 
-		long millisTosleep = 1;
-		Object[] args = new Object[]{millisTosleep};
+		double smallDouble = 8378;
+		double bigDouble = 827193;
+
+		Object[] args = new Object[]{ smallDouble, bigDouble};
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
-		assertEquals(Void.getInstance(), returned);
+		assertEquals(bigDouble, returned);
 	}
 }

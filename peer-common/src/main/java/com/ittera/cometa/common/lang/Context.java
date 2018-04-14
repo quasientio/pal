@@ -19,7 +19,7 @@ public class Context {
 	private final Class withinType;
 	private final Signature signature;
 
-	Context(String sourceFilename, int sourceLine, Class withinType, Signature signature) {
+	public Context(String sourceFilename, int sourceLine, Class withinType, Signature signature) {
 		this.sourceFilename = sourceFilename;
 		this.sourceLine = sourceLine;
 		this.withinType = withinType;

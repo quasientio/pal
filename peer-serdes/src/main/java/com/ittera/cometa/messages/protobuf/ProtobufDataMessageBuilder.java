@@ -42,7 +42,6 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	protected static final Logger logger = LoggerFactory.getLogger(ProtobufDataMessageBuilder.class);
 
-	@Inject
 	private ObjectService objectService;
 
 	private boolean storeUncachedObjects = true;
@@ -52,6 +51,21 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	private final ThreadLocal<AtomicLong> threadDispatchSequence = ThreadLocal.withInitial(() -> new AtomicLong(1));
 
 	private final ThreadLocal<AtomicLong> threadBuilderSequence = ThreadLocal.withInitial(() -> new AtomicLong(1));
+
+	public ProtobufDataMessageBuilder() {
+		this(null, false);
+	}
+
+	@Inject
+	public ProtobufDataMessageBuilder(ObjectService objectService) {
+		this(objectService, true);
+	}
+
+	@Inject
+	public ProtobufDataMessageBuilder(ObjectService objectService, boolean storeUncachedObjects) {
+		this.objectService = objectService;
+		this.storeUncachedObjects = storeUncachedObjects;
+	}
 
 	@Override
 	public void resetThreadLocalSequence() {
@@ -114,7 +128,6 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	}
 
 	private Builder addParameters(Builder callBuilder, Context context, Object[] args) {
-
 		final CodeSignature codeSignature = (CodeSignature) context.getSignature();
 		for (int i = 0; codeSignature.getParameterTypes() != null && i < args.length; i++) {
 			//TODO what about objectRefs?
@@ -629,9 +642,10 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		return msgBuilder.build();
 	}
 
+	//</editor-fold>
+
 	@Override
 	public void dontStoreObjects() {
 		this.storeUncachedObjects = false;
 	}
-	//</editor-fold>
 }
