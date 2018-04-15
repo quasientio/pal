@@ -13,34 +13,33 @@ import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public class NonVoidClassMethodDispatcherTest extends AbstractDispatcherTest {
+public class VoidInstanceMethodDispatcherTest extends AbstractDispatcherTest {
 
-	private Dispatcher dispatcher = new NonVoidClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector,
-		objectService);
+	private Dispatcher dispatcher = new VoidInstanceMethodDispatcher(peerUuid, messageBuilder,
+		dispatcherConnector, objectService);
 
 	@Test
 	public void dispatch() throws Throwable {
 
 		// signature
-		Class targetClass = Math.class;
-		String methodName = "max";
-		Class[] parameterTypes = new Class[]{double.class, double.class};
+		Class targetClass = java.io.PrintStream.class;
+		String methodName = "println";
+		Class[] parameterTypes = new Class[]{String.class};
 		Signature signature = new MethodSignature(targetClass, methodName, parameterTypes);
 
 		// ctxt
 		String sourceFilename = null;
-		int sourceLine = 10;
+		int sourceLine = -1;
 		Context ctxt = new Context(sourceFilename, sourceLine, targetClass, signature);
 
 		// args
-		double smallDouble = 8378;
-		double bigDouble = 827193;
-		Object[] args = new Object[]{smallDouble, bigDouble};
+		Object[] args = new Object[]{"hello from test"};
 
 		// dispatch
-		Object returned = dispatcher.dispatch(ctxt, this, null, args);
+		Object target = System.out;
+		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		assertEquals(bigDouble, returned);
+		assertEquals(Void.getInstance(), returned);
 	}
 }

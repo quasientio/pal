@@ -9,17 +9,18 @@ import com.ittera.cometa.common.ObjectService;
 import java.util.UUID;
 
 import org.mockito.AdditionalAnswers;
+
 import static org.mockito.Mockito.*;
 
 public abstract class AbstractDispatcherTest {
 
-	protected  UUID peerUuid = UUID.randomUUID();
+	protected UUID peerUuid = UUID.randomUUID();
 
 	protected ObjectService objectService = new BiMapObjectService();
 
-	protected  DataMessageBuilder messageBuilder = new ProtobufDataMessageBuilder(objectService);
+	protected DataMessageBuilder messageBuilder = new ProtobufDataMessageBuilder(objectService);
 
-	protected  DispatcherConnector dispatcherConnector;
+	protected DispatcherConnector dispatcherConnector;
 
 	protected AbstractDispatcherTest() {
 

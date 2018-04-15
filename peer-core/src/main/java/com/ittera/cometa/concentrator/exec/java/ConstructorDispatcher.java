@@ -1,15 +1,32 @@
 package com.ittera.cometa.concentrator.exec.java;
 
+import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
+import com.ittera.cometa.concentrator.exec.DispatcherConnector;
+import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
+import javax.inject.Singleton;
+import javax.inject.Inject;
+
+import java.util.UUID;
+
 import java.lang.reflect.Constructor;
 
-import javax.inject.Singleton;
-
 public class ConstructorDispatcher extends BaseDispatcher {
+
+	@Singleton
+	@Inject
+	public ConstructorDispatcher(UUID peerUuid, DataMessageBuilder messageBuilder, DispatcherConnector connector,
+															 ObjectService objectService) {
+		setPeerUuid(peerUuid);
+		setMessageBuilder(messageBuilder);
+		setConnector(connector);
+		setObjectService(objectService);
+	}
+
 
 	@Singleton
 	public ConstructorDispatcher() {

@@ -32,25 +32,4 @@ public abstract class FieldOpDispatcher extends BaseDispatcher {
 			}
 		}
 	}
-
-	@Override
-	protected final Object invoke(Context ctxt, Object sender, Object target, Object[] args) {
-
-		Field field = ((FieldSignature) ctxt.getSignature()).getField();
-		field.setAccessible(true);
-
-		Object fieldValue;
-		try {
-			fieldValue = field.get(null);
-		} catch (Exception ex) {
-			logger.error("Caught exception while invoking field operation. Will wrap and return it.", ex);
-			return new InvocationException(ex);
-		}
-
-		if (returnsVoid()) {
-			return Void.getInstance();
-		} else {
-			return fieldValue;
-		}
-	}
 }

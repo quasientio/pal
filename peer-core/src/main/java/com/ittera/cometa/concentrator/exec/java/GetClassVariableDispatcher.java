@@ -1,13 +1,25 @@
 package com.ittera.cometa.concentrator.exec.java;
 
+import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.concentrator.exec.DispatcherConnector;
+import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
-public class GetClassVariableDispatcher extends FieldOpDispatcher {
+import java.util.UUID;
+
+public class GetClassVariableDispatcher extends GetFieldDispatcher {
 
 	@Singleton
-	public GetClassVariableDispatcher() {
+	@Inject
+	public GetClassVariableDispatcher(UUID peerUuid, DataMessageBuilder messageBuilder, DispatcherConnector connector,
+																	 ObjectService objectService) {
+		setPeerUuid(peerUuid);
+		setMessageBuilder(messageBuilder);
+		setConnector(connector);
+		setObjectService(objectService);
 	}
 
 	@Override

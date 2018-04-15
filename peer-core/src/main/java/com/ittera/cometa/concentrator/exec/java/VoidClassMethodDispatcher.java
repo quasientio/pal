@@ -10,7 +10,6 @@ import javax.inject.Singleton;
 
 import java.util.UUID;
 
-
 public class VoidClassMethodDispatcher extends ClassMethodDispatcher {
 
 	@Singleton
