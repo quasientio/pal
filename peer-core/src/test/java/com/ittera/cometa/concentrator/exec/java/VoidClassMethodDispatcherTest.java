@@ -76,6 +76,7 @@ public class VoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertTrue(ClassForVoidClassMethodTest.slept);
 	}
@@ -100,6 +101,7 @@ public class VoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(millisToSleep, ClassForVoidClassMethodTest.millisSlept);
 	}
@@ -123,6 +125,7 @@ public class VoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(1, sumContainer.size());
 		assertEquals(LongStream.of(someNumbers).sum(), (long) sumContainer.get(0));
@@ -151,6 +154,7 @@ public class VoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 		} catch (NullPointerException npe) {
 			// all good
 		}
+		verifyDispatcherCalledTwice();
 	}
 
 

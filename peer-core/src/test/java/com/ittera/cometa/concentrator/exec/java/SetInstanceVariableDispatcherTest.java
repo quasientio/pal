@@ -51,6 +51,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, target.someShort);
 	}
@@ -72,6 +73,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertArrayEquals(newFieldValue, target.bytes);
 	}
@@ -93,6 +95,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, target.aLong);
 	}
@@ -114,6 +117,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, target.aString);
 	}
@@ -135,6 +139,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, target.anObject);
 	}
@@ -156,6 +161,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertArrayEquals(newFieldValue, target.objects);
 	}
@@ -177,6 +183,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, target.lastError);
 	}

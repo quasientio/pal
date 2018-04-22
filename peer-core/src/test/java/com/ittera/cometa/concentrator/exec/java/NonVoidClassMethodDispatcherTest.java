@@ -67,6 +67,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertNotEquals(Void.getInstance(), returned);
 		assertTrue((short) returned >= 0 && (short) returned < 60);
 	}
@@ -91,6 +92,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(bigDouble, returned);
 	}
 
@@ -116,6 +118,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(d4, returned);
 	}
 
@@ -142,6 +145,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 		} catch (ArithmeticException ae) {
 			// all good
 		}
+		verifyDispatcherCalledTwice();
 	}
 
 }

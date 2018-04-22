@@ -29,4 +29,7 @@ public abstract class AbstractDispatcherTest {
 		when(dispatcherConnector.sendAndRecv(any())).then(AdditionalAnswers.returnsFirstArg());
 	}
 
+	protected void verifyDispatcherCalledTwice() {
+		verify(dispatcherConnector, times(2)).sendAndRecv(any());
+	}
 }

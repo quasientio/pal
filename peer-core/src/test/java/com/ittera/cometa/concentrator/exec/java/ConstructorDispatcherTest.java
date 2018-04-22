@@ -70,6 +70,7 @@ public class ConstructorDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertNotNull(returned);
 		assertThat(returned, instanceOf(targetClass));
 	}
@@ -93,6 +94,7 @@ public class ConstructorDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertNotNull(returned);
 		assertThat(returned, instanceOf(targetClass));
 		assertEquals(args[0], ((ClassForConstructorTest) returned).someInteger);
@@ -117,6 +119,7 @@ public class ConstructorDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertNotNull(returned);
 		assertThat(returned, instanceOf(targetClass));
 		assertEquals("hello world!", ((ClassForConstructorTest) returned).joinedVarArgs);
@@ -144,6 +147,6 @@ public class ConstructorDispatcherTest extends AbstractDispatcherTest {
 			// all good
 		}
 
+		verifyDispatcherCalledTwice();
 	}
-
 }

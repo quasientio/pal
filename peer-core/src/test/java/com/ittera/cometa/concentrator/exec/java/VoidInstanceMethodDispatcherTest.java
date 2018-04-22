@@ -74,6 +74,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(2, target.wordsCollected.size());
 	}
@@ -97,6 +98,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(1, target.wordsCollected.size());
 	}
@@ -121,6 +123,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(4, target.wordsCollected.size());
 	}
@@ -147,5 +150,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractDispatcherTest {
 		} catch (IllegalArgumentException iae) {
 			// all good
 		}
+		verifyDispatcherCalledTwice();
 	}
 }

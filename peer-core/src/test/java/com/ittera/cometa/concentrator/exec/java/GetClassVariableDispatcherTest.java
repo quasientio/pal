@@ -45,6 +45,7 @@ public class GetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, null);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(ClassForGetStaticTest.someShort, returned);
 	}
 
@@ -62,6 +63,7 @@ public class GetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, null);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertArrayEquals(ClassForGetStaticTest.bytes, (byte[]) returned);
 	}
 
@@ -79,6 +81,7 @@ public class GetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, null);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(ClassForGetStaticTest.someInteger, returned);
 	}
 
@@ -96,6 +99,7 @@ public class GetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, null);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(ClassForGetStaticTest.aString, returned);
 	}
 
@@ -113,6 +117,7 @@ public class GetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, null);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(ClassForGetStaticTest.anObject, returned);
 	}
 
@@ -130,6 +135,7 @@ public class GetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, null);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertArrayEquals(ClassForGetStaticTest.objects, (Object[]) returned);
 	}
 
@@ -147,6 +153,7 @@ public class GetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, null);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(ClassForGetStaticTest.lastError, returned);
 	}
 }

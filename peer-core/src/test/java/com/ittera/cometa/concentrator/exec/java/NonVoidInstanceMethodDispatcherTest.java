@@ -72,6 +72,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractDispatcherTest 
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(value.toUpperCase(), returned);
 	}
 
@@ -94,6 +95,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractDispatcherTest 
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals("blanket", returned);
 	}
 
@@ -118,6 +120,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractDispatcherTest 
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals("package::class::method", returned);
 	}
 
@@ -144,5 +147,6 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractDispatcherTest 
 		} catch (NullPointerException npe) {
 			// all good
 		}
+		verifyDispatcherCalledTwice();
 	}
 }

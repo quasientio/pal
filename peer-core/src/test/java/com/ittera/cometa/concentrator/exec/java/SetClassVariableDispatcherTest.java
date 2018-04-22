@@ -50,6 +50,7 @@ public class SetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, ClassForPutStaticTest.someShort);
 	}
@@ -70,6 +71,7 @@ public class SetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertArrayEquals(newFieldValue, ClassForPutStaticTest.bytes);
 	}
@@ -90,6 +92,7 @@ public class SetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, ClassForPutStaticTest.someBoolean);
 	}
@@ -110,6 +113,7 @@ public class SetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, ClassForPutStaticTest.aString);
 	}
@@ -130,6 +134,7 @@ public class SetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertThat(newFieldValue, instanceOf(LinkedList.class));
 		assertEquals(newFieldValue, ClassForPutStaticTest.anObject);
@@ -151,6 +156,7 @@ public class SetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertArrayEquals(newFieldValue, ClassForPutStaticTest.objects);
 	}
@@ -171,6 +177,7 @@ public class SetClassVariableDispatcherTest extends AbstractDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
+		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, ClassForPutStaticTest.lastError);
 	}
