@@ -87,6 +87,6 @@ public class Context {
 			throw new IllegalArgumentException("Cannot handle signature of type: " + ajSig.getClass().getName());
 		}
 
-		return new Context(sourceFilename, sourceLine, withinType, signature);
+		return new Context(filename, sourceLine, withinType, signature);
 	}
 }

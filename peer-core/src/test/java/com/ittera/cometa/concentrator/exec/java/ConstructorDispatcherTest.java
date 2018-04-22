@@ -16,7 +16,35 @@ import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.lang.reflect.Constructor;
+import java.util.Arrays;
 
+import static java.util.stream.Collectors.*;
+
+// auxiliary class
+class ClassForConstructorTest {
+	Integer someInteger;
+	String joinedVarArgs;
+
+	ClassForConstructorTest() {
+	}
+
+	ClassForConstructorTest(Integer someInteger) {
+		this.someInteger = someInteger;
+	}
+
+	ClassForConstructorTest(String aMalformedNumber) {
+		this.someInteger = Integer.valueOf(aMalformedNumber);
+	}
+
+	ClassForConstructorTest(String... args) {
+		this.joinedVarArgs = Arrays.stream(args).collect(joining());
+	}
+}
+
+/**
+ * TODO:
+ *  - with remoteArgs
+ */
 @RunWith(MockitoJUnitRunner.class)
 public class ConstructorDispatcherTest extends AbstractDispatcherTest {
 
@@ -24,22 +52,16 @@ public class ConstructorDispatcherTest extends AbstractDispatcherTest {
 		objectService);
 
 	@Test
-	public void dispatch() throws Throwable {
+	public void dispatch_noArgs_ok() throws Throwable {
 
 		// signature
-		Class targetClass = java.util.ArrayList.class;
+		Class targetClass = ClassForConstructorTest.class;
 		Class[] parameterTypes = new Class[]{};
-		String[] parameterNames = new String[]{};
-		Class[] exceptionTypes = new Class[]{};
-		int modifiers = 0;
-		Constructor constructor = targetClass.getConstructor(parameterTypes);
-		Signature signature = new ConstructorSignature(targetClass, targetClass.getTypeName(),
-			modifiers, targetClass.getSimpleName(), exceptionTypes, parameterNames, parameterTypes, constructor);
+		Constructor constructor = targetClass.getDeclaredConstructor(parameterTypes);
+		Signature signature = new ConstructorSignature(constructor);
 
 		// ctxt
-		String sourceFilename = null;
-		int sourceLine = 10;
-		Context ctxt = new Context(sourceFilename, sourceLine, targetClass, signature);
+		Context ctxt = new Context(null, -1, targetClass, signature);
 
 		// args
 		Object[] args = new Object[]{};
@@ -51,4 +73,77 @@ public class ConstructorDispatcherTest extends AbstractDispatcherTest {
 		assertNotNull(returned);
 		assertThat(returned, instanceOf(targetClass));
 	}
+
+	@Test
+	public void dispatch_withArgs_ok() throws Throwable {
+
+		// signature
+		Class targetClass = ClassForConstructorTest.class;
+		Class[] parameterTypes = {Integer.class};
+		Constructor constructor = targetClass.getDeclaredConstructor(parameterTypes);
+		Signature signature = new ConstructorSignature(constructor);
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// args
+		Object[] args = new Object[]{459};
+
+		// dispatch
+		Object returned = dispatcher.dispatch(ctxt, this, null, args);
+
+		// expect
+		assertNotNull(returned);
+		assertThat(returned, instanceOf(targetClass));
+		assertEquals(args[0], ((ClassForConstructorTest) returned).someInteger);
+	}
+
+	@Test
+	public void dispatch_varargs_ok() throws Throwable {
+		// signature
+		Class targetClass = ClassForConstructorTest.class;
+		Class[] parameterTypes = {String[].class};
+		Constructor constructor = targetClass.getDeclaredConstructor(parameterTypes);
+		Signature signature = new ConstructorSignature(constructor);
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// args
+		Object[] args = new Object[1];
+		args[0] = new String[]{"hello ", "world", "!"}; //varargs must be wrapped in array of expected type
+
+		// dispatch
+		Object returned = dispatcher.dispatch(ctxt, this, null, args);
+
+		// expect
+		assertNotNull(returned);
+		assertThat(returned, instanceOf(targetClass));
+		assertEquals("hello world!", ((ClassForConstructorTest) returned).joinedVarArgs);
+	}
+
+	@Test
+	public void dispatch_throwsException_exceptionThrown() throws Throwable {
+		// signature
+		Class targetClass = ClassForConstructorTest.class;
+		Class[] parameterTypes = {String.class};
+		Constructor constructor = targetClass.getDeclaredConstructor(parameterTypes);
+		Signature signature = new ConstructorSignature(constructor);
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// args
+		Object[] args = new Object[]{"49385InvalidNumber1001"};
+
+		// dispatch
+		try {
+			Object returned = dispatcher.dispatch(ctxt, this, null, args);
+			fail("Should have thrown a NumberFormatException");
+		} catch (NumberFormatException nfe) {
+			// all good
+		}
+
+	}
+
 }

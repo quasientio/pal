@@ -38,19 +38,13 @@ public interface DataMessageBuilder {
 	DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueClassName,
 														 Object value);
 
-	DataMessage buildPutStatic(UUID concentratorUuid, Context context, Object sender, Object arg);
-
 	DataMessage buildFieldOpDone(UUID concentratorUuid, Context context, Type type);
 
 	DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid, Fields.StaticFieldPut staticFieldPut,
 																 Class fieldType, String followingUuid);
 
-	DataMessage buildPutStaticDone(UUID concentratorUuid, Context context, Object sender, Object arg);
-
 	DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef,
 														 String valueClassName, Object value);
-
-	DataMessage buildPutObject(UUID concentratorUuid, Context context, Object sender, Object target, Object arg);
 
 	DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid,
 																 Fields.InstanceFieldPut instanceFieldPut, Class fieldType, String followingUuid);

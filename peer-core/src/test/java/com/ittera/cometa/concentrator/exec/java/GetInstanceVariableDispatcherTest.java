@@ -13,8 +13,14 @@ import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
 // auxiliary class
-class ClassForGetInstanceVariableTest {
-	int myInt = 10;
+class ClassForGetFieldTest {
+	short someShort = 0;
+	byte[] bytes;
+	Integer someInteger = null;
+	String aString = "I am a normal string";
+	java.util.List anObject = new java.util.ArrayList();
+	Object[] objects = {1, "a", false};
+	Throwable lastError = new Error("dummy error");
 }
 
 @RunWith(MockitoJUnitRunner.class)
@@ -23,26 +29,131 @@ public class GetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 	private Dispatcher dispatcher = new GetInstanceVariableDispatcher(peerUuid, messageBuilder,
 		dispatcherConnector, objectService);
 
+	private Class targetClass = ClassForGetFieldTest.class;
+
 	@Test
-	public void dispatch() throws Throwable {
+	public void dispatch_primitive_ok() throws Throwable {
 
 		// signature
-		Class targetClass = ClassForGetInstanceVariableTest.class;
-		String fieldName = "myInt";
-		int modifiers = targetClass.getDeclaredField(fieldName).getModifiers();
-		Signature signature = new FieldSignature(targetClass, targetClass.getTypeName(), modifiers, fieldName,
-			targetClass.getDeclaredField(fieldName), java.io.PrintStream.class);
+		String fieldName = "someShort";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
 		// ctxt
-		String sourceFilename = null;
-		int sourceLine = -1;
-		Context ctxt = new Context(sourceFilename, sourceLine, targetClass, signature);
+		Context ctxt = new Context(null, -1, targetClass, signature);
 
 		// dispatch
-		ClassForGetInstanceVariableTest target = new ClassForGetInstanceVariableTest();
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
 		Object returned = dispatcher.dispatch(ctxt, this, target, null);
 
 		// expect
-		assertEquals(target.myInt, returned);
+		assertEquals(target.someShort, returned);
+	}
+
+	@Test
+	public void dispatch_primitiveArray_ok() throws Throwable {
+
+		// signature
+		String fieldName = "bytes";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, null);
+
+		// expect
+		assertArrayEquals(target.bytes, (byte[]) returned);
+	}
+
+	@Test
+	public void dispatch_wrapper_ok() throws Throwable {
+
+		// signature
+		String fieldName = "someInteger";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, null);
+
+		// expect
+		assertEquals(target.someInteger, returned);
+	}
+
+	@Test
+	public void dispatch_string_ok() throws Throwable {
+
+		// signature
+		String fieldName = "aString";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, null);
+
+		// expect
+		assertEquals(target.aString, returned);
+	}
+
+	@Test
+	public void dispatch_object_ok() throws Throwable {
+
+		// signature
+		String fieldName = "anObject";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, null);
+
+		// expect
+		assertEquals(target.anObject, returned);
+	}
+
+	@Test
+	public void dispatch_objectArray_ok() throws Throwable {
+
+		// signature
+		String fieldName = "objects";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, null);
+
+		// expect
+		assertArrayEquals(target.objects, (Object[]) returned);
+	}
+
+	@Test
+	public void dispatch_throwable_ok() throws Throwable {
+
+		// signature
+		String fieldName = "lastError";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, null);
+
+		// expect
+		assertEquals(target.lastError, returned);
 	}
 }

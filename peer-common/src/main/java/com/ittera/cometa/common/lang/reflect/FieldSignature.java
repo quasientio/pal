@@ -14,6 +14,11 @@ public class FieldSignature extends Signature {
 		this.fieldType = fieldType;
 	}
 
+	public FieldSignature(Field field) {
+		this(field.getDeclaringClass(), field.getDeclaringClass().getTypeName(), field.getModifiers(), field.getName(),
+			field, field.getType());
+	}
+
 	public Field getField() {
 		return field;
 	}

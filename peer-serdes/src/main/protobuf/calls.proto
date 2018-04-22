@@ -14,11 +14,9 @@ message ConstructorCall {
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 2;
 
-    repeated string parameterName = 3;
+    repeated Parameter parameter = 3;
 
-    repeated Object parameter = 4;
-
-    optional Context context = 5;
+    optional Context context = 4;
 
     //TO DO:  annotations
 }
@@ -39,11 +37,9 @@ message InstanceMethodCall {
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 5;
 
-    repeated string parameterName = 6;
+    repeated Parameter parameter = 6;
 
-    repeated Object parameter = 7;
-
-    optional Context context = 8;
+    optional Context context = 7;
 
     //TO DO:  annotations
     //TO DO:  exception types?
@@ -69,12 +65,11 @@ message ClassMethodCall {
     //The modifiers can be decoded with the Modifier class
     optional int32 modifiers = 3;
 
-    repeated string parameterName = 4;
-    repeated Class exceptionType = 5;
+    repeated Class exceptionType = 4;
 
-    repeated Object parameter = 6;
+    repeated Parameter parameter = 5;
 
-    optional Context context = 7;
+    optional Context context = 6;
 
     //TO DO:  annotations
     //TO DO:  exception types?

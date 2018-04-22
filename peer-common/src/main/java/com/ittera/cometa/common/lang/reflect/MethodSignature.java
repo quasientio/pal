@@ -10,18 +10,15 @@ public class MethodSignature extends CodeSignature {
 	public MethodSignature(Class declaringType, String declaringTypeName, int modifiers, String name,
 												 Class[] exceptionTypes, String[] parameterNames, Class[] parameterTypes, Method method,
 												 Class returnType) {
-		super(declaringType, declaringTypeName, modifiers, name, exceptionTypes, parameterNames, parameterTypes);
+		super(declaringType, declaringTypeName, modifiers, name, exceptionTypes, parameterNames, parameterTypes,
+			method.getParameters());
 		this.method = method;
 		this.returnType = returnType;
 	}
 
-	public MethodSignature(Class declaringType, String name, Class[] parameterTypes) throws NoSuchMethodException {
-		super(declaringType, declaringType.getTypeName(), 0, name, null, null,
-			parameterTypes);
-
-		method = declaringType.getMethod(name, parameterTypes);
-		modifiers = method.getModifiers();
-		exceptionTypes = method.getExceptionTypes();
+	public MethodSignature(Method method) throws NoSuchMethodException {
+		this(method.getDeclaringClass(), method.getDeclaringClass().getTypeName(), method.getModifiers(), method.getName(),
+			method.getExceptionTypes(), null, method.getParameterTypes(), method, method.getReturnType());
 	}
 
 	public Method getMethod() {

@@ -24,22 +24,17 @@ import com.ittera.cometa.concentrator.exec.*;
 import com.ittera.cometa.concentrator.messages.IncomingMessageDispatcher;
 import com.ittera.cometa.concentrator.util.ReflectionHelper;
 
-import org.aspectj.lang.reflect.ConstructorSignature;
-import org.aspectj.lang.reflect.MethodSignature;
-import org.aspectj.lang.JoinPoint.StaticPart;
-import org.aspectj.runtime.reflect.FieldSignatureImpl;
-
 import java.io.InputStream;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.lang.reflect.InvocationTargetException;
 
 import java.util.*;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
@@ -173,8 +168,8 @@ public class Concentrator {
 		Exception exceptionWhileLoading = null;
 		try {
 			clazz = Class.forName(constructorCall.getClass_().getName());
-			for (Primitives.Object param : constructorCall.getParameterList()) {
-				paramClasses.add(Class.forName(param.getClass_().getName()));
+			for (Primitives.Parameter param : constructorCall.getParameterList()) {
+				paramClasses.add(Class.forName(param.getType().getName()));
 			}
 			constructor = clazz.getDeclaredConstructor((Class[]) paramClasses.toArray(new Class[paramClasses.size()]));
 		} catch (Exception e) {
@@ -193,7 +188,8 @@ public class Concentrator {
 			try {
 				List<Object> args = new ArrayList<>();
 				for (int i = 0; i < constructorCall.getParameterCount(); i++) {
-					Primitives.Object obj = constructorCall.getParameter(i);
+					Primitives.Parameter parameter = constructorCall.getParameter(i);
+					Primitives.Object obj = parameter.getValue();
 					if (obj.getIsNull()) {
 						args.add(null);
 					} else if (obj.hasRef()) {
@@ -256,7 +252,8 @@ public class Concentrator {
 		List<Class> paramClasses = new ArrayList<>();
 		try {
 			clazz = Class.forName(instanceMethodCall.getClass_().getName());
-			for (Primitives.Object obj : instanceMethodCall.getParameterList()) {
+			for (Primitives.Parameter param : instanceMethodCall.getParameterList()) {
+				Primitives.Object obj = param.getValue();
 				Class paramClass = Unwrapper.getClassForPrimitive(obj.getClass_().getName());
 				if (paramClass == null) {
 					paramClass = Class.forName(obj.getClass_().getName());
@@ -275,7 +272,8 @@ public class Concentrator {
 		if (exceptionWhileLoading == null) {
 			List<Object> args = new ArrayList<>();
 			for (int i = 0; i < instanceMethodCall.getParameterCount(); i++) {
-				Primitives.Object obj = instanceMethodCall.getParameter(i);
+				Primitives.Parameter param = instanceMethodCall.getParameter(i);
+				Primitives.Object obj = param.getValue();
 				if (obj.getIsNull()) {
 					args.add(null);
 				} else if (obj.hasRef()) {
@@ -297,7 +295,8 @@ public class Concentrator {
 				if (target == null) {
 					throw new RuntimeException("Invoking a method on null object will yield a NPE!");
 				}
-				method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), instanceMethodCall.getParameterList(),
+				method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(),
+					instanceMethodCall.getParameterList().stream().map(p -> p.getValue()).collect(Collectors.toList()),
 					instanceMethodCall.getName());
 				if (method == null) {
 					//TODO perhaps this should be thrown by ReflectionHelper instead of returning null
@@ -360,7 +359,8 @@ public class Concentrator {
 		try {
 			logger.debug("Attempting to load (initialize) class");
 			clazz = Class.forName(classMethodCall.getClass_().getName());
-			for (Primitives.Object obj : classMethodCall.getParameterList()) {
+			for (Primitives.Parameter param : classMethodCall.getParameterList()) {
+				Primitives.Object obj = param.getValue();
 				Class paramClass = Unwrapper.getClassForPrimitive(obj.getClass_().getName());
 				if (paramClass == null) {
 					paramClass = Class.forName(obj.getClass_().getName());
@@ -380,7 +380,8 @@ public class Concentrator {
 			logger.debug("Unwrapping parameters");
 			List<Object> args = new ArrayList<>();
 			for (int i = 0; i < classMethodCall.getParameterCount(); i++) {
-				Primitives.Object obj = classMethodCall.getParameter(i);
+				Primitives.Parameter param = classMethodCall.getParameter(i);
+				Primitives.Object obj = param.getValue();
 				if (obj.getIsNull()) {
 					args.add(null);
 				} else if (obj.hasRef()) {
@@ -390,7 +391,8 @@ public class Concentrator {
 				}
 			}
 			try {
-				method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(), classMethodCall.getParameterList(),
+				method = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(),
+					classMethodCall.getParameterList().stream().map(p -> p.getValue()).collect(Collectors.toList()),
 					classMethodCall.getName());
 				if (method == null) {
 					throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types",

@@ -12,9 +12,18 @@ import org.junit.runner.RunWith;
 
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.util.List;
+import java.util.Arrays;
+
 // auxiliary class
-class ClassForSetInstanceVariableTest {
-	int myInt = 10;
+class ClassForPutFieldTest {
+	short someShort = 4;
+	byte[] bytes;
+	Long aLong = 8238l;
+	String aString = "I am a normal string";
+	java.util.List anObject = new java.util.ArrayList();
+	Object[] objects;
+	Throwable lastError = new Exception("dummy exception");
 }
 
 @RunWith(MockitoJUnitRunner.class)
@@ -23,29 +32,152 @@ public class SetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 	private Dispatcher dispatcher = new SetInstanceVariableDispatcher(peerUuid, messageBuilder,
 		dispatcherConnector, objectService);
 
+	private Class targetClass = ClassForPutFieldTest.class;
+
 	@Test
-	public void dispatch() throws Throwable {
+	public void dispatch_primitive_ok() throws Throwable {
 
 		// signature
-		Class targetClass = ClassForSetInstanceVariableTest.class;
-		String fieldName = "myInt";
-		int modifiers = targetClass.getDeclaredField(fieldName).getModifiers();
-		Signature signature = new FieldSignature(targetClass, targetClass.getTypeName(), modifiers, fieldName,
-			targetClass.getDeclaredField(fieldName), java.io.PrintStream.class);
+		String fieldName = "someShort";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
 		// ctxt
-		String sourceFilename = null;
-		int sourceLine = -1;
-		Context ctxt = new Context(sourceFilename, sourceLine, targetClass, signature);
+		Context ctxt = new Context(null, -1, targetClass, signature);
 
 		// dispatch
-		ClassForSetInstanceVariableTest target = new ClassForSetInstanceVariableTest();
-		int newValue = 7204;
-		Object[] args = {newValue};
+		short newFieldValue = 987;
+		Object[] args = {newFieldValue};
+		ClassForPutFieldTest target = new ClassForPutFieldTest();
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
 		assertEquals(Void.getInstance(), returned);
-		assertEquals(newValue, target.myInt);
+		assertEquals(newFieldValue, target.someShort);
+	}
+
+	@Test
+	public void dispatch_primitiveArray_ok() throws Throwable {
+
+		// signature
+		String fieldName = "bytes";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		byte[] newFieldValue = "bytes".getBytes();
+		Object[] args = {newFieldValue};
+		ClassForPutFieldTest target = new ClassForPutFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, args);
+
+		// expect
+		assertEquals(Void.getInstance(), returned);
+		assertArrayEquals(newFieldValue, target.bytes);
+	}
+
+	@Test
+	public void dispatch_wrapper_ok() throws Throwable {
+
+		// signature
+		String fieldName = "aLong";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		Long newFieldValue = null;
+		Object[] args = {newFieldValue};
+		ClassForPutFieldTest target = new ClassForPutFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, args);
+
+		// expect
+		assertEquals(Void.getInstance(), returned);
+		assertEquals(newFieldValue, target.aLong);
+	}
+
+	@Test
+	public void dispatch_string_ok() throws Throwable {
+
+		// signature
+		String fieldName = "aString";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		String newFieldValue = "to string or not to";
+		Object[] args = {newFieldValue};
+		ClassForPutFieldTest target = new ClassForPutFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, args);
+
+		// expect
+		assertEquals(Void.getInstance(), returned);
+		assertEquals(newFieldValue, target.aString);
+	}
+
+	@Test
+	public void dispatch_object_ok() throws Throwable {
+
+		// signature
+		String fieldName = "anObject";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		List newFieldValue = Arrays.asList(938,3038,948,394);
+		Object[] args = {newFieldValue};
+		ClassForPutFieldTest target = new ClassForPutFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, args);
+
+		// expect
+		assertEquals(Void.getInstance(), returned);
+		assertEquals(newFieldValue, target.anObject);
+	}
+
+	@Test
+	public void dispatch_objectArray_ok() throws Throwable {
+
+		// signature
+		String fieldName = "objects";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		Object[] newFieldValue = {1, "a", false};
+		Object[] args = {newFieldValue};
+		ClassForPutFieldTest target = new ClassForPutFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, args);
+
+		// expect
+		assertEquals(Void.getInstance(), returned);
+		assertArrayEquals(newFieldValue, target.objects);
+	}
+
+	@Test
+	public void dispatch_throwable_ok() throws Throwable {
+
+		// signature
+		String fieldName = "lastError";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		Error newFieldValue = new Error("uuh ooooh");
+		Object[] args = {newFieldValue};
+		ClassForPutFieldTest target = new ClassForPutFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, args);
+
+		// expect
+		assertEquals(Void.getInstance(), returned);
+		assertEquals(newFieldValue, target.lastError);
 	}
 }
