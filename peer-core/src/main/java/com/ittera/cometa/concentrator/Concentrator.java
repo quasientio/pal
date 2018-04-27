@@ -593,11 +593,11 @@ public class Concentrator {
 			field.setAccessible(true);
 			try {
 				final Object value;
-				if (staticFieldPut.hasObject()) {
-					value = Unwrapper.unwrapObject(staticFieldPut.getObject(), field.getType());
+				if (staticFieldPut.hasValueObject()) {
+					value = Unwrapper.unwrapObject(staticFieldPut.getValueObject(), field.getType());
 					logger.debug("Unwrapped value: {}", value);
 				} else {
-					value = objectService.lookupObject(staticFieldPut.getObjectRef());
+					value = objectService.lookupObject(staticFieldPut.getValueObjectRef());
 					logger.debug("Loaded value: {}", value);
 				}
 				//invoke set

@@ -4,6 +4,10 @@ import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.AccessibleObject;
+
+import java.util.List;
+import java.util.Optional;
 
 abstract public class SetFieldDispatcher extends FieldOpDispatcher {
 
@@ -21,6 +25,15 @@ abstract public class SetFieldDispatcher extends FieldOpDispatcher {
 			return new InvocationException(ex);
 		}
 
+		return Void.getInstance();
+	}
+
+
+	@Override
+	protected Object invokeIncoming(AccessibleObject accessibleObject, Optional<Object> target, List<Object> args,
+																	Optional<Object> value) throws Exception {
+		Field field = (Field) accessibleObject;
+		field.set(target.isPresent() ? target.get() : null, value);
 		return Void.getInstance();
 	}
 }

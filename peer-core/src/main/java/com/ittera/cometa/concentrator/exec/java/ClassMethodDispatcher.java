@@ -4,8 +4,15 @@ import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.protobuf.data.Primitives;
+
+import com.ittera.cometa.concentrator.util.ReflectionHelper;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.AccessibleObject;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 public abstract class ClassMethodDispatcher extends MethodDispatcher {
 
@@ -53,5 +60,32 @@ public abstract class ClassMethodDispatcher extends MethodDispatcher {
 	@Override
 	protected final Type getBeforeExecMessageType() {
 		return Type.CLASS_METHOD;
+	}
+
+	@Override
+	protected List<Primitives.Parameter> getParameterList(DataMessage dataMessage) {
+		return dataMessage.getClassMethodCall().getParameterList();
+	}
+
+	/**
+	 * @param dataMessage
+	 * @param parameterTypes Not used here.
+	 * @param args
+	 * @return
+	 * @throws ReflectiveOperationException
+	 */
+	@Override
+	protected AccessibleObject loadAccessibleObject(DataMessage dataMessage, List<Class> parameterTypes,
+																									List<Object> args) throws ReflectiveOperationException {
+
+		Class clazz = Class.forName(dataMessage.getClassMethodCall().getClass_().getName());
+		AccessibleObject accessibleObject = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(),
+			dataMessage.getClassMethodCall().getParameterList().stream().map(p -> p.getValue()).collect(Collectors.toList()),
+			dataMessage.getClassMethodCall().getName());
+		if (accessibleObject == null) {
+			throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types",
+				dataMessage.getClassMethodCall().getName(), clazz.getName()));
+		}
+		return accessibleObject;
 	}
 }

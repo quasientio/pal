@@ -3,8 +3,11 @@ package com.ittera.cometa.concentrator.exec.java;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Primitives;
 
 import java.lang.reflect.Field;
+
+import java.util.List;
 
 public abstract class FieldOpDispatcher extends BaseDispatcher {
 
@@ -31,5 +34,10 @@ public abstract class FieldOpDispatcher extends BaseDispatcher {
 				return messageBuilder.buildFieldOpDone(peerUuid, ctxt, getAfterExecMessageType());
 			}
 		}
+	}
+
+	@Override
+	protected List<Primitives.Parameter> getParameterList(DataMessage dataMessage) {
+		return null;
 	}
 }

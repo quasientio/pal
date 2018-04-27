@@ -34,8 +34,8 @@ message StaticFieldPut {
     required Field field = 2;
 
     oneof value {
-        Object object = 3;
-        string objectRef = 4;
+        Object valueObject = 3;
+        string valueObjectRef = 4;
     }
 
     //The modifiers can be decoded with the Modifier class

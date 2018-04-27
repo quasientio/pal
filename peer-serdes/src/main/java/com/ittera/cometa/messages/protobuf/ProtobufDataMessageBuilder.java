@@ -389,7 +389,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 			case PUT_STATIC:
 				msgBuilder.setStaticFieldPut(StaticFieldPut.newBuilder()
 					.setClass_(clazz)
-					.setObject(getWrappedObject(arg, fieldSignature.getFieldType(), null))
+					.setValueObject(getWrappedObject(arg, fieldSignature.getFieldType(), null))
 					.setField(field)
 					.setModifiers(modifiers)
 					.setContext(ctxt));
@@ -471,7 +471,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 			.setStaticFieldPut(StaticFieldPut.newBuilder()
 				.setClass_(getWrappedClass(className))
 				.setField(getWrappedField((String) null, fieldName))
-				.setObject(getWrappedObject(value, valueClassName, null)));
+				.setValueObject(getWrappedObject(value, valueClassName, null)));
 
 		return msgBuilder.build();
 	}
