@@ -47,12 +47,12 @@ abstract public class GetFieldDispatcher extends FieldOpDispatcher {
 																						 Exception exceptionWhileInvoking) {
 
 		String messageUuid = dataMessage.getMessageUuid();
-		Class fieldType = ((Field) accessibleObject).getType();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
 			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
 		}
 
+		Class fieldType = ((Field) accessibleObject).getType();
 		return messageBuilder.buildReturnValue(peerUuid, valueObject, fieldType, valueObjKey, returnsVoid(), messageUuid);
 	}
 }

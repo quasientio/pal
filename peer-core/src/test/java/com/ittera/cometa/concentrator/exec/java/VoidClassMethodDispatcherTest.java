@@ -1,5 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
@@ -20,6 +22,11 @@ import java.util.stream.LongStream;
 class ClassForVoidClassMethodTest {
 	public static boolean slept;
 	public static long millisSlept;
+	static Object verified;
+
+	static {
+		__resetStaticVars();
+	}
 
 	static void sleep() {
 		slept = true;
@@ -27,6 +34,10 @@ class ClassForVoidClassMethodTest {
 
 	static void sleep(long millis) {
 		millisSlept = millis;
+	}
+
+	static void verify(Object toVerify) {
+		verified = toVerify;
 	}
 
 	static void add(List<Long> sumContainer, long... parts) {
@@ -43,21 +54,34 @@ class ClassForVoidClassMethodTest {
 			aList.add(chunk);
 		}
 	}
+
+	// call this method from unit tests to restore class variables that have been modified
+	static void __resetStaticVars() {
+		verified = "blah";
+		slept = false;
+		millisSlept = 0;
+	}
 }
 
 /**
  * TODO:
- *  - with remoteArgs
+ * - with remoteArgs
  */
 @RunWith(MockitoJUnitRunner.class)
-public class VoidClassMethodDispatcherTest extends AbstractDispatcherTest {
+public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
 	private Dispatcher dispatcher = new VoidClassMethodDispatcher(peerUuid, messageBuilder,
 		dispatcherConnector, objectService);
 
 	private Class targetClass = ClassForVoidClassMethodTest.class;
 
+	@After
+	public void resetTestClassVariables() {
+		ClassForVoidClassMethodTest.__resetStaticVars();
+	}
+
 	@Test
+	@Override
 	public void dispatch_noArgs_ok() throws Throwable {
 
 		// signature
@@ -82,11 +106,36 @@ public class VoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 	}
 
 	@Test
+	@Override
+	public void dispatchIncoming_noArgs_ok() {
+
+		String methodName = "sleep";
+		Class[] parameterTypes = new Class[]{};
+		String[] argObjRefs = {};
+		Object[] args = {};
+
+		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+			toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		assertFalse(ClassForVoidClassMethodTest.slept);
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(args.length, objectService.size());
+		assertTrue(doneMessage.getReturnValue().getIsVoid());
+		assertTrue(ClassForVoidClassMethodTest.slept);
+	}
+
+	@Test
+	@Override
 	public void dispatch_withArgs_ok() throws Throwable {
 
 		// signature
 		String methodName = "sleep";
-		Class[] parameterTypes = new Class[]{long.class};
+		Class[] parameterTypes = {long.class};
 		Signature signature = new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
 		// ctxt
@@ -107,6 +156,82 @@ public class VoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 	}
 
 	@Test
+	@Override
+	public void dispatchIncoming_withArgs_ok() {
+
+		String methodName = "sleep";
+		Class[] parameterTypes = {long.class};
+		String[] argObjRefs = {null};
+		long millisToSleep = 5;
+		Object[] args = {millisToSleep};
+
+		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+			toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		assertEquals(0, ClassForVoidClassMethodTest.millisSlept);
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(args.length, objectService.size());
+		assertTrue(doneMessage.getReturnValue().getIsVoid());
+		assertEquals(millisToSleep, ClassForVoidClassMethodTest.millisSlept);
+	}
+
+	@Test
+	@Override
+	public void dispatchIncoming_withObjectRefArgs_ok() {
+
+		String methodName = "sleep";
+		Class[] parameterTypes = {long.class};
+		Long millisToSleep = 5l;
+		String objRef = objectService.storeObject(millisToSleep);
+		Object[] args = {null};
+		String[] argObjRefs = {objRef};
+
+		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+			toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		assertEquals(0, ClassForVoidClassMethodTest.millisSlept);
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(argObjRefs.length, objectService.size());
+		assertTrue(doneMessage.getReturnValue().getIsVoid());
+		assertEquals(millisToSleep.longValue(), ClassForVoidClassMethodTest.millisSlept);
+	}
+
+	@Test
+	@Override
+	public void dispatchIncoming_withNullArgs_ok() {
+
+		String methodName = "verify";
+		Class[] parameterTypes = {Object.class};
+		Object[] args = {null};
+		String[] argObjRefs = {null};
+
+		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+			toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		assertNotNull(ClassForVoidClassMethodTest.verified);
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(0, objectService.size());
+		assertTrue(doneMessage.getReturnValue().getIsVoid());
+		assertNull(ClassForVoidClassMethodTest.verified);
+	}
+
+	@Test
+	@Override
 	public void dispatch_varargs_ok() throws Throwable {
 		// signature
 		String methodName = "add";
@@ -132,6 +257,32 @@ public class VoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 	}
 
 	@Test
+	@Override
+	public void dispatchIncoming_varargs_ok() {
+
+		String methodName = "add";
+		Class[] parameterTypes = {List.class, long[].class};
+		long[] someNumbers = {10L, 20L, 30L};
+		List<Long> sumContainer = new ArrayList();
+		Object[] args = {sumContainer, someNumbers};
+		String[] argObjRefs = {null, null};
+
+		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+			toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(args.length, objectService.size());
+		assertTrue(doneMessage.getReturnValue().getIsVoid());
+		assertEquals(LongStream.of(someNumbers).sum(), (long) sumContainer.get(0));
+	}
+
+	@Test
+	@Override
 	public void dispatch_throwsException_exceptionThrown() throws Throwable {
 
 		// signature
@@ -145,7 +296,7 @@ public class VoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 		// args
 		long aNumber = 2;
 		List<Long> aList = null;
-		Object[] args = new Object[]{aList, aNumber};
+		Object[] args = {aList, aNumber};
 
 		// dispatch
 		try {
@@ -157,5 +308,31 @@ public class VoidClassMethodDispatcherTest extends AbstractDispatcherTest {
 		verifyDispatcherCalledTwice();
 	}
 
+	@Test
+	@Override
+	public void dispatchIncoming_throwsException_exceptionThrown() {
 
+		String methodName = "addPositive";
+		Class[] parameterTypes = new Class[]{List.class, long.class};
+		List<Long> aList = null;
+		Object[] args = {aList, 2};
+		String[] argObjRefs = {null, null};
+
+		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+			toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(1, objectService.size());
+
+		assertTrue(doneMessage.hasRaisedThrowable());
+		assertEquals(doneMessage.getRaisedThrowable().getThrowable().getType(),
+			"java.lang.reflect.InvocationTargetException");
+		assertEquals(doneMessage.getRaisedThrowable().getThrowable().getCause().getType(),
+			"java.lang.NullPointerException");
+	}
 }

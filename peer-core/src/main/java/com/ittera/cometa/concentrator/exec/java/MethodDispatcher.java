@@ -25,12 +25,12 @@ public abstract class MethodDispatcher extends BaseDispatcher {
 																						 Exception exceptionWhileInvoking) {
 
 		String messageUuid = dataMessage.getMessageUuid();
-		Class methodReturnType = ((Method) accessibleObject).getDeclaringClass();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
 			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
 		}
 
+		Class methodReturnType = ((Method) accessibleObject).getReturnType();
 		return messageBuilder.buildReturnValue(peerUuid, valueObject, methodReturnType, valueObjKey, returnsVoid(),
 			messageUuid);
 	}

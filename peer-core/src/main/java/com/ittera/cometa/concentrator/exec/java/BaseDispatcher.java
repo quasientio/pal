@@ -104,64 +104,57 @@ public abstract class BaseDispatcher implements Dispatcher {
 		 * this message.
 		 */
 
-		Exception exceptionWhileLoading = null;
-		Exception exceptionWhileInvoking = null;
-		final Class clazz;
-
-		// 1. Extract and load parameter types from message
-		List<Class> parameterTypes = null;
-		try {
-			parameterTypes = getParameterTypesFromMessage(incomingCall);
-		} catch (ClassNotFoundException e) {
-			logger.error("Error while loading parameter types", e);
-			exceptionWhileLoading = e;
-		}
-
-		// 2. Unwrap and load arguments
-		List<Object> args = getArgsFromMessage(incomingCall, parameterTypes);
-
-		// 3. Load constructor/method/field to call
+		Exception exceptionWhileLoading = null, exceptionWhileInvoking = null;
 		AccessibleObject accessibleObject = null;
+		Optional<Object> target = null, value = null;
+		List<Object> args = null;
+
+		// Loading phase
 		try {
+			// 1. Extract and load parameter types from message
+			List<Class> parameterTypes = null;
+			parameterTypes = getParameterTypesFromMessage(incomingCall);
+
+			// 2. Unwrap and load arguments
+			args = getArgsFromMessage(incomingCall, parameterTypes);
+
+			// 3. Load constructor/method/field to call
 			accessibleObject = loadAccessibleObject(incomingCall, parameterTypes, args);
-		} catch (Exception e) {
-			logger.error("Error while loading constructor/method/field", e);
-			exceptionWhileLoading = e;
-		}
 
-		// 4. Load target for instance methods/field ops
-		Optional<Object> target = null;
-		try {
+			// 4. Load target for instance methods/field ops
 			target = getTargetFromMessage(incomingCall);
-		} catch (ClassNotFoundException e) {
-			logger.error("Error while loading target object", e);
-			exceptionWhileLoading = e;
+
+			// 5. Load value for assigning field ops
+			value = getValueFromMessage(incomingCall, accessibleObject);
+
+			// 6. (Optionally) Set field/method accessible, allowing to break Java access rules
+			if (!ENFORCE_JAVALANG_ACCESS) {
+				accessibleObject.setAccessible(true);
+			}
+		} catch (Exception ex) {
+			logger.error("Error during loading phase (before invocation)", ex);
+			exceptionWhileLoading = ex;
 		}
 
-		// 5. Load value for assigning field ops
-		Optional<Object> value = getValueFromMessage(incomingCall, accessibleObject);
-
-		// 6. (Optionally) Set field/method accessible, allowing to break Java access rules
-		if (!ENFORCE_JAVALANG_ACCESS) {
-			accessibleObject.setAccessible(true);
-		}
-
-		// 7. Invoke constructor/method/field
+		// Invocation phase
 		Object returnValue = null;
-		try {
-			returnValue = invokeIncoming(accessibleObject, target, args, value);
-		} catch (Exception e) {
-			logger.error("Error during invocation", e);
-			exceptionWhileInvoking = e;
-		}
-
-		// 8. Store? object in object map
 		String objectRef = null;
-		if (!returnsVoid() && returnValue != null) {
-			objectRef = storeObject(returnValue);
+		if (exceptionWhileLoading == null) {
+			try {
+				// 7. Invoke constructor/method/field
+				returnValue = invokeIncoming(accessibleObject, target, args, value);
+
+				// 8. Store? object in object map
+				if (!returnsVoid() && returnValue != null) {
+					objectRef = storeObject(returnValue);
+				}
+			} catch (Exception e) {
+				logger.error("Error during invocation phase", e);
+				exceptionWhileInvoking = e;
+			}
 		}
 
-		// 8. Wrap object or exception
+		// 9. Wrap object or exception
 		final DataMessage afterExecMsg = wrapAfterExecMessage(incomingCall, returnValue, objectRef, accessibleObject,
 			exceptionWhileLoading, exceptionWhileInvoking);
 
@@ -176,7 +169,6 @@ public abstract class BaseDispatcher implements Dispatcher {
 	private String storeObject(Object object) {
 		return object != null ? objectService.storeObject(object) : null;
 	}
-
 
 	/**
 	 * @param dataMessage
@@ -267,22 +259,22 @@ public abstract class BaseDispatcher implements Dispatcher {
 	}
 
 	@Inject
-	protected void setPeerUuid(UUID peerUuid) {
+	protected final void setPeerUuid(UUID peerUuid) {
 		this.peerUuid = peerUuid;
 	}
 
 	@Inject
-	protected void setMessageBuilder(DataMessageBuilder messageBuilder) {
+	protected final void setMessageBuilder(DataMessageBuilder messageBuilder) {
 		this.messageBuilder = messageBuilder;
 	}
 
 	@Inject
-	protected void setObjectService(ObjectService objectService) {
+	protected final void setObjectService(ObjectService objectService) {
 		this.objectService = objectService;
 	}
 
 	@Inject
-	protected void setConnector(DispatcherConnector connector) {
+	protected final void setConnector(DispatcherConnector connector) {
 		this.connector = connector;
 	}
 

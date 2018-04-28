@@ -4,6 +4,9 @@ import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
+import com.ittera.cometa.messages.protobuf.Unwrapper;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+
 import org.junit.*;
 
 import static org.junit.Assert.*;
@@ -32,6 +35,9 @@ class ClassForNonVoidInstanceMethodTest {
 	}
 
 	String append(String value) {
+		if (value == null) {
+			return this.value;
+		}
 		return this.value.concat(value);
 	}
 
@@ -45,7 +51,7 @@ class ClassForNonVoidInstanceMethodTest {
  * - with remoteArgs
  */
 @RunWith(MockitoJUnitRunner.class)
-public class NonVoidInstanceMethodDispatcherTest extends AbstractDispatcherTest {
+public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
 	private Dispatcher dispatcher = new NonVoidInstanceMethodDispatcher(peerUuid, messageBuilder,
 		dispatcherConnector, objectService);
@@ -53,6 +59,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractDispatcherTest 
 	private Class targetClass = ClassForNonVoidInstanceMethodTest.class;
 
 	@Test
+	@Override
 	public void dispatch_noArgs_ok() throws Throwable {
 
 		// signature
@@ -77,6 +84,40 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractDispatcherTest 
 	}
 
 	@Test
+	@Override
+	public void dispatchIncoming_noArgs_ok() {
+
+		// create and store new instance
+		String value = "a lowercase string";
+		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest(value);
+		String targetObjRef = objectService.storeObject(target);
+
+		String methodName = "toUpperCase";
+		Class[] parameterTypes = new Class[]{};
+		String[] argObjRefs = {};
+		Object[] args = {};
+
+		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(args.length + 2, objectService.size());
+		String returned = null;
+		try {
+			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
+		} catch (ClassNotFoundException cnfe) {
+			fail(cnfe.getMessage());
+		}
+		assertEquals(value.toUpperCase(), returned);
+	}
+
+	@Test
+	@Override
 	public void dispatch_withArgs_ok() throws Throwable {
 
 		// signature
@@ -91,15 +132,117 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractDispatcherTest 
 		Object[] args = {"et"};
 
 		// dispatch
-		Object target = new ClassForNonVoidInstanceMethodTest("blank");
+		String value = "blank";
+		Object target = new ClassForNonVoidInstanceMethodTest(value);
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
 		verifyDispatcherCalledTwice();
+		assertEquals(value + args[0], returned);
+	}
+
+	@Test
+	@Override
+	public void dispatchIncoming_withArgs_ok() {
+
+		// create and store new instance
+		String value = "blank";
+		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest(value);
+		String targetObjRef = objectService.storeObject(target);
+
+		String methodName = "append";
+		Class[] parameterTypes = new Class[]{String.class};
+		String[] argObjRefs = {null};
+		Object[] args = {"et"};
+
+		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(args.length + 2, objectService.size());
+		String returned = null;
+		try {
+			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
+		} catch (ClassNotFoundException cnfe) {
+			fail(cnfe.getMessage());
+		}
+		assertEquals(value + args[0], returned);
+	}
+
+	@Test
+	@Override
+	public void dispatchIncoming_withObjectRefArgs_ok() {
+
+		// create and store new instance
+		String value = "blank";
+		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest(value);
+		String targetObjRef = objectService.storeObject(target);
+
+		String methodName = "append";
+		Class[] parameterTypes = new Class[]{String.class};
+		Object[] args = {null};
+		String etObjRef = objectService.storeObject("et");
+		String[] argObjRefs = {etObjRef};
+
+		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(args.length + 2, objectService.size());
+		String returned = null;
+		try {
+			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
+		} catch (ClassNotFoundException cnfe) {
+			fail(cnfe.getMessage());
+		}
 		assertEquals("blanket", returned);
 	}
 
 	@Test
+	@Override
+	public void dispatchIncoming_withNullArgs_ok() {
+
+		// create and store new instance
+		String value = "blank";
+		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest(value);
+		String targetObjRef = objectService.storeObject(target);
+
+		String methodName = "append";
+		Class[] parameterTypes = new Class[]{String.class};
+		Object[] args = {null};
+		String[] argObjRefs = {null};
+
+		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(2, objectService.size());
+		String returned = null;
+		try {
+			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
+		} catch (ClassNotFoundException cnfe) {
+			fail(cnfe.getMessage());
+		}
+		assertEquals(value, returned);
+	}
+
+	@Test
+	@Override
 	public void dispatch_varargs_ok() throws Throwable {
 
 		// signature
@@ -124,8 +267,43 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractDispatcherTest 
 		assertEquals("package::class::method", returned);
 	}
 
+	@Test
+	@Override
+	public void dispatchIncoming_varargs_ok() {
+
+		// create and store new instance
+		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest();
+		String targetObjRef = objectService.storeObject(target);
+
+		String methodName = "join";
+		Class[] parameterTypes = new Class[]{String.class, String[].class};
+		String[] parts = {"package", "class", "method"};
+		String joiner = "::";
+		Object[] args = {joiner, parts};
+		String[] argObjRefs = {null, null};
+
+		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(args.length + 2, objectService.size());
+		String returned = null;
+		try {
+			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
+		} catch (ClassNotFoundException cnfe) {
+			fail(cnfe.getMessage());
+		}
+		assertEquals("package::class::method", returned);
+	}
+
 
 	@Test
+	@Override
 	public void dispatch_throwsException_exceptionThrown() throws Throwable {
 
 		// signature
@@ -148,5 +326,33 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractDispatcherTest 
 			// all good
 		}
 		verifyDispatcherCalledTwice();
+	}
+
+	@Test
+	@Override
+	public void dispatchIncoming_throwsException_exceptionThrown() {
+
+		// create and store new instance
+		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest();
+		String targetObjRef = objectService.storeObject(target);
+
+		String methodName = "toUpperCase";
+		Class[] parameterTypes = new Class[]{};
+		Object[] args = {};
+		String[] argObjRefs = {};
+
+		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(args.length + 1, objectService.size());
+		assertTrue(doneMessage.hasRaisedThrowable());
+		assertEquals(doneMessage.getRaisedThrowable().getThrowable().getType(), "java.lang.reflect.InvocationTargetException");
+		assertEquals(doneMessage.getRaisedThrowable().getThrowable().getCause().getType(), "java.lang.NullPointerException");
 	}
 }

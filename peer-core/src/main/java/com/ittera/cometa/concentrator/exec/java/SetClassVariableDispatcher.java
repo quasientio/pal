@@ -83,12 +83,12 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 																						 Exception exceptionWhileInvoking) {
 
 		String messageUuid = dataMessage.getMessageUuid();
-		Class fieldType = ((Field) accessibleObject).getType();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
 			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
 		}
 
+		Class fieldType = ((Field) accessibleObject).getType();
 		return messageBuilder.buildPutStaticDone(peerUuid, messageUuid, dataMessage.getStaticFieldPut(), fieldType,
 			messageUuid);
 	}

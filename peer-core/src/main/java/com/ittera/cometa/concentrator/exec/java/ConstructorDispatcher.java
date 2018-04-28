@@ -65,12 +65,12 @@ public class ConstructorDispatcher extends BaseDispatcher {
 																						 Exception exceptionWhileInvoking) {
 
 		String messageUuid = dataMessage.getMessageUuid();
-		Class constructorType = ((Constructor) accessibleObject).getDeclaringClass();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
 			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
 		}
 
+		Class constructorType = ((Constructor) accessibleObject).getDeclaringClass();
 		return messageBuilder.buildReturnValue(peerUuid, valueObject, constructorType, valueObjKey, returnsVoid(),
 			messageUuid);
 	}

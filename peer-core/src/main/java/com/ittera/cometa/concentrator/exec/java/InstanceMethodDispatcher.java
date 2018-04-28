@@ -69,7 +69,7 @@ public abstract class InstanceMethodDispatcher extends MethodDispatcher {
 
 	@Override
 	protected List<Primitives.Parameter> getParameterList(DataMessage dataMessage) {
-		return dataMessage.getClassMethodCall().getParameterList();
+		return dataMessage.getInstanceMethodCall().getParameterList();
 	}
 
 	@Override

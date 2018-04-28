@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * We should avoid that if 2 or more methods match (i.e. all params assignable), the method with the least specific
  * type are chosen
  * TODO: WE MUST UNIT TEST THIS CLASS
+ * TODO: Use streams
  */
 public final class ReflectionHelper {
 
@@ -97,7 +98,7 @@ public final class ReflectionHelper {
 
 			boolean matches = true;
 			for (int i = 0; i < parameterTypes.length; i++) {
-				if (!ClassUtils.isAssignable(parameters[i].getClass(), parameterTypes[i])) {
+				if (!isAssignable(parameters[i], parameterTypes[i])) {
 					matches = false;
 					break;
 				}
@@ -122,7 +123,7 @@ public final class ReflectionHelper {
 
 			boolean matches = true;
 			for (int i = 0; i < parameterTypes.length; i++) {
-				if (!ClassUtils.isAssignable(parameters[i].getClass(), parameterTypes[i])) {
+				if (!isAssignable(parameters[i], parameterTypes[i])) {
 					matches = false;
 					break;
 				}
@@ -158,6 +159,14 @@ public final class ReflectionHelper {
 			keyBuilder.append(paramType.getClass_().getName());
 		}
 		return keyBuilder.toString();
+	}
+
+	private static boolean isAssignable(Object object, Class clazz) {
+		if (object == null) {
+			return !clazz.isPrimitive();
+		} else {
+			return ClassUtils.isAssignable(object.getClass(), clazz);
+		}
 	}
 }
 

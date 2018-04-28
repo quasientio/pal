@@ -80,7 +80,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		// TODO : deal with objectRef
 		Primitives.Parameter.Builder paramBuilder = Primitives.Parameter.newBuilder();
 		paramBuilder.setType(getWrappedClass(parameterType));
-		paramBuilder.setValue(getWrappedObject(arg, parameterType, null));
+		paramBuilder.setValue(getWrappedObject(arg, parameterType, argObjRef));
 
 		if (callBuilder instanceof ConstructorCall.Builder) {
 			((ConstructorCall.Builder) callBuilder).addParameter(paramBuilder);
