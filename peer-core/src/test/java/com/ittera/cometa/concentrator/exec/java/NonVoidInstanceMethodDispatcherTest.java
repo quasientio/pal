@@ -352,7 +352,9 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(args.length + 1, objectService.size());
 		assertTrue(doneMessage.hasRaisedThrowable());
-		assertEquals(doneMessage.getRaisedThrowable().getThrowable().getType(), "java.lang.reflect.InvocationTargetException");
-		assertEquals(doneMessage.getRaisedThrowable().getThrowable().getCause().getType(), "java.lang.NullPointerException");
+		assertEquals("java.lang.reflect.InvocationTargetException",
+			doneMessage.getRaisedThrowable().getThrowable().getType());
+		assertEquals("java.lang.NullPointerException",
+			doneMessage.getRaisedThrowable().getThrowable().getCause().getType());
 	}
 }

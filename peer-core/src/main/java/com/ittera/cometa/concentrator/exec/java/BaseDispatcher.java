@@ -210,16 +210,18 @@ public abstract class BaseDispatcher implements Dispatcher {
 		List<Primitives.Parameter> parameterList = getParameterList(dataMessage);
 
 		int i = 0;
-		for (Primitives.Parameter parameter : parameterList) {
-			Primitives.Object obj = parameter.getValue();
-			if (obj.getIsNull()) {
-				args.add(null);
-			} else if (obj.hasRef()) {
-				args.add(objectService.lookupObject(obj.getRef()));
-			} else {
-				args.add(Unwrapper.unwrapObject(obj, parameterTypes.get(i)));
+		if (parameterList != null) {
+			for (Primitives.Parameter parameter : parameterList) {
+				Primitives.Object obj = parameter.getValue();
+				if (obj.getIsNull()) {
+					args.add(null);
+				} else if (obj.hasRef()) {
+					args.add(objectService.lookupObject(obj.getRef()));
+				} else {
+					args.add(Unwrapper.unwrapObject(obj, parameterTypes.get(i)));
+				}
+				i++;
 			}
-			i++;
 		}
 
 		return args;

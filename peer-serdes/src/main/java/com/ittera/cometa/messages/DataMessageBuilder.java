@@ -38,6 +38,8 @@ public interface DataMessageBuilder {
 	DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueClassName,
 														 Object value);
 
+	DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueObjectRef);
+
 	DataMessage buildFieldOpDone(UUID concentratorUuid, Context context, Type type);
 
 	DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid, Fields.StaticFieldPut staticFieldPut,
@@ -45,6 +47,9 @@ public interface DataMessageBuilder {
 
 	DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef,
 														 String valueClassName, Object value);
+
+	DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef,
+														 String valueObjectRef);
 
 	DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid,
 																 Fields.InstanceFieldPut instanceFieldPut, Class fieldType, String followingUuid);

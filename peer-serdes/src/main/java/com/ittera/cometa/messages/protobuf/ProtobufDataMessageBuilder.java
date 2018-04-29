@@ -461,9 +461,6 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Static field put messages">
 
-	/**
-	 * This method is to be called when no joinpoint context is available.
-	 */
 	public DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueClassName,
 																		Object value) {
 
@@ -472,6 +469,17 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 				.setClass_(getWrappedClass(className))
 				.setField(getWrappedField((String) null, fieldName))
 				.setValueObject(getWrappedObject(value, valueClassName, null)));
+
+		return msgBuilder.build();
+	}
+
+	public DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueObjectRef) {
+
+		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC, concentratorUuid)
+			.setStaticFieldPut(StaticFieldPut.newBuilder()
+				.setClass_(getWrappedClass(className))
+				.setField(getWrappedField((String) null, fieldName))
+				.setValueObjectRef(valueObjectRef));
 
 		return msgBuilder.build();
 	}
@@ -503,10 +511,6 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Instance field put messages">
 
-	/**
-	 * This method is to be called when no joinpoint context is available.
-	 * Equivalent to the above, for objectRefs
-	 */
 	public DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef,
 																		String valueClassName, Object value) {
 
@@ -516,6 +520,19 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 				.setObjectRef(targetObjRef)
 				.setField(getWrappedField((String) null, fieldName))
 				.setValueObject(getWrappedObject(value, valueClassName, null)));
+
+		return msgBuilder.build();
+	}
+
+	public DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef,
+																		String valueObjectRef) {
+
+		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD, concentratorUuid, null)
+			.setInstanceFieldPut(InstanceFieldPut.newBuilder()
+				.setClass_(getWrappedClass(className))
+				.setObjectRef(targetObjRef)
+				.setField(getWrappedField((String) null, fieldName))
+				.setValueObjectRef(valueObjectRef));
 
 		return msgBuilder.build();
 	}

@@ -4,6 +4,9 @@ import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
+import com.ittera.cometa.messages.protobuf.Unwrapper;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+
 import org.junit.*;
 
 import static org.junit.Assert.*;
@@ -24,13 +27,14 @@ class ClassForGetFieldTest {
 }
 
 @RunWith(MockitoJUnitRunner.class)
-public class GetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
+public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
 
 	private Dispatcher dispatcher = new GetInstanceVariableDispatcher(peerUuid, messageBuilder,
 		dispatcherConnector, objectService);
 
 	private Class targetClass = ClassForGetFieldTest.class;
 
+	@Override
 	@Test
 	public void dispatch_primitive_ok() throws Throwable {
 
@@ -50,6 +54,37 @@ public class GetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		assertEquals(target.someShort, returned);
 	}
 
+	@Override
+	@Test
+	public void dispatchIncoming_primitive_ok() {
+
+		String fieldName = "someShort";
+
+		// create and store new instance
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		String targetObjRef = objectService.storeObject(target);
+
+		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+			targetObjRef);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(2, objectService.size());
+		assertFalse(doneMessage.getReturnValue().getIsVoid());
+		short returned = -1;
+		try {
+			returned = (short) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
+		} catch (ClassNotFoundException cnfe) {
+			fail(cnfe.getMessage());
+		}
+		assertEquals(target.someShort, returned);
+	}
+
+	@Override
 	@Test
 	public void dispatch_primitiveArray_ok() throws Throwable {
 
@@ -69,6 +104,37 @@ public class GetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		assertArrayEquals(target.bytes, (byte[]) returned);
 	}
 
+	@Override
+	@Test
+	public void dispatchIncoming_primitiveArray_ok() {
+
+		String fieldName = "bytes";
+
+		// create and store new instance
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		String targetObjRef = objectService.storeObject(target);
+
+		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+			targetObjRef);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(1, objectService.size());
+		assertFalse(doneMessage.getReturnValue().getIsVoid());
+		byte[] returned = null;
+		try {
+			returned = (byte[]) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
+		} catch (ClassNotFoundException cnfe) {
+			fail(cnfe.getMessage());
+		}
+		assertArrayEquals(target.bytes, returned);
+	}
+
+	@Override
 	@Test
 	public void dispatch_wrapper_ok() throws Throwable {
 
@@ -88,6 +154,37 @@ public class GetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		assertEquals(target.someInteger, returned);
 	}
 
+	@Override
+	@Test
+	public void dispatchIncoming_wrapper_ok() {
+
+		String fieldName = "someInteger";
+
+		// create and store new instance
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		String targetObjRef = objectService.storeObject(target);
+
+		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+			targetObjRef);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(1, objectService.size());
+		assertFalse(doneMessage.getReturnValue().getIsVoid());
+		Integer returned = null;
+		try {
+			returned = (Integer) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
+		} catch (ClassNotFoundException cnfe) {
+			fail(cnfe.getMessage());
+		}
+		assertEquals(target.someInteger, returned);
+	}
+
+	@Override
 	@Test
 	public void dispatch_string_ok() throws Throwable {
 
@@ -107,6 +204,37 @@ public class GetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		assertEquals(target.aString, returned);
 	}
 
+	@Override
+	@Test
+	public void dispatchIncoming_string_ok() {
+
+		String fieldName = "aString";
+
+		// create and store new instance
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		String targetObjRef = objectService.storeObject(target);
+
+		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+			targetObjRef);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(2, objectService.size());
+		assertFalse(doneMessage.getReturnValue().getIsVoid());
+		String returned = null;
+		try {
+			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
+		} catch (ClassNotFoundException cnfe) {
+			fail(cnfe.getMessage());
+		}
+		assertEquals(target.aString, returned);
+	}
+
+	@Override
 	@Test
 	public void dispatch_object_ok() throws Throwable {
 
@@ -126,6 +254,32 @@ public class GetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		assertEquals(target.anObject, returned);
 	}
 
+	@Override
+	@Test
+	public void dispatchIncoming_object_ok() {
+
+		String fieldName = "anObject";
+
+		// create and store new instance
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		String targetObjRef = objectService.storeObject(target);
+
+		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+			targetObjRef);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(2, objectService.size());
+		assertFalse(doneMessage.getReturnValue().getIsVoid());
+		Object returned = objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef());
+		assertEquals(target.anObject, returned);
+	}
+
+	@Override
 	@Test
 	public void dispatch_objectArray_ok() throws Throwable {
 
@@ -145,6 +299,33 @@ public class GetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 		assertArrayEquals(target.objects, (Object[]) returned);
 	}
 
+	@Override
+	@Test
+	public void dispatchIncoming_objectArray_ok() {
+
+		String fieldName = "objects";
+
+		// create and store new instance
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		String targetObjRef = objectService.storeObject(target);
+
+		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+			targetObjRef);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(2, objectService.size());
+		assertFalse(doneMessage.getReturnValue().getIsVoid());
+		Object returned = objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef());
+		assertArrayEquals(target.objects, (Object[]) returned);
+
+	}
+
+	@Override
 	@Test
 	public void dispatch_throwable_ok() throws Throwable {
 
@@ -161,6 +342,31 @@ public class GetInstanceVariableDispatcherTest extends AbstractDispatcherTest {
 
 		// expect
 		verifyDispatcherCalledTwice();
+		assertEquals(target.lastError, returned);
+	}
+
+	@Override
+	@Test
+	public void dispatchIncoming_throwable_ok() {
+
+		String fieldName = "lastError";
+
+		// create and store new instance
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		String targetObjRef = objectService.storeObject(target);
+
+		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+			targetObjRef);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(2, objectService.size());
+		assertFalse(doneMessage.getReturnValue().getIsVoid());
+		Object returned = objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef());
 		assertEquals(target.lastError, returned);
 	}
 }
