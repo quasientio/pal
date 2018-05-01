@@ -32,16 +32,6 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 		setObjectService(objectService);
 	}
 
-
-	@Singleton
-	public SetClassVariableDispatcher() {
-	}
-
-	@Override
-	protected final boolean returnsVoid() {
-		return true;
-	}
-
 	@Override
 	protected final Type getBeforeExecMessageType() {
 		return Type.PUT_STATIC;

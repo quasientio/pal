@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.Concentrator;
+import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -15,6 +16,8 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
+import javax.inject.Inject;
+
 public class LogMessageInvoker extends Thread {
 
 	protected static final Logger logger = LoggerFactory.getLogger(LogMessageInvoker.class);
@@ -26,6 +29,12 @@ public class LogMessageInvoker extends Thread {
 	private final ZContext zmqContext;
 	private final String inLogAddress;
 	private Socket socket;
+
+	@Inject
+	protected IncomingMessageDispatcher incomingMessageDispatcher;
+
+	@Inject
+	private ReqSocketDispatcherConnector reqSocketDispatcherConnector;
 
 	protected final DataMessageBuilder dataMessageBuilder;
 
@@ -114,11 +123,11 @@ public class LogMessageInvoker extends Thread {
 			socket.close();
 		}
 
-		Concentrator.closeThreadLocalSocket();
+		reqSocketDispatcherConnector.closeThreadLocalSocket();
 	}
 
 	private void dispatch(DataMessage requestMsg, long recordOffset) {
-		DataMessage replyMsg = Concentrator.incomingCall(requestMsg);
+		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg);
 		logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",
 			requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());
 		requestsDispatched.getAndIncrement();

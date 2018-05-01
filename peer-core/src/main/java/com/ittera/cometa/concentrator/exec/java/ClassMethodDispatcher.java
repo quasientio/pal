@@ -2,19 +2,37 @@ package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
+import com.ittera.cometa.common.ObjectService;
+
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
+import com.ittera.cometa.messages.DataMessageBuilder;
 
 import com.ittera.cometa.concentrator.util.ReflectionHelper;
+import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.AccessibleObject;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.UUID;
 
-public abstract class ClassMethodDispatcher extends MethodDispatcher {
+import javax.inject.Singleton;
+import javax.inject.Inject;
+
+public class ClassMethodDispatcher extends MethodDispatcher {
+
+	@Singleton
+	@Inject
+	public ClassMethodDispatcher(UUID peerUuid, DataMessageBuilder messageBuilder, DispatcherConnector connector,
+															 ObjectService objectService) {
+		setPeerUuid(peerUuid);
+		setMessageBuilder(messageBuilder);
+		setConnector(connector);
+		setObjectService(objectService);
+	}
 
 	@Override
 	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
@@ -22,7 +40,7 @@ public abstract class ClassMethodDispatcher extends MethodDispatcher {
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef) {
+	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef, boolean isVoid) {
 
 		final Method method = ((MethodSignature) ctxt.getSignature()).getMethod();
 
@@ -30,7 +48,7 @@ public abstract class ClassMethodDispatcher extends MethodDispatcher {
 			Exception invocationException = ((InvocationException) value).getException();
 			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, invocationException, null);
 		} else {
-			return messageBuilder.buildReturnValue(peerUuid, value, method.getReturnType(), objectRef, returnsVoid(),
+			return messageBuilder.buildReturnValue(peerUuid, value, method.getReturnType(), objectRef, isVoid,
 				null);
 		}
 	}
@@ -50,7 +68,7 @@ public abstract class ClassMethodDispatcher extends MethodDispatcher {
 			return new InvocationException(ex);
 		}
 
-		if (returnsVoid()) {
+		if (method.getReturnType().equals(java.lang.Void.TYPE)) {
 			return Void.getInstance();
 		} else {
 			return returnValue;
@@ -88,4 +106,5 @@ public abstract class ClassMethodDispatcher extends MethodDispatcher {
 		}
 		return accessibleObject;
 	}
+
 }

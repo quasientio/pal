@@ -1,6 +1,6 @@
 package com.ittera.cometa.concentrator.exec;
 
-import com.ittera.cometa.concentrator.Concentrator;
+import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -15,6 +15,8 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
+import javax.inject.Inject;
+
 public class PeerMessageInvoker extends Thread {
 
 	protected static final Logger logger = LoggerFactory.getLogger(PeerMessageInvoker.class);
@@ -28,6 +30,12 @@ public class PeerMessageInvoker extends Thread {
 	private final ZContext zmqContext;
 	private final String dealerAddress;
 	private Socket socket;
+
+	@Inject
+	protected IncomingMessageDispatcher incomingMessageDispatcher;
+
+	@Inject
+	private ReqSocketDispatcherConnector reqSocketDispatcherConnector;
 
 	public PeerMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
 														DataMessageBuilder dataMessageBuilder, String dealerAddress) {
@@ -110,11 +118,11 @@ public class PeerMessageInvoker extends Thread {
 		if (socket != null) {
 			socket.close();
 		}
-		Concentrator.closeThreadLocalSocket();
+		reqSocketDispatcherConnector.closeThreadLocalSocket();
 	}
 
 	private DataMessage dispatch(DataMessage requestMsg) {
-		DataMessage replyMsg = Concentrator.incomingCall(requestMsg);
+		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg);
 		logger.debug("Invoker dispatched peer request message uuid: {}, reply uuid: {}", requestMsg.getMessageUuid(),
 			replyMsg.getMessageUuid());
 		requestsDispatched.getAndIncrement();

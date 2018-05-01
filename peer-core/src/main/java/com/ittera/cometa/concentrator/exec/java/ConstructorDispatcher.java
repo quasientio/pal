@@ -45,7 +45,7 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef) {
+	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef, boolean isVoid) {
 
 		final Constructor constructor = ((ConstructorSignature) ctxt.getSignature()).getConstructor();
 
@@ -71,8 +71,7 @@ public class ConstructorDispatcher extends BaseDispatcher {
 		}
 
 		Class constructorType = ((Constructor) accessibleObject).getDeclaringClass();
-		return messageBuilder.buildReturnValue(peerUuid, valueObject, constructorType, valueObjKey, returnsVoid(),
-			messageUuid);
+		return messageBuilder.buildReturnValue(peerUuid, valueObject, constructorType, valueObjKey, false, messageUuid);
 	}
 
 	@Override
@@ -100,18 +99,13 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected final boolean returnsVoid() {
+	protected final boolean returnsVoid(AccessibleObject accessibleObject) {
 		return false;
 	}
 
 	@Override
 	protected final Type getBeforeExecMessageType() {
 		return Type.CONSTRUCTOR;
-	}
-
-	@Override
-	protected final Type getAfterExecMessageType() {
-		return Type.RETURN_VALUE;
 	}
 
 	@Override

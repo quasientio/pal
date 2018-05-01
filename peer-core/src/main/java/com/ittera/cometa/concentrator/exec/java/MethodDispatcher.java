@@ -31,8 +31,12 @@ public abstract class MethodDispatcher extends BaseDispatcher {
 		}
 
 		Class methodReturnType = ((Method) accessibleObject).getReturnType();
-		return messageBuilder.buildReturnValue(peerUuid, valueObject, methodReturnType, valueObjKey, returnsVoid(),
-			messageUuid);
+		return messageBuilder.buildReturnValue(peerUuid, valueObject, methodReturnType, valueObjKey,
+			returnsVoid(accessibleObject), messageUuid);
 	}
 
+	@Override
+	protected boolean returnsVoid(AccessibleObject accessibleObject) {
+		return ((Method) accessibleObject).getReturnType().equals(java.lang.Void.TYPE);
+	}
 }

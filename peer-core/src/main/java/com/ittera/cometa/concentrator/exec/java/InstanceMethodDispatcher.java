@@ -1,23 +1,40 @@
 package com.ittera.cometa.concentrator.exec.java;
 
+import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
+import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
 import com.ittera.cometa.concentrator.util.ReflectionHelper;
+import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.AccessibleObject;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public abstract class InstanceMethodDispatcher extends MethodDispatcher {
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+public class InstanceMethodDispatcher extends MethodDispatcher {
+
+	@Singleton
+	@Inject
+	public InstanceMethodDispatcher(UUID peerUuid, DataMessageBuilder messageBuilder, DispatcherConnector connector,
+																	ObjectService objectService) {
+		setPeerUuid(peerUuid);
+		setMessageBuilder(messageBuilder);
+		setConnector(connector);
+		setObjectService(objectService);
+	}
 
 	@Override
 	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
@@ -26,15 +43,14 @@ public abstract class InstanceMethodDispatcher extends MethodDispatcher {
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef) {
+	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef, boolean isVoid) {
 
 		final Method method = ((MethodSignature) ctxt.getSignature()).getMethod();
 		if (value instanceof InvocationException) {
 			Exception invocationException = ((InvocationException) value).getException();
 			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, invocationException, null);
 		} else {
-			return messageBuilder.buildReturnValue(peerUuid, value, method.getClass(), objectRef, returnsVoid(),
-				null);
+			return messageBuilder.buildReturnValue(peerUuid, value, method.getClass(), objectRef, isVoid, null);
 		}
 
 	}
@@ -54,13 +70,12 @@ public abstract class InstanceMethodDispatcher extends MethodDispatcher {
 			return new InvocationException(ex);
 		}
 
-		if (returnsVoid()) {
+		if (method.getReturnType().equals(java.lang.Void.TYPE)) {
 			return Void.getInstance();
 		} else {
 			return returnValue;
 		}
 	}
-
 
 	@Override
 	protected final Type getBeforeExecMessageType() {
@@ -107,5 +122,4 @@ public abstract class InstanceMethodDispatcher extends MethodDispatcher {
 		}
 		return accessibleObject;
 	}
-
 }

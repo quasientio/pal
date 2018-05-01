@@ -12,6 +12,7 @@ import org.zeromq.ZContext;
 import zmq.ZError;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 public class ReqSocketDispatcherConnector implements DispatcherConnector {
 
@@ -36,6 +37,7 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 		}
 	};
 
+	@Singleton
 	@Inject
 	public ReqSocketDispatcherConnector(ZContext zmqContext, String outCellAddress) {
 		this.zmqContext = zmqContext;
@@ -77,4 +79,14 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 		return returnValue;
 	}
 
+	@Override
+	public void closeThreadLocalSocket() {
+		if (threadSocketCreated.get()) {
+			Socket outSocket = threadSocket.get();
+			if (outSocket != null) {
+				outSocket.close();
+				logger.debug("Thread local socket closed");
+			}
+		}
+	}
 }

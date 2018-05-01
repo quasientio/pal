@@ -6,4 +6,5 @@ public interface DispatcherConnector {
 
 	DataMessage sendAndRecv(DataMessage message);
 
+	void closeThreadLocalSocket();
 }

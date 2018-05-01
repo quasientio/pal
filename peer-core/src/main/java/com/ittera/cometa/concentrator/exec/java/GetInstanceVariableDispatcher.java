@@ -32,11 +32,6 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 	}
 
 	@Override
-	protected final boolean returnsVoid() {
-		return false;
-	}
-
-	@Override
 	protected final Type getBeforeExecMessageType() {
 		return Type.GET_FIELD;
 	}

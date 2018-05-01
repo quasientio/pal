@@ -56,12 +56,14 @@ public abstract class BaseDispatcher implements Dispatcher {
 
 		// 4. Store? object in object map
 		String objectRef = null;
-		if (!returnsVoid() && returnValue != null) {
+		boolean returnsVoid = returnValue == Void.getInstance();
+
+		if (!returnsVoid && returnValue != null) {
 			objectRef = storeObject(returnValue);
 		}
 
 		// 5. Wrap object or exception
-		final DataMessage afterExecMsg = wrapAfterExecMessage(ctxt, returnValue, objectRef);
+		final DataMessage afterExecMsg = wrapAfterExecMessage(ctxt, returnValue, objectRef, returnsVoid);
 
 		// 6. Send object or exception
 		final DataMessage afterExecReplyMsg = connector.sendAndRecv(afterExecMsg);
@@ -145,7 +147,7 @@ public abstract class BaseDispatcher implements Dispatcher {
 				returnValue = invokeIncoming(accessibleObject, target, args, value);
 
 				// 8. Store? object in object map
-				if (!returnsVoid() && returnValue != null) {
+				if (!returnsVoid(accessibleObject) && returnValue != null) {
 					objectRef = storeObject(returnValue);
 				}
 			} catch (Exception e) {
@@ -285,7 +287,7 @@ public abstract class BaseDispatcher implements Dispatcher {
 
 	// TODO generalize this method, using a Builder method taking Executable's
 	// TODO create a Builder.buildVoidReturnValue() method
-	abstract protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef);
+	abstract protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef, boolean isVoid);
 
 	abstract protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, String valueObjKey,
 																											AccessibleObject accessibleObject, Exception exceptionWhileLoading,
@@ -304,11 +306,9 @@ public abstract class BaseDispatcher implements Dispatcher {
 	abstract protected Object invokeIncoming(AccessibleObject accessibleObject, Optional<Object> target, List<Object> args,
 																					 Optional<Object> value) throws Exception;
 
-	abstract protected boolean returnsVoid();
+	abstract protected boolean returnsVoid(AccessibleObject accessibleObject);
 
 	abstract protected Type getBeforeExecMessageType();
-
-	abstract protected Type getAfterExecMessageType();
 
 	abstract protected List<Primitives.Parameter> getParameterList(DataMessage dataMessage);
 

@@ -57,7 +57,7 @@ class ClassForNonVoidClassMethodTest {
 @RunWith(MockitoJUnitRunner.class)
 public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
-	private Dispatcher dispatcher = new NonVoidClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector,
+	private Dispatcher dispatcher = new ClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector,
 		objectService);
 
 	private Class targetClass = ClassForNonVoidClassMethodTest.class;

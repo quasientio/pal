@@ -37,10 +37,6 @@ abstract public class GetFieldDispatcher extends FieldOpDispatcher {
 		return fieldValue;
 	}
 
-	protected final boolean assignsValue() {
-		return false;
-	}
-
 	@Override
 	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, String valueObjKey,
 																						 AccessibleObject accessibleObject, Exception exceptionWhileLoading,
@@ -54,5 +50,15 @@ abstract public class GetFieldDispatcher extends FieldOpDispatcher {
 
 		Class fieldType = ((Field) accessibleObject).getType();
 		return messageBuilder.buildReturnValue(peerUuid, valueObject, fieldType, valueObjKey, returnsVoid(), messageUuid);
+	}
+
+	@Override
+	protected final boolean returnsVoid() {
+		return false;
+	}
+
+	@Override
+	protected boolean returnsVoid(AccessibleObject accessibleObject) {
+		return false;
 	}
 }

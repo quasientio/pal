@@ -33,11 +33,6 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 	}
 
 	@Override
-	protected final boolean returnsVoid() {
-		return true;
-	}
-
-	@Override
 	protected final Type getBeforeExecMessageType() {
 		return Type.PUT_FIELD;
 	}

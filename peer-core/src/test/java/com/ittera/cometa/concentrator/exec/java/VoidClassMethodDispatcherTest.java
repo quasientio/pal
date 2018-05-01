@@ -70,8 +70,8 @@ class ClassForVoidClassMethodTest {
 @RunWith(MockitoJUnitRunner.class)
 public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
-	private Dispatcher dispatcher = new VoidClassMethodDispatcher(peerUuid, messageBuilder,
-		dispatcherConnector, objectService);
+	private Dispatcher dispatcher = new ClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector,
+		objectService);
 
 	private Class targetClass = ClassForVoidClassMethodTest.class;
 

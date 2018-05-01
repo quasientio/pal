@@ -36,4 +36,14 @@ abstract public class SetFieldDispatcher extends FieldOpDispatcher {
 		field.set(target.isPresent() ? target.get() : null, value.get());
 		return Void.getInstance();
 	}
+
+	@Override
+	protected final boolean returnsVoid() {
+		return true;
+	}
+
+	@Override
+	protected boolean returnsVoid(AccessibleObject accessibleObject) {
+		return true;
+	}
 }
