@@ -11,6 +11,7 @@ import java.lang.reflect.AccessibleObject;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
 
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
@@ -55,7 +56,7 @@ public abstract class BaseDispatcher implements Dispatcher {
 		Object returnValue = invoke(ctxt, sender, target, args);
 
 		// 4. Store? object in object map
-		String objectRef = null;
+		ObjectRef objectRef = null;
 		boolean returnsVoid = returnValue == Void.getInstance();
 
 		if (!returnsVoid && returnValue != null) {
@@ -140,7 +141,7 @@ public abstract class BaseDispatcher implements Dispatcher {
 
 		// Invocation phase
 		Object returnValue = null;
-		String objectRef = null;
+		ObjectRef objectRef = null;
 		if (exceptionWhileLoading == null) {
 			try {
 				// 7. Invoke constructor/method/field
@@ -168,7 +169,7 @@ public abstract class BaseDispatcher implements Dispatcher {
 		return afterExecReplyMsg;
 	}
 
-	private String storeObject(Object object) {
+	protected final ObjectRef storeObject(Object object) {
 		return object != null ? objectService.storeObject(object) : null;
 	}
 
@@ -218,7 +219,7 @@ public abstract class BaseDispatcher implements Dispatcher {
 				if (obj.getIsNull()) {
 					args.add(null);
 				} else if (obj.hasRef()) {
-					args.add(objectService.lookupObject(obj.getRef()));
+					args.add(objectService.lookupObject(ObjectRef.from(obj.getRef())));
 				} else {
 					args.add(Unwrapper.unwrapObject(obj, parameterTypes.get(i)));
 				}
@@ -287,9 +288,9 @@ public abstract class BaseDispatcher implements Dispatcher {
 
 	// TODO generalize this method, using a Builder method taking Executable's
 	// TODO create a Builder.buildVoidReturnValue() method
-	abstract protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef, boolean isVoid);
+	abstract protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid);
 
-	abstract protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, String valueObjKey,
+	abstract protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
 																											AccessibleObject accessibleObject, Exception exceptionWhileLoading,
 																											Exception exceptionWhileInvoking);
 

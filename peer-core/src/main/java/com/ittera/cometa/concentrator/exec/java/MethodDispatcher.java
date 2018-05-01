@@ -1,5 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.lang.reflect.Method;
@@ -20,7 +22,7 @@ public abstract class MethodDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, String valueObjKey,
+	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
 																						 AccessibleObject accessibleObject, Exception exceptionWhileLoading,
 																						 Exception exceptionWhileInvoking) {
 
@@ -31,7 +33,7 @@ public abstract class MethodDispatcher extends BaseDispatcher {
 		}
 
 		Class methodReturnType = ((Method) accessibleObject).getReturnType();
-		return messageBuilder.buildReturnValue(peerUuid, valueObject, methodReturnType, valueObjKey,
+		return messageBuilder.buildReturnValue(peerUuid, valueObject, methodReturnType, valueObjRef,
 			returnsVoid(accessibleObject), messageUuid);
 	}
 

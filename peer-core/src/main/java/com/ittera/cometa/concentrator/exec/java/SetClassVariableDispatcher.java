@@ -2,6 +2,7 @@ package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.ObjectService;
 
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
@@ -61,14 +62,14 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 			value = Unwrapper.unwrapObject(dataMessage.getStaticFieldPut().getValueObject(), field.getType());
 			logger.debug("Unwrapped value: {}", value);
 		} else {
-			value = objectService.lookupObject(dataMessage.getStaticFieldPut().getValueObjectRef());
+			value = objectService.lookupObject(ObjectRef.from(dataMessage.getStaticFieldPut().getValueObjectRef()));
 			logger.debug("Loaded value: {}", value);
 		}
 		return Optional.of(value);
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, String valueObjKey,
+	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
 																						 AccessibleObject accessibleObject, Exception exceptionWhileLoading,
 																						 Exception exceptionWhileInvoking) {
 

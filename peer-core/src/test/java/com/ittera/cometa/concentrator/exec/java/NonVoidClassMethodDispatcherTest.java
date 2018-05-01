@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
@@ -92,11 +93,11 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		String methodName = "getRandomMinute";
 		Class[] parameterTypes = {};
-		String[] argObjRefs = {};
+		ObjectRef[] argObjRefs = {};
 		Object[] args = {};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -104,7 +105,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
+		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
 		short returned = -1;
 		try {
@@ -149,10 +150,10 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		double smallDouble = 8378;
 		double bigDouble = 827193;
 		Object[] args = new Object[]{smallDouble, bigDouble};
-		String[] argObjRefs = {null, null};
+		ObjectRef[] argObjRefs = {null, null};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -160,7 +161,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
+		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
 		double returned = -1;
 		try {
@@ -180,10 +181,10 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		double smallDouble = 8378;
 		double bigDouble = 827193;
 		Object[] args = new Object[]{null, null};
-		String[] argObjRefs = {objectService.storeObject(smallDouble), objectService.storeObject(bigDouble)};
+		ObjectRef[] argObjRefs = {objectService.storeObject(smallDouble), objectService.storeObject(bigDouble)};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -191,7 +192,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
+		assertEquals(3, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
 		double returned = -1;
 		try {
@@ -210,10 +211,10 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Integer realNumber = 6565;
 		Class[] parameterTypes = new Class[]{Integer.class, Integer.class};
 		Object[] args = new Object[]{null, realNumber};
-		String[] argObjRefs = {null, null};
+		ObjectRef[] argObjRefs = {null, null};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -271,10 +272,10 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		double d4 = 8287193;
 		double[] varargs = new double[]{d1, d2, d3, d4};
 		Object[] args = {varargs};
-		String[] argObjRefs = {null, null, null, null};
+		ObjectRef[] argObjRefs = {null, null, null, null};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -282,7 +283,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
+		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
 		double returned = -1;
 		try {
@@ -329,10 +330,10 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		int number = 8378;
 		int divisor = 0;
 		Object[] args = new Object[]{number, divisor};
-		String[] argObjRefs = {null, null};
+		ObjectRef[] argObjRefs = {null, null};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -340,7 +341,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length, objectService.size());
+		assertEquals(0, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
 		assertTrue(doneMessage.hasRaisedThrowable());
 		assertEquals("java.lang.reflect.InvocationTargetException",
@@ -348,5 +349,4 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertEquals("java.lang.ArithmeticException",
 			doneMessage.getRaisedThrowable().getThrowable().getCause().getType());
 	}
-
 }

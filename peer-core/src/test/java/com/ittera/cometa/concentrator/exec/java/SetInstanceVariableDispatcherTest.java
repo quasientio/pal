@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
@@ -69,7 +70,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		// create and store new instance
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, fieldClassName, newFieldValue);
@@ -80,7 +81,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(2, objectService.size());
+		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
 		assertEquals(fieldName, doneMessage.getInstanceFieldPutDone().getField().getName());
 		assertEquals(newFieldValue, target.someShort);
@@ -119,7 +120,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		// create and store new instance
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, fieldClassName, newFieldValue);
@@ -130,7 +131,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(2, objectService.size());
+		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
 		assertEquals(fieldName, doneMessage.getInstanceFieldPutDone().getField().getName());
 		assertArrayEquals(newFieldValue, target.bytes);
@@ -169,7 +170,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		// create and store new instance
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, fieldClassName, newFieldValue);
@@ -180,7 +181,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(2, objectService.size());
+		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
 		assertEquals(fieldName, doneMessage.getInstanceFieldPutDone().getField().getName());
 		assertEquals(newFieldValue, target.aLong);
@@ -219,7 +220,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		// create and store new instance
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, fieldClassName, newFieldValue);
@@ -230,7 +231,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(2, objectService.size());
+		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
 		assertEquals(fieldName, doneMessage.getInstanceFieldPutDone().getField().getName());
 		assertEquals(newFieldValue, target.aString);
@@ -265,11 +266,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		String fieldName = "anObject";
 		List newFieldValue = Arrays.asList(938, 3038, 948, 394);
-		String newValueObjRef = objectService.storeObject(newFieldValue);
+		ObjectRef newValueObjRef = objectService.storeObject(newFieldValue);
 
 		// create and store new instance
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, newValueObjRef);
@@ -316,11 +317,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		String fieldName = "objects";
 		Object[] newFieldValue = {1, "a", false};
-		String newValueObjRef = objectService.storeObject(newFieldValue);
+		ObjectRef newValueObjRef = objectService.storeObject(newFieldValue);
 
 		// create and store new instance
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, newValueObjRef);
@@ -367,11 +368,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		String fieldName = "lastError";
 		Error newFieldValue = new Error("uuh ooooh");
-		String newValueObjRef = objectService.storeObject(newFieldValue);
+		ObjectRef newValueObjRef = objectService.storeObject(newFieldValue);
 
 		// create and store new instance
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, newValueObjRef);

@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
@@ -62,7 +63,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		// create and store new instance
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
@@ -112,7 +113,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		// create and store new instance
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
@@ -162,7 +163,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		// create and store new instance
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
@@ -212,7 +213,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		// create and store new instance
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
@@ -262,7 +263,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		// create and store new instance
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
@@ -275,7 +276,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(2, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		Object returned = objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef());
+		Object returned = objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()));
 		assertEquals(target.anObject, returned);
 	}
 
@@ -307,7 +308,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		// create and store new instance
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
@@ -320,7 +321,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(2, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		Object returned = objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef());
+		Object returned = objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()));
 		assertArrayEquals(target.objects, (Object[]) returned);
 
 	}
@@ -353,7 +354,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
 		// create and store new instance
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
@@ -366,7 +367,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(2, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		Object returned = objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef());
+		Object returned = objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()));
 		assertEquals(target.lastError, returned);
 	}
 }

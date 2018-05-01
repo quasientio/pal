@@ -1,6 +1,7 @@
 package com.ittera.cometa.messages.protobuf;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 
 import com.ittera.cometa.messages.protobuf.data.Fields.Field;
 import com.ittera.cometa.messages.protobuf.data.Ctxt;
@@ -52,7 +53,7 @@ public final class Wrapper {
 	 * @return
 	 */
 	private static <T> Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, T t,
-																													 String objectRef) {
+																													 ObjectRef objectRef) {
 
 		logger.trace("in getWrappedObjectAux with object: {}, class: {}, objectRef: {}", object, t, objectRef);
 
@@ -82,7 +83,7 @@ public final class Wrapper {
 			builder.setClass_(getWrappedClass(className));
 		}
 		if (objectRef != null) {
-			builder.setRef(objectRef);
+			builder.setRef(objectRef.getRef());
 		}
 		builder.setIdentityHash(System.identityHashCode(object));
 
@@ -139,11 +140,11 @@ public final class Wrapper {
 	 * @param <T>
 	 * @return
 	 */
-	static <T> Primitives.Object getWrappedObject(Object object, T t, String objectRef) {
+	static <T> Primitives.Object getWrappedObject(Object object, T t, ObjectRef objectRef) {
 		logger.trace("in getWrappedObject with object: {}, class: {}, objectRef: {}", object, t, objectRef);
 
 		final Primitives.Object.Builder builder = Primitives.Object.newBuilder();
-		boolean gotObjectRef = (objectRef != null) && (!objectRef.isEmpty());
+		boolean gotObjectRef = objectRef != null;
 
 		if (!gotObjectRef && !isWrappable(object)) {
 			throw new NonWrappableObjectException(object);
@@ -189,7 +190,7 @@ public final class Wrapper {
 		return fieldBuilder.build();
 	}
 
-	static Ctxt.Context getWrappedContext(Context context, Object sender, String senderObjRef) {
+	static Ctxt.Context getWrappedContext(Context context, Object sender, ObjectRef senderObjRef) {
 		final Ctxt.Context.Builder ctxtBuilder = Ctxt.Context.newBuilder();
 
 		ctxtBuilder.setSenderClass(getWrappedClass(context.getWithinType()));

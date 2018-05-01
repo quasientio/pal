@@ -3,6 +3,7 @@ package com.ittera.cometa.concentrator.exec.java;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
@@ -111,11 +112,11 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
 		String methodName = "sleep";
 		Class[] parameterTypes = new Class[]{};
-		String[] argObjRefs = {};
+		ObjectRef[] argObjRefs = {};
 		Object[] args = {};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		assertFalse(ClassForVoidClassMethodTest.slept);
@@ -124,7 +125,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length, objectService.size());
+		assertEquals(0, objectService.size());
 		assertTrue(doneMessage.getReturnValue().getIsVoid());
 		assertTrue(ClassForVoidClassMethodTest.slept);
 	}
@@ -161,12 +162,12 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
 		String methodName = "sleep";
 		Class[] parameterTypes = {long.class};
-		String[] argObjRefs = {null};
+		ObjectRef[] argObjRefs = {null};
 		long millisToSleep = 5;
 		Object[] args = {millisToSleep};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		assertEquals(0, ClassForVoidClassMethodTest.millisSlept);
@@ -175,7 +176,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length, objectService.size());
+		assertEquals(0, objectService.size());
 		assertTrue(doneMessage.getReturnValue().getIsVoid());
 		assertEquals(millisToSleep, ClassForVoidClassMethodTest.millisSlept);
 	}
@@ -187,12 +188,12 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		String methodName = "sleep";
 		Class[] parameterTypes = {long.class};
 		Long millisToSleep = 5l;
-		String objRef = objectService.storeObject(millisToSleep);
+		ObjectRef objRef = objectService.storeObject(millisToSleep);
 		Object[] args = {null};
-		String[] argObjRefs = {objRef};
+		ObjectRef[] argObjRefs = {objRef};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		assertEquals(0, ClassForVoidClassMethodTest.millisSlept);
@@ -201,7 +202,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(argObjRefs.length, objectService.size());
+		assertEquals(1, objectService.size());
 		assertTrue(doneMessage.getReturnValue().getIsVoid());
 		assertEquals(millisToSleep.longValue(), ClassForVoidClassMethodTest.millisSlept);
 	}
@@ -213,10 +214,10 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		String methodName = "verify";
 		Class[] parameterTypes = {Object.class};
 		Object[] args = {null};
-		String[] argObjRefs = {null};
+		ObjectRef[] argObjRefs = {null};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		assertNotNull(ClassForVoidClassMethodTest.verified);
@@ -264,11 +265,11 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Class[] parameterTypes = {List.class, long[].class};
 		long[] someNumbers = {10L, 20L, 30L};
 		List<Long> sumContainer = new ArrayList();
-		Object[] args = {sumContainer, someNumbers};
-		String[] argObjRefs = {null, null};
+		Object[] args = {null, someNumbers};
+		ObjectRef[] argObjRefs = {objectService.storeObject(sumContainer), null};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -276,7 +277,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length, objectService.size());
+		assertEquals(1, objectService.size());
 		assertTrue(doneMessage.getReturnValue().getIsVoid());
 		assertEquals(LongStream.of(someNumbers).sum(), (long) sumContainer.get(0));
 	}
@@ -316,10 +317,10 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Class[] parameterTypes = new Class[]{List.class, long.class};
 		List<Long> aList = null;
 		Object[] args = {aList, 2};
-		String[] argObjRefs = {null, null};
+		ObjectRef[] argObjRefs = {null, null};
 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
-			toNames(parameterTypes), args, argObjRefs);
+			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -327,7 +328,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
+		assertEquals(0, objectService.size());
 
 		assertTrue(doneMessage.hasRaisedThrowable());
 		assertEquals("java.lang.reflect.InvocationTargetException",

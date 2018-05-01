@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.util.concurrent.AbstractIdleService;
+import com.ittera.cometa.common.lang.ObjectRef;
 
 /**
  * BiMapObjectService is a ObjectRef -> Object map used for storing references to objects instantiated locally.
@@ -17,13 +17,13 @@ import com.google.common.util.concurrent.AbstractIdleService;
  * <p>
  * Contract:
  * --=====--
- * Storing an object returns an ObjectRef (String)
+ * Storing an object returns an ObjectRef (Plain wrapper around String)
  * <p>
  * We wrap objects before putting them in the map, so the BiMap implementation uses our overriden hashCode(),
  * which delegates to the value's System.identityHashCode, and not the normal hashCode.
  * <p>
  * This allows mapping values that are equal() -- This is OK because we don't care about the general Map contract.
- * <p>
+ *
  * <b>WARNING</b>: We assume System.identityHashCode will return distinct ints for different objects.
  * This may be the most probable, but is not guaranteed according to the JDK javadocs.
  * <p>
@@ -36,8 +36,8 @@ public final class BiMapObjectService implements ObjectService {
 	private static final Logger logger = LoggerFactory.getLogger(BiMapObjectService.class);
 
 	//A map for all objects created by the Concentrator.
-	private static final BiMap<String, BiMapObjectService.IdentifiableObject> objectBiMap = HashBiMap.create();
-	private static final BiMap<String, BiMapObjectService.IdentifiableObject> syncdObjectMap =
+	private static final BiMap<ObjectRef, BiMapObjectService.IdentifiableObject> objectBiMap = HashBiMap.create();
+	private static final BiMap<ObjectRef, BiMapObjectService.IdentifiableObject> syncdObjectMap =
 		Maps.synchronizedBiMap(objectBiMap);
 
 	//for concurrency
@@ -67,18 +67,19 @@ public final class BiMapObjectService implements ObjectService {
 		}
 	}
 
-	private String generateObjectRef(Object object) {
+	private ObjectRef generateObjectRef(Object object) {
 		final Long currentTimeMillis = System.currentTimeMillis();
 		final int identHash = System.identityHashCode(object);
-		return String.format("%d:%d:%d", objectSequence.incrementAndGet(), currentTimeMillis, identHash);
+		return new ObjectRef(String.format("%d:%d:%d", objectSequence.incrementAndGet(), currentTimeMillis, identHash));
 	}
 
-	public String storeObject(Object object) {
+	@Override
+	public ObjectRef storeObject(Object object) {
 		logger.trace("in w/ object: {}", object);
 		if (object == null) {
 			throw new NullPointerException("object cannot be null");
 		}
-		String objectRef = generateObjectRef(object);
+		ObjectRef objectRef = generateObjectRef(object);
 		final IdentifiableObject wrappedObject = new IdentifiableObject(object);
 		synchronized (syncdObjectMap) {
 			if (syncdObjectMap.containsValue(wrappedObject)) {
@@ -93,7 +94,8 @@ public final class BiMapObjectService implements ObjectService {
 		}
 	}
 
-	public Object lookupObject(String objectRef) {
+	@Override
+	public Object lookupObject(ObjectRef objectRef) {
 		logger.trace("in w/ objectRef: {}", objectRef);
 		if (objectRef == null) {
 			throw new NullPointerException("objectRef cannot be null");
@@ -107,28 +109,33 @@ public final class BiMapObjectService implements ObjectService {
 		return object;
 	}
 
-	public String lookupObjectRef(Object object) {
+	@Override
+	public ObjectRef lookupObjectRef(Object object) {
 		logger.trace("in w/ object: {}", object);
 		if (object == null) {
 			throw new NullPointerException("object cannot be null");
 		}
-		final String objectRef = syncdObjectMap.inverse().get(new IdentifiableObject(object));
+		final ObjectRef objectRef = syncdObjectMap.inverse().get(new IdentifiableObject(object));
 		logger.trace("out w/ objectRef: {}", objectRef);
 		return objectRef;
 	}
 
+	@Override
 	public void clear() {
 		syncdObjectMap.clear();
 	}
 
+	@Override
 	public int size() {
 		return syncdObjectMap.size();
 	}
 
+	@Override
 	public boolean isEmpty() {
 		return size() == 0;
 	}
 
+	@Override
 	public boolean containsValue(Object object) {
 		logger.trace("in w/ object: {}", object);
 		if (object == null) {
@@ -139,7 +146,8 @@ public final class BiMapObjectService implements ObjectService {
 		return containsValue;
 	}
 
-	public boolean containsObjectRef(String objectRef) {
+	@Override
+	public boolean containsObjectRef(ObjectRef objectRef) {
 		logger.trace("in w/ objectRef: {}", objectRef);
 		if (objectRef == null) {
 			throw new NullPointerException("objectRef cannot be null");
@@ -149,7 +157,8 @@ public final class BiMapObjectService implements ObjectService {
 		return containsObjectRef;
 	}
 
-	public Object remove(String objectRef) {
+	@Override
+	public Object remove(ObjectRef objectRef) {
 		logger.trace("in w/ objectRef: {}", objectRef);
 		if (objectRef == null) {
 			throw new NullPointerException("objectRef cannot be null");

@@ -12,9 +12,8 @@ import com.ittera.cometa.messages.protobuf.data.Calls.*;
 import com.ittera.cometa.messages.protobuf.data.Values.*;
 import com.ittera.cometa.messages.DataMessageBuilder;
 
-import com.ittera.cometa.common.ObjectService;
-
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 import com.ittera.cometa.common.lang.reflect.CodeSignature;
 import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
@@ -34,15 +33,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.Message.Builder;
 
-import javax.inject.Inject;
-
 public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	protected static final Logger logger = LoggerFactory.getLogger(ProtobufDataMessageBuilder.class);
-
-	private ObjectService objectService;
-
-	private boolean storeUncachedObjects = true;
 
 	//<editor-fold desc="Thread-local sequence stamping methods">
 
@@ -51,18 +44,6 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	private final ThreadLocal<AtomicLong> threadBuilderSequence = ThreadLocal.withInitial(() -> new AtomicLong(1));
 
 	public ProtobufDataMessageBuilder() {
-		this(null, false);
-	}
-
-	@Inject
-	public ProtobufDataMessageBuilder(ObjectService objectService) {
-		this(objectService, true);
-	}
-
-	@Inject
-	public ProtobufDataMessageBuilder(ObjectService objectService, boolean storeUncachedObjects) {
-		this.objectService = objectService;
-		this.storeUncachedObjects = storeUncachedObjects;
 	}
 
 	@Override
@@ -75,7 +56,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Private Auxiliary methods">
 
-	private Builder addParameter(Builder callBuilder, String parameterType, Object arg, String argObjRef) {
+	private Builder addParameter(Builder callBuilder, String parameterType, Object arg, ObjectRef argObjRef) {
 
 		// TODO : deal with objectRef
 		Primitives.Parameter.Builder paramBuilder = Primitives.Parameter.newBuilder();
@@ -96,7 +77,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		return callBuilder;
 	}
 
-	private Builder addParameters(Builder callBuilder, String[] parameterTypes, Object[] args, String[] argObjRefs) {
+	private Builder addParameters(Builder callBuilder, String[] parameterTypes, Object[] args, ObjectRef[] argObjRefs) {
 
 		for (int i = 0; parameterTypes != null && i < parameterTypes.length; i++) {
 			if (argObjRefs[i] != null) { //parameter is an objectref
@@ -112,14 +93,14 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	}
 
 	private Builder addNamedParameter(Builder callBuilder, Parameter parameter, String paramName, String paramType,
-																		Object param) {
+																		Object param, ObjectRef paramObjRef) {
 
 		// TODO : deal with objectRef
 		Primitives.Parameter.Builder paramBuilder = Primitives.Parameter.newBuilder();
 		paramBuilder.setName(paramName == null ? parameter.getName() : paramName);
 		paramBuilder.setType(getWrappedClass(paramType == null ? parameter.getType().getName() : paramType));
 		paramBuilder.setIsVarArgs(parameter.isVarArgs());
-		paramBuilder.setValue(getWrappedObject(param, paramType, null));
+		paramBuilder.setValue(getWrappedObject(param, paramType, paramObjRef));
 
 		if (callBuilder instanceof ConstructorCall.Builder) {
 			((ConstructorCall.Builder) callBuilder).addParameter(paramBuilder);
@@ -135,15 +116,14 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		return callBuilder;
 	}
 
-	private Builder addParameters(Builder callBuilder, Context context, Object[] args) {
-		// TODO what about objectRefs?
+	private Builder addParameters(Builder callBuilder, Context context, Object[] args, ObjectRef[] argObjRefs) {
 		final CodeSignature codeSignature = (CodeSignature) context.getSignature();
 		Parameter[] parameters = codeSignature.getParameters();
 		String paramName, paramTypeName;
 		for (int i = 0; codeSignature.getParameterTypes() != null && i < args.length; i++) {
 			paramName = codeSignature.getParameterNames()[i];
 			paramTypeName = codeSignature.getParameterTypes()[i].getName();
-			addNamedParameter(callBuilder, parameters[i], paramName, paramTypeName, args[i]);
+			addNamedParameter(callBuilder, parameters[i], paramName, paramTypeName, args[i], argObjRefs[i]);
 		}
 
 		return callBuilder;
@@ -175,22 +155,12 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	/**
 	 * Methods delegating to Wrapper
 	 **/
-	private <T> Primitives.Object getWrappedObject(Object object, T t, String objectRef) {
-
-		if (objectRef == null && object != null) {
-			return Wrapper.getWrappedObject(object, t, storeUncachedObjects ? objectService.storeObject(object) : null);
-		} else {
-			return Wrapper.getWrappedObject(object, t, objectRef);
-		}
+	private <T> Primitives.Object getWrappedObject(Object object, T t, ObjectRef objectRef) {
+		return Wrapper.getWrappedObject(object, t, objectRef);
 	}
 
-	private Ctxt.Context getWrappedContext(Context context, Object sender) {
-		if (sender != null) {
-			return Wrapper.getWrappedContext(context, sender,
-				storeUncachedObjects ? objectService.storeObject(sender) : null);
-		} else {
-			return Wrapper.getWrappedContext(context, null, null);
-		}
+	private Ctxt.Context getWrappedContext(Context context, Object sender, ObjectRef senderObjRef) {
+		return Wrapper.getWrappedContext(context, sender, senderObjRef);
 	}
 
 	private Fields.Field getWrappedField(Class clazz, String fieldName) {
@@ -214,15 +184,16 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	//<editor-fold desc="Constructor messages">
 
 
-	private DataMessage buildConstructorMessage(UUID concentratorUuid, String className,
-																							Context context, Object sender, String[] parameterTypes, Object[] args, String[] argObjRefs) {
+	private DataMessage buildConstructorMessage(UUID concentratorUuid, String className, Context context, Object sender,
+																							ObjectRef senderObjRef, String[] parameterTypes, Object[] args,
+																							ObjectRef[] argObjRefs) {
 
 		final ConstructorCall.Builder constructorCallBuilder = ConstructorCall.newBuilder();
 		if (context != null) {
 			final ConstructorSignature codeSignature = (ConstructorSignature) context.getSignature();
-			addParameters(constructorCallBuilder, context, args);
+			addParameters(constructorCallBuilder, context, args, argObjRefs);
 			constructorCallBuilder.setModifiers(codeSignature.getModifiers());
-			constructorCallBuilder.setContext(getWrappedContext(context, sender));
+			constructorCallBuilder.setContext(getWrappedContext(context, sender, senderObjRef));
 			constructorCallBuilder.setClass_(getWrappedClass(codeSignature.getDeclaringTypeName()));
 		} else {
 			addParameters(constructorCallBuilder, parameterTypes, args, argObjRefs);
@@ -235,13 +206,11 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		return msgBuilder.build();
 	}
 
-	/**
-	 * This method is to be called when no joinpoint context is available.
-	 */
+	@Override
 	public DataMessage buildEmptyConstructor(UUID concentratorUuid, String className) {
 
 		return buildConstructorMessage(concentratorUuid, className,
-			null, null, null, null, null);
+			null, null, null, null, null, null);
 	}
 
 	/**
@@ -254,27 +223,29 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	 * @param argObjRefs       Should be of same length as parameterTypes. For objectrefs.
 	 * @return
 	 */
+	@Override
 	public DataMessage buildNonEmptyConstructor(UUID concentratorUuid, String className, String[] parameterTypes,
-																							Object[] args, String[] argObjRefs) {
+																							Object[] args, ObjectRef[] argObjRefs) {
 
-		return buildConstructorMessage(concentratorUuid, className, null, null, parameterTypes, args,
-			argObjRefs);
+		return buildConstructorMessage(concentratorUuid, className, null, null, null,
+			parameterTypes, args, argObjRefs);
 	}
 
-	public DataMessage buildConstructor(UUID concentratorUuid, Context context, Object sender, Object[] args) {
+	@Override
+	public DataMessage buildConstructor(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+																			Object[] args, ObjectRef[] argObjRefs) {
 
-		return buildConstructorMessage(concentratorUuid, null, context, sender, null, args,
-			null);
+		return buildConstructorMessage(concentratorUuid, null, context, sender, senderObjRef,
+			null, args, argObjRefs);
 	}
 	//</editor-fold>
 
 	//<editor-fold desc="Instance method messages">
 
-	/**
-	 * This method is to be called when no joinpoint context is available.
-	 */
-	public DataMessage buildInstanceMethod(UUID concentratorUuid, String className, String methodName, String objRef,
-																				 String[] parameterTypes, Object[] args, String[] argObjRefs) {
+	@Override
+	public DataMessage buildInstanceMethod(UUID concentratorUuid, String className, String methodName, Object target,
+																				 ObjectRef targetObjRef, String[] parameterTypes, Object[] args,
+																				 ObjectRef[] argObjRefs) {
 
 		final InstanceMethodCall.Builder callBuilder = InstanceMethodCall.newBuilder();
 		addParameters(callBuilder, parameterTypes, args, argObjRefs);
@@ -283,27 +254,27 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 			.setInstanceMethodCall(callBuilder
 				.setClass_(getWrappedClass(className))
 				.setName(methodName)
-				.setObjectRef(objRef));
+				.setObjectRef(targetObjRef.getRef()));
 
 		return msgBuilder.build();
 	}
 
-
-	public DataMessage buildInstanceMethod(UUID concentratorUuid, Context context, Object sender, Object target,
-																				 Object[] args) {
+	@Override
+	public DataMessage buildInstanceMethod(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+																				 Object target, ObjectRef targetObjRef, Object[] args, ObjectRef[] argObjRefs) {
 
 		final MethodSignature codeSignature = (MethodSignature) context.getSignature();
 
 		final InstanceMethodCall.Builder callBuilder = InstanceMethodCall.newBuilder();
-		addParameters(callBuilder, context, args);
+		addParameters(callBuilder, context, args, argObjRefs);
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.INSTANCE_METHOD, concentratorUuid)
 			.setInstanceMethodCall(callBuilder
 				.setClass_(getWrappedClass(codeSignature.getDeclaringTypeName()))
 				.setName(codeSignature.getName())
-				.setObject(getWrappedObject(target, codeSignature.getDeclaringTypeName(), null))
+				.setObject(getWrappedObject(target, codeSignature.getDeclaringTypeName(), targetObjRef))
 				.setModifiers(codeSignature.getModifiers())
-				.setContext(getWrappedContext(context, sender)));
+				.setContext(getWrappedContext(context, sender, senderObjRef)));
 
 		return msgBuilder.build();
 	}
@@ -311,11 +282,10 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Class method messages">
 
-	/**
-	 * This method is to be called when no joinpoint context is available.
-	 */
+	@Override
 	public DataMessage buildClassMethod(UUID concentratorUuid, String className, String methodName,
-																			String[] parameterTypes, Object[] args, String[] argObjRefs) {
+																			String[] parameterTypes, Object sender, ObjectRef senderObjRef, Object[] args,
+																			ObjectRef[] argObjRefs) {
 
 		final ClassMethodCall.Builder callBuilder = ClassMethodCall.newBuilder();
 		addParameters(callBuilder, parameterTypes, args, argObjRefs);
@@ -329,16 +299,18 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	}
 
-	public DataMessage buildClassMethod(UUID concentratorUuid, Context context, Object sender, Object[] args) {
+	@Override
+	public DataMessage buildClassMethod(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+																			Object[] args, ObjectRef[] argObjRefs) {
 
 		final MethodSignature codeSignature = (MethodSignature) context.getSignature();
 
 		final ClassMethodCall.Builder callBuilder = ClassMethodCall.newBuilder();
-		addParameters(callBuilder, context, args);
+		addParameters(callBuilder, context, args, argObjRefs);
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.CLASS_METHOD, concentratorUuid)
 			.setClassMethodCall(callBuilder
-				.setContext(getWrappedContext(context, sender))
+				.setContext(getWrappedContext(context, sender, senderObjRef))
 				.setClass_(getWrappedClass(codeSignature.getDeclaringTypeName()))
 				.setName(codeSignature.getName())
 				.setModifiers(codeSignature.getModifiers()));
@@ -349,15 +321,16 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	@Override
 	public DataMessage buildFieldOp(UUID concentratorUuid, Context context, Type type, Object sender,
-																	Object target, Object arg) {
+																	ObjectRef senderObjRef, Object target, ObjectRef targetObjRef, Object arg,
+																	ObjectRef argObjRef) {
 
 		final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
 
 		Primitives.Class clazz = getWrappedClass(fieldSignature.getDeclaringType());
-		Primitives.Object targetObj = getWrappedObject(target, fieldSignature.getDeclaringType(), null);
+		Primitives.Object targetObj = getWrappedObject(target, fieldSignature.getDeclaringType(), targetObjRef);
 		Fields.Field field = getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName());
 		int modifiers = fieldSignature.getModifiers();
-		Ctxt.Context ctxt = getWrappedContext(context, sender);
+		Ctxt.Context ctxt = getWrappedContext(context, sender, senderObjRef);
 
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(type, concentratorUuid);
@@ -375,7 +348,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 					.setClass_(clazz)
 					.setObject(targetObj)
 					.setField(field)
-					.setValueObject(getWrappedObject(arg, fieldSignature.getFieldType().getName(), null))
+					.setValueObject(getWrappedObject(arg, fieldSignature.getFieldType().getName(), argObjRef))
 					.setModifiers(modifiers)
 					.setContext(ctxt));
 				break;
@@ -389,7 +362,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 			case PUT_STATIC:
 				msgBuilder.setStaticFieldPut(StaticFieldPut.newBuilder()
 					.setClass_(clazz)
-					.setValueObject(getWrappedObject(arg, fieldSignature.getFieldType(), null))
+					.setValueObject(getWrappedObject(arg, fieldSignature.getFieldType(), argObjRef))
 					.setField(field)
 					.setModifiers(modifiers)
 					.setContext(ctxt));
@@ -401,6 +374,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		return msgBuilder.build();
 	}
 
+	@Override
 	public DataMessage buildFieldOpDone(UUID concentratorUuid, Context context, Type type) {
 
 		final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
@@ -426,9 +400,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Static field get messages">
 
-	/**
-	 * This method is to be called when no joinpoint context is available.
-	 */
+	@Override
 	public DataMessage buildGetStatic(UUID concentratorUuid, String className, String fieldName) {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.GET_STATIC, concentratorUuid)
@@ -443,15 +415,13 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Instance field get messages">
 
-	/**
-	 * This method is to be called when no joinpoint context is available.
-	 */
-	public DataMessage buildGetObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef) {
+	@Override
+	public DataMessage buildGetObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef) {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.GET_FIELD, concentratorUuid)
 			.setInstanceFieldGet(InstanceFieldGet.newBuilder()
 				.setClass_(getWrappedClass(className))
-				.setObjectRef(targetObjRef)
+				.setObjectRef(targetObjRef.getRef())
 				.setField(getWrappedField((String) null, fieldName)));
 
 		return msgBuilder.build();
@@ -461,6 +431,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Static field put messages">
 
+	@Override
 	public DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueClassName,
 																		Object value) {
 
@@ -473,21 +444,19 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		return msgBuilder.build();
 	}
 
-	public DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueObjectRef) {
+	@Override
+	public DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, ObjectRef valueObjectRef) {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC, concentratorUuid)
 			.setStaticFieldPut(StaticFieldPut.newBuilder()
 				.setClass_(getWrappedClass(className))
 				.setField(getWrappedField((String) null, fieldName))
-				.setValueObjectRef(valueObjectRef));
+				.setValueObjectRef(valueObjectRef.getRef()));
 
 		return msgBuilder.build();
 	}
 
-	/**
-	 * This method is to be called when no joinpoint context is available.
-	 * Equivalent to the above, for objectRefs
-	 */
+	@Override
 	public DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid,
 																				Fields.StaticFieldPut staticFieldPut, Class fieldType, String followingUuid) {
 
@@ -511,32 +480,35 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Instance field put messages">
 
-	public DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef,
+	@Override
+	public DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef,
 																		String valueClassName, Object value) {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD, concentratorUuid, null)
 			.setInstanceFieldPut(InstanceFieldPut.newBuilder()
 				.setClass_(getWrappedClass(className))
-				.setObjectRef(targetObjRef)
+				.setObjectRef(targetObjRef.getRef())
 				.setField(getWrappedField((String) null, fieldName))
 				.setValueObject(getWrappedObject(value, valueClassName, null)));
 
 		return msgBuilder.build();
 	}
 
-	public DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef,
-																		String valueObjectRef) {
+	@Override
+	public DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef,
+																		ObjectRef valueObjectRef) {
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD, concentratorUuid, null)
 			.setInstanceFieldPut(InstanceFieldPut.newBuilder()
 				.setClass_(getWrappedClass(className))
-				.setObjectRef(targetObjRef)
+				.setObjectRef(targetObjRef.getRef())
 				.setField(getWrappedField((String) null, fieldName))
-				.setValueObjectRef(valueObjectRef));
+				.setValueObjectRef(valueObjectRef.getRef()));
 
 		return msgBuilder.build();
 	}
 
+	@Override
 	public DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid,
 																				Fields.InstanceFieldPut instanceFieldPut, Class fieldType, String followingUuid) {
 
@@ -558,6 +530,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	//</editor-fold>
 
 	//<editor-fold desc="Throwable messages">
+	@Override
 	public DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, AccessibleObject accessibleObject,
 																										Exception exception, String followingUuid) {
 
@@ -611,12 +584,13 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	//</editor-fold>
 
 	//<editor-fold desc="Return value messages">
-	public DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, String objectKey,
+	@Override
+	public DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, ObjectRef objectRef,
 																			boolean isVoid, String followingUuid) {
 
 		final ReturnValue.Builder contentBuilder = Values.ReturnValue.newBuilder();
 		if (!isVoid) {
-			contentBuilder.setObject(getWrappedObject(object, type, objectKey));
+			contentBuilder.setObject(getWrappedObject(object, type, objectRef));
 		}
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.RETURN_VALUE, concentratorUuid, followingUuid)
@@ -628,9 +602,4 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	}
 
 	//</editor-fold>
-
-	@Override
-	public void dontStoreObjects() {
-		this.storeUncachedObjects = false;
-	}
 }

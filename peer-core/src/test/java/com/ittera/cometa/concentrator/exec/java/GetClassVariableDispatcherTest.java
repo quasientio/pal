@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
@@ -245,7 +246,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		Object returned = objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef());
+		Object returned = objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()));
 		assertEquals(ClassForGetStaticTest.anObject, returned);
 		assertTrue(ClassForGetStaticTest.anObject == returned);
 	}
@@ -286,7 +287,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
 		assertTrue(doneMessage.getReturnValue().getObject().hasRef());
-		Object returned = objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef());
+		Object returned = objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()));
 		assertArrayEquals(ClassForGetStaticTest.objects, (Object[]) returned);
 		assertTrue(ClassForGetStaticTest.objects == returned);
 	}
@@ -327,7 +328,8 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
 		assertTrue(doneMessage.getReturnValue().getObject().hasRef());
-		Throwable returned = (Throwable) objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef());
+		Throwable returned = (Throwable) objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().
+			getObject().getRef()));
 		assertEquals(ClassForGetStaticTest.lastError, returned);
 	}
 }

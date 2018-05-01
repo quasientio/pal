@@ -1,7 +1,9 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
 import java.lang.reflect.Field;
@@ -38,7 +40,7 @@ abstract public class GetFieldDispatcher extends FieldOpDispatcher {
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, String valueObjKey,
+	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
 																						 AccessibleObject accessibleObject, Exception exceptionWhileLoading,
 																						 Exception exceptionWhileInvoking) {
 
@@ -49,7 +51,7 @@ abstract public class GetFieldDispatcher extends FieldOpDispatcher {
 		}
 
 		Class fieldType = ((Field) accessibleObject).getType();
-		return messageBuilder.buildReturnValue(peerUuid, valueObject, fieldType, valueObjKey, returnsVoid(), messageUuid);
+		return messageBuilder.buildReturnValue(peerUuid, valueObject, fieldType, valueObjRef, returnsVoid(), messageUuid);
 	}
 
 	@Override

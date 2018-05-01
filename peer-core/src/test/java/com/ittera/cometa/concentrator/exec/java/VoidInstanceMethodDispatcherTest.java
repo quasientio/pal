@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
@@ -95,15 +96,15 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// create and store new instance
 		ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "addHelloWorld";
 		Class[] parameterTypes = new Class[]{};
-		String[] argObjRefs = {};
+		ObjectRef[] argObjRefs = {};
 		Object[] args = {};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -111,7 +112,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
+		assertEquals(1, objectService.size());
 		assertTrue(doneMessage.getReturnValue().getIsVoid());
 		assertEquals(2, target.wordsCollected.size());
 	}
@@ -147,15 +148,15 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// create and store new instance
 		ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "addWord";
 		Class[] parameterTypes = new Class[]{String.class};
 		Object[] args = {"hello"};
-		String[] argObjRefs = {null};
+		ObjectRef[] argObjRefs = {null};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -163,7 +164,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
+		assertEquals(1, objectService.size());
 		assertTrue(doneMessage.getReturnValue().getIsVoid());
 		assertEquals(1, target.wordsCollected.size());
 	}
@@ -174,17 +175,17 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// create and store new instance
 		ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "addWordList";
 		Class[] parameterTypes = new Class[]{List.class};
 		List<String> wordList = Arrays.asList("the", "truth", "is", "out", "there");
-		String listObjRef = objectService.storeObject(wordList);
+		ObjectRef listObjRef = objectService.storeObject(wordList);
 		Object[] args = {null};
-		String[] argObjRefs = {listObjRef};
+		ObjectRef[] argObjRefs = {listObjRef};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -192,7 +193,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
+		assertEquals(2, objectService.size());
 		assertTrue(doneMessage.getReturnValue().getIsVoid());
 		assertEquals(wordList.size(), target.wordsCollected.size());
 	}
@@ -202,15 +203,15 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 	public void dispatchIncoming_withNullArgs_ok() {
 		// create and store new instance
 		ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "addWord";
 		Class[] parameterTypes = new Class[]{List.class};
 		Object[] args = {null};
-		String[] argObjRefs = {null};
+		ObjectRef[] argObjRefs = {null};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -255,16 +256,16 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// create and store new instance
 		ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "addWords";
 		Class[] parameterTypes = new Class[]{String[].class};
 		String[] words = {"hey", "there", "!", "whats", "up", "?"};
 		Object[] args = {words};
-		String[] argObjRefs = {null};
+		ObjectRef[] argObjRefs = {null};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -272,7 +273,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
+		assertEquals(1, objectService.size());
 		assertTrue(doneMessage.getReturnValue().getIsVoid());
 		assertEquals(4, target.wordsCollected.size());
 	}
@@ -309,15 +310,15 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// create and store new instance
 		ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "addWord";
 		Class[] parameterTypes = new Class[]{String.class};
 		Object[] args = {","};
-		String[] argObjRefs = {null};
+		ObjectRef[] argObjRefs = {null};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -325,7 +326,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
+		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
 		assertTrue(doneMessage.hasRaisedThrowable());
 		assertEquals("java.lang.reflect.InvocationTargetException",

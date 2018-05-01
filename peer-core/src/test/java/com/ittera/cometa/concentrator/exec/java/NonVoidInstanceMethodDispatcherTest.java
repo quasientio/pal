@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
@@ -90,15 +91,15 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		// create and store new instance
 		String value = "a lowercase string";
 		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest(value);
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "toUpperCase";
 		Class[] parameterTypes = new Class[]{};
-		String[] argObjRefs = {};
+		ObjectRef[] argObjRefs = {};
 		Object[] args = {};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -106,7 +107,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 2, objectService.size());
+		assertEquals(2, objectService.size());
 		String returned = null;
 		try {
 			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
@@ -148,15 +149,15 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		// create and store new instance
 		String value = "blank";
 		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest(value);
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "append";
 		Class[] parameterTypes = new Class[]{String.class};
-		String[] argObjRefs = {null};
+		ObjectRef[] argObjRefs = {null};
 		Object[] args = {"et"};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -164,7 +165,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 2, objectService.size());
+		assertEquals(2, objectService.size());
 		String returned = null;
 		try {
 			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
@@ -181,16 +182,16 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		// create and store new instance
 		String value = "blank";
 		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest(value);
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "append";
 		Class[] parameterTypes = new Class[]{String.class};
 		Object[] args = {null};
-		String etObjRef = objectService.storeObject("et");
-		String[] argObjRefs = {etObjRef};
+		ObjectRef etObjRef = objectService.storeObject("et");
+		ObjectRef[] argObjRefs = {etObjRef};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -198,7 +199,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 2, objectService.size());
+		assertEquals(3, objectService.size());
 		String returned = null;
 		try {
 			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
@@ -215,15 +216,15 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		// create and store new instance
 		String value = "blank";
 		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest(value);
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "append";
 		Class[] parameterTypes = new Class[]{String.class};
 		Object[] args = {null};
-		String[] argObjRefs = {null};
+		ObjectRef[] argObjRefs = {null};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -273,17 +274,17 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
 		// create and store new instance
 		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "join";
 		Class[] parameterTypes = new Class[]{String.class, String[].class};
 		String[] parts = {"package", "class", "method"};
 		String joiner = "::";
 		Object[] args = {joiner, parts};
-		String[] argObjRefs = {null, null};
+		ObjectRef[] argObjRefs = {null, null};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -291,7 +292,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 2, objectService.size());
+		assertEquals(2, objectService.size());
 		String returned = null;
 		try {
 			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
@@ -334,15 +335,15 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
 		// create and store new instance
 		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest();
-		String targetObjRef = objectService.storeObject(target);
+		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "toUpperCase";
 		Class[] parameterTypes = new Class[]{};
 		Object[] args = {};
-		String[] argObjRefs = {};
+		ObjectRef[] argObjRefs = {};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
-			targetObjRef, toNames(parameterTypes), args, argObjRefs);
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
 		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
@@ -350,7 +351,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
+		assertEquals(1, objectService.size());
 		assertTrue(doneMessage.hasRaisedThrowable());
 		assertEquals("java.lang.reflect.InvocationTargetException",
 			doneMessage.getRaisedThrowable().getThrowable().getType());

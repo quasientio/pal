@@ -1,10 +1,11 @@
 package com.ittera.cometa.concentrator.exec.java;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
-
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
+
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.junit.*;
 
@@ -70,7 +71,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		Context ctxt = new Context(null, -1, targetClass, signature);
 
 		// args
-		Object[] args = new Object[]{};
+		Object[] args = {};
 
 		// dispatch
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
@@ -94,8 +95,9 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
-		assertTrue(objectService.containsObjectRef(doneMessage.getReturnValue().getObject().getRef()));
-		assertThat(objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef()), instanceOf(targetClass));
+		assertTrue(objectService.containsObjectRef(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())));
+		assertThat(objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())),
+			instanceOf(targetClass));
 	}
 
 	@Test
@@ -129,55 +131,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
 		Class[] parameterTypes = {Integer.class};
 		Object[] args = {459};
-		String[] argRefs = {null};
-
-		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
-			toNames(parameterTypes), args, argRefs);
-
-		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
-
-		// expect
-		verifyDispatcherCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
-		assertTrue(objectService.containsObjectRef(doneMessage.getReturnValue().getObject().getRef()));
-		assertThat(objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef()), instanceOf(targetClass));
-	}
-
-	@Test
-	@Override
-	public void dispatchIncoming_withObjectRefArgs_ok() {
-
-		Class[] parameterTypes = {Integer.class};
-		Integer arg = new Integer(459);
-		String objRef = objectService.storeObject(arg);
-		Object[] args = {};
-		String[] argRefs = {objRef};
-
-		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
-			toNames(parameterTypes), args, argRefs);
-
-		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
-
-		// expect
-		verifyDispatcherCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(argRefs.length + 1, objectService.size());
-		assertTrue(objectService.containsObjectRef(doneMessage.getReturnValue().getObject().getRef()));
-		assertThat(objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef()), instanceOf(targetClass));
-		assertEquals(arg, ((ClassForConstructorTest) objectService.lookupObject(
-			doneMessage.getReturnValue().getObject().getRef())).someInteger);
-	}
-
-	@Test
-	@Override
-	public void dispatchIncoming_withNullArgs_ok() {
-
-		Class[] parameterTypes = {Integer.class};
-		Object[] args = {null};
-		String[] argRefs = {null};
+		ObjectRef[] argRefs = {null};
 
 		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
 			toNames(parameterTypes), args, argRefs);
@@ -189,10 +143,61 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
-		assertTrue(objectService.containsObjectRef(doneMessage.getReturnValue().getObject().getRef()));
-		assertThat(objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef()), instanceOf(targetClass));
+		assertTrue(objectService.containsObjectRef(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())));
+		assertThat(objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())),
+			instanceOf(targetClass));
+	}
+
+	@Test
+	@Override
+	public void dispatchIncoming_withObjectRefArgs_ok() {
+
+		Class[] parameterTypes = {Integer.class};
+		Integer arg = new Integer(459);
+		ObjectRef objRef = objectService.storeObject(arg);
+		Object[] args = {};
+		ObjectRef[] argRefs = {objRef};
+
+		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
+			toNames(parameterTypes), args, argRefs);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(2, objectService.size());
+		assertTrue(objectService.containsObjectRef(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())));
+		assertThat(objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())),
+			instanceOf(targetClass));
+		assertEquals(arg, ((ClassForConstructorTest) objectService.lookupObject(
+			ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()))).someInteger);
+	}
+
+	@Test
+	@Override
+	public void dispatchIncoming_withNullArgs_ok() {
+
+		Class[] parameterTypes = {Integer.class};
+		Object[] args = {null};
+		ObjectRef[] argRefs = {null};
+
+		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
+			toNames(parameterTypes), args, argRefs);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(1, objectService.size());
+		assertTrue(objectService.containsObjectRef(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())));
+		assertThat(objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())),
+			instanceOf(targetClass));
 		assertNull(((ClassForConstructorTest) objectService.lookupObject(
-			doneMessage.getReturnValue().getObject().getRef())).someInteger);
+			ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()))).someInteger);
 	}
 
 	/**
@@ -203,7 +208,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 	 * Class targetClass = ClassForConstructorTest.class;
 	 * Class[] parameterTypes = {int.class};
 	 * Object[] args = {459};
-	 * String[] argRefs = {null};
+	 * ObjectRef[] argRefs = {null};
 	 * <p>
 	 * String[] parameterTypesNamesArray = Arrays.stream(parameterTypes).map(p -> p.getName()).collect(toList()).
 	 * toArray(new String[0]);
@@ -217,7 +222,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 	 * // expect
 	 * verifyDispatcherCalledOnce();
 	 * assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-	 * assertEquals(args.length + 1, objectService.size());
+	 * assertEquals(1, objectService.size());
 	 * assertTrue(objectService.containsObjectRef(doneMessage.getReturnValue().getObject().getRef()));
 	 * assertThat(objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef()), instanceOf(targetClass));
 	 * }
@@ -255,7 +260,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		Class[] parameterTypes = {String[].class};
 		Object[] args = new Object[1];
 		args[0] = new String[]{"hello ", "world", "!"}; //varargs must be wrapped in array of expected type
-		String[] argRefs = {null};
+		ObjectRef[] argRefs = {null};
 
 		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
 			toNames(parameterTypes), args, argRefs);
@@ -266,9 +271,10 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length + 1, objectService.size());
-		assertTrue(objectService.containsObjectRef(doneMessage.getReturnValue().getObject().getRef()));
-		assertThat(objectService.lookupObject(doneMessage.getReturnValue().getObject().getRef()), instanceOf(targetClass));
+		assertEquals(1, objectService.size());
+		assertTrue(objectService.containsObjectRef(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())));
+		assertThat(objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())),
+			instanceOf(targetClass));
 	}
 
 	@Test
@@ -283,7 +289,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		Context ctxt = new Context(null, -1, targetClass, signature);
 
 		// args
-		Object[] args = new Object[]{"49385InvalidNumber1001"};
+		Object[] args = {"49385InvalidNumber1001"};
 
 		// dispatch
 		try {
@@ -301,8 +307,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 	public void dispatchIncoming_throwsException_exceptionThrown() {
 
 		Class[] parameterTypes = {String.class};
-		Object[] args = new Object[]{"49385InvalidNumber1001"};
-		String[] argRefs = {null};
+		Object[] args = {"49385InvalidNumber1001"};
+		ObjectRef[] argRefs = {null};
 
 		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
 			toNames(parameterTypes), args, argRefs);
@@ -313,7 +319,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(args.length, objectService.size());
+		assertEquals(0, objectService.size());
 		assertTrue(doneMessage.hasRaisedThrowable());
 		assertEquals("java.lang.reflect.InvocationTargetException",
 			doneMessage.getRaisedThrowable().getThrowable().getType());

@@ -2,6 +2,7 @@ package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
@@ -17,6 +18,7 @@ import javax.inject.Inject;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 
+import java.util.Arrays;
 import java.util.UUID;
 import java.util.List;
 import java.util.Optional;
@@ -41,11 +43,12 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	@Override
 	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
 
-		return messageBuilder.buildConstructor(peerUuid, ctxt, sender, args);
+		return messageBuilder.buildConstructor(peerUuid, ctxt, sender, storeObject(sender), args, Arrays.stream(args).map(
+			a -> storeObject(a)).toArray(ObjectRef[]::new));
 	}
 
 	@Override
-	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef, boolean isVoid) {
+	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
 		final Constructor constructor = ((ConstructorSignature) ctxt.getSignature()).getConstructor();
 
@@ -60,7 +63,7 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, String valueObjKey,
+	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
 																						 AccessibleObject accessibleObject, Exception exceptionWhileLoading,
 																						 Exception exceptionWhileInvoking) {
 
@@ -71,7 +74,7 @@ public class ConstructorDispatcher extends BaseDispatcher {
 		}
 
 		Class constructorType = ((Constructor) accessibleObject).getDeclaringClass();
-		return messageBuilder.buildReturnValue(peerUuid, valueObject, constructorType, valueObjKey, false, messageUuid);
+		return messageBuilder.buildReturnValue(peerUuid, valueObject, constructorType, valueObjRef, false, messageUuid);
 	}
 
 	@Override

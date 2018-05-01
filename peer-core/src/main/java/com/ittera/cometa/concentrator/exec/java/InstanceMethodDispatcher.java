@@ -2,6 +2,7 @@ package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
@@ -16,6 +17,7 @@ import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 import java.lang.reflect.Method;
 import java.lang.reflect.AccessibleObject;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.Optional;
@@ -38,12 +40,12 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 
 	@Override
 	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
-
-		return messageBuilder.buildInstanceMethod(peerUuid, ctxt, sender, target, args);
+		return messageBuilder.buildInstanceMethod(peerUuid, ctxt, sender, storeObject(sender), target, storeObject(target),
+			args, Arrays.stream(args).map(a -> storeObject(a)).toArray(ObjectRef[]::new));
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef, boolean isVoid) {
+	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
 		final Method method = ((MethodSignature) ctxt.getSignature()).getMethod();
 		if (value instanceof InvocationException) {
@@ -95,7 +97,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceMethodCall().getObject(), objClass);
 			logger.debug("Unwrapped target: {}", target);
 		} else {
-			target = objectService.lookupObject(dataMessage.getInstanceMethodCall().getObjectRef());
+			target = objectService.lookupObject(ObjectRef.from(dataMessage.getInstanceMethodCall().getObjectRef()));
 			logger.debug("Loaded target: {}", target);
 		}
 		return Optional.of(target);

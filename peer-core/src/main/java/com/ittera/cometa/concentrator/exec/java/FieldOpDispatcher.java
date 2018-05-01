@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -16,13 +17,13 @@ public abstract class FieldOpDispatcher extends BaseDispatcher {
 	@Override
 	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target,
 																										Object[] args) {
-
 		Object parameter = (args == null || args.length == 0) ? null : args[0];
-		return messageBuilder.buildFieldOp(peerUuid, ctxt, getBeforeExecMessageType(), sender, target, parameter);
+		return messageBuilder.buildFieldOp(peerUuid, ctxt, getBeforeExecMessageType(), sender, storeObject(sender),
+			target, storeObject(target), parameter, storeObject(parameter));
 	}
 
 	@Override
-	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef, boolean isVoid) {
+	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
 		Field field = ((FieldSignature) ctxt.getSignature()).getField();
 

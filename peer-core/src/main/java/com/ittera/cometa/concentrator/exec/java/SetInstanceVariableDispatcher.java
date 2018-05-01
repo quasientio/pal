@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.lang.ObjectRef;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
@@ -52,7 +53,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldPut().getObject(), objClass);
 			logger.debug("Unwrapped target: {}", target);
 		} else {
-			target = objectService.lookupObject(dataMessage.getInstanceFieldPut().getObjectRef());
+			target = objectService.lookupObject(ObjectRef.from(dataMessage.getInstanceFieldPut().getObjectRef()));
 			logger.debug("Loaded target: {}", target);
 		}
 		return Optional.of(target);
@@ -77,14 +78,14 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 			value = Unwrapper.unwrapObject(dataMessage.getInstanceFieldPut().getValueObject(), field.getType());
 			logger.debug("Unwrapped value: {}", value);
 		} else {
-			value = objectService.lookupObject(dataMessage.getInstanceFieldPut().getValueObjectRef());
+			value = objectService.lookupObject(ObjectRef.from(dataMessage.getInstanceFieldPut().getValueObjectRef()));
 			logger.debug("Loaded value: {}", value);
 		}
 		return Optional.of(value);
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, String valueObjKey,
+	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
 																						 AccessibleObject accessibleObject, Exception exceptionWhileLoading,
 																						 Exception exceptionWhileInvoking) {
 

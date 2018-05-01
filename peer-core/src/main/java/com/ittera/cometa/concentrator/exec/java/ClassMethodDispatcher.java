@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 import com.ittera.cometa.common.ObjectService;
 
@@ -16,6 +17,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.AccessibleObject;
 
 import java.util.List;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.UUID;
 
@@ -36,11 +38,12 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 
 	@Override
 	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
-		return messageBuilder.buildClassMethod(peerUuid, ctxt, sender, args);
+		return messageBuilder.buildClassMethod(peerUuid, ctxt, sender, storeObject(sender), args, Arrays.stream(args).map(
+			a -> storeObject(a)).toArray(ObjectRef[]::new));
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, String objectRef, boolean isVoid) {
+	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
 		final Method method = ((MethodSignature) ctxt.getSignature()).getMethod();
 

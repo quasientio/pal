@@ -1,10 +1,11 @@
 package com.ittera.cometa.messages;
 
+import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.messages.protobuf.data.Fields;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
-
-import com.ittera.cometa.common.lang.Context;
 
 import java.util.UUID;
 
@@ -12,55 +13,81 @@ import java.lang.reflect.AccessibleObject;
 
 public interface DataMessageBuilder {
 
+	/**
+	 * constructor builders
+	 */
 	DataMessage buildEmptyConstructor(UUID concentratorUuid, String className);
 
 	DataMessage buildNonEmptyConstructor(UUID concentratorUuid, String className, String[] parameterTypes, Object[] args,
-																			 String[] argObjRefs);
+																			 ObjectRef[] argObjRefs);
 
-	DataMessage buildConstructor(UUID concentratorUuid, Context context, Object sender, Object[] args);
+	DataMessage buildConstructor(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+															 Object[] args, ObjectRef[] argObjRefs);
 
-	DataMessage buildInstanceMethod(UUID concentratorUuid, String className, String methodName, String objRef,
-																	String[] parameterTypes, Object[] args, String[] argObjRefs);
+	/**
+	 * instance method builders
+	 */
+	DataMessage buildInstanceMethod(UUID concentratorUuid, String className, String methodName, Object target,
+																	ObjectRef targetObjRef, String[] parameterTypes, Object[] args,
+																	ObjectRef[] argObjRefs);
 
-	DataMessage buildInstanceMethod(UUID concentratorUuid, Context context, Object sender, Object target, Object[] args);
+	DataMessage buildInstanceMethod(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+																	Object target, ObjectRef targetObjRef, Object[] args, ObjectRef[] argObjRefs);
 
+	/**
+	 * class method builders
+	 */
 	DataMessage buildClassMethod(UUID concentratorUuid, String className, String methodName, String[] parameterTypes,
-															 Object[] args, String[] argObjRefs);
+															 Object sender, ObjectRef senderObjRef, Object[] args, ObjectRef[] argObjRefs);
 
-	DataMessage buildClassMethod(UUID concentratorUuid, Context context, Object sender, Object[] args);
+	DataMessage buildClassMethod(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+															 Object[] args, ObjectRef[] argObjRefs);
 
-	DataMessage buildFieldOp(UUID concentratorUuid, Context context, Type type, Object sender, Object target, Object arg);
+	/**
+	 * field op builders
+	 */
+	DataMessage buildFieldOp(UUID concentratorUuid, Context context, Type type, Object sender,
+													 ObjectRef senderObjRef, Object target, ObjectRef targetObjRef, Object arg,
+													 ObjectRef argObjRef);
 
 	DataMessage buildGetStatic(UUID concentratorUuid, String className, String fieldName);
 
-	DataMessage buildGetObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef);
+	DataMessage buildGetObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef);
 
 	DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueClassName,
 														 Object value);
 
-	DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueObjectRef);
+	DataMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, ObjectRef valueObjectRef);
 
+	DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef,
+														 String valueClassName, Object value);
+
+	DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef,
+														 ObjectRef valueObjectRef);
+
+	/**
+	 * field op done builders
+	 */
 	DataMessage buildFieldOpDone(UUID concentratorUuid, Context context, Type type);
 
 	DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid, Fields.StaticFieldPut staticFieldPut,
 																 Class fieldType, String followingUuid);
 
-	DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef,
-														 String valueClassName, Object value);
-
-	DataMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, String targetObjRef,
-														 String valueObjectRef);
 
 	DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid,
 																 Fields.InstanceFieldPut instanceFieldPut, Class fieldType, String followingUuid);
 
+	/**
+	 * return builders
+	 */
 	DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, AccessibleObject accessibleObject,
 																						 Exception exception, String followingUuid);
 
-	DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, String objectKey, boolean isVoid,
+	DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, ObjectRef objectRef, boolean isVoid,
 															 String followingUuid);
 
-	void dontStoreObjects();
-
+	/**
+	 * other
+	 */
 	void resetThreadLocalSequence();
 }

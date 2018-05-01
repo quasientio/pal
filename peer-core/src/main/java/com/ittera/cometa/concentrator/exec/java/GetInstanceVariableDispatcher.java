@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.lang.ObjectRef;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
@@ -49,7 +50,7 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldGet().getObject(), objClass);
 			logger.debug("Unwrapped target: {}", target);
 		} else {
-			target = objectService.lookupObject(dataMessage.getInstanceFieldGet().getObjectRef());
+			target = objectService.lookupObject(ObjectRef.from(dataMessage.getInstanceFieldGet().getObjectRef()));
 			logger.debug("Loaded target: {}", target);
 		}
 		return Optional.of(target);

@@ -8,6 +8,7 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.DataMessageBuilder;
 
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.BiMapObjectService;
 
@@ -54,7 +55,6 @@ public class AppRunner {
 
 		final Injector injector = Guice.createInjector(module);
 		dataMessageBuilder = injector.getInstance(DataMessageBuilder.class);
-		dataMessageBuilder.dontStoreObjects();
 
 		// configure services
 		final Set<Service> services = new HashSet<>();
@@ -94,7 +94,7 @@ public class AppRunner {
 
 		// send 1st request
 		DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
-			parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+			parameterTypesNamesArray, this, null, parameters, new ObjectRef[parameterTypes.length]);
 		messageFuture = thinPeer.sendToLogAsync(requestMsg);
 		reqsSent++;
 
@@ -111,7 +111,7 @@ public class AppRunner {
 		// send rest of requests
 		for (; reqsSent < opts.requests; reqsSent++) {
 			requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
-				parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+				parameterTypesNamesArray, this, null, parameters, new ObjectRef[parameterTypes.length]);
 			thinPeer.sendAndReceive(requestMsg);
 		}
 
@@ -200,7 +200,7 @@ public class AppRunner {
 		// send all requests
 		for (; reqsSent < opts.requests; reqsSent++) {
 			DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
-				parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+				parameterTypesNamesArray, this, null, parameters, new ObjectRef[parameterTypes.length]);
 			if (opts.sendAndForget) {
 				// send to log and forget
 				thinPeer.sendToLogAndForget(requestMsg);

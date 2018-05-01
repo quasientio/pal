@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 import com.ittera.cometa.common.lang.reflect.Signature;
 
@@ -95,7 +96,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
+		assertEquals(0, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
 		assertEquals(fieldName, doneMessage.getStaticFieldPutDone().getField().getName());
 		assertEquals(newFieldValue, ClassForPutStaticTest.someShort);
@@ -140,7 +141,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
+		assertEquals(0, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
 		assertEquals(fieldName, doneMessage.getStaticFieldPutDone().getField().getName());
 		assertArrayEquals(newFieldValue, ClassForPutStaticTest.bytes);
@@ -187,7 +188,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
+		assertEquals(0, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
 		assertEquals(fieldName, doneMessage.getStaticFieldPutDone().getField().getName());
 		assertEquals(newFieldValue, ClassForPutStaticTest.someBoolean);
@@ -232,7 +233,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		// expect
 		verifyDispatcherCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
+		assertEquals(0, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
 		assertEquals(fieldName, doneMessage.getStaticFieldPutDone().getField().getName());
 		assertEquals(newFieldValue, ClassForPutStaticTest.aString);
@@ -267,7 +268,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		String fieldName = "anObject";
 		LinkedList newFieldValue = new LinkedList();
-		String valueObjRef = objectService.storeObject(newFieldValue);
+		ObjectRef valueObjRef = objectService.storeObject(newFieldValue);
 
 		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
 
@@ -312,7 +313,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		String fieldName = "objects";
 		Object[] newFieldValue = {1, "a", false, 9283.95d};
-		String valueObjRef = objectService.storeObject(newFieldValue);
+		ObjectRef valueObjRef = objectService.storeObject(newFieldValue);
 
 		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
 
@@ -357,7 +358,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		String fieldName = "lastError";
 		Exception newFieldValue = new Exception("not working");
-		String valueObjRef = objectService.storeObject(newFieldValue);
+		ObjectRef valueObjRef = objectService.storeObject(newFieldValue);
 
 		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
 
