@@ -1,5 +1,7 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 
@@ -27,7 +29,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String param = "GIVE ME THIS IN LOWERCASE";
 		Object[] parameters = new Object[]{param};
 		String[] parameterTypes = new String[]{param.getClass().getName()};
-		String[] paramObjRefs = new String[parameters.length];
+		ObjectRef[] paramObjRefs = new ObjectRef[parameters.length];
 
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs);
 
@@ -45,7 +47,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		String[] parameterTypes = new String[]{};
 		Object[] parameters = new Object[]{};
-		String[] paramObjRefs = new String[parameters.length];
+		ObjectRef[] paramObjRefs = new ObjectRef[parameters.length];
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs);
 
 		// test returned value
@@ -61,19 +63,19 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "nonVoidSumUpList";
 
 		// new ArrayList<Integer>
-		String listObjRef = callConstructor("java.util.ArrayList").getObject().getRef();
+		ObjectRef listObjRef = ObjectRef.from(callConstructor("java.util.ArrayList").getObject().getRef());
 
 		// add some int's
 		int[] someInts = {39, 5, 58, 32, 70, 42};
 		for (int someInt : someInts) {
 			callInstanceMethod("java.util.ArrayList", "add", listObjRef,
-				new String[]{"java.lang.Integer"}, new Object[]{someInt}, new String[someInts.length]);
+				new String[]{"java.lang.Integer"}, new Object[]{someInt}, new ObjectRef[someInts.length]);
 		}
 
 		// call method
 		String[] parameterTypes = new String[]{"java.util.ArrayList"};
 		Object[] params = new Object[parameterTypes.length];
-		String[] objRefs = new String[]{listObjRef};
+		ObjectRef[] objRefs = new ObjectRef[]{listObjRef};
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, params, objRefs);
 
 		// test returned value
@@ -92,7 +94,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		// call method
 		String[] parameterTypes = new String[]{};
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes,
-			new Object[parameterTypes.length], new String[parameterTypes.length]);
+			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
 		// test returned value
 		assertValueIsNullObjectOfType(retValue, "java.lang.Object");
@@ -110,7 +112,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String[] parameterTypes = new String[]{param.getClass().getName()};
 		Object[] parameters = new Object[]{param};
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters,
-			new String[parameterTypes.length]);
+			new ObjectRef[parameterTypes.length]);
 
 		// test returned value
 		char[] shouldReturn = param.toCharArray();
@@ -129,7 +131,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String[] parameterTypes = new String[]{};
 		Object[] parameters = new Object[]{};
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters,
-			new String[parameterTypes.length]);
+			new ObjectRef[parameterTypes.length]);
 
 		// test returned value
 		Long[] shouldReturn = new Long[]{};
@@ -146,7 +148,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		// call method
 		String[] parameterTypes = new String[]{};
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes,
-			new Object[parameterTypes.length], new String[parameterTypes.length]);
+			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
 		// test returned value
 		Boolean[] shouldReturn = null;
@@ -164,7 +166,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		Object[] parameters = new Object[]{};
 
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters,
-			new String[parameterTypes.length]);
+			new ObjectRef[parameterTypes.length]);
 
 		// test returned value
 		assertValueIsObjectRefOfType(retValue, "java.lang.Thread");
@@ -173,7 +175,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String appRef = retValue.getObject().getRef();
 
 		retValue = callClassMethod(className, methodName, parameterTypes, parameters,
-			new String[parameterTypes.length]);
+			new ObjectRef[parameterTypes.length]);
 
 		// test returned value
 		assertValueIsObjectRefOfType(retValue, "java.lang.Thread");
@@ -189,7 +191,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String[] parameterTypes = new String[]{};
 
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes,
-			new Object[parameterTypes.length], new String[parameterTypes.length]);
+			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
 		assertValueIsArrayOfType(retValue, String.format("[L%s;", "java.lang.Thread"));
 	}

@@ -1,5 +1,7 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import org.junit.Test;
 
 /**
@@ -21,7 +23,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		Object[] parameters = new Object[]{"Hello from a unit test"};
 
 		// test call
-		callVoidClassMethod(className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length]);
 	}
 
 	@Test
@@ -33,7 +35,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		Object[] parameters = new Object[]{2, "more than an argument"};
 
 		// test call
-		callVoidClassMethod(className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length]);
 	}
 
 	@Test
@@ -45,7 +47,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		Object[] parameters = new Object[]{};
 
 		// test call
-		callVoidClassMethod(className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length]);
 	}
 
 
@@ -59,7 +61,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		Object[] parameters = new Object[]{new String[]{}};
 
 		// test call
-		callVoidClassMethod(className, methodName, parameterTypes, parameters, new String[parameterTypes.length]);
+		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length]);
 	}
 
 	@Test
@@ -68,19 +70,19 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "sumUpList";
 
 		//new ArrayList<Integer>
-		String listObjRef = callConstructor("java.util.ArrayList").getObject().getRef();
+		ObjectRef listObjRef = ObjectRef.from(callConstructor("java.util.ArrayList").getObject().getRef());
 
 		//add some int's
 		int[] someInts = {39, 5, 58, 32, 70, 42};
 		for (int someInt : someInts) {
 			callInstanceMethod("java.util.ArrayList", "add", listObjRef,
-				new String[]{"java.lang.Integer"}, new Object[]{someInt}, new String[someInts.length]);
+				new String[]{"java.lang.Integer"}, new Object[]{someInt}, new ObjectRef[someInts.length]);
 		}
 
 
 		String[] parameterTypes = new String[]{"java.util.ArrayList"};
 		Object[] parameters = new Object[parameterTypes.length];
-		String[] paramObjRefs = new String[]{listObjRef};
+		ObjectRef[] paramObjRefs = new ObjectRef[]{listObjRef};
 
 		// test call
 		callVoidClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs);

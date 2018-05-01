@@ -1,12 +1,14 @@
 package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.cxn.ThinPeer;
+
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 import com.ittera.cometa.messages.protobuf.data.Fields.*;
 import com.ittera.cometa.messages.DataMessageBuilder;
 
+import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.BiMapObjectService;
 
@@ -52,7 +54,6 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 
 		final Injector injector = Guice.createInjector(module);
 		dataMessageBuilder = injector.getInstance(DataMessageBuilder.class);
-		dataMessageBuilder.dontStoreObjects();
 
 		// configure services
 		final Set<Service> services = new HashSet<>();
@@ -82,7 +83,7 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 	 **/
 
 	protected ReturnValue callConstructor(String className, Class[] parameterTypes, Object[] args,
-																				String[] argObjRefs) throws Exception {
+																				ObjectRef[] argObjRefs) throws Exception {
 
 		String[] parameterTypesNamesArray = new String[parameterTypes.length];
 		for (int i = 0; i < parameterTypes.length; i++) {
@@ -134,7 +135,7 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 		assertEquals(staticFieldPutDone.getField().getName(), fieldName);
 	}
 
-	protected ReturnValue callGetInstanceVar(String className, String fieldName, String objRef) throws Exception {
+	protected ReturnValue callGetInstanceVar(String className, String fieldName, ObjectRef objRef) throws Exception {
 
 		DataMessage requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, objRef);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
@@ -145,7 +146,7 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 		return replyMsg.getReturnValue();
 	}
 
-	protected void callPutField(String className, String fieldName, String targetObjRef,
+	protected void callPutField(String className, String fieldName, ObjectRef targetObjRef,
 															String valueClassName, Object value) throws Exception {
 
 		DataMessage requestMsg = dataMessageBuilder.buildPutObject(clientId, className, fieldName, targetObjRef,
@@ -160,11 +161,11 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 	}
 
 	protected ReturnValue callClassMethod(String className, String methodName, String[] parameterTypeNames,
-																				Object[] parameters, String[] argObjRefs)
+																				Object[] parameters, ObjectRef[] paramObjRefs)
 		throws Exception {
 
 		DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName,
-			parameterTypeNames, parameters, argObjRefs);
+			parameterTypeNames, this, null, parameters, paramObjRefs);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
@@ -174,11 +175,11 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 	}
 
 	protected void callVoidClassMethod(String className, String methodName, String[] parameterTypeNames,
-																		 Object[] parameters, String[] argObjRefs)
+																		 Object[] parameters, ObjectRef[] paramObjRefs)
 		throws Exception {
 
 		DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName,
-			parameterTypeNames, parameters, argObjRefs);
+			parameterTypeNames, this, null, parameters, paramObjRefs);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
@@ -187,11 +188,11 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 	}
 
-	protected ReturnValue callInstanceMethod(String className, String methodName, String targetObjRef, String[]
-		parameterTypeNames, Object[] parameters, String[] argObjRefs) throws Exception {
+	protected ReturnValue callInstanceMethod(String className, String methodName, ObjectRef targetObjRef, String[]
+		parameterTypeNames, Object[] parameters, ObjectRef[] paramObjRefs) throws Exception {
 
-		DataMessage requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, targetObjRef,
-			parameterTypeNames, parameters, argObjRefs);
+		DataMessage requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, null,
+			targetObjRef, parameterTypeNames, parameters, paramObjRefs);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
@@ -200,11 +201,11 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 		return replyMsg.getReturnValue();
 	}
 
-	protected void callVoidInstanceMethod(String className, String methodName, String targetObjRef, String[]
-		parameterTypeNames, Object[] parameters, String[] argObjRefs) throws Exception {
+	protected void callVoidInstanceMethod(String className, String methodName, ObjectRef targetObjRef, String[]
+		parameterTypeNames, Object[] parameters, ObjectRef[] paramObjRefs) throws Exception {
 
-		DataMessage requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, targetObjRef,
-			parameterTypeNames, parameters, argObjRefs);
+		DataMessage requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, null,
+			targetObjRef, parameterTypeNames, parameters, paramObjRefs);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions

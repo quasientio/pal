@@ -1,6 +1,9 @@
 package com.ittera.cometa.concentrator.swing;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.cxn.ThinPeer;
+
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -23,7 +26,8 @@ public class SwingAppTest {
 		Object[] parameters = new Object[]{new String[]{}};
 
 		DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(),
-			className, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+			className, methodName, parameterTypesNamesArray, null, null, parameters,
+			new ObjectRef[parameterTypes.length]);
 		DataMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
 	}
 }

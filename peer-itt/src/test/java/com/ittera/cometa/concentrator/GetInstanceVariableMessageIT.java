@@ -1,5 +1,7 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 
@@ -23,7 +25,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_publicIntegerNotNull_intReturned() throws Exception {
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "anInt", newObjRef);
@@ -38,7 +40,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_privateNullInteger_nullIntReturned() throws Exception {
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "aNullInt", newObjRef);
@@ -50,7 +52,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_protectedStringNotNull_stringReturned() throws Exception {
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "someString", newObjRef);
@@ -65,7 +67,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_getPublicStringNull_nullStringReturned() throws Exception {
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "aNullStr", newObjRef);
@@ -77,7 +79,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_packageVisibleBooleanNull_nullBoolReturned() throws Exception {
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "aNullBool", newObjRef);
@@ -89,7 +91,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_publicBoolNotNull_boolReturned() throws Exception {
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "aBool", newObjRef);
@@ -104,7 +106,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_privateShortNotZero_shortReturned() throws Exception {
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "someShort", newObjRef);

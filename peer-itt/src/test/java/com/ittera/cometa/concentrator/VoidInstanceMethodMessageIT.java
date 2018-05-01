@@ -1,5 +1,7 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import org.junit.Test;
 
 /**
@@ -18,12 +20,12 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "doSomething";
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now call the method
 		String[] parameterTypes = new String[]{};
 		callVoidInstanceMethod(className, methodName, newObjRef, parameterTypes, new Object[parameterTypes.length],
-			new String[parameterTypes.length]);
+			new ObjectRef[parameterTypes.length]);
 	}
 
 	@Test
@@ -32,14 +34,14 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "testArg";
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now call the method
 		String param = "testing testing 1 2 3";
 		Object[] parameters = new Object[]{param};
 		String[] parameterTypes = new String[]{param.getClass().getName()};
 		callVoidInstanceMethod(className, methodName, newObjRef, parameterTypes, parameters,
-			new String[parameterTypes.length]);
+			new ObjectRef[parameterTypes.length]);
 	}
 
 	@Test
@@ -48,11 +50,11 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "printDate";
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now call the method
 		String[] parameterTypes = new String[]{};
 		callVoidInstanceMethod(className, methodName, newObjRef, parameterTypes, new Object[parameterTypes.length],
-			new String[parameterTypes.length]);
+			new ObjectRef[parameterTypes.length]);
 	}
 }

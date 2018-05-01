@@ -1,5 +1,7 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
@@ -31,7 +33,7 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 		Integer newValue = 500;
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// get instance variable, assert original value
 		ReturnValue retValue = callGetInstanceVar(className, fieldName, newObjRef);
@@ -61,7 +63,7 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 		Integer newValue = null;
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// test with a non null integer
 		ReturnValue retValue = callGetInstanceVar(className, fieldName, newObjRef);

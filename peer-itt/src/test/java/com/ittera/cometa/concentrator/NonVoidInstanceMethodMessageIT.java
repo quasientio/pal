@@ -1,5 +1,7 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 
@@ -23,12 +25,12 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "giveMeX";
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now call the method
 		String[] parameterTypes = new String[]{};
 		ReturnValue retValue = callInstanceMethod(className, methodName, newObjRef, parameterTypes,
-			new Object[parameterTypes.length], new String[parameterTypes.length]);
+			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
 		// test returned value
 		Integer shouldReturn = 4;
@@ -44,12 +46,12 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "getListOfStrings";
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now call the method
 		String[] parameterTypes = new String[]{};
 		ReturnValue retValue = callInstanceMethod(className, methodName, newObjRef, parameterTypes,
-			new Object[parameterTypes.length], new String[parameterTypes.length]);
+			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
 		// test returned value
 		assertValueIsObjectRefOfType(retValue, "java.util.List");
@@ -60,12 +62,12 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "getListOfStringsShorthand";
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		// now call the method
 		String[] parameterTypes = new String[]{};
 		ReturnValue retValue = callInstanceMethod(className, methodName, newObjRef, parameterTypes,
-			new Object[parameterTypes.length], new String[parameterTypes.length]);
+			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
 		// test returned value
 		assertValueIsObjectRefOfType(retValue, "java.util.List");
@@ -77,23 +79,23 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "addOffsetToListAndSumUp";
 
 		// new ArrayList<Integer>
-		String listObjRef = callConstructor("java.util.ArrayList").getObject().getRef();
+		ObjectRef listObjRef = ObjectRef.from(callConstructor("java.util.ArrayList").getObject().getRef());
 
 		// add some int's to the list
 		int[] someInts = {1, 2, 3, 5, 7, 9};
 		for (int someInt : someInts) {
 			callInstanceMethod("java.util.ArrayList", "add", listObjRef,
-				new String[]{"java.lang.Integer"}, new Object[]{someInt}, new String[someInts.length]);
+				new String[]{"java.lang.Integer"}, new Object[]{someInt}, new ObjectRef[someInts.length]);
 		}
 
 		// create new instance
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		//prepare parameters, expected return value
 		String[] parameterTypes = new String[]{"int", "java.util.ArrayList"};
 		int offsetParam = 10;
 		Object[] parameters = new Object[]{offsetParam, null};
-		String[] paramObjRefs = new String[]{null, listObjRef};
+		ObjectRef[] paramObjRefs = new ObjectRef[]{null, listObjRef};
 
 		// now call the method
 		ReturnValue retValue = callInstanceMethod(className, methodName, newObjRef, parameterTypes, parameters,

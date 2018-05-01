@@ -1,6 +1,9 @@
 package com.ittera.cometa.concentrator.swing;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.cxn.ThinPeer;
+
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
@@ -28,7 +31,8 @@ public class SwingAppActor {
 
 
 		final DataMessage mainRequest = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(),
-			swingAppClassName, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+			swingAppClassName, methodName, parameterTypesNamesArray, null, null,
+			parameters, new ObjectRef[parameterTypes.length]);
 
 		// start the swingapp by calling main in background
 		new Thread(() -> thinPeer.sendToLogAndForget(mainRequest)).start();
@@ -51,7 +55,8 @@ public class SwingAppActor {
 			parameters = new Object[]{false};
 			parameterTypesNamesArray = new String[]{"boolean"};
 			requestMsg = dataMessageBuilder.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
-				methodName, myFrame.getRef(), parameterTypesNamesArray, parameters, new String[parameters.length]);
+				methodName, null, ObjectRef.from(myFrame.getRef()), parameterTypesNamesArray, parameters,
+				new ObjectRef[parameters.length]);
 			thinPeer.sendAndReceive(requestMsg);
 
 			sleep(1);
@@ -59,7 +64,8 @@ public class SwingAppActor {
 			// reset visible = true
 			parameters = new Object[]{Boolean.TRUE};
 			requestMsg = dataMessageBuilder.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
-				methodName, myFrame.getRef(), parameterTypesNamesArray, parameters, new String[parameters.length]);
+				methodName, null, ObjectRef.from(myFrame.getRef()), parameterTypesNamesArray, parameters,
+				new ObjectRef[parameters.length]);
 			thinPeer.sendAndReceive(requestMsg);
 		}
 
