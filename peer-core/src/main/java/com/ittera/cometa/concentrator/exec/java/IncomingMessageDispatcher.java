@@ -5,8 +5,13 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import javax.inject.Singleton;
 import javax.inject.Inject;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Singleton
-public class IncomingMessageDispatcher {
+public class IncomingMessageDispatcher  {
+
+	protected static final Logger logger = LoggerFactory.getLogger(IncomingMessageDispatcher.class);
 
 	// constructor & method dispatchers
 	@Inject

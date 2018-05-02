@@ -24,7 +24,7 @@ class ClassForPutFieldTest {
 	byte[] bytes;
 	Long aLong = 8238l;
 	String aString = "I am a normal string";
-	java.util.List anObject = new java.util.ArrayList();
+	java.util.List aList = new java.util.ArrayList();
 	Object[] objects;
 	Throwable lastError = new Exception("dummy exception");
 }
@@ -242,7 +242,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 	public void dispatch_object_ok() throws Throwable {
 
 		// signature
-		String fieldName = "anObject";
+		String fieldName = "aList";
 		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
 		// ctxt
@@ -257,14 +257,14 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		// expect
 		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
-		assertEquals(newFieldValue, target.anObject);
+		assertEquals(newFieldValue, target.aList);
 	}
 
 	@Override
 	@Test
 	public void dispatchIncoming_object_ok() {
 
-		String fieldName = "anObject";
+		String fieldName = "aList";
 		List newFieldValue = Arrays.asList(938, 3038, 948, 394);
 		ObjectRef newValueObjRef = objectService.storeObject(newFieldValue);
 
@@ -284,8 +284,59 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertEquals(2, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
 		assertEquals(fieldName, doneMessage.getInstanceFieldPutDone().getField().getName());
-		assertEquals(newFieldValue, target.anObject);
-		assertTrue(newFieldValue == target.anObject);
+		assertEquals(newFieldValue, target.aList);
+		assertTrue(newFieldValue == target.aList);
+	}
+
+	@Override
+	@Test
+	public void dispatch_nullObject_ok() throws Throwable {
+
+		// signature
+		String fieldName = "aList";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		List newFieldValue = null;
+		Object[] args = {newFieldValue};
+		ClassForPutFieldTest target = new ClassForPutFieldTest();
+		assertNotNull(target.aList);
+		Object returned = dispatcher.dispatch(ctxt, this, target, args);
+
+		// expect
+		verifyDispatcherCalledTwice();
+		assertEquals(Void.getInstance(), returned);
+		assertNull(target.aList);
+	}
+
+	@Override
+	@Test
+	public void dispatchIncoming_nullObject_ok() {
+
+		String fieldName = "aList";
+		List newFieldValue = null;
+
+		// create and store new instance
+		ClassForPutFieldTest target = new ClassForPutFieldTest();
+		ObjectRef targetObjRef = objectService.storeObject(target);
+
+		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
+			targetObjRef, "List.class", newFieldValue);
+
+		// dispatch
+		assertNotNull(target.aList);
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(1, objectService.size());
+		assertFalse(doneMessage.hasReturnValue());
+		assertEquals(fieldName, doneMessage.getInstanceFieldPutDone().getField().getName());
+		assertNull(target.aList);
 	}
 
 	@Override

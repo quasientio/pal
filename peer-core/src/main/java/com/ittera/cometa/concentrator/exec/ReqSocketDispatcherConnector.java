@@ -13,6 +13,7 @@ import zmq.ZError;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import javax.inject.Named;
 
 public class ReqSocketDispatcherConnector implements DispatcherConnector {
 
@@ -39,7 +40,7 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 
 	@Singleton
 	@Inject
-	public ReqSocketDispatcherConnector(ZContext zmqContext, String outCellAddress) {
+	public ReqSocketDispatcherConnector(ZContext zmqContext, @Named("out.cell") String outCellAddress) {
 		this.zmqContext = zmqContext;
 		this.outCellAddress = outCellAddress;
 	}

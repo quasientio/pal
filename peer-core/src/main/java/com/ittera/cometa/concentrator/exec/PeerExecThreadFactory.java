@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
 
+import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
+
 import com.google.inject.Singleton;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -20,6 +22,8 @@ public class PeerExecThreadFactory extends ExecThreadFactory implements PeerThre
 	private static final String THREAD_BASE_NAME = "Peer Executor";
 
 	private final DataMessageBuilder dataMessageBuilder;
+	protected final DispatcherConnector dispatcherConnector;
+	protected final IncomingMessageDispatcher incomingMessageDispatcher;
 
 	// zmq stuff
 	private final ZContext zmqContext;
@@ -27,13 +31,16 @@ public class PeerExecThreadFactory extends ExecThreadFactory implements PeerThre
 
 	@Inject
 	public PeerExecThreadFactory(ZContext zmqContext, @Named("in.dealer") String dealerAddress,
-															 DataMessageBuilder dataMessageBuilder) {
+															 DataMessageBuilder dataMessageBuilder, IncomingMessageDispatcher
+																 incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
 		threadGroup = new ThreadGroup(THREAD_GROUP_NAME);
 		threadGroup.setDaemon(THREAD_GROUP_IS_DAEMON);
 		threadGroup.setMaxPriority(THREAD_GROUP_MAX_PRIORITY);
 		this.zmqContext = zmqContext;
 		this.dealerAddress = dealerAddress;
 		this.dataMessageBuilder = dataMessageBuilder;
+		this.dispatcherConnector = dispatcherConnector;
+		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		logger.info("Initialized exec thread factory with group name: {}, daemon: {}, maxPriority: {}", THREAD_GROUP_NAME,
 			THREAD_GROUP_IS_DAEMON, THREAD_GROUP_MAX_PRIORITY);
 	}
@@ -42,7 +49,7 @@ public class PeerExecThreadFactory extends ExecThreadFactory implements PeerThre
 	public Thread newThread(Runnable r) {
 		final String newThreadName = THREAD_BASE_NAME + ' ' + threadCounter.getAndIncrement();
 		final Thread thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext, dataMessageBuilder,
-			dealerAddress);
+			dealerAddress, incomingMessageDispatcher, dispatcherConnector);
 		thread.setPriority(THREAD_PRIORITY);
 		thread.setDaemon(THREAD_IS_DAEMON);
 		thread.setUncaughtExceptionHandler((t, e) -> logger.error("Uncaught exception in peer exec thread: {}",

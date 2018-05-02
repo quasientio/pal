@@ -33,7 +33,7 @@ abstract public class SetFieldDispatcher extends FieldOpDispatcher {
 	protected Object invokeIncoming(AccessibleObject accessibleObject, Optional<Object> target, List<Object> args,
 																	Optional<Object> value) throws Exception {
 		Field field = (Field) accessibleObject;
-		field.set(target.isPresent() ? target.get() : null, value.get());
+		field.set(target.isPresent() ? target.get() : null, value.orElse(null));
 		return Void.getInstance();
 	}
 

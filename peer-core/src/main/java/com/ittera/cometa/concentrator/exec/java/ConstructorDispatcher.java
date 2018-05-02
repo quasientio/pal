@@ -35,11 +35,6 @@ public class ConstructorDispatcher extends BaseDispatcher {
 		setObjectService(objectService);
 	}
 
-
-	@Singleton
-	public ConstructorDispatcher() {
-	}
-
 	@Override
 	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
 

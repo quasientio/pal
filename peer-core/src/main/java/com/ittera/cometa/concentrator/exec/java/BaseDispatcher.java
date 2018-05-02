@@ -125,7 +125,7 @@ public abstract class BaseDispatcher implements Dispatcher {
 			accessibleObject = loadAccessibleObject(incomingCall, parameterTypes, args);
 
 			// 4. Load target for instance methods/field ops
-			target = getTargetFromMessage(incomingCall);
+			target = getTargetFromMessage(incomingCall, accessibleObject);
 
 			// 5. Load value for assigning field ops
 			value = getValueFromMessage(incomingCall, accessibleObject);
@@ -244,7 +244,8 @@ public abstract class BaseDispatcher implements Dispatcher {
 	 *
 	 * @return
 	 */
-	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage) throws ClassNotFoundException {
+	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, AccessibleObject accessibleObject)
+		throws ClassNotFoundException {
 		return Optional.empty();
 	}
 

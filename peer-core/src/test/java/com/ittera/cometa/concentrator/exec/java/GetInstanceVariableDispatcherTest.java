@@ -20,11 +20,12 @@ import org.mockito.runners.MockitoJUnitRunner;
 class ClassForGetFieldTest {
 	short someShort = 0;
 	byte[] bytes;
-	Integer someInteger = null;
+	Integer someInteger;
 	String aString = "I am a normal string";
 	java.util.List anObject = new java.util.ArrayList();
 	Object[] objects = {1, "a", false};
 	Throwable lastError = new Error("dummy error");
+	Class aNullClass;
 }
 
 @RunWith(MockitoJUnitRunner.class)
@@ -278,6 +279,50 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
 		Object returned = objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()));
 		assertEquals(target.anObject, returned);
+	}
+
+	@Override
+	@Test
+	public void dispatch_nullObject_ok() throws Throwable {
+
+		// signature
+		String fieldName = "aNullClass";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, null);
+
+		// expect
+		verifyDispatcherCalledTwice();
+		assertNull(returned);
+	}
+
+	@Override
+	@Test
+	public void dispatchIncoming_nullObject_ok() {
+
+		String fieldName = "aNullClass";
+
+		// create and store new instance
+		ClassForGetFieldTest target = new ClassForGetFieldTest();
+		ObjectRef targetObjRef = objectService.storeObject(target);
+
+		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+			targetObjRef);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(1, objectService.size());
+		assertFalse(doneMessage.getReturnValue().getIsVoid());
+		assertTrue(doneMessage.getReturnValue().getObject().getIsNull());
 	}
 
 	@Override

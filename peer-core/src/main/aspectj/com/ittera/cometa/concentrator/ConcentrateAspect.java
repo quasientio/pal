@@ -1,5 +1,9 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.common.lang.Context;
+
+import com.ittera.cometa.concentrator.exec.java.AspectProxyDispatcher;
+
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.reflect.CodeSignature;
 import org.aspectj.lang.reflect.FieldSignature;
@@ -8,17 +12,16 @@ aspect ConcentrateAspect {
 	//if false, no output at all
 	private static final boolean verbose=false;
 
-	//Exception softening of calls to Concentrator
-	declare soft: ClassNotFoundException : call (boolean Concentrator.classConstructor(..));
-	declare soft: Throwable : call (Object Concentrator.constructor(..));
-	declare soft: Throwable : call (void Concentrator.voidInstanceMethod(..));
-	declare soft: Throwable : call (Object Concentrator.nonVoidInstanceMethod(..));
-	declare soft: Throwable : call (void Concentrator.voidClassMethod(..));
-	declare soft: Throwable : call (Object Concentrator.nonVoidClassMethod(..));
-	declare soft: IllegalAccessException : call (Object Concentrator.getStatic(..));
-	declare soft: IllegalAccessException : call (Object Concentrator.getObject(..));
-	declare soft: IllegalAccessException : call (void Concentrator.putStatic(..));
-	declare soft: IllegalAccessException : call (void Concentrator.putField(..));
+	//Exception softening of calls to AspectProxyDispatcher
+	declare soft: Throwable : call (Object AspectProxyDispatcher.constructor(..));
+	declare soft: Throwable : call (void AspectProxyDispatcher.voidInstanceMethod(..));
+	declare soft: Throwable : call (Object AspectProxyDispatcher.nonVoidInstanceMethod(..));
+	declare soft: Throwable : call (void AspectProxyDispatcher.voidClassMethod(..));
+	declare soft: Throwable : call (Object AspectProxyDispatcher.nonVoidClassMethod(..));
+	declare soft: Throwable : call (Object AspectProxyDispatcher.getStatic(..));
+	declare soft: Throwable : call (Object AspectProxyDispatcher.getObject(..));
+	declare soft: Throwable : call (void AspectProxyDispatcher.putStatic(..));
+	declare soft: Throwable : call (void AspectProxyDispatcher.putField(..));
 
 	/** POINTCUT DEFINITIONS **/
 
@@ -42,12 +45,9 @@ aspect ConcentrateAspect {
 
 	pointcut nonStaticPutfields(): allClasses() && set(!static * *);
 
-	pointcut staticConstructors(): allClasses() && staticinitialization(*);
-
-
 	/** ADVICE for Methods **/
 
-	void around(): voidInstanceMethods() {	
+	void around(): voidInstanceMethods() {
 		if (verbose) {
 			print(" D --> void instance method: "+thisJoinPointStaticPart.getSignature().toShortString());
 			printStaticCtxt(thisJoinPointStaticPart);
@@ -55,13 +55,14 @@ aspect ConcentrateAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		Concentrator.voidInstanceMethod(thisJoinPointStaticPart,
-			thisJoinPoint.getThis(), //Object sender
-			thisJoinPoint.getTarget(), //Object receiver
-			thisJoinPoint.getArgs()); //parameters
+		AspectProxyDispatcher.voidInstanceMethod(
+			Context.parseFrom(thisJoinPointStaticPart),
+			thisJoinPoint.getThis(),
+			thisJoinPoint.getTarget(),
+			thisJoinPoint.getArgs());
 	}
 
-	void around(): voidClassMethods() {	
+	void around(): voidClassMethods() {
 		if (verbose) {
 			print(" D --> void class method: "+thisJoinPointStaticPart.getSignature().toShortString());
 			printStaticCtxt(thisJoinPointStaticPart);
@@ -69,12 +70,14 @@ aspect ConcentrateAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		Concentrator.voidClassMethod(thisJoinPointStaticPart,
-			thisJoinPoint.getThis(), //Object sender
-			thisJoinPoint.getArgs()); //parameters
+		AspectProxyDispatcher.voidClassMethod(
+			Context.parseFrom(thisJoinPointStaticPart),
+			thisJoinPoint.getThis(),
+			thisJoinPoint.getTarget(),
+			thisJoinPoint.getArgs());
 	}
 
-	Object around(): nonVoidInstanceMethods() {	
+	Object around(): nonVoidInstanceMethods() {
 		if (verbose) {
 			print(" D --> non-void instance method: "+thisJoinPointStaticPart.getSignature().toShortString());
 			printStaticCtxt(thisJoinPointStaticPart);
@@ -82,16 +85,14 @@ aspect ConcentrateAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		Object returnedValue = Concentrator.nonVoidInstanceMethod(
-			thisJoinPointStaticPart,
-			thisJoinPoint.getThis(), //Object sender
-			thisJoinPoint.getTarget(), //Object receiver
-			thisJoinPoint.getArgs()); //parameters
-
-		return returnedValue;
+		return AspectProxyDispatcher.nonVoidInstanceMethod(
+			Context.parseFrom(thisJoinPointStaticPart),
+			thisJoinPoint.getThis(),
+			thisJoinPoint.getTarget(),
+			thisJoinPoint.getArgs());
 	}
 
-	Object around(): nonVoidClassMethods() {	
+	Object around(): nonVoidClassMethods() {
 		if (verbose) {
 			print(" D --> non-void class method: "+thisJoinPointStaticPart.getSignature().toShortString());
 			printStaticCtxt(thisJoinPointStaticPart);
@@ -99,17 +100,16 @@ aspect ConcentrateAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		Object returnedValue = Concentrator.nonVoidClassMethod(
-			thisJoinPointStaticPart,
-			thisJoinPoint.getThis(), //Object sender
-			thisJoinPoint.getArgs()); //parameters
-
-		return returnedValue;
+		return AspectProxyDispatcher.nonVoidClassMethod(
+			Context.parseFrom(thisJoinPointStaticPart),
+			thisJoinPoint.getThis(),
+			thisJoinPoint.getTarget(),
+			thisJoinPoint.getArgs());
 	}
 
 	/** ADVICE for Constructors **/
 
-	Object around(): constructors() {	
+	Object around(): constructors() {
 		if (verbose) {
 			print(" D --> constructor: "+thisJoinPoint);
 			printStaticCtxt(thisJoinPointStaticPart);
@@ -117,88 +117,69 @@ aspect ConcentrateAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		Object returnedValue = Concentrator.constructor(
-			thisJoinPointStaticPart,
-			thisJoinPoint.getThis(), //Object sender
-			thisJoinPoint.getArgs()); //parameters
-
-		return returnedValue;
+		return AspectProxyDispatcher.constructor(
+			Context.parseFrom(thisJoinPointStaticPart),
+			thisJoinPoint.getThis(),
+			thisJoinPoint.getTarget(),
+			thisJoinPoint.getArgs());
 	}
-
-	/** ADVICE for Initializers (ie. class constructors) **/
-
-	/**
-	void around(): staticConstructors() {
-		if (verbose) {
-			print(" D --> static constructor: "+thisJoinPoint);
-			printStaticCtxt(thisJoinPointStaticPart);
-			printNonStaticCtxt(thisJoinPoint);
-			printParameters(thisJoinPoint);
-		}
-
-		boolean classLoaded = Concentrator.classConstructor(
-			thisJoinPointStaticPart,
-			thisJoinPoint.getThis()); //Object sender
-
-		if (!classLoaded) {
-			proceed();
-		}
-	}*
-
 
 	/** ADVICE for Fields **/
 
-	Object around(): staticGetfields() {	
+	Object around(): staticGetfields() {
 		if (verbose) {
 			print(" D --> get static: "+thisJoinPoint);
 			printStaticCtxt(thisJoinPointStaticPart);
 			printNonStaticCtxt(thisJoinPoint);
 		}
-		Object returnedValue = Concentrator.getStatic(
-			thisJoinPointStaticPart,
-			thisJoinPoint.getThis()); //Object sender
 
-		return returnedValue;
+		return AspectProxyDispatcher.getStatic(
+			Context.parseFrom(thisJoinPointStaticPart),
+			thisJoinPoint.getThis(),
+			thisJoinPoint.getTarget(),
+			thisJoinPoint.getArgs());
 	}
 
-	Object around(): nonStaticGetfields() {	
+	Object around(): nonStaticGetfields() {
 		if (verbose) {
 			print(" D --> get field: "+thisJoinPoint);
 			printStaticCtxt(thisJoinPointStaticPart);
 			printNonStaticCtxt(thisJoinPoint);
 		}
-		Object returnedValue = Concentrator.getObject(
-			thisJoinPointStaticPart,
-			thisJoinPoint.getThis(), //Object sender
-			thisJoinPoint.getTarget()); //Object receiver
 
-		return returnedValue;
+		return AspectProxyDispatcher.getObject(
+			Context.parseFrom(thisJoinPointStaticPart),
+			thisJoinPoint.getThis(),
+			thisJoinPoint.getTarget(),
+			thisJoinPoint.getArgs());
 	}
 
-	void around(): staticPutfields() {	
+	void around(): staticPutfields() {
 		if (verbose) {
 			print(" D --> put static: "+thisJoinPoint);
 			printStaticCtxt(thisJoinPointStaticPart);
 			printNonStaticCtxt(thisJoinPoint);
 		}
-		Concentrator.putStatic(
-			thisJoinPointStaticPart,
-			thisJoinPoint.getThis(), //Object sender
-			thisJoinPoint.getArgs()); //parameters
+
+		AspectProxyDispatcher.putStatic(
+			Context.parseFrom(thisJoinPointStaticPart),
+			thisJoinPoint.getThis(),
+			thisJoinPoint.getTarget(),
+			thisJoinPoint.getArgs());
 	}
 
-	void around(): nonStaticPutfields() {	
+	void around(): nonStaticPutfields() {
 		if (verbose) {
 			print(" D --> put field: "+thisJoinPoint);
 			printStaticCtxt(thisJoinPointStaticPart);
 			printNonStaticCtxt(thisJoinPoint);
 		}
 
-		Concentrator.putField(
-			thisJoinPointStaticPart,
-			thisJoinPoint.getThis(), //Object sender
-			thisJoinPoint.getTarget(), //Object receiver
-			thisJoinPoint.getArgs()); //parameters
+		AspectProxyDispatcher.putField(
+			Context.parseFrom(thisJoinPointStaticPart),
+			thisJoinPoint.getThis(),
+			thisJoinPoint.getTarget(),
+			thisJoinPoint.getArgs());
 	}
 
 

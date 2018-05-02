@@ -16,8 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
-import java.util.Set;
-import java.util.HashSet;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -25,9 +23,6 @@ import org.junit.BeforeClass;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import com.google.inject.Guice;
-
-import com.google.common.util.concurrent.Service;
-import com.google.common.util.concurrent.ServiceManager;
 
 import static org.junit.Assert.*;
 
@@ -54,12 +49,6 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 
 		final Injector injector = Guice.createInjector(module);
 		dataMessageBuilder = injector.getInstance(DataMessageBuilder.class);
-
-		// configure services
-		final Set<Service> services = new HashSet<>();
-		services.add((Service) injector.getInstance(ObjectService.class));
-		final ServiceManager manager = new ServiceManager(services);
-		manager.startAsync();
 
 		// we run tests read-writing exclusively from log (no p2p talk)
 		boolean allowP2P = Boolean.parseBoolean(System.getProperty("peer.allowP2P", "false"));

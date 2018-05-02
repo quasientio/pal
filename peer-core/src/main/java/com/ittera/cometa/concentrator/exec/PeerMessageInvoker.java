@@ -15,8 +15,6 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-import javax.inject.Inject;
-
 public class PeerMessageInvoker extends Thread {
 
 	protected static final Logger logger = LoggerFactory.getLogger(PeerMessageInvoker.class);
@@ -24,6 +22,8 @@ public class PeerMessageInvoker extends Thread {
 	protected final AtomicLong requestsDispatched = new AtomicLong(0);
 	protected final AtomicLong requestsDismissed = new AtomicLong(0);
 
+	protected final IncomingMessageDispatcher incomingMessageDispatcher;
+	protected final DispatcherConnector dispatcherConnector;
 	protected final DataMessageBuilder dataMessageBuilder;
 
 	// zmq stuff
@@ -31,18 +31,15 @@ public class PeerMessageInvoker extends Thread {
 	private final String dealerAddress;
 	private Socket socket;
 
-	@Inject
-	protected IncomingMessageDispatcher incomingMessageDispatcher;
-
-	@Inject
-	private ReqSocketDispatcherConnector reqSocketDispatcherConnector;
-
 	public PeerMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
-														DataMessageBuilder dataMessageBuilder, String dealerAddress) {
+														DataMessageBuilder dataMessageBuilder, String dealerAddress, IncomingMessageDispatcher
+															incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
 		this.dealerAddress = dealerAddress;
 		this.dataMessageBuilder = dataMessageBuilder;
+		this.incomingMessageDispatcher = incomingMessageDispatcher;
+		this.dispatcherConnector = dispatcherConnector;
 		logger.debug("Initialized new peer message invoker thread named: {} with dealerAddress: {}", name, dealerAddress);
 	}
 
@@ -60,7 +57,7 @@ public class PeerMessageInvoker extends Thread {
 		while (!Thread.interrupted()) {
 
 			// recv req
-			byte[] req = null;
+			byte[] req;
 
 			try {
 				req = socket.recv();
@@ -118,10 +115,10 @@ public class PeerMessageInvoker extends Thread {
 		if (socket != null) {
 			socket.close();
 		}
-		reqSocketDispatcherConnector.closeThreadLocalSocket();
+		dispatcherConnector.closeThreadLocalSocket();
 	}
 
-	private DataMessage dispatch(DataMessage requestMsg) {
+	protected DataMessage dispatch(DataMessage requestMsg) {
 		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg);
 		logger.debug("Invoker dispatched peer request message uuid: {}, reply uuid: {}", requestMsg.getMessageUuid(),
 			replyMsg.getMessageUuid());

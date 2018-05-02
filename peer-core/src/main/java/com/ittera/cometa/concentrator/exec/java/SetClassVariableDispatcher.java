@@ -65,7 +65,8 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 			value = objectService.lookupObject(ObjectRef.from(dataMessage.getStaticFieldPut().getValueObjectRef()));
 			logger.debug("Loaded value: {}", value);
 		}
-		return Optional.of(value);
+
+		return Optional.ofNullable(value);
 	}
 
 	@Override

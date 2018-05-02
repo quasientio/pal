@@ -15,6 +15,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
 
 import java.util.List;
 import java.util.UUID;
@@ -43,11 +44,14 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 	}
 
 	@Override
-	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage) throws ClassNotFoundException {
+	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, AccessibleObject accessibleObject)
+		throws ClassNotFoundException {
 		Object target;
 		if (dataMessage.getInstanceFieldGet().hasObject()) {
-			Class objClass = Class.forName(dataMessage.getInstanceFieldGet().getClass_().getName());
-			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldGet().getObject(), objClass);
+			Class fieldType = ((Field) accessibleObject).getType();
+			// originally in Concentrator we used objClass, not fieldType.
+//			Class objClass = Class.forName(dataMessage.getInstanceFieldGet().getClass_().getName());
+			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldGet().getObject(), fieldType);
 			logger.debug("Unwrapped target: {}", target);
 		} else {
 			target = objectService.lookupObject(ObjectRef.from(dataMessage.getInstanceFieldGet().getObjectRef()));

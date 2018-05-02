@@ -29,7 +29,7 @@ class ClassForPutStaticTest {
 	static byte[] bytes;
 	static Boolean someBoolean;
 	static String aString;
-	static java.util.List anObject;
+	static java.util.List aList;
 	static Object[] objects;
 	static Throwable lastError;
 
@@ -38,7 +38,7 @@ class ClassForPutStaticTest {
 		bytes = null;
 		someBoolean = false;
 		aString = "I am a normal string";
-		anObject = new java.util.ArrayList();
+		aList = new java.util.ArrayList();
 		objects = null;
 		lastError = new Exception("dummy exception");
 	}
@@ -244,7 +244,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 	public void dispatch_object_ok() throws Throwable {
 
 		// signature
-		String fieldName = "anObject";
+		String fieldName = "aList";
 		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
 		// ctxt
@@ -259,14 +259,14 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		verifyDispatcherCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertThat(newFieldValue, instanceOf(LinkedList.class));
-		assertEquals(newFieldValue, ClassForPutStaticTest.anObject);
+		assertEquals(newFieldValue, ClassForPutStaticTest.aList);
 	}
 
 	@Override
 	@Test
 	public void dispatchIncoming_object_ok() {
 
-		String fieldName = "anObject";
+		String fieldName = "aList";
 		LinkedList newFieldValue = new LinkedList();
 		ObjectRef valueObjRef = objectService.storeObject(newFieldValue);
 
@@ -281,8 +281,54 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
 		assertEquals(fieldName, doneMessage.getStaticFieldPutDone().getField().getName());
-		assertEquals(newFieldValue, ClassForPutStaticTest.anObject);
-		assertTrue(newFieldValue == ClassForPutStaticTest.anObject);
+		assertEquals(newFieldValue, ClassForPutStaticTest.aList);
+		assertTrue(newFieldValue == ClassForPutStaticTest.aList);
+	}
+
+	@Override
+	@Test
+	public void dispatch_nullObject_ok() throws Throwable {
+
+		// signature
+		String fieldName = "aList";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		java.util.List newFieldValue = null;
+		Object[] args = {newFieldValue};
+		assertNotNull(ClassForPutStaticTest.aList);
+		Object returned = dispatcher.dispatch(ctxt, this, null, args);
+
+		// expect
+		verifyDispatcherCalledTwice();
+		assertEquals(Void.getInstance(), returned);
+		assertNull(ClassForPutStaticTest.aList);
+	}
+
+	@Override
+	@Test
+	public void dispatchIncoming_nullObject_ok() {
+
+		String fieldName = "aList";
+		LinkedList newFieldValue = null;
+
+		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName,
+			"List.class", newFieldValue);
+
+		// dispatch
+		assertNotNull(ClassForPutStaticTest.aList);
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(0, objectService.size());
+		assertFalse(doneMessage.hasReturnValue());
+		assertEquals(fieldName, doneMessage.getStaticFieldPutDone().getField().getName());
+		assertNull(ClassForPutStaticTest.aList);
 	}
 
 	@Override

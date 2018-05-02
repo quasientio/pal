@@ -90,7 +90,8 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 	}
 
 	@Override
-	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage) throws ClassNotFoundException {
+	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, AccessibleObject accessibleObject)
+		throws ClassNotFoundException {
 		Object target;
 		if (dataMessage.getInstanceMethodCall().hasObject()) {
 			Class objClass = Class.forName(dataMessage.getInstanceMethodCall().getClass_().getName());

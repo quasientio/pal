@@ -6,6 +6,8 @@ import com.google.inject.name.Named;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
 
+import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +22,8 @@ public class LogExecThreadFactory extends ExecThreadFactory implements LogThread
 	private static final String THREAD_BASE_NAME = "Log Executor";
 
 	private final DataMessageBuilder dataMessageBuilder;
+	protected final DispatcherConnector dispatcherConnector;
+	protected final IncomingMessageDispatcher incomingMessageDispatcher;
 
 	// zmq stuff
 	private final ZContext zmqContext;
@@ -27,13 +31,16 @@ public class LogExecThreadFactory extends ExecThreadFactory implements LogThread
 
 	@Inject
 	public LogExecThreadFactory(ZContext zmqContext, @Named("in.log") String inLogAddress,
-															DataMessageBuilder dataMessageBuilder) {
+															DataMessageBuilder dataMessageBuilder, IncomingMessageDispatcher
+																incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
 		threadGroup = new ThreadGroup(THREAD_GROUP_NAME);
 		threadGroup.setDaemon(THREAD_GROUP_IS_DAEMON);
 		threadGroup.setMaxPriority(THREAD_GROUP_MAX_PRIORITY);
 		this.zmqContext = zmqContext;
 		this.inLogAddress = inLogAddress;
 		this.dataMessageBuilder = dataMessageBuilder;
+		this.dispatcherConnector = dispatcherConnector;
+		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		logger.info("Initialized exec thread factory with group name: {}, daemon: {}, maxPriority: {}", THREAD_GROUP_NAME,
 			THREAD_GROUP_IS_DAEMON, THREAD_GROUP_MAX_PRIORITY);
 	}
@@ -42,7 +49,7 @@ public class LogExecThreadFactory extends ExecThreadFactory implements LogThread
 	public Thread newThread(Runnable r) {
 		final String newThreadName = THREAD_BASE_NAME + ' ' + threadCounter.getAndIncrement();
 		final Thread thread = new LogMessageInvoker(threadGroup, r, newThreadName, zmqContext, dataMessageBuilder,
-			inLogAddress);
+			inLogAddress, incomingMessageDispatcher, dispatcherConnector);
 		thread.setPriority(THREAD_PRIORITY);
 		thread.setDaemon(THREAD_IS_DAEMON);
 		thread.setUncaughtExceptionHandler((t, e) -> logger.error("Uncaught exception in log exec thread: {}",

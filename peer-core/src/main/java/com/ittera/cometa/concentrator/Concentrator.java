@@ -1,10 +1,11 @@
 package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
+import com.ittera.cometa.concentrator.exec.java.IncomingProxyDispatcher;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 
 import com.ittera.cometa.concentrator.exec.*;
-import com.ittera.cometa.concentrator.messages.IncomingMessageDispatcher;
 
 import java.io.InputStream;
 
@@ -140,10 +141,10 @@ public class Concentrator {
 	}
 
 	private static void readFromLog(LogInfo log, Injector injector, boolean inAndOutAreSameLog, Long initialOffset) {
-		IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
+		KafkaMessageReader kafkaMessageReader = injector.getInstance(KafkaMessageReader.class);
 		try {
 			boolean skipWrittenOffsets = inAndOutAreSameLog; // for clarity
-			incomingMessageDispatcher.readFromLog(log.getName(), skipWrittenOffsets, initialOffset);
+			kafkaMessageReader.readFromLog(log.getName(), skipWrittenOffsets, initialOffset);
 		} catch (Exception ex) {
 			logger.error("Could not initialize log reader. Aborting ...", ex);
 			ex.printStackTrace();
@@ -224,7 +225,7 @@ public class Concentrator {
 
 		// managed services
 		final Set<Service> services = new HashSet<>();
-		services.add((Service) injector.getInstance(IncomingMessageDispatcher.class));
+		services.add((Service) injector.getInstance(KafkaMessageReader.class));
 		services.add((Service) injector.getInstance(OutgoingMessageDispatcher.class));
 		services.add(injector.getInstance(KafkaDataMessageWriter.class));
 		services.add(injector.getInstance(JeromqInRequestDispatcher.class));
@@ -239,8 +240,8 @@ public class Concentrator {
 			public void healthy() {
 				// start accepting requests...
 				logger.info("Service manager is healthy.");
-				IncomingMessageDispatcher incomingMessageDispatcher = injector.getInstance(IncomingMessageDispatcher.class);
-				incomingMessageDispatcher.acceptConnections(true);
+				KafkaMessageReader kafkaMessageReader = injector.getInstance(KafkaMessageReader.class);
+				kafkaMessageReader.acceptConnections(true);
 
 				// We must prestart threads to create the REP sockets, and this must be done after DEALER
 				ExtendedThreadPoolExecutor executor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);

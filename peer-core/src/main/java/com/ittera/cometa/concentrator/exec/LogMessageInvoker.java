@@ -2,6 +2,7 @@ package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.Concentrator;
 import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
+
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -16,8 +17,6 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-import javax.inject.Inject;
-
 public class LogMessageInvoker extends Thread {
 
 	protected static final Logger logger = LoggerFactory.getLogger(LogMessageInvoker.class);
@@ -30,20 +29,19 @@ public class LogMessageInvoker extends Thread {
 	private final String inLogAddress;
 	private Socket socket;
 
-	@Inject
-	protected IncomingMessageDispatcher incomingMessageDispatcher;
-
-	@Inject
-	private ReqSocketDispatcherConnector reqSocketDispatcherConnector;
-
+	protected final IncomingMessageDispatcher incomingMessageDispatcher;
+	protected final DispatcherConnector dispatcherConnector;
 	protected final DataMessageBuilder dataMessageBuilder;
 
 	public LogMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
-													 DataMessageBuilder dataMessageBuilder, String inLogAddress) {
+													 DataMessageBuilder dataMessageBuilder, String inLogAddress, IncomingMessageDispatcher
+														 incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
 		this.inLogAddress = inLogAddress;
 		this.dataMessageBuilder = dataMessageBuilder;
+		this.incomingMessageDispatcher = incomingMessageDispatcher;
+		this.dispatcherConnector = dispatcherConnector;
 		logger.debug("Initialized new log message invoker thread named: {} with inLogAddress: {}", name, inLogAddress);
 	}
 
@@ -59,9 +57,9 @@ public class LogMessageInvoker extends Thread {
 		logger.debug("Start getting requests from socket");
 		while (!Thread.interrupted()) {
 
-			String offset = null;
+			String offset;
 			long logOffset;
-			byte[] req = null;
+			byte[] req;
 
 			// recv req
 			try {
@@ -123,15 +121,14 @@ public class LogMessageInvoker extends Thread {
 			socket.close();
 		}
 
-		reqSocketDispatcherConnector.closeThreadLocalSocket();
+		dispatcherConnector.closeThreadLocalSocket();
 	}
 
-	private void dispatch(DataMessage requestMsg, long recordOffset) {
+	protected void dispatch(DataMessage requestMsg, long recordOffset) {
 		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg);
 		logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",
 			requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());
 		requestsDispatched.getAndIncrement();
 		dataMessageBuilder.resetThreadLocalSequence();
 	}
-
 }

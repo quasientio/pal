@@ -25,6 +25,7 @@ class ClassForGetStaticTest {
 	static java.util.List anObject = new java.util.ArrayList();
 	static Object[] objects = {1, "a", false};
 	static Throwable lastError = new Exception("dummy exception");
+	static java.util.Map aNullMap;
 }
 
 @RunWith(MockitoJUnitRunner.class)
@@ -249,6 +250,44 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		Object returned = objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()));
 		assertEquals(ClassForGetStaticTest.anObject, returned);
 		assertTrue(ClassForGetStaticTest.anObject == returned);
+	}
+
+	@Override
+	@Test
+	public void dispatch_nullObject_ok() throws Throwable {
+
+		// signature
+		String fieldName = "aNullMap";
+		Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// dispatch
+		Object returned = dispatcher.dispatch(ctxt, this, null, null);
+
+		// expect
+		verifyDispatcherCalledTwice();
+		assertNull(returned);
+	}
+
+	@Override
+	@Test
+	public void dispatchIncoming_nullObject_ok() {
+
+		String fieldName = "aNullMap";
+
+		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
+
+		// dispatch
+		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(0, objectService.size());
+		assertFalse(doneMessage.getReturnValue().getIsVoid());
+		assertTrue(doneMessage.getReturnValue().getObject().getIsNull());
 	}
 
 	@Override

@@ -17,6 +17,9 @@ public abstract class AbstractFieldOpDispatcherTest extends AbstractDispatcherTe
 	public abstract void dispatch_object_ok() throws Throwable;
 	public abstract void dispatchIncoming_object_ok();
 
+	public abstract void dispatch_nullObject_ok() throws Throwable;
+	public abstract void dispatchIncoming_nullObject_ok();
+
 	public abstract void dispatch_objectArray_ok() throws Throwable;
 	public abstract void dispatchIncoming_objectArray_ok();
 

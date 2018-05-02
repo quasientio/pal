@@ -4,8 +4,6 @@ import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
-import com.ittera.cometa.concentrator.messages.IncomingMessageDispatcher;
-
 import java.util.Properties;
 import java.util.Collections;
 import java.util.List;
@@ -39,7 +37,7 @@ import zmq.ZError;
  * We are reading everything from the log. Is it absolutely required? Can it be optional? If so, what to skip reading?
  */
 @Singleton
-public class KafkaDataMessageReader extends AbstractExecutionThreadService implements IncomingMessageDispatcher {
+public class KafkaDataMessageReader extends AbstractExecutionThreadService implements KafkaMessageReader {
 
 	protected static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageReader.class);
 
@@ -183,11 +181,6 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 		consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
 		logger.info("Now reading from log: {} and bootstrapServers: {}, starting at offset: {}", logInfo.getName(),
 			logInfo.getBootstrapServers(), initialOffset);
-	}
-
-	@Override
-	public void readFromLog(String logName, boolean skipWrittenOffsets) throws Exception {
-		readFromLog(logName, skipWrittenOffsets, 0L);
 	}
 
 	protected void openConnections() {

@@ -42,7 +42,7 @@ public class Context {
 		return signature;
 	}
 
-	public Context parseFrom(final JoinPoint.StaticPart staticPart) {
+	public static Context parseFrom(final JoinPoint.StaticPart staticPart) {
 		final String filename = staticPart.getSourceLocation().getFileName();
 		final int sourceLine = staticPart.getSourceLocation().getLine();
 		final Class withinType = staticPart.getSourceLocation().getWithinType();

@@ -44,13 +44,12 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 	}
 
 	@Override
-	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage) throws ClassNotFoundException {
+	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, AccessibleObject accessibleObject)
+		throws ClassNotFoundException {
 		Object target;
 		if (dataMessage.getInstanceFieldPut().hasObject()) {
-			Class objClass = Class.forName(dataMessage.getInstanceFieldPut().getClass_().getName());
-			// originally in Concentrator:
-			//target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldPut().getObject(), field.getType());
-			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldPut().getObject(), objClass);
+			Class fieldType = ((Field) accessibleObject).getType();
+			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldPut().getObject(), fieldType);
 			logger.debug("Unwrapped target: {}", target);
 		} else {
 			target = objectService.lookupObject(ObjectRef.from(dataMessage.getInstanceFieldPut().getObjectRef()));
@@ -81,7 +80,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 			value = objectService.lookupObject(ObjectRef.from(dataMessage.getInstanceFieldPut().getValueObjectRef()));
 			logger.debug("Loaded value: {}", value);
 		}
-		return Optional.of(value);
+		return Optional.ofNullable(value);
 	}
 
 	@Override
