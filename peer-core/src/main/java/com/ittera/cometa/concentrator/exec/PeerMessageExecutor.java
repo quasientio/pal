@@ -1,17 +1,23 @@
 package com.ittera.cometa.concentrator.exec;
 
+import com.ittera.cometa.messages.DataMessageBuilder;
+
+import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
+
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import com.google.inject.name.Named;
+
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
+import org.zeromq.ZContext;
 
-import com.google.inject.name.Named;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
-public class PeerMessageExecutor extends ExtendedThreadPoolExecutor implements PeerExecutor {
+public class PeerMessageExecutor extends ExtendedThreadPoolExecutor {
 
 	protected static final Logger logger = LoggerFactory.getLogger(PeerMessageExecutor.class);
 
@@ -19,9 +25,12 @@ public class PeerMessageExecutor extends ExtendedThreadPoolExecutor implements P
 	public PeerMessageExecutor(@Named("peer.corePoolSize") String corePoolSize,
 														 @Named("peer.maximumPoolSize") String maximumPoolSize,
 														 @Named("peer.keepAliveSeconds") String keepAliveSeconds,
-														 PeerThreadFactory threadFactory) {
+														 ZContext zmqContext, @Named("in.dealer") String zmqSocketAddress,
+														 DataMessageBuilder dataMessageBuilder, IncomingMessageDispatcher
+															 incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
 
 		super(Integer.valueOf(corePoolSize), Integer.valueOf(maximumPoolSize), Integer.valueOf(keepAliveSeconds),
-			TimeUnit.SECONDS, new SynchronousQueue<>(), threadFactory);
+			TimeUnit.SECONDS, new SynchronousQueue<>(), new ExecThreadFactory(zmqContext, zmqSocketAddress, dataMessageBuilder,
+				incomingMessageDispatcher, dispatcherConnector, ExecThreadFactory.ExecChannelType.PEER));
 	}
 }

@@ -37,7 +37,7 @@ import zmq.ZError;
  * We are reading everything from the log. Is it absolutely required? Can it be optional? If so, what to skip reading?
  */
 @Singleton
-public class KafkaDataMessageReader extends AbstractExecutionThreadService implements KafkaMessageReader {
+public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 
 	protected static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageReader.class);
 
@@ -170,7 +170,6 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 		}
 	}
 
-	@Override
 	public void readFromLog(String logName, boolean skipWrittenOffsets, Long initialOffset) throws Exception {
 
 		this.kafkaTopic = logName;
@@ -383,7 +382,6 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService imple
 		logger.debug("-----END OF STATS-----");
 	}
 
-	@Override
 	public void acceptConnections(boolean acceptConnections) {
 		this.acceptingConnections = acceptConnections;
 	}

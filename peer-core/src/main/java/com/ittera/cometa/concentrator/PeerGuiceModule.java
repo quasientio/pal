@@ -36,16 +36,7 @@ public class PeerGuiceModule extends AbstractModule {
 		Names.bindProperties(binder(), properties);
 
 		// bind implementations
-		bind(PeerThreadFactory.class).to(com.ittera.cometa.concentrator.exec.PeerExecThreadFactory.class);
-		bind(PeerExecutor.class).to(com.ittera.cometa.concentrator.exec.PeerMessageExecutor.class);
-		bind(LogThreadFactory.class).to(com.ittera.cometa.concentrator.exec.LogExecThreadFactory.class);
-		bind(LogExecutor.class).to(com.ittera.cometa.concentrator.exec.LogMessageExecutor.class);
-
 		bind(DispatcherConnector.class).to(com.ittera.cometa.concentrator.exec.ReqSocketDispatcherConnector.class);
-		bind(KafkaMessageWriter.class).to(com.ittera.cometa.concentrator.KafkaDataMessageWriter.class);
-		bind(KafkaMessageReader.class).to(com.ittera.cometa.concentrator.KafkaDataMessageReader.class);
-		bind(OutgoingMessageDispatcher.class).to(com.ittera.cometa.concentrator.JeromqOutMessageDispatcher.class);
-		bind(InRequestMessageDispatcher.class).to(com.ittera.cometa.concentrator.JeromqInRequestDispatcher.class);
 
 		// common and cxn library classes are not annotated with @Singleton
 		bind(ObjectService.class).to(com.ittera.cometa.common.BiMapObjectService.class).asEagerSingleton();

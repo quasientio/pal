@@ -1,11 +1,10 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
-import com.ittera.cometa.concentrator.exec.java.IncomingProxyDispatcher;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 
-import com.ittera.cometa.concentrator.exec.*;
+import com.ittera.cometa.concentrator.exec.PeerMessageExecutor;
+import com.ittera.cometa.concentrator.exec.LogMessageExecutor;
+import com.ittera.cometa.concentrator.exec.ExtendedThreadPoolExecutor;
 
 import java.io.InputStream;
 
@@ -47,19 +46,13 @@ public class Concentrator {
 	private static final String ZMQ_RCVHWM_DEFAULT = "10000";
 	private static final String ZMQ_SNDHWM_DEFAULT = "10000";
 
-	protected static final String DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
-
 	static {
-
 		// load properties from file in classpath
 		try (final InputStream stream = Concentrator.class.getResourceAsStream(PROPERTIES_FILE)) {
 			properties.load(stream);
-		} catch (Exception e) {
-			logger.error("Could not load properties", e);
-			System.err.println(String.format("Could not load properties. Make sure to have `%s` in the classpath",
-				PROPERTIES_FILE));
-			e.printStackTrace();
-			System.exit(1);
+		} catch (Exception ex) {
+			fatalExit(ex, PeerFatalCode.ERROR_LOADING_PROPERTIES,
+				String.format("Make sure to have `%s` in the classpath", PROPERTIES_FILE));
 		}
 
 		// initialize zmq context
@@ -75,6 +68,24 @@ public class Concentrator {
 		logger.info("Destroyed zmq context");
 	}
 
+	private static void fatalExit(Throwable ex, PeerFatalCode fatalCode) {
+		fatalExit(ex, fatalCode, null);
+	}
+
+	private static void fatalExit(Throwable ex, PeerFatalCode fatalCode, String extraMessage) {
+		if (ex != null) {
+			logger.error(fatalCode.getMessage(), ex);
+		}
+		System.err.println(fatalCode.getMessage());
+		if (extraMessage != null) {
+			System.err.println(extraMessage);
+		}
+		if (ex != null) {
+			ex.printStackTrace();
+		}
+		System.exit(fatalCode.getCode());
+	}
+
 	// <editor-fold defaultstate="collapsed" desc="PEER INIT METHODS">
 	private static void registerSelfAsPeer(Properties properties, Injector injector) {
 
@@ -84,9 +95,7 @@ public class Concentrator {
 		try {
 			registry.connect(properties.getProperty("zookeeper.url"));
 		} catch (Exception ex) {
-			logger.error("Error connecting to directory", ex);
-			ex.printStackTrace();
-			System.exit(3);
+			fatalExit(ex, PeerFatalCode.ERROR_CONNECTING_TO_DIRECTORY);
 		}
 
 		// register self as new peer
@@ -95,139 +104,50 @@ public class Concentrator {
 			peerProperties.put("listenAddress", properties.getProperty("in.router"));
 			registry.registerPeer(uuid, peerProperties);
 		} catch (Exception ex) {
-			logger.error("Error registering peer", ex);
-			ex.printStackTrace();
-			System.exit(4);
+			fatalExit(ex, PeerFatalCode.ERROR_REGISTERING_PEER);
 		}
 	}
 
-	private static LogInfo registerNewLog(Properties properties, Injector injector) {
-
-		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
-		final String kafkaTopicPrefix = properties.getProperty("kafkaTopic");
-		LogInfo newLogInfo = null;
-
-		// register new log
-		try {
-			newLogInfo = registry.createLog(kafkaTopicPrefix, DEFAULT_BOOTSTRAP_SERVERS);
-		} catch (Exception ex) {
-			logger.error("Error registering new log", ex);
-			ex.printStackTrace();
-			System.exit(5);
-		}
-
-		return newLogInfo;
-	}
-
-	private static LogInfo registerGivenLog(LogInfo givenLogInfo, Injector injector) {
-
-		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
-		LogInfo logInfo = null;
-
-		// register given log if not registered
-		try {
-			if (registry.logExists(givenLogInfo.getName())) {
-				logInfo = registry.getLogInfo(givenLogInfo.getName());
-			} else {
-				logInfo = registry.addGivenLog(givenLogInfo.getName(), DEFAULT_BOOTSTRAP_SERVERS);
-			}
-		} catch (Exception ex) {
-			logger.error("Error registering given log", ex);
-			ex.printStackTrace();
-			System.exit(5);
-		}
-
-		return logInfo;
-	}
-
-	private static void readFromLog(LogInfo log, Injector injector, boolean inAndOutAreSameLog, Long initialOffset) {
-		KafkaMessageReader kafkaMessageReader = injector.getInstance(KafkaMessageReader.class);
-		try {
-			boolean skipWrittenOffsets = inAndOutAreSameLog; // for clarity
-			kafkaMessageReader.readFromLog(log.getName(), skipWrittenOffsets, initialOffset);
-		} catch (Exception ex) {
-			logger.error("Could not initialize log reader. Aborting ...", ex);
-			ex.printStackTrace();
-			System.exit(6);
-		}
-	}
-
-	private static void writeToLog(LogInfo outLog, LogInfo inLog, Injector injector) {
-		KafkaMessageWriter kafkaMessageWriter = injector.getInstance(KafkaMessageWriter.class);
-		try {
-			boolean publishOffsets = outLog.equals(inLog);
-			kafkaMessageWriter.writeToLog(outLog, inLog, publishOffsets);
-		} catch (Exception ex) {
-			logger.error("Could not initialize log writer. Aborting ...", ex);
-			ex.printStackTrace();
-			System.exit(6);
-		}
-	}
 	// </editor-fold>
 
 	public static void main(final String[] args) {
 
 		if (logger.isInfoEnabled()) {
-			StringBuilder sb = new StringBuilder();
-			for (String arg : args) {
-				sb.append(arg).append(" ");
-			}
-			logger.info("::main called w/args: {}", sb);
+			logger.info("peer::main called w/args: {}", String.join(" ", args));
 		}
 
+		// parse options
 		PeerOptions options = PeerOptions.parse(args);
 		if (options.helpNeeded) {
 			options.printHelp();
 			System.exit(0);
 		}
-		// set uuid
-		if (options.uuid != null) {
-			uuid = options.uuid;
-		} else {
-			uuid = UUID.randomUUID();
-		}
+		// set this peer's uuid
+		uuid = options.uuid != null ? options.uuid : UUID.randomUUID();
 		properties.put("id", uuid.toString());
 
+		// inject dependencies
 		final Injector injector = Guice.createInjector(new PeerGuiceModule(properties, zmqContext));
 
 		// register peer
 		registerSelfAsPeer(properties, injector);
 
-		// init log IO
+		// init logs IO
 		if (options.offsetGiven && options.inLog == null) {
-			System.err.println("Offset given but no given log to read from. Try `runner -h`.");
-			System.exit(1);
+			fatalExit(null, PeerFatalCode.ERROR_NO_LOG_GIVEN);
 		}
 
-		// register log(s)
-		LogInfo inLog, outLog, newLog = null;
-
-		if (options.inLog != null) {
-			inLog = registerGivenLog(options.inLog, injector);
-		} else { // no log given, create new
-			inLog = registerNewLog(properties, injector);
-			newLog = inLog;
+		try {
+			new LogConfigurator(options, properties, injector).init();
+		} catch (Exception ex) {
+			fatalExit(ex, PeerFatalCode.ERROR_INITIALIZING_LOGS);
 		}
 
-		if (options.outLog != null) {
-			outLog = registerGivenLog(options.outLog, injector);
-		} else { // no log given, create new if not done already
-			if (newLog == null) {
-				newLog = registerNewLog(properties, injector);
-			}
-			outLog = newLog;
-		}
-
-		// init log reader+writer
-		boolean inAndOutAreSame = inLog.equals(outLog);
-		readFromLog(inLog, injector, inAndOutAreSame, options.offset);
-		writeToLog(outLog, inLog, injector);
-
-		// managed services
+		// set up managed services
 		final Set<Service> services = new HashSet<>();
-		services.add((Service) injector.getInstance(KafkaMessageReader.class));
-		services.add((Service) injector.getInstance(OutgoingMessageDispatcher.class));
+		services.add(injector.getInstance(KafkaDataMessageReader.class));
 		services.add(injector.getInstance(KafkaDataMessageWriter.class));
+		services.add(injector.getInstance(JeromqOutMessageDispatcher.class));
 		services.add(injector.getInstance(JeromqInRequestDispatcher.class));
 
 		final ServiceManager manager = new ServiceManager(services);
@@ -238,21 +158,18 @@ public class Concentrator {
 			}
 
 			public void healthy() {
-				// start accepting requests...
+				// start accepting requests
 				logger.info("Service manager is healthy.");
-				KafkaMessageReader kafkaMessageReader = injector.getInstance(KafkaMessageReader.class);
-				kafkaMessageReader.acceptConnections(true);
+				KafkaDataMessageReader logMessageReader = injector.getInstance(KafkaDataMessageReader.class);
+				logMessageReader.acceptConnections(true);
 
 				// We must prestart threads to create the REP sockets, and this must be done after DEALER
-				ExtendedThreadPoolExecutor executor = (PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
-				executor.prestartAllCoreThreads();
-				executor = (LogMessageExecutor) injector.getInstance(LogExecutor.class);
-				executor.prestartAllCoreThreads();
+				injector.getInstance(PeerMessageExecutor.class).prestartAllCoreThreads();
+				injector.getInstance(LogMessageExecutor.class).prestartAllCoreThreads();
 			}
 
 			public void failure(Service service) {
-				logger.error("Service manager failed. Exiting ...", service.failureCause());
-				System.exit(7);
+				fatalExit(service.failureCause(), PeerFatalCode.ERROR_SERVICE_MANAGER_FAILED);
 			}
 		}, MoreExecutors.directExecutor());
 
@@ -260,17 +177,15 @@ public class Concentrator {
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			try {
 				// destroy context
-				Concentrator.closeZmqContext();
+				closeZmqContext();
 
 				// stop peer executor (interrupts all peer exec threads)
-				final ExtendedThreadPoolExecutor peerMessageExecutor =
-					(PeerMessageExecutor) injector.getInstance(PeerExecutor.class);
+				final ExtendedThreadPoolExecutor peerMessageExecutor = injector.getInstance(PeerMessageExecutor.class);
 				logger.info("shutting down peer threads");
 				peerMessageExecutor.shutdownNow();
 
 				// stop log executor (interrupts all log exec threads)
-				final ExtendedThreadPoolExecutor logMessageExecutor =
-					(LogMessageExecutor) injector.getInstance(LogExecutor.class);
+				final ExtendedThreadPoolExecutor logMessageExecutor = injector.getInstance(LogMessageExecutor.class);
 				logger.info("shutting down log threads");
 				logMessageExecutor.shutdownNow();
 
