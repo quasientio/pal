@@ -6,8 +6,9 @@ COMMONS_PATH=$MVN_REPO/org/apache/commons/commons-lang3/3.4/commons-lang3-3.4.ja
 ASPECTJ_PATH=$MVN_REPO/org/aspectj/aspectjrt/1.8.9/aspectjrt-1.8.9.jar
 ASPECTJ_TOOLS=/usr/local/lib/aspectj/lib/aspectjtools.jar
 CORE_CLASSES=$MVN_REPO/com/ittera/cometa/peer-core/1.0-SNAPSHOT/peer-core-1.0-SNAPSHOT.jar
+COMMON_CLASSES=$MVN_REPO/com/ittera/cometa/peer-common/1.0-SNAPSHOT/peer-common-1.0-SNAPSHOT.jar
 
-CLASSPATH=$CLASSPATH:$ASPECTJ_PATH:$ASPECTJ_TOOLS:$COMMONS_PATH:$CORE_CLASSES
+CLASSPATH=$CLASSPATH:$ASPECTJ_PATH:$ASPECTJ_TOOLS:$COMMONS_PATH:$CORE_CLASSES:$COMMON_CLASSES
 
 export CLASSPATH
 export ASPECTJ_HOME='/usr/local/lib/aspectj'

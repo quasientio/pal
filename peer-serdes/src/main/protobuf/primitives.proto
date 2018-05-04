@@ -28,3 +28,12 @@ message Class {
     optional bool unknown = 2 [default = false];
 }
 
+message Parameter {
+    optional string name = 1;
+    optional Object value = 2;
+    optional int32 modifiers = 3;
+    optional Class type = 4;
+    optional bool isVarArgs = 5 [default = false];
+
+    // TODO: annotations
+}

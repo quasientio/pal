@@ -17,3 +17,5 @@ message ReturnValue {
     optional Class clazz = 4;
 }
 
+message Void {
+}

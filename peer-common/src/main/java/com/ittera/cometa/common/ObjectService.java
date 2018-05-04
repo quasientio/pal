@@ -1,12 +1,14 @@
 package com.ittera.cometa.common;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 public interface ObjectService {
 
-	String storeObject(Object object);
+	ObjectRef storeObject(Object object);
 
-	Object lookupObject(String objectRef);
+	Object lookupObject(ObjectRef objectRef);
 
-	String lookupObjectRef(Object object);
+	ObjectRef lookupObjectRef(Object object);
 
 	void clear();
 
@@ -16,7 +18,7 @@ public interface ObjectService {
 
 	boolean containsValue(Object object);
 
-	boolean containsObjectRef(String objectRef);
+	boolean containsObjectRef(ObjectRef objectRef);
 
-	Object remove(String objectRef);
+	Object remove(ObjectRef objectRef);
 }

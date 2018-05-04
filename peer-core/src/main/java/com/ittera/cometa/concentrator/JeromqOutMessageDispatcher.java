@@ -20,7 +20,7 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 @Singleton
-public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService implements OutgoingMessageDispatcher {
+public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 
 	protected static final Logger logger = LoggerFactory.getLogger(JeromqOutMessageDispatcher.class);
 

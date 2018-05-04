@@ -23,6 +23,7 @@ enum Type {
     PUT_FIELD_DONE = 11;
     THROWABLE = 12;
     RETURN_VALUE = 13;
+    VOID = 14;
 }
 
 message DataMessage {
@@ -49,5 +50,6 @@ message DataMessage {
         InstanceFieldPutDone instanceFieldPutDone = 18;
         RaisedThrowable raisedThrowable = 19;
         ReturnValue returnValue = 20;
+        Void void = 21;
     }
 }

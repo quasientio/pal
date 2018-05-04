@@ -29,7 +29,7 @@ import zmq.ZError;
  */
 
 @Singleton
-public class KafkaDataMessageWriter extends AbstractExecutionThreadService implements KafkaMessageWriter {
+public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 
 	protected static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageWriter.class);
 
@@ -100,7 +100,6 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService imple
 		logger.info("All connections closed");
 	}
 
-	@Override
 	public void writeToLog(LogInfo outLog, LogInfo inLog, boolean publishOffsets) {
 
 		this.outLog = outLog;

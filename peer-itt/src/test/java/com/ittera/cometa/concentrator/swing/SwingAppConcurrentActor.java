@@ -1,6 +1,9 @@
 package com.ittera.cometa.concentrator.swing;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.cxn.ThinPeer;
+
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
@@ -47,7 +50,8 @@ public class SwingAppConcurrentActor {
 
 			parameters = new Object[]{visible};
 			requestMsg = dataMessageBuilder.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
-				methodName, jframeRef, parameterTypesNamesArray, parameters, new String[parameters.length]);
+				methodName, null, ObjectRef.from(jframeRef), parameterTypesNamesArray, parameters,
+				new ObjectRef[parameters.length]);
 			try {
 				thinPeer.sendAndReceive(requestMsg);
 			} catch (Exception e) {
@@ -80,7 +84,8 @@ public class SwingAppConcurrentActor {
 
 
 		final DataMessage mainRequest = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(),
-			swingAppClassName, methodName, parameterTypesNamesArray, parameters, new String[parameterTypes.length]);
+			swingAppClassName, methodName, parameterTypesNamesArray, null, null, parameters,
+			new ObjectRef[parameterTypes.length]);
 
 		// start the swingapp by calling main in background
 		new Thread(() -> thinPeer.sendToLogAndForget(mainRequest)).start();

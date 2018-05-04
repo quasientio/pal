@@ -1,10 +1,11 @@
 package com.ittera.cometa.messages.protobuf;
 
+import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.messages.protobuf.data.Fields.Field;
 import com.ittera.cometa.messages.protobuf.data.Ctxt;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
-
-import org.aspectj.lang.JoinPoint.StaticPart;
 
 import java.lang.reflect.Array;
 
@@ -52,7 +53,7 @@ public final class Wrapper {
 	 * @return
 	 */
 	private static <T> Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, T t,
-																													 String objectRef) {
+																													 ObjectRef objectRef) {
 
 		logger.trace("in getWrappedObjectAux with object: {}, class: {}, objectRef: {}", object, t, objectRef);
 
@@ -82,7 +83,7 @@ public final class Wrapper {
 			builder.setClass_(getWrappedClass(className));
 		}
 		if (objectRef != null) {
-			builder.setRef(objectRef);
+			builder.setRef(objectRef.getRef());
 		}
 		builder.setIdentityHash(System.identityHashCode(object));
 
@@ -100,7 +101,7 @@ public final class Wrapper {
 				for (int i = 0; i < length; i++) {
 					final Object arrayElem = Array.get(object, i);
 					//wrap and all array elements -- recursive
-					builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(),null));
+					builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(), null));
 				}
 			} else if (ClassUtils.isPrimitiveOrWrapper(object.getClass())) {
 				builder.setValue(String.valueOf(object));
@@ -139,11 +140,11 @@ public final class Wrapper {
 	 * @param <T>
 	 * @return
 	 */
-	static <T> Primitives.Object getWrappedObject(Object object, T t, String objectRef) {
+	static <T> Primitives.Object getWrappedObject(Object object, T t, ObjectRef objectRef) {
 		logger.trace("in getWrappedObject with object: {}, class: {}, objectRef: {}", object, t, objectRef);
 
 		final Primitives.Object.Builder builder = Primitives.Object.newBuilder();
-		boolean gotObjectRef = (objectRef != null) && (!objectRef.isEmpty());
+		boolean gotObjectRef = objectRef != null;
 
 		if (!gotObjectRef && !isWrappable(object)) {
 			throw new NonWrappableObjectException(object);
@@ -189,16 +190,23 @@ public final class Wrapper {
 		return fieldBuilder.build();
 	}
 
-	static Ctxt.Context getWrappedContext(StaticPart staticPart, Object sender, String senderObjRef) {
+	static Ctxt.Context getWrappedContext(Context context, Object sender, ObjectRef senderObjRef) {
 		final Ctxt.Context.Builder ctxtBuilder = Ctxt.Context.newBuilder();
 
-		ctxtBuilder.setSenderClass(getWrappedClass(staticPart.getSourceLocation().getWithinType()));
+		ctxtBuilder.setSenderClass(getWrappedClass(context.getWithinType()));
 		if (sender != null) {
-			ctxtBuilder.setSender(getWrappedObject(sender, staticPart.getSourceLocation().getWithinType(), senderObjRef));
+			ctxtBuilder.setSender(getWrappedObject(sender, context.getWithinType(), senderObjRef));
 		}
-		ctxtBuilder.setSourceLocationFile(staticPart.getSourceLocation().getFileName());
-		ctxtBuilder.setSourceLocationLine(staticPart.getSourceLocation().getLine());
-		ctxtBuilder.setSourceLocationType(staticPart.getSourceLocation().getWithinType().getName());
+
+		if (context.getFileName() != null) {
+			ctxtBuilder.setSourceLocationFile(context.getFileName());
+		}
+
+		ctxtBuilder.setSourceLocationLine(context.getSourceLine());
+
+		if (context.getWithinType() != null) {
+			ctxtBuilder.setSourceLocationType(context.getWithinType().getName());
+		}
 
 		return ctxtBuilder.build();
 	}

@@ -1,6 +1,8 @@
 package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.Concentrator;
+import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
+
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -27,14 +29,19 @@ public class LogMessageInvoker extends Thread {
 	private final String inLogAddress;
 	private Socket socket;
 
+	protected final IncomingMessageDispatcher incomingMessageDispatcher;
+	protected final DispatcherConnector dispatcherConnector;
 	protected final DataMessageBuilder dataMessageBuilder;
 
 	public LogMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
-													 DataMessageBuilder dataMessageBuilder, String inLogAddress) {
+													 DataMessageBuilder dataMessageBuilder, String inLogAddress, IncomingMessageDispatcher
+														 incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
 		this.inLogAddress = inLogAddress;
 		this.dataMessageBuilder = dataMessageBuilder;
+		this.incomingMessageDispatcher = incomingMessageDispatcher;
+		this.dispatcherConnector = dispatcherConnector;
 		logger.debug("Initialized new log message invoker thread named: {} with inLogAddress: {}", name, inLogAddress);
 	}
 
@@ -50,9 +57,9 @@ public class LogMessageInvoker extends Thread {
 		logger.debug("Start getting requests from socket");
 		while (!Thread.interrupted()) {
 
-			String offset = null;
+			String offset;
 			long logOffset;
-			byte[] req = null;
+			byte[] req;
 
 			// recv req
 			try {
@@ -114,15 +121,14 @@ public class LogMessageInvoker extends Thread {
 			socket.close();
 		}
 
-		Concentrator.closeThreadLocalSocket();
+		dispatcherConnector.closeThreadLocalSocket();
 	}
 
-	private void dispatch(DataMessage requestMsg, long recordOffset) {
-		DataMessage replyMsg = Concentrator.incomingCall(requestMsg);
+	protected void dispatch(DataMessage requestMsg, long recordOffset) {
+		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg);
 		logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",
 			requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());
 		requestsDispatched.getAndIncrement();
 		dataMessageBuilder.resetThreadLocalSequence();
 	}
-
 }

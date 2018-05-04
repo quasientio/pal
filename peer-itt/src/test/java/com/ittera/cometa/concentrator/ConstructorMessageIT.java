@@ -1,5 +1,7 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.apps.Constructors;
 
 import org.junit.Test;
@@ -40,7 +42,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 	public void constructor_publicOneArg_newObjectReturned() throws Exception {
 
 		Object[] args = {5};
-		String[] argRefs = {null};
+		ObjectRef[] argRefs = {null};
 		Class[] parameterTypes = new Class[]{Integer.class};
 
 		callConstructor(className, parameterTypes, args, argRefs);
@@ -50,7 +52,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 	public void constructor_packageVisibleTwoArgs_newObjectReturned() throws Exception {
 
 		Object[] args = {"Constructing an app", 5};
-		String[] argRefs = {null, null};
+		ObjectRef[] argRefs = {null, null};
 		Class[] parameterTypes = new Class[]{String.class, Integer.class};
 
 		callConstructor(className, parameterTypes, args, argRefs);
@@ -60,7 +62,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 	public void constructor_publicOneArgNull_newObjectReturned() throws Exception {
 
 		Object[] args = {null};
-		String[] argRefs = {null};
+		ObjectRef[] argRefs = {null};
 		Class[] parameterTypes = new Class[]{Integer.class};
 
 		callConstructor(className, parameterTypes, args, argRefs);
@@ -70,7 +72,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 	public void constructor_privateOneArgArray_newObjectReturned() throws Exception {
 
 		Object[] args = {new String[]{"Aa", "Bb", "Cc"}};
-		String[] argRefs = {null};
+		ObjectRef[] argRefs = {null};
 		Class[] parameterTypes = new Class[]{String[].class};
 
 		callConstructor(className, parameterTypes, args, argRefs);
@@ -80,11 +82,11 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 	public void constructor_protectedOneArgRef_newObjectReturned() throws Exception {
 
 		//1. Construct an instance calling no-args constructor
-		String newObjRef = callConstructor(className).getObject().getRef();
+		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
 
 		//2. Construct an instance calling the constructor that takes another instance as arg
 		Object[] args = {null};
-		String[] argRefs = {newObjRef};
+		ObjectRef[] argRefs = {newObjRef};
 		Class[] parameterTypes = new Class[]{Constructors.class};
 
 		callConstructor(className, parameterTypes, args, argRefs);

@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator;
 
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
@@ -13,7 +14,7 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 @Singleton
-public class JeromqInRequestDispatcher extends AbstractExecutionThreadService implements InRequestMessageDispatcher {
+public class JeromqInRequestDispatcher extends AbstractExecutionThreadService {
 
 	protected static final Logger logger = LoggerFactory.getLogger(JeromqInRequestDispatcher.class);
 

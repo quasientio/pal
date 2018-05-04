@@ -1,6 +1,6 @@
 package com.ittera.cometa.concentrator.exec;
 
-import com.ittera.cometa.concentrator.Concentrator;
+import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -22,6 +22,8 @@ public class PeerMessageInvoker extends Thread {
 	protected final AtomicLong requestsDispatched = new AtomicLong(0);
 	protected final AtomicLong requestsDismissed = new AtomicLong(0);
 
+	protected final IncomingMessageDispatcher incomingMessageDispatcher;
+	protected final DispatcherConnector dispatcherConnector;
 	protected final DataMessageBuilder dataMessageBuilder;
 
 	// zmq stuff
@@ -30,11 +32,14 @@ public class PeerMessageInvoker extends Thread {
 	private Socket socket;
 
 	public PeerMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
-														DataMessageBuilder dataMessageBuilder, String dealerAddress) {
+														DataMessageBuilder dataMessageBuilder, String dealerAddress, IncomingMessageDispatcher
+															incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
 		this.dealerAddress = dealerAddress;
 		this.dataMessageBuilder = dataMessageBuilder;
+		this.incomingMessageDispatcher = incomingMessageDispatcher;
+		this.dispatcherConnector = dispatcherConnector;
 		logger.debug("Initialized new peer message invoker thread named: {} with dealerAddress: {}", name, dealerAddress);
 	}
 
@@ -52,7 +57,7 @@ public class PeerMessageInvoker extends Thread {
 		while (!Thread.interrupted()) {
 
 			// recv req
-			byte[] req = null;
+			byte[] req;
 
 			try {
 				req = socket.recv();
@@ -110,11 +115,11 @@ public class PeerMessageInvoker extends Thread {
 		if (socket != null) {
 			socket.close();
 		}
-		Concentrator.closeThreadLocalSocket();
+		dispatcherConnector.closeThreadLocalSocket();
 	}
 
-	private DataMessage dispatch(DataMessage requestMsg) {
-		DataMessage replyMsg = Concentrator.incomingCall(requestMsg);
+	protected DataMessage dispatch(DataMessage requestMsg) {
+		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg);
 		logger.debug("Invoker dispatched peer request message uuid: {}, reply uuid: {}", requestMsg.getMessageUuid(),
 			replyMsg.getMessageUuid());
 		requestsDispatched.getAndIncrement();
