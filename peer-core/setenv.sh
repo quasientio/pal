@@ -25,7 +25,7 @@ CLASSPATH=$COMPILED_CLASSES:$ASPECTJ_PATH:$GUAVA_PATH:$GUICE_PATH:$JAVAX_INJECT_
 
 export CLASSPATH
 export SJK_PATH
-export PATH=$WORKING_DIR/bin:$PATH
+export PATH=$WORKING_DIR/bin:$JAVA_HOME/bin:$PATH
 export KAFKA_HOME='/usr/local/lib/kafka'
 export ASPECTJ_HOME='/usr/local/lib/aspectj'
 export JLINE_HOME='/usr/share/java'
