@@ -1,4 +1,4 @@
 -sourceroots
 ../peer-core/src/main/aspectj/com/ittera/cometa:src/main/java/com/ittera/cometa/apps
--d
-../codebase
+-outjar
+../codebase/apps.jar
