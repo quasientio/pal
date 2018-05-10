@@ -86,14 +86,26 @@ public class Concentrator {
 		System.exit(fatalCode.getCode());
 	}
 
-	// <editor-fold defaultstate="collapsed" desc="PEER INIT METHODS">
+	private static void addEnvToProperties(Properties properties) {
+
+		// load from Environment variable or system property
+		String zookeeperUrl = System.getenv("ZOOKEEPER_URL");
+		if (zookeeperUrl == null) {
+			zookeeperUrl = System.getProperty("zookeeper_url");
+		}
+
+		// add to app properties
+		// TODO if zookeeper_url not present throw new fatal exception
+		properties.setProperty("zookeeper_url", zookeeperUrl);
+	}
+
 	private static void registerSelfAsPeer(Properties properties, Injector injector) {
 
 		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
 
 		// connect to directory
 		try {
-			registry.connect(properties.getProperty("zookeeper.url"));
+			registry.connect(properties.getProperty("zookeeper_url"));
 		} catch (Exception ex) {
 			fatalExit(ex, PeerFatalCode.ERROR_CONNECTING_TO_DIRECTORY);
 		}
@@ -107,8 +119,6 @@ public class Concentrator {
 			fatalExit(ex, PeerFatalCode.ERROR_REGISTERING_PEER);
 		}
 	}
-
-	// </editor-fold>
 
 	public static void main(final String[] args) {
 
@@ -125,6 +135,9 @@ public class Concentrator {
 		// set this peer's uuid
 		uuid = options.uuid != null ? options.uuid : UUID.randomUUID();
 		properties.put("id", uuid.toString());
+
+		// check and add env variables to app props
+		addEnvToProperties(properties);
 
 		// inject dependencies
 		final Injector injector = Guice.createInjector(new PeerGuiceModule(properties, zmqContext));

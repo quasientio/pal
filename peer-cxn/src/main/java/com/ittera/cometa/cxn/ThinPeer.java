@@ -109,7 +109,7 @@ public class ThinPeer {
 		pollTimeout = Long.parseLong(properties.getProperty("pollTimeout"));
 
 		// connect to log and peer directory
-		peerLogDirectory = ZkClient.getConnectedClient(properties.getProperty("zookeeper.url"));
+		peerLogDirectory = ZkClient.getConnectedClient(properties.getProperty("zookeeper_url"));
 		try {
 			// register self as new peer
 			final Properties peerProperties = new Properties();

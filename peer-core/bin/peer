@@ -3,6 +3,9 @@
 JMX_PORT=9012
 JMX_HOST=localhost
 
+export ZOOKEEPER_URL=localhost:2181
+export PEER_LOGS_DIR=./logs
+
 JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA"
 LTW_OPTS=""
 
