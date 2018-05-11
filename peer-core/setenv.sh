@@ -15,7 +15,7 @@ COMMONS_PATH=$MVN_REPO/org/apache/commons/commons-lang3/3.4/commons-lang3-3.4.ja
 ZOOKEEPER_PATH=$MVN_REPO/org/apache/zookeeper/zookeeper/3.4.10/zookeeper-3.4.10.jar
 COMPILED_CLASSES=$WORKING_DIR/target/classes
 SJK_PATH=$WORKING_DIR/tools/lib/sjk-plus-0.5.1.jar
-CODEBASE_PATH=$WORKING_DIR/../codebase
+CODEBASE_PATH=$MVN_REPO/com/ittera/cometa/apps/1.0-SNAPSHOT/apps-1.0-SNAPSHOT.jar
 
 PEER_COMMON_PATH=$MVN_REPO/com/ittera/cometa/peer-common/1.0-SNAPSHOT/peer-common-1.0-SNAPSHOT.jar
 PEER_SERDES_PATH=$MVN_REPO/com/ittera/cometa/peer-serdes/1.0-SNAPSHOT/peer-serdes-1.0-SNAPSHOT.jar
