@@ -2,7 +2,7 @@ WORKING_DIR=`pwd`
 MVN_REPO=~/.m2/repository
 
 CONF_PATH=$WORKING_DIR/conf
-KAFKA_PATH=$MVN_REPO/org/apache/kafka/kafka-clients/0.11.0.0/kafka-clients-0.11.0.0.jar
+KAFKA_PATH=$MVN_REPO/org/apache/kafka/kafka-clients/1.1.0/kafka-clients-1.1.0.jar
 SLF4J_PATH=$MVN_REPO/org/slf4j/slf4j-api/1.7.21/slf4j-api-1.7.21.jar
 LOGBACK_PATH=$MVN_REPO/ch/qos/logback/logback-classic/1.2.3/logback-classic-1.2.3.jar:$MVN_REPO/ch/qos/logback/logback-core/1.2.3/logback-core-1.2.3.jar
 ASPECTJ_PATH=$MVN_REPO/org/aspectj/aspectjrt/1.8.9/aspectjrt-1.8.9.jar
