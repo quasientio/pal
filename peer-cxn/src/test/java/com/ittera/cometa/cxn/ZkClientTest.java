@@ -1,9 +1,6 @@
 package com.ittera.cometa.cxn;
 
-import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.PeerInfo;
-import com.ittera.cometa.LogRequest;
-import com.ittera.cometa.LogReply;
+import com.ittera.cometa.*;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.zookeeper.AsyncCallback;
@@ -117,7 +114,7 @@ public class ZkClientTest {
 
 		String logNamePrefix = "test.topic";
 
-		LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+		LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 		String createdLogName = newLogInfo.getName();
 
 		assertTrue(zkCli.logExists(createdLogName));
@@ -131,7 +128,7 @@ public class ZkClientTest {
 		String logName = "test.topic";
 
 		assertFalse(zkCli.logExists(logName));
-		LogInfo newLogInfo = zkCli.addGivenLog(logName, "localhost:9092");
+		LogInfo newLogInfo = zkCli.addGivenLog(logName);
 		String createdLogName = newLogInfo.getName();
 		assertEquals(logName, createdLogName);
 
@@ -145,7 +142,7 @@ public class ZkClientTest {
 
 		String logNamePrefix = "test.topic";
 
-		LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+		LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 		String createdLogName = newLogInfo.getName();
 		createdLogs.add(createdLogName);
 
@@ -160,7 +157,7 @@ public class ZkClientTest {
 
 		String logNamePrefix = "test.topic";
 
-		LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+		LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 		String createdLogName = newLogInfo.getName();
 		createdLogs.add(createdLogName);
 
@@ -219,7 +216,7 @@ public class ZkClientTest {
 		long someOffset = 32384893;
 
 		// create log
-		LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+		LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 		String createdLogName = newLogInfo.getName();
 		createdLogs.add(createdLogName);
 
@@ -256,7 +253,7 @@ public class ZkClientTest {
 		String logNamePrefix = "someRandomLogName";
 
 		// create log
-		LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+		LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 		String createdLogName = newLogInfo.getName();
 		createdLogs.add(createdLogName);
 
@@ -278,7 +275,7 @@ public class ZkClientTest {
 		String logNamePrefix = "test.topic";
 
 		// create log
-		LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+		LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 		String createdLogName = newLogInfo.getName();
 		createdLogs.add(createdLogName);
 
@@ -298,7 +295,7 @@ public class ZkClientTest {
 		long someOffset = 32384893;
 
 		// create log
-		LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+		LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 		String createdLogName = newLogInfo.getName();
 		createdLogs.add(createdLogName);
 
@@ -324,7 +321,7 @@ public class ZkClientTest {
 		long largeOffset = 32384893;
 
 		// create log
-		LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+		LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 		String createdLogName = newLogInfo.getName();
 		createdLogs.add(createdLogName);
 
@@ -359,7 +356,7 @@ public class ZkClientTest {
 
 		String logNamePrefix = "test.topic";
 
-		LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+		LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 		String createdLogName = newLogInfo.getName();
 
 		assertTrue(zkCli.logExists(createdLogName));
@@ -378,7 +375,7 @@ public class ZkClientTest {
 		// create  a few
 		String lastCreated = null;
 		for (int i = 6; i > 0; i--) {
-			LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+			LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 			lastCreated = newLogInfo.getName();
 			createdLogs.add(lastCreated);
 		}
@@ -399,7 +396,7 @@ public class ZkClientTest {
 		String lastCreated = null;
 		int N = 30;
 		for (int i = N; i > 0; i--) {
-			LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+			LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 			createdLogs.add(newLogInfo.getName());
 		}
 
@@ -419,7 +416,7 @@ public class ZkClientTest {
 
 		String logNamePrefix = "test.topic";
 
-		LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+		LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 		String createdLogName = newLogInfo.getName();
 
 		assertTrue(zkCli.logExists(createdLogName));
@@ -443,7 +440,7 @@ public class ZkClientTest {
 		String lastCreated = null;
 		int logsToCreate = 10;
 		for (int i = 0; i < logsToCreate; i++) {
-			LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+			LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 			createdLogs.add(newLogInfo.getName());
 		}
 
@@ -458,7 +455,7 @@ public class ZkClientTest {
 		// create  a few
 		String lastCreated = null;
 		for (int i = 0; i < 10; i++) {
-			LogInfo newLogInfo = zkCli.createLog(logNamePrefix, "localhost:9092");
+			LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 			createdLogs.add(newLogInfo.getName());
 		}
 
@@ -471,13 +468,13 @@ public class ZkClientTest {
 	public void getLogProperties_existingLog_logInfo() throws Exception {
 
 		String logNamePrefix = "test.topic";
-		String bootstrapServers = "localhost:9092";
 
-		LogInfo newLogInfo = zkCli.createLog(logNamePrefix, bootstrapServers);
+		LogInfo newLogInfo = zkCli.createLog(logNamePrefix);
 		createdLogs.add(newLogInfo.getName());
 
 		// now compare
-		assertEquals(bootstrapServers, newLogInfo.getBootstrapServers());
+		assertTrue(newLogInfo.getName().startsWith(logNamePrefix));
+		assertNotNull(newLogInfo.getBootstrapServers());
 	}
 
 	@Test

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker run --network peers --publish 5671:5671 --name peer peer

@@ -1,25 +1,14 @@
 package com.ittera.cometa.cxn;
 
-import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.PeerInfo;
-import com.ittera.cometa.LogRequest;
-import com.ittera.cometa.LogReply;
+import com.ittera.cometa.*;
 
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.Properties;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
+import org.apache.zookeeper.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.AsyncCallback.StringCallback;
 import org.apache.zookeeper.AsyncCallback.StatCallback;
@@ -38,12 +27,15 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	protected static final String PEERS_SUBPATH = "/peers";
 	protected static final String LOGS_SUBPATH = "/logs";
 
+	protected static final String BROKERS_PATH = "/brokers/ids";
 	public static final int SESSION_TIMEOUT = 10000;
 
+	private boolean brokersInfoLoaded;
 	private ZooKeeper zk;
 	private Watcher watcher;
 	private String customRootPath;
 	private String zookeeperUrl;
+	private Set<KafkaBrokerInfo> brokerInfoSet;
 
 	public static ZkClient getConnectedClient(String zookeeperUrl, String customRootPath, Watcher watcher)
 		throws Exception {
@@ -127,12 +119,48 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 	}
 
+	private void loadBrokerInfoSet() {
+
+		Stat brokersInfoStat;
+		String brokerInfoPath;
+
+		if (brokerInfoSet == null) {
+			brokerInfoSet = new HashSet<>();
+		} else {
+			brokerInfoSet.clear();
+		}
+
+		try {
+			for (String brokerId : zk.getChildren(BROKERS_PATH, false)) {
+				brokerInfoPath = BROKERS_PATH + "/" + brokerId;
+				brokersInfoStat = zk.exists(brokerInfoPath, null);
+				String nodeData = new String(zk.getData(brokerInfoPath, false, brokersInfoStat));
+				logger.debug("Read registered broker info data: {}", nodeData);
+				KafkaBrokerInfo kafkaBrokerInfo = KafkaBrokerInfo.parseFromJSON(nodeData);
+				brokerInfoSet.add(kafkaBrokerInfo);
+			}
+		} catch (Exception e) {
+			logger.error("Error reading registered kafka brokers info", e);
+		} finally {
+			brokersInfoLoaded = true;
+		}
+	}
+
 	@Override
 	public void connect(String zookeeperUrl) throws Exception {
 		this.zookeeperUrl = zookeeperUrl;
 		zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, watcher == null ? this : watcher);
 		logger.info("Connected to zookeeper at {}", zookeeperUrl);
 		ensureRootAndSubdirsExist();
+	}
+
+	@Override
+	public Set<KafkaBrokerInfo> getKafkaBrokers() {
+		if (!brokersInfoLoaded) {
+			loadBrokerInfoSet();
+		}
+
+		return brokerInfoSet;
 	}
 
 	@Override
@@ -193,7 +221,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	}
 
 	@Override
-	public LogInfo createLog(String logNamePrefix, String bootstrapServers) throws Exception {
+	public LogInfo createLog(String logNamePrefix) throws Exception {
 		String logNodePrefix = getLogsPath() + "/" + logNamePrefix;
 
 		byte[] data;
@@ -201,20 +229,18 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		// create new node
 		StringBuilder sb = new StringBuilder();
 		String newLogUuid = UUID.randomUUID().toString();
-		sb.append("bootstrap.servers").append(PROPERTIES_SEP).append(bootstrapServers.trim()).append('\n');
 		sb.append("uuid").append(PROPERTIES_SEP).append(newLogUuid).append('\n');
 		data = sb.toString().getBytes();
 		String createdNode = zk.create(logNodePrefix, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
 
 		String createdLogName = StringUtils.substringAfterLast(createdNode, "/");
 		LogInfo newLogInfo = getLogInfo(createdLogName);
-		logger.info("Created new log node: {} with bootstrapServers: {} and uuid: {}", createdLogName, bootstrapServers,
-			newLogUuid);
+		logger.info("Created new log node: {} with uuid: {}", createdLogName, newLogUuid);
 		return newLogInfo;
 	}
 
 	@Override
-	public LogInfo addGivenLog(String logName, String bootstrapServers) throws Exception {
+	public LogInfo addGivenLog(String logName) throws Exception {
 		String logNode = getLogsPath() + "/" + logName;
 
 		byte[] data;
@@ -222,15 +248,13 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		// create new node
 		StringBuilder sb = new StringBuilder();
 		String logUuid = UUID.randomUUID().toString();
-		sb.append("bootstrap.servers").append(PROPERTIES_SEP).append(bootstrapServers.trim()).append('\n');
 		sb.append("uuid").append(PROPERTIES_SEP).append(logUuid).append('\n');
 		data = sb.toString().getBytes();
 		String createdNode = zk.create(logNode, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
 		String registeredLogName = StringUtils.substringAfterLast(createdNode, "/");
 		LogInfo newLogInfo = getLogInfo(registeredLogName);
-		logger.info("Registered given log node: {} with bootstrapServers: {} and uuid: {}", registeredLogName,
-			bootstrapServers, logUuid);
+		logger.info("Registered given log node: {} with uuid: {}", registeredLogName, logUuid);
 		return newLogInfo;
 	}
 
@@ -418,8 +442,11 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 		// find last
 		List<String> logs = zk.getChildren(getLogsPath(), false);
-		long maxLogIndex = 0;
+		long maxLogIndex = -1;
 		String lastLog = null;
+		if (logs.size() == 0) {
+			logger.debug("No logs found with prefix '{}'", logNamePrefix);
+		}
 		// loop through all logs
 		for (String log : logs) {
 			// filter those with our prefix
@@ -497,7 +524,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		UUID uuid = UUID.fromString(props.getProperty("uuid"));
 
 		// fill stat info
-		LogInfo logInfo = new LogInfo(logName, servers, uuid);
+		LogInfo logInfo = new LogInfo(logName, getKafkaBrokers(), uuid);
 		logInfo.setZk_ctime(nodeStat.getCtime());
 
 		return logInfo;

@@ -52,7 +52,7 @@ public class ThinPeer {
 
 	private final UUID peerUuid = UUID.randomUUID();
 
-	private final boolean allowP2P;
+	private boolean allowP2P;
 
 	// static
 	protected final static Logger logger = LoggerFactory.getLogger(ThinPeer.class);
@@ -78,26 +78,35 @@ public class ThinPeer {
 	// zookeeper
 	private PeerLogDirectory peerLogDirectory;
 
-	public ThinPeer(String propertiesFile, boolean allowP2P) throws Exception {
-		this(propertiesFile, allowP2P, null, null);
-	}
-
 	public ThinPeer(String propertiesFile) throws Exception {
-		this(propertiesFile, true, null, null);
+		this(propertiesFile, null, null, null);
 	}
 
 	public ThinPeer(String propertiesFile, LogInfo logInfo) throws Exception {
-		this(propertiesFile, true, null, logInfo);
+		this(propertiesFile, null, logInfo, logInfo);
 	}
 
-	public ThinPeer(String propertiesFile, boolean allowP2P, PeerInfo initialPeer, LogInfo inLog, LogInfo outLog) throws Exception {
-		logger.info("Initializing ThinPeer with props from: {}, allowP2P: {}, initialPeer: {}, inLog: {}, outLog: {}",
-			propertiesFile, allowP2P, initialPeer, inLog, outLog);
+	public ThinPeer(String propertiesFile, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
+		this(propertiesFile, initialPeer, logInfo, logInfo);
+	}
 
-		this.allowP2P = allowP2P;
+	public ThinPeer(String propertiesFile, LogInfo inLog, LogInfo outLog) throws Exception {
+		this(propertiesFile, null, inLog, outLog);
+	}
+
+	public ThinPeer(String propertiesFile, PeerInfo initialPeer, LogInfo inLog, LogInfo outLog) throws Exception {
+		logger.info("Initializing ThinPeer with props from: {}, initialPeer: {}, inLog: {}, outLog: {}",
+			propertiesFile, initialPeer, inLog, outLog);
+
 		this.inLog = inLog;
 		this.outLog = outLog;
 		currentPeer = initialPeer;
+
+		/** TODO allowP2P, as well as zookeeper_url, could be given in Properties, if we pass a Properties instead of
+		 * propertiesFile to the constructor
+		 */
+		this.allowP2P = Boolean.parseBoolean(System.getProperty("peer.allowP2P", "true"));
+		logger.info("This peer will communicate P2P? {}", allowP2P ? "yes" : "no");
 
 		//load properties
 		final Properties properties = new Properties();
@@ -108,11 +117,18 @@ public class ThinPeer {
 		String kafkaTopicPrefix = properties.getProperty("kafkaTopicPrefix");
 		pollTimeout = Long.parseLong(properties.getProperty("pollTimeout"));
 
-		// connect to log and peer directory
+		// connect to directory
 		String zookeeperUrl = System.getenv("ZOOKEEPER_URL");
 		if (zookeeperUrl == null) {
 			zookeeperUrl = System.getProperty("zookeeper_url");
+			// if we still can't find it, there's nothing we can do... break out
+			if (zookeeperUrl == null) {
+				throw new RuntimeException("Couldn't connect to zookeeper. Please set the environment variable 'ZOOKEEPER_URL'" +
+					" or the 'zookeeper_url' system property. (Example: -Dzookeeper_url=localhost:2181)");
+			}
 		}
+
+		logger.info("Using ZOOKEEPER_URL = {}", zookeeperUrl);
 		peerLogDirectory = ZkClient.getConnectedClient(zookeeperUrl);
 		try {
 			// register self as new peer
@@ -122,12 +138,16 @@ public class ThinPeer {
 			logger.error("Error registering peer", ex);
 		}
 
-		// get/set log(s) to connect to
+		// get/set log(s) to connect to; fill bootstrap servers if only log names given
 		LogInfo lastLog = null;
-		if (inLog == null) {
+		if (this.inLog == null) {
 			// get last log with prefix = kafkaTopic
 			lastLog = peerLogDirectory.getLastLog(kafkaTopicPrefix);
 			this.inLog = lastLog;
+		} else {
+			if (this.inLog.getBootstrapServers() == null) {
+				this.inLog.setBrokerInfoSet(peerLogDirectory.getKafkaBrokers());
+			}
 		}
 
 		if (outLog == null) {
@@ -135,6 +155,10 @@ public class ThinPeer {
 				lastLog = peerLogDirectory.getLastLog(kafkaTopicPrefix);
 			}
 			this.outLog = lastLog;
+		} else {
+			if (this.outLog.getBootstrapServers() == null) {
+				this.outLog.setBrokerInfoSet(peerLogDirectory.getKafkaBrokers());
+			}
 		}
 
 		logger.info("Will read from log: {} and write to log: {}", this.inLog, this.outLog);
@@ -179,22 +203,14 @@ public class ThinPeer {
 
 		// create zmq context
 		logger.info("Initializing zmq context");
-		zmqContext = new ZContext();
-		peerSocket = zmqContext.createSocket(ZMQ.REQ);
+		this.zmqContext = new ZContext();
+		this.peerSocket = zmqContext.createSocket(ZMQ.REQ);
 		if (currentPeer != null) {
 			connectToPeer(currentPeer);
 		}
 
 		//init msg builder
-		dataMessageBuilder = new ProtobufDataMessageBuilder();
-	}
-
-	public ThinPeer(String propertiesFile, boolean allowP2P, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
-		this(propertiesFile, allowP2P, initialPeer, logInfo, logInfo);
-	}
-
-	public ThinPeer(String propertiesFile, LogInfo inLog, LogInfo outLog) throws Exception {
-		this(propertiesFile, true, null, inLog, outLog);
+		this.dataMessageBuilder = new ProtobufDataMessageBuilder();
 	}
 
 	private void connectSocket() {

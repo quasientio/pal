@@ -14,7 +14,6 @@ import com.google.inject.Injector;
 class LogConfigurator {
 
 	protected static final Logger logger = LoggerFactory.getLogger(LogConfigurator.class);
-	protected static final String DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
 	private final PeerOptions peerOptions;
 	private final Properties appProps;
 	private final Injector injector;
@@ -29,24 +28,19 @@ class LogConfigurator {
 
 		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
 		final String kafkaTopicPrefix = appProps.getProperty("kafkaTopic");
-		LogInfo newLogInfo = null;
-
-		// register new log
-		newLogInfo = registry.createLog(kafkaTopicPrefix, DEFAULT_BOOTSTRAP_SERVERS);
-
-		return newLogInfo;
+		return registry.createLog(kafkaTopicPrefix);
 	}
 
 	private LogInfo registerGivenLog(LogInfo givenLogInfo) throws Exception {
 
 		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
-		LogInfo logInfo = null;
+		final LogInfo logInfo;
 
 		// register given log if not registered
 		if (registry.logExists(givenLogInfo.getName())) {
 			logInfo = registry.getLogInfo(givenLogInfo.getName());
 		} else {
-			logInfo = registry.addGivenLog(givenLogInfo.getName(), DEFAULT_BOOTSTRAP_SERVERS);
+			logInfo = registry.addGivenLog(givenLogInfo.getName());
 		}
 
 		return logInfo;

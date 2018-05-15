@@ -9,6 +9,7 @@ ASPECTJ_PATH=$MVN_REPO/org/aspectj/aspectjrt/1.8.9/aspectjrt-1.8.9.jar
 PROTOBUF_PATH=$MVN_REPO/com/google/protobuf/protobuf-java/3.3.0/protobuf-java-3.3.0.jar
 JEROMQ_PATH=$MVN_REPO/org/zeromq/jeromq/0.4.3/jeromq-0.4.3.jar
 GUAVA_PATH=$MVN_REPO/com/google/guava/guava/19.0/guava-19.0.jar
+ORGJSON_PATH=$MVN_REPO/org/json/json/20180130/json-20180130.jar
 GUICE_PATH=$MVN_REPO/com/google/inject/guice/4.1.0/guice-4.1.0-no_aop.jar
 JAVAX_INJECT_PATH=$MVN_REPO/javax/inject/javax.inject/1/javax.inject-1.jar
 COMMONS_PATH=$MVN_REPO/org/apache/commons/commons-lang3/3.4/commons-lang3-3.4.jar:$MVN_REPO/commons-cli/commons-cli/1.4/commons-cli-1.4.jar
@@ -21,7 +22,7 @@ PEER_COMMON_PATH=$MVN_REPO/com/ittera/cometa/peer-common/1.0-SNAPSHOT/peer-commo
 PEER_SERDES_PATH=$MVN_REPO/com/ittera/cometa/peer-serdes/1.0-SNAPSHOT/peer-serdes-1.0-SNAPSHOT.jar
 PEER_CXN_PATH=$MVN_REPO/com/ittera/cometa/peer-cxn/1.0-SNAPSHOT/peer-cxn-1.0-SNAPSHOT.jar
 
-CLASSPATH=$COMPILED_CLASSES:$ASPECTJ_PATH:$GUAVA_PATH:$GUICE_PATH:$JAVAX_INJECT_PATH:$PROTOBUF_PATH:$KAFKA_PATH:$JEROMQ_PATH:$SLF4J_PATH:$LOGBACK_PATH:$COMMONS_PATH:$ZOOKEEPER_PATH:$PEER_COMMON_PATH:$PEER_SERDES_PATH:$PEER_CXN_PATH:$CODEBASE_PATH
+CLASSPATH=$COMPILED_CLASSES:$ASPECTJ_PATH:$GUAVA_PATH:$ORGJSON_PATH:$GUICE_PATH:$JAVAX_INJECT_PATH:$PROTOBUF_PATH:$KAFKA_PATH:$JEROMQ_PATH:$SLF4J_PATH:$LOGBACK_PATH:$COMMONS_PATH:$ZOOKEEPER_PATH:$PEER_COMMON_PATH:$PEER_SERDES_PATH:$PEER_CXN_PATH:$CODEBASE_PATH
 
 export CLASSPATH
 export SJK_PATH

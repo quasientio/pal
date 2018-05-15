@@ -1,9 +1,10 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.PeerInfo;
 import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.LogReply;
+import com.ittera.cometa.PeerInfo;
+import com.ittera.cometa.KafkaBrokerInfo;
 
 import java.util.Properties;
 import java.util.UUID;
@@ -15,6 +16,8 @@ public interface PeerLogDirectory {
 	 * CONNECTION METHODS
 	 **/
 	void connect(String url) throws Exception;
+
+	Set<KafkaBrokerInfo> getKafkaBrokers();
 
 	boolean isConnectionEstablished();
 
@@ -46,9 +49,9 @@ public interface PeerLogDirectory {
 	/**
 	 * LOG METHODS
 	 **/
-	LogInfo createLog(String logNamePrefix, String bootstrapServers) throws Exception;
+	LogInfo createLog(String logNamePrefix) throws Exception;
 
-	LogInfo addGivenLog(String logName, String bootstrapServers) throws Exception;
+	LogInfo addGivenLog(String logName) throws Exception;
 
 	LogInfo getLastLog(String logNamePrefix) throws Exception;
 

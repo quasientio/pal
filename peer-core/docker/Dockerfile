@@ -2,21 +2,25 @@ FROM openjdk:8u151-jre-alpine
 
 MAINTAINER libre
 
+ARG zookeeper_url=zookeeper:2181
+
+ENV PEER_LOGS_DIR=/app/logs \
+    JMX_PORT=9012 \
+    JMX_HOST=localhost \
+    ZOOKEEPER_URL=$zookeeper_url
+
 WORKDIR /app
 
-ENV PEER_LOGS_DIR=/app/mylogs
-ENV JMX_PORT=9012
-ENV JMX_HOST=localhost
-
 COPY \
-	bin/peerd \
+	bin/peer-docker \
 	target/classes/logback.xml \
 	target/classes/peer.properties \
 	target/peer-core-1.0-SNAPSHOT-jar-with-dependencies.jar /app/
 
 
-RUN chmod +x peerd
+RUN mv /app/peer-docker /app/peer \
+	&& chmod +x peer 
 
 EXPOSE 5671
 
-CMD ./peerd
+CMD ./peer

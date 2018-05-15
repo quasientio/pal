@@ -3,3 +3,5 @@ logs/
 .idea/
 *.iml
 conf/
+Dockerfile
+docker-compose.yml

@@ -50,9 +50,7 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 		final Injector injector = Guice.createInjector(module);
 		dataMessageBuilder = injector.getInstance(DataMessageBuilder.class);
 
-		// we run tests read-writing exclusively from log (no p2p talk)
-		boolean allowP2P = Boolean.parseBoolean(System.getProperty("peer.allowP2P", "false"));
-		thinPeer = new ThinPeer("/tests.properties", allowP2P);
+		thinPeer = new ThinPeer("/tests.properties");
 	}
 
 	protected DataMessage sendAndReceive(DataMessage message) throws Exception {

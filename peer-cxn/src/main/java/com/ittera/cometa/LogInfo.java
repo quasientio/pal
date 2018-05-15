@@ -3,17 +3,20 @@ package com.ittera.cometa;
 import com.ittera.cometa.util.ByteSizeConverter;
 
 import java.util.UUID;
+import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
 
 public class LogInfo implements Comparable {
 
 	// name of node in zk
-	private String name;
+	private final String name;
 
 	// in zk node stat
 	private long zk_ctime;
 
 	// in zk node data
-	private String bootstrapServers;
+	private Set<KafkaBrokerInfo> brokerInfoSet;
 	private UUID uuid;
 
 	// to be filled from (kafka) mbeans via jmx
@@ -27,13 +30,13 @@ public class LogInfo implements Comparable {
 		this.name = name;
 	}
 
-	public LogInfo(String name, String bootstrapServers) {
+	public LogInfo(String name, Set<KafkaBrokerInfo> brokerInfoSet) {
 		this(name);
-		this.bootstrapServers = bootstrapServers;
+		this.brokerInfoSet = brokerInfoSet;
 	}
 
-	public LogInfo(String name, String bootstrapServers, UUID uuid) {
-		this(name, bootstrapServers);
+	public LogInfo(String name, Set<KafkaBrokerInfo> brokerInfoSet, UUID uuid) {
+		this(name, brokerInfoSet);
 		this.uuid = uuid;
 	}
 
@@ -49,16 +52,25 @@ public class LogInfo implements Comparable {
 		return uuid;
 	}
 
-	public void setName(String name) {
-		this.name = name;
-	}
-
 	public String getBootstrapServers() {
-		return bootstrapServers;
+
+		if (brokerInfoSet == null) {
+			return null;
+		}
+
+		StringBuilder sb = new StringBuilder();
+		for (KafkaBrokerInfo brokerInfo : brokerInfoSet) {
+			for (KafkaBrokerEndpoint brokerEndpoint : brokerInfo.getEndpoints()) {
+				sb.append(brokerEndpoint.toURL());
+				sb.append(",");
+			}
+		}
+
+		return StringUtils.stripEnd(sb.toString(), ",");
 	}
 
-	public void setBootstrapServers(String bootstrapServers) {
-		this.bootstrapServers = bootstrapServers;
+	public void setBrokerInfoSet(Set<KafkaBrokerInfo> brokerInfoSet) {
+		this.brokerInfoSet = brokerInfoSet;
 	}
 
 	public void setZk_ctime(long ctime) {
@@ -113,13 +125,13 @@ public class LogInfo implements Comparable {
 
 	@Override
 	public int hashCode() {
-		return name.hashCode() + bootstrapServers.hashCode();
+		return name.hashCode() + getBootstrapServers().hashCode();
 	}
 
 	@Override
 	public boolean equals(Object o) {
 		return (o instanceof LogInfo) && name.equals(((LogInfo) o).getName())
-			&& bootstrapServers.equals(((LogInfo) o).getBootstrapServers());
+			&& getBootstrapServers().equals(((LogInfo) o).getBootstrapServers());
 	}
 
 	@Override

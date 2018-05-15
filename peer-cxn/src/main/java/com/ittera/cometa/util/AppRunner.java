@@ -13,8 +13,6 @@ import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.BiMapObjectService;
 
 import java.util.Queue;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.UUID;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -25,9 +23,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import com.google.inject.Guice;
 
-import com.google.common.util.concurrent.Service;
-import com.google.common.util.concurrent.ServiceManager;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,11 +30,10 @@ public class AppRunner {
 
 	protected final static Logger logger = LoggerFactory.getLogger(AppRunner.class);
 	protected final DataMessageBuilder dataMessageBuilder;
-	final ServiceManager manager;
 	protected final boolean verbose;
 	protected static final long REPLY_PROCESSOR_SLEEP_MS = 100;
 
-	protected static final String DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
+	protected static final String RUNNER_PROPERTIES_PATH = "/runner.properties";
 
 	AppRunner(boolean verbose) {
 		this.verbose = verbose;
@@ -55,12 +49,6 @@ public class AppRunner {
 
 		final Injector injector = Guice.createInjector(module);
 		dataMessageBuilder = injector.getInstance(DataMessageBuilder.class);
-
-		// configure services
-		final Set<Service> services = new HashSet<>();
-		services.add((Service) injector.getInstance(ObjectService.class));
-		manager = new ServiceManager(services);
-		manager.startAsync();
 	}
 
 	/**
@@ -71,9 +59,9 @@ public class AppRunner {
 
 		// init ThinPeer
 		ThinPeer thinPeer;
-		LogInfo inLog = opts.inLog == null ? null : new LogInfo(opts.inLog, DEFAULT_BOOTSTRAP_SERVERS);
-		LogInfo outLog = opts.outLog == null ? null : new LogInfo(opts.outLog, DEFAULT_BOOTSTRAP_SERVERS);
-		thinPeer = new ThinPeer("/runner.properties", inLog, outLog);
+		LogInfo inLog = opts.inLog == null ? null : new LogInfo(opts.inLog);
+		LogInfo outLog = opts.outLog == null ? null : new LogInfo(opts.outLog);
+		thinPeer = new ThinPeer(RUNNER_PROPERTIES_PATH, inLog, outLog);
 
 		long start = System.currentTimeMillis();
 		int reqsSent = 0;
@@ -116,7 +104,6 @@ public class AppRunner {
 		}
 
 		thinPeer.close();
-		manager.stopAsync();
 
 		if (verbose) {
 			System.out.println(String.format("sent and received %s requests in %s ms", reqsSent,
@@ -137,9 +124,9 @@ public class AppRunner {
 
 		// init ThinPeer
 		ThinPeer thinPeer;
-		LogInfo inLog = opts.inLog == null ? null : new LogInfo(opts.inLog, DEFAULT_BOOTSTRAP_SERVERS);
-		LogInfo outLog = opts.outLog == null ? null : new LogInfo(opts.outLog, DEFAULT_BOOTSTRAP_SERVERS);
-		thinPeer = new ThinPeer("/runner.properties", inLog, outLog);
+		LogInfo inLog = opts.inLog == null ? null : new LogInfo(opts.inLog);
+		LogInfo outLog = opts.outLog == null ? null : new LogInfo(opts.outLog);
+		thinPeer = new ThinPeer(RUNNER_PROPERTIES_PATH, inLog, outLog);
 
 		long start = System.currentTimeMillis();
 		int reqsSent = 0;
@@ -217,7 +204,6 @@ public class AppRunner {
 		}
 
 		thinPeer.close();
-		manager.stopAsync();
 
 		if (verbose) {
 			System.out.println(String.format("sent and received %s requests in %s ms", reqsSent,
