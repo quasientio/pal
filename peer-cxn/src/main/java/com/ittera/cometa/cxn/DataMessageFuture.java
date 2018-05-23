@@ -90,7 +90,7 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 	// <editor-fold defaultstate="collapsed" desc="Zk Watcher Interface">
 	@Override
 	public void process(WatchedEvent evt) {
-		logger.debug("NodeChildrenChanged event for node of request: {}", logRequest);
+		logger.debug("NodeChildrenChanged event: {} for node of request: {}", evt, logRequest);
 
 		if (evt.getType() == Event.EventType.NodeChildrenChanged) {
 			process();
@@ -121,6 +121,10 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 
 	private void process() {
 
+		if (isDone() || isCancelled()) {
+			return;
+		}
+
 		final LogReply logReply = getReplyNode();
 
 		if (logReply == null) {
@@ -145,7 +149,7 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 		try {
 			Set<LogReply> replySet = peerLogDirectory.getRepliesTo(logName, logRequest);
 			if (!replySet.isEmpty()) {
-				logReply = (LogReply) replySet.toArray()[0];
+				logReply = replySet.iterator().next();
 			}
 		} catch (Exception ex) {
 			logger.warn("Error getting LogReply object for request: {}", logRequest, ex);
