@@ -28,8 +28,6 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
-import java.io.InputStream;
-
 import java.util.Properties;
 import java.util.UUID;
 import java.util.List;
@@ -78,25 +76,25 @@ public class ThinPeer {
 	// zookeeper
 	private PeerLogDirectory peerLogDirectory;
 
-	public ThinPeer(String propertiesFile) throws Exception {
-		this(propertiesFile, null, null, null);
+	public ThinPeer(Properties properties) throws Exception {
+		this(properties, null, null, null);
 	}
 
-	public ThinPeer(String propertiesFile, LogInfo logInfo) throws Exception {
-		this(propertiesFile, null, logInfo, logInfo);
+	public ThinPeer(Properties properties, LogInfo logInfo) throws Exception {
+		this(properties, null, logInfo, logInfo);
 	}
 
-	public ThinPeer(String propertiesFile, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
-		this(propertiesFile, initialPeer, logInfo, logInfo);
+	public ThinPeer(Properties properties, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
+		this(properties, initialPeer, logInfo, logInfo);
 	}
 
-	public ThinPeer(String propertiesFile, LogInfo inLog, LogInfo outLog) throws Exception {
-		this(propertiesFile, null, inLog, outLog);
+	public ThinPeer(Properties properties, LogInfo inLog, LogInfo outLog) throws Exception {
+		this(properties, null, inLog, outLog);
 	}
 
-	public ThinPeer(String propertiesFile, PeerInfo initialPeer, LogInfo inLog, LogInfo outLog) throws Exception {
+	public ThinPeer(Properties properties, PeerInfo initialPeer, LogInfo inLog, LogInfo outLog) throws Exception {
 		logger.info("Initializing ThinPeer with props from: {}, initialPeer: {}, inLog: {}, outLog: {}",
-			propertiesFile, initialPeer, inLog, outLog);
+			properties, initialPeer, inLog, outLog);
 
 		this.inLog = inLog;
 		this.outLog = outLog;
@@ -107,12 +105,6 @@ public class ThinPeer {
 		 */
 		this.allowP2P = Boolean.parseBoolean(System.getProperty("peer.allowP2P", "true"));
 		logger.info("This peer will communicate P2P? {}", allowP2P ? "yes" : "no");
-
-		//load properties
-		final Properties properties = new Properties();
-		try (final InputStream stream = ThinPeer.class.getResourceAsStream(propertiesFile)) {
-			properties.load(stream);
-		}
 
 		String kafkaTopicPrefix = properties.getProperty("kafkaTopicPrefix");
 		pollTimeout = Long.parseLong(properties.getProperty("pollTimeout"));

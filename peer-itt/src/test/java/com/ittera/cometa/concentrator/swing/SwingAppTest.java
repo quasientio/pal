@@ -8,14 +8,24 @@ import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
+import java.util.Properties;
+
+import java.io.InputStream;
+
 public class SwingAppTest {
 
 	protected static final DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
 
 	protected static final String className = "com.ittera.cometa.apps.SwingApp";
+	protected static final String TEST_PROPERTIES_PATH = "/tests.properties";
 
 	public static void main(String[] args) throws Exception {
-		ThinPeer thinPeer = new ThinPeer("/tests.properties");
+
+		final Properties properties = new Properties();
+		try (final InputStream stream = SwingAppConcurrentActor.class.getResourceAsStream(TEST_PROPERTIES_PATH)) {
+			properties.load(stream);
+		}
+		final ThinPeer thinPeer = new ThinPeer(properties);
 		final String methodName = "main";
 
 		Class[] parameterTypes = new Class[]{String[].class};

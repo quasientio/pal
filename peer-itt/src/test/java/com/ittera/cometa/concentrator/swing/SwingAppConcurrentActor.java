@@ -10,24 +10,24 @@ import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
+import java.util.Properties;
+
+import java.io.InputStream;
+
 public class SwingAppConcurrentActor {
 
 	protected static final DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
 
 	protected static final String swingAppClassName = "com.ittera.cometa.apps.SwingApp";
+	protected static final String TEST_PROPERTIES_PATH = "/tests.properties";
 
 	private static class SwingActor implements Runnable {
 		ThinPeer thinPeer;
 		final String jframeRef;
 
-		SwingActor(String jframeRef) {
+		SwingActor(ThinPeer thinPeer, String jframeRef) {
 			this.jframeRef = jframeRef;
-			try {
-				this.thinPeer = new ThinPeer("/tests.properties");
-			} catch (Exception ex) {
-				System.err.println("error starting dual peer");
-				ex.printStackTrace();
-			}
+			this.thinPeer = thinPeer;
 		}
 
 		@Override
@@ -71,7 +71,11 @@ public class SwingAppConcurrentActor {
 
 	public static void main(String[] args) throws Exception {
 
-		final ThinPeer thinPeer = new ThinPeer("/tests.properties");
+		final Properties properties = new Properties();
+		try (final InputStream stream = SwingAppConcurrentActor.class.getResourceAsStream(TEST_PROPERTIES_PATH)) {
+			properties.load(stream);
+		}
+		final ThinPeer thinPeer = new ThinPeer(properties);
 		String methodName;
 
 		methodName = "main";
@@ -103,7 +107,7 @@ public class SwingAppConcurrentActor {
 		// start some actors and pass them the frame to play with
 		final Thread[] actors = new Thread[5];
 		for (int i = 0; i < actors.length; i++) {
-			actors[i] = new Thread(new SwingActor(myFrame.getRef()));
+			actors[i] = new Thread(new SwingActor(thinPeer, myFrame.getRef()));
 			// introduce some delay and start
 			Thread.sleep(150);
 			actors[i].start();

@@ -14,6 +14,9 @@ import com.ittera.cometa.common.BiMapObjectService;
 
 import java.util.Queue;
 import java.util.UUID;
+import java.util.Properties;
+
+import java.io.InputStream;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
@@ -57,11 +60,15 @@ public class AppRunner {
 	 */
 	protected int runReqsWithSingleClient(String className, String methodName, AppRunnerOptions opts) throws Exception {
 
-		// init ThinPeer
+		// load properties and init ThinPeer
 		ThinPeer thinPeer;
 		LogInfo inLog = opts.inLog == null ? null : new LogInfo(opts.inLog);
 		LogInfo outLog = opts.outLog == null ? null : new LogInfo(opts.outLog);
-		thinPeer = new ThinPeer(RUNNER_PROPERTIES_PATH, inLog, outLog);
+		final Properties properties = new Properties();
+		try (final InputStream stream = AppRunner.class.getResourceAsStream(RUNNER_PROPERTIES_PATH)) {
+			properties.load(stream);
+		}
+		thinPeer = new ThinPeer(properties, inLog, outLog);
 
 		long start = System.currentTimeMillis();
 		int reqsSent = 0;
@@ -122,11 +129,15 @@ public class AppRunner {
 	protected int runReqsWithSingleClientAsync(String className, String methodName, AppRunnerOptions opts)
 		throws Exception {
 
-		// init ThinPeer
+		// load properties and init ThinPeer
 		ThinPeer thinPeer;
 		LogInfo inLog = opts.inLog == null ? null : new LogInfo(opts.inLog);
 		LogInfo outLog = opts.outLog == null ? null : new LogInfo(opts.outLog);
-		thinPeer = new ThinPeer(RUNNER_PROPERTIES_PATH, inLog, outLog);
+		final Properties properties = new Properties();
+		try (final InputStream stream = AppRunner.class.getResourceAsStream(RUNNER_PROPERTIES_PATH)) {
+			properties.load(stream);
+		}
+		thinPeer = new ThinPeer(properties, inLog, outLog);
 
 		long start = System.currentTimeMillis();
 		int reqsSent = 0;

@@ -10,15 +10,24 @@ import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
+import java.util.Properties;
+
+import java.io.InputStream;
+
 public class SwingAppActor {
 
 	protected static final DataMessageBuilder dataMessageBuilder = new ProtobufDataMessageBuilder();
 
 	protected static final String swingAppClassName = "com.ittera.cometa.apps.SwingApp";
+	protected static final String TEST_PROPERTIES_PATH = "/tests.properties";
 
 	public static void main(String[] args) throws Exception {
+		final Properties properties = new Properties();
+		try (final InputStream stream = SwingAppActor.class.getResourceAsStream(TEST_PROPERTIES_PATH)) {
+			properties.load(stream);
+		}
 
-		final ThinPeer thinPeer = new ThinPeer("/tests.properties");
+		final ThinPeer thinPeer = new ThinPeer(properties);
 		String methodName;
 
 		methodName = "main";

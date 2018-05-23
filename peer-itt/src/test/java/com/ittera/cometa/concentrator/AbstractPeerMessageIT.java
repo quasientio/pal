@@ -16,6 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
+import java.util.Properties;
+
+import java.io.InputStream;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -29,6 +32,8 @@ import static org.junit.Assert.*;
 public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 
 	protected final static Logger logger = LoggerFactory.getLogger("tests");
+
+	protected static final String TEST_PROPERTIES_PATH = "/tests.properties";
 
 	protected final static UUID clientId = UUID.randomUUID();
 
@@ -50,7 +55,11 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 		final Injector injector = Guice.createInjector(module);
 		dataMessageBuilder = injector.getInstance(DataMessageBuilder.class);
 
-		thinPeer = new ThinPeer("/tests.properties");
+		final Properties properties = new Properties();
+		try (final InputStream stream = AbstractPeerMessageIT.class.getResourceAsStream(TEST_PROPERTIES_PATH)) {
+			properties.load(stream);
+		}
+		thinPeer = new ThinPeer(properties);
 	}
 
 	protected DataMessage sendAndReceive(DataMessage message) throws Exception {
