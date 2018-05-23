@@ -12,13 +12,12 @@ ENV PEER_LOGS_DIR=/app/logs \
 WORKDIR /app
 
 COPY \
-	bin/peer-docker \
+	bin/peer4docker \
 	target/classes/logback.xml \
-	target/classes/peer.properties \
 	target/peer-core-1.0-SNAPSHOT-jar-with-dependencies.jar /app/
 
 
-RUN mv /app/peer-docker /app/peer \
+RUN mv /app/peer4docker /app/peer \
 	&& chmod +x peer 
 
 EXPOSE 5671
