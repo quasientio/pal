@@ -11,4 +11,6 @@ JMX_PROPS="-Dcom.sun.management.jmxremote \
 	-Dcom.sun.management.jmxremote.authenticate=false \
 	-Dcom.sun.management.jmxremote.ssl=false"
 
-java $JMX_PROPS $JVM_OPTS -jar peer-core-1.0-SNAPSHOT-jar-with-dependencies.jar $MAIN_ARGS
+CLASSPATH=classes:libs/*
+
+java $JMX_PROPS $JVM_OPTS -cp $CLASSPATH com.ittera.cometa.concentrator.Concentrator $MAIN_ARGS

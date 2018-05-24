@@ -46,6 +46,16 @@
                 </configuration>
             </plugin>
         </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <excludes>
+                    <exclude>logback-default.xml</exclude>
+                    <exclude>logback-runner-default.xml</exclude>
+                    <exclude>.gitignore</exclude>
+                </excludes>
+            </resource>
+        </resources>
     </build>
 
     <!-- DEPENDENCIES -->
