@@ -96,6 +96,9 @@ public class Concentrator {
 
 		// add to app properties
 		// TODO if zookeeper_url not present throw new fatal exception
+		if (zookeeperUrl == null) {
+			fatalExit(null, PeerFatalCode.ERROR_NO_ZOOKEEPER_URL_GIVEN);
+		}
 		properties.setProperty("zookeeper_url", zookeeperUrl);
 	}
 

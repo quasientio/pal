@@ -10,7 +10,8 @@ enum PeerFatalCode {
 	ERROR_REGISTERING_PEER(3, "Error registering peer"),
 	ERROR_NO_LOG_GIVEN(4, "Offset given but no log to read from"),
 	ERROR_INITIALIZING_LOGS(5, "Error initializing IN/OUT logs"),
-	ERROR_SERVICE_MANAGER_FAILED(6, "Service manager failure");
+	ERROR_SERVICE_MANAGER_FAILED(6, "Service manager failure"),
+	ERROR_NO_ZOOKEEPER_URL_GIVEN(7, "Missing zookeeper URL");
 
 	private final int code;
 	private final String message;
