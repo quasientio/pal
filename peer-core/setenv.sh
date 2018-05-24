@@ -1,3 +1,5 @@
+
+# Set up classpath
 WORKING_DIR=`pwd`
 MVN_REPO=~/.m2/repository
 
@@ -24,9 +26,16 @@ PEER_CXN_PATH=$MVN_REPO/com/ittera/cometa/peer-cxn/1.0-SNAPSHOT/peer-cxn-1.0-SNA
 
 CLASSPATH=$COMPILED_CLASSES:$ASPECTJ_PATH:$GUAVA_PATH:$ORGJSON_PATH:$GUICE_PATH:$JAVAX_INJECT_PATH:$PROTOBUF_PATH:$KAFKA_PATH:$JEROMQ_PATH:$SLF4J_PATH:$LOGBACK_PATH:$COMMONS_PATH:$ZOOKEEPER_PATH:$PEER_COMMON_PATH:$PEER_SERDES_PATH:$PEER_CXN_PATH:$CODEBASE_PATH
 
+# Export classpath and other path variables
 export CLASSPATH
 export SJK_PATH
 export PATH=$WORKING_DIR/bin:$JAVA_HOME/bin:$PATH
 export KAFKA_HOME='/usr/local/lib/kafka'
 export ASPECTJ_HOME='/usr/local/lib/aspectj'
 export JLINE_HOME='/usr/share/java'
+
+# Some usefull aliases to work with peer (in and outside containers)
+alias k='pkill -9 -f Concentrator'
+alias kd='docker kill peer'
+alias dp='docker run --network peers --publish 5671:5671 --rm --name peer peer'
+alias da='docker exec -ti $(docker ps -f name=^/peer$ -q) /bin/sh'
