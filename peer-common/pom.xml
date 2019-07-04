@@ -51,7 +51,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>19.0</version>
+            <version>28.0-jre</version>
         </dependency>
         <dependency>
             <groupId>javax.inject</groupId>
@@ -61,7 +61,7 @@
         <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjrt</artifactId>
-            <version>1.8.9</version>
+            <version>1.9.4</version>
         </dependency>
     </dependencies>
 </project>
