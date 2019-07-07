@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
 import java.util.Set;
 import java.util.HashSet;
 
@@ -34,8 +35,17 @@ public class LogInfoTest {
 
 		LogInfo logInfo = new LogInfo(logName, brokerInfoSet);
 
+		// verify log name
 		assertEquals(logName, logInfo.getName());
-		assertEquals("localdomain.localhost:4091,127.0.0.1:4092", logInfo.getBootstrapServers());
+
+		// verify bootstrap servers
+		String[] expectedBootstrapServers = {
+			"localdomain.localhost:4091",
+			"127.0.0.1:4092"
+		};
+		assertArrayEquals(
+			Arrays.stream(expectedBootstrapServers).sorted().toArray(),
+			Arrays.stream(logInfo.getBootstrapServers().split(",")).sorted().toArray());
 	}
 
 	@Test
@@ -62,9 +72,18 @@ public class LogInfoTest {
 
 		LogInfo logInfo = new LogInfo(logName, brokerInfoSet);
 
+		// verify log name
 		assertEquals(logName, logInfo.getName());
-		assertEquals("localdomain.localhost:4091,127.0.0.1:4092,somedomain.com:4091,localhost:4092",
-			logInfo.getBootstrapServers());
+
+		// verify bootstrap servers
+		String[] expectedBootstrapServers = {
+			"localdomain.localhost:4091",
+			"127.0.0.1:4092",
+			"somedomain.com:4091",
+			"localhost:4092"};
+		assertArrayEquals(
+			Arrays.stream(expectedBootstrapServers).sorted().toArray(),
+			Arrays.stream(logInfo.getBootstrapServers().split(",")).sorted().toArray());
 	}
 
 	@Test
