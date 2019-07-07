@@ -18,20 +18,20 @@ COMMONS_PATH=$MVN_REPO/org/apache/commons/commons-lang3/3.9/commons-lang3-3.9.ja
 ZOOKEEPER_PATH=$MVN_REPO/org/apache/zookeeper/zookeeper/3.4.14/zookeeper-3.4.14.jar
 COMPILED_CLASSES=$WORKING_DIR/target/classes
 SJK_PATH=$WORKING_DIR/tools/lib/sjk-plus-0.5.1.jar
-CODEBASE_PATH=$MVN_REPO/com/ittera/cometa/apps/1.0-SNAPSHOT/apps-1.0-SNAPSHOT.jar
 
 PEER_COMMON_PATH=$MVN_REPO/com/ittera/cometa/peer-common/1.0-SNAPSHOT/peer-common-1.0-SNAPSHOT.jar
 PEER_SERDES_PATH=$MVN_REPO/com/ittera/cometa/peer-serdes/1.0-SNAPSHOT/peer-serdes-1.0-SNAPSHOT.jar
 PEER_CXN_PATH=$MVN_REPO/com/ittera/cometa/peer-cxn/1.0-SNAPSHOT/peer-cxn-1.0-SNAPSHOT.jar
+PEER_ITT_APPS_PATH=$MVN_REPO/com/ittera/cometa/peer-itt-apps/1.0-SNAPSHOT/peer-itt-apps-1.0-SNAPSHOT.jar
+PEER_AJ_PATH=$MVN_REPO/com/ittera/cometa/peer-aj/1.0-SNAPSHOT/peer-aj-1.0-SNAPSHOT.jar
 
-CLASSPATH=$COMPILED_CLASSES:$ASPECTJ_PATH:$GUAVA_PATH:$ORGJSON_PATH:$GUICE_PATH:$JAVAX_INJECT_PATH:$PROTOBUF_PATH:$KAFKA_PATH:$JEROMQ_PATH:$SLF4J_PATH:$LOGBACK_PATH:$COMMONS_PATH:$ZOOKEEPER_PATH:$PEER_COMMON_PATH:$PEER_SERDES_PATH:$PEER_CXN_PATH:$CODEBASE_PATH
+CLASSPATH=$PEER_ITT_APPS_PATH:$COMPILED_CLASSES:$ASPECTJ_PATH:$GUAVA_PATH:$ORGJSON_PATH:$GUICE_PATH:$JAVAX_INJECT_PATH:$PROTOBUF_PATH:$KAFKA_PATH:$JEROMQ_PATH:$SLF4J_PATH:$LOGBACK_PATH:$COMMONS_PATH:$ZOOKEEPER_PATH:$PEER_COMMON_PATH:$PEER_SERDES_PATH:$PEER_CXN_PATH:$PEER_AJ_PATH
 
 # Export classpath and other path variables
 export CLASSPATH
 export SJK_PATH
 export PATH=$WORKING_DIR/bin:$JAVA_HOME/bin:$PATH
 export KAFKA_HOME='/usr/local/lib/kafka'
-export ASPECTJ_HOME='/usr/local/lib/aspectj'
 export JLINE_HOME='/usr/share/java'
 
 # Some usefull aliases to work with peer (in and outside containers)

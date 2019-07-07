@@ -5,7 +5,7 @@
     <artifactId>peer-itt</artifactId>
     <packaging>jar</packaging>
     <version>1.0-SNAPSHOT</version>
-    <name>peer integration tests</name>
+    <name>integration tests</name>
 
     <parent>
         <groupId>com.ittera.cometa</groupId>
@@ -15,10 +15,21 @@
 
     <build>
         <plugins>
+            <!-- SKIP UNIT TESTS -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.surefire.version}</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+
+            <!-- CONFIGURE FAILSAFE -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>2.20.1</version>
+                <version>${maven.failsafe.version}</version>
                 <executions>
                     <execution>
                         <goals>
@@ -38,18 +49,17 @@
             <artifactId>peer-cxn</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>com.ittera.cometa</groupId>
+            <artifactId>peer-itt-apps</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
 
         <!-- OTHER DEPENDENCIES -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>${commons.lang3.version}</version>
-        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
