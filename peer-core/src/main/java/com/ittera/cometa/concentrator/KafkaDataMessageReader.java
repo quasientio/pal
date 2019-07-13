@@ -12,6 +12,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -58,7 +61,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 
 	// kafka stuff
 	private boolean skipWrittenOffsets;
-	private final long pollTimeout;
+	private final Duration pollDuration;
 	private Long initialOffset;
 	private String kafkaTopic;
 	private TopicPartition topicPartition;
@@ -145,12 +148,12 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 																@Named("auto.offset.reset") String autoOffsetReset,
 																@Named("session.timeout.ms") String sessionTimeout,
 																@Named("id") String concentratorId,
-																@Named("pollTimeout") String pollTimeout,
+																@Named("pollDuration") String pollDuration,
 																@Named("in.log") String inLogAddress,
 																@Named("offset.pub") String offsetPubAddress) {
 		this.inLogAddress = inLogAddress;
 		this.offsetPubAddress = offsetPubAddress;
-		this.pollTimeout = Long.parseLong(pollTimeout);
+		this.pollDuration = Duration.of(Long.parseLong(pollDuration), ChronoUnit.MILLIS);
 		// prepare Kafka consumer
 		consumerProperties.put("group.id", concentratorId);
 		consumerProperties.put("key.deserializer", keyDeserializer);
@@ -262,7 +265,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 
 			// read from kafka
 			t0 = System.nanoTime();
-			records = consumer.poll(pollTimeout);
+			records = consumer.poll(pollDuration);
 			totalPollingNanos.getAndAdd(System.nanoTime() - t0);
 			totalPolls.getAndIncrement();
 

@@ -28,6 +28,8 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.List;
@@ -59,7 +61,7 @@ public class ThinPeer {
 	// kafka stuff
 	private LogInfo inLog, outLog;
 	private final TopicPartition inTopicPartition;
-	private final Long pollTimeout;
+	private final Duration pollingDuration;
 
 	private final KafkaProducer producer;
 	private final KafkaConsumer<String, String> consumer;
@@ -160,7 +162,7 @@ public class ThinPeer {
 		logger.info("Kafka consumer initialized. Will connect to bootstrap servers: {}", this.inLog.getBootstrapServers());
 
 		// configure kafka misc
-		pollTimeout = Long.parseLong(load_property("pollTimeout", properties));
+		pollingDuration = Duration.of(Long.parseLong(load_property("pollDuration", properties)), ChronoUnit.MILLIS);
 
 		// manual assignment of partition so we can control offset seek
 		inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
@@ -251,7 +253,7 @@ public class ThinPeer {
 		//consumer.seek(inTopicPartition, sentRecordOffset);
 
 		while (true) {
-			ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
 			for (ConsumerRecord record : records) {
 				final DataMessage dataMessage = (DataMessage) record.value();
 				long receivedMsgOffset = record.offset();
@@ -288,7 +290,7 @@ public class ThinPeer {
 		ConsumerRecord requestedRecord = null;
 
 		while (requestedRecord == null) {
-			ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
 			logger.debug("Read {} records during poll", records.count());
 			for (ConsumerRecord record : records) {
 				if (seek == record.offset()) {
@@ -320,7 +322,7 @@ public class ThinPeer {
 		boolean gotAllMessages = false;
 
 		while (!gotAllMessages) {
-			ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
 			logger.debug("got {} records after poll", records.count());
 			for (ConsumerRecord record : records) {
 				if (record.offset() < startOffset + numMessages) {
@@ -439,7 +441,7 @@ public class ThinPeer {
 
 		//wait for the reply to the sent message (reply should contain following = sentRecordOffset in message)
 		while (true) {
-			ConsumerRecords<String, String> records = consumer.poll(pollTimeout);
+			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
 			if (records.count() != 0) {
 				logger.debug("Received {} records", records.count());
 			}
