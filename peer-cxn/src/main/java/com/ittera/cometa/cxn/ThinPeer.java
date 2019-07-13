@@ -98,42 +98,33 @@ public class ThinPeer {
 
 		this.inLog = inLog;
 		this.outLog = outLog;
-		currentPeer = initialPeer;
+		this.currentPeer = initialPeer;
 
-		/** TODO allowP2P, as well as zookeeper_url, could be given in Properties, if we pass a Properties instead of
-		 * propertiesFile to the constructor
-		 */
-		this.allowP2P = Boolean.parseBoolean(System.getProperty("peer.allowP2P", "true"));
-		logger.info("This peer will communicate P2P? {}", allowP2P ? "yes" : "no");
+		// configure p2p
+		this.allowP2P = Boolean.parseBoolean(load_property("peer.allowP2P", properties, "true"));
+		logger.info("This peer will {}communicate P2P", allowP2P ? "" : "NOT ");
 
-		String kafkaTopicPrefix = properties.getProperty("kafkaTopicPrefix");
-		pollTimeout = Long.parseLong(properties.getProperty("pollTimeout"));
-
-		// connect to directory
-		String zookeeperUrl = System.getenv("ZOOKEEPER_URL");
+		// configure zookeeper
+		String zookeeperUrl = load_property("zookeeper_url", properties);
 		if (zookeeperUrl == null) {
-			zookeeperUrl = System.getProperty("zookeeper_url");
-			// if we still can't find it, there's nothing we can do... break out
-			if (zookeeperUrl == null) {
-				throw new RuntimeException("Couldn't connect to zookeeper. Please set the environment variable 'ZOOKEEPER_URL'" +
-					" or the 'zookeeper_url' system property. (Example: -Dzookeeper_url=localhost:2181)");
-			}
+			throw new RuntimeException("Couldn't connect to zookeeper. Please set the environment variable 'ZOOKEEPER_URL'" +
+				" or the 'zookeeper_url' system property. (Example: -Dzookeeper_url=localhost:2181)");
 		}
-
 		logger.info("Using ZOOKEEPER_URL = {}", zookeeperUrl);
-		peerLogDirectory = ZkClient.getConnectedClient(zookeeperUrl);
+		this.peerLogDirectory = ZkClient.getConnectedClient(zookeeperUrl);
 		try {
-			// register self as new peer
+			// register self as new peer TODO fill properties
 			final Properties peerProperties = new Properties();
 			peerLogDirectory.registerPeer(peerUuid, peerProperties);
 		} catch (Exception ex) {
 			logger.error("Error registering peer", ex);
 		}
 
-		// get/set log(s) to connect to; fill bootstrap servers if only log names given
+		// configure log(s) to connect to; fill bootstrap servers if only log names given
+		String kafkaTopicPrefix = load_property("kafkaTopicPrefix", properties);
 		LogInfo lastLog = null;
 		if (this.inLog == null) {
-			// get last log with prefix = kafkaTopic
+			// get last log with prefix = kafkaTopicPrefix
 			lastLog = peerLogDirectory.getLastLog(kafkaTopicPrefix);
 			this.inLog = lastLog;
 		} else {
@@ -152,11 +143,42 @@ public class ThinPeer {
 				this.outLog.setBrokerInfoSet(peerLogDirectory.getKafkaBrokers());
 			}
 		}
-
 		logger.info("Will read from log: {} and write to log: {}", this.inLog, this.outLog);
 
+		// configure kafka producer
+		Properties kafkaProducerProps = loadKafkaProducerProps(properties);
+		kafkaProducerProps.put("client.id", peerUuid.toString());
+		kafkaProducerProps.put("bootstrap.servers", this.outLog.getBootstrapServers());
+		this.producer = new KafkaProducer<>(kafkaProducerProps);
+		logger.info("Kafka producer initialized. Will connect to bootstrap servers: {}", this.outLog.getBootstrapServers());
 
-		/** Configure and Initialize Kafka Producer **/
+		// configure kafka consumer
+		Properties kafkaConsumerProps = loadKafkaConsumerProps(properties);
+		kafkaConsumerProps.put("group.id", peerUuid.toString());
+		kafkaConsumerProps.put("bootstrap.servers", this.inLog.getBootstrapServers());
+		this.consumer = new KafkaConsumer<>(kafkaConsumerProps);
+		logger.info("Kafka consumer initialized. Will connect to bootstrap servers: {}", this.inLog.getBootstrapServers());
+
+		// configure kafka misc
+		pollTimeout = Long.parseLong(load_property("pollTimeout", properties));
+
+		// manual assignment of partition so we can control offset seek
+		inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
+		consumer.assign(Collections.singletonList(inTopicPartition));
+
+		// configure ZMQ
+		logger.info("Initializing zmq context");
+		this.zmqContext = new ZContext();
+		this.peerSocket = zmqContext.createSocket(ZMQ.REQ);
+		if (currentPeer != null) {
+			connectToPeer(currentPeer);
+		}
+
+		// configure msg builder
+		this.dataMessageBuilder = new ProtobufDataMessageBuilder();
+	}
+
+	private Properties loadKafkaProducerProps(Properties properties) {
 		Properties kafkaProducerProps = new Properties();
 		for (String propKey : properties.stringPropertyNames()) {
 			if (propKey.startsWith("kafka.producer.")) {
@@ -167,13 +189,10 @@ public class ThinPeer {
 					properties.getProperty(propKey));
 			}
 		}
+		return kafkaProducerProps;
+	}
 
-		kafkaProducerProps.put("client.id", peerUuid.toString());
-		kafkaProducerProps.put("bootstrap.servers", this.outLog.getBootstrapServers());
-		producer = new KafkaProducer<>(kafkaProducerProps);
-		logger.info("Kafka producer initialized. Will connect to bootstrap servers: {}", this.outLog.getBootstrapServers());
-
-		/** Configure and Initialize Kafka Consumer **/
+	private Properties loadKafkaConsumerProps(Properties properties) {
 		Properties kafkaConsumerProps = new Properties();
 		for (String propKey : properties.stringPropertyNames()) {
 			if (propKey.startsWith("kafka.consumer.")) {
@@ -183,26 +202,33 @@ public class ThinPeer {
 				kafkaConsumerProps.put(StringUtils.substringAfter(propKey, "kafka."), properties.getProperty(propKey));
 			}
 		}
+		return kafkaConsumerProps;
+	}
 
-		kafkaConsumerProps.put("group.id", peerUuid.toString());
-		kafkaConsumerProps.put("bootstrap.servers", this.inLog.getBootstrapServers());
-		consumer = new KafkaConsumer<>(kafkaConsumerProps);
-		logger.info("Kafka consumer initialized. Will connect to bootstrap servers: {}", this.inLog.getBootstrapServers());
-
-		//manual assignment of partition so we can control offset seek
-		inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
-		consumer.assign(Collections.singletonList(inTopicPartition));
-
-		// create zmq context
-		logger.info("Initializing zmq context");
-		this.zmqContext = new ZContext();
-		this.peerSocket = zmqContext.createSocket(ZMQ.REQ);
-		if (currentPeer != null) {
-			connectToPeer(currentPeer);
+	/**
+	 * Get a property's value, by performing a search in the following order:
+	 * 1) given properties object, 2) System properties, 3) ENV (uppercase variable)
+	 * If not found, return defaultValue if given
+	 */
+	private static String load_property(String propertyName, Properties properties, String defaultValue) {
+		if (properties.containsKey(propertyName)) {
+			logger.debug("loading value of '{}' from properties object", propertyName);
+			return properties.getProperty(propertyName);
+		} else if (System.getProperty(propertyName) != null) {
+			logger.debug("loading value of '{}' from system properties", propertyName);
+			return System.getProperty(propertyName);
+		} else if (System.getenv(propertyName.toUpperCase()) != null) {
+			logger.debug("loading value of '{}' from ENV", propertyName.toUpperCase());
+			return System.getenv(propertyName.toUpperCase());
+		} else if (defaultValue != null) {
+			logger.debug("loading value of '{}' from default", propertyName);
+			return defaultValue;
 		}
+		return null;
+	}
 
-		//init msg builder
-		this.dataMessageBuilder = new ProtobufDataMessageBuilder();
+	private static String load_property(String propertyName, Properties properties) {
+		return load_property(propertyName, properties, null);
 	}
 
 	private void connectSocket() {
