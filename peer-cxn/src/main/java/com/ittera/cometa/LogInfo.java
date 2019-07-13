@@ -25,6 +25,9 @@ public class LogInfo implements Comparable {
 	private long bytes;
 	private boolean exists;
 
+	// computed fields
+	private String humanReadableByteSize;
+	private String bootstrapServers;
 
 	public LogInfo(String name) {
 		this.name = name;
@@ -32,7 +35,7 @@ public class LogInfo implements Comparable {
 
 	public LogInfo(String name, Set<KafkaBrokerInfo> brokerInfoSet) {
 		this(name);
-		this.brokerInfoSet = brokerInfoSet;
+		setBrokerInfoSet(brokerInfoSet);
 	}
 
 	public LogInfo(String name, Set<KafkaBrokerInfo> brokerInfoSet, UUID uuid) {
@@ -53,24 +56,25 @@ public class LogInfo implements Comparable {
 	}
 
 	public String getBootstrapServers() {
-
-		if (brokerInfoSet == null) {
-			return null;
-		}
-
-		StringBuilder sb = new StringBuilder();
-		for (KafkaBrokerInfo brokerInfo : brokerInfoSet) {
-			for (KafkaBrokerEndpoint brokerEndpoint : brokerInfo.getEndpoints()) {
-				sb.append(brokerEndpoint.toURL());
-				sb.append(",");
-			}
-		}
-
-		return StringUtils.stripEnd(sb.toString(), ",");
+		return bootstrapServers;
 	}
 
 	public void setBrokerInfoSet(Set<KafkaBrokerInfo> brokerInfoSet) {
 		this.brokerInfoSet = brokerInfoSet;
+
+		// assign bootstrap servers
+		if (brokerInfoSet == null) {
+			this.bootstrapServers = null;
+		} else {
+			StringBuilder sb = new StringBuilder();
+			for (KafkaBrokerInfo brokerInfo : brokerInfoSet) {
+				for (KafkaBrokerEndpoint brokerEndpoint : brokerInfo.getEndpoints()) {
+					sb.append(brokerEndpoint.toURL());
+					sb.append(",");
+				}
+			}
+			this.bootstrapServers = StringUtils.stripEnd(sb.toString(), ",");
+		}
 	}
 
 	public void setZk_ctime(long ctime) {
@@ -82,7 +86,7 @@ public class LogInfo implements Comparable {
 	}
 
 	public String getHumanReadableByteSize() {
-		return ByteSizeConverter.humanReadableByteCount(getBytes(), false);
+		return humanReadableByteSize;
 	}
 
 	public long getStartOffset() {
@@ -107,6 +111,7 @@ public class LogInfo implements Comparable {
 
 	public void setBytes(long bytes) {
 		this.bytes = bytes;
+		humanReadableByteSize = ByteSizeConverter.humanReadableByteCount(getBytes(), false);
 	}
 
 	public boolean isExists() {
