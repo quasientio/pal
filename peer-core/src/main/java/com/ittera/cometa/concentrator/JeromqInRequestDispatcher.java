@@ -9,6 +9,7 @@ import com.google.inject.name.Named;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
@@ -33,11 +34,11 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService {
 
 	protected void openConnections() {
 		// to get requests for conc
-		this.router = context.createSocket(ZMQ.ROUTER);
+		this.router = context.createSocket(SocketType.ROUTER);
 		router.bind(routerAddress);
 
 		// to send requests to conc
-		this.dealer = context.createSocket(ZMQ.DEALER);
+		this.dealer = context.createSocket(SocketType.DEALER);
 		dealer.bind(dealerAddress);
 
 		logger.info("All connections open");

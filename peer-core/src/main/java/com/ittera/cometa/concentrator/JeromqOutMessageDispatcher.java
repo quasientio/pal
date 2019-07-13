@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.zeromq.SocketType;
 import org.zeromq.ZMQ;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
@@ -48,10 +49,10 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 
 	protected void openConnections() {
 
-		broker = context.createSocket(ZMQ.REP);
+		broker = context.createSocket(SocketType.REP);
 		broker.bind(outCellAddress);
 
-		publisher = context.createSocket(ZMQ.PUB);
+		publisher = context.createSocket(SocketType.PUB);
 		publisher.connect(outPubAddress);
 
 		logger.info("All connections open");

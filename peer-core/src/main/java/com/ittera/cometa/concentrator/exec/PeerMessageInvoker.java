@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
@@ -47,7 +48,7 @@ public class PeerMessageInvoker extends Thread {
 	public void run() {
 
 		// create REP socket
-		socket = zmqContext.createSocket(ZMQ.REP);
+		socket = zmqContext.createSocket(SocketType.REP);
 		socket.connect(dealerAddress);
 
 		DataMessage requestMsg, replyMsg;

@@ -29,6 +29,7 @@ import com.google.inject.Singleton;
 
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 
+import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
@@ -199,12 +200,12 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 
 		logger.info("Initialized kafka consumer");
 
-		this.logDealer = zmqContext.createSocket(ZMQ.DEALER);
+		this.logDealer = zmqContext.createSocket(SocketType.DEALER);
 		logDealer.bind(inLogAddress);
 
 		// subscriber to get the offsets written by the message writer
 		if (skipWrittenOffsets) {
-			this.offsetSubscriber = zmqContext.createSocket(ZMQ.SUB);
+			this.offsetSubscriber = zmqContext.createSocket(SocketType.SUB);
 			offsetSubscriber.connect(offsetPubAddress);
 			offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
 

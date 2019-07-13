@@ -24,6 +24,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
@@ -171,7 +172,7 @@ public class ThinPeer {
 		// configure ZMQ
 		logger.info("Initializing zmq context");
 		this.zmqContext = new ZContext();
-		this.peerSocket = zmqContext.createSocket(ZMQ.REQ);
+		this.peerSocket = zmqContext.createSocket(SocketType.REQ);
 		if (currentPeer != null) {
 			connectToPeer(currentPeer);
 		}

@@ -5,6 +5,7 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
+import org.zeromq.SocketType;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
@@ -30,7 +31,7 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 	private final ThreadLocal<Socket> threadSocket = new ThreadLocal<Socket>() {
 		@Override
 		protected Socket initialValue() {
-			Socket worker = zmqContext.createSocket(ZMQ.REQ);
+			Socket worker = zmqContext.createSocket(SocketType.REQ);
 			worker.connect(outCellAddress);
 			logger.debug("Created and connected REQ new socket to outCellAddress: {}", outCellAddress);
 			threadSocketCreated.set(true);

@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.zeromq.SocketType;
 import org.zeromq.ZMQ;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
@@ -68,14 +69,14 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 	public void openConnections() {
 
 		// start subscriber
-		this.subscriber = zmqContext.createSocket(ZMQ.SUB);
+		this.subscriber = zmqContext.createSocket(SocketType.SUB);
 		subscriber.bind(outPubAddress);
 		subscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
 		logger.info("Subscriber connected");
 
 		// start offsets publisher
 		if (publishOffsets) {
-			this.offsetPublisher = zmqContext.createSocket(ZMQ.PUB);
+			this.offsetPublisher = zmqContext.createSocket(SocketType.PUB);
 			offsetPublisher.bind(offsetPubAddress);
 			logger.info("Publisher connected");
 		}
