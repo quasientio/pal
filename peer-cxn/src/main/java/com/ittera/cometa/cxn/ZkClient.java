@@ -26,18 +26,18 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	protected static final String DEFAULT_ROOT_PATH = "/cometa";
 	protected static final String PEERS_SUBPATH = "/peers";
 	protected static final String LOGS_SUBPATH = "/logs";
-
 	protected static final String BROKERS_PATH = "/brokers/ids";
+
 	public static final int SESSION_TIMEOUT = 10000;
 
 	private boolean brokersInfoLoaded;
 	private ZooKeeper zk;
 	private Watcher watcher;
 	private String customRootPath;
-	private String zookeeperUrl;
+	private String zkAddress;
 	private Set<KafkaBrokerInfo> brokerInfoSet;
 
-	public static ZkClient getConnectedClient(String zookeeperUrl, String customRootPath, Watcher watcher)
+	public static ZkClient getConnectedClient(String zkAddress, String customRootPath, Watcher watcher)
 		throws Exception {
 
 		ZkClient cli = new ZkClient();
@@ -50,24 +50,24 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			cli.setCustomRootPath(customRootPath);
 		}
 
-		cli.connect(zookeeperUrl);
+		cli.connect(zkAddress);
 
 		return cli;
 	}
 
-	public static ZkClient getConnectedClient(String zookeeperUrl, String customRootPath)
+	public static ZkClient getConnectedClient(String zkAddress, String customRootPath)
 		throws Exception {
-		return getConnectedClient(zookeeperUrl, customRootPath, null);
+		return getConnectedClient(zkAddress, customRootPath, null);
 	}
 
-	public static ZkClient getConnectedClient(String zookeeperUrl, Watcher watcher)
+	public static ZkClient getConnectedClient(String zkAddress, Watcher watcher)
 		throws Exception {
-		return getConnectedClient(zookeeperUrl, null, watcher);
+		return getConnectedClient(zkAddress, null, watcher);
 	}
 
-	public static ZkClient getConnectedClient(String zookeeperUrl)
+	public static ZkClient getConnectedClient(String zkAddress)
 		throws Exception {
-		return getConnectedClient(zookeeperUrl, null, null);
+		return getConnectedClient(zkAddress, null, null);
 	}
 
 	public static ZkClient getDisconnectedClient(String customRootPath, Watcher watcher) {
@@ -147,10 +147,10 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	}
 
 	@Override
-	public void connect(String zookeeperUrl) throws Exception {
-		this.zookeeperUrl = zookeeperUrl;
-		zk = new ZooKeeper(zookeeperUrl, SESSION_TIMEOUT, watcher == null ? this : watcher);
-		logger.info("Connected to zookeeper at {}", zookeeperUrl);
+	public void connect(String zkAddress) throws Exception {
+		this.zkAddress = zkAddress;
+		zk = new ZooKeeper(zkAddress, SESSION_TIMEOUT, watcher == null ? this : watcher);
+		logger.info("Connected to zookeeper at {}", zkAddress);
 		ensureRootAndSubdirsExist();
 	}
 
@@ -437,7 +437,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public LogInfo getLastLog(String logNamePrefix) throws Exception {
 		if (!zk.getState().equals(ZooKeeper.States.CONNECTED)) {
-			connect(zookeeperUrl);
+			connect(zkAddress);
 		}
 
 		// find last
@@ -513,7 +513,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public LogInfo getLogInfo(String logName) throws Exception {
 		if (!zk.getState().equals(ZooKeeper.States.CONNECTED)) {
-			connect(zookeeperUrl);
+			connect(zkAddress);
 		}
 
 		Stat nodeStat = getLogNodeStat(logName);
@@ -545,7 +545,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public Properties getPeerProperties(UUID peerUuid) throws Exception {
 		if (!zk.getState().equals(ZooKeeper.States.CONNECTED)) {
-			connect(zookeeperUrl);
+			connect(zkAddress);
 		}
 
 		Stat nodeStat = getPeerNodeStat(peerUuid);
@@ -566,7 +566,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public PeerInfo getPeerInfo(UUID peerUuid) throws Exception {
 		if (!zk.getState().equals(ZooKeeper.States.CONNECTED)) {
-			connect(zookeeperUrl);
+			connect(zkAddress);
 		}
 
 		PeerInfo peerInfo = new PeerInfo(peerUuid);
@@ -681,8 +681,16 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	}
 
 	@Override
-	public String getUrl() {
-		return zookeeperUrl;
+	public String getAddress() {
+		return zkAddress;
+	}
+
+	public ZooKeeper.States getZkState() {
+		return zk.getState();
+	}
+
+	public long getZkSessionId() {
+		return zk.getSessionId();
 	}
 
 	@Override
@@ -692,7 +700,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 	@Override
 	public void close() {
-		logger.info("Closing zookeeper connection to {}", zookeeperUrl);
+		logger.info("Closing zookeeper connection to {}", zkAddress);
 		try {
 			zk.close();
 		} catch (InterruptedException ex) {

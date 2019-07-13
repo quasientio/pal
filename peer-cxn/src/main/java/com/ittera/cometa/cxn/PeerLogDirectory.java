@@ -15,13 +15,13 @@ public interface PeerLogDirectory {
 	/**
 	 * CONNECTION METHODS
 	 **/
-	void connect(String url) throws Exception;
+	void connect(String address) throws Exception;
 
 	Set<KafkaBrokerInfo> getKafkaBrokers();
 
 	boolean isConnectionEstablished();
 
-	String getUrl();
+	String getAddress();
 
 	void close();
 
