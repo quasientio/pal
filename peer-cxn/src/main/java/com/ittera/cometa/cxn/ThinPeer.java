@@ -249,7 +249,6 @@ public class ThinPeer {
 
 	public DataMessage waitFor(Wrappers.Type type, String fieldName) {
 		logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
-		DataMessage reply = null;
 		// TODO extra param to seek before
 		//consumer.seek(inTopicPartition, sentRecordOffset);
 
@@ -275,10 +274,8 @@ public class ThinPeer {
 	}
 
 	public DataMessage getMessageAtOffset(Long seek, boolean lookupCached) {
-
 		logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
 		consumer.seek(inTopicPartition, seek);
-
 		if (lookupCached) {
 			DataMessage cachedMsg = getCachedMessageAtOffset(seek);
 			if (cachedMsg != null) {
@@ -300,10 +297,8 @@ public class ThinPeer {
 				recordsRead.put(record.offset(), record);
 			}
 		}
-
 		// now swap last batch (map) of records read with the new one
 		this.lastRecordsRead = recordsRead;
-
 		return (DataMessage) requestedRecord.value();
 	}
 
@@ -406,7 +401,6 @@ public class ThinPeer {
 	}
 
 	private DataMessage sendAsyncAndSwitchToPeer(DataMessage message) throws ExecutionException, InterruptedException {
-
 		Future<DataMessage> replyFuture = sendToLogAsync(message);
 
 		// wait for reply (blocking)
@@ -420,8 +414,7 @@ public class ThinPeer {
 	}
 
 	private DataMessage sendAndReceiveConsumingLog(DataMessage message) {
-
-		//send to kafka
+		// send to kafka
 		Long sentRecordOffset;
 		Future<RecordMetadata> recordMetadataFuture =
 			producer.send(new ProducerRecord(outLog.getName(), message.getMessageUuid(), message));
@@ -539,9 +532,8 @@ public class ThinPeer {
 			logger.error("Error closing zmq connection", ex);
 		}
 		producer.close();
-		logger.info("Producer closed.");
+		logger.info("Log producer closed.");
 		consumer.close();
-		logger.info("Consumer closed.");
+		logger.info("Log consumer closed.");
 	}
 }
-
