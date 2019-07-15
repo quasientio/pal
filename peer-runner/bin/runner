@@ -5,4 +5,4 @@ JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts
 #SYSTEM_PROPS="-Dlogback.configurationFile=logback-runner.xml -Dpeer.allowP2P=false"
 SYSTEM_PROPS="-Dlogback.configurationFile=logback-runner.xml"
 
-java $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.util.AppRunner "$@"
+java $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.AppRunner "$@"

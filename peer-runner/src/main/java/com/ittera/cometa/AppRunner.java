@@ -1,16 +1,10 @@
-package com.ittera.cometa.util;
+package com.ittera.cometa;
 
-import com.ittera.cometa.PeerInfo;
-import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.ThinPeer;
-
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.DataMessageBuilder;
-
 import com.ittera.cometa.common.lang.ObjectRef;
-import com.ittera.cometa.common.ObjectService;
-import com.ittera.cometa.common.BiMapObjectService;
 
 import java.util.Queue;
 import java.util.UUID;
@@ -21,10 +15,6 @@ import java.io.InputStream;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.google.inject.AbstractModule;
-import com.google.inject.Injector;
-import com.google.inject.Guice;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,18 +30,7 @@ public class AppRunner {
 
 	AppRunner(boolean verbose) {
 		this.verbose = verbose;
-
-		// configure wiring
-		AbstractModule module = new AbstractModule() {
-			@Override
-			protected void configure() {
-				bind(ObjectService.class).to(BiMapObjectService.class).asEagerSingleton();
-				bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class).asEagerSingleton();
-			}
-		};
-
-		final Injector injector = Guice.createInjector(module);
-		dataMessageBuilder = injector.getInstance(DataMessageBuilder.class);
+		this.dataMessageBuilder = new ProtobufDataMessageBuilder();
 	}
 
 	/**

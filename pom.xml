@@ -61,6 +61,7 @@
         <module>peer-cxn</module>
         <module>peer-itt-apps</module>
         <module>peer-itt</module>
+        <module>peer-runner</module>
     </modules>
 
 </project>

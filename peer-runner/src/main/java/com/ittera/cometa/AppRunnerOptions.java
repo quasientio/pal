@@ -1,4 +1,4 @@
-package com.ittera.cometa.util;
+package com.ittera.cometa;
 
 import java.util.List;
 
