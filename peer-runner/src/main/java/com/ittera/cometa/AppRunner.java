@@ -10,6 +10,7 @@ import java.util.Queue;
 import java.util.UUID;
 import java.util.Properties;
 import java.util.List;
+import java.util.Arrays;
 
 import java.io.InputStream;
 
@@ -17,6 +18,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,9 +110,7 @@ public class AppRunner implements Callable<Integer> {
 		// prepare arrays for message construction
 		Class[] parameterTypes = new Class[]{String[].class};
 		String[] parameterTypesNamesArray = new String[parameterTypes.length];
-		for (int i = 0; i < parameterTypes.length; i++) {
-			parameterTypesNamesArray[i] = parameterTypes[i].getName();
-		}
+		IntStream.range(0, parameterTypes.length).forEach(i -> parameterTypesNamesArray[i] = parameterTypes[i].getName());
 		Object[] parameters = new Object[]{new String[]{}};
 		// TODO: generalize this to other methods (non-varargs)
 		if ("main".equals(methodName) && argList != null) {
@@ -134,10 +134,11 @@ public class AppRunner implements Callable<Integer> {
 		thinPeer.connectToPeer(UUID.fromString(concentratorUuid));
 
 		// send rest of requests
-		for (; reqsSent < requests; reqsSent++) {
+		while (reqsSent < requests) {
 			requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
 				parameterTypesNamesArray, this, null, parameters, new ObjectRef[parameterTypes.length]);
 			thinPeer.sendAndReceive(requestMsg);
+			reqsSent++;
 		}
 
 		thinPeer.close();
@@ -198,9 +199,7 @@ public class AppRunner implements Callable<Integer> {
 							queueSize);
 						if (logger.isTraceEnabled() && queueSize > 0) {
 							logger.trace("PENDING:");
-							for (Future<DataMessage> futureReply : messageFutureQueue) {
-								logger.trace(futureReply.toString());
-							}
+							messageFutureQueue.stream().forEach(f -> logger.trace(f.toString()));
 						}
 					}
 					try {
@@ -219,9 +218,7 @@ public class AppRunner implements Callable<Integer> {
 		// prepare arrays for message construction
 		Class[] parameterTypes = new Class[]{String[].class};
 		String[] parameterTypesNamesArray = new String[parameterTypes.length];
-		for (int i = 0; i < parameterTypes.length; i++) {
-			parameterTypesNamesArray[i] = parameterTypes[i].getName();
-		}
+		IntStream.range(0, parameterTypes.length).forEach(i -> parameterTypesNamesArray[i] = parameterTypes[i].getName());
 		Object[] parameters = new Object[]{new String[]{}};
 		// TODO: generalize this to other methods (non-varargs)
 		if ("main".equals(methodName) && argList != null) {
@@ -229,7 +226,7 @@ public class AppRunner implements Callable<Integer> {
 		}
 
 		// send all requests
-		for (; reqsSent < requests; reqsSent++) {
+		while (reqsSent < requests) {
 			DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
 				parameterTypesNamesArray, this, null, parameters, new ObjectRef[parameterTypes.length]);
 			if (sendAndForget) {
@@ -240,6 +237,7 @@ public class AppRunner implements Callable<Integer> {
 				messageFuture = thinPeer.sendToLogAsync(requestMsg);
 				messageFutureQueue.add(messageFuture);
 			}
+			reqsSent++;
 		}
 
 		// wait for background reply processor to be done
@@ -280,7 +278,7 @@ public class AppRunner implements Callable<Integer> {
 		long start = System.currentTimeMillis();
 
 		// create all threads
-		for (int i = 0; i < clients; i++) {
+		IntStream.range(0, clients).forEach(i -> {
 			Thread client = new Thread(() -> {
 				try {
 					int sent;
@@ -296,12 +294,10 @@ public class AppRunner implements Callable<Integer> {
 				}
 			});
 			clientList[i] = client;
-		}
+		});
 
 		// then start all clients at once
-		for (int i = 0; i < clients; i++) {
-			clientList[i].start();
-		}
+		Arrays.stream(clientList).forEach(c -> c.start());
 
 		// wait for threads to finish
 		while (finishedThreads.get() < clients) {
