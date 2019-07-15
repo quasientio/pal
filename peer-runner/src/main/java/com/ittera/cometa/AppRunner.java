@@ -23,11 +23,11 @@ import org.slf4j.LoggerFactory;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+
 import static picocli.CommandLine.Option;
 import static picocli.CommandLine.Parameters;
-import static picocli.CommandLine.ArgGroup;
 
-@Command(name="runner")
+@Command(name = "runner")
 public class AppRunner implements Callable<Integer> {
 
 	protected static final Logger logger = LoggerFactory.getLogger(AppRunner.class);
@@ -53,25 +53,17 @@ public class AppRunner implements Callable<Integer> {
 	@Option(names = {"-l", "--log"}, paramLabel = "LOGNAME", description = "read and write from/to given log")
 	protected String logName;
 
+	@Option(names = {"-a", "--async"}, description = "send to log in async mode")
+	protected boolean async;
+
+	@Option(names = {"-f", "--forget-reply"}, description = "do not wait for replies")
+	protected boolean sendAndForget;
+
 	@Option(names = {"-h", "--help"}, usageHelp = true, description = "display this help message")
 	protected boolean helpRequested = false;
 
 	@Option(names = "-v", description = "run verbosely")
 	protected boolean verbose;
-
-	/**
-	 * Exclusive Options
-	 */
-	@ArgGroup(exclusive = true, multiplicity = "0..1")
-	protected ExclusiveOpts exclusiveOpts;
-
-	static class ExclusiveOpts {
-		@Option(names = {"-a", "--async"}, description = "send to log in async mode")
-		boolean async;
-
-		@Option(names = {"-f", "--forget-reply"}, description = "do not wait for replies")
-		boolean sendAndForget;
-	}
 
 	/**
 	 * Parameters
@@ -187,7 +179,7 @@ public class AppRunner implements Callable<Integer> {
 		// a queue to store futures (async mode)
 		final Queue<Future<DataMessage>> messageFutureQueue = new ConcurrentLinkedQueue<>();
 		Thread replyProcessorThread = null;
-		if (exclusiveOpts != null && !exclusiveOpts.sendAndForget) {
+		if (!sendAndForget) {
 			replyProcessorThread = new Thread(() -> {
 				int totalProcessed = 0;
 				int processed;
@@ -240,7 +232,7 @@ public class AppRunner implements Callable<Integer> {
 		for (; reqsSent < requests; reqsSent++) {
 			DataMessage requestMsg = dataMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(), className, methodName,
 				parameterTypesNamesArray, this, null, parameters, new ObjectRef[parameterTypes.length]);
-			if (exclusiveOpts != null && exclusiveOpts.sendAndForget) {
+			if (sendAndForget) {
 				// send to log and forget
 				thinPeer.sendToLogAndForget(requestMsg);
 			} else {
@@ -251,7 +243,7 @@ public class AppRunner implements Callable<Integer> {
 		}
 
 		// wait for background reply processor to be done
-		if (exclusiveOpts != null && !exclusiveOpts.sendAndForget) {
+		if (!sendAndForget) {
 			replyProcessorThread.join();
 		}
 
@@ -292,7 +284,7 @@ public class AppRunner implements Callable<Integer> {
 			Thread client = new Thread(() -> {
 				try {
 					int sent;
-					if (exclusiveOpts != null && (exclusiveOpts.async || exclusiveOpts.sendAndForget)) {
+					if (async || sendAndForget) {
 						sent = runReqsWithSingleClientAsync();
 					} else {
 						sent = runReqsWithSingleClient();
@@ -330,7 +322,7 @@ public class AppRunner implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 		if (requests == 1 || clients == 1) {
-			if (exclusiveOpts != null && (exclusiveOpts.async || exclusiveOpts.sendAndForget)) {
+			if (async || sendAndForget) {
 				runReqsWithSingleClientAsync();
 			} else {
 				runReqsWithSingleClient();
