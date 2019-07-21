@@ -3,19 +3,6 @@
 JMX_PORT=9012
 JMX_HOST=localhost
 
-export ZOOKEEPER_URL=localhost:2181
-export PEER_LOGS_DIR=./logs
-
-JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA -noverify"
-LTW_OPTS=""
-
-if [[ $1 = '-ltw' ]]; then
-	LTW_OPTS="-javaagent:$ASPECTJ_HOME/lib/aspectjweaver.jar"
-	MAIN_ARGS=${@:2}
-else
-	MAIN_ARGS=$@
-fi
-
 JMX_PROPS="-Dcom.sun.management.jmxremote \
 	-Djava.rmi.server.hostname=$JMX_HOST \
 	-Dcom.sun.management.jmxremote.port=$JMX_PORT \
@@ -23,4 +10,8 @@ JMX_PROPS="-Dcom.sun.management.jmxremote \
 	-Dcom.sun.management.jmxremote.authenticate=false \
 	-Dcom.sun.management.jmxremote.ssl=false"
 
-java $JMX_PROPS $LTW_OPTS $JVM_OPTS com.ittera.cometa.concentrator.Concentrator $MAIN_ARGS
+export MAVEN_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA -noverify $JMX_PROPS"
+
+MAIN_ARGS=$@
+
+mvn exec:java -Dexec.mainClass="com.ittera.cometa.concentrator.Concentrator" $MAIN_ARGS
