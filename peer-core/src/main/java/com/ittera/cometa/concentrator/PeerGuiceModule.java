@@ -4,6 +4,7 @@ import com.ittera.cometa.common.ObjectService;
 
 import com.ittera.cometa.common.lang.DispatchForwarder;
 import com.ittera.cometa.common.lang.ProxyDispatcher;
+import com.ittera.cometa.concentrator.exec.java.CustomClassloader;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 
 import com.ittera.cometa.concentrator.exec.*;
@@ -25,11 +26,13 @@ public class PeerGuiceModule extends AbstractModule {
 	private Properties properties;
 	private ZContext zContext;
 	private UUID peerUuid;
+	private CustomClassloader customClassloader;
 
-	PeerGuiceModule(Properties properties, ZContext zContext) {
+	PeerGuiceModule(Properties properties, ZContext zContext, CustomClassloader customClassloader) {
 		this.properties = properties;
 		this.zContext = zContext;
 		this.peerUuid = UUID.fromString(properties.getProperty("id"));
+		this.customClassloader = customClassloader;
 	}
 
 	@Override
@@ -60,5 +63,10 @@ public class PeerGuiceModule extends AbstractModule {
 	@Provides
 	UUID getPeerUuid() {
 		return peerUuid;
+	}
+
+	@Provides
+	CustomClassloader getCustomClassloader() {
+		return customClassloader;
 	}
 }

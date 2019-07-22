@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.concentrator.exec.java.CustomClassloader;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 
 import com.ittera.cometa.concentrator.exec.PeerMessageExecutor;
@@ -7,11 +8,12 @@ import com.ittera.cometa.concentrator.exec.LogMessageExecutor;
 import com.ittera.cometa.concentrator.exec.ExtendedThreadPoolExecutor;
 
 import java.io.InputStream;
+import java.io.File;
 
-import java.util.Properties;
-import java.util.UUID;
-import java.util.Set;
-import java.util.HashSet;
+import java.net.MalformedURLException;
+import java.net.URL;
+
+import java.util.*;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -35,6 +37,8 @@ public class Concentrator {
 	public static UUID uuid;
 
 	private static final Properties properties = new Properties();
+
+	private static CustomClassloader customClassloader;
 
 	// zmq context -- gets injected to all other threads
 	protected static final ZContext zmqContext;
@@ -94,11 +98,10 @@ public class Concentrator {
 			zookeeperUrl = System.getProperty("zookeeper_url");
 		}
 
-		// add to app properties
-		// TODO if zookeeper_url not present throw new fatal exception
 		if (zookeeperUrl == null) {
 			fatalExit(null, PeerFatalCode.ERROR_NO_ZOOKEEPER_URL_GIVEN);
 		}
+		// add to app properties
 		properties.setProperty("zookeeper_url", zookeeperUrl);
 	}
 
@@ -142,8 +145,25 @@ public class Concentrator {
 		// check and add env variables to app props
 		addEnvToProperties(properties);
 
+		// init custom classloader
+		List<URL> urls = new ArrayList<>();
+		if (options.classpath != null) {
+			// split by ':' and add each entry: each should be either a folder or a JAR (just as in $CLASSPATH)
+			Arrays.stream(options.classpath.split(":"))
+				.map(e -> new File(e))
+				.forEach(f -> {
+					try {
+						urls.add(f.toURI().toURL());
+					} catch (MalformedURLException ex) {
+						logger.error("Error adding classpath entry as URL for custom classloader", ex);
+					}
+				});
+		}
+		customClassloader = new CustomClassloader(urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
+		logger.info("initialized custom classloader with paths: {}", urls.toString());
+
 		// inject dependencies
-		final Injector injector = Guice.createInjector(new PeerGuiceModule(properties, zmqContext));
+		final Injector injector = Guice.createInjector(new PeerGuiceModule(properties, zmqContext, customClassloader));
 
 		// register peer
 		registerSelfAsPeer(properties, injector);

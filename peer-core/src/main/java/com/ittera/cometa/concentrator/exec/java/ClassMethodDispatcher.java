@@ -99,7 +99,8 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 	protected AccessibleObject loadAccessibleObject(DataMessage dataMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 
-		Class clazz = Class.forName(dataMessage.getClassMethodCall().getClass_().getName());
+		Class clazz = Class.forName(dataMessage.getClassMethodCall().getClass_().getName(), true,
+			Thread.currentThread().getContextClassLoader());
 		AccessibleObject accessibleObject = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(),
 			dataMessage.getClassMethodCall().getParameterList().stream().map(p -> p.getValue()).collect(Collectors.toList()),
 			dataMessage.getClassMethodCall().getName());

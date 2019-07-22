@@ -115,7 +115,8 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	protected AccessibleObject loadAccessibleObject(DataMessage dataMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 		// TODO why are we not using ReflectionHelper to get the constructor?
-		Class clazz = Class.forName(dataMessage.getConstructorCall().getClass_().getName());
+		Class clazz = Class.forName(dataMessage.getConstructorCall().getClass_().getName(), true,
+			Thread.currentThread().getContextClassLoader());
 		return clazz.getDeclaredConstructor((Class[]) parameterTypes.toArray(new Class[parameterTypes.size()]));
 	}
 }

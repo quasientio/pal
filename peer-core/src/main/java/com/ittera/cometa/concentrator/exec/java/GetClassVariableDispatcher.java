@@ -42,7 +42,8 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
 	protected AccessibleObject loadAccessibleObject(Wrappers.DataMessage dataMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 
-		Class clazz = Class.forName(dataMessage.getStaticFieldGet().getClass_().getName());
+		Class clazz = Class.forName(dataMessage.getStaticFieldGet().getClass_().getName(), true,
+			Thread.currentThread().getContextClassLoader());
 		AccessibleObject accessibleObject = clazz.getDeclaredField(dataMessage.getStaticFieldGet().getField().getName());
 		return accessibleObject;
 	}

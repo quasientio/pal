@@ -62,7 +62,8 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 	protected AccessibleObject loadAccessibleObject(Wrappers.DataMessage dataMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 
-		Class clazz = Class.forName(dataMessage.getInstanceFieldPut().getClass_().getName());
+		Class clazz = Class.forName(dataMessage.getInstanceFieldPut().getClass_().getName(), true,
+			Thread.currentThread().getContextClassLoader());
 		AccessibleObject accessibleObject = clazz.getDeclaredField(dataMessage.getInstanceFieldPut().getField().getName());
 		return accessibleObject;
 	}

@@ -17,9 +17,6 @@ import org.zeromq.ZContext;
 
 import org.apache.commons.lang3.StringUtils;
 
-/**
- * TODO set context classloader to created threads
- */
 public class ExecThreadFactory implements ThreadFactory {
 
 	private final List<Thread> createdThreads = new ArrayList<>();
@@ -43,6 +40,8 @@ public class ExecThreadFactory implements ThreadFactory {
 	protected final ZContext zmqContext;
 	protected final String zmqSocketAddress;
 
+	protected final ClassLoader classLoader;
+
 	enum ExecChannelType {
 		PEER("peer"), LOG("log");
 
@@ -54,8 +53,8 @@ public class ExecThreadFactory implements ThreadFactory {
 	}
 
 	public ExecThreadFactory(ZContext zmqContext, String zmqSocketAddress, DataMessageBuilder dataMessageBuilder,
-													 IncomingMessageDispatcher incomingMessageDispatcher,
-													 DispatcherConnector dispatcherConnector, ExecChannelType execChannelType) {
+													 IncomingMessageDispatcher incomingMessageDispatcher, DispatcherConnector dispatcherConnector,
+													 ExecChannelType execChannelType, ClassLoader classLoader) {
 
 		this.execChannelType = execChannelType;
 		threadGroup = new ThreadGroup(getThreadGroupName());
@@ -66,6 +65,7 @@ public class ExecThreadFactory implements ThreadFactory {
 		this.dataMessageBuilder = dataMessageBuilder;
 		this.dispatcherConnector = dispatcherConnector;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
+		this.classLoader = classLoader;
 		logger.info("Initialized exec thread factory with group name: {}, daemon: {}, maxPriority: {}", getThreadGroupName(),
 			THREAD_GROUP_IS_DAEMON, THREAD_GROUP_MAX_PRIORITY);
 	}
@@ -86,6 +86,7 @@ public class ExecThreadFactory implements ThreadFactory {
 			default:
 				throw new IllegalArgumentException("Unknown ExecChannelType: " + execChannelType);
 		}
+		thread.setContextClassLoader(classLoader);
 		thread.setPriority(THREAD_PRIORITY);
 		thread.setDaemon(THREAD_IS_DAEMON);
 		thread.setUncaughtExceptionHandler((t, e) -> logger.error("Uncaught exception in {} exec thread: {}",

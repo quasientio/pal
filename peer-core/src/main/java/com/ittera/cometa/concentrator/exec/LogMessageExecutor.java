@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator.exec;
 
+import com.ittera.cometa.concentrator.exec.java.CustomClassloader;
 import com.ittera.cometa.messages.DataMessageBuilder;
 
 import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
@@ -27,10 +28,11 @@ public class LogMessageExecutor extends ExtendedThreadPoolExecutor {
 														@Named("log.keepAliveSeconds") String keepAliveSeconds,
 														ZContext zmqContext, @Named("in.log") String zmqSocketAddress,
 														DataMessageBuilder dataMessageBuilder, IncomingMessageDispatcher
-															incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
+															incomingMessageDispatcher, DispatcherConnector dispatcherConnector,
+														CustomClassloader customClassloader) {
 
 		super(Integer.valueOf(corePoolSize), Integer.valueOf(maximumPoolSize), Integer.valueOf(keepAliveSeconds),
 			TimeUnit.SECONDS, new SynchronousQueue<>(), new ExecThreadFactory(zmqContext, zmqSocketAddress, dataMessageBuilder,
-				incomingMessageDispatcher, dispatcherConnector, ExecThreadFactory.ExecChannelType.LOG));
+				incomingMessageDispatcher, dispatcherConnector, ExecThreadFactory.ExecChannelType.LOG, customClassloader));
 	}
 }

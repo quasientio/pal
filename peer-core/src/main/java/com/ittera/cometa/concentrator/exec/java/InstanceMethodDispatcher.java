@@ -94,7 +94,8 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 		throws ClassNotFoundException {
 		Object target;
 		if (dataMessage.getInstanceMethodCall().hasObject()) {
-			Class objClass = Class.forName(dataMessage.getInstanceMethodCall().getClass_().getName());
+			Class objClass = Class.forName(dataMessage.getInstanceMethodCall().getClass_().getName(), true,
+				Thread.currentThread().getContextClassLoader());
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceMethodCall().getObject(), objClass);
 			logger.debug("Unwrapped target: {}", target);
 		} else {
@@ -114,7 +115,8 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 	@Override
 	protected AccessibleObject loadAccessibleObject(DataMessage dataMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
-		Class clazz = Class.forName(dataMessage.getInstanceMethodCall().getClass_().getName());
+		Class clazz = Class.forName(dataMessage.getInstanceMethodCall().getClass_().getName(), true,
+			Thread.currentThread().getContextClassLoader());
 		AccessibleObject accessibleObject = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(),
 			dataMessage.getInstanceMethodCall().getParameterList().stream().map(p -> p.getValue()).collect(Collectors.toList()),
 			dataMessage.getInstanceMethodCall().getName());

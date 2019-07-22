@@ -190,14 +190,14 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 
 		if (dataMessage.hasConstructorCall()) {
 			for (Primitives.Parameter param : parameterList) {
-				paramClasses.add(Class.forName(param.getType().getName()));
+				paramClasses.add(Class.forName(param.getType().getName(), true, Thread.currentThread().getContextClassLoader()));
 			}
 		} else if (dataMessage.hasClassMethodCall() || dataMessage.hasInstanceMethodCall()) {
 			for (Primitives.Parameter param : parameterList) {
 				Primitives.Object obj = param.getValue();
 				Class paramClass = Unwrapper.getClassForPrimitive(obj.getClass_().getName());
 				if (paramClass == null) {
-					paramClass = Class.forName(obj.getClass_().getName());
+					paramClass = Class.forName(obj.getClass_().getName(), true, Thread.currentThread().getContextClassLoader());
 				}
 				paramClasses.add(paramClass);
 			}

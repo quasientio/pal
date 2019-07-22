@@ -269,7 +269,7 @@ public class Unwrapper {
 		if (shortPrimitiveNameToClass.containsKey(objClassName)) {
 			objectClass = shortPrimitiveNameToClass.get(objClassName);
 		} else {
-			objectClass = Class.forName(objClassName);
+			objectClass = Class.forName(objClassName, true, Thread.currentThread().getContextClassLoader());
 		}
 		return unwrapObject(object, objectClass);
 	}

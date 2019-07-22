@@ -73,7 +73,8 @@ public final class ReflectionHelper {
 			// create type array
 			Class[] parameterTypes = new Class[parameterTypeNames.size()];
 			for (int i = 0; i < parameterTypeNames.size(); i++) {
-				parameterTypes[i] = Class.forName(parameterTypeNames.get(i).getClass_().getName());
+				parameterTypes[i] = Class.forName(parameterTypeNames.get(i).getClass_().getName(), true,
+					Thread.currentThread().getContextClassLoader());
 			}
 
 			Method methodFound = clazz.getMethod(methodName, parameterTypes);

@@ -22,6 +22,7 @@ public class PeerOptions {
 	Long offset;
 	UUID uuid;
 	boolean helpNeeded;
+	String classpath;
 
 	PeerOptions(Options options) {
 		this.options = options;
@@ -40,6 +41,7 @@ public class PeerOptions {
 		options.addOption("w", "write-log", true, "write to given log");
 		options.addOption("l", "log", true, "read and write from/to given log");
 		options.addOption("s", "offset-start", true, "read from given offset (requires -l or -r)");
+		options.addOption("cp", "classpath", true, "load classes from given folders/JARs");
 		options.addOption("h", "help", false, "print usage");
 
 		CommandLine cmdLine = null;
@@ -82,6 +84,11 @@ public class PeerOptions {
 				logName = cmdLine.getOptionValue("w");
 			}
 			opts.outLog = new LogInfo(logName.trim());
+		}
+
+		// parse jarsPath
+		if (cmdLine.hasOption("classpath")) {
+			opts.classpath = cmdLine.getOptionValue("cp").trim();
 		}
 
 		return opts;

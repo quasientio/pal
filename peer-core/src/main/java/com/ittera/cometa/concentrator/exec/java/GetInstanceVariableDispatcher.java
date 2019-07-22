@@ -50,7 +50,6 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 		if (dataMessage.getInstanceFieldGet().hasObject()) {
 			Class fieldType = ((Field) accessibleObject).getType();
 			// originally in Concentrator we used objClass, not fieldType.
-//			Class objClass = Class.forName(dataMessage.getInstanceFieldGet().getClass_().getName());
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldGet().getObject(), fieldType);
 			logger.debug("Unwrapped target: {}", target);
 		} else {
@@ -64,7 +63,8 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 	protected AccessibleObject loadAccessibleObject(Wrappers.DataMessage dataMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 
-		Class clazz = Class.forName(dataMessage.getInstanceFieldGet().getClass_().getName());
+		Class clazz = Class.forName(dataMessage.getInstanceFieldGet().getClass_().getName(), true,
+			Thread.currentThread().getContextClassLoader());
 		AccessibleObject accessibleObject = clazz.getDeclaredField(dataMessage.getInstanceFieldGet().getField().getName());
 		return accessibleObject;
 	}
