@@ -2,6 +2,8 @@ package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.common.ObjectService;
 
+import com.ittera.cometa.common.lang.DispatchForwarder;
+import com.ittera.cometa.common.lang.ProxyDispatcher;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 
 import com.ittera.cometa.concentrator.exec.*;
@@ -37,6 +39,7 @@ public class PeerGuiceModule extends AbstractModule {
 
 		// bind implementations
 		bind(DispatcherConnector.class).to(com.ittera.cometa.concentrator.exec.ReqSocketDispatcherConnector.class);
+		bind(ProxyDispatcher.class).to(com.ittera.cometa.concentrator.exec.java.AspectProxyDispatcher.class);
 
 		// common and cxn library classes are not annotated with @Singleton
 		bind(ObjectService.class).to(com.ittera.cometa.common.BiMapObjectService.class).asEagerSingleton();
@@ -44,8 +47,9 @@ public class PeerGuiceModule extends AbstractModule {
 			to(com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder.class).asEagerSingleton();
 		bind(PeerLogDirectory.class).to(com.ittera.cometa.cxn.ZkClient.class).asEagerSingleton();
 
-		// aspect proxy dispatcher's fields are static
+		// AspectProxy and DispatchForwarder's fields are static
 		requestStaticInjection(AspectProxyDispatcher.class);
+		requestStaticInjection(DispatchForwarder.class);
 	}
 
 	@Provides
