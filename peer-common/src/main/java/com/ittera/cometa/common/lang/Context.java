@@ -64,7 +64,7 @@ public class Context {
 			final String[] parameterNames = ajCodeSig.getParameterNames();
 			final Class[] parameterTypes = ajCodeSig.getParameterTypes();
 
-			// finally pull out specific fields of concrete types MethodSignature or ConstructorSignature
+			// pull out specific fields of concrete types MethodSignature or ConstructorSignature
 			if (ajSig instanceof org.aspectj.lang.reflect.MethodSignature) {
 
 				org.aspectj.lang.reflect.MethodSignature ajMethodSig = (org.aspectj.lang.reflect.MethodSignature) ajSig;
