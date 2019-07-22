@@ -27,7 +27,6 @@ enum Type {
 }
 
 message DataMessage {
-    //TO DO:  IP or hostname for this Concentrator
     required string concentratorUuid = 1;
     required string messageUuid = 2;
     required Type msgType = 3;
