@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator.exec.java;
 
+import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import com.ittera.cometa.common.lang.Context;
@@ -120,7 +121,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
 		// dispatch
 		assertFalse(ClassForVoidClassMethodTest.slept);
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -171,7 +172,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
 		// dispatch
 		assertEquals(0, ClassForVoidClassMethodTest.millisSlept);
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -197,7 +198,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
 		// dispatch
 		assertEquals(0, ClassForVoidClassMethodTest.millisSlept);
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -221,7 +222,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
 		// dispatch
 		assertNotNull(ClassForVoidClassMethodTest.verified);
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -272,7 +273,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -323,7 +324,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();

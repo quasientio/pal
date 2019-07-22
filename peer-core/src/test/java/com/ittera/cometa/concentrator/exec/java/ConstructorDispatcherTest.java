@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator.exec.java;
 
+import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.Signature;
@@ -89,7 +90,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		DataMessage incomingMessage = messageBuilder.buildEmptyConstructor(peerUuid, targetClass.getName());
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -137,7 +138,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 			toNames(parameterTypes), args, argRefs);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -162,7 +163,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 			toNames(parameterTypes), args, argRefs);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -187,7 +188,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 			toNames(parameterTypes), args, argRefs);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -266,7 +267,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 			toNames(parameterTypes), args, argRefs);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -314,7 +315,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 			toNames(parameterTypes), args, argRefs);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();

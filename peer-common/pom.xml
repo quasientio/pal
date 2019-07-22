@@ -36,5 +36,10 @@
             <artifactId>aspectjrt</artifactId>
             <version>${aspectj.runtime.version}</version>
         </dependency>
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>${javax.inject.version}</version>
+        </dependency>
     </dependencies>
 </project>

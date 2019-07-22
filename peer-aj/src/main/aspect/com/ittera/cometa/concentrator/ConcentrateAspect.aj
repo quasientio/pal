@@ -1,8 +1,7 @@
 package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.common.lang.Context;
-
-import com.ittera.cometa.concentrator.exec.java.AspectProxyDispatcher;
+import com.ittera.cometa.common.lang.DispatchForwarder;
 
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.reflect.CodeSignature;
@@ -12,16 +11,16 @@ aspect ConcentrateAspect {
 	//if false, no output at all
 	private static final boolean verbose=false;
 
-	//Exception softening of calls to AspectProxyDispatcher
-	declare soft: Throwable : call (Object AspectProxyDispatcher.constructor(..));
-	declare soft: Throwable : call (void AspectProxyDispatcher.voidInstanceMethod(..));
-	declare soft: Throwable : call (Object AspectProxyDispatcher.nonVoidInstanceMethod(..));
-	declare soft: Throwable : call (void AspectProxyDispatcher.voidClassMethod(..));
-	declare soft: Throwable : call (Object AspectProxyDispatcher.nonVoidClassMethod(..));
-	declare soft: Throwable : call (Object AspectProxyDispatcher.getStatic(..));
-	declare soft: Throwable : call (Object AspectProxyDispatcher.getObject(..));
-	declare soft: Throwable : call (void AspectProxyDispatcher.putStatic(..));
-	declare soft: Throwable : call (void AspectProxyDispatcher.putField(..));
+	//Exception softening of calls to DispatchForwarder
+	declare soft: Throwable : call (Object DispatchForwarder.constructor(..));
+	declare soft: Throwable : call (void DispatchForwarder.voidInstanceMethod(..));
+	declare soft: Throwable : call (Object DispatchForwarder.nonVoidInstanceMethod(..));
+	declare soft: Throwable : call (void DispatchForwarder.voidClassMethod(..));
+	declare soft: Throwable : call (Object DispatchForwarder.nonVoidClassMethod(..));
+	declare soft: Throwable : call (Object DispatchForwarder.getStatic(..));
+	declare soft: Throwable : call (Object DispatchForwarder.getObject(..));
+	declare soft: Throwable : call (void DispatchForwarder.putStatic(..));
+	declare soft: Throwable : call (void DispatchForwarder.putField(..));
 
 	/** POINTCUT DEFINITIONS **/
 
@@ -55,7 +54,7 @@ aspect ConcentrateAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		AspectProxyDispatcher.voidInstanceMethod(
+		DispatchForwarder.voidInstanceMethod(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
 			thisJoinPoint.getTarget(),
@@ -70,7 +69,7 @@ aspect ConcentrateAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		AspectProxyDispatcher.voidClassMethod(
+		DispatchForwarder.voidClassMethod(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
 			thisJoinPoint.getTarget(),
@@ -85,7 +84,7 @@ aspect ConcentrateAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		return AspectProxyDispatcher.nonVoidInstanceMethod(
+		return DispatchForwarder.nonVoidInstanceMethod(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
 			thisJoinPoint.getTarget(),
@@ -100,7 +99,7 @@ aspect ConcentrateAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		return AspectProxyDispatcher.nonVoidClassMethod(
+		return DispatchForwarder.nonVoidClassMethod(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
 			thisJoinPoint.getTarget(),
@@ -117,7 +116,7 @@ aspect ConcentrateAspect {
 			printParameters(thisJoinPoint);
 		}
 
-		return AspectProxyDispatcher.constructor(
+		return DispatchForwarder.constructor(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
 			thisJoinPoint.getTarget(),
@@ -133,7 +132,7 @@ aspect ConcentrateAspect {
 			printNonStaticCtxt(thisJoinPoint);
 		}
 
-		return AspectProxyDispatcher.getStatic(
+		return DispatchForwarder.getStatic(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
 			thisJoinPoint.getTarget(),
@@ -147,7 +146,7 @@ aspect ConcentrateAspect {
 			printNonStaticCtxt(thisJoinPoint);
 		}
 
-		return AspectProxyDispatcher.getObject(
+		return DispatchForwarder.getObject(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
 			thisJoinPoint.getTarget(),
@@ -161,7 +160,7 @@ aspect ConcentrateAspect {
 			printNonStaticCtxt(thisJoinPoint);
 		}
 
-		AspectProxyDispatcher.putStatic(
+		DispatchForwarder.putStatic(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
 			thisJoinPoint.getTarget(),
@@ -175,7 +174,7 @@ aspect ConcentrateAspect {
 			printNonStaticCtxt(thisJoinPoint);
 		}
 
-		AspectProxyDispatcher.putField(
+		DispatchForwarder.putField(
 			Context.parseFrom(thisJoinPointStaticPart),
 			thisJoinPoint.getThis(),
 			thisJoinPoint.getTarget(),

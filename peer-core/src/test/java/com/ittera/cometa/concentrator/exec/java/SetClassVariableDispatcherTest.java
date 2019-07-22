@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 import com.ittera.cometa.common.lang.reflect.Signature;
@@ -91,7 +92,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 			fieldClassName, newFieldValue);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -136,7 +137,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 			fieldClassName, newFieldValue);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -183,7 +184,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		// dispatch
 		assertFalse(ClassForPutStaticTest.someBoolean);
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -228,7 +229,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 			fieldClassName, newFieldValue);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -273,7 +274,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -320,7 +321,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		// dispatch
 		assertNotNull(ClassForPutStaticTest.aList);
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -364,7 +365,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -409,7 +410,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();

@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
@@ -70,7 +71,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 			targetObjRef);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -120,7 +121,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 			targetObjRef);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -170,7 +171,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 			targetObjRef);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -220,7 +221,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 			targetObjRef);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -270,7 +271,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 			targetObjRef);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -315,7 +316,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 			targetObjRef);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -359,7 +360,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 			targetObjRef);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();
@@ -405,7 +406,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 			targetObjRef);
 
 		// dispatch
-		DataMessage doneMessage = dispatcher.dispatchIncoming(incomingMessage);
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherCalledOnce();

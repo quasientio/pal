@@ -11,6 +11,7 @@ import java.lang.reflect.AccessibleObject;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
 
+import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
@@ -25,7 +26,7 @@ import org.slf4j.Logger;
 
 import javax.inject.Inject;
 
-public abstract class BaseDispatcher implements Dispatcher {
+public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatcher {
 
 	protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
