@@ -310,7 +310,7 @@ public class AppRunner implements Callable<Integer> {
 		}
 	}
 
-	public static void main(String[] args) throws Exception {
+	public static void main(String[] args) {
 		int exitCode = new CommandLine(new AppRunner()).execute(args);
 		System.exit(exitCode);
 	}

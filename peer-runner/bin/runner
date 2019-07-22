@@ -1,8 +1,8 @@
 #!/bin/bash
 
-JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA"
 
-#SYSTEM_PROPS="-Dlogback.configurationFile=logback-runner.xml -Dpeer.allowP2P=false"
-SYSTEM_PROPS="-Dlogback.configurationFile=logback-runner.xml"
+MAIN_ARGS="$@"
 
-java $JVM_OPTS $SYSTEM_PROPS com.ittera.cometa.AppRunner "$@"
+export MAVEN_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA"
+
+mvn exec:java -Dexec.mainClass="com.ittera.cometa.AppRunner" -Dlogback.configurationFile=logback-runner.xml -Dexec.args="$MAIN_ARGS"

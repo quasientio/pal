@@ -7,7 +7,7 @@ export SJK_PATH=$WORKING_DIR/tools/lib/sjk-plus-0.5.1.jar
 export KAFKA_HOME='/usr/local/lib/kafka'
 
 # Add bin folders to path
-export PATH=$WORKING_DIR/bin:$WORKING_DIR/../peer-runner/bin:$JAVA_HOME/bin:$PATH
+export PATH=$WORKING_DIR/bin:$JAVA_HOME/bin:$PATH
 
 # Some usefull aliases to work with peer (in and outside containers)
 alias k='pkill -9 -f Concentrator'
