@@ -1,5 +1,6 @@
 target/
 logs/
+apps/
 .idea/
 *.iml
 conf/
