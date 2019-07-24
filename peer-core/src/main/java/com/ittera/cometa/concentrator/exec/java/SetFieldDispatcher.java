@@ -22,7 +22,7 @@ abstract public class SetFieldDispatcher extends FieldOpDispatcher {
 			field.set(target, fieldValue);
 		} catch (Exception ex) {
 			logger.error("Caught exception while invoking field operation. Will wrap and return it.", ex);
-			return new InvocationException(ex);
+			return new InvocationExceptionWrapper(ex);
 		}
 
 		return Void.getInstance();

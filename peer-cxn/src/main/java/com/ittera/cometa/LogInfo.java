@@ -2,6 +2,7 @@ package com.ittera.cometa;
 
 import com.ittera.cometa.util.ByteSizeConverter;
 
+import java.util.Objects;
 import java.util.UUID;
 import java.util.Set;
 
@@ -16,7 +17,6 @@ public class LogInfo implements Comparable {
 	private long zk_ctime;
 
 	// in zk node data
-	private Set<KafkaBrokerInfo> brokerInfoSet;
 	private UUID uuid;
 
 	// to be filled from (kafka) mbeans via jmx
@@ -60,7 +60,6 @@ public class LogInfo implements Comparable {
 	}
 
 	public void setBrokerInfoSet(Set<KafkaBrokerInfo> brokerInfoSet) {
-		this.brokerInfoSet = brokerInfoSet;
 
 		// assign bootstrap servers
 		if (brokerInfoSet == null) {
@@ -129,14 +128,18 @@ public class LogInfo implements Comparable {
 	}
 
 	@Override
-	public int hashCode() {
-		return name.hashCode() + getBootstrapServers().hashCode();
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		LogInfo logInfo = (LogInfo) o;
+		return name.equals(logInfo.name) &&
+			Objects.equals(uuid, logInfo.uuid) &&
+			Objects.equals(bootstrapServers, logInfo.bootstrapServers);
 	}
 
 	@Override
-	public boolean equals(Object o) {
-		return (o instanceof LogInfo) && name.equals(((LogInfo) o).getName())
-			&& getBootstrapServers().equals(((LogInfo) o).getBootstrapServers());
+	public int hashCode() {
+		return Objects.hash(name, uuid, bootstrapServers);
 	}
 
 	@Override

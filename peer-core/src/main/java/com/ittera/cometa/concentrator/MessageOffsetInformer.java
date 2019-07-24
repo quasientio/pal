@@ -49,6 +49,7 @@ class MessageOffsetInformer implements Callback, Watcher {
 	private final Socket offsetPublisher;
 	private final PeerLogDirectory peerLogDirectory;
 	private final LogInfo inLog;
+	private final UUID peerUuid;
 
 	protected static final Logger logger = LoggerFactory.getLogger(MessageOffsetInformer.class);
 
@@ -85,12 +86,13 @@ class MessageOffsetInformer implements Callback, Watcher {
 	};
 
 	MessageOffsetInformer(DataMessage message, boolean publishOffsets, Socket offsetPublisher,
-												PeerLogDirectory peerLogDirectory, LogInfo inLog) {
+												PeerLogDirectory peerLogDirectory, LogInfo inLog, UUID peerUuid) {
 		this.message = message;
 		this.publishOffsets = publishOffsets;
 		this.offsetPublisher = offsetPublisher;
 		this.peerLogDirectory = peerLogDirectory;
 		this.inLog = inLog;
+		this.peerUuid = peerUuid;
 	}
 
 	boolean isDone() {
@@ -118,7 +120,7 @@ class MessageOffsetInformer implements Callback, Watcher {
 
 		// if message is reply, save offset to zookeeper
 		if (message.hasFollowingUuid()) {
-			this.logReply = new LogReply(UUID.fromString(message.getMessageUuid()), Concentrator.uuid,
+			this.logReply = new LogReply(UUID.fromString(message.getMessageUuid()), peerUuid,
 				UUID.fromString(message.getFollowingUuid()), recordMetadata.offset());
 			try {
 				((ZkClient) peerLogDirectory).addLogReply(inLog.getName(), logReply, addReplyCallback);

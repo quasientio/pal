@@ -73,9 +73,9 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		// TODO if afterExecReplyMsg != afterExecMsg, unpack exception or return value
 
 		// 7. Return object or re-raise exception
-		if (returnValue instanceof InvocationException) {
+		if (returnValue instanceof InvocationExceptionWrapper) {
 			logger.trace("dispatch:out re-raising exception: {}", returnValue);
-			Exception invocationException = ((InvocationException) returnValue).getException();
+			Exception invocationException = ((InvocationExceptionWrapper) returnValue).getException();
 			// we want to throw the cause exception
 			if (invocationException instanceof InvocationTargetException) {
 				throw invocationException.getCause();
@@ -92,8 +92,6 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 
 	@Override
 	public DataMessage dispatchIncoming(DataMessage incomingCall) {
-
-		String messageUuid = incomingCall.getMessageUuid();
 
 		logger.trace("dispatchIncoming:in w/ message uuid: {}", incomingCall.getMessageUuid());
 

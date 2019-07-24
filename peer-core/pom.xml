@@ -14,8 +14,8 @@
     </parent>
 
     <properties>
-        <file.appender.class>com.ittera.cometa.common.util.FileAppender</file.appender.class>
-        <console.appender.class>com.ittera.cometa.common.util.ConsoleAppender</console.appender.class>
+        <file.appender.class>com.ittera.cometa.common.util.PeerFileAppender</file.appender.class>
+        <console.appender.class>com.ittera.cometa.common.util.PeerConsoleAppender</console.appender.class>
 
         <!-- shading related -->
         <shading.prefix>com.ittera.cometa.shd</shading.prefix>

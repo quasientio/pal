@@ -2,6 +2,8 @@ package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.*;
 
+import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -21,6 +23,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	protected static final Logger logger = LoggerFactory.getLogger(ZkClient.class);
 
 	protected static final String PROPERTIES_SEP = "|";
+	static Charset loadedCharset;
 
 	// root paths
 	protected static final String DEFAULT_ROOT_PATH = "/cometa";
@@ -134,7 +137,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			for (String brokerId : zk.getChildren(BROKERS_PATH, false)) {
 				brokerInfoPath = BROKERS_PATH + "/" + brokerId;
 				brokersInfoStat = zk.exists(brokerInfoPath, null);
-				String nodeData = new String(zk.getData(brokerInfoPath, false, brokersInfoStat));
+				String nodeData = new String(zk.getData(brokerInfoPath, false, brokersInfoStat), getEncodingCharset());
 				logger.debug("Read registered broker info data: {}", nodeData);
 				KafkaBrokerInfo kafkaBrokerInfo = KafkaBrokerInfo.parseFromJSON(nodeData);
 				brokerInfoSet.add(kafkaBrokerInfo);
@@ -178,7 +181,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 					sb.append('\n');
 				}
 			}
-			data = sb.toString().getBytes();
+			data = sb.toString().getBytes(getEncodingCharset());
 		}
 
 		if (zk.exists(peerNode, null) == null) {
@@ -230,7 +233,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		StringBuilder sb = new StringBuilder();
 		String newLogUuid = UUID.randomUUID().toString();
 		sb.append("uuid").append(PROPERTIES_SEP).append(newLogUuid).append('\n');
-		data = sb.toString().getBytes();
+		data = sb.toString().getBytes(getEncodingCharset());
 		String createdNode = zk.create(logNodePrefix, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
 
 		String createdLogName = StringUtils.substringAfterLast(createdNode, "/");
@@ -249,7 +252,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		StringBuilder sb = new StringBuilder();
 		String logUuid = UUID.randomUUID().toString();
 		sb.append("uuid").append(PROPERTIES_SEP).append(logUuid).append('\n');
-		data = sb.toString().getBytes();
+		data = sb.toString().getBytes(getEncodingCharset());
 		String createdNode = zk.create(logNode, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
 		String registeredLogName = StringUtils.substringAfterLast(createdNode, "/");
@@ -310,7 +313,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			// create reply node with message uuid as name and offset as data
 			String sb = "from" + PROPERTIES_SEP + logReply.getPeerUuid() +
 				'\n' + "offset" + PROPERTIES_SEP + logReply.getOffset() + '\n';
-			byte[] data = sb.getBytes();
+			byte[] data = sb.getBytes(getEncodingCharset());
 			zk.create(newReplyNode, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT, callback, null);
 			logger.debug("Async-created new reply node uuid: {} for request: {}, log: {}", logReply.getUuid(), requestUuid,
 				logName);
@@ -335,7 +338,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			// create reply node with message uuid as name and offset as data
 			String sb = "from" + PROPERTIES_SEP + logReply.getPeerUuid() + '\n' +
 				"offset" + PROPERTIES_SEP + logReply.getOffset() + '\n';
-			byte[] data = sb.getBytes();
+			byte[] data = sb.getBytes(getEncodingCharset());
 			zk.create(newReplyNode, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		} else {
 			if (!logExists(logName)) {
@@ -404,7 +407,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			props = getProperties(replyNodePath, nodeStat);
 			replies.add(new LogReply(UUID.fromString(replyNode),
 				props.getProperty("from") == null ? null : UUID.fromString(props.getProperty("from")),
-				logRequest.getUuid(), Long.valueOf(props.getProperty("offset"))));
+				logRequest.getUuid(), Long.parseLong(props.getProperty("offset"))));
 		}
 
 		return replies;
@@ -417,7 +420,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		Stat nodeStat = zk.exists(replyNode, null);
 		Properties props = getProperties(replyNode, nodeStat);
 		return new LogReply(replyUuid, UUID.fromString(props.getProperty("from")), requestUuid,
-			Long.valueOf(props.getProperty("offset")));
+			Long.parseLong(props.getProperty("offset")));
 	}
 
 	public void getChildren(String logName, UUID requestUuid, Watcher watcher, ChildrenCallback cb, Object ctx) {
@@ -498,7 +501,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		Properties properties = new Properties();
 
 		if (data != null) {
-			String nodeData = new String(zk.getData(node, false, nodeStat));
+			String nodeData = new String(zk.getData(node, false, nodeStat), getEncodingCharset());
 			String[] lines = nodeData.split("\n");
 			for (String line : lines) {
 				String key = StringUtils.substringBefore(line, PROPERTIES_SEP);
@@ -520,7 +523,6 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		String logNode = getLogsPath() + "/" + logName;
 
 		Properties props = getProperties(logNode, nodeStat);
-		String servers = props.getProperty("bootstrap.servers");
 		UUID uuid = UUID.fromString(props.getProperty("uuid"));
 
 		// fill stat info
@@ -706,5 +708,17 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		} catch (InterruptedException ex) {
 			logger.error("Error while closing down zookeeper connection", ex);
 		}
+	}
+
+	private Charset getEncodingCharset() {
+		if (loadedCharset == null) {
+			try {
+				loadedCharset = Charset.forName("UTF-8");
+			} catch (UnsupportedCharsetException e) {
+				logger.warn("No UTF-8 available for encoding/decoding. Falling back to default charset", e);
+				loadedCharset = Charset.defaultCharset();
+			}
+		}
+		return loadedCharset;
 	}
 }

@@ -6,6 +6,7 @@ import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
@@ -33,16 +34,18 @@ public class LogMessageInvoker extends Thread {
 	protected final IncomingMessageDispatcher incomingMessageDispatcher;
 	protected final DispatcherConnector dispatcherConnector;
 	protected final DataMessageBuilder dataMessageBuilder;
+	protected final UUID peerUuid;
 
 	public LogMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
 													 DataMessageBuilder dataMessageBuilder, String inLogAddress, IncomingMessageDispatcher
-														 incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
+														 incomingMessageDispatcher, DispatcherConnector dispatcherConnector, UUID peerUuid) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
 		this.inLogAddress = inLogAddress;
 		this.dataMessageBuilder = dataMessageBuilder;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = dispatcherConnector;
+		this.peerUuid = peerUuid;
 		logger.debug("Initialized new log message invoker thread named: {} with inLogAddress: {}", name, inLogAddress);
 	}
 
@@ -97,7 +100,7 @@ public class LogMessageInvoker extends Thread {
 			if (requestMsg != null) {
 
 				// we dispatch only if concentrator uuid isn't ours
-				if (!Concentrator.uuid.toString().equals(requestMsg.getConcentratorUuid())) {
+				if (!peerUuid.toString().equals(requestMsg.getConcentratorUuid())) {
 					dispatch(requestMsg, logOffset);
 					if (logger.isDebugEnabled()) {
 						final long took = System.currentTimeMillis() - started;

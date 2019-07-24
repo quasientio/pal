@@ -48,8 +48,8 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
 		final Method method = ((MethodSignature) ctxt.getSignature()).getMethod();
-		if (value instanceof InvocationException) {
-			Exception invocationException = ((InvocationException) value).getException();
+		if (value instanceof InvocationExceptionWrapper) {
+			Exception invocationException = ((InvocationExceptionWrapper) value).getException();
 			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, invocationException, null);
 		} else {
 			return messageBuilder.buildReturnValue(peerUuid, value, method.getClass(), objectRef, isVoid, null);
@@ -69,7 +69,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 			returnValue = method.invoke(target, args);
 		} catch (Exception ex) {
 			logger.error("Caught exception while invoking instance method. Will wrap and return it.", ex);
-			return new InvocationException(ex);
+			return new InvocationExceptionWrapper(ex);
 		}
 
 		if (method.getReturnType().equals(java.lang.Void.TYPE)) {

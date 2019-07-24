@@ -2,42 +2,42 @@ package com.ittera.cometa.common.lang.reflect;
 
 import java.lang.reflect.Parameter;
 
+import java.util.Arrays;
 import java.util.stream.IntStream;
 
 public abstract class CodeSignature extends Signature {
 
-	protected Class[] exceptionTypes;
-	protected String[] parameterNames;
-	protected Class[] parameterTypes;
-	protected Parameter[] parameters;
+	protected final Class[] exceptionTypes;
+	protected final String[] parameterNames;
+	protected final Class[] parameterTypes;
+	protected final Parameter[] parameters;
 
 	public CodeSignature(Class declaringType, String declaringTypeName, int modifiers, String name,
 											 Class[] exceptionTypes, String[] parameterNames, Class[] parameterTypes, Parameter[] parameters) {
 		super(declaringType, declaringTypeName, modifiers, name);
-		this.exceptionTypes = exceptionTypes;
-		this.parameterTypes = parameterTypes;
+		this.exceptionTypes = Arrays.copyOf(exceptionTypes, exceptionTypes.length);
+		this.parameterTypes = Arrays.copyOf(parameterTypes, parameterTypes.length);
 		if (parameterNames == null) {
 			this.parameterNames = IntStream.range(0, parameterTypes.length).mapToObj(i -> "arg" + i).toArray(String[]::new);
 		} else {
-			this.parameterNames = parameterNames;
+			this.parameterNames = Arrays.copyOf(parameterNames, parameterNames.length);
 		}
-		this.parameters = parameters;
+		this.parameters = Arrays.copyOf(parameters, parameters.length);
 	}
 
 	public Class[] getExceptionTypes() {
-		return exceptionTypes;
+		return Arrays.copyOf(exceptionTypes, exceptionTypes.length);
 	}
 
 	public String[] getParameterNames() {
-		return parameterNames;
+		return Arrays.copyOf(parameterNames, parameterNames.length);
 	}
 
 	public Class[] getParameterTypes() {
-		return parameterTypes;
+		return Arrays.copyOf(parameterTypes, parameterTypes.length);
 	}
 
 	public Parameter[] getParameters() {
-		return parameters;
+		return Arrays.copyOf(parameters, parameters.length);
 	}
-
 }

@@ -7,6 +7,7 @@ import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.UUID;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -40,6 +41,7 @@ public class ExecThreadFactory implements ThreadFactory {
 	protected final ZContext zmqContext;
 	protected final String zmqSocketAddress;
 
+	protected final UUID peerUuid;
 	protected final ClassLoader classLoader;
 
 	enum ExecChannelType {
@@ -54,7 +56,7 @@ public class ExecThreadFactory implements ThreadFactory {
 
 	public ExecThreadFactory(ZContext zmqContext, String zmqSocketAddress, DataMessageBuilder dataMessageBuilder,
 													 IncomingMessageDispatcher incomingMessageDispatcher, DispatcherConnector dispatcherConnector,
-													 ExecChannelType execChannelType, ClassLoader classLoader) {
+													 ExecChannelType execChannelType, ClassLoader classLoader, UUID peerUuid) {
 
 		this.execChannelType = execChannelType;
 		threadGroup = new ThreadGroup(getThreadGroupName());
@@ -66,6 +68,7 @@ public class ExecThreadFactory implements ThreadFactory {
 		this.dispatcherConnector = dispatcherConnector;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.classLoader = classLoader;
+		this.peerUuid = peerUuid;
 		logger.info("Initialized exec thread factory with group name: {}, daemon: {}, maxPriority: {}", getThreadGroupName(),
 			THREAD_GROUP_IS_DAEMON, THREAD_GROUP_MAX_PRIORITY);
 	}
@@ -77,7 +80,7 @@ public class ExecThreadFactory implements ThreadFactory {
 		switch (execChannelType) {
 			case LOG:
 				thread = new LogMessageInvoker(threadGroup, r, newThreadName, zmqContext, dataMessageBuilder,
-					zmqSocketAddress, incomingMessageDispatcher, dispatcherConnector);
+					zmqSocketAddress, incomingMessageDispatcher, dispatcherConnector, peerUuid);
 				break;
 			case PEER:
 				thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext, dataMessageBuilder,

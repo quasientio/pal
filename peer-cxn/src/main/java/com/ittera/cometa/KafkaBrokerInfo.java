@@ -5,6 +5,8 @@ import org.json.JSONArray;
 
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Arrays;
+
 /**
  * This class and KafkaBrokerEndpoint are modelled after Kafka's data nodes in zookeeper.
  * More details:
@@ -29,7 +31,7 @@ public class KafkaBrokerInfo {
 		this.host = host;
 		this.port = port;
 		this.jmxPort = jmxPort;
-		this.endpoints = endpoints;
+		this.endpoints = Arrays.copyOf(endpoints, endpoints.length);
 		this.timestamp = timestamp;
 	}
 
@@ -50,7 +52,7 @@ public class KafkaBrokerInfo {
 	}
 
 	public KafkaBrokerEndpoint[] getEndpoints() {
-		return endpoints;
+		return Arrays.copyOf(endpoints, endpoints.length);
 	}
 
 	public String getTimestamp() {

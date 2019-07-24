@@ -1,5 +1,6 @@
 package com.ittera.cometa;
 
+import java.util.Objects;
 import java.util.UUID;
 
 public class PeerInfo implements Comparable {
@@ -48,12 +49,16 @@ public class PeerInfo implements Comparable {
 
 	@Override
 	public boolean equals(Object o) {
-		if (o == null || !(o instanceof PeerInfo)) {
-			return false;
-		}
-		PeerInfo otherPeer = (PeerInfo) o;
-		return this.getUuid().equals(otherPeer.getUuid()) &&
-			this.getListenAddress().equals(otherPeer.getListenAddress());
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		PeerInfo peerInfo = (PeerInfo) o;
+		return uuid.equals(peerInfo.uuid) &&
+			listenAddress.equals(peerInfo.listenAddress);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(uuid, listenAddress);
 	}
 
 	@Override

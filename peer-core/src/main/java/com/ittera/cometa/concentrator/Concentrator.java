@@ -32,18 +32,18 @@ import org.zeromq.ZContext;
 
 public class Concentrator {
 
-	protected static final Logger logger = LoggerFactory.getLogger(Concentrator.class);
+	private static final Logger logger = LoggerFactory.getLogger(Concentrator.class);
 
-	public static UUID uuid;
+	private static UUID uuid;
 
 	private static final Properties properties = new Properties();
 
 	private static CustomClassloader customClassloader;
 
 	// zmq context -- gets injected to all other threads
-	protected static final ZContext zmqContext;
+	private static final ZContext zmqContext;
 
-	protected static final String PROPERTIES_FILE = "/peer.properties";
+	private static final String PROPERTIES_FILE = "/peer.properties";
 
 	// defaults for properties
 	private static final String ZMQ_LINGER_DEFAULT = "1000";
@@ -61,9 +61,9 @@ public class Concentrator {
 
 		// initialize zmq context
 		zmqContext = new ZContext();
-		zmqContext.setLinger(Integer.valueOf(properties.getProperty("ZMQ_LINGER", ZMQ_LINGER_DEFAULT)));
-		zmqContext.setRcvHWM(Integer.valueOf(properties.getProperty("ZMQ_RCVHWM", ZMQ_RCVHWM_DEFAULT)));
-		zmqContext.setSndHWM(Integer.valueOf(properties.getProperty("ZMQ_SNDHWM", ZMQ_SNDHWM_DEFAULT)));
+		zmqContext.setLinger(Integer.parseInt(properties.getProperty("ZMQ_LINGER", ZMQ_LINGER_DEFAULT)));
+		zmqContext.setRcvHWM(Integer.parseInt(properties.getProperty("ZMQ_RCVHWM", ZMQ_RCVHWM_DEFAULT)));
+		zmqContext.setSndHWM(Integer.parseInt(properties.getProperty("ZMQ_SNDHWM", ZMQ_SNDHWM_DEFAULT)));
 	}
 
 	private static void closeZmqContext() {

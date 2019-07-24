@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.zeromq.SocketType;
@@ -48,6 +49,9 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 	// zookeeper
 	@Inject
 	private PeerLogDirectory peerLogDirectory;
+
+	@Inject
+	private UUID peerUuid;
 
 	private boolean publishOffsets;
 	private LogInfo outLog, inLog;
@@ -166,7 +170,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 		logger.debug("sending new message with uuid: {}", message.getMessageUuid());
 		ProducerRecord newRecord = new ProducerRecord(outLog.getName(), message);
 		producer.send(newRecord, new MessageOffsetInformer(message, publishOffsets, offsetPublisher,
-			peerLogDirectory, inLog));
+			peerLogDirectory, inLog, peerUuid));
 		messagesSent.getAndIncrement();
 		logger.debug("new message sent with uuid: {} replying to message uuid: {}", message.getMessageUuid(),
 			message.getFollowingUuid());

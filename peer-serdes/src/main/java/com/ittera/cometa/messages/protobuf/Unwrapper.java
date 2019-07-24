@@ -99,21 +99,21 @@ public class Unwrapper {
 		//is primitive
 		if (ClassUtils.isPrimitiveOrWrapper(clazz)) {
 			if (clazz == byte.class || clazz == Byte.class) {
-				return Byte.valueOf(object.getValue());
+				return Byte.parseByte(object.getValue());
 			} else if (clazz == short.class || clazz == Short.class) {
-				return Short.valueOf(object.getValue());
+				return Short.parseShort(object.getValue());
 			} else if (clazz == int.class || clazz == Integer.class) {
-				return Integer.valueOf(object.getValue());
+				return Integer.parseInt(object.getValue());
 			} else if (clazz == long.class || clazz == Long.class) {
-				return Long.valueOf(object.getValue());
+				return Long.parseLong(object.getValue());
 			} else if (clazz == float.class || clazz == Float.class) {
-				return Float.valueOf(object.getValue());
+				return Float.parseFloat(object.getValue());
 			} else if (clazz == double.class || clazz == Double.class) {
-				return Double.valueOf(object.getValue());
+				return Double.parseDouble(object.getValue());
 			} else if (clazz == char.class || clazz == Character.class) {
 				return Character.valueOf(object.getValue().charAt(0));
 			} else if (clazz == boolean.class || clazz == Boolean.class) {
-				return Boolean.valueOf(object.getValue());
+				return Boolean.parseBoolean(object.getValue());
 			} else {
 				throw new IllegalArgumentException("Unsupported primitive type:" + clazz.getName());
 			}
@@ -195,21 +195,21 @@ public class Unwrapper {
 				int[] array = new int[object.getArrayValueList().size()];
 				int idx = 0;
 				for (Primitives.Object strObj : object.getArrayValueList()) {
-					array[idx++] = Integer.valueOf(strObj.getValue());
+					array[idx++] = Integer.parseInt(strObj.getValue());
 				}
 				return array;
 			} else if (clazz == boolean[].class) {
 				boolean[] array = new boolean[object.getArrayValueList().size()];
 				int idx = 0;
 				for (Primitives.Object strObj : object.getArrayValueList()) {
-					array[idx++] = Boolean.valueOf(strObj.getValue());
+					array[idx++] = Boolean.parseBoolean(strObj.getValue());
 				}
 				return array;
 			} else if (clazz == byte[].class) {
 				byte[] array = new byte[object.getArrayValueList().size()];
 				int idx = 0;
 				for (Primitives.Object strObj : object.getArrayValueList()) {
-					array[idx++] = Byte.valueOf(strObj.getValue());
+					array[idx++] = Byte.parseByte(strObj.getValue());
 				}
 				return array;
 			} else if (clazz == char[].class) {
@@ -223,28 +223,28 @@ public class Unwrapper {
 				short[] array = new short[object.getArrayValueList().size()];
 				int idx = 0;
 				for (Primitives.Object strObj : object.getArrayValueList()) {
-					array[idx++] = Short.valueOf(strObj.getValue());
+					array[idx++] = Short.parseShort(strObj.getValue());
 				}
 				return array;
 			} else if (clazz == long[].class) {
 				long[] array = new long[object.getArrayValueList().size()];
 				int idx = 0;
 				for (Primitives.Object strObj : object.getArrayValueList()) {
-					array[idx++] = Long.valueOf(strObj.getValue());
+					array[idx++] = Long.parseLong(strObj.getValue());
 				}
 				return array;
 			} else if (clazz == float[].class) {
 				float[] array = new float[object.getArrayValueList().size()];
 				int idx = 0;
 				for (Primitives.Object strObj : object.getArrayValueList()) {
-					array[idx++] = Float.valueOf(strObj.getValue());
+					array[idx++] = Float.parseFloat(strObj.getValue());
 				}
 				return array;
 			} else if (clazz == double[].class) {
 				double[] array = new double[object.getArrayValueList().size()];
 				int idx = 0;
 				for (Primitives.Object strObj : object.getArrayValueList()) {
-					array[idx++] = Double.valueOf(strObj.getValue());
+					array[idx++] = Double.parseDouble(strObj.getValue());
 				}
 				return array;
 

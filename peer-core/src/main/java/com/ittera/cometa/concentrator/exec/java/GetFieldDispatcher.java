@@ -25,7 +25,7 @@ abstract public class GetFieldDispatcher extends FieldOpDispatcher {
 			fieldValue = field.get(target);
 		} catch (Exception ex) {
 			logger.error("Caught exception while invoking field operation. Will wrap and return it.", ex);
-			return new InvocationException(ex);
+			return new InvocationExceptionWrapper(ex);
 		}
 
 		return fieldValue;

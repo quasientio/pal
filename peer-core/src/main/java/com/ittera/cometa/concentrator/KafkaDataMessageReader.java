@@ -111,7 +111,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 				}
 
 				while (rcvd != null) {
-					long offset = Long.valueOf(rcvd);
+					long offset = Long.parseLong(rcvd);
 					rcvd = null;
 					skipOffsets.add(offset);
 					try {

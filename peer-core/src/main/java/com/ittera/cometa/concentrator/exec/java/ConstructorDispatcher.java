@@ -47,8 +47,8 @@ public class ConstructorDispatcher extends BaseDispatcher {
 
 		final Constructor constructor = ((ConstructorSignature) ctxt.getSignature()).getConstructor();
 
-		if (value instanceof InvocationException) {
-			Exception invocationException = ((InvocationException) value).getException();
+		if (value instanceof InvocationExceptionWrapper) {
+			Exception invocationException = ((InvocationExceptionWrapper) value).getException();
 			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, constructor, invocationException,
 				null);
 		} else {
@@ -83,7 +83,7 @@ public class ConstructorDispatcher extends BaseDispatcher {
 			newObject = constructor.newInstance(args);
 		} catch (Exception ex) {
 			logger.error("Caught exception while invoking constructor. Will wrap and return it.", ex);
-			return new InvocationException(ex);
+			return new InvocationExceptionWrapper(ex);
 		}
 
 		return newObject;

@@ -1,7 +1,6 @@
 package com.ittera.cometa.common.lang.reflect;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Parameter;
 
 public class ConstructorSignature extends CodeSignature {
 

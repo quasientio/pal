@@ -9,6 +9,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 
+import java.util.UUID;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -29,10 +30,11 @@ public class LogMessageExecutor extends ExtendedThreadPoolExecutor {
 														ZContext zmqContext, @Named("in.log") String zmqSocketAddress,
 														DataMessageBuilder dataMessageBuilder, IncomingMessageDispatcher
 															incomingMessageDispatcher, DispatcherConnector dispatcherConnector,
-														CustomClassloader customClassloader) {
+														CustomClassloader customClassloader, UUID peerUuid) {
 
-		super(Integer.valueOf(corePoolSize), Integer.valueOf(maximumPoolSize), Integer.valueOf(keepAliveSeconds),
-			TimeUnit.SECONDS, new SynchronousQueue<>(), new ExecThreadFactory(zmqContext, zmqSocketAddress, dataMessageBuilder,
-				incomingMessageDispatcher, dispatcherConnector, ExecThreadFactory.ExecChannelType.LOG, customClassloader));
+		super(Integer.parseInt(corePoolSize), Integer.parseInt(maximumPoolSize), Integer.parseInt(keepAliveSeconds),
+			TimeUnit.SECONDS, new SynchronousQueue<>(), new ExecThreadFactory(zmqContext, zmqSocketAddress,
+				dataMessageBuilder, incomingMessageDispatcher, dispatcherConnector, ExecThreadFactory.ExecChannelType.LOG,
+				customClassloader, peerUuid));
 	}
 }

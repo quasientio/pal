@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Singleton
-public class IncomingMessageDispatcher  {
+public class IncomingMessageDispatcher {
 
 	protected static final Logger logger = LoggerFactory.getLogger(IncomingMessageDispatcher.class);
 
@@ -48,7 +48,7 @@ public class IncomingMessageDispatcher  {
 		} else if (dataMessage.hasInstanceFieldPut()) {
 			return setInstanceVariableDispatcher.dispatchIncoming(dataMessage);
 		} else {
-			throw new IllegalArgumentException(String.format("Incoming message with uuid ignored - no handler:\n%s",
+			throw new IllegalArgumentException(String.format("Incoming message with uuid ignored - no handler:%n%s",
 				dataMessage));
 		}
 	}

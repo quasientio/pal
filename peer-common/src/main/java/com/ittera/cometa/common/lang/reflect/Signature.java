@@ -2,10 +2,10 @@ package com.ittera.cometa.common.lang.reflect;
 
 public abstract class Signature {
 
-	protected Class declaringType;
-	protected String declaringTypeName;
-	protected int modifiers;
-	protected String name;
+	protected final Class declaringType;
+	protected final String declaringTypeName;
+	protected final int modifiers;
+	protected final String name;
 
 	protected Signature(Class declaringType, String declaringTypeName, int modifiers, String name) {
 		this.declaringType = declaringType;

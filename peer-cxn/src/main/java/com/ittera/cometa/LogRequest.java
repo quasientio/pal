@@ -1,5 +1,6 @@
 package com.ittera.cometa;
 
+import java.util.Objects;
 import java.util.UUID;
 
 public class LogRequest implements Comparable {
@@ -27,6 +28,20 @@ public class LogRequest implements Comparable {
 	@Override
 	public int compareTo(Object o) {
 		return getUuid().compareTo(((LogRequest) o).getUuid());
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		LogRequest that = (LogRequest) o;
+		return uuid.equals(that.uuid) &&
+			Objects.equals(outputLog, that.outputLog);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(uuid, outputLog);
 	}
 
 	@Override

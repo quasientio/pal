@@ -4,8 +4,8 @@ import java.lang.reflect.Method;
 
 public class MethodSignature extends CodeSignature {
 
-	protected Method method;
-	protected Class returnType;
+	protected final Method method;
+	protected final Class returnType;
 
 	public MethodSignature(Class declaringType, String declaringTypeName, int modifiers, String name,
 												 Class[] exceptionTypes, String[] parameterNames, Class[] parameterTypes, Method method,
