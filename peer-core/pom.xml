@@ -13,6 +13,18 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
+    <properties>
+        <file.appender.class>com.ittera.cometa.common.util.FileAppender</file.appender.class>
+        <console.appender.class>com.ittera.cometa.common.util.ConsoleAppender</console.appender.class>
+
+        <!-- shading related -->
+        <shading.prefix>com.ittera.cometa.shd</shading.prefix>
+        <kafka.logger.name>com.ittera.cometa.shd.apache.kafka</kafka.logger.name>
+        <kafka.logger.name.unshaded>org.apache.kafka</kafka.logger.name.unshaded>
+        <zookeeper.logger.name>com.ittera.cometa.shd.apache.zookeeper</zookeeper.logger.name>
+        <zookeeper.logger.name.unshaded>org.apache.zookeeper</zookeeper.logger.name.unshaded>
+    </properties>
+
     <build>
         <plugins>
             <!-- extra clean tasks -->
@@ -27,7 +39,7 @@
                     </filesets>
                 </configuration>
             </plugin>
-            <!-- jar with deps -->
+            <!-- unshaded jar with deps -->
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
@@ -41,14 +53,156 @@
                     </descriptorRefs>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.1</version>
+                <configuration>
+                    <artifactSet>
+                        <excludes>
+                            <exclude>org.aspectj:aspectjtools:*</exclude>
+                            <!-- exclude zookeeper dependencies -->
+                            <exclude>com.github.spotbugs:spotbugs-annotations</exclude>
+                            <exclude>com.google.code.findbugs:jsr305</exclude>
+                            <exclude>jline:jline</exclude>
+                        </excludes>
+                    </artifactSet>
+                    <relocations>
+                        <!--relocation>
+                            <pattern>org.aspectj</pattern>
+                            <shadedPattern>${shading.prefix}.aspectj</shadedPattern>
+                        </relocation-->
+                        <relocation>
+                            <pattern>com.google</pattern>
+                            <shadedPattern>${shading.prefix}.google</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>google.protobuf</pattern>
+                            <shadedPattern>${shading.prefix}.protobuf</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.json</pattern>
+                            <shadedPattern>${shading.prefix}.json</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.slf4j</pattern>
+                            <shadedPattern>${shading.prefix}.slf4j</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>ch.qos.logback</pattern>
+                            <shadedPattern>${shading.prefix}.logback</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.apache</pattern>
+                            <shadedPattern>${shading.prefix}.apache</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>common</pattern>
+                            <shadedPattern>${shading.prefix}.common</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.github.luben</pattern>
+                            <shadedPattern>${shading.prefix}.luben</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>net.jpountz</pattern>
+                            <shadedPattern>${shading.prefix}.jpountz</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.xerial.snappy</pattern>
+                            <shadedPattern>${shading.prefix}.snappy</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.aopalliance</pattern>
+                            <shadedPattern>${shading.prefix}.aopalliance</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>javax.inject</pattern>
+                            <shadedPattern>${shading.prefix}.inject</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.zeromq</pattern>
+                            <shadedPattern>${shading.prefix}.zeromq</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>zmq</pattern>
+                            <shadedPattern>${shading.prefix}.zmq</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.neilalexander</pattern>
+                            <shadedPattern>${shading.prefix}.neilalexander</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.jboss.netty</pattern>
+                            <shadedPattern>${shading.prefix}.netty</shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <filters>
+                        <filter>
+                            <artifact>ch.qos.logback:logback-classic</artifact>
+                            <excludes>
+                                <exclude>META-INF/services/**</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
+                            <artifact>org.apache.kafka:kafka-clients</artifact>
+                            <excludes>
+                                <exclude>META-INF/services/**</exclude>
+                                <exclude>kafka/kafka-version.properties</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
+                            <artifact>com.github.luben:zstd-jni</artifact>
+                            <excludes>
+                                <exclude>include/</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>NOTICE</exclude>
+                                <exclude>META-INF/NOTICE*</exclude>
+                                <exclude>META-INF/DEPENDENCIES</exclude>
+                                <exclude>META-INF/maven/**</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                    <transformers>
+                        <transformer
+                                implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                            <mainClass>com.ittera.cometa.concentrator.Concentrator</mainClass>
+                        </transformer>
+                    </transformers>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
+
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+                <excludes>
+                    <exclude>logback-test-default.xml</exclude>
+                    <exclude>.gitignore</exclude>
+                </excludes>
+            </testResource>
+        </testResources>
 
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
+                <filtering>true</filtering>
                 <excludes>
                     <exclude>logback-default.xml</exclude>
-                    <exclude>logback-runner-default.xml</exclude>
                     <exclude>.gitignore</exclude>
                 </excludes>
             </resource>

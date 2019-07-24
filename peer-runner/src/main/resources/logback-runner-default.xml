@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration debug="false" scan="true" scanPeriod="30 seconds">
 
-	<property name="logs.dir" value="/PATH/TO/LOGS"/>
-
 	<!-- APPENDERS -->
 	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
@@ -32,7 +30,6 @@
 	</appender>
 
 	<!-- LOGGERS -->
-
 	<logger name="com.ittera.cometa" level="info" additivity="false">
 		<appender-ref ref="runner"/>
 	</logger>

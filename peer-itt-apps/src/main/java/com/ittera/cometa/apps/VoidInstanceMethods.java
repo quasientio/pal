@@ -1,7 +1,7 @@
 package com.ittera.cometa.apps;
 
-import org.apache.commons.lang3.time.FastDateFormat;
-import org.apache.commons.lang3.time.DatePrinter;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 public class VoidInstanceMethods {
 
@@ -21,7 +21,7 @@ public class VoidInstanceMethods {
 	}
 
 	protected void printDate() {
-		DatePrinter datePrinter = FastDateFormat.getInstance("yyyy-MM-dd");
-		System.out.println(datePrinter.format(System.currentTimeMillis()));
+		LocalDate date = LocalDate.now();
+		System.out.println(date.format(DateTimeFormatter.ISO_LOCAL_DATE));
 	}
 }

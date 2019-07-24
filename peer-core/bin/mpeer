@@ -10,8 +10,8 @@ JMX_PROPS="-Dcom.sun.management.jmxremote \
 	-Dcom.sun.management.jmxremote.authenticate=false \
 	-Dcom.sun.management.jmxremote.ssl=false"
 
-JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA -noverify"
+export MAVEN_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA -noverify $JMX_PROPS"
 
 MAIN_ARGS="$@"
 
-java -jar $JVM_OPTS $JMX_PROPS $PEER_CORE_HOME/target/peer-core-*.jar $MAIN_ARGS
+mvn exec:java -Dexec.mainClass="com.ittera.cometa.concentrator.Concentrator" -Dexec.args="$MAIN_ARGS"

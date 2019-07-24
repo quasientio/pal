@@ -66,11 +66,6 @@
 
         <!-- OTHER DEPENDENCIES -->
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>${commons.lang3.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjrt</artifactId>
             <version>${aspectj.runtime.version}</version>

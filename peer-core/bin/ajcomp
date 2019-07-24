@@ -1,0 +1,8 @@
+#!/bin/bash
+
+CLASSES_TO_WEAVE=target/classes
+PEER_ASPECT_JAR=/home/libre/.m2/repository/com/ittera/cometa/peer-aj/1.0-SNAPSHOT/peer-aj-1.0-SNAPSHOT.jar
+OUTPUT_JAR=apps.jar
+
+# Create jar file containing weaved classes
+ajc -1.8 -aspectpath $PEER_ASPECT_JAR -inpath $CLASSES_TO_WEAVE -outjar $OUTPUT_JAR
