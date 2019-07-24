@@ -192,7 +192,6 @@
                 <filtering>true</filtering>
                 <excludes>
                     <exclude>logback-test-default.xml</exclude>
-                    <exclude>.gitignore</exclude>
                 </excludes>
             </testResource>
         </testResources>
@@ -203,7 +202,6 @@
                 <filtering>true</filtering>
                 <excludes>
                     <exclude>logback-default.xml</exclude>
-                    <exclude>.gitignore</exclude>
                 </excludes>
             </resource>
         </resources>

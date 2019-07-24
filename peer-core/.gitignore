@@ -1,8 +1,4 @@
-target/
-logs/
 apps/
-.idea/
-*.iml
 conf/
 Dockerfile
 docker-compose.yml

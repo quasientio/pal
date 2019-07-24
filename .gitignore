@@ -2,3 +2,6 @@ target/
 logs/
 .idea/
 *.iml
+logback.xml
+logback-test.xml
+logback-runner.xml
