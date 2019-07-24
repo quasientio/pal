@@ -75,7 +75,9 @@ public class Unwrapper {
 	 * @return
 	 */
 	public static Object unwrapObject(Primitives.Object object, Class clazz) {
-		logger.trace("in with object:\n{}, clazz:\n{}", object, clazz);
+		if (logger.isTraceEnabled()) {
+			logger.trace("in with object:\n{}, clazz:\n{}", object, clazz);
+		}
 
 		if (object.getIsNull()) {
 			return null;

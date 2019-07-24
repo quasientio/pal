@@ -55,7 +55,9 @@ public final class Wrapper {
 	private static <T> Primitives.Object getWrappedObjectAux(Primitives.Object.Builder builder, Object object, T t,
 																													 ObjectRef objectRef) {
 
-		logger.trace("in getWrappedObjectAux with object: {}, class: {}, objectRef: {}", object, t, objectRef);
+		if (logger.isTraceEnabled()) {
+			logger.trace("in getWrappedObjectAux with object: {}, class: {}, objectRef: {}", object, t, objectRef);
+		}
 
 		if (t == null) {
 			throw new NullPointerException("class(name) parameter cannot be null nor empty");
@@ -106,12 +108,17 @@ public final class Wrapper {
 			} else if (ClassUtils.isPrimitiveOrWrapper(object.getClass())) {
 				builder.setValue(String.valueOf(object));
 			} else {
-				logger.warn("Don't know what to do to wrap object: {} of class: {}", object, t);
+				// nothing we can do but leave a trace
+				if (logger.isTraceEnabled()) {
+					logger.trace("Don't know what to do to wrap object: {} of class: {}", object, t);
+				}
 			}
 		}
 
 		final Primitives.Object builtValue = builder.build();
-		logger.trace("out with wrappedValue: {}", builtValue);
+		if (logger.isTraceEnabled()) {
+			logger.trace("out with wrappedValue: {}", builtValue);
+		}
 		return builtValue;
 	}
 
@@ -141,7 +148,9 @@ public final class Wrapper {
 	 * @return
 	 */
 	static <T> Primitives.Object getWrappedObject(Object object, T t, ObjectRef objectRef) {
-		logger.trace("in getWrappedObject with object: {}, class: {}, objectRef: {}", object, t, objectRef);
+		if (logger.isTraceEnabled()) {
+			logger.trace("in getWrappedObject with object: {}, class: {}, objectRef: {}", object, t, objectRef);
+		}
 
 		final Primitives.Object.Builder builder = Primitives.Object.newBuilder();
 		boolean gotObjectRef = objectRef != null;
