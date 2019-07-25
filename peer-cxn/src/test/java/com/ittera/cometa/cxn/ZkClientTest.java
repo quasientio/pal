@@ -1,8 +1,8 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.*;
+import com.ittera.cometa.common.util.Strings;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.KeeperException.Code;
 
@@ -149,7 +149,7 @@ public class ZkClientTest {
 		UUID someRequestUuid = UUID.randomUUID();
 
 		String reqNodeCreated = zkCli.addLogRequest(createdLogName, new LogRequest(someRequestUuid));
-		assertEquals(someRequestUuid, UUID.fromString(StringUtils.substringAfterLast(reqNodeCreated, "/")));
+		assertEquals(someRequestUuid, UUID.fromString(Strings.stringAfterLast(reqNodeCreated, "/")));
 	}
 
 	@Test

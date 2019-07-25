@@ -13,6 +13,7 @@ import com.ittera.cometa.common.lang.Context;
 
 import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.common.lang.ObjectRef;
+import com.ittera.cometa.common.util.Classes;
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
@@ -193,7 +194,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		} else if (dataMessage.hasClassMethodCall() || dataMessage.hasInstanceMethodCall()) {
 			for (Primitives.Parameter param : parameterList) {
 				Primitives.Object obj = param.getValue();
-				Class paramClass = Unwrapper.getClassForPrimitive(obj.getClass_().getName());
+				Class paramClass = Classes.getClassForPrimitive(obj.getClass_().getName());
 				if (paramClass == null) {
 					paramClass = Class.forName(obj.getClass_().getName(), true, Thread.currentThread().getContextClassLoader());
 				}

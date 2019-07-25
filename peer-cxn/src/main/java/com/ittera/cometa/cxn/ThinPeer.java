@@ -8,7 +8,7 @@ import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
 
-import org.apache.commons.lang3.StringUtils;
+import com.ittera.cometa.common.util.Strings;
 
 import org.apache.zookeeper.AsyncCallback.StringCallback;
 import org.apache.zookeeper.KeeperException.Code;
@@ -185,10 +185,10 @@ public class ThinPeer {
 		Properties kafkaProducerProps = new Properties();
 		for (String propKey : properties.stringPropertyNames()) {
 			if (propKey.startsWith("kafka.producer.")) {
-				kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka.producer."),
+				kafkaProducerProps.put(Strings.stringAfter(propKey, "kafka.producer."),
 					properties.getProperty(propKey));
 			} else if (propKey.startsWith("kafka.") && !propKey.startsWith("kafka.consumer")) {
-				kafkaProducerProps.put(StringUtils.substringAfter(propKey, "kafka."),
+				kafkaProducerProps.put(Strings.stringAfter(propKey, "kafka."),
 					properties.getProperty(propKey));
 			}
 		}
@@ -199,10 +199,10 @@ public class ThinPeer {
 		Properties kafkaConsumerProps = new Properties();
 		for (String propKey : properties.stringPropertyNames()) {
 			if (propKey.startsWith("kafka.consumer.")) {
-				kafkaConsumerProps.put(StringUtils.substringAfter(propKey, "kafka.consumer."),
+				kafkaConsumerProps.put(Strings.stringAfter(propKey, "kafka.consumer."),
 					properties.getProperty(propKey));
 			} else if (propKey.startsWith("kafka.") && !propKey.startsWith("kafka.producer")) {
-				kafkaConsumerProps.put(StringUtils.substringAfter(propKey, "kafka."), properties.getProperty(propKey));
+				kafkaConsumerProps.put(Strings.stringAfter(propKey, "kafka."), properties.getProperty(propKey));
 			}
 		}
 		return kafkaConsumerProps;

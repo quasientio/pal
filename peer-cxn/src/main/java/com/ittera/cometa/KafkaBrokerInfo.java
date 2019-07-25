@@ -1,9 +1,9 @@
 package com.ittera.cometa;
 
+import com.ittera.cometa.common.util.Strings;
+
 import org.json.JSONObject;
 import org.json.JSONArray;
-
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.Arrays;
 
@@ -67,8 +67,8 @@ public class KafkaBrokerInfo {
 		KafkaBrokerEndpoint[] endpoints = new KafkaBrokerEndpoint[endpointsArray.length()];
 
 		for (int i = 0; i < endpoints.length; i++) {
-			String protocolKey = StringUtils.substringBefore(endpointsArray.getString(i), "://");
-			String hostAndPort = StringUtils.substringAfter(endpointsArray.getString(i), "://");
+			String protocolKey = Strings.stringBefore(endpointsArray.getString(i), "://");
+			String hostAndPort = Strings.stringAfter(endpointsArray.getString(i), "://");
 			endpoints[i] = new KafkaBrokerEndpoint(protocolMap.getString(protocolKey), hostAndPort);
 		}
 

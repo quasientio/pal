@@ -3,6 +3,8 @@ package com.ittera.cometa.messages.protobuf;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
 
+import com.ittera.cometa.common.util.Classes;
+
 import com.ittera.cometa.messages.protobuf.data.Fields.Field;
 import com.ittera.cometa.messages.protobuf.data.Ctxt;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
@@ -11,8 +13,6 @@ import java.lang.reflect.Array;
 
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.commons.lang3.ClassUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,7 +105,7 @@ public final class Wrapper {
 					//wrap and all array elements -- recursive
 					builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(), null));
 				}
-			} else if (ClassUtils.isPrimitiveOrWrapper(object.getClass())) {
+			} else if (Classes.isPrimitiveOrWrapper(object.getClass())) {
 				builder.setValue(String.valueOf(object));
 			} else {
 				// nothing we can do but leave a trace
@@ -131,9 +131,9 @@ public final class Wrapper {
 	public static boolean isWrappable(Object object) {
 		return
 			object == null || object == Void.class || object == void.class ||
-				ClassUtils.isPrimitiveOrWrapper(object.getClass()) ||
+				Classes.isPrimitiveOrWrapper(object.getClass()) ||
 				object instanceof String || isWrappableCharSeqClass(object.getClass()) ||
-				(object.getClass().isArray() && ClassUtils.isPrimitiveOrWrapper(object.getClass().getComponentType())) ||
+				(object.getClass().isArray() && Classes.isPrimitiveOrWrapper(object.getClass().getComponentType())) ||
 				/** String[] will pass the last check so this check is redundant, but they're so common we can optimize a bit
 				 * by checking first for String[] and avoid going through its interfaces as the next check does **/
 				(object.getClass().isArray() && String.class.equals(object.getClass().getComponentType())) ||

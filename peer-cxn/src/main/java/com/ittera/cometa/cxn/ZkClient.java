@@ -1,13 +1,16 @@
 package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.*;
+import com.ittera.cometa.common.util.Strings;
 
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
 import org.apache.zookeeper.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,8 +18,6 @@ import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.AsyncCallback.StringCallback;
 import org.apache.zookeeper.AsyncCallback.StatCallback;
 import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
-
-import org.apache.commons.lang3.StringUtils;
 
 public class ZkClient implements Watcher, PeerLogDirectory {
 
@@ -236,7 +237,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		data = sb.toString().getBytes(getEncodingCharset());
 		String createdNode = zk.create(logNodePrefix, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
 
-		String createdLogName = StringUtils.substringAfterLast(createdNode, "/");
+		String createdLogName = Strings.stringAfterLast(createdNode, "/");
 		LogInfo newLogInfo = getLogInfo(createdLogName);
 		logger.info("Created new log node: {} with uuid: {}", createdLogName, newLogUuid);
 		return newLogInfo;
@@ -255,7 +256,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		data = sb.toString().getBytes(getEncodingCharset());
 		String createdNode = zk.create(logNode, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
-		String registeredLogName = StringUtils.substringAfterLast(createdNode, "/");
+		String registeredLogName = Strings.stringAfterLast(createdNode, "/");
 		LogInfo newLogInfo = getLogInfo(registeredLogName);
 		logger.info("Registered given log node: {} with uuid: {}", registeredLogName, logUuid);
 		return newLogInfo;
@@ -455,7 +456,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			// filter those with our prefix
 			if (log.startsWith(logNamePrefix)) {
 				// parse index in log names and set max
-				String logIdxStr = StringUtils.substringAfter(log, logNamePrefix);
+				String logIdxStr = Strings.stringAfter(log, logNamePrefix);
 				Long logIdx = Long.valueOf(logIdxStr);
 				if (logIdx > maxLogIndex) {
 					maxLogIndex = logIdx;
@@ -504,8 +505,8 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			String nodeData = new String(zk.getData(node, false, nodeStat), getEncodingCharset());
 			String[] lines = nodeData.split("\n");
 			for (String line : lines) {
-				String key = StringUtils.substringBefore(line, PROPERTIES_SEP);
-				String value = StringUtils.substringAfter(line, PROPERTIES_SEP);
+				String key = Strings.stringBefore(line, PROPERTIES_SEP);
+				String value = Strings.stringAfter(line, PROPERTIES_SEP);
 				properties.put(key, value);
 			}
 		}

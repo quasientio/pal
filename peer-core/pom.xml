@@ -160,6 +160,7 @@
                         <filter>
                             <artifact>*:*</artifact>
                             <excludes>
+                                <!-- TODO we MUST INCLUDE NOTICE files : licenses (eg. Apache) requires them to be included) -->
                                 <exclude>NOTICE</exclude>
                                 <exclude>META-INF/NOTICE*</exclude>
                                 <exclude>META-INF/DEPENDENCIES</exclude>

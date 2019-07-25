@@ -3,14 +3,10 @@ package com.ittera.cometa.messages.protobuf;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 
+import com.ittera.cometa.common.util.Classes;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 
-import com.google.common.collect.ImmutableMap;
-
-import org.apache.commons.lang3.ClassUtils;
-
 import java.util.Optional;
-import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,21 +18,6 @@ import org.slf4j.LoggerFactory;
 public class Unwrapper {
 
 	protected static final Logger logger = LoggerFactory.getLogger(Unwrapper.class);
-
-	private static final Map<String, Class> shortPrimitiveNameToClass = ImmutableMap.<String, Class>builder()
-		.put("byte", byte.class)
-		.put("short", short.class)
-		.put("int", int.class)
-		.put("long", long.class)
-		.put("float", float.class)
-		.put("double", double.class)
-		.put("char", char.class)
-		.put("boolean", boolean.class)
-		.build();
-
-	public static Class getClassForPrimitive(String primitiveType) {
-		return shortPrimitiveNameToClass.get(primitiveType);
-	}
 
 	private static <T> T[] getArrayOf(Class<T> clazz, int length) {
 		return (T[]) Array.newInstance(clazz, length);
@@ -97,7 +78,7 @@ public class Unwrapper {
 		}
 
 		//is primitive
-		if (ClassUtils.isPrimitiveOrWrapper(clazz)) {
+		if (Classes.isPrimitiveOrWrapper(clazz)) {
 			if (clazz == byte.class || clazz == Byte.class) {
 				return Byte.parseByte(object.getValue());
 			} else if (clazz == short.class || clazz == Short.class) {
@@ -111,7 +92,7 @@ public class Unwrapper {
 			} else if (clazz == double.class || clazz == Double.class) {
 				return Double.parseDouble(object.getValue());
 			} else if (clazz == char.class || clazz == Character.class) {
-				return Character.valueOf(object.getValue().charAt(0));
+				return object.getValue().charAt(0);
 			} else if (clazz == boolean.class || clazz == Boolean.class) {
 				return Boolean.parseBoolean(object.getValue());
 			} else {
@@ -158,7 +139,7 @@ public class Unwrapper {
 				Character[] array = new Character[object.getArrayValueList().size()];
 				int idx = 0;
 				for (Primitives.Object strObj : object.getArrayValueList()) {
-					array[idx++] = Character.valueOf(strObj.getValue().charAt(0));
+					array[idx++] = strObj.getValue().charAt(0);
 				}
 				return array;
 			} else if (clazz == Short[].class) {
@@ -267,10 +248,8 @@ public class Unwrapper {
 
 	public static Object unwrapObject(Primitives.Object object) throws ClassNotFoundException {
 		final String objClassName = object.getClass_().getName();
-		final Class objectClass;
-		if (shortPrimitiveNameToClass.containsKey(objClassName)) {
-			objectClass = shortPrimitiveNameToClass.get(objClassName);
-		} else {
+		Class objectClass = Classes.getClassForPrimitive(objClassName);
+		if (objectClass == null) {
 			objectClass = Class.forName(objClassName, true, Thread.currentThread().getContextClassLoader());
 		}
 		return unwrapObject(object, objectClass);

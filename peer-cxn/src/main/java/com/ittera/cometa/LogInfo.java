@@ -2,11 +2,8 @@ package com.ittera.cometa;
 
 import com.ittera.cometa.util.ByteSizeConverter;
 
-import java.util.Objects;
-import java.util.UUID;
-import java.util.Set;
-
-import org.apache.commons.lang3.StringUtils;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class LogInfo implements Comparable {
 
@@ -65,14 +62,11 @@ public class LogInfo implements Comparable {
 		if (brokerInfoSet == null) {
 			this.bootstrapServers = null;
 		} else {
-			StringBuilder sb = new StringBuilder();
+			List<String> urlList = new ArrayList<>();
 			for (KafkaBrokerInfo brokerInfo : brokerInfoSet) {
-				for (KafkaBrokerEndpoint brokerEndpoint : brokerInfo.getEndpoints()) {
-					sb.append(brokerEndpoint.toURL());
-					sb.append(",");
-				}
+				Arrays.stream(brokerInfo.getEndpoints()).map(ep -> ep.toURL()).forEach(u -> urlList.add(u));
 			}
-			this.bootstrapServers = StringUtils.stripEnd(sb.toString(), ",");
+			this.bootstrapServers = String.join(",", urlList);
 		}
 	}
 

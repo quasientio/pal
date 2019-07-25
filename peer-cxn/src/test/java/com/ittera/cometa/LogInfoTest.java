@@ -81,6 +81,7 @@ public class LogInfoTest {
 			"127.0.0.1:4092",
 			"somedomain.com:4091",
 			"localhost:4092"};
+		System.out.println(logInfo.getBootstrapServers());
 		assertArrayEquals(
 			Arrays.stream(expectedBootstrapServers).sorted().toArray(),
 			Arrays.stream(logInfo.getBootstrapServers().split(",")).sorted().toArray());

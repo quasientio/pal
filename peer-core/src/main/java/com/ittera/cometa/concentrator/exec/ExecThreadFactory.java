@@ -1,8 +1,9 @@
 package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
-
 import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
+
+import com.ittera.cometa.common.util.Strings;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.zeromq.ZContext;
-
-import org.apache.commons.lang3.StringUtils;
 
 public class ExecThreadFactory implements ThreadFactory {
 
@@ -113,11 +112,11 @@ public class ExecThreadFactory implements ThreadFactory {
 	}
 
 	private String getThreadBaseName() {
-		return String.format("%s Executor", StringUtils.capitalize(execChannelType.name));
+		return String.format("%s Executor", Strings.capitalize(execChannelType.name));
 
 	}
 
 	private String getThreadGroupName() {
-		return String.format("%s Executor Group", StringUtils.capitalize(execChannelType.name));
+		return String.format("%s Executor Group", Strings.capitalize(execChannelType.name));
 	}
 }
