@@ -68,10 +68,6 @@
                         </excludes>
                     </artifactSet>
                     <relocations>
-                        <!--relocation>
-                            <pattern>org.aspectj</pattern>
-                            <shadedPattern>${shading.prefix}.aspectj</shadedPattern>
-                        </relocation-->
                         <relocation>
                             <pattern>com.google</pattern>
                             <shadedPattern>${shading.prefix}.google</shadedPattern>
@@ -148,7 +144,6 @@
                             <artifact>org.apache.kafka:kafka-clients</artifact>
                             <excludes>
                                 <exclude>META-INF/services/**</exclude>
-                                <exclude>kafka/kafka-version.properties</exclude>
                             </excludes>
                         </filter>
                         <filter>
