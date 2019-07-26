@@ -21,6 +21,9 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+
 import com.google.inject.Injector;
 import com.google.inject.Guice;
 
@@ -45,12 +48,27 @@ public class Concentrator {
 
 	private static final String PROPERTIES_FILE = "/peer.properties";
 
+	private static final String LOGGING_CONFIG = "/peer-logging.xml";
+
 	// defaults for properties
 	private static final String ZMQ_LINGER_DEFAULT = "1000";
 	private static final String ZMQ_RCVHWM_DEFAULT = "10000";
 	private static final String ZMQ_SNDHWM_DEFAULT = "10000";
 
 	static {
+		// configure logging
+		LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+		JoranConfigurator configurator = new JoranConfigurator();
+		configurator.setContext(context);
+		context.reset();
+		try (final InputStream stream = Concentrator.class.getResourceAsStream(LOGGING_CONFIG)) {
+			configurator.doConfigure(stream);
+		} catch (Exception ie) {
+			System.err.printf("Error loading logging configuration from %s%n", LOGGING_CONFIG);
+			// for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
+			ie.printStackTrace();
+		}
+
 		// load properties from file in classpath
 		try (final InputStream stream = Concentrator.class.getResourceAsStream(PROPERTIES_FILE)) {
 			properties.load(stream);

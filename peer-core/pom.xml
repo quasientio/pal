@@ -182,6 +182,15 @@
             </plugin>
         </plugins>
 
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <excludes>
+                    <exclude>peer-logging-default.xml</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <testResources>
             <testResource>
                 <directory>src/test/resources</directory>
@@ -192,15 +201,6 @@
             </testResource>
         </testResources>
 
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-                <excludes>
-                    <exclude>logback-default.xml</exclude>
-                </excludes>
-            </resource>
-        </resources>
     </build>
 
     <dependencies>
