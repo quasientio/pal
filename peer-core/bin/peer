@@ -14,4 +14,4 @@ JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts
 
 MAIN_ARGS="$@"
 
-java -jar $JVM_OPTS $JMX_PROPS $PEER_CORE_HOME/target/peer-core-*.jar $MAIN_ARGS
+java $JVM_OPTS $JMX_PROPS -jar $PEER_CORE_HOME/target/peer-core-*.jar $MAIN_ARGS
