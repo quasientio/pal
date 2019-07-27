@@ -80,7 +80,11 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 
 	protected ReturnValue callConstructor(String className, Class[] parameterTypes, Object[] args,
 																				ObjectRef[] argObjRefs) throws Exception {
+		return callConstructor(className, parameterTypes, args, argObjRefs, null);
+	}
 
+	protected ReturnValue callConstructor(String className, Class[] parameterTypes, Object[] args,
+																				ObjectRef[] argObjRefs, String expectedThrowableType) throws Exception {
 		String[] parameterTypesNamesArray = new String[parameterTypes.length];
 		for (int i = 0; i < parameterTypes.length; i++) {
 			parameterTypesNamesArray[i] = parameterTypes[i].getName();
@@ -90,82 +94,134 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 			parameterTypesNamesArray, args, argObjRefs));
 
 		// basic assertions
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
+		if (expectedThrowableType != null) {
+			assertHasThrowableOfType(replyMsg, expectedThrowableType);
+		} else {
+			assertTrue(replyMsg.hasReturnValue());
+			assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
+		}
 
 		return replyMsg.getReturnValue();
 	}
 
-	protected ReturnValue callConstructor(String className) throws Exception {
+	protected ReturnValue callEmptyConstructor(String className) throws Exception {
+		return callEmptyConstructor(className, null);
+	}
 
+	protected ReturnValue callEmptyConstructor(String className, String expectedThrowableType) throws Exception {
 		DataMessage replyMsg = sendAndReceive(dataMessageBuilder.buildEmptyConstructor(clientId, className));
 
 		// basic assertions
-		assertTrue(replyMsg.hasReturnValue());
-		assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
+		if (expectedThrowableType != null) {
+			assertHasThrowableOfType(replyMsg, expectedThrowableType);
+		} else {
+			assertTrue(replyMsg.hasReturnValue());
+			assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
+		}
 
 		return replyMsg.getReturnValue();
 	}
 
 	protected ReturnValue callGetStatic(String className, String fieldName) throws Exception {
+		return callGetStatic(className, fieldName, null);
+	}
 
+	protected ReturnValue callGetStatic(String className, String fieldName, String expectedThrowableType) throws Exception {
 		DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
-		assertTrue(replyMsg.hasReturnValue());
+		if (expectedThrowableType != null) {
+			assertHasThrowableOfType(replyMsg, expectedThrowableType);
+		} else {
+			assertTrue(replyMsg.hasReturnValue());
+		}
 
 		return replyMsg.getReturnValue();
 	}
 
 	protected void callPutStatic(String className, String fieldName, String fieldClassName,
 															 Object value) throws Exception {
+		callPutStatic(className, fieldName, fieldClassName, value, null);
+	}
 
+	protected void callPutStatic(String className, String fieldName, String fieldClassName,
+															 Object value, String expectedThrowableType) throws Exception {
 		DataMessage requestMsg = dataMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, value);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
-		assertFalse(replyMsg.hasReturnValue());
-		assertTrue(replyMsg.hasStaticFieldPutDone());
-		StaticFieldPutDone staticFieldPutDone = replyMsg.getStaticFieldPutDone();
-		assertEquals(staticFieldPutDone.getField().getName(), fieldName);
+		if (expectedThrowableType != null) {
+			assertHasThrowableOfType(replyMsg, expectedThrowableType);
+		} else {
+			assertFalse(replyMsg.hasReturnValue());
+			assertTrue(replyMsg.hasStaticFieldPutDone());
+			StaticFieldPutDone staticFieldPutDone = replyMsg.getStaticFieldPutDone();
+			assertEquals(staticFieldPutDone.getField().getName(), fieldName);
+		}
 	}
 
 	protected ReturnValue callGetInstanceVar(String className, String fieldName, ObjectRef objRef) throws Exception {
+		return callGetInstanceVar(className, fieldName, objRef, null);
+	}
 
+	protected ReturnValue callGetInstanceVar(String className, String fieldName, ObjectRef objRef,
+																					 String expectedThrowableType) throws Exception {
 		DataMessage requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, objRef);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
-		assertTrue(replyMsg.hasReturnValue());
+		if (expectedThrowableType != null) {
+			assertHasThrowableOfType(replyMsg, expectedThrowableType);
+		} else {
+			assertTrue(replyMsg.hasReturnValue());
+		}
 
 		return replyMsg.getReturnValue();
 	}
 
 	protected void callPutField(String className, String fieldName, ObjectRef targetObjRef,
 															String valueClassName, Object value) throws Exception {
+		callPutField(className, fieldName, targetObjRef, valueClassName, value, null);
+	}
+
+	protected void callPutField(String className, String fieldName, ObjectRef targetObjRef,
+															String valueClassName, Object value, String expectedThrowableType) throws Exception {
 
 		DataMessage requestMsg = dataMessageBuilder.buildPutObject(clientId, className, fieldName, targetObjRef,
 			valueClassName, value);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
-		assertFalse(replyMsg.hasReturnValue());
-		assertTrue(replyMsg.hasInstanceFieldPutDone());
-		InstanceFieldPutDone fieldPutDone = replyMsg.getInstanceFieldPutDone();
-		assertEquals(fieldPutDone.getField().getName(), fieldName);
+		if (expectedThrowableType != null) {
+			assertHasThrowableOfType(replyMsg, expectedThrowableType);
+		} else {
+			assertFalse(replyMsg.hasReturnValue());
+			assertTrue(replyMsg.hasInstanceFieldPutDone());
+			InstanceFieldPutDone fieldPutDone = replyMsg.getInstanceFieldPutDone();
+			assertEquals(fieldPutDone.getField().getName(), fieldName);
+		}
 	}
 
 	protected ReturnValue callClassMethod(String className, String methodName, String[] parameterTypeNames,
 																				Object[] parameters, ObjectRef[] paramObjRefs)
 		throws Exception {
+		return callClassMethod(className, methodName, parameterTypeNames, parameters, paramObjRefs, null);
+	}
 
+	protected ReturnValue callClassMethod(String className, String methodName, String[] parameterTypeNames,
+																				Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType)
+		throws Exception {
 		DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName,
 			parameterTypeNames, this, null, parameters, paramObjRefs);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
-		assertTrue(replyMsg.hasReturnValue());
+		if (expectedThrowableType != null) {
+			assertHasThrowableOfType(replyMsg, expectedThrowableType);
+		} else {
+			assertTrue(replyMsg.hasReturnValue());
+		}
 
 		return replyMsg.getReturnValue();
 	}
@@ -173,41 +229,67 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 	protected void callVoidClassMethod(String className, String methodName, String[] parameterTypeNames,
 																		 Object[] parameters, ObjectRef[] paramObjRefs)
 		throws Exception {
+		callVoidClassMethod(className, methodName, parameterTypeNames, parameters, paramObjRefs, null);
+	}
 
+	protected void callVoidClassMethod(String className, String methodName, String[] parameterTypeNames,
+																		 Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType)
+		throws Exception {
 		DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName,
 			parameterTypeNames, this, null, parameters, paramObjRefs);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
-		assertTrue(replyMsg.hasReturnValue());
-		assertNotNull(replyMsg.getReturnValue());
-		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		if (expectedThrowableType != null) {
+			assertHasThrowableOfType(replyMsg, expectedThrowableType);
+		} else {
+			assertTrue(replyMsg.hasReturnValue());
+			assertNotNull(replyMsg.getReturnValue());
+			assertTrue(replyMsg.getReturnValue().getIsVoid());
+		}
 	}
 
 	protected ReturnValue callInstanceMethod(String className, String methodName, ObjectRef targetObjRef, String[]
 		parameterTypeNames, Object[] parameters, ObjectRef[] paramObjRefs) throws Exception {
+		return callInstanceMethod(className, methodName, targetObjRef, parameterTypeNames, parameters, paramObjRefs, null);
+	}
 
+	protected ReturnValue callInstanceMethod(String className, String methodName, ObjectRef targetObjRef, String[]
+		parameterTypeNames, Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType) throws Exception {
 		DataMessage requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, null,
 			targetObjRef, parameterTypeNames, parameters, paramObjRefs);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
-		assertTrue(replyMsg.hasReturnValue());
+		if (expectedThrowableType != null) {
+			assertHasThrowableOfType(replyMsg, expectedThrowableType);
+		} else {
+			assertTrue(replyMsg.hasReturnValue());
+		}
 
 		return replyMsg.getReturnValue();
 	}
 
 	protected void callVoidInstanceMethod(String className, String methodName, ObjectRef targetObjRef, String[]
 		parameterTypeNames, Object[] parameters, ObjectRef[] paramObjRefs) throws Exception {
+		callVoidInstanceMethod(className, methodName, targetObjRef, parameterTypeNames, parameters, paramObjRefs, null);
+	}
+
+	protected void callVoidInstanceMethod(String className, String methodName, ObjectRef targetObjRef, String[]
+		parameterTypeNames, Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType) throws Exception {
 
 		DataMessage requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, null,
 			targetObjRef, parameterTypeNames, parameters, paramObjRefs);
 		DataMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
-		assertTrue(replyMsg.hasReturnValue());
-		assertNotNull(replyMsg.getReturnValue());
-		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		if (expectedThrowableType != null) {
+			assertHasThrowableOfType(replyMsg, expectedThrowableType);
+		} else {
+			assertTrue(replyMsg.hasReturnValue());
+			assertNotNull(replyMsg.getReturnValue());
+			assertTrue(replyMsg.getReturnValue().getIsVoid());
+		}
 	}
 }
 

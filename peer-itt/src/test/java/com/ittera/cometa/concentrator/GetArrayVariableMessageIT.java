@@ -18,6 +18,7 @@ import static org.junit.Assert.*;
  * - an array initialized with some values of the right type
  * <p>
  * TODO: introduce null values
+ * TODO: use assertArrayEquals()
  */
 
 public class GetArrayVariableMessageIT extends AbstractPeerMessageIT {

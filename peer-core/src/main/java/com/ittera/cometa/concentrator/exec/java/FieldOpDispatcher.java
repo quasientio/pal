@@ -2,15 +2,18 @@ package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
+import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.Optional;
 
 public abstract class FieldOpDispatcher extends BaseDispatcher {
 
@@ -25,14 +28,15 @@ public abstract class FieldOpDispatcher extends BaseDispatcher {
 	@Override
 	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
-		Field field = ((FieldSignature) ctxt.getSignature()).getField();
+		Optional<AccessibleObject> field = Optional.of(((FieldSignature) ctxt.getSignature()).getField());
 
 		if (value instanceof InvocationExceptionWrapper) {
 			Exception invocationException = ((InvocationExceptionWrapper) value).getException();
-			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, field, invocationException, null);
+			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, field, getAccessibleObjectType(),
+				invocationException, null);
 		} else {
 			if (!returnsVoid()) {
-				return messageBuilder.buildReturnValue(peerUuid, value, field.getType(), objectRef, false, null);
+				return messageBuilder.buildReturnValue(peerUuid, value, ((Field) field.get()).getType(), objectRef, false, null);
 			} else {
 				return messageBuilder.buildFieldOpDone(peerUuid, ctxt, getAfterExecMessageType());
 			}
@@ -42,6 +46,11 @@ public abstract class FieldOpDispatcher extends BaseDispatcher {
 	@Override
 	protected List<Primitives.Parameter> getParameterList(DataMessage dataMessage) {
 		return null;
+	}
+
+	@Override
+	protected final AccessibleObjectType getAccessibleObjectType() {
+		return AccessibleObjectType.FIELD;
 	}
 
 	abstract protected boolean returnsVoid();

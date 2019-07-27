@@ -16,6 +16,10 @@ public class VoidStaticMethods {
 		System.out.println("whatever");
 	}
 
+	static void throwRuntimeException() {
+		throw new RuntimeException("Bastards threw me out!");
+	}
+
 	public static void sumUpList(ArrayList<Integer> listOfInts) {
 		int sum = listOfInts.stream().reduce(0, Integer::sum);
 		System.out.println(String.format("The sum of ints = %d", sum));

@@ -2,12 +2,14 @@ package com.ittera.cometa.messages;
 
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
+import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
 
 import com.ittera.cometa.messages.protobuf.data.Fields;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.util.UUID;
+import java.util.Optional;
 
 import java.lang.reflect.AccessibleObject;
 
@@ -80,8 +82,8 @@ public interface DataMessageBuilder {
 	/**
 	 * return builders
 	 */
-	DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, AccessibleObject accessibleObject,
-																						 Exception exception, String followingUuid);
+	DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, Optional<AccessibleObject> accessibleObject,
+																						 AccessibleObjectType type, Throwable throwable, String followingUuid);
 
 	DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, ObjectRef objectRef, boolean isVoid,
 															 String followingUuid);

@@ -33,7 +33,7 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 		Integer newValue = 500;
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// get instance variable, assert original value
 		ReturnValue retValue = callGetInstanceVar(className, fieldName, newObjRef);
@@ -63,7 +63,7 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 		Integer newValue = null;
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// test with a non null integer
 		ReturnValue retValue = callGetInstanceVar(className, fieldName, newObjRef);
@@ -81,5 +81,29 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 		assertValueIsNullObjectOfType(retValue, fieldClassName);
 		rawObj = Unwrapper.unwrapObject(retValue.getObject());
 		assertEquals(newValue, rawObj);
+	}
+
+	@Test
+	public void putField_wrongType_exThrown() throws Exception {
+
+		String fieldName = "anInt";
+		String fieldClassName = "java.lang.String";
+		String newValue = "500";
+
+		// create new instance
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
+		callPutField(className, fieldName, newObjRef, fieldClassName, newValue);
+	}
+
+	@Test
+	public void putField_noSuchField_exThrown() throws Exception {
+
+		String fieldName = "aMadeUpField";
+		String fieldClassName = "java.lang.String";
+		String newValue = "500";
+
+		// create new instance
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
+		callPutField(className, fieldName, newObjRef, fieldClassName, newValue, "java.lang.NoSuchFieldException");
 	}
 }

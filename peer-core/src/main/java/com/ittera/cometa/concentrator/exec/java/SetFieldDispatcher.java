@@ -28,12 +28,11 @@ abstract public class SetFieldDispatcher extends FieldOpDispatcher {
 		return Void.getInstance();
 	}
 
-
 	@Override
-	protected Object invokeIncoming(AccessibleObject accessibleObject, Optional<Object> target, List<Object> args,
-																	Optional<Object> value) throws Exception {
-		Field field = (Field) accessibleObject;
-		field.set(target.isPresent() ? target.get() : null, value.orElse(null));
+	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Optional<Object> target,
+																	List<Object> args, Optional<Object> value) throws Exception {
+		Field field = (Field) accessibleObject.get();
+		field.set(target.orElse(null), value.orElse(null));
 		return Void.getInstance();
 	}
 
@@ -43,7 +42,7 @@ abstract public class SetFieldDispatcher extends FieldOpDispatcher {
 	}
 
 	@Override
-	protected boolean returnsVoid(AccessibleObject accessibleObject) {
+	protected boolean returnsVoid(Optional<AccessibleObject> accessibleObject) {
 		return true;
 	}
 }

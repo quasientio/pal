@@ -3,6 +3,7 @@ package com.ittera.cometa.concentrator.exec.java;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
+import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
 import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
@@ -45,30 +46,32 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	@Override
 	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
-		final Constructor constructor = ((ConstructorSignature) ctxt.getSignature()).getConstructor();
+		final Optional<AccessibleObject> constructor = Optional.of(((ConstructorSignature) ctxt.getSignature())
+			.getConstructor());
 
 		if (value instanceof InvocationExceptionWrapper) {
 			Exception invocationException = ((InvocationExceptionWrapper) value).getException();
-			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, constructor, invocationException,
-				null);
+			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, constructor, getAccessibleObjectType(),
+				invocationException, null);
 		} else {
-			return messageBuilder.buildReturnValue(peerUuid, value, constructor.getClass(), objectRef, false,
+			return messageBuilder.buildReturnValue(peerUuid, value, constructor.get().getClass(), objectRef, false,
 				null);
 		}
 	}
 
 	@Override
 	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
-																						 AccessibleObject accessibleObject, Exception exceptionWhileLoading,
-																						 Exception exceptionWhileInvoking) {
+																						 Optional<AccessibleObject> accessibleObject, Throwable exceptionWhileLoading,
+																						 Throwable exceptionWhileInvoking) {
 
 		String messageUuid = dataMessage.getMessageUuid();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
-			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
+			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getAccessibleObjectType(),
+				exceptionWhileLoading, exceptionWhileInvoking);
 		}
 
-		Class constructorType = ((Constructor) accessibleObject).getDeclaringClass();
+		Class constructorType = accessibleObject.map(ao -> ((Constructor) ao).getDeclaringClass()).orElse(null);
 		return messageBuilder.buildReturnValue(peerUuid, valueObject, constructorType, valueObjRef, false, messageUuid);
 	}
 
@@ -90,20 +93,25 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected Object invokeIncoming(AccessibleObject accessibleObject, Optional<Object> target, List<Object> args,
-																	Optional<Object> value) throws Exception {
-		Constructor constructor = (Constructor) accessibleObject;
+	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Optional<Object> target,
+																	List<Object> args, Optional<Object> value) throws Exception {
+		Constructor constructor = (Constructor) accessibleObject.get();
 		return constructor.newInstance(args.toArray(new Object[args.size()]));
 	}
 
 	@Override
-	protected final boolean returnsVoid(AccessibleObject accessibleObject) {
+	protected final boolean returnsVoid(Optional<AccessibleObject> accessibleObject) {
 		return false;
 	}
 
 	@Override
 	protected final Type getBeforeExecMessageType() {
 		return Type.CONSTRUCTOR;
+	}
+
+	@Override
+	protected final AccessibleObjectType getAccessibleObjectType() {
+		return AccessibleObjectType.CONSTRUCTOR;
 	}
 
 	@Override

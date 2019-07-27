@@ -322,9 +322,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(0, objectService.size());
 		assertTrue(doneMessage.hasRaisedThrowable());
-		assertEquals("java.lang.reflect.InvocationTargetException",
-			doneMessage.getRaisedThrowable().getThrowable().getType());
-		assertEquals("java.lang.NumberFormatException",
-			doneMessage.getRaisedThrowable().getThrowable().getCause().getType());
+		assertEquals("java.lang.NumberFormatException", doneMessage.getRaisedThrowable().getThrowable().getType());
 	}
 }

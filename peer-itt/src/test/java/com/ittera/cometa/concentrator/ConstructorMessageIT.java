@@ -14,7 +14,6 @@ import org.junit.Test;
  * - constructor that takes Object, passing a Constructors instance. This will test ReflectionHelper,
  * as it should invoke the more specific constructor (the one taking Constructors type, not Object type)
  * - invoke constructor using constructor-ref (requires [ticket:15])
- * - constructor throwing exception
  * - inner constructor (commented out below), if it makes sense
  */
 public class ConstructorMessageIT extends AbstractPeerMessageIT {
@@ -29,13 +28,13 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 	public void innerConstructor() throws Exception {
 
 		String className = "com.ittera.cometa.apps.Constructors$Empty";
-		callConstructor(className);
+		callEmptyConstructor(className);
 	}
 
 	@Test
 	public void constructor_publicNoArgs_newObjectReturned() throws Exception {
 
-		callConstructor(className);
+		callEmptyConstructor(className);
 	}
 
 	@Test
@@ -82,7 +81,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 	public void constructor_protectedOneArgRef_newObjectReturned() throws Exception {
 
 		//1. Construct an instance calling no-args constructor
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		//2. Construct an instance calling the constructor that takes another instance as arg
 		Object[] args = {null};
@@ -90,5 +89,37 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 		Class[] parameterTypes = new Class[]{Constructors.class};
 
 		callConstructor(className, parameterTypes, args, argRefs);
+	}
+
+//	@Test
+	public void constructor_publicOneBadArg_exThrown() throws Exception {
+
+		Object[] args = {"not_a_number"};
+		ObjectRef[] argRefs = {null};
+		Class[] parameterTypes = new Class[]{String.class};
+
+		callConstructor(className, parameterTypes, args, argRefs, "java.lang.NumberFormatException");
+	}
+
+//	@Test
+	public void constructor_constructor3DoublesDoesNotExist_exThrown() throws Exception {
+
+		Object[] args = {239823d, 38723d, 2323d};
+		ObjectRef[] argRefs = {null, null, null};
+		Class[] parameterTypes = new Class[]{Double.class, Double.class, Double.class};
+
+		callConstructor(className, parameterTypes, args, argRefs, "java.lang.NoSuchMethodException");
+	}
+
+//	TODO failing with CNFE!!!??
+	// TODO Y otra cosa rara, el message con el throwable tiene un followingUUID con un UUID que no esta en el log!!
+	@Test
+public void constructor_constructor3doublesDoesNotExist_exThrown() throws Exception {
+
+		Object[] args = {239823d, 38723d, 2323d};
+		ObjectRef[] argRefs = {null, null, null};
+		Class[] parameterTypes = new Class[]{double.class, double.class, double.class};
+
+		callConstructor(className, parameterTypes, args, argRefs, "java.lang.NoSuchMethodException");
 	}
 }

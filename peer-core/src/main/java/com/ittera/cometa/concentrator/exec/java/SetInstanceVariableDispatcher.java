@@ -44,11 +44,11 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 	}
 
 	@Override
-	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, AccessibleObject accessibleObject)
+	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
 		throws ClassNotFoundException {
 		Object target;
 		if (dataMessage.getInstanceFieldPut().hasObject()) {
-			Class fieldType = ((Field) accessibleObject).getType();
+			Class fieldType = ((Field) accessibleObject.get()).getType();
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldPut().getObject(), fieldType);
 			logger.debug("Unwrapped target: {}", target);
 		} else {
@@ -69,10 +69,10 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 	}
 
 	@Override
-	protected Optional<Object> getValueFromMessage(final DataMessage dataMessage, final AccessibleObject accessibleObject) {
+	protected Optional<Object> getValueFromMessage(final DataMessage dataMessage, final Optional<AccessibleObject> accessibleObject) {
 
 		final Object value;
-		final Field field = (Field) accessibleObject;
+		final Field field = (Field) accessibleObject.get();
 
 		if (dataMessage.getInstanceFieldPut().hasValueObject()) {
 			value = Unwrapper.unwrapObject(dataMessage.getInstanceFieldPut().getValueObject(), field.getType());
@@ -86,16 +86,17 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 
 	@Override
 	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
-																						 AccessibleObject accessibleObject, Exception exceptionWhileLoading,
-																						 Exception exceptionWhileInvoking) {
+																						 Optional<AccessibleObject> accessibleObject, Throwable exceptionWhileLoading,
+																						 Throwable exceptionWhileInvoking) {
 
 		String messageUuid = dataMessage.getMessageUuid();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
-			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
+			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getAccessibleObjectType(),
+				exceptionWhileLoading, exceptionWhileInvoking);
 		}
 
-		Class fieldType = ((Field) accessibleObject).getType();
+		Class fieldType = accessibleObject.map(ao -> ((Field) ao).getType()).orElse(null);
 		return messageBuilder.buildPutObjectDone(peerUuid, messageUuid, dataMessage.getInstanceFieldPut(), fieldType,
 			messageUuid);
 	}

@@ -20,7 +20,7 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "doSomething";
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now call the method
 		String[] parameterTypes = new String[]{};
@@ -34,7 +34,7 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "testArg";
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now call the method
 		String param = "testing testing 1 2 3";
@@ -50,11 +50,27 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "printDate";
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now call the method
 		String[] parameterTypes = new String[]{};
 		callVoidInstanceMethod(className, methodName, newObjRef, parameterTypes, new Object[parameterTypes.length],
 			new ObjectRef[parameterTypes.length]);
+	}
+
+	@Test
+	public void callInstanceMethod_nullArg_throwsEx() throws Exception {
+
+		String methodName = "testNonNullArg";
+
+		// create new instance
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
+
+		// now call the method
+		String param = null;
+		Object[] parameters = new Object[]{param};
+		String[] parameterTypes = new String[]{String.class.getName()};
+		callVoidInstanceMethod(className, methodName, newObjRef, parameterTypes, parameters,
+			new ObjectRef[parameterTypes.length], "java.lang.NullPointerException");
 	}
 }

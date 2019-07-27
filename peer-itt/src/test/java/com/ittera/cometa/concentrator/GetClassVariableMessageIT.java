@@ -65,4 +65,9 @@ public class GetClassVariableMessageIT extends AbstractPeerMessageIT {
 		assertTrue(rawObj instanceof Boolean);
 		assertEquals(true, rawObj);
 	}
+
+	@Test
+	public void getClassVariable_noSuchField_exThrown() throws Exception {
+		callGetStatic(className, "aMadeUpField", "java.lang.NoSuchFieldException");
+	}
 }

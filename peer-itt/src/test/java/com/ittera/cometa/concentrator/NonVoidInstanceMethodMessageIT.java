@@ -25,7 +25,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "giveMeX";
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now call the method
 		String[] parameterTypes = new String[]{};
@@ -46,7 +46,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "getListOfStrings";
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now call the method
 		String[] parameterTypes = new String[]{};
@@ -62,7 +62,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "getListOfStringsShorthand";
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now call the method
 		String[] parameterTypes = new String[]{};
@@ -79,7 +79,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "addOffsetToListAndSumUp";
 
 		// new ArrayList<Integer>
-		ObjectRef listObjRef = ObjectRef.from(callConstructor("java.util.ArrayList").getObject().getRef());
+		ObjectRef listObjRef = ObjectRef.from(callEmptyConstructor("java.util.ArrayList").getObject().getRef());
 
 		// add some int's to the list
 		int[] someInts = {1, 2, 3, 5, 7, 9};
@@ -89,7 +89,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		}
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		//prepare parameters, expected return value
 		String[] parameterTypes = new String[]{"int", "java.util.ArrayList"};
@@ -109,6 +109,23 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
 		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
 		assertEquals(shouldReturn, rawObj);
-
 	}
+
+	@Test
+	public void callInstanceMethod_throwsCheckedException_exThrown() throws Exception {
+
+		String methodName = "throwMeACheckedException";
+
+		// create new instance
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
+		Object param = new Long(Integer.MAX_VALUE) + 1;
+
+		// now call the method
+		String[] parameterTypes = new String[]{param.getClass().getTypeName()};
+		Object[] parameters = new Object[]{param};
+
+		callInstanceMethod(className, methodName, newObjRef, parameterTypes, parameters,
+			new ObjectRef[parameterTypes.length], "java.lang.Exception");
+	}
+
 }

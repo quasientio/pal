@@ -24,6 +24,10 @@ public class NonVoidStaticMethods {
 		return 5;
 	}
 
+	public static Integer throwMeAnException() {
+		throw new RuntimeException("Here you go");
+	}
+
 	public static Object giveMeANull() {
 		return null;
 	}

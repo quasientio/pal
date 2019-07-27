@@ -32,25 +32,25 @@ abstract public class GetFieldDispatcher extends FieldOpDispatcher {
 	}
 
 	@Override
-	protected Object invokeIncoming(AccessibleObject accessibleObject, Optional<Object> target, List<Object> args,
-																	Optional<Object> value) throws Exception {
-		Field field = (Field) accessibleObject;
-		Object fieldValue = field.get(target.isPresent() ? target.get() : null);
-		return fieldValue;
+	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Optional<Object> target,
+																	List<Object> args, Optional<Object> value) throws Exception {
+		Field field = (Field) accessibleObject.get();
+		return field.get(target.orElse(null));
 	}
 
 	@Override
 	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
-																						 AccessibleObject accessibleObject, Exception exceptionWhileLoading,
-																						 Exception exceptionWhileInvoking) {
+																						 Optional<AccessibleObject> accessibleObject, Throwable exceptionWhileLoading,
+																						 Throwable exceptionWhileInvoking) {
 
 		String messageUuid = dataMessage.getMessageUuid();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
-			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
+			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getAccessibleObjectType(),
+				exceptionWhileLoading, exceptionWhileInvoking);
 		}
 
-		Class fieldType = ((Field) accessibleObject).getType();
+		Class fieldType = accessibleObject.map(ao -> ((Field) ao).getType()).orElse(null);
 		return messageBuilder.buildReturnValue(peerUuid, valueObject, fieldType, valueObjRef, returnsVoid(), messageUuid);
 	}
 
@@ -60,7 +60,7 @@ abstract public class GetFieldDispatcher extends FieldOpDispatcher {
 	}
 
 	@Override
-	protected boolean returnsVoid(AccessibleObject accessibleObject) {
+	protected boolean returnsVoid(Optional<AccessibleObject> accessibleObject) {
 		return false;
 	}
 }

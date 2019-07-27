@@ -87,4 +87,13 @@ public class SetClassVariableMessageIT extends AbstractPeerMessageIT {
 			callPutStatic(className, fieldName, fieldClassName, originalValue);
 		}
 	}
+
+	@Test
+	public void putStatic_noSuchField_exThrown() throws Exception {
+
+		String fieldName = "aMadeUpField";
+		String fieldClassName = "java.lang.String";
+
+		callPutStatic(className, fieldName, fieldClassName, "whatever", "java.lang.NoSuchFieldException");
+	}
 }

@@ -44,11 +44,11 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 	}
 
 	@Override
-	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, AccessibleObject accessibleObject)
+	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
 		throws ClassNotFoundException {
 		Object target;
 		if (dataMessage.getInstanceFieldGet().hasObject()) {
-			Class fieldType = ((Field) accessibleObject).getType();
+			Class fieldType = ((Field) accessibleObject.get()).getType();
 			// originally in Concentrator we used objClass, not fieldType.
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldGet().getObject(), fieldType);
 			logger.debug("Unwrapped target: {}", target);

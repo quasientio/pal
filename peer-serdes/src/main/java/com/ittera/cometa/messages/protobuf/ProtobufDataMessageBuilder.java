@@ -1,5 +1,6 @@
 package com.ittera.cometa.messages.protobuf;
 
+import com.ittera.cometa.common.lang.reflect.*;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
@@ -14,10 +15,6 @@ import com.ittera.cometa.messages.DataMessageBuilder;
 
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
-import com.ittera.cometa.common.lang.reflect.FieldSignature;
-import com.ittera.cometa.common.lang.reflect.CodeSignature;
-import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
-import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
@@ -26,6 +23,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
 
 import java.util.UUID;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
@@ -531,22 +529,37 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Throwable messages">
 	@Override
-	public DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, AccessibleObject accessibleObject,
-																										Exception exception, String followingUuid) {
+	public DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, Optional<AccessibleObject> accessibleObject,
+																										AccessibleObjectType accessibleObjectType, Throwable exception,
+																										String followingUuid) {
 
 		final Exceptions.RaisedThrowable.Builder thrBuilder = Exceptions.RaisedThrowable.newBuilder();
-		if (accessibleObject instanceof Constructor) {
-			thrBuilder.setConstructor(((Constructor) accessibleObject).getDeclaringClass().getName());
-			thrBuilder.setModifiers(((Constructor) accessibleObject).getModifiers());
-		} else if (accessibleObject instanceof Method) {
-			thrBuilder.setMethod(((Method) accessibleObject).getName());
-			thrBuilder.setModifiers(((Method) accessibleObject).getModifiers());
-		} else if (accessibleObject instanceof Field) {
-			thrBuilder.setField(((Field) accessibleObject).getName());
-			thrBuilder.setModifiers(((Field) accessibleObject).getModifiers());
+		if (accessibleObject.isPresent()) {
+			if (accessibleObject.get() instanceof Constructor) {
+				thrBuilder.setConstructor(((Constructor) accessibleObject.get()).getDeclaringClass().getName());
+				thrBuilder.setModifiers(((Constructor) accessibleObject.get()).getModifiers());
+			} else if (accessibleObject.get() instanceof Method) {
+				thrBuilder.setMethod(((Method) accessibleObject.get()).getName());
+				thrBuilder.setModifiers(((Method) accessibleObject.get()).getModifiers());
+			} else if (accessibleObject.get() instanceof Field) {
+				thrBuilder.setField(((Field) accessibleObject.get()).getName());
+				thrBuilder.setModifiers(((Field) accessibleObject.get()).getModifiers());
+			} else {
+				throw new UnsupportedOperationException(String.format("Unsupported accessibleObject type: %s",
+					accessibleObject.getClass().getName()));
+			}
 		} else {
-			throw new UnsupportedOperationException(String.format("Unsupported accessibleObject type: %s",
-				accessibleObject.getClass().getName()));
+			switch (accessibleObjectType) {
+				case CONSTRUCTOR:
+					thrBuilder.setConstructor("<info not available>");
+					break;
+				case METHOD:
+					thrBuilder.setMethod("<info not available>");
+					break;
+				case FIELD:
+					thrBuilder.setField("<info not available>");
+					break;
+			}
 		}
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.THROWABLE, concentratorUuid, followingUuid)

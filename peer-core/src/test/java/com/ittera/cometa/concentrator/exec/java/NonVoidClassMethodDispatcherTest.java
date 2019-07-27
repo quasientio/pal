@@ -345,9 +345,6 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertEquals(0, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
 		assertTrue(doneMessage.hasRaisedThrowable());
-		assertEquals("java.lang.reflect.InvocationTargetException",
-			doneMessage.getRaisedThrowable().getThrowable().getType());
-		assertEquals("java.lang.ArithmeticException",
-			doneMessage.getRaisedThrowable().getThrowable().getCause().getType());
+		assertEquals("java.lang.ArithmeticException", doneMessage.getRaisedThrowable().getThrowable().getType());
 	}
 }

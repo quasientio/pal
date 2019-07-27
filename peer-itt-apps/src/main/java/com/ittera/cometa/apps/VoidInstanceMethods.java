@@ -20,6 +20,10 @@ public class VoidInstanceMethods {
 		System.out.println(arg);
 	}
 
+	private void testNonNullArg(String arg) {
+		System.out.println(arg.concat("and stuff"));
+	}
+
 	protected void printDate() {
 		LocalDate date = LocalDate.now();
 		System.out.println(date.format(DateTimeFormatter.ISO_LOCAL_DATE));

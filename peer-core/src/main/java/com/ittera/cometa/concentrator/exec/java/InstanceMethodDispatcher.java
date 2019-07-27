@@ -3,6 +3,7 @@ package com.ittera.cometa.concentrator.exec.java;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
+import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
@@ -47,12 +48,13 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 	@Override
 	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
-		final Method method = ((MethodSignature) ctxt.getSignature()).getMethod();
+		final Optional<AccessibleObject> method = Optional.of(((MethodSignature) ctxt.getSignature()).getMethod());
+
 		if (value instanceof InvocationExceptionWrapper) {
 			Exception invocationException = ((InvocationExceptionWrapper) value).getException();
-			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, invocationException, null);
+			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, AccessibleObjectType.METHOD, invocationException, null);
 		} else {
-			return messageBuilder.buildReturnValue(peerUuid, value, method.getClass(), objectRef, isVoid, null);
+			return messageBuilder.buildReturnValue(peerUuid, value, method.get().getClass(), objectRef, isVoid, null);
 		}
 
 	}
@@ -90,7 +92,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 	}
 
 	@Override
-	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, AccessibleObject accessibleObject)
+	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
 		throws ClassNotFoundException {
 		Object target;
 		if (dataMessage.getInstanceMethodCall().hasObject()) {

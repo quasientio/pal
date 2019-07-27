@@ -34,4 +34,11 @@ public class NonVoidInstanceMethods {
 
 		return listOfInts.stream().reduce(0, Integer::sum);
 	}
+
+	public String throwMeACheckedException(long aLongValue) throws Exception {
+		if (aLongValue > Integer.MAX_VALUE) {
+			throw new Exception("long is really long!");
+		}
+		return "I'm fine";
+	}
 }

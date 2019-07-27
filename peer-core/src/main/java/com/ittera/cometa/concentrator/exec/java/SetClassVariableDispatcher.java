@@ -54,10 +54,10 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 	}
 
 	@Override
-	protected Optional<Object> getValueFromMessage(final DataMessage dataMessage, final AccessibleObject accessibleObject) {
+	protected Optional<Object> getValueFromMessage(final DataMessage dataMessage, final Optional<AccessibleObject> accessibleObject) {
 
 		final Object value;
-		final Field field = (Field) accessibleObject;
+		final Field field = (Field) accessibleObject.get();
 
 		if (dataMessage.getStaticFieldPut().hasValueObject()) {
 			value = Unwrapper.unwrapObject(dataMessage.getStaticFieldPut().getValueObject(), field.getType());
@@ -72,16 +72,17 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 
 	@Override
 	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
-																						 AccessibleObject accessibleObject, Exception exceptionWhileLoading,
-																						 Exception exceptionWhileInvoking) {
+																						 Optional<AccessibleObject> accessibleObject, Throwable exceptionWhileLoading,
+																						 Throwable exceptionWhileInvoking) {
 
 		String messageUuid = dataMessage.getMessageUuid();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
-			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
+			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getAccessibleObjectType(),
+				exceptionWhileLoading, exceptionWhileInvoking);
 		}
 
-		Class fieldType = ((Field) accessibleObject).getType();
+		Class fieldType = accessibleObject.map(ao -> ((Field) ao).getType()).orElse(null);
 		return messageBuilder.buildPutStaticDone(peerUuid, messageUuid, dataMessage.getStaticFieldPut(), fieldType,
 			messageUuid);
 	}

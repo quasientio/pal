@@ -70,7 +70,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "sumUpList";
 
 		//new ArrayList<Integer>
-		ObjectRef listObjRef = ObjectRef.from(callConstructor("java.util.ArrayList").getObject().getRef());
+		ObjectRef listObjRef = ObjectRef.from(callEmptyConstructor("java.util.ArrayList").getObject().getRef());
 
 		//add some int's
 		int[] someInts = {39, 5, 58, 32, 70, 42};
@@ -86,5 +86,31 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		// test call
 		callVoidClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs);
+	}
+
+	@Test
+	public void callClassMethod_noSuchMethod_exThrown() throws Exception {
+
+		String methodName = "a_made_up_method";
+
+		String[] parameterTypes = new String[]{};
+		Object[] parameters = new Object[]{};
+
+		// test call
+		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length],
+			"java.lang.NoSuchMethodException");
+	}
+
+	@Test
+	public void callClassMethod_throwsRuntimeEx_exThrown() throws Exception {
+
+		String methodName = "throwRuntimeException";
+
+		String[] parameterTypes = new String[]{};
+		Object[] parameters = new Object[]{};
+
+		// test call
+		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length],
+			"java.lang.RuntimeException");
 	}
 }

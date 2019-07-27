@@ -63,7 +63,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "nonVoidSumUpList";
 
 		// new ArrayList<Integer>
-		ObjectRef listObjRef = ObjectRef.from(callConstructor("java.util.ArrayList").getObject().getRef());
+		ObjectRef listObjRef = ObjectRef.from(callEmptyConstructor("java.util.ArrayList").getObject().getRef());
 
 		// add some int's
 		int[] someInts = {39, 5, 58, 32, 70, 42};
@@ -183,7 +183,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		assertEquals(appRef, secondAppRef);
 	}
 
-	//	@Test
+	//	@Test TODO reinstate and fix if it doesn't pass
 	public void callClassMethod_returningObjectRefArray_refRetValue() throws Exception {
 
 		String methodName = "fetchMeAThreadArray";
@@ -194,6 +194,33 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
 		assertValueIsArrayOfType(retValue, String.format("[L%s;", "java.lang.Thread"));
+	}
+
+	@Test
+	public void callClassMethod_badFormat_exThrown() throws Exception {
+
+		String methodName = "parseInt";
+		String param = "not_a_num";
+
+		String[] parameterTypes = new String[]{param.getClass().getTypeName()};
+		Object[] parameters = new Object[]{param};
+		ObjectRef[] paramObjRefs = new ObjectRef[parameters.length];
+
+		callClassMethod("java.lang.Integer", methodName, parameterTypes, parameters, paramObjRefs,
+			"java.lang.NumberFormatException");
+	}
+
+	@Test
+	public void callClassMethod_throwsEx_exThrown() throws Exception {
+
+		String methodName = "throwMeAnException";
+
+		String[] parameterTypes = new String[]{};
+		Object[] parameters = new Object[]{};
+		ObjectRef[] paramObjRefs = new ObjectRef[parameters.length];
+
+		callClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs,
+			"java.lang.RuntimeException");
 	}
 }
 

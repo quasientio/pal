@@ -10,9 +10,10 @@ import java.lang.reflect.AccessibleObject;
 
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
-
 import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.common.lang.ObjectRef;
+import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
+
 import com.ittera.cometa.common.util.Classes;
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
@@ -107,22 +108,21 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		 * this message.
 		 */
 
-		Exception exceptionWhileLoading = null, exceptionWhileInvoking = null;
-		AccessibleObject accessibleObject = null;
+		Throwable exceptionWhileLoading = null, exceptionWhileInvoking = null;
+		Optional<AccessibleObject> accessibleObject = Optional.empty();
 		Optional<Object> target = null, value = null;
 		List<Object> args = null;
 
 		// Loading phase
 		try {
 			// 1. Extract and load parameter types from message
-			List<Class> parameterTypes = null;
-			parameterTypes = getParameterTypesFromMessage(incomingCall);
+			List<Class> parameterTypes = getParameterTypesFromMessage(incomingCall);
 
 			// 2. Unwrap and load arguments
 			args = getArgsFromMessage(incomingCall, parameterTypes);
 
 			// 3. Load constructor/method/field to call
-			accessibleObject = loadAccessibleObject(incomingCall, parameterTypes, args);
+			accessibleObject = Optional.of(loadAccessibleObject(incomingCall, parameterTypes, args));
 
 			// 4. Load target for instance methods/field ops
 			target = getTargetFromMessage(incomingCall, accessibleObject);
@@ -132,7 +132,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 
 			// 6. (Optionally) Set field/method accessible, allowing to break Java access rules
 			if (!ENFORCE_JAVALANG_ACCESS) {
-				accessibleObject.setAccessible(true);
+				accessibleObject.ifPresent(aobj -> aobj.setAccessible(true));
 			}
 		} catch (Exception ex) {
 			logger.error("Error during loading phase (before invocation)", ex);
@@ -153,7 +153,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 				}
 			} catch (Exception e) {
 				logger.error("Error during invocation phase", e);
-				exceptionWhileInvoking = e;
+				exceptionWhileInvoking = e.getCause();
 			}
 		}
 
@@ -235,7 +235,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 *
 	 * @return
 	 */
-	protected Optional<Object> getValueFromMessage(DataMessage dataMessage, AccessibleObject accessibleObject) {
+	protected Optional<Object> getValueFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject) {
 		return Optional.empty();
 	}
 
@@ -244,7 +244,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 *
 	 * @return
 	 */
-	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, AccessibleObject accessibleObject)
+	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
 		throws ClassNotFoundException {
 		return Optional.empty();
 	}
@@ -252,16 +252,20 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	/**
 	 * @param messageUuid
 	 * @param accessibleObject
+	 * @param accessibleObjectType
 	 * @param exceptionWhileLoading  Either this or exceptionWhileInvoking must be non-null
 	 * @param exceptionWhileInvoking
 	 * @return
 	 */
-	protected final DataMessage wrapAfterExecThrowableMessage(String messageUuid, AccessibleObject accessibleObject,
-																														Exception exceptionWhileLoading,
-																														Exception exceptionWhileInvoking) {
+	protected final DataMessage wrapAfterExecThrowableMessage(String messageUuid,
+																														Optional<AccessibleObject> accessibleObject,
+																														AccessibleObjectType accessibleObjectType,
+																														Throwable exceptionWhileLoading,
+																														Throwable exceptionWhileInvoking) {
 
-		Exception exception = exceptionWhileLoading != null ? exceptionWhileLoading : exceptionWhileInvoking;
-		return messageBuilder.buildAccessibleObjectThrowable(peerUuid, accessibleObject, exception, messageUuid);
+		Throwable throwable = exceptionWhileLoading != null ? exceptionWhileLoading : exceptionWhileInvoking;
+		return messageBuilder.buildAccessibleObjectThrowable(peerUuid, accessibleObject, accessibleObjectType,
+			throwable, messageUuid);
 	}
 
 	@Inject
@@ -292,8 +296,8 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	abstract protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid);
 
 	abstract protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
-																											AccessibleObject accessibleObject, Exception exceptionWhileLoading,
-																											Exception exceptionWhileInvoking);
+																											Optional<AccessibleObject> accessibleObject,
+																											Throwable exceptionWhileLoading, Throwable exceptionWhileInvoking);
 
 	abstract protected Object invoke(Context ctxt, Object sender, Object target, Object[] args);
 
@@ -305,12 +309,14 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 * @return
 	 * @throws Exception
 	 */
-	abstract protected Object invokeIncoming(AccessibleObject accessibleObject, Optional<Object> target, List<Object> args,
+	abstract protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Optional<Object> target, List<Object> args,
 																					 Optional<Object> value) throws Exception;
 
-	abstract protected boolean returnsVoid(AccessibleObject accessibleObject);
+	abstract protected boolean returnsVoid(Optional<AccessibleObject> accessibleObject);
 
 	abstract protected Type getBeforeExecMessageType();
+
+	abstract protected AccessibleObjectType getAccessibleObjectType();
 
 	abstract protected List<Primitives.Parameter> getParameterList(DataMessage dataMessage);
 

@@ -10,6 +10,10 @@ public class Constructors {
 	public Constructors(Integer anInt) {
 	}
 
+	public Constructors(String someString) {
+		Integer integer = Integer.parseInt(someString);
+	}
+
 	Constructors(String msg, Integer times) {
 
 		StringBuilder sb = new StringBuilder();

@@ -25,7 +25,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_publicIntegerNotNull_intReturned() throws Exception {
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "anInt", newObjRef);
@@ -40,7 +40,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_privateNullInteger_nullIntReturned() throws Exception {
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "aNullInt", newObjRef);
@@ -52,7 +52,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_protectedStringNotNull_stringReturned() throws Exception {
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "someString", newObjRef);
@@ -67,7 +67,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_getPublicStringNull_nullStringReturned() throws Exception {
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "aNullStr", newObjRef);
@@ -79,7 +79,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_packageVisibleBooleanNull_nullBoolReturned() throws Exception {
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "aNullBool", newObjRef);
@@ -91,7 +91,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_publicBoolNotNull_boolReturned() throws Exception {
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "aBool", newObjRef);
@@ -106,7 +106,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 	public void getInstanceVariable_privateShortNotZero_shortReturned() throws Exception {
 
 		// create new instance
-		ObjectRef newObjRef = ObjectRef.from(callConstructor(className).getObject().getRef());
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now get instance variable
 		ReturnValue retValue = callGetInstanceVar(className, "someShort", newObjRef);
@@ -115,5 +115,16 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
 		assertTrue(rawObj instanceof Short);
 		assertEquals((short) 233, rawObj);
+	}
+
+
+	@Test
+	public void getInstanceVariable_noSuchField_exThrown() throws Exception {
+
+		// create new instance
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
+
+		// now get instance variable
+		callGetInstanceVar(className, "aMadeUpField", newObjRef, "java.lang.NoSuchFieldException");
 	}
 }

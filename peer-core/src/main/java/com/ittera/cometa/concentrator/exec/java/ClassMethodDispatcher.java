@@ -2,6 +2,7 @@ package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
+import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 import com.ittera.cometa.common.ObjectService;
 
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.UUID;
+import java.util.Optional;
 
 import javax.inject.Singleton;
 import javax.inject.Inject;
@@ -45,13 +47,13 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 	@Override
 	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
-		final Method method = ((MethodSignature) ctxt.getSignature()).getMethod();
+		final Optional<AccessibleObject> method = Optional.of(((MethodSignature) ctxt.getSignature()).getMethod());
 
 		if (value instanceof InvocationExceptionWrapper) {
 			Exception invocationException = ((InvocationExceptionWrapper) value).getException();
-			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, invocationException, null);
+			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, AccessibleObjectType.METHOD, invocationException, null);
 		} else {
-			return messageBuilder.buildReturnValue(peerUuid, value, method.getReturnType(), objectRef, isVoid,
+			return messageBuilder.buildReturnValue(peerUuid, value, ((Method) method.get()).getReturnType(), objectRef, isVoid,
 				null);
 		}
 	}

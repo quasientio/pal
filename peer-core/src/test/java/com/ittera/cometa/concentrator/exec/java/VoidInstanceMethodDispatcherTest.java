@@ -330,9 +330,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.getReturnValue().getIsVoid());
 		assertTrue(doneMessage.hasRaisedThrowable());
-		assertEquals("java.lang.reflect.InvocationTargetException",
-			doneMessage.getRaisedThrowable().getThrowable().getType());
-		assertEquals("java.lang.IllegalArgumentException",
-			doneMessage.getRaisedThrowable().getThrowable().getCause().getType());
+		assertEquals("java.lang.IllegalArgumentException", doneMessage.getRaisedThrowable().getThrowable().getType());
 	}
 }

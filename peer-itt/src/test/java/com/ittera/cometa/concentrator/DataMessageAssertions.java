@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator;
 
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
@@ -71,4 +72,8 @@ public class DataMessageAssertions {
 		}
 	}
 
+	protected void assertHasThrowableOfType(DataMessage msg, String throwableType) {
+		assertTrue(msg.hasRaisedThrowable());
+		assertEquals(throwableType, msg.getRaisedThrowable().getThrowable().getType());
+	}
 }
