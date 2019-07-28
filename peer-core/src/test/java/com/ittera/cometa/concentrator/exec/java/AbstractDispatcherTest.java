@@ -38,16 +38,16 @@ public abstract class AbstractDispatcherTest {
 		when(dispatcherConnector.sendAndRecv(any())).then(AdditionalAnswers.returnsFirstArg());
 	}
 
-	private void verifyDispatcherCalledTimes(int n) {
+	private void verifyDispatcherConnectorCalledTimes(int n) {
 		verify(dispatcherConnector, times(n)).sendAndRecv(any());
 	}
 
-	protected void verifyDispatcherCalledTwice() {
-		verifyDispatcherCalledTimes(2);
+	protected void verifyDispatcherConnectorCalledTwice() {
+		verifyDispatcherConnectorCalledTimes(2);
 	}
 
-	protected void verifyDispatcherCalledOnce() {
-		verifyDispatcherCalledTimes(1);
+	protected void verifyDispatcherConnectorCalledOnce() {
+		verifyDispatcherConnectorCalledTimes(1);
 	}
 
 	protected String[] toNames(Class[] types) {

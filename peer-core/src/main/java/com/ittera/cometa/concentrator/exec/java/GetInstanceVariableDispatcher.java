@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.lang.ObjectNotFoundException;
 import com.ittera.cometa.common.lang.ObjectRef;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
@@ -44,19 +45,23 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 	}
 
 	@Override
-	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
-		throws ClassNotFoundException {
+	protected Object getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject) throws
+		ObjectNotFoundException {
 		Object target;
 		if (dataMessage.getInstanceFieldGet().hasObject()) {
 			Class fieldType = ((Field) accessibleObject.get()).getType();
-			// originally in Concentrator we used objClass, not fieldType.
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldGet().getObject(), fieldType);
 			logger.debug("Unwrapped target: {}", target);
 		} else {
-			target = objectService.lookupObject(ObjectRef.from(dataMessage.getInstanceFieldGet().getObjectRef()));
+			ObjectRef targetObjRef = ObjectRef.from(dataMessage.getInstanceFieldGet().getObjectRef());
+			if (objectService.containsObjectRef(targetObjRef)) {
+				target = objectService.lookupObject(targetObjRef);
+			} else {
+				throw new ObjectNotFoundException(String.format("No object found with objRef: %s", targetObjRef.getRef()));
+			}
 			logger.debug("Loaded target: {}", target);
 		}
-		return Optional.of(target);
+		return target;
 	}
 
 	@Override

@@ -106,4 +106,32 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 		callPutField(className, fieldName, newObjRef, fieldClassName, newValue, "java.lang.NoSuchFieldException");
 	}
+
+	@Test
+	public void putField_noSuchClass_exThrown() throws Exception {
+
+		String nonExistingClass = "com.ittera.cometa.apps.IDontExist";
+		String fieldName = "anInt";
+		String fieldClassName = "java.lang.String";
+		String newValue = "500";
+
+		// create new instance
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
+		callPutField(nonExistingClass, fieldName, newObjRef, fieldClassName, newValue,
+			"java.lang.ClassNotFoundException");
+	}
+
+	@Test
+	public void putField_noSuchInstance_exThrown() throws Exception {
+
+		// fake non-existing instance
+		ObjectRef badObjRef = ObjectRef.from("Not_A_Real_ObjRef");
+
+		String fieldName = "anInt";
+		String fieldClassName = "java.lang.String";
+		String newValue = "500";
+
+		callPutField(className, fieldName, badObjRef, fieldClassName, newValue,
+			"com.ittera.cometa.common.lang.ObjectNotFoundException");
+	}
 }

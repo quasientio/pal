@@ -117,6 +117,24 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 		assertEquals((short) 233, rawObj);
 	}
 
+	@Test
+	public void getInstanceVariable_noSuchClass_exThrown() throws Exception {
+		// create new instance
+		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
+
+		String nonExistingClass = "com.ittera.cometa.apps.IDontExist";
+		callGetInstanceVar(nonExistingClass, "someShort", newObjRef,
+			"java.lang.ClassNotFoundException");
+	}
+
+	@Test
+	public void getInstanceVariable_noSuchInstance_exThrown() throws Exception {
+		// create new instance
+		ObjectRef newObjRef = ObjectRef.from("Not_A_Real_ObjRef");
+
+		callGetInstanceVar(className, "someShort", newObjRef,
+			"com.ittera.cometa.common.lang.ObjectNotFoundException");
+	}
 
 	@Test
 	public void getInstanceVariable_noSuchField_exThrown() throws Exception {
@@ -125,6 +143,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now get instance variable
-		callGetInstanceVar(className, "aMadeUpField", newObjRef, "java.lang.NoSuchFieldException");
+		callGetInstanceVar(className, "aMadeUpField", newObjRef,
+			"java.lang.NoSuchFieldException");
 	}
 }

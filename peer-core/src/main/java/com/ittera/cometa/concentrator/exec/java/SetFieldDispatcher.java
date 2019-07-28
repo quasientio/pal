@@ -29,10 +29,10 @@ abstract public class SetFieldDispatcher extends FieldOpDispatcher {
 	}
 
 	@Override
-	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Optional<Object> target,
+	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Object target,
 																	List<Object> args, Optional<Object> value) throws Exception {
 		Field field = (Field) accessibleObject.get();
-		field.set(target.orElse(null), value.orElse(null));
+		field.set(target, value.orElse(null));
 		return Void.getInstance();
 	}
 

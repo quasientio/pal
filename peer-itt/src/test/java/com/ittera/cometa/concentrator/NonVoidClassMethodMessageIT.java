@@ -27,8 +27,8 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "testNonVoidStatic";
 
 		String param = "GIVE ME THIS IN LOWERCASE";
-		Object[] parameters = new Object[]{param};
-		String[] parameterTypes = new String[]{param.getClass().getName()};
+		Object[] parameters = {param};
+		String[] parameterTypes = {param.getClass().getName()};
 		ObjectRef[] paramObjRefs = new ObjectRef[parameters.length];
 
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs);
@@ -45,8 +45,8 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		String methodName = "highFive";
 
-		String[] parameterTypes = new String[]{};
-		Object[] parameters = new Object[]{};
+		String[] parameterTypes = {};
+		Object[] parameters = {};
 		ObjectRef[] paramObjRefs = new ObjectRef[parameters.length];
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs);
 
@@ -73,9 +73,9 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		}
 
 		// call method
-		String[] parameterTypes = new String[]{"java.util.ArrayList"};
+		String[] parameterTypes = {"java.util.ArrayList"};
 		Object[] params = new Object[parameterTypes.length];
-		ObjectRef[] objRefs = new ObjectRef[]{listObjRef};
+		ObjectRef[] objRefs = {listObjRef};
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, params, objRefs);
 
 		// test returned value
@@ -92,7 +92,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "giveMeANull";
 
 		// call method
-		String[] parameterTypes = new String[]{};
+		String[] parameterTypes = {};
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes,
 			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
@@ -109,8 +109,8 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		// call method
 		String param = "split me up";
-		String[] parameterTypes = new String[]{param.getClass().getName()};
-		Object[] parameters = new Object[]{param};
+		String[] parameterTypes = {param.getClass().getName()};
+		Object[] parameters = {param};
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters,
 			new ObjectRef[parameterTypes.length]);
 
@@ -128,13 +128,13 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "giveMeAnEmptyLongArray";
 
 		// call method
-		String[] parameterTypes = new String[]{};
-		Object[] parameters = new Object[]{};
+		String[] parameterTypes = {};
+		Object[] parameters = {};
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters,
 			new ObjectRef[parameterTypes.length]);
 
 		// test returned value
-		Long[] shouldReturn = new Long[]{};
+		Long[] shouldReturn = {};
 		assertValueIsArrayOfType(retValue, shouldReturn.getClass().getName());
 		Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
 		assertArrayEquals(shouldReturn, (Long[]) rawObj);
@@ -146,7 +146,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "giveMeANullBoolArray";
 
 		// call method
-		String[] parameterTypes = new String[]{};
+		String[] parameterTypes = {};
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes,
 			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
@@ -162,8 +162,8 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		String methodName = "fetchMeAThreadSingleton";
 
-		String[] parameterTypes = new String[]{};
-		Object[] parameters = new Object[]{};
+		String[] parameterTypes = {};
+		Object[] parameters = {};
 
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, parameters,
 			new ObjectRef[parameterTypes.length]);
@@ -188,7 +188,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		String methodName = "fetchMeAThreadArray";
 
-		String[] parameterTypes = new String[]{};
+		String[] parameterTypes = {};
 
 		ReturnValue retValue = callClassMethod(className, methodName, parameterTypes,
 			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
@@ -202,8 +202,8 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		String methodName = "parseInt";
 		String param = "not_a_num";
 
-		String[] parameterTypes = new String[]{param.getClass().getTypeName()};
-		Object[] parameters = new Object[]{param};
+		String[] parameterTypes = {param.getClass().getTypeName()};
+		Object[] parameters = {param};
 		ObjectRef[] paramObjRefs = new ObjectRef[parameters.length];
 
 		callClassMethod("java.lang.Integer", methodName, parameterTypes, parameters, paramObjRefs,
@@ -215,8 +215,8 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		String methodName = "throwMeAnException";
 
-		String[] parameterTypes = new String[]{};
-		Object[] parameters = new Object[]{};
+		String[] parameterTypes = {};
+		Object[] parameters = {};
 		ObjectRef[] paramObjRefs = new ObjectRef[parameters.length];
 
 		callClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs,

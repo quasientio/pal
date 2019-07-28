@@ -42,7 +42,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 
 		Object[] args = {5};
 		ObjectRef[] argRefs = {null};
-		Class[] parameterTypes = new Class[]{Integer.class};
+		Class[] parameterTypes = {Integer.class};
 
 		callConstructor(className, parameterTypes, args, argRefs);
 	}
@@ -52,7 +52,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 
 		Object[] args = {"Constructing an app", 5};
 		ObjectRef[] argRefs = {null, null};
-		Class[] parameterTypes = new Class[]{String.class, Integer.class};
+		Class[] parameterTypes = {String.class, Integer.class};
 
 		callConstructor(className, parameterTypes, args, argRefs);
 	}
@@ -62,7 +62,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 
 		Object[] args = {null};
 		ObjectRef[] argRefs = {null};
-		Class[] parameterTypes = new Class[]{Integer.class};
+		Class[] parameterTypes = {Integer.class};
 
 		callConstructor(className, parameterTypes, args, argRefs);
 	}
@@ -72,7 +72,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 
 		Object[] args = {new String[]{"Aa", "Bb", "Cc"}};
 		ObjectRef[] argRefs = {null};
-		Class[] parameterTypes = new Class[]{String[].class};
+		Class[] parameterTypes = {String[].class};
 
 		callConstructor(className, parameterTypes, args, argRefs);
 	}
@@ -86,40 +86,39 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
 		//2. Construct an instance calling the constructor that takes another instance as arg
 		Object[] args = {null};
 		ObjectRef[] argRefs = {newObjRef};
-		Class[] parameterTypes = new Class[]{Constructors.class};
+		Class[] parameterTypes = {Constructors.class};
 
 		callConstructor(className, parameterTypes, args, argRefs);
 	}
 
-//	@Test
-	public void constructor_publicOneBadArg_exThrown() throws Exception {
-
-		Object[] args = {"not_a_number"};
-		ObjectRef[] argRefs = {null};
-		Class[] parameterTypes = new Class[]{String.class};
-
-		callConstructor(className, parameterTypes, args, argRefs, "java.lang.NumberFormatException");
-	}
-
-//	@Test
+	@Test
 	public void constructor_constructor3DoublesDoesNotExist_exThrown() throws Exception {
 
 		Object[] args = {239823d, 38723d, 2323d};
 		ObjectRef[] argRefs = {null, null, null};
-		Class[] parameterTypes = new Class[]{Double.class, Double.class, Double.class};
+		Class[] parameterTypes = {Double.class, Double.class, Double.class};
 
 		callConstructor(className, parameterTypes, args, argRefs, "java.lang.NoSuchMethodException");
 	}
 
-//	TODO failing with CNFE!!!??
-	// TODO Y otra cosa rara, el message con el throwable tiene un followingUUID con un UUID que no esta en el log!!
 	@Test
-public void constructor_constructor3doublesDoesNotExist_exThrown() throws Exception {
+	public void constructor_noSuchClass_exThrown() throws Exception {
+		String nonExistingClass = "com.ittera.cometa.apps.IDontExist";
 
 		Object[] args = {239823d, 38723d, 2323d};
 		ObjectRef[] argRefs = {null, null, null};
-		Class[] parameterTypes = new Class[]{double.class, double.class, double.class};
+		Class[] parameterTypes = {Double.class, Double.class, Double.class};
 
-		callConstructor(className, parameterTypes, args, argRefs, "java.lang.NoSuchMethodException");
+		callConstructor(nonExistingClass, parameterTypes, args, argRefs, "java.lang.ClassNotFoundException");
+	}
+
+	@Test
+	public void constructor_publicOneBadArg_exThrown() throws Exception {
+
+		Object[] args = {"not_a_number"};
+		ObjectRef[] argRefs = {null};
+		Class[] parameterTypes = {String.class};
+
+		callConstructor(className, parameterTypes, args, argRefs, "java.lang.NumberFormatException");
 	}
 }

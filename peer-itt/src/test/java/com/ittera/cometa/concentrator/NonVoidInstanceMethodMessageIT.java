@@ -28,7 +28,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now call the method
-		String[] parameterTypes = new String[]{};
+		String[] parameterTypes = {};
 		ReturnValue retValue = callInstanceMethod(className, methodName, newObjRef, parameterTypes,
 			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
@@ -49,7 +49,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now call the method
-		String[] parameterTypes = new String[]{};
+		String[] parameterTypes = {};
 		ReturnValue retValue = callInstanceMethod(className, methodName, newObjRef, parameterTypes,
 			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
@@ -65,7 +65,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		// now call the method
-		String[] parameterTypes = new String[]{};
+		String[] parameterTypes = {};
 		ReturnValue retValue = callInstanceMethod(className, methodName, newObjRef, parameterTypes,
 			new Object[parameterTypes.length], new ObjectRef[parameterTypes.length]);
 
@@ -92,10 +92,10 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
 		//prepare parameters, expected return value
-		String[] parameterTypes = new String[]{"int", "java.util.ArrayList"};
+		String[] parameterTypes = {"int", "java.util.ArrayList"};
 		int offsetParam = 10;
-		Object[] parameters = new Object[]{offsetParam, null};
-		ObjectRef[] paramObjRefs = new ObjectRef[]{null, listObjRef};
+		Object[] parameters = {offsetParam, null};
+		ObjectRef[] paramObjRefs = {null, listObjRef};
 
 		// now call the method
 		ReturnValue retValue = callInstanceMethod(className, methodName, newObjRef, parameterTypes, parameters,
@@ -121,8 +121,8 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 		Object param = new Long(Integer.MAX_VALUE) + 1;
 
 		// now call the method
-		String[] parameterTypes = new String[]{param.getClass().getTypeName()};
-		Object[] parameters = new Object[]{param};
+		String[] parameterTypes = {param.getClass().getTypeName()};
+		Object[] parameters = {param};
 
 		callInstanceMethod(className, methodName, newObjRef, parameterTypes, parameters,
 			new ObjectRef[parameterTypes.length], "java.lang.Exception");

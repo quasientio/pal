@@ -19,8 +19,8 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		String methodName = "testVoidStatic";
 
-		String[] parameterTypes = new String[]{"java.lang.String"};
-		Object[] parameters = new Object[]{"Hello from a unit test"};
+		String[] parameterTypes = {"java.lang.String"};
+		Object[] parameters = {"Hello from a unit test"};
 
 		// test call
 		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length]);
@@ -31,8 +31,8 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		String methodName = "printArg";
 
-		String[] parameterTypes = new String[]{"int", "java.lang.String"};
-		Object[] parameters = new Object[]{2, "more than an argument"};
+		String[] parameterTypes = {"int", "java.lang.String"};
+		Object[] parameters = {2, "more than an argument"};
 
 		// test call
 		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length]);
@@ -43,8 +43,8 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		String methodName = "doSomethingStatically";
 
-		String[] parameterTypes = new String[]{};
-		Object[] parameters = new Object[]{};
+		String[] parameterTypes = {};
+		Object[] parameters = {};
 
 		// test call
 		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length]);
@@ -57,8 +57,8 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		//test main
 		String methodName = "main";
 
-		String[] parameterTypes = new String[]{"[Ljava.lang.String;"};
-		Object[] parameters = new Object[]{new String[]{}};
+		String[] parameterTypes = {"[Ljava.lang.String;"};
+		Object[] parameters = {new String[]{}};
 
 		// test call
 		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length]);
@@ -80,12 +80,26 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 		}
 
 
-		String[] parameterTypes = new String[]{"java.util.ArrayList"};
+		String[] parameterTypes = {"java.util.ArrayList"};
 		Object[] parameters = new Object[parameterTypes.length];
-		ObjectRef[] paramObjRefs = new ObjectRef[]{listObjRef};
+		ObjectRef[] paramObjRefs = {listObjRef};
 
 		// test call
 		callVoidClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs);
+	}
+
+	@Test
+	public void callClassMethod_noSuchClass_exThrown() throws Exception {
+
+		String nonExistingClass = "com.ittera.cometa.apps.IDontExist";
+		String methodName = "doSomethingStatically";
+
+		String[] parameterTypes = {};
+		Object[] parameters = {};
+
+		// test call
+		callVoidClassMethod(nonExistingClass, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length],
+			"java.lang.ClassNotFoundException");
 	}
 
 	@Test
@@ -93,8 +107,8 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		String methodName = "a_made_up_method";
 
-		String[] parameterTypes = new String[]{};
-		Object[] parameters = new Object[]{};
+		String[] parameterTypes = {};
+		Object[] parameters = {};
 
 		// test call
 		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length],
@@ -106,8 +120,8 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
 		String methodName = "throwRuntimeException";
 
-		String[] parameterTypes = new String[]{};
-		Object[] parameters = new Object[]{};
+		String[] parameterTypes = {};
+		Object[] parameters = {};
 
 		// test call
 		callVoidClassMethod(className, methodName, parameterTypes, parameters, new ObjectRef[parameterTypes.length],

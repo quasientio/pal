@@ -96,4 +96,11 @@ public class SetClassVariableMessageIT extends AbstractPeerMessageIT {
 
 		callPutStatic(className, fieldName, fieldClassName, "whatever", "java.lang.NoSuchFieldException");
 	}
+
+
+	@Test
+	public void putStatic_noSuchClass_exThrown() throws Exception {
+		String nonExistingClass = "com.ittera.cometa.apps.IDontExist";
+		callGetStatic(nonExistingClass, "aStaticInteger", "java.lang.ClassNotFoundException");
+	}
 }

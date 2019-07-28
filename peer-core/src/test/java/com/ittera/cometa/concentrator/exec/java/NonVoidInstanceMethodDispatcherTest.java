@@ -15,7 +15,7 @@ import static org.junit.Assert.*;
 
 import org.junit.runner.RunWith;
 
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import static java.util.stream.Collectors.*;
 
@@ -30,6 +30,10 @@ class ClassForNonVoidInstanceMethodTest {
 
 	ClassForNonVoidInstanceMethodTest(String value) {
 		this.value = value;
+	}
+
+	String floatAsString(float someFloat) {
+		return String.valueOf(someFloat);
 	}
 
 	String toUpperCase() {
@@ -48,10 +52,6 @@ class ClassForNonVoidInstanceMethodTest {
 	}
 }
 
-/**
- * TODO:
- * - with remoteArgs
- */
 @RunWith(MockitoJUnitRunner.class)
 public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
@@ -66,7 +66,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
 		// signature
 		String methodName = "toUpperCase";
-		Class[] parameterTypes = new Class[]{};
+		Class[] parameterTypes = {};
 		Signature signature = new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
 		// ctxt
@@ -81,7 +81,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertEquals(value.toUpperCase(), returned);
 	}
 
@@ -95,7 +95,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "toUpperCase";
-		Class[] parameterTypes = new Class[]{};
+		Class[] parameterTypes = {};
 		ObjectRef[] argObjRefs = {};
 		Object[] args = {};
 
@@ -106,7 +106,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(2, objectService.size());
 		String returned = null;
@@ -124,7 +124,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
 		// signature
 		String methodName = "append";
-		Class[] parameterTypes = new Class[]{String.class};
+		Class[] parameterTypes = {String.class};
 		Signature signature = new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
 		// ctxt
@@ -139,7 +139,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertEquals(value + args[0], returned);
 	}
 
@@ -153,7 +153,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "append";
-		Class[] parameterTypes = new Class[]{String.class};
+		Class[] parameterTypes = {String.class};
 		ObjectRef[] argObjRefs = {null};
 		Object[] args = {"et"};
 
@@ -164,7 +164,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(2, objectService.size());
 		String returned = null;
@@ -178,6 +178,63 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
 	@Test
 	@Override
+	public void dispatch_withPrimitiveArgs_ok() throws Throwable {
+
+		// signature
+		String methodName = "floatAsString";
+		Class[] parameterTypes = {float.class};
+		Signature signature = new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// args
+		float floatArg = 238923.32f;
+		Object[] args = {floatArg};
+
+		// dispatch
+		Object target = new ClassForNonVoidInstanceMethodTest();
+		Object returned = dispatcher.dispatch(ctxt, this, target, args);
+
+		// expect
+		verifyDispatcherConnectorCalledTwice();
+		assertEquals(String.valueOf(floatArg), returned);
+	}
+
+	@Test
+	@Override
+	public void dispatchIncoming_withPrimitiveArgs_ok() {
+		// create and store new instance
+		ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest();
+		ObjectRef targetObjRef = objectService.storeObject(target);
+
+		String methodName = "floatAsString";
+		Class[] parameterTypes = {float.class};
+		float floatArg = 238923.32f;
+		Object[] args = {floatArg};
+		ObjectRef[] argObjRefs = {null};
+
+		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
+
+		// dispatch
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherConnectorCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(2, objectService.size());
+		String returned = null;
+		try {
+			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
+		} catch (ClassNotFoundException cnfe) {
+			fail(cnfe.getMessage());
+		}
+		assertEquals(String.valueOf(floatArg), returned);
+	}
+
+	@Test
+	@Override
 	public void dispatchIncoming_withObjectRefArgs_ok() {
 
 		// create and store new instance
@@ -186,7 +243,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "append";
-		Class[] parameterTypes = new Class[]{String.class};
+		Class[] parameterTypes = {String.class};
 		Object[] args = {null};
 		ObjectRef etObjRef = objectService.storeObject("et");
 		ObjectRef[] argObjRefs = {etObjRef};
@@ -198,7 +255,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(3, objectService.size());
 		String returned = null;
@@ -220,7 +277,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "append";
-		Class[] parameterTypes = new Class[]{String.class};
+		Class[] parameterTypes = {String.class};
 		Object[] args = {null};
 		ObjectRef[] argObjRefs = {null};
 
@@ -231,7 +288,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(2, objectService.size());
 		String returned = null;
@@ -249,7 +306,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
 		// signature
 		String methodName = "join";
-		Class[] parameterTypes = new Class[]{String.class, String[].class};
+		Class[] parameterTypes = {String.class, String[].class};
 		Signature signature = new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
 		// ctxt
@@ -265,7 +322,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertEquals("package::class::method", returned);
 	}
 
@@ -278,7 +335,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "join";
-		Class[] parameterTypes = new Class[]{String.class, String[].class};
+		Class[] parameterTypes = {String.class, String[].class};
 		String[] parts = {"package", "class", "method"};
 		String joiner = "::";
 		Object[] args = {joiner, parts};
@@ -291,7 +348,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(2, objectService.size());
 		String returned = null;
@@ -310,7 +367,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
 		// signature
 		String methodName = "toUpperCase";
-		Class[] parameterTypes = new Class[]{};
+		Class[] parameterTypes = {};
 		Signature signature = new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
 		// ctxt
@@ -327,7 +384,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		} catch (NullPointerException npe) {
 			// all good
 		}
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 	}
 
 	@Test
@@ -339,7 +396,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
 		String methodName = "toUpperCase";
-		Class[] parameterTypes = new Class[]{};
+		Class[] parameterTypes = {};
 		Object[] args = {};
 		ObjectRef[] argObjRefs = {};
 
@@ -350,7 +407,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
 		assertTrue(doneMessage.hasRaisedThrowable());

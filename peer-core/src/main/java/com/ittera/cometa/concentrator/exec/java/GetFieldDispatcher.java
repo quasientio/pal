@@ -32,10 +32,10 @@ abstract public class GetFieldDispatcher extends FieldOpDispatcher {
 	}
 
 	@Override
-	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Optional<Object> target,
+	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Object target,
 																	List<Object> args, Optional<Object> value) throws Exception {
 		Field field = (Field) accessibleObject.get();
-		return field.get(target.orElse(null));
+		return field.get(target);
 	}
 
 	@Override

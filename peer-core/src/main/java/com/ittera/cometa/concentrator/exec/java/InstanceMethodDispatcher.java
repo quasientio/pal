@@ -2,6 +2,7 @@ package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectNotFoundException;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
@@ -92,8 +93,8 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 	}
 
 	@Override
-	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
-		throws ClassNotFoundException {
+	protected Object getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
+		throws ClassNotFoundException, ObjectNotFoundException {
 		Object target;
 		if (dataMessage.getInstanceMethodCall().hasObject()) {
 			Class objClass = Class.forName(dataMessage.getInstanceMethodCall().getClass_().getName(), true,
@@ -101,10 +102,15 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceMethodCall().getObject(), objClass);
 			logger.debug("Unwrapped target: {}", target);
 		} else {
-			target = objectService.lookupObject(ObjectRef.from(dataMessage.getInstanceMethodCall().getObjectRef()));
+			ObjectRef targetObjRef = ObjectRef.from(dataMessage.getInstanceMethodCall().getObjectRef());
+			if (objectService.containsObjectRef(targetObjRef)) {
+				target = objectService.lookupObject(targetObjRef);
+			} else {
+				throw new ObjectNotFoundException(String.format("No object found with objRef: %s", targetObjRef.getRef()));
+			}
 			logger.debug("Loaded target: {}", target);
 		}
-		return Optional.of(target);
+		return target;
 	}
 
 	/**

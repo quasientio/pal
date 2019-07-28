@@ -7,7 +7,14 @@ public abstract class AbstractMethodDispatcherTest extends AbstractDispatcherTes
 
 	public abstract void dispatch_withArgs_ok() throws Throwable;
 	public abstract void dispatchIncoming_withArgs_ok();
+
+	public abstract void dispatch_withPrimitiveArgs_ok() throws Throwable;
+	public abstract void dispatchIncoming_withPrimitiveArgs_ok();
+
+//	public abstract void dispatch_withObjectRefArgs_ok(); TODO
 	public abstract void dispatchIncoming_withObjectRefArgs_ok();
+
+//	public abstract void dispatch_withNullArgs_ok(); TODO
 	public abstract void dispatchIncoming_withNullArgs_ok();
 
 	public abstract void dispatch_varargs_ok() throws Throwable;

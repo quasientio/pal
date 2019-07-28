@@ -14,11 +14,11 @@ import java.util.Optional;
 public abstract class MethodDispatcher extends BaseDispatcher {
 
 	@Override
-	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Optional<Object> target, List<Object> args,
+	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Object target, List<Object> args,
 																	Optional<Object> value) throws Exception {
 
 		Method method = (Method) accessibleObject.get();
-		return method.invoke(target.orElse(null), args.toArray());
+		return method.invoke(target, args.toArray());
 	}
 
 	@Override

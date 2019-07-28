@@ -93,7 +93,7 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Optional<Object> target,
+	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Object target,
 																	List<Object> args, Optional<Object> value) throws Exception {
 		Constructor constructor = (Constructor) accessibleObject.get();
 		return constructor.newInstance(args.toArray(new Object[args.size()]));

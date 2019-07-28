@@ -56,7 +56,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, target.someShort);
 	}
@@ -80,7 +80,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
@@ -106,7 +106,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertArrayEquals(newFieldValue, target.bytes);
 	}
@@ -130,7 +130,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
@@ -156,7 +156,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, target.aLong);
 	}
@@ -180,7 +180,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
@@ -206,7 +206,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, target.aString);
 	}
@@ -230,7 +230,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
@@ -256,7 +256,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, target.aList);
 	}
@@ -280,7 +280,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(2, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
@@ -308,7 +308,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertNull(target.aList);
 	}
@@ -332,7 +332,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
@@ -358,7 +358,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertArrayEquals(newFieldValue, target.objects);
 	}
@@ -382,7 +382,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(2, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());
@@ -409,7 +409,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertEquals(Void.getInstance(), returned);
 		assertEquals(newFieldValue, target.lastError);
 	}
@@ -433,7 +433,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(2, objectService.size());
 		assertFalse(doneMessage.hasReturnValue());

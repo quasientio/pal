@@ -11,6 +11,7 @@ import java.lang.reflect.AccessibleObject;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.Dispatcher;
+import com.ittera.cometa.common.lang.ObjectNotFoundException;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
 
@@ -110,7 +111,8 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 
 		Throwable exceptionWhileLoading = null, exceptionWhileInvoking = null;
 		Optional<AccessibleObject> accessibleObject = Optional.empty();
-		Optional<Object> target = null, value = null;
+		Object target = null;
+		Optional<Object> value = null;
 		List<Object> args = null;
 
 		// Loading phase
@@ -180,23 +182,14 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 */
 	private List<Class> getParameterTypesFromMessage(DataMessage dataMessage) throws ClassNotFoundException {
 
-		/** TODO: after testing, refactor so that constructor param types are extracted same as method calls,
-		 * for some reason we are not calling Unwrapper.getClassForPrimitive() for constructors.
-		 * If it can't be done for constructor and methods, then push this down to Constructor and Method dispatchers */
-
 		final List<Class> paramClasses = new ArrayList<>();
 		List<Primitives.Parameter> parameterList = getParameterList(dataMessage);
 
-		if (dataMessage.hasConstructorCall()) {
+		if (dataMessage.hasConstructorCall() || dataMessage.hasClassMethodCall() || dataMessage.hasInstanceMethodCall()) {
 			for (Primitives.Parameter param : parameterList) {
-				paramClasses.add(Class.forName(param.getType().getName(), true, Thread.currentThread().getContextClassLoader()));
-			}
-		} else if (dataMessage.hasClassMethodCall() || dataMessage.hasInstanceMethodCall()) {
-			for (Primitives.Parameter param : parameterList) {
-				Primitives.Object obj = param.getValue();
-				Class paramClass = Classes.getClassForPrimitive(obj.getClass_().getName());
-				if (paramClass == null) {
-					paramClass = Class.forName(obj.getClass_().getName(), true, Thread.currentThread().getContextClassLoader());
+				Class paramClass = Classes.getClassForPrimitive(param.getType().getName());
+				if (paramClass == null) { // ie. not a primitive
+					paramClass = Class.forName(param.getType().getName(), true, Thread.currentThread().getContextClassLoader());
 				}
 				paramClasses.add(paramClass);
 			}
@@ -244,9 +237,9 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 *
 	 * @return
 	 */
-	protected Optional<Object> getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
-		throws ClassNotFoundException {
-		return Optional.empty();
+	protected Object getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
+		throws ClassNotFoundException, ObjectNotFoundException {
+		return null;
 	}
 
 	/**
@@ -309,7 +302,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 * @return
 	 * @throws Exception
 	 */
-	abstract protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Optional<Object> target, List<Object> args,
+	abstract protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Object target, List<Object> args,
 																					 Optional<Object> value) throws Exception;
 
 	abstract protected boolean returnsVoid(Optional<AccessibleObject> accessibleObject);

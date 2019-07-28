@@ -16,7 +16,7 @@ import org.junit.runner.RunWith;
 
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.lang.reflect.Constructor;
 
@@ -28,8 +28,13 @@ import static java.util.stream.Collectors.*;
 class ClassForConstructorTest {
 	Integer someInteger;
 	String joinedVarArgs;
+	long aLong;
 
 	ClassForConstructorTest() {
+	}
+
+	ClassForConstructorTest(boolean plusOne, long aLong) {
+		this.aLong = plusOne ? aLong + 1 : aLong;
 	}
 
 	ClassForConstructorTest(Integer someInteger) {
@@ -64,7 +69,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 	public void dispatch_noArgs_ok() throws Throwable {
 
 		// signature
-		Class[] parameterTypes = new Class[]{};
+		Class[] parameterTypes = {};
 		Constructor constructor = targetClass.getDeclaredConstructor(parameterTypes);
 		Signature signature = new ConstructorSignature(constructor);
 
@@ -78,7 +83,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertNotNull(returned);
 		assertThat(returned, instanceOf(targetClass));
 	}
@@ -93,7 +98,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
 		assertTrue(objectService.containsObjectRef(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())));
@@ -120,7 +125,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertNotNull(returned);
 		assertThat(returned, instanceOf(targetClass));
 		assertEquals(args[0], ((ClassForConstructorTest) returned).someInteger);
@@ -141,12 +146,60 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
 		assertTrue(objectService.containsObjectRef(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())));
 		assertThat(objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())),
 			instanceOf(targetClass));
+	}
+
+	@Test
+	@Override
+	public void dispatch_withPrimitiveArgs_ok() throws Throwable {
+		// signature
+		Class[] parameterTypes = {boolean.class, long.class};
+		Constructor constructor = targetClass.getDeclaredConstructor(parameterTypes);
+		Signature signature = new ConstructorSignature(constructor);
+
+		// ctxt
+		Context ctxt = new Context(null, -1, targetClass, signature);
+
+		// args
+		Object[] args = {true, 983309835l};
+
+		// dispatch
+		Object returned = dispatcher.dispatch(ctxt, this, null, args);
+
+		// expect
+		verifyDispatcherConnectorCalledTwice();
+		assertNotNull(returned);
+		assertThat(returned, instanceOf(targetClass));
+		assertEquals((long) args[1] + 1, ((ClassForConstructorTest) returned).aLong);
+	}
+
+	@Test
+	@Override
+	public void dispatchIncoming_withPrimitiveArgs_ok() {
+		Class[] parameterTypes = {boolean.class, long.class};
+		Object[] args = {true, 983309835l};
+		ObjectRef[] argRefs = {null, null};
+
+		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
+			toNames(parameterTypes), args, argRefs);
+
+		// dispatch
+		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+
+		// expect
+		verifyDispatcherConnectorCalledOnce();
+		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
+		assertEquals(1, objectService.size());
+		assertTrue(objectService.containsObjectRef(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())));
+		assertThat(objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())),
+			instanceOf(targetClass));
+		assertEquals((long) args[1] + 1, ((ClassForConstructorTest) objectService.lookupObject(
+			ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()))).aLong);
 	}
 
 	@Test
@@ -166,7 +219,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(2, objectService.size());
 		assertTrue(objectService.containsObjectRef(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())));
@@ -191,7 +244,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
 		assertTrue(objectService.containsObjectRef(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())));
@@ -248,7 +301,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 		assertNotNull(returned);
 		assertThat(returned, instanceOf(targetClass));
 		assertEquals("hello world!", ((ClassForConstructorTest) returned).joinedVarArgs);
@@ -270,7 +323,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(1, objectService.size());
 		assertTrue(objectService.containsObjectRef(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef())));
@@ -300,7 +353,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 			// all good
 		}
 
-		verifyDispatcherCalledTwice();
+		verifyDispatcherConnectorCalledTwice();
 	}
 
 	@Test
@@ -318,7 +371,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherCalledOnce();
+		verifyDispatcherConnectorCalledOnce();
 		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
 		assertEquals(0, objectService.size());
 		assertTrue(doneMessage.hasRaisedThrowable());

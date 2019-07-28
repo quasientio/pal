@@ -67,6 +67,12 @@ public class GetClassVariableMessageIT extends AbstractPeerMessageIT {
 	}
 
 	@Test
+	public void getClassVariable_noSuchClass_exThrown() throws Exception {
+		String nonExistingClass = "com.ittera.cometa.apps.IDontExist";
+		callGetStatic(nonExistingClass, "aProtectedBool", "java.lang.ClassNotFoundException");
+	}
+
+	@Test
 	public void getClassVariable_noSuchField_exThrown() throws Exception {
 		callGetStatic(className, "aMadeUpField", "java.lang.NoSuchFieldException");
 	}
