@@ -13,8 +13,10 @@ import java.util.Arrays;
 
 import static java.util.stream.Collectors.*;
 
+import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import org.junit.Before;
 
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
 
 import org.mockito.AdditionalAnswers;
@@ -57,6 +59,6 @@ public abstract class AbstractDispatcherTest {
 	@Before
 	public void clearStuff() {
 		objectService.clear();
-		assertEquals(0, objectService.size());
+		assertThat(objectService.size(), is(0));
 	}
 }

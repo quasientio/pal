@@ -11,6 +11,7 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import org.junit.*;
 
 import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.*;
 
 import org.junit.runner.RunWith;
 
@@ -89,8 +90,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(Void.getInstance(), returned);
-		assertEquals(2, target.wordsCollected.size());
+		assertThat(returned, is(Void.getInstance()));
+		assertThat(target.wordsCollected.size(), is(2));
 	}
 
 	@Test
@@ -110,14 +111,18 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
-		assertEquals(2, target.wordsCollected.size());
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		assertThat(target.wordsCollected.size(), is(2));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -141,8 +146,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(Void.getInstance(), returned);
-		assertEquals(1, target.wordsCollected.size());
+		assertThat(returned, is(Void.getInstance()));
+		assertThat(target.wordsCollected.size(), is(1));
 	}
 
 	@Test
@@ -162,14 +167,19 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
-		assertEquals(1, target.wordsCollected.size());
+
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		assertThat(target.wordsCollected.size(), is(1));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -184,8 +194,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Context ctxt = new Context(null, -1, targetClass, signature);
 
 		// args
-		int wordsToAdd = 5;
-		Object[] args = {wordsToAdd};
+		int numberOfWordsToAdd = 5;
+		Object[] args = {numberOfWordsToAdd};
 
 		// dispatch
 		ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
@@ -193,8 +203,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(Void.getInstance(), returned);
-		assertEquals(wordsToAdd, target.wordsCollected.size());
+		assertThat(returned, is(Void.getInstance()));
+		assertThat(target.wordsCollected.size(), is(numberOfWordsToAdd));
 	}
 
 	@Test
@@ -206,22 +216,26 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		String methodName = "addWords";
 		Class[] parameterTypes = {int.class};
-		int wordsToAdd = 15;
-		Object[] args = {wordsToAdd};
+		int numberOfWordsToAdd = 15;
+		Object[] args = {numberOfWordsToAdd};
 		ObjectRef[] argObjRefs = {null};
 
 		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
-		assertEquals(wordsToAdd, target.wordsCollected.size());
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		assertThat(target.wordsCollected.size(), is(numberOfWordsToAdd));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -243,14 +257,18 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(2, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
-		assertEquals(wordList.size(), target.wordsCollected.size());
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(2));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		assertThat(target.wordsCollected.size(), is(wordList.size()));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -269,14 +287,18 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
-		assertEquals(0, target.wordsCollected.size());
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		assertThat(target.wordsCollected.size(), is(0));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -301,8 +323,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(Void.getInstance(), returned);
-		assertEquals(4, target.wordsCollected.size());
+		assertThat(returned, is(Void.getInstance()));
+		assertThat(target.wordsCollected.size(), is(4));
 	}
 
 	@Test
@@ -323,14 +345,18 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
-		assertEquals(4, target.wordsCollected.size());
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		assertThat(target.wordsCollected.size(), is(4));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -376,14 +402,13 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		assertTrue(doneMessage.hasRaisedThrowable());
-		assertEquals("java.lang.IllegalArgumentException", doneMessage.getRaisedThrowable().getThrowable().getType());
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		assertThat(replyMsg.getRaisedThrowable().getThrowable().getType(),is("java.lang.IllegalArgumentException"));
 	}
 }

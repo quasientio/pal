@@ -23,7 +23,7 @@ public class DataMessageAssertions {
 		assertFalse(returnValue.getIsVoid());
 		assertFalse(returnValue.getIsClass());
 		assertTrue(returnValue.hasClazz());
-		assertEquals(className, returnValue.getClazz().getName());
+		assertEquals(className, returnValue.getObject().getClass_().getName());
 		assertTrue(returnValue.hasObject());
 
 		Primitives.Object retObj = returnValue.getObject();

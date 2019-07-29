@@ -2,7 +2,7 @@ package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.ObjectRef;
 
-import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
+import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.lang.reflect.Method;
@@ -29,12 +29,11 @@ public abstract class MethodDispatcher extends BaseDispatcher {
 		String messageUuid = dataMessage.getMessageUuid();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
-			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getAccessibleObjectType(),
+			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getExecutableObjectType(),
 				exceptionWhileLoading, exceptionWhileInvoking);
 		}
 
-		Class methodReturnType = accessibleObject.map(ao -> ((Method) ao).getReturnType()).orElse(null);
-		return messageBuilder.buildReturnValue(peerUuid, valueObject, methodReturnType, valueObjRef,
+		return messageBuilder.buildReturnValue(peerUuid, valueObject, accessibleObject.get(), valueObjRef,
 			returnsVoid(accessibleObject), messageUuid);
 	}
 
@@ -45,7 +44,7 @@ public abstract class MethodDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected final AccessibleObjectType getAccessibleObjectType() {
-		return AccessibleObjectType.METHOD;
+	protected final ExecutableObjectType getExecutableObjectType() {
+		return ExecutableObjectType.METHOD;
 	}
 }

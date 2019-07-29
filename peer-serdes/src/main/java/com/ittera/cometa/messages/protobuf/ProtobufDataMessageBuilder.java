@@ -16,12 +16,9 @@ import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
 
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.lang.reflect.Field;
-import java.lang.reflect.Parameter;
+import java.lang.reflect.*;
 
+import java.lang.reflect.Field;
 import java.util.UUID;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -161,11 +158,15 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 		return Wrapper.getWrappedContext(context, sender, senderObjRef);
 	}
 
-	private Fields.Field getWrappedField(Class clazz, String fieldName) {
+	private Primitives.Field getWrappedField(Field field) {
+		return Wrapper.getWrappedField(field);
+	}
+
+	private Primitives.Field getWrappedField(Class clazz, String fieldName) {
 		return Wrapper.getWrappedField(clazz, fieldName);
 	}
 
-	private Fields.Field getWrappedField(String className, String fieldName) {
+	private Primitives.Field getWrappedField(String className, String fieldName) {
 		return Wrapper.getWrappedField(className, fieldName);
 	}
 
@@ -317,16 +318,17 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	}
 	//</editor-fold>
 
+	//<editor-fold desc="Field Ops generic">
 	@Override
 	public DataMessage buildFieldOp(UUID concentratorUuid, Context context, Type type, Object sender,
-																	ObjectRef senderObjRef, Object target, ObjectRef targetObjRef, Object arg,
-																	ObjectRef argObjRef) {
+																	ObjectRef senderObjRef, Object target, ObjectRef targetObjRef,
+																	Object arg, ObjectRef argObjRef) {
 
 		final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
 
 		Primitives.Class clazz = getWrappedClass(fieldSignature.getDeclaringType());
 		Primitives.Object targetObj = getWrappedObject(target, fieldSignature.getDeclaringType(), targetObjRef);
-		Fields.Field field = getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName());
+		Primitives.Field field = getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName());
 		int modifiers = fieldSignature.getModifiers();
 		Ctxt.Context ctxt = getWrappedContext(context, sender, senderObjRef);
 
@@ -373,7 +375,8 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	}
 
 	@Override
-	public DataMessage buildFieldOpDone(UUID concentratorUuid, Context context, Type type) {
+	public DataMessage buildFieldOpDone(UUID concentratorUuid, AccessibleObject accessibleObject,
+																			Context context, Type type) {
 
 		final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
 
@@ -382,12 +385,12 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 			case PUT_FIELD_DONE:
 				msgBuilder.setInstanceFieldPutDone(InstanceFieldPutDone.newBuilder()
 					.setClass_(getWrappedClass(fieldSignature.getDeclaringType()))
-					.setField(getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName())));
+					.setField(getWrappedField((Field) accessibleObject)));
 				break;
 			case PUT_STATIC_DONE:
 				msgBuilder.setStaticFieldPutDone(StaticFieldPutDone.newBuilder()
-					.setField(getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName()))
-					.setClass_(getWrappedClass(fieldSignature.getDeclaringType())));
+					.setClass_(getWrappedClass(fieldSignature.getDeclaringType()))
+					.setField(getWrappedField((Field) accessibleObject)));
 				break;
 			default:
 				throw new IllegalArgumentException("Unexpected field op done type: " + type);
@@ -395,6 +398,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		return msgBuilder.build();
 	}
+	//</editor-fold>
 
 	//<editor-fold desc="Static field get messages">
 
@@ -455,21 +459,16 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	}
 
 	@Override
-	public DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid,
-																				Fields.StaticFieldPut staticFieldPut, Class fieldType, String followingUuid) {
+	public DataMessage buildPutStaticDone(UUID concentratorUuid, AccessibleObject accessibleObject,
+																				String staticFieldPutUuid, String followingUuid) {
 
 		final StaticFieldPutDone.Builder fieldBuilder = StaticFieldPutDone.newBuilder();
-		if (staticFieldPut.getField().hasClass_()) {
-			fieldBuilder.setField(staticFieldPut.getField());
-		} else {
-			fieldBuilder.setField(getWrappedField(fieldType, staticFieldPut.getField().getName()));
-		}
+		fieldBuilder.setField(getWrappedField((Field) accessibleObject))
+			.setClass_(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
+			.setStaticFieldPutUuid(staticFieldPutUuid);
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC_DONE, concentratorUuid, followingUuid)
-			.setStaticFieldPutDone(fieldBuilder
-				.setClass_(getWrappedClass(staticFieldPut.getClass_().getName()))
-				.setStaticFieldPutUuid(staticFieldPutUuid));
-
+			.setStaticFieldPutDone(fieldBuilder);
 		return msgBuilder.build();
 	}
 
@@ -507,20 +506,16 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	}
 
 	@Override
-	public DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid,
-																				Fields.InstanceFieldPut instanceFieldPut, Class fieldType, String followingUuid) {
+	public DataMessage buildPutObjectDone(UUID concentratorUuid, AccessibleObject accessibleObject,
+																				String instanceFieldPutUuid, String followingUuid) {
 
 		final Fields.InstanceFieldPutDone.Builder fieldBuilder = InstanceFieldPutDone.newBuilder();
-		if (instanceFieldPut.getField().hasClass_()) {
-			fieldBuilder.setField(instanceFieldPut.getField());
-		} else {
-			fieldBuilder.setField(getWrappedField(fieldType, instanceFieldPut.getField().getName()));
-		}
+		fieldBuilder.setField(getWrappedField((Field) accessibleObject))
+			.setClass_(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
+			.setInstanceFieldPutUuid(instanceFieldPutUuid);
 
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD_DONE, concentratorUuid, followingUuid)
-			.setInstanceFieldPutDone(fieldBuilder
-				.setClass_(getWrappedClass(instanceFieldPut.getClass_().getName()))
-				.setInstanceFieldPutUuid(instanceFieldPutUuid));
+			.setInstanceFieldPutDone(fieldBuilder);
 
 		return msgBuilder.build();
 	}
@@ -530,7 +525,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 	//<editor-fold desc="Throwable messages">
 	@Override
 	public DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, Optional<AccessibleObject> accessibleObject,
-																										AccessibleObjectType accessibleObjectType, Throwable exception,
+																										ExecutableObjectType executableObjectType, Throwable exception,
 																										String followingUuid) {
 
 		final Exceptions.RaisedThrowable.Builder thrBuilder = Exceptions.RaisedThrowable.newBuilder();
@@ -549,7 +544,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 					accessibleObject.getClass().getName()));
 			}
 		} else {
-			switch (accessibleObjectType) {
+			switch (executableObjectType) {
 				case CONSTRUCTOR:
 					thrBuilder.setConstructor("<info not available>");
 					break;
@@ -598,18 +593,48 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Return value messages">
 	@Override
-	public DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, ObjectRef objectRef,
-																			boolean isVoid, String followingUuid) {
+	public DataMessage buildReturnValue(UUID concentratorUuid, Object object, AccessibleObject accessibleObject,
+																			ObjectRef objectRef, boolean isVoid, String followingUuid) {
 
-		final ReturnValue.Builder contentBuilder = Values.ReturnValue.newBuilder();
+		final ReturnValue.Builder valueBuilder = Values.ReturnValue.newBuilder();
+
+		Class declaringClass = ((Member) accessibleObject).getDeclaringClass();
+
+		// set 'object'
 		if (!isVoid) {
-			contentBuilder.setObject(getWrappedObject(object, type, objectRef));
+			Class objectClass = null;
+			if (accessibleObject instanceof Constructor) {
+				objectClass = declaringClass;
+			} else if (accessibleObject instanceof Method) {
+				objectClass = ((Method) accessibleObject).getReturnType();
+			} else if (accessibleObject instanceof Field) {
+				objectClass = ((Field) accessibleObject).getType();
+			} else {
+				throw new RuntimeException(String.format("Unable to handle accessible object of type: %s", accessibleObject));
+			}
+			valueBuilder.setObject(getWrappedObject(object, objectClass, objectRef));
 		}
 
+		// set 'from'
+		if (accessibleObject instanceof Constructor) {
+			valueBuilder.setFrom(Primitives.Reflectable.newBuilder().setConstructor(Primitives.Constructor.newBuilder()
+				.setRepr(((Executable) accessibleObject).toGenericString()).build()));
+		} else if (accessibleObject instanceof Method) {
+			valueBuilder.setFrom(Primitives.Reflectable.newBuilder().setMethod(Primitives.Method.newBuilder()
+				.setRepr(((Executable) accessibleObject).toGenericString()).build()));
+		} else if (accessibleObject instanceof Field) {
+			valueBuilder.setFrom(Primitives.Reflectable.newBuilder().setField(Primitives.Field.newBuilder()
+				.setName(((Field) accessibleObject).getName())
+				.setRepr(((Field) accessibleObject).toGenericString()).build()));
+		} else {
+			throw new RuntimeException(String.format("Unable to handle accessible object of type: %s", accessibleObject));
+		}
+
+		// set 'class'
 		final DataMessage.Builder msgBuilder = newWrapperBuilder(Type.RETURN_VALUE, concentratorUuid, followingUuid)
-			.setReturnValue(contentBuilder
+			.setReturnValue(valueBuilder
 				.setIsVoid(isVoid)
-				.setClazz(getWrappedClass(type)));
+				.setClazz(getWrappedClass(declaringClass)));
 
 		return msgBuilder.build();
 	}

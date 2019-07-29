@@ -8,11 +8,6 @@ option java_package = "com.ittera.cometa.messages.protobuf.data";
 option java_outer_classname = "Fields";
 option optimize_for = SPEED;
 
-message Field {
-    required string name = 1;
-    optional Class class = 2;
-}
-
 message StaticFieldGet {
 
     required Class class = 1;
@@ -49,7 +44,7 @@ message StaticFieldPut {
 message StaticFieldPutDone {
     //TODO from here all should be replaced by reference to originator StaticFieldPut message
 
-    //redundant if instanceFieldPut is set
+    //redundant if field->class is set
     required Class class = 1;
 
     required Field field = 2;
@@ -106,7 +101,7 @@ message InstanceFieldPutDone {
 
     //TODO from here all should be replaced by reference to originator InstanceFieldPut message
 
-    //redundant if instanceFieldPut is set
+    //redundant if field->class is set
     required Class class = 1;
 
     required Field field = 2;

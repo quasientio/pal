@@ -2,7 +2,7 @@ package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
-import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
+import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -10,7 +10,6 @@ import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
 import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Field;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,13 +31,13 @@ public abstract class FieldOpDispatcher extends BaseDispatcher {
 
 		if (value instanceof InvocationExceptionWrapper) {
 			Exception invocationException = ((InvocationExceptionWrapper) value).getException();
-			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, field, getAccessibleObjectType(),
+			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, field, getExecutableObjectType(),
 				invocationException, null);
 		} else {
 			if (!returnsVoid()) {
-				return messageBuilder.buildReturnValue(peerUuid, value, ((Field) field.get()).getType(), objectRef, false, null);
+				return messageBuilder.buildReturnValue(peerUuid, value, field.get(), objectRef, false, null);
 			} else {
-				return messageBuilder.buildFieldOpDone(peerUuid, ctxt, getAfterExecMessageType());
+				return messageBuilder.buildFieldOpDone(peerUuid, field.get(), ctxt, getAfterExecMessageType());
 			}
 		}
 	}
@@ -49,8 +48,8 @@ public abstract class FieldOpDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected final AccessibleObjectType getAccessibleObjectType() {
-		return AccessibleObjectType.FIELD;
+	protected final ExecutableObjectType getExecutableObjectType() {
+		return ExecutableObjectType.FIELD;
 	}
 
 	abstract protected boolean returnsVoid();

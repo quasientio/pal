@@ -23,9 +23,31 @@ message Object {
     required bool isVoid = 10 [default = false];
 }
 
+message Field {
+    required string name = 1;
+    optional Class class = 2;
+    optional string repr = 3;
+}
+
+message Method {
+    required string repr = 1;
+}
+
+message Constructor {
+    required string repr = 1;
+}
+
 message Class {
     optional string name = 1;
     optional bool unknown = 2 [default = false];
+}
+
+message Reflectable {
+    oneof type {
+        Constructor constructor = 1;
+        Method method = 2;
+        Field field = 3;
+    }
 }
 
 message Parameter {

@@ -5,11 +5,11 @@ import com.ittera.cometa.common.lang.ObjectRef;
 
 import com.ittera.cometa.common.util.Classes;
 
-import com.ittera.cometa.messages.protobuf.data.Fields.Field;
 import com.ittera.cometa.messages.protobuf.data.Ctxt;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 
 import java.util.Arrays;
 import java.util.List;
@@ -183,16 +183,24 @@ public final class Wrapper {
 		return clazzBuilder.build();
 	}
 
-	static Field getWrappedField(Class clazz, String fieldName) {
-		final Field.Builder fieldBuilder = Field.newBuilder();
+	static Primitives.Field getWrappedField(Field field) {
+		final Primitives.Field.Builder fieldBuilder = Primitives.Field.newBuilder();
+		fieldBuilder.setName(field.getName());
+		fieldBuilder.setClass_(getWrappedClass(field.getDeclaringClass()));
+		fieldBuilder.setRepr(field.toGenericString());
+		return fieldBuilder.build();
+	}
+
+	static Primitives.Field getWrappedField(Class clazz, String fieldName) {
+		final Primitives.Field.Builder fieldBuilder = Primitives.Field.newBuilder();
 
 		fieldBuilder.setName(fieldName);
 		fieldBuilder.setClass_(getWrappedClass(clazz));
 		return fieldBuilder.build();
 	}
 
-	static Field getWrappedField(String className, String fieldName) {
-		final Field.Builder fieldBuilder = Field.newBuilder();
+	static Primitives.Field getWrappedField(String className, String fieldName) {
+		final Primitives.Field.Builder fieldBuilder = Primitives.Field.newBuilder();
 
 		fieldBuilder.setName(fieldName);
 		fieldBuilder.setClass_(getWrappedClass(className));

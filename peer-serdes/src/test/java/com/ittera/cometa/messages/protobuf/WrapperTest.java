@@ -1,7 +1,7 @@
 package com.ittera.cometa.messages.protobuf;
 
 import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Fields.Field;
+import com.ittera.cometa.messages.protobuf.data.Primitives.Field;
 
 import org.junit.BeforeClass;
 import org.junit.Test;

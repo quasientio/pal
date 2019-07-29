@@ -2,9 +2,8 @@ package com.ittera.cometa.messages;
 
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
-import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
+import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 
-import com.ittera.cometa.messages.protobuf.data.Fields;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -70,23 +69,23 @@ public interface DataMessageBuilder {
 	/**
 	 * field op done builders
 	 */
-	DataMessage buildFieldOpDone(UUID concentratorUuid, Context context, Type type);
+	DataMessage buildFieldOpDone(UUID concentratorUuid, AccessibleObject accessibleObject, Context context, Type type);
 
-	DataMessage buildPutStaticDone(UUID concentratorUuid, String staticFieldPutUuid, Fields.StaticFieldPut staticFieldPut,
-																 Class fieldType, String followingUuid);
+	DataMessage buildPutStaticDone(UUID concentratorUuid, AccessibleObject accessibleObject, String staticFieldPutUuid,
+																 String followingUuid);
 
 
-	DataMessage buildPutObjectDone(UUID concentratorUuid, String instanceFieldPutUuid,
-																 Fields.InstanceFieldPut instanceFieldPut, Class fieldType, String followingUuid);
+	DataMessage buildPutObjectDone(UUID concentratorUuid, AccessibleObject accessibleObject, String instanceFieldPutUuid,
+																 String followingUuid);
 
 	/**
 	 * return builders
 	 */
 	DataMessage buildAccessibleObjectThrowable(UUID concentratorUuid, Optional<AccessibleObject> accessibleObject,
-																						 AccessibleObjectType type, Throwable throwable, String followingUuid);
+																						 ExecutableObjectType type, Throwable throwable, String followingUuid);
 
-	DataMessage buildReturnValue(UUID concentratorUuid, Object object, Class type, ObjectRef objectRef, boolean isVoid,
-															 String followingUuid);
+	DataMessage buildReturnValue(UUID concentratorUuid, Object object, AccessibleObject accessibleObject,
+															 ObjectRef objectRef, boolean isVoid, String followingUuid);
 
 	/**
 	 * other

@@ -16,6 +16,8 @@ import org.junit.runner.RunWith;
 
 import org.mockito.junit.MockitoJUnitRunner;
 
+import static org.hamcrest.Matchers.*;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.LongStream;
@@ -103,7 +105,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(Void.getInstance(), returned);
+		assertThat(returned, is(Void.getInstance()));
 		assertTrue(ClassForVoidClassMethodTest.slept);
 	}
 
@@ -121,14 +123,18 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
 		// dispatch
 		assertFalse(ClassForVoidClassMethodTest.slept);
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(0, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(0));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertTrue(ClassForVoidClassMethodTest.slept);
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -147,14 +153,16 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Long millisToSleep = 5L;
 		Object[] args = {millisToSleep};
 
+		// pre-assertion
+		assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
+
 		// dispatch
-		assertEquals(Long.valueOf(0), ClassForVoidClassMethodTest.millisSlept);
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(Void.getInstance(), returned);
-		assertEquals(millisToSleep, ClassForVoidClassMethodTest.millisSlept);
+		assertThat(returned, is(Void.getInstance()));
+		assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
 	}
 
 	@Test
@@ -170,16 +178,21 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
+		// pre-assertion
+		assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
 		// dispatch
-		assertEquals(Long.valueOf(0), ClassForVoidClassMethodTest.millisSlept);
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(0, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
-		assertEquals(millisToSleep, ClassForVoidClassMethodTest.millisSlept);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(0));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -197,14 +210,15 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		long millisToSleep = 5;
 		Object[] args = {millisToSleep};
 
+		// pre-assertion
+		assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
 		// dispatch
-		assertEquals(0, ClassForVoidClassMethodTest.millisSlept.longValue());
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(Void.getInstance(), returned);
-		assertEquals(millisToSleep, ClassForVoidClassMethodTest.millisSlept.longValue());
+		assertThat(returned, is(Void.getInstance()));
+		assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
 	}
 
 	@Test
@@ -219,16 +233,21 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
+		// pre-assertion
+		assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
 		// dispatch
-		assertEquals(Long.valueOf(0), ClassForVoidClassMethodTest.millisSlept);
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(0, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
-		assertEquals(millisToSleep, ClassForVoidClassMethodTest.millisSlept.longValue());
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(0));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -245,16 +264,21 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
+		// pre-assertion
+		assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
 		// dispatch
-		assertEquals(Long.valueOf(0), ClassForVoidClassMethodTest.millisSlept);
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
-		assertEquals(millisToSleep, ClassForVoidClassMethodTest.millisSlept);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -269,16 +293,21 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
+		// pre-assertion
+		assertThat(ClassForVoidClassMethodTest.verified, notNullValue());
 		// dispatch
-		assertNotNull(ClassForVoidClassMethodTest.verified);
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(0, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
-		assertNull(ClassForVoidClassMethodTest.verified);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(0));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		assertThat(ClassForVoidClassMethodTest.verified, is(nullValue()));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -302,9 +331,9 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(Void.getInstance(), returned);
-		assertEquals(1, sumContainer.size());
-		assertEquals(LongStream.of(someNumbers).sum(), (long) sumContainer.get(0));
+		assertThat(returned, is(Void.getInstance()));
+		assertThat(sumContainer.size(), is(1));
+		assertThat(sumContainer.get(0), is(LongStream.of(someNumbers).sum()));
 	}
 
 	@Test
@@ -322,14 +351,18 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertTrue(doneMessage.getReturnValue().getIsVoid());
-		assertEquals(LongStream.of(someNumbers).sum(), (long) sumContainer.get(0));
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertTrue(replyMsg.getReturnValue().getIsVoid());
+		assertThat(sumContainer.get(0), is(LongStream.of(someNumbers).sum()));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -373,14 +406,13 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(0, objectService.size());
-
-		assertTrue(doneMessage.hasRaisedThrowable());
-		assertEquals("java.lang.NullPointerException", doneMessage.getRaisedThrowable().getThrowable().getType());
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(0));
+		assertThat(replyMsg.getRaisedThrowable().getThrowable().getType(),
+			is("java.lang.NullPointerException"));
 	}
 }

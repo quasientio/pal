@@ -12,10 +12,11 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import org.junit.*;
 
 import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.*;
 
 import org.junit.runner.RunWith;
 
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 // auxiliary class
 class ClassForGetStaticTest {
@@ -53,32 +54,31 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(ClassForGetStaticTest.someShort, returned);
+		assertThat(returned, is(ClassForGetStaticTest.someShort));
 	}
 
 	@Override
 	@Test
-	public void dispatchIncoming_primitive_ok() {
+	public void dispatchIncoming_primitive_ok() throws Exception {
 
 		String fieldName = "someShort";
 
 		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		short returned = -1;
-		try {
-			returned = (short) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
-		} catch (ClassNotFoundException cnfe) {
-			fail(cnfe.getMessage());
-		}
-		assertEquals(ClassForGetStaticTest.someShort, returned);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		short returned = (short) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+		assertThat(returned, is(ClassForGetStaticTest.someShort));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(fieldName)));
 	}
 
 	@Override
@@ -97,32 +97,31 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertArrayEquals(ClassForGetStaticTest.bytes, (byte[]) returned);
+		assertThat(returned, is(ClassForGetStaticTest.bytes));
 	}
 
 	@Override
 	@Test
-	public void dispatchIncoming_primitiveArray_ok() {
+	public void dispatchIncoming_primitiveArray_ok() throws Exception {
 
 		String fieldName = "bytes";
 
 		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		byte[] returned = null;
-		try {
-			returned = (byte[]) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
-		} catch (ClassNotFoundException cnfe) {
-			fail(cnfe.getMessage());
-		}
-		assertArrayEquals(ClassForGetStaticTest.bytes, returned);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		byte[] returned = (byte[]) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+		assertThat(returned, is(ClassForGetStaticTest.bytes));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(fieldName)));
 	}
 
 	@Override
@@ -141,32 +140,31 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(ClassForGetStaticTest.someInteger, returned);
+		assertThat(returned, is(ClassForGetStaticTest.someInteger));
 	}
 
 	@Override
 	@Test
-	public void dispatchIncoming_wrapper_ok() {
+	public void dispatchIncoming_wrapper_ok() throws Exception {
 
 		String fieldName = "someInteger";
 
 		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		Integer returned = null;
-		try {
-			returned = (Integer) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
-		} catch (ClassNotFoundException cnfe) {
-			fail(cnfe.getMessage());
-		}
-		assertEquals(ClassForGetStaticTest.someInteger, returned);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		Integer returned = (Integer) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+		assertThat(returned, is(ClassForGetStaticTest.someInteger));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(fieldName)));
 	}
 
 	@Override
@@ -185,32 +183,31 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(ClassForGetStaticTest.aString, returned);
+		assertThat(returned, is(ClassForGetStaticTest.aString));
 	}
 
 	@Override
 	@Test
-	public void dispatchIncoming_string_ok() {
+	public void dispatchIncoming_string_ok() throws Exception {
 
 		String fieldName = "aString";
 
 		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		String returned = null;
-		try {
-			returned = (String) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
-		} catch (ClassNotFoundException cnfe) {
-			fail(cnfe.getMessage());
-		}
-		assertEquals(ClassForGetStaticTest.aString, returned);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+		assertThat(returned, is(ClassForGetStaticTest.aString));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(fieldName)));
 	}
 
 	@Override
@@ -229,7 +226,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(ClassForGetStaticTest.anObject, returned);
+		assertThat(returned, is(ClassForGetStaticTest.anObject));
 	}
 
 	@Override
@@ -241,16 +238,19 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		Object returned = objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()));
-		assertEquals(ClassForGetStaticTest.anObject, returned);
-		assertTrue(ClassForGetStaticTest.anObject == returned);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		Object returned = objectService.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
+		assertThat(returned, sameInstance(ClassForGetStaticTest.anObject));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(fieldName)));
 	}
 
 	@Override
@@ -269,7 +269,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertNull(returned);
+		assertThat(returned, is(nullValue()));
 	}
 
 	@Override
@@ -281,14 +281,18 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(0, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		assertTrue(doneMessage.getReturnValue().getObject().getIsNull());
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(0));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		assertTrue(replyMsg.getReturnValue().getObject().getIsNull());
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(fieldName)));
 	}
 
 	@Override
@@ -307,7 +311,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertArrayEquals(ClassForGetStaticTest.objects, (Object[]) returned);
+		assertThat(returned, is(ClassForGetStaticTest.objects));
 	}
 
 	@Override
@@ -319,17 +323,20 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		assertTrue(doneMessage.getReturnValue().getObject().hasRef());
-		Object returned = objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().getObject().getRef()));
-		assertArrayEquals(ClassForGetStaticTest.objects, (Object[]) returned);
-		assertTrue(ClassForGetStaticTest.objects == returned);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		assertTrue(replyMsg.getReturnValue().getObject().hasRef());
+		Object returned = objectService.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
+		assertThat(returned, sameInstance(ClassForGetStaticTest.objects));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(fieldName)));
 	}
 
 	@Override
@@ -348,7 +355,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(ClassForGetStaticTest.lastError, returned);
+		assertThat(returned, is(ClassForGetStaticTest.lastError));
 	}
 
 	@Override
@@ -360,16 +367,20 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		assertTrue(doneMessage.getReturnValue().getObject().hasRef());
-		Throwable returned = (Throwable) objectService.lookupObject(ObjectRef.from(doneMessage.getReturnValue().
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		assertTrue(replyMsg.getReturnValue().getObject().hasRef());
+		Throwable returned = (Throwable) objectService.lookupObject(ObjectRef.from(replyMsg.getReturnValue().
 			getObject().getRef()));
-		assertEquals(ClassForGetStaticTest.lastError, returned);
+		assertThat(returned, is(ClassForGetStaticTest.lastError));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(fieldName)));
 	}
 }

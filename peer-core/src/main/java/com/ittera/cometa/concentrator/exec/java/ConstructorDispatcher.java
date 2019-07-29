@@ -3,7 +3,7 @@ package com.ittera.cometa.concentrator.exec.java;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
-import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
+import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
@@ -51,10 +51,10 @@ public class ConstructorDispatcher extends BaseDispatcher {
 
 		if (value instanceof InvocationExceptionWrapper) {
 			Exception invocationException = ((InvocationExceptionWrapper) value).getException();
-			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, constructor, getAccessibleObjectType(),
+			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, constructor, getExecutableObjectType(),
 				invocationException, null);
 		} else {
-			return messageBuilder.buildReturnValue(peerUuid, value, constructor.get().getClass(), objectRef, false,
+			return messageBuilder.buildReturnValue(peerUuid, value, constructor.get(), objectRef, false,
 				null);
 		}
 	}
@@ -67,12 +67,12 @@ public class ConstructorDispatcher extends BaseDispatcher {
 		String messageUuid = dataMessage.getMessageUuid();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
-			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getAccessibleObjectType(),
+			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getExecutableObjectType(),
 				exceptionWhileLoading, exceptionWhileInvoking);
 		}
 
-		Class constructorType = accessibleObject.map(ao -> ((Constructor) ao).getDeclaringClass()).orElse(null);
-		return messageBuilder.buildReturnValue(peerUuid, valueObject, constructorType, valueObjRef, false, messageUuid);
+		return messageBuilder.buildReturnValue(peerUuid, valueObject, accessibleObject.get(), valueObjRef, false,
+			messageUuid);
 	}
 
 	@Override
@@ -110,8 +110,8 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected final AccessibleObjectType getAccessibleObjectType() {
-		return AccessibleObjectType.CONSTRUCTOR;
+	protected final ExecutableObjectType getExecutableObjectType() {
+		return ExecutableObjectType.CONSTRUCTOR;
 	}
 
 	@Override

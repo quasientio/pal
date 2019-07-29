@@ -15,6 +15,8 @@ import static org.junit.Assert.*;
 
 import org.junit.runner.RunWith;
 
+import static org.hamcrest.Matchers.*;
+
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.stream.DoubleStream;
@@ -84,13 +86,13 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertNotEquals(Void.getInstance(), returned);
+		assertThat(returned, is(not(Void.getInstance())));
 		assertTrue((short) returned >= 0 && (short) returned < 60);
 	}
 
 	@Test
 	@Override
-	public void dispatchIncoming_noArgs_ok() {
+	public void dispatchIncoming_noArgs_ok() throws Exception {
 
 		String methodName = "getRandomMinute";
 		Class[] parameterTypes = {};
@@ -101,20 +103,19 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		short returned = -1;
-		try {
-			returned = (short) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
-			assertTrue(returned >= 0 && returned < 60);
-		} catch (ClassNotFoundException cnfe) {
-			fail(cnfe.getMessage());
-		}
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		short returned = (short) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+		assertTrue(returned >= 0 && returned < 60);
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -139,12 +140,12 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(bigDouble, (Double) returned, 0);
+		assertThat(returned, is(bigDouble));
 	}
 
 	@Test
 	@Override
-	public void dispatchIncoming_withArgs_ok() {
+	public void dispatchIncoming_withArgs_ok() throws Exception {
 
 		String methodName = "max";
 		Class[] parameterTypes = {Double.class, Double.class};
@@ -157,20 +158,19 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		Double returned = null;
-		try {
-			returned = (Double) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
-		} catch (ClassNotFoundException cnfe) {
-			fail(cnfe.getMessage());
-		}
-		assertEquals(bigDouble, returned, 0);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		Double returned = (Double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+		assertThat(returned, is(bigDouble));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -194,12 +194,12 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(smallDouble, (double) returned, 0);
+		assertThat(returned, is(smallDouble));
 	}
 
 	@Test
 	@Override
-	public void dispatchIncoming_withPrimitiveArgs_ok() {
+	public void dispatchIncoming_withPrimitiveArgs_ok() throws Exception {
 		String methodName = "min";
 		Class[] parameterTypes = {double.class, double.class};
 		double smallDouble = 8378;
@@ -211,25 +211,24 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		double returned = -1;
-		try {
-			returned = (double) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
-		} catch (ClassNotFoundException cnfe) {
-			fail(cnfe.getMessage());
-		}
-		assertEquals(smallDouble, returned, 0);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		double returned = (double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+		assertThat(returned, is(smallDouble));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
 	@Override
-	public void dispatchIncoming_withObjectRefArgs_ok() {
+	public void dispatchIncoming_withObjectRefArgs_ok() throws Exception {
 
 		String methodName = "max";
 		Class[] parameterTypes = {double.class, double.class};
@@ -242,25 +241,24 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(3, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		double returned = -1;
-		try {
-			returned = (double) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
-		} catch (ClassNotFoundException cnfe) {
-			fail(cnfe.getMessage());
-		}
-		assertEquals(bigDouble, returned, 0);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(3));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		double returned = (double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+		assertThat(returned, is(bigDouble));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
 	@Override
-	public void dispatchIncoming_withNullArgs_ok() {
+	public void dispatchIncoming_withNullArgs_ok() throws Exception {
 
 		String methodName = "add";
 		Integer realNumber = 6565;
@@ -272,20 +270,19 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		Integer returned = null;
-		try {
-			returned = (Integer) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
-		} catch (ClassNotFoundException cnfe) {
-			fail(cnfe.getMessage());
-		}
-		assertEquals(realNumber, returned);
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		Integer returned = (Integer) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
+		assertThat(returned, is(realNumber));
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -312,12 +309,12 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
 		// expect
 		verifyDispatcherConnectorCalledTwice();
-		assertEquals(d4, returned);
+		assertThat(returned, is(d4));
 	}
 
 	@Test
 	@Override
-	public void dispatchIncoming_varargs_ok() {
+	public void dispatchIncoming_varargs_ok() throws Exception {
 
 		String methodName = "max";
 		Class[] parameterTypes = {double[].class};
@@ -333,20 +330,19 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(1, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		double returned = -1;
-		try {
-			returned = (double) Unwrapper.unwrapObject(doneMessage.getReturnValue().getObject());
-		} catch (ClassNotFoundException cnfe) {
-			fail(cnfe.getMessage());
-		}
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(1));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		double returned = (double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
 		assertEquals(d4, returned, 0);
+
+		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
+			allOf(containsString(targetClass.getName()),containsString(methodName)));
 	}
 
 	@Test
@@ -391,14 +387,13 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage doneMessage = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
-		assertTrue(doneMessage.getFollowingUuid().equals(incomingMessage.getMessageUuid()));
-		assertEquals(0, objectService.size());
-		assertFalse(doneMessage.getReturnValue().getIsVoid());
-		assertTrue(doneMessage.hasRaisedThrowable());
-		assertEquals("java.lang.ArithmeticException", doneMessage.getRaisedThrowable().getThrowable().getType());
+		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+		assertThat(objectService.size(), is(0));
+		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		assertThat(replyMsg.getRaisedThrowable().getThrowable().getType(), is("java.lang.ArithmeticException"));
 	}
 }

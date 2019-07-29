@@ -13,7 +13,7 @@ import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.common.lang.ObjectNotFoundException;
 import com.ittera.cometa.common.lang.ObjectRef;
-import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
+import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 
 import com.ittera.cometa.common.util.Classes;
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
@@ -58,6 +58,9 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 
 		// 3. Invoke
 		Object returnValue = invoke(ctxt, sender, target, args);
+		if (logger.isTraceEnabled()) {
+			logger.trace("invoke() returned: {}", returnValue);
+		}
 
 		// 4. Store? object in object map
 		ObjectRef objectRef = null;
@@ -245,19 +248,19 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	/**
 	 * @param messageUuid
 	 * @param accessibleObject
-	 * @param accessibleObjectType
+	 * @param executableObjectType
 	 * @param exceptionWhileLoading  Either this or exceptionWhileInvoking must be non-null
 	 * @param exceptionWhileInvoking
 	 * @return
 	 */
 	protected final DataMessage wrapAfterExecThrowableMessage(String messageUuid,
 																														Optional<AccessibleObject> accessibleObject,
-																														AccessibleObjectType accessibleObjectType,
+																														ExecutableObjectType executableObjectType,
 																														Throwable exceptionWhileLoading,
 																														Throwable exceptionWhileInvoking) {
 
 		Throwable throwable = exceptionWhileLoading != null ? exceptionWhileLoading : exceptionWhileInvoking;
-		return messageBuilder.buildAccessibleObjectThrowable(peerUuid, accessibleObject, accessibleObjectType,
+		return messageBuilder.buildAccessibleObjectThrowable(peerUuid, accessibleObject, executableObjectType,
 			throwable, messageUuid);
 	}
 
@@ -309,7 +312,13 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 
 	abstract protected Type getBeforeExecMessageType();
 
-	abstract protected AccessibleObjectType getAccessibleObjectType();
+	/**
+	 * We need this method and the ExecutableObjectType enum for cases where a Field, Constructor or Method fails to
+	 * be loaded (i.e. exceptionWhileLoading), and we require at least information about the type of accessible to
+	 * include in the Throwable message
+	 * @return
+	 */
+	abstract protected ExecutableObjectType getExecutableObjectType();
 
 	abstract protected List<Primitives.Parameter> getParameterList(DataMessage dataMessage);
 

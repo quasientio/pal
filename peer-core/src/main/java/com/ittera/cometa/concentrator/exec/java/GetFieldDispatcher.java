@@ -46,12 +46,12 @@ abstract public class GetFieldDispatcher extends FieldOpDispatcher {
 		String messageUuid = dataMessage.getMessageUuid();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
-			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getAccessibleObjectType(),
+			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getExecutableObjectType(),
 				exceptionWhileLoading, exceptionWhileInvoking);
 		}
 
-		Class fieldType = accessibleObject.map(ao -> ((Field) ao).getType()).orElse(null);
-		return messageBuilder.buildReturnValue(peerUuid, valueObject, fieldType, valueObjRef, returnsVoid(), messageUuid);
+		return messageBuilder.buildReturnValue(peerUuid, valueObject, accessibleObject.get(), valueObjRef, returnsVoid(),
+			messageUuid);
 	}
 
 	@Override

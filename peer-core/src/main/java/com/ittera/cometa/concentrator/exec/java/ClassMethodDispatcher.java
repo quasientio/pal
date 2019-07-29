@@ -2,7 +2,7 @@ package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
-import com.ittera.cometa.common.lang.reflect.AccessibleObjectType;
+import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 import com.ittera.cometa.common.ObjectService;
 
@@ -51,10 +51,10 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 
 		if (value instanceof InvocationExceptionWrapper) {
 			Exception invocationException = ((InvocationExceptionWrapper) value).getException();
-			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, AccessibleObjectType.METHOD, invocationException, null);
+			return messageBuilder.buildAccessibleObjectThrowable(peerUuid, method, ExecutableObjectType.METHOD,
+				invocationException, null);
 		} else {
-			return messageBuilder.buildReturnValue(peerUuid, value, ((Method) method.get()).getReturnType(), objectRef, isVoid,
-				null);
+			return messageBuilder.buildReturnValue(peerUuid, value, method.get(), objectRef, isVoid, null);
 		}
 	}
 

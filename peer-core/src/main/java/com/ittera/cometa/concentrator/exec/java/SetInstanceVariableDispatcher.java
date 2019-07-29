@@ -75,7 +75,8 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 	}
 
 	@Override
-	protected Optional<Object> getValueFromMessage(final DataMessage dataMessage, final Optional<AccessibleObject> accessibleObject) {
+	protected Optional<Object> getValueFromMessage(final DataMessage dataMessage,
+																								 final Optional<AccessibleObject> accessibleObject) {
 
 		final Object value;
 		final Field field = (Field) accessibleObject.get();
@@ -92,18 +93,13 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 
 	@Override
 	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
-																						 Optional<AccessibleObject> accessibleObject, Throwable exceptionWhileLoading,
-																						 Throwable exceptionWhileInvoking) {
-
+																						 Optional<AccessibleObject> accessibleObject,
+																						 Throwable exceptionWhileLoading, Throwable exceptionWhileInvoking) {
 		String messageUuid = dataMessage.getMessageUuid();
-
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
-			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getAccessibleObjectType(),
+			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getExecutableObjectType(),
 				exceptionWhileLoading, exceptionWhileInvoking);
 		}
-
-		Class fieldType = accessibleObject.map(ao -> ((Field) ao).getType()).orElse(null);
-		return messageBuilder.buildPutObjectDone(peerUuid, messageUuid, dataMessage.getInstanceFieldPut(), fieldType,
-			messageUuid);
+		return messageBuilder.buildPutObjectDone(peerUuid, accessibleObject.get(), messageUuid, messageUuid);
 	}
 }
