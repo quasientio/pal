@@ -139,7 +139,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 				brokerInfoPath = BROKERS_PATH + "/" + brokerId;
 				brokersInfoStat = zk.exists(brokerInfoPath, null);
 				String nodeData = new String(zk.getData(brokerInfoPath, false, brokersInfoStat), getEncodingCharset());
-				logger.debug("Read registered broker info data: {}", nodeData);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Read registered broker info data: {}", nodeData);
+				}
 				KafkaBrokerInfo kafkaBrokerInfo = KafkaBrokerInfo.parseFromJSON(nodeData);
 				brokerInfoSet.add(kafkaBrokerInfo);
 			}
@@ -215,7 +217,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			deleted++;
 		}
 
-		logger.debug("Deleted {} peers", deleted);
+		logger.info("Deleted {} peers", deleted);
 	}
 
 	@Override
@@ -280,7 +282,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		}
 
 		zk.create(newRequestNode, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT, cb, ctx);
-		logger.debug("Async-created new request node uuid: {} for log: {}", logRequest.getUuid(), logName);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Async-created new request node uuid: {} for log: {}", logRequest.getUuid(), logName);
+		}
 	}
 
 	@Override
@@ -292,7 +296,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		}
 
 		String createdNode = zk.create(newRequestNode, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-		logger.debug("Created new request node uuid: {} for log: {}", logRequest.getUuid(), logName);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Created new request node uuid: {} for log: {}", logRequest.getUuid(), logName);
+		}
 		return createdNode;
 	}
 
@@ -316,8 +322,10 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 				'\n' + "offset" + PROPERTIES_SEP + logReply.getOffset() + '\n';
 			byte[] data = sb.getBytes(getEncodingCharset());
 			zk.create(newReplyNode, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT, callback, null);
-			logger.debug("Async-created new reply node uuid: {} for request: {}, log: {}", logReply.getUuid(), requestUuid,
-				logName);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Async-created new reply node uuid: {} for request: {}, log: {}", logReply.getUuid(), requestUuid,
+					logName);
+			}
 		} else {
 			if (!logExists(logName)) {
 				throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
@@ -428,7 +436,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 		String requestNode = String.format("%s/%s/%s", getLogsPath(), logName, requestUuid);
 
-		logger.debug("Setting watch on getChildren for new request node: {}", requestNode);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Setting watch on getChildren for new request node: {}", requestNode);
+		}
 		zk.getChildren(requestNode, watcher, cb, ctx);
 	}
 
@@ -449,7 +459,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		long maxLogIndex = -1;
 		String lastLog = null;
 		if (logs.size() == 0) {
-			logger.debug("No logs found with prefix '{}'", logNamePrefix);
+			if (logger.isDebugEnabled()) {
+				logger.debug("No logs found with prefix '{}'", logNamePrefix);
+			}
 		}
 		// loop through all logs
 		for (String log : logs) {
@@ -465,7 +477,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			}
 		}
 
-		logger.debug("With prefix '{}' got log = {}", logNamePrefix, lastLog);
+		logger.info("With prefix '{}' got log = {}", logNamePrefix, lastLog);
 
 		return getLogInfo(lastLog);
 	}
@@ -627,8 +639,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 			}
 		}
 
-		logger.debug("Deleted {} logs with prefix: {}", deleted, logNamePrefix);
-
+		logger.info("Deleted {} logs with prefix: {}", deleted, logNamePrefix);
 	}
 
 	public void deleteRootPaths() throws Exception {
@@ -698,7 +709,9 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 	@Override
 	public void process(WatchedEvent watchedEvent) {
-		logger.debug("Ignoring received event: {}", watchedEvent);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Ignoring received event: {}", watchedEvent);
+		}
 	}
 
 	@Override

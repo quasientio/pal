@@ -28,12 +28,16 @@ public class ExtendedThreadPoolExecutor extends ThreadPoolExecutor {
 
 	@Override
 	protected void beforeExecute(Thread t, Runnable r) {
-		logger.debug("Before executing runnable: {} by thread: {}", r, t.getName());
+		if (logger.isDebugEnabled()) {
+			logger.debug("Before executing runnable: {} by thread: {}", r, t.getName());
+		}
 	}
 
 	@Override
 	protected void afterExecute(Runnable r, Throwable t) {
-		logger.debug("After executing runnable: {} with throwable: {}", r, t);
+		if (logger.isDebugEnabled()) {
+			logger.debug("After executing runnable: {} with throwable: {}", r, t);
+		}
 		super.afterExecute(r, t);
 		if ((t == null) && (r instanceof Future<?>)) {
 			try {

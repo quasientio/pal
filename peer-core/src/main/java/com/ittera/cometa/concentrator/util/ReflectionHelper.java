@@ -40,7 +40,9 @@ public final class ReflectionHelper {
 	 */
 	public static Method getMethodToInvoke(Class clazz, Object[] parameters, List<Primitives.Object> parameterTypeNames,
 																				 String methodName) {
-		logger.trace("in w/ class:{} and method:{}", clazz.getName(), methodName);
+		if (logger.isTraceEnabled()) {
+			logger.trace("in w/ class:{} and method:{}", clazz.getName(), methodName);
+		}
 
 		if (parameters.length != parameterTypeNames.size()) {
 			throw new IllegalArgumentException(String.format("Parameters length=%s, different from parameter types length=%s",
@@ -64,7 +66,9 @@ public final class ReflectionHelper {
 		// cache lookup
 		Method cached = lookup(clazz, methodName, parameterTypeNames);
 		if (cached != null) {
-			logger.debug("Got cached method with signature in step0: {}", cached);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Got cached method with signature in step0: {}", cached);
+			}
 			return cached;
 		}
 
@@ -79,16 +83,22 @@ public final class ReflectionHelper {
 
 			Method methodFound = clazz.getMethod(methodName, parameterTypes);
 			cache(clazz, methodName, parameterTypeNames, methodFound);
-			logger.debug("Got method with signature in step1: {}", methodFound);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Got method with signature in step1: {}", methodFound);
+			}
 			return methodFound;
 		} catch (Exception e) {
-			logger.debug("Could not find method the easy way - {}", e.getMessage());
+			if (logger.isDebugEnabled()) {
+				logger.debug("Could not find method the easy way - {}", e.getMessage());
+			}
 		}
 
 
 		// scan public methods
 		for (Method method : clazz.getMethods()) {
-			logger.trace("public method: {}", method.getName());
+			if (logger.isTraceEnabled()) {
+				logger.trace("public method: {}", method.getName());
+			}
 			if (!method.getName().equals(methodName)) {
 				continue;
 			}
@@ -106,14 +116,18 @@ public final class ReflectionHelper {
 			}
 			if (matches) {
 				cache(clazz, methodName, parameterTypeNames, method);
-				logger.debug("Got method with signature in step2: {}", method);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Got method with signature in step2: {}", method);
+				}
 				return method;
 			}
 		}
 
 		// now scan other methods
 		for (Method method : clazz.getDeclaredMethods()) {
-			logger.trace("declared method: {}", method.getName());
+			if (logger.isDebugEnabled()) {
+				logger.debug("declared method: {}", method.getName());
+			}
 			if (!method.getName().equals(methodName)) {
 				continue;
 			}
@@ -131,7 +145,9 @@ public final class ReflectionHelper {
 			}
 			if (matches) {
 				cache(clazz, methodName, parameterTypeNames, method);
-				logger.debug("Got method with signature in step3: {}", method);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Got method with signature in step3: {}", method);
+				}
 				return method;
 			}
 		}

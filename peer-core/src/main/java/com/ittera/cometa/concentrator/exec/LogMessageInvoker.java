@@ -46,7 +46,9 @@ public class LogMessageInvoker extends Thread {
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = dispatcherConnector;
 		this.peerUuid = peerUuid;
-		logger.debug("Initialized new log message invoker thread named: {} with inLogAddress: {}", name, inLogAddress);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Initialized new log message invoker thread named: {} with inLogAddress: {}", name, inLogAddress);
+		}
 	}
 
 	@Override
@@ -58,7 +60,9 @@ public class LogMessageInvoker extends Thread {
 
 		DataMessage requestMsg;
 
-		logger.debug("Start getting requests from socket");
+		if (logger.isDebugEnabled()) {
+			logger.debug("Start getting requests from socket");
+		}
 		while (!Thread.interrupted()) {
 
 			String offset;
@@ -68,16 +72,22 @@ public class LogMessageInvoker extends Thread {
 			// recv req
 			try {
 				offset = socket.recvStr();
-				logger.debug("Getting message with kafka offset: {}", offset);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Getting message with kafka offset: {}", offset);
+				}
 				logOffset = Long.parseLong(offset);
 				req = socket.recv();
 			} catch (ZMQException ex) {
 				int errorCode = ex.getErrorCode();
 				if (errorCode == ZError.ETERM) {
-					logger.debug("Caught ETERM during blocking read. Breaking out.");
+					if (logger.isDebugEnabled()) {
+						logger.debug("Caught ETERM during blocking read. Breaking out.");
+					}
 					break;
 				} else if (errorCode == ZError.EINTR) {
-					logger.debug("Caught EINTR during blocking read. Breaking out.");
+					if (logger.isDebugEnabled()) {
+						logger.debug("Caught EINTR during blocking read. Breaking out.");
+					}
 					break;
 				} else {
 					throw ex;
@@ -94,7 +104,9 @@ public class LogMessageInvoker extends Thread {
 				logger.error("Caught exception parsing message", e);
 			}
 
-			logger.debug("Received req message with uuid: {}", requestMsg != null ? requestMsg.getMessageUuid() : null);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Received req message with uuid: {}", requestMsg != null ? requestMsg.getMessageUuid() : null);
+			}
 
 			// dispatch it
 			if (requestMsg != null) {
@@ -104,19 +116,25 @@ public class LogMessageInvoker extends Thread {
 					dispatch(requestMsg, logOffset);
 					if (logger.isDebugEnabled()) {
 						final long took = System.currentTimeMillis() - started;
-						logger.debug("Dispatched data message with uuid: {} in {} millisecs", requestMsg.getMessageUuid(), took);
+						if (logger.isDebugEnabled()) {
+							logger.debug("Dispatched data message with uuid: {} in {} millisecs", requestMsg.getMessageUuid(), took);
+						}
 					}
 				} else {
 					requestsDismissed.getAndIncrement();
-					logger.debug("Discarding message with uuid: {}", requestMsg.getMessageUuid());
+					if (logger.isDebugEnabled()) {
+						logger.debug("Discarding message with uuid: {}", requestMsg.getMessageUuid());
+					}
 				}
 			}
 		}
 
 		closeConnections();
 
-		logger.debug("Stopped log executor thread: {}, dispatched={} dismissed={}", getName(), requestsDispatched.get(),
-			requestsDismissed.get());
+		if (logger.isDebugEnabled()) {
+			logger.debug("Stopped log executor thread: {}, dispatched={} dismissed={}", getName(), requestsDispatched.get(),
+				requestsDismissed.get());
+		}
 	}
 
 	protected void closeConnections() {
@@ -130,8 +148,10 @@ public class LogMessageInvoker extends Thread {
 
 	protected void dispatch(DataMessage requestMsg, long recordOffset) {
 		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg);
-		logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",
-			requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());
+		if (logger.isDebugEnabled()) {
+			logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",
+				requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());
+		}
 		requestsDispatched.getAndIncrement();
 		dataMessageBuilder.resetThreadLocalSequence();
 	}

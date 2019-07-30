@@ -248,7 +248,9 @@ public class ThinPeer {
 	}
 
 	public DataMessage waitFor(Wrappers.Type type, String fieldName) {
-		logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
+		}
 		// TODO extra param to seek before
 		//consumer.seek(inTopicPartition, sentRecordOffset);
 
@@ -260,10 +262,14 @@ public class ThinPeer {
 
 				if (dataMessage.hasStaticFieldPutDone() &&
 					fieldName.equals(dataMessage.getStaticFieldPutDone().getField().getName())) {
-					logger.debug("Got matching message with offset {}:\n{}", receivedMsgOffset, dataMessage);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Got matching message with offset {}:\n{}", receivedMsgOffset, dataMessage);
+					}
 					return dataMessage;
 				} else {
-					logger.debug("Skipping record with offset {}", receivedMsgOffset);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Skipping record with offset {}", receivedMsgOffset);
+					}
 				}
 			}
 		}
@@ -274,12 +280,16 @@ public class ThinPeer {
 	}
 
 	public DataMessage getMessageAtOffset(Long seek, boolean lookupCached) {
-		logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
+		}
 		consumer.seek(inTopicPartition, seek);
 		if (lookupCached) {
 			DataMessage cachedMsg = getCachedMessageAtOffset(seek);
 			if (cachedMsg != null) {
-				logger.debug("Got cached record at offset {}", seek);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Got cached record at offset {}", seek);
+				}
 				return cachedMsg;
 			}
 		}
@@ -289,7 +299,9 @@ public class ThinPeer {
 
 		while (requestedRecord == null) {
 			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
-			logger.debug("Read {} records during poll", records.count());
+			if (logger.isDebugEnabled()) {
+				logger.debug("Read {} records during poll", records.count());
+			}
 			for (ConsumerRecord record : records) {
 				if (seek == record.offset()) {
 					requestedRecord = record;
@@ -312,14 +324,18 @@ public class ThinPeer {
 
 	public List<ConsumerRecord> getMessages(long startOffset, long numMessages) {
 
-		logger.debug("Getting {} messages starting @ offset #{}", numMessages, startOffset);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Getting {} messages starting @ offset #{}", numMessages, startOffset);
+		}
 		consumer.seek(inTopicPartition, startOffset);
 		List<ConsumerRecord> messages = new ArrayList();
 		boolean gotAllMessages = false;
 
 		while (!gotAllMessages) {
 			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
-			logger.debug("got {} records after poll", records.count());
+			if (logger.isDebugEnabled()) {
+				logger.debug("got {} records after poll", records.count());
+			}
 			for (ConsumerRecord record : records) {
 				if (record.offset() < startOffset + numMessages) {
 					messages.add(record);
@@ -339,7 +355,9 @@ public class ThinPeer {
 
 		// send to kafka
 		producer.send(new ProducerRecord(outLog.getName(), message.getMessageUuid(), message));
-		logger.debug("Message sent to log, and we're done:\n{}", message);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Message sent to log, and we're done:\n{}", message);
+		}
 	}
 
 	public Future<DataMessage> sendToLogAsync(DataMessage message) {
@@ -348,7 +366,9 @@ public class ThinPeer {
 
 		// send to kafka
 		producer.send(new ProducerRecord(outLog.getName(), message.getMessageUuid(), message));
-		logger.debug("Message sent to log:\n{}", message);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Message sent to log:\n{}", message);
+		}
 
 		final DataMessageFuture messageFuture = new DataMessageFuture(this, peerLogDirectory,
 			singleThreadConsumerExecutor, outLog.getName(), new LogRequest(requestMsgUuid));
@@ -430,20 +450,24 @@ public class ThinPeer {
 		}
 
 		//now poll to consume
-		logger.debug("Consumer seeking to offset: {}", sentRecordOffset);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Consumer seeking to offset: {}", sentRecordOffset);
+		}
 		consumer.seek(inTopicPartition, sentRecordOffset);
 
 		//wait for the reply to the sent message (reply should contain following = sentRecordOffset in message)
 		while (true) {
 			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
-			if (records.count() != 0) {
+			if (records.count() != 0 && logger.isDebugEnabled()) {
 				logger.debug("Received {} records", records.count());
 			}
 			for (ConsumerRecord record : records) {
 				final DataMessage dataMessage = (DataMessage) record.value();
 				long receivedMsgOffset = record.offset();
 				if (dataMessage.hasFollowingUuid() && message.getMessageUuid().equals(dataMessage.getFollowingUuid())) {
-					logger.debug("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
+					if (logger.isDebugEnabled()) {
+						logger.debug("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
+					}
 					// try switching to direct peer talk (i.e. p2p)
 					if (allowP2P) {
 						UUID concentratorUuid = UUID.fromString(dataMessage.getConcentratorUuid());
@@ -461,7 +485,9 @@ public class ThinPeer {
 
 					return dataMessage;
 				} else {
-					logger.debug("Skipping record with offset {}", receivedMsgOffset);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Skipping record with offset {}", receivedMsgOffset);
+					}
 				}
 			}
 		}
@@ -501,7 +527,9 @@ public class ThinPeer {
 		DataMessage replyMsg = null;
 		try {
 			replyMsg = DataMessage.parseFrom(reply);
-			logger.debug("Got reply message with uuid: {}, waited {} ms", replyMsg.getMessageUuid(), (waitEnd - waitStart));
+			if (logger.isDebugEnabled()) {
+				logger.debug("Got reply message with uuid: {}, waited {} ms", replyMsg.getMessageUuid(), (waitEnd - waitStart));
+			}
 		} catch (InvalidProtocolBufferException ipbe) {
 			logger.error("Caught protobuf exception", ipbe);
 		}

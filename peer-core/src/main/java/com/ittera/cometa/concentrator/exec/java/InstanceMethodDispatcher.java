@@ -101,7 +101,9 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 			Class objClass = Class.forName(dataMessage.getInstanceMethodCall().getClass_().getName(), true,
 				Thread.currentThread().getContextClassLoader());
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceMethodCall().getObject(), objClass);
-			logger.debug("Unwrapped target: {}", target);
+			if (logger.isTraceEnabled()) {
+				logger.trace("Unwrapped target: {}", target);
+			}
 		} else {
 			ObjectRef targetObjRef = ObjectRef.from(dataMessage.getInstanceMethodCall().getObjectRef());
 			if (objectService.containsObjectRef(targetObjRef)) {
@@ -109,7 +111,9 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 			} else {
 				throw new ObjectNotFoundException(String.format("No object found with objRef: %s", targetObjRef.getRef()));
 			}
-			logger.debug("Loaded target: {}", target);
+			if (logger.isTraceEnabled()) {
+				logger.trace("Loaded target: {}", target);
+			}
 		}
 		return target;
 	}

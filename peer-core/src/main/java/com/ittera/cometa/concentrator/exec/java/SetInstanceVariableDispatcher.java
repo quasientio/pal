@@ -51,7 +51,9 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 		if (dataMessage.getInstanceFieldPut().hasObject()) {
 			Class fieldType = ((Field) accessibleObject.get()).getType();
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldPut().getObject(), fieldType);
-			logger.debug("Unwrapped target: {}", target);
+			if (logger.isTraceEnabled()) {
+				logger.trace("Unwrapped target: {}", target);
+			}
 		} else {
 			ObjectRef targetObjRef = ObjectRef.from(dataMessage.getInstanceFieldPut().getObjectRef());
 			if (objectService.containsObjectRef(targetObjRef)) {
@@ -59,7 +61,9 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 			} else {
 				throw new ObjectNotFoundException(String.format("No object found with objRef: %s", targetObjRef.getRef()));
 			}
-			logger.debug("Loaded target: {}", target);
+			if (logger.isTraceEnabled()) {
+				logger.trace("Loaded target: {}", target);
+			}
 		}
 		return target;
 	}
@@ -83,10 +87,14 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 
 		if (dataMessage.getInstanceFieldPut().hasValueObject()) {
 			value = Unwrapper.unwrapObject(dataMessage.getInstanceFieldPut().getValueObject(), field.getType());
-			logger.debug("Unwrapped value: {}", value);
+			if (logger.isTraceEnabled()) {
+				logger.trace("Unwrapped value: {}", value);
+			}
 		} else {
 			value = objectService.lookupObject(ObjectRef.from(dataMessage.getInstanceFieldPut().getValueObjectRef()));
-			logger.debug("Loaded value: {}", value);
+			if (logger.isTraceEnabled()) {
+				logger.trace("Loaded value: {}", value);
+			}
 		}
 		return Optional.ofNullable(value);
 	}

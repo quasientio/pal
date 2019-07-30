@@ -45,8 +45,10 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	public final Object dispatch(Context ctxt, Object sender, Object target, Object[] args)
 		throws Throwable {
 
-		logger.trace("dispatch:in w/ signature: {}, sender: {}, target: {}, args: {}", ctxt.getSignature(), sender,
-			target, args);
+		if (logger.isTraceEnabled()) {
+			logger.trace("dispatch:in w/ signature: {}, sender: {}, target: {}, args: {}", ctxt.getSignature(), sender,
+				target, args);
+		}
 
 		// 1. Wrap message
 		final DataMessage beforeExecMsg = wrapBeforeExecMessage(ctxt, sender, target, args);
@@ -80,7 +82,9 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 
 		// 7. Return object or re-raise exception
 		if (returnValue instanceof InvocationExceptionWrapper) {
-			logger.trace("dispatch:out re-raising exception: {}", returnValue);
+			if (logger.isTraceEnabled()) {
+				logger.trace("dispatch:out re-raising exception: {}", returnValue);
+			}
 			Exception invocationException = ((InvocationExceptionWrapper) returnValue).getException();
 			// we want to throw the cause exception
 			if (invocationException instanceof InvocationTargetException) {
@@ -92,14 +96,17 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 
 		// TODO return Optional? for dispatch of voids, OR have our own Void class
 
-		logger.trace("dispatch:out returning object: {}", returnValue);
+		if (logger.isTraceEnabled()) {
+			logger.trace("dispatch:out returning object: {}", returnValue);
+		}
 		return returnValue;
 	}
 
 	@Override
 	public DataMessage dispatchIncoming(DataMessage incomingCall) {
-
-		logger.trace("dispatchIncoming:in w/ message uuid: {}", incomingCall.getMessageUuid());
+		if (logger.isTraceEnabled()) {
+			logger.trace("dispatchIncoming:in w/ message uuid: {}", incomingCall.getMessageUuid());
+		}
 
 		/**TODO: Verify that message is invokable:
 		 * - Class can be loaded/found
@@ -170,7 +177,9 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		final DataMessage afterExecReplyMsg = connector.sendAndRecv(afterExecMsg);
 
 		// 11. Return received message
-		logger.trace("dispatchIncoming:out returning message: {}", afterExecReplyMsg);
+		if (logger.isTraceEnabled()) {
+			logger.trace("dispatchIncoming:out returning message: {}", afterExecReplyMsg);
+		}
 		return afterExecReplyMsg;
 	}
 
@@ -316,6 +325,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 * We need this method and the ExecutableObjectType enum for cases where a Field, Constructor or Method fails to
 	 * be loaded (i.e. exceptionWhileLoading), and we require at least information about the type of accessible to
 	 * include in the Throwable message
+	 *
 	 * @return
 	 */
 	abstract protected ExecutableObjectType getExecutableObjectType();

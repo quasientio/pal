@@ -128,7 +128,9 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 			}
 		}
 
-		logger.debug("Starting to dispatch messages to kafka");
+		if (logger.isDebugEnabled()) {
+			logger.debug("Starting to dispatch messages to kafka");
+		}
 
 		while (isRunning() && !Thread.interrupted()) {
 
@@ -138,10 +140,14 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 			} catch (ZMQException ex) {
 				int errorCode = ex.getErrorCode();
 				if (errorCode == ZError.ETERM) {
-					logger.debug("Caught ETERM during blocking read. Breaking out.");
+					if (logger.isDebugEnabled()) {
+						logger.debug("Caught ETERM during blocking read. Breaking out.");
+					}
 					break;
 				} else if (errorCode == ZError.EINTR) {
-					logger.debug("Caught EINTR during blocking read. Breaking out.");
+					if (logger.isDebugEnabled()) {
+						logger.debug("Caught EINTR during blocking read. Breaking out.");
+					}
 					break;
 				} else {
 					throw ex;
@@ -167,13 +173,17 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 	}
 
 	private void sendToKafka(DataMessage message) {
-		logger.debug("sending new message with uuid: {}", message.getMessageUuid());
+		if (logger.isDebugEnabled()) {
+			logger.debug("sending new message with uuid: {}", message.getMessageUuid());
+		}
 		ProducerRecord newRecord = new ProducerRecord(outLog.getName(), message);
 		producer.send(newRecord, new MessageOffsetInformer(message, publishOffsets, offsetPublisher,
 			peerLogDirectory, inLog, peerUuid));
 		messagesSent.getAndIncrement();
-		logger.debug("new message sent with uuid: {} replying to message uuid: {}", message.getMessageUuid(),
-			message.getFollowingUuid());
+		if (logger.isDebugEnabled()) {
+			logger.debug("new message sent with uuid: {} replying to message uuid: {}", message.getMessageUuid(),
+				message.getFollowingUuid());
+		}
 	}
 
 	@Override

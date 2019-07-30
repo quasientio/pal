@@ -33,7 +33,9 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 		protected Socket initialValue() {
 			Socket worker = zmqContext.createSocket(SocketType.REQ);
 			worker.connect(outCellAddress);
-			logger.debug("Created and connected REQ new socket to outCellAddress: {}", outCellAddress);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Created and connected REQ new socket to outCellAddress: {}", outCellAddress);
+			}
 			threadSocketCreated.set(true);
 			return worker;
 		}
@@ -70,7 +72,9 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 
 		DataMessage returnValue;
 		if ("0".equals(rcvdString)) {
-			logger.debug("0 means return same message");
+			if (logger.isDebugEnabled()) {
+				logger.debug("0 means return same message");
+			}
 			returnValue = message;
 		} else {
 			logger.error("We should not get here");
@@ -87,7 +91,9 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 			Socket outSocket = threadSocket.get();
 			if (outSocket != null) {
 				outSocket.close();
-				logger.debug("Thread local socket closed");
+				if (logger.isDebugEnabled()) {
+					logger.debug("Thread local socket closed");
+				}
 			}
 		}
 	}

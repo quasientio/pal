@@ -88,7 +88,9 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 
 		@Override
 		public void run() {
-			logger.debug("Offset informer running");
+			if (logger.isDebugEnabled()) {
+				logger.debug("Offset informer running");
+			}
 
 			String rcvd;
 			boolean breakOut = false;
@@ -100,10 +102,14 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 				} catch (ZMQException ex) {
 					int errorCode = ex.getErrorCode();
 					if (errorCode == ZError.ETERM) {
-						logger.debug("Caught ETERM during blocking read. Breaking out.");
+						if (logger.isDebugEnabled()) {
+							logger.debug("Caught ETERM during blocking read. Breaking out.");
+						}
 						break;
 					} else if (errorCode == ZError.EINTR) {
-						logger.debug("Caught EINTR during blocking read. Breaking out.");
+						if (logger.isDebugEnabled()) {
+							logger.debug("Caught EINTR during blocking read. Breaking out.");
+						}
 						break;
 					} else {
 						throw ex;
@@ -119,11 +125,15 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 					} catch (ZMQException ex) {
 						int errorCode = ex.getErrorCode();
 						if (errorCode == ZError.ETERM) {
-							logger.debug("Caught ETERM during blocking read. Breaking out.");
+							if (logger.isDebugEnabled()) {
+								logger.debug("Caught ETERM during blocking read. Breaking out.");
+							}
 							breakOut = true;
 							break;
 						} else if (errorCode == ZError.EINTR) {
-							logger.debug("Caught EINTR during blocking read. Breaking out.");
+							if (logger.isDebugEnabled()) {
+								logger.debug("Caught EINTR during blocking read. Breaking out.");
+							}
 							break;
 						} else {
 							throw ex;
@@ -164,14 +174,12 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 		consumerProperties.put("auto.offset.reset", autoOffsetReset);
 		consumerProperties.put("session.timeout.ms", sessionTimeout);
 
-		if (logger.isInfoEnabled()) {
-			StringBuilder propsStr = new StringBuilder();
-			for (String propKey : consumerProperties.stringPropertyNames()) {
-				propsStr.append(propKey).append('=').append(consumerProperties.getProperty(propKey)).append(", ");
-			}
-			logger.info("Initialized kafka publisher for concentrator with id '{}' and properties: [{}]",
-				concentratorId, propsStr.toString());
+		StringBuilder propsStr = new StringBuilder();
+		for (String propKey : consumerProperties.stringPropertyNames()) {
+			propsStr.append(propKey).append('=').append(consumerProperties.getProperty(propKey)).append(", ");
 		}
+		logger.info("Initialized kafka publisher for concentrator with id '{}' and properties: [{}]",
+			concentratorId, propsStr.toString());
 	}
 
 	public void readFromLog(String logName, boolean skipWrittenOffsets, Long initialOffset) throws Exception {
@@ -292,14 +300,18 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 				logDealer.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
 				logDealer.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
 				logDealer.send(dataMessage.toByteArray(), 0);
-				logger.debug("Dealt new log Data Message with uuid: {}", dataMessage.getMessageUuid());
+				if (logger.isDebugEnabled()) {
+					logger.debug("Dealt new log Data Message with uuid: {}", dataMessage.getMessageUuid());
+				}
 
 				// get next offset to poll
 				if (skipWrittenOffsets) {
 					Long nextOffset = nextOffset();
 					if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
-						logger.debug("Skipping received records. Jumping from offset: {} to: {}", lastOffsetRead,
-							nextOffset);
+						if (logger.isDebugEnabled()) {
+							logger.debug("Skipping received records. Jumping from offset: {} to: {}", lastOffsetRead,
+								nextOffset);
+						}
 						consumer.seek(topicPartition, nextOffset);
 						break;
 					}
@@ -317,7 +329,9 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 			if (skipWrittenOffsets) {
 				Long nextOffset = nextOffset();
 				if ((nextOffset != null) && (nextOffset > (lastOffsetRead + 1))) {
-					logger.debug("Jumping from offset: {} to: {}", lastOffsetRead, nextOffset);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Jumping from offset: {} to: {}", lastOffsetRead, nextOffset);
+					}
 					consumer.seek(topicPartition, nextOffset);
 				}
 			}
@@ -379,11 +393,13 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 	}
 
 	protected void printDebugStats() {
-		logger.debug("--------STATS--------");
-		logger.debug("# of messages received from k-log: {}", messagesRcvd.get());
-		logger.debug("# polling nanoseconds: {}", totalPollingNanos.get());
-		logger.debug("# polls: {}", totalPolls.get());
-		logger.debug("-----END OF STATS-----");
+		if (logger.isDebugEnabled()) {
+			logger.debug("--------STATS--------");
+			logger.debug("# of messages received from k-log: {}", messagesRcvd.get());
+			logger.debug("# polling nanoseconds: {}", totalPollingNanos.get());
+			logger.debug("# polls: {}", totalPolls.get());
+			logger.debug("-----END OF STATS-----");
+		}
 	}
 
 	public void acceptConnections(boolean acceptConnections) {

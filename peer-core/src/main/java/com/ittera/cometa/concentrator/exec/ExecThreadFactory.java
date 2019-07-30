@@ -94,8 +94,10 @@ public class ExecThreadFactory implements ThreadFactory {
 		thread.setUncaughtExceptionHandler((t, e) -> logger.error("Uncaught exception in {} exec thread: {}",
 			execChannelType.name, newThreadName, e));
 		addCreatedThread(thread);
-		logger.debug("Created new {} executor thread with name: '{}' and id: {}", execChannelType.name, newThreadName,
-			thread.getId());
+		if (logger.isDebugEnabled()) {
+			logger.debug("Created new {} executor thread with name: '{}' and id: {}", execChannelType.name, newThreadName,
+				thread.getId());
+		}
 		return thread;
 	}
 

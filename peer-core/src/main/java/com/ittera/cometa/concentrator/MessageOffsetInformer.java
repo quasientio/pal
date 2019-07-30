@@ -58,7 +58,9 @@ class MessageOffsetInformer implements Callback, Watcher {
 		public void processResult(int rc, String path, Object ctx, String name) {
 			switch (Code.get(rc)) {
 				case OK:
-					logger.debug("reply node created for message w/uuid: {}", message.getMessageUuid());
+					if (logger.isDebugEnabled()) {
+						logger.debug("reply node created for message w/uuid: {}", message.getMessageUuid());
+					}
 					done = true;
 					break;
 				default:
@@ -71,9 +73,13 @@ class MessageOffsetInformer implements Callback, Watcher {
 	private final AsyncCallback.StatCallback statCallback = new AsyncCallback.StatCallback() {
 		@Override
 		public void processResult(int rc, String path, Object ctx, Stat stat) {
-			logger.debug("processResult with rc: {}, path: {}, and stat: {}", rc, path, stat);
+			if (logger.isDebugEnabled()) {
+				logger.debug("processResult with rc: {}, path: {}, and stat: {}", rc, path, stat);
+			}
 			if (Code.get(rc) == Code.OK && stat != null) {
-				logger.debug("node exists now: will retry to write reply node");
+				if (logger.isDebugEnabled()) {
+					logger.debug("node exists now: will retry to write reply node");
+				}
 				try {
 					((ZkClient) peerLogDirectory).addLogReply(inLog.getName(), logReply, addReplyCallback);
 				} catch (Exception ex) {
@@ -116,7 +122,9 @@ class MessageOffsetInformer implements Callback, Watcher {
 		if (publishOffsets) {
 			offsetPublisher.send(String.valueOf(recordMetadata.offset()), 0);
 		}
-		logger.debug("New offset {} for message w/uuid: {}", recordMetadata.offset(), message.getMessageUuid());
+		if (logger.isDebugEnabled()) {
+			logger.debug("New offset {} for message w/uuid: {}", recordMetadata.offset(), message.getMessageUuid());
+		}
 
 		// if message is reply, save offset to zookeeper
 		if (message.hasFollowingUuid()) {
@@ -125,7 +133,9 @@ class MessageOffsetInformer implements Callback, Watcher {
 			try {
 				((ZkClient) peerLogDirectory).addLogReply(inLog.getName(), logReply, addReplyCallback);
 			} catch (NoLogRequestNodeException nrne) {
-				logger.debug("Log request node {} does not exist, will add ourselves as watcher and wait", nrne.getLogRequest());
+				if (logger.isDebugEnabled()) {
+					logger.debug("Log request node {} does not exist, will add ourselves as watcher and wait", nrne.getLogRequest());
+				}
 				// request node doesn't exist yet, add ourselves as watcher to get notified when created
 				((ZkClient) peerLogDirectory).requestExists(inLog.getName(), UUID.fromString(message.getFollowingUuid()),
 					this, statCallback);
@@ -145,10 +155,14 @@ class MessageOffsetInformer implements Callback, Watcher {
 	 */
 	@Override
 	public void process(WatchedEvent watchedEvent) {
-		logger.debug("Received watchedEvent relating replyNode {}: {}", logReply, watchedEvent);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Received watchedEvent relating replyNode {}: {}", logReply, watchedEvent);
+		}
 
 		if (watchedEvent.getType() == Event.EventType.NodeCreated) {
-			logger.debug("node created event: {}, will retry to write reply node", watchedEvent);
+			if (logger.isDebugEnabled()) {
+				logger.debug("node created event: {}, will retry to write reply node", watchedEvent);
+			}
 			try {
 				((ZkClient) peerLogDirectory).addLogReply(inLog.getName(), logReply, addReplyCallback);
 			} catch (Exception ex) {

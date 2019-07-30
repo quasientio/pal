@@ -41,7 +41,9 @@ public class PeerMessageInvoker extends Thread {
 		this.dataMessageBuilder = dataMessageBuilder;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = dispatcherConnector;
-		logger.debug("Initialized new peer message invoker thread named: {} with dealerAddress: {}", name, dealerAddress);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Initialized new peer message invoker thread named: {} with dealerAddress: {}", name, dealerAddress);
+		}
 	}
 
 	@Override
@@ -53,7 +55,9 @@ public class PeerMessageInvoker extends Thread {
 
 		DataMessage requestMsg, replyMsg;
 
-		logger.debug("Start getting requests from socket");
+		if (logger.isDebugEnabled()) {
+			logger.debug("Start getting requests from socket");
+		}
 
 		while (!Thread.interrupted()) {
 
@@ -65,13 +69,19 @@ public class PeerMessageInvoker extends Thread {
 			} catch (ZMQException ex) {
 				int errorCode = ex.getErrorCode();
 				if (errorCode == ZError.ETERM) {
-					logger.debug("Caught ETERM during blocking read. Breaking out.");
+					if (logger.isDebugEnabled()) {
+						logger.debug("Caught ETERM during blocking read. Breaking out.");
+					}
 					break;
 				} else if (errorCode == ZError.EINTR) {
-					logger.debug("Caught EINTR during blocking read. Breaking out.");
+					if (logger.isDebugEnabled()) {
+						logger.debug("Caught EINTR during blocking read. Breaking out.");
+					}
 					break;
 				} else {
-					logger.debug("Re-throwing unexpected exception", ex);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Re-throwing unexpected exception", ex);
+					}
 					throw ex;
 				}
 			}
@@ -87,7 +97,9 @@ public class PeerMessageInvoker extends Thread {
 				logger.error("Caught exception parsing message", e);
 			}
 
-			logger.debug("Received req message with uuid: {}", requestMsg != null ? requestMsg.getMessageUuid() : null);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Received req message with uuid: {}", requestMsg != null ? requestMsg.getMessageUuid() : null);
+			}
 
 			if (requestMsg != null) {
 
@@ -99,16 +111,20 @@ public class PeerMessageInvoker extends Thread {
 
 				if (logger.isDebugEnabled()) {
 					final long took = System.currentTimeMillis() - started;
-					logger.debug("Dispatched and sent data message reply with uuid: {} in {} millisecs",
-						requestMsg.getMessageUuid(), took);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Dispatched and sent data message reply with uuid: {} in {} millisecs",
+							requestMsg.getMessageUuid(), took);
+					}
 				}
 			}
 		}
 
 		closeConnections();
 
-		logger.debug("Stopped peer executor thread: {}, dispatched={} dismissed={}", getName(), requestsDispatched.get(),
-			requestsDismissed.get());
+		if (logger.isDebugEnabled()) {
+			logger.debug("Stopped peer executor thread: {}, dispatched={} dismissed={}", getName(), requestsDispatched.get(),
+				requestsDismissed.get());
+		}
 	}
 
 	protected void closeConnections() {
@@ -121,8 +137,10 @@ public class PeerMessageInvoker extends Thread {
 
 	protected DataMessage dispatch(DataMessage requestMsg) {
 		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg);
-		logger.debug("Invoker dispatched peer request message uuid: {}, reply uuid: {}", requestMsg.getMessageUuid(),
-			replyMsg.getMessageUuid());
+		if (logger.isDebugEnabled()) {
+			logger.debug("Invoker dispatched peer request message uuid: {}, reply uuid: {}", requestMsg.getMessageUuid(),
+				replyMsg.getMessageUuid());
+		}
 		requestsDispatched.getAndIncrement();
 		dataMessageBuilder.resetThreadLocalSequence();
 		return replyMsg;

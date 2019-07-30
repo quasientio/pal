@@ -146,9 +146,7 @@ public class Concentrator {
 
 	public static void main(final String[] args) {
 
-		if (logger.isInfoEnabled()) {
-			logger.info("peer::main called w/args: {}", String.join(" ", args));
-		}
+		logger.info("peer::main called w/args: {}", String.join(" ", args));
 
 		// parse options
 		PeerOptions options = PeerOptions.parse(args);

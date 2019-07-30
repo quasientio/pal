@@ -82,10 +82,14 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 			} catch (ZMQException ex) {
 				int errorCode = ex.getErrorCode();
 				if (errorCode == ZError.ETERM) {
-					logger.debug("Caught ETERM during blocking read. Breaking out.");
+					if (logger.isDebugEnabled()) {
+						logger.debug("Caught ETERM during blocking read. Breaking out.");
+					}
 					break;
 				} else if (errorCode == ZError.EINTR) {
-					logger.debug("Caught EINTR during blocking read. Breaking out.");
+					if (logger.isDebugEnabled()) {
+						logger.debug("Caught EINTR during blocking read. Breaking out.");
+					}
 					break;
 				} else {
 					throw ex;
@@ -101,7 +105,9 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 
 			// got a message
 			if (dataMessage != null) {
-				logger.debug("Got for dispatch data message with uuid: " + dataMessage.getMessageUuid());
+				if (logger.isDebugEnabled()) {
+					logger.debug("Got for dispatch data message with uuid: " + dataMessage.getMessageUuid());
+				}
 
 				// send to subscribers
 				publisher.send(dataMessage.toByteArray());
@@ -139,14 +145,15 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 	}
 
 	protected void printDebugStats() {
-		logger.debug("--------STATS--------");
-		logger.debug("# of messages queued to send: {}", messagesQueuedToSend.get());
-		logger.debug("# of messages received from k-log: {}", messagesRcvd.get());
-		logger.debug("# polling nanoseconds: {}", totalPollingNanos.get());
-		logger.debug("# polls: {}", totalPolls.get());
-		logger.debug("# queue reads: {}", totalReadCalls.get());
-		logger.debug("Total waiting time reading from queue in nanoseconds: {}", totalReadBlockingQueueNanos.get());
-		logger.debug("-----END OF STATS-----");
+		if (logger.isDebugEnabled()) {
+			logger.debug("--------STATS--------");
+			logger.debug("# of messages queued to send: {}", messagesQueuedToSend.get());
+			logger.debug("# of messages received from k-log: {}", messagesRcvd.get());
+			logger.debug("# polling nanoseconds: {}", totalPollingNanos.get());
+			logger.debug("# polls: {}", totalPolls.get());
+			logger.debug("# queue reads: {}", totalReadCalls.get());
+			logger.debug("Total waiting time reading from queue in nanoseconds: {}", totalReadBlockingQueueNanos.get());
+			logger.debug("-----END OF STATS-----");
+		}
 	}
-
 }

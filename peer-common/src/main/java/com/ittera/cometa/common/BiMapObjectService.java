@@ -75,7 +75,9 @@ public final class BiMapObjectService implements ObjectService {
 
 	@Override
 	public ObjectRef storeObject(Object object) {
-		logger.trace("in w/ object: {}", object);
+		if (logger.isTraceEnabled()) {
+			logger.trace("in w/ object: {}", object);
+		}
 		if (object == null) {
 			throw new NullPointerException("object cannot be null");
 		}
@@ -84,11 +86,15 @@ public final class BiMapObjectService implements ObjectService {
 		synchronized (syncdObjectMap) {
 			if (syncdObjectMap.containsValue(wrappedObject)) {
 				objectRef = syncdObjectMap.inverse().get(wrappedObject);
-				logger.trace("out w/ (pre-existing) objectRef: {}", objectRef);
+				if (logger.isTraceEnabled()) {
+					logger.trace("out w/ (pre-existing) objectRef: {}", objectRef);
+				}
 				return objectRef;
 			} else {
 				syncdObjectMap.put(objectRef, wrappedObject);
-				logger.trace("out w/ objectRef: {}", objectRef);
+				if (logger.isTraceEnabled()) {
+					logger.trace("out w/ objectRef: {}", objectRef);
+				}
 				return objectRef;
 			}
 		}
@@ -96,7 +102,9 @@ public final class BiMapObjectService implements ObjectService {
 
 	@Override
 	public Object lookupObject(ObjectRef objectRef) {
-		logger.trace("in w/ objectRef: {}", objectRef);
+		if (logger.isTraceEnabled()) {
+			logger.trace("in w/ objectRef: {}", objectRef);
+		}
 		if (objectRef == null) {
 			throw new NullPointerException("objectRef cannot be null");
 		}
@@ -105,18 +113,24 @@ public final class BiMapObjectService implements ObjectService {
 		if (identifiableObject != null) {
 			object = identifiableObject.object;
 		}
-		logger.trace("out w/ object: {}", object);
+		if (logger.isTraceEnabled()) {
+			logger.trace("out w/ object: {}", object);
+		}
 		return object;
 	}
 
 	@Override
 	public ObjectRef lookupObjectRef(Object object) {
-		logger.trace("in w/ object: {}", object);
+		if (logger.isTraceEnabled()) {
+			logger.trace("in w/ object: {}", object);
+		}
 		if (object == null) {
 			throw new NullPointerException("object cannot be null");
 		}
 		final ObjectRef objectRef = syncdObjectMap.inverse().get(new IdentifiableObject(object));
-		logger.trace("out w/ objectRef: {}", objectRef);
+		if (logger.isTraceEnabled()) {
+			logger.trace("out w/ objectRef: {}", objectRef);
+		}
 		return objectRef;
 	}
 
@@ -137,29 +151,39 @@ public final class BiMapObjectService implements ObjectService {
 
 	@Override
 	public boolean containsValue(Object object) {
-		logger.trace("in w/ object: {}", object);
+		if (logger.isTraceEnabled()) {
+			logger.trace("in w/ object: {}", object);
+		}
 		if (object == null) {
 			throw new NullPointerException("object cannot be null");
 		}
 		final boolean containsValue = syncdObjectMap.containsValue(new IdentifiableObject(object));
-		logger.trace("out w/ containsValue: {}", containsValue);
+		if (logger.isTraceEnabled()) {
+			logger.trace("out w/ containsValue: {}", containsValue);
+		}
 		return containsValue;
 	}
 
 	@Override
 	public boolean containsObjectRef(ObjectRef objectRef) {
-		logger.trace("in w/ objectRef: {}", objectRef);
+		if (logger.isTraceEnabled()) {
+			logger.trace("in w/ objectRef: {}", objectRef);
+		}
 		if (objectRef == null) {
 			throw new NullPointerException("objectRef cannot be null");
 		}
 		final boolean containsObjectRef = syncdObjectMap.containsKey(objectRef);
-		logger.trace("out w/ containsObjectRef: {}", containsObjectRef);
+		if (logger.isTraceEnabled()) {
+			logger.trace("out w/ containsObjectRef: {}", containsObjectRef);
+		}
 		return containsObjectRef;
 	}
 
 	@Override
 	public Object remove(ObjectRef objectRef) {
-		logger.trace("in w/ objectRef: {}", objectRef);
+		if (logger.isTraceEnabled()) {
+			logger.trace("in w/ objectRef: {}", objectRef);
+		}
 		if (objectRef == null) {
 			throw new NullPointerException("objectRef cannot be null");
 		}
@@ -168,7 +192,9 @@ public final class BiMapObjectService implements ObjectService {
 		if (identifiableObject != null) {
 			object = identifiableObject.object;
 		}
-		logger.trace("out w/ object: {}", object);
+		if (logger.isTraceEnabled()) {
+			logger.trace("out w/ object: {}", object);
+		}
 		return object;
 	}
 }

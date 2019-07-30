@@ -62,10 +62,14 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 
 		if (dataMessage.getStaticFieldPut().hasValueObject()) {
 			value = Unwrapper.unwrapObject(dataMessage.getStaticFieldPut().getValueObject(), field.getType());
-			logger.debug("Unwrapped value: {}", value);
+			if (logger.isTraceEnabled()) {
+				logger.trace("Unwrapped value: {}", value);
+			}
 		} else {
 			value = objectService.lookupObject(ObjectRef.from(dataMessage.getStaticFieldPut().getValueObjectRef()));
-			logger.debug("Loaded value: {}", value);
+			if (logger.isTraceEnabled()) {
+				logger.trace("Loaded value: {}", value);
+			}
 		}
 
 		return Optional.ofNullable(value);

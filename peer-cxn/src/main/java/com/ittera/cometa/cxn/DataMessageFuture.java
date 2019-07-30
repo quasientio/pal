@@ -90,7 +90,9 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 	// <editor-fold defaultstate="collapsed" desc="Zk Watcher Interface">
 	@Override
 	public void process(WatchedEvent evt) {
-		logger.debug("NodeChildrenChanged event: {} for node of request: {}", evt, logRequest);
+		if (logger.isDebugEnabled()) {
+			logger.debug("NodeChildrenChanged event: {} for node of request: {}", evt, logRequest);
+		}
 
 		if (evt.getType() == Event.EventType.NodeChildrenChanged) {
 			process();
@@ -101,7 +103,9 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 	// <editor-fold defaultstate="collapsed" desc="Zk Callback Interface">
 	@Override
 	public void processResult(int rc, String path, Object ctx, List<String> children) {
-		logger.debug("getChildren returned for request: {}, with {} children", logRequest, children.size());
+		if (logger.isDebugEnabled()) {
+			logger.debug("getChildren returned for request: {}, with {} children", logRequest, children.size());
+		}
 
 		if (!children.isEmpty()) {
 			if (logger.isDebugEnabled()) {
@@ -135,8 +139,10 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 		executorService.submit(() -> {
 			// set msg value to complete future
 			DataMessage messageReply = thinPeer.getMessageAtOffset(logReply.getOffset());
-			logger.debug("completing future reply msg w/uuid: {} for request w/uuid: {}",
-				messageReply.getMessageUuid(), messageReply.getFollowingUuid());
+			if (logger.isDebugEnabled()) {
+				logger.debug("completing future reply msg w/uuid: {} for request w/uuid: {}",
+					messageReply.getMessageUuid(), messageReply.getFollowingUuid());
+			}
 			DataMessageFuture.this.put(messageReply);
 			// delete request and reply nodes
 			deleteRequestNode();

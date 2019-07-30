@@ -51,7 +51,9 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 		if (dataMessage.getInstanceFieldGet().hasObject()) {
 			Class fieldType = ((Field) accessibleObject.get()).getType();
 			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldGet().getObject(), fieldType);
-			logger.debug("Unwrapped target: {}", target);
+			if (logger.isTraceEnabled()) {
+				logger.trace("Unwrapped target: {}", target);
+			}
 		} else {
 			ObjectRef targetObjRef = ObjectRef.from(dataMessage.getInstanceFieldGet().getObjectRef());
 			if (objectService.containsObjectRef(targetObjRef)) {
@@ -59,7 +61,9 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 			} else {
 				throw new ObjectNotFoundException(String.format("No object found with objRef: %s", targetObjRef.getRef()));
 			}
-			logger.debug("Loaded target: {}", target);
+			if (logger.isTraceEnabled()) {
+				logger.trace("Loaded target: {}", target);
+			}
 		}
 		return target;
 	}
