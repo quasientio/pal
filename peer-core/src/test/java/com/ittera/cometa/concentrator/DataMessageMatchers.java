@@ -82,28 +82,28 @@ public class DataMessageMatchers {
 	}
 
 	public static final class ComesFromReflectable extends TypeSafeMatcher<Object> {
-		private String fieldName;
+		private String reflectableName;
 
-		ComesFromReflectable(String fieldName) {
-			this.fieldName = fieldName;
+		ComesFromReflectable(String reflectableName) {
+			this.reflectableName = reflectableName;
 		}
 
 		@Override
 		protected boolean matchesSafely(Object returnValue) {
 			if (returnValue instanceof ReturnValue) {
 				if (((ReturnValue) returnValue).getFrom().hasField()) {
-					return ((ReturnValue) returnValue).getFrom().getField().getRepr().contains(fieldName);
+					return ((ReturnValue) returnValue).getFrom().getField().getRepr().contains(reflectableName);
 				} else if (((ReturnValue) returnValue).getFrom().hasConstructor()) {
-					return ((ReturnValue) returnValue).getFrom().getConstructor().getRepr().contains(fieldName);
+					return ((ReturnValue) returnValue).getFrom().getConstructor().getRepr().contains(reflectableName);
 				} else if (((ReturnValue) returnValue).getFrom().hasMethod()) {
-					return ((ReturnValue) returnValue).getFrom().getMethod().getRepr().contains(fieldName);
+					return ((ReturnValue) returnValue).getFrom().getMethod().getRepr().contains(reflectableName);
 				} else {
 					return false;
 				}
 			} else if (returnValue instanceof Fields.StaticFieldPutDone) {
-				return ((Fields.StaticFieldPutDone) returnValue).getField().getRepr().contains(fieldName);
+				return ((Fields.StaticFieldPutDone) returnValue).getField().getRepr().contains(reflectableName);
 			} else if (returnValue instanceof Fields.InstanceFieldPutDone) {
-				return ((Fields.InstanceFieldPutDone) returnValue).getField().getRepr().contains(fieldName);
+				return ((Fields.InstanceFieldPutDone) returnValue).getField().getRepr().contains(reflectableName);
 			} else {
 				return false;
 			}
@@ -111,7 +111,7 @@ public class DataMessageMatchers {
 
 		@Override
 		public void describeTo(Description description) {
-			description.appendText("comes from field: " + fieldName);
+			description.appendText("comes from reflectable: " + reflectableName);
 		}
 
 		public static Matcher<Object> comesFrom(String fieldName) {
