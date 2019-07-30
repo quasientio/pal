@@ -10,6 +10,9 @@ import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
 import org.junit.*;
 
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.comesFromClass;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.comesFrom;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.junit.Assert.*;
 
 import org.junit.runner.RunWith;
@@ -131,10 +134,8 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		assertThat(objectService.size(), is(0));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertTrue(ClassForVoidClassMethodTest.slept);
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -189,10 +190,8 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		assertThat(objectService.size(), is(0));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -244,10 +243,8 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		assertThat(objectService.size(), is(0));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -275,10 +272,8 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -304,10 +299,8 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		assertThat(objectService.size(), is(0));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertThat(ClassForVoidClassMethodTest.verified, is(nullValue()));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -359,10 +352,8 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertThat(sumContainer.get(0), is(LongStream.of(someNumbers).sum()));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test

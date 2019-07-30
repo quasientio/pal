@@ -10,6 +10,9 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.junit.*;
 
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.comesFromClass;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.comesFrom;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.junit.Assert.*;
 import static org.hamcrest.Matchers.*;
 
@@ -119,10 +122,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertThat(target.wordsCollected.size(), is(2));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -176,10 +177,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertThat(target.wordsCollected.size(), is(1));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -232,10 +231,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertThat(target.wordsCollected.size(), is(numberOfWordsToAdd));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -265,10 +262,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertThat(objectService.size(), is(2));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertThat(target.wordsCollected.size(), is(wordList.size()));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -295,10 +290,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertThat(target.wordsCollected.size(), is(0));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -353,10 +346,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
 		assertThat(target.wordsCollected.size(), is(4));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -408,7 +399,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		verifyDispatcherConnectorCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(1));
-		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		assertFalse(replyMsg.hasReturnValue());
 		assertThat(replyMsg.getRaisedThrowable().getThrowable().getType(),is("java.lang.IllegalArgumentException"));
 	}
 }

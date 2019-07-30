@@ -8,6 +8,10 @@ import com.ittera.cometa.common.lang.reflect.Signature;
 
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.comesFromClass;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.comesFrom;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
+
 import org.junit.*;
 import org.junit.runner.RunWith;
 
@@ -102,10 +106,8 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertFalse(replyMsg.hasReturnValue());
 		assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
 		assertThat(ClassForPutStaticTest.someShort, is(newFieldValue));
-
-		assertThat(replyMsg.getStaticFieldPutDone().getClass_().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getStaticFieldPutDone().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getStaticFieldPutDone(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 		assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
 	}
 
@@ -152,10 +154,8 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertFalse(replyMsg.hasReturnValue());
 		assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
 		assertThat(ClassForPutStaticTest.bytes, is(newFieldValue));
-
-		assertThat(replyMsg.getStaticFieldPutDone().getClass_().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getStaticFieldPutDone().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getStaticFieldPutDone(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 		assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
 	}
 
@@ -204,10 +204,8 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertFalse(replyMsg.hasReturnValue());
 		assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
 		assertThat(ClassForPutStaticTest.someBoolean, is(newFieldValue));
-
-		assertThat(replyMsg.getStaticFieldPutDone().getClass_().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getStaticFieldPutDone().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getStaticFieldPutDone(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 		assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
 	}
 
@@ -254,10 +252,8 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertFalse(replyMsg.hasReturnValue());
 		assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
 		assertThat(ClassForPutStaticTest.aString, is(newFieldValue));
-
-		assertThat(replyMsg.getStaticFieldPutDone().getClass_().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getStaticFieldPutDone().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getStaticFieldPutDone(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 		assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
 	}
 
@@ -304,10 +300,8 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertFalse(replyMsg.hasReturnValue());
 		assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
 		assertThat(ClassForPutStaticTest.aList, sameInstance(newFieldValue));
-
-		assertThat(replyMsg.getStaticFieldPutDone().getClass_().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getStaticFieldPutDone().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getStaticFieldPutDone(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 		assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
 	}
 
@@ -355,10 +349,8 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertFalse(replyMsg.hasReturnValue());
 		assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
 		assertThat(ClassForPutStaticTest.aList, is(nullValue()));
-
-		assertThat(replyMsg.getStaticFieldPutDone().getClass_().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getStaticFieldPutDone().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getStaticFieldPutDone(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 		assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
 	}
 
@@ -404,10 +396,8 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertFalse(replyMsg.hasReturnValue());
 		assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
 		assertThat(ClassForPutStaticTest.objects, sameInstance(newFieldValue));
-
-		assertThat(replyMsg.getStaticFieldPutDone().getClass_().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getStaticFieldPutDone().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getStaticFieldPutDone(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 		assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
 	}
 
@@ -453,10 +443,8 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		assertFalse(replyMsg.hasReturnValue());
 		assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
 		assertThat(ClassForPutStaticTest.lastError, sameInstance(newFieldValue));
-
-		assertThat(replyMsg.getStaticFieldPutDone().getClass_().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getStaticFieldPutDone().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getStaticFieldPutDone(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 		assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
 	}
 }

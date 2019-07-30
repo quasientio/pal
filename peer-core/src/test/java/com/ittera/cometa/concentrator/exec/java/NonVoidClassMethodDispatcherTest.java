@@ -11,6 +11,9 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.junit.*;
 
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.comesFromClass;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.comesFrom;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.junit.Assert.*;
 
 import org.junit.runner.RunWith;
@@ -112,10 +115,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		short returned = (short) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
 		assertTrue(returned >= 0 && returned < 60);
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -167,10 +168,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		Double returned = (Double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
 		assertThat(returned, is(bigDouble));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -220,10 +219,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		double returned = (double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
 		assertThat(returned, is(smallDouble));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -250,10 +247,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		double returned = (double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
 		assertThat(returned, is(bigDouble));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -279,10 +274,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		Integer returned = (Integer) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
 		assertThat(returned, is(realNumber));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -339,10 +332,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		double returned = (double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
 		assertEquals(d4, returned, 0);
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getMethod().getRepr(),
-			allOf(containsString(targetClass.getName()),containsString(methodName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
 	}
 
 	@Test
@@ -393,7 +384,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 		verifyDispatcherConnectorCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(0));
-		assertFalse(replyMsg.getReturnValue().getIsVoid());
+		assertFalse(replyMsg.hasReturnValue());
 		assertThat(replyMsg.getRaisedThrowable().getThrowable().getType(), is("java.lang.ArithmeticException"));
 	}
 }

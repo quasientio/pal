@@ -9,6 +9,10 @@ import com.ittera.cometa.common.lang.reflect.FieldSignature;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
+import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.*;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.*;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.*;
+
 import org.junit.*;
 
 import static org.junit.Assert.*;
@@ -29,6 +33,7 @@ class ClassForGetFieldTest {
 	Throwable lastError = new Error("dummy error");
 	Class aNullClass;
 }
+
 
 @RunWith(MockitoJUnitRunner.class)
 public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
@@ -81,16 +86,8 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		short returned = (short) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
 		assertThat(returned, is(target.someShort));
-
-		/** TODO: create hamcrest matchers that read something like this:
-		 * assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
-		 * assertThat(replyMsg.getReturnValue(), allOf(isFromClass(targetClass), isFromField(fieldName)));
-		 *
-		 * and replace all returnValue assertions in this and all other unit tests
-		 */
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 	}
 
 	@Override
@@ -136,10 +133,8 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		byte[] returned = (byte[]) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
 		assertThat(returned, is(target.bytes));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 	}
 
 	@Override
@@ -185,10 +180,8 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		Integer returned = (Integer) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
 		assertThat(returned, is(target.someInteger));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 	}
 
 	@Override
@@ -234,10 +227,8 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
 		assertThat(returned, is(target.aString));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 	}
 
 	@Override
@@ -283,10 +274,8 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		Object returned = objectService.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
 		assertThat(returned, is(target.anObject));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 	}
 
 	@Override
@@ -331,10 +320,8 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertThat(objectService.size(), is(1));
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		assertTrue(replyMsg.getReturnValue().getObject().getIsNull());
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 	}
 
 	@Override
@@ -380,10 +367,8 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		Object returned = objectService.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
 		assertThat(returned, is(target.objects));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 	}
 
 	@Override
@@ -429,9 +414,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		assertFalse(replyMsg.getReturnValue().getIsVoid());
 		Object returned = objectService.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
 		assertThat(returned, is(target.lastError));
-
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
-		assertThat(replyMsg.getReturnValue().getFrom().getField().getRepr(),
-			allOf(containsString(targetClass.getName()), containsString(fieldName)));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
 	}
 }

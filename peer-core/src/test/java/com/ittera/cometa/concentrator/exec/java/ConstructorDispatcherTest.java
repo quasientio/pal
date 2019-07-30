@@ -10,6 +10,9 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.junit.*;
 
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.comesFromClass;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.comesFrom;
+import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.junit.Assert.*;
 
 import org.junit.runner.RunWith;
@@ -105,9 +108,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		assertTrue(objectService.containsObjectRef(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())));
 		assertThat(objectService.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
 			instanceOf(targetClass));
-
-		assertTrue(replyMsg.getReturnValue().getFrom().hasConstructor());
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(targetClass.getName())));
 	}
 
 	@Test
@@ -157,9 +159,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		assertTrue(objectService.containsObjectRef(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())));
 		assertThat(objectService.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
 			instanceOf(targetClass));
-
-		assertTrue(replyMsg.getReturnValue().getFrom().hasConstructor());
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(targetClass.getName())));
 	}
 
 	@Test
@@ -207,9 +208,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		assertTrue(objectService.containsObjectRef(objRef));
 		assertThat(objectService.lookupObject(objRef), instanceOf(targetClass));
 		assertThat(((ClassForConstructorTest) objectService.lookupObject(objRef)).aLong, is((long) args[1] + 1));
-
-		assertTrue(replyMsg.getReturnValue().getFrom().hasConstructor());
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(targetClass.getName())));
 	}
 
 	@Test
@@ -236,9 +236,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		assertTrue(objectService.containsObjectRef(retObjRef));
 		assertThat(objectService.lookupObject(retObjRef), instanceOf(targetClass));
 		assertThat(((ClassForConstructorTest) objectService.lookupObject(retObjRef)).someInteger, is(arg));
-
-		assertTrue(replyMsg.getReturnValue().getFrom().hasConstructor());
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(targetClass.getName())));
 	}
 
 	@Test
@@ -263,9 +262,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		assertTrue(objectService.containsObjectRef(objRef));
 		assertThat(objectService.lookupObject(objRef), instanceOf(targetClass));
 		assertThat(((ClassForConstructorTest) objectService.lookupObject(objRef)).someInteger, is(nullValue()));
-
-		assertTrue(replyMsg.getReturnValue().getFrom().hasConstructor());
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(targetClass.getName())));
 	}
 
 	/**
@@ -343,9 +341,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		assertThat(objectService.size(), is(1));
 		assertTrue(objectService.containsObjectRef(objRef));
 		assertThat(objectService.lookupObject(objRef), instanceOf(targetClass));
-
-		assertTrue(replyMsg.getReturnValue().getFrom().hasConstructor());
-		assertThat(replyMsg.getReturnValue().getClazz().getName(), is(targetClass.getName()));
+		assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
+		assertThat(replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(targetClass.getName())));
 	}
 
 	@Test
