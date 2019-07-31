@@ -20,6 +20,3 @@ message ReturnValue {
     // the class returning this object through a fieldop, constructor or method (i.e. the declaring class)
     optional Class clazz = 5;
 }
-
-message Void {
-}

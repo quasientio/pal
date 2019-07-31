@@ -50,6 +50,5 @@ message DataMessage {
         InstanceFieldPutDone instanceFieldPutDone = 19;
         RaisedThrowable raisedThrowable = 20;
         ReturnValue returnValue = 21;
-        Void void = 22; // TODO are we using this and the Void type? in Values? it looks like we don't, and don't need
     }
 }
