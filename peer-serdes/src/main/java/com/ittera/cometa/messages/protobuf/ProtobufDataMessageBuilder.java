@@ -132,6 +132,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 			.setMessageUuid(UUID.randomUUID().toString())
 			.setMsgType(msgType)
 			.setThreadId(Thread.currentThread().getId())
+			.setThreadName(Thread.currentThread().getName())
 			.setDispatchSeq(threadDispatchSequence.get().longValue())
 			.setBuilderSeq(threadBuilderSequence.get().getAndIncrement())
 			.setCurrentTime(System.currentTimeMillis());
