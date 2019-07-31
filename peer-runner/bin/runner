@@ -1,8 +1,0 @@
-#!/bin/bash
-
-
-MAIN_ARGS="$@"
-
-export MAVEN_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA"
-
-mvn exec:java -Dexec.mainClass="com.ittera.cometa.AppRunner" -Dlogback.configurationFile=logback-runner.xml -Dexec.args="$MAIN_ARGS"
