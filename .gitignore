@@ -5,4 +5,3 @@ logs/
 peer-logging.xml
 logback.xml
 logback-test.xml
-logback-runner.xml
