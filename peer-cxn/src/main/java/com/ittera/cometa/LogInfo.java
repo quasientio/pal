@@ -140,4 +140,18 @@ public class LogInfo implements Comparable {
 	public String toString() {
 		return "Log {name: " + getName() + ", bootstrapServers: " + getBootstrapServers() + "}";
 	}
+
+	public String toFullString() {
+		return "LogInfo{" +
+			"name='" + name + '\'' +
+			", zk_ctime=" + zk_ctime +
+			", uuid=" + uuid +
+			", startOffset=" + startOffset +
+			", endOffset=" + endOffset +
+			", bytes=" + bytes +
+			", exists=" + exists +
+			", humanReadableByteSize='" + humanReadableByteSize + '\'' +
+			", bootstrapServers='" + bootstrapServers + '\'' +
+			'}';
+	}
 }
