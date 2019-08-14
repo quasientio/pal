@@ -63,6 +63,7 @@ public class ThinPeer {
 	private LogInfo inLog, outLog;
 	private final TopicPartition inTopicPartition;
 	private final Duration pollingDuration;
+	private static final int PRECEDING_RECS = 50;
 
 	private final KafkaProducer producer;
 	private final KafkaConsumer<String, String> consumer;
@@ -283,7 +284,6 @@ public class ThinPeer {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
 		}
-		consumer.seek(inTopicPartition, seek);
 		if (lookupCached) {
 			DataMessage cachedMsg = getCachedMessageAtOffset(seek);
 			if (cachedMsg != null) {
@@ -296,6 +296,12 @@ public class ThinPeer {
 
 		Map recordsRead = new HashMap<Long, ConsumerRecord>();
 		ConsumerRecord requestedRecord = null;
+
+		long actualSeekOffset =  (seek - PRECEDING_RECS < 0) ?  seek : seek - PRECEDING_RECS;
+		if (logger.isDebugEnabled()) {
+			logger.debug("Seek to offset #{}", actualSeekOffset);
+		}
+		consumer.seek(inTopicPartition, actualSeekOffset);
 
 		while (requestedRecord == null) {
 			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
