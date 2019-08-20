@@ -1,6 +1,5 @@
 package com.ittera.cometa.concentrator.exec;
 
-import com.ittera.cometa.concentrator.Concentrator;
 import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
@@ -14,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
@@ -24,7 +22,6 @@ public class LogMessageInvoker extends Thread {
 	protected static final Logger logger = LoggerFactory.getLogger(LogMessageInvoker.class);
 
 	protected final AtomicLong requestsDispatched = new AtomicLong(0);
-	protected final AtomicLong requestsDismissed = new AtomicLong(0);
 
 	// zmq stuff
 	private final ZContext zmqContext;
@@ -110,20 +107,11 @@ public class LogMessageInvoker extends Thread {
 
 			// dispatch it
 			if (requestMsg != null) {
-
-				// we dispatch only if concentrator uuid isn't ours
-				if (!peerUuid.toString().equals(requestMsg.getConcentratorUuid())) {
-					dispatch(requestMsg, logOffset);
+				dispatch(requestMsg, logOffset);
+				if (logger.isDebugEnabled()) {
+					final long took = System.currentTimeMillis() - started;
 					if (logger.isDebugEnabled()) {
-						final long took = System.currentTimeMillis() - started;
-						if (logger.isDebugEnabled()) {
-							logger.debug("Dispatched data message with uuid: {} in {} millisecs", requestMsg.getMessageUuid(), took);
-						}
-					}
-				} else {
-					requestsDismissed.getAndIncrement();
-					if (logger.isDebugEnabled()) {
-						logger.debug("Discarding message with uuid: {}", requestMsg.getMessageUuid());
+						logger.debug("Dispatched data message with uuid: {} in {} millisecs", requestMsg.getMessageUuid(), took);
 					}
 				}
 			}
@@ -132,8 +120,7 @@ public class LogMessageInvoker extends Thread {
 		closeConnections();
 
 		if (logger.isDebugEnabled()) {
-			logger.debug("Stopped log executor thread: {}, dispatched={} dismissed={}", getName(), requestsDispatched.get(),
-				requestsDismissed.get());
+			logger.debug("Stopped log executor thread: {}, dispatched={}", getName(), requestsDispatched.get());
 		}
 	}
 

@@ -4,10 +4,8 @@ import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
-import java.util.Properties;
-import java.util.Collections;
-import java.util.List;
-import java.util.AbstractQueue;
+import java.io.UnsupportedEncodingException;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -20,6 +18,8 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.Headers;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -73,6 +73,9 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 	// zookeeper
 	@Inject
 	private PeerLogDirectory peerLogDirectory;
+
+	@Inject
+	private UUID peerUuid;
 
 	// shared by threads OffsetUpdater and KafkaDataMessageReader: TODO avoid sharing
 	final private AbstractQueue<Long> skipOffsets = new ConcurrentLinkedQueue<>();
@@ -292,16 +295,19 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 						record);
 				}
 
-				final DataMessage dataMessage = (DataMessage) record.value();
 				final long messageOffset = record.offset();
 				lastOffsetRead = messageOffset;
 
-				// send request to DEALER socket
-				logDealer.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
-				logDealer.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
-				logDealer.send(dataMessage.toByteArray(), 0);
-				if (logger.isDebugEnabled()) {
-					logger.debug("Dealt new log Data Message with uuid: {}", dataMessage.getMessageUuid());
+				if (!recordProducedBySelf(record.headers())) {
+					final DataMessage dataMessage = (DataMessage) record.value();
+
+					// send request to DEALER socket
+					logDealer.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
+					logDealer.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
+					logDealer.send(dataMessage.toByteArray(), 0);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Dealt new log Data Message with uuid: {}", dataMessage.getMessageUuid());
+					}
 				}
 
 				// get next offset to poll
@@ -338,6 +344,26 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 		}
 
 		closeConnections();
+	}
+
+	private boolean recordProducedBySelf(Headers headers) {
+		for (Header header : headers.headers("produced-by")) {
+			String valueAsStr;
+			try {
+				valueAsStr = new String(header.value(), "UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				logger.error("Cannot decode bytes into string", e);
+				continue;
+			}
+
+			if (peerUuid.toString().equalsIgnoreCase(valueAsStr)) {
+				if (logger.isDebugEnabled()) {
+					logger.debug("skipping message produced-by self");
+				}
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private Long nextOffset() {

@@ -2,6 +2,7 @@ package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PeerLogDirectory;
+import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import com.google.inject.Inject;
@@ -12,9 +13,11 @@ import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+import org.apache.kafka.common.header.Header;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -57,6 +60,8 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 	private LogInfo outLog, inLog;
 	private volatile boolean connectionsOpen = false;
 	private final AtomicInteger messagesSent = new AtomicInteger(0);
+	private Iterable<Header> SELF_PRODUCED_HEADERS;
+	private Iterable<Header> SELF_DISPATCHING_HEADERS;
 
 	@Inject
 	public KafkaDataMessageWriter(@Named("key.serializer") String keySerializer,
@@ -111,6 +116,11 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 		this.inLog = inLog;
 		this.publishOffsets = publishOffsets;
 		producerProperties.put("bootstrap.servers", outLog.getBootstrapServers());
+
+		// create and store headers (instead of creating with every send)
+		this.SELF_PRODUCED_HEADERS = Arrays.asList(new LogMessageHeader("produced-by", peerUuid.toString().toUpperCase()));
+		this.SELF_DISPATCHING_HEADERS = Arrays.asList(new LogMessageHeader("dispatching-by", peerUuid.toString().toUpperCase()));
+
 		// start kafka writer
 		this.producer = new KafkaProducer<>(producerProperties);
 		logger.info("Will write to log: {}", outLog);
@@ -165,18 +175,21 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 			if (dataMessage != null) {
 
 				// send to kafka immediately
-				sendToKafka(dataMessage);
+				sendToKafka(dataMessage, peerUuid);
 			}
 		}
 
 		closeConnections();
 	}
 
-	private void sendToKafka(DataMessage message) {
+	private void sendToKafka(DataMessage message, UUID fromPeer) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("sending new message with uuid: {}", message.getMessageUuid());
 		}
-		ProducerRecord newRecord = new ProducerRecord(outLog.getName(), message);
+
+		ProducerRecord<String, DataMessage> newRecord = new ProducerRecord<String, DataMessage>(outLog.getName(), 0,
+			fromPeer.toString(), message, this.SELF_PRODUCED_HEADERS);
+
 		producer.send(newRecord, new MessageOffsetInformer(message, publishOffsets, offsetPublisher,
 			peerLogDirectory, inLog, peerUuid));
 		messagesSent.getAndIncrement();
