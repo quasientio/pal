@@ -13,7 +13,6 @@ import java.util.Arrays;
 
 import static java.util.stream.Collectors.*;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import org.junit.Before;
 
 import static org.hamcrest.Matchers.is;
