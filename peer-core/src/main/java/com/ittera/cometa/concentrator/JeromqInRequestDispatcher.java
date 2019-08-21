@@ -20,16 +20,18 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService {
 	protected static final Logger logger = LoggerFactory.getLogger(JeromqInRequestDispatcher.class);
 
 	// zmq stuff
-	private final String routerAddress, dealerAddress;
+	private final String routerAddress, dealerAddress, proxyCtrlAddress;
 
 	@Inject
 	private ZContext context;
-	private Socket router, dealer;
+	private Socket router, dealer, ctrl;
 
 	@Inject
-	public JeromqInRequestDispatcher(@Named("in.router") String routerAddress, @Named("in.dealer") String dealerAddress) {
+	public JeromqInRequestDispatcher(@Named("in.router") String routerAddress, @Named("in.dealer") String dealerAddress,
+																	 @Named("in.proxy.ctrl") String proxyCtrlAddress ) {
 		this.routerAddress = routerAddress;
 		this.dealerAddress = dealerAddress;
+		this.proxyCtrlAddress = proxyCtrlAddress;
 	}
 
 	protected void openConnections() {
@@ -40,6 +42,10 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService {
 		// to send requests to conc
 		this.dealer = context.createSocket(SocketType.DEALER);
 		dealer.bind(dealerAddress);
+
+		// to get proxy termination command
+		this.ctrl = context.createSocket(SocketType.PAIR);
+		ctrl.bind(proxyCtrlAddress);
 
 		logger.info("All connections open");
 	}
@@ -53,6 +59,10 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService {
 			dealer.close();
 		}
 
+		if (ctrl != null) {
+			ctrl.close();
+		}
+
 		logger.info("All connections closed");
 	}
 
@@ -62,7 +72,8 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService {
 		logger.info("Running router-dealer proxy");
 
 		// create router-dealer proxy
-		ZMQ.proxy(router, dealer, null);
+		ZMQ.proxy(router, dealer, null, ctrl);
+		logger.info("Finished running router-dealer proxy");
 	}
 
 	@Override

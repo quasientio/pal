@@ -31,7 +31,9 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import org.zeromq.SocketType;
 import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
 
 public class Concentrator {
 
@@ -82,12 +84,21 @@ public class Concentrator {
 		zmqContext.setLinger(Integer.parseInt(properties.getProperty("ZMQ_LINGER", ZMQ_LINGER_DEFAULT)));
 		zmqContext.setRcvHWM(Integer.parseInt(properties.getProperty("ZMQ_RCVHWM", ZMQ_RCVHWM_DEFAULT)));
 		zmqContext.setSndHWM(Integer.parseInt(properties.getProperty("ZMQ_SNDHWM", ZMQ_SNDHWM_DEFAULT)));
+		logger.info("Created and configured zmq context");
+	}
+
+	private static void terminateProxies(Properties properties) {
+		String proxyCtrlAddress = properties.getProperty("in.proxy.ctrl");
+		ZMQ.Socket ctrl = zmqContext.createSocket(SocketType.PAIR);
+		ctrl.connect(proxyCtrlAddress);
+		ctrl.send(ZMQ.PROXY_TERMINATE);
+		ctrl.close();
+		logger.info("Sent TERM cmd to proxies");
 	}
 
 	private static void closeZmqContext() {
-		logger.info("Destroying zmq context");
-		zmqContext.destroy();
-		logger.info("Destroyed zmq context");
+		zmqContext.close();
+		logger.info("Closed zmq context");
 	}
 
 	private static void fatalExit(Throwable ex, PeerFatalCode fatalCode) {
@@ -228,17 +239,20 @@ public class Concentrator {
 		// add shutdown hook
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			try {
-				// destroy context
+				// terminate zmq proxies
+				terminateProxies(properties);
+
+				// close/destroy zmq context
 				closeZmqContext();
 
 				// stop peer executor (interrupts all peer exec threads)
 				final ExtendedThreadPoolExecutor peerMessageExecutor = injector.getInstance(PeerMessageExecutor.class);
-				logger.info("shutting down peer threads");
 				peerMessageExecutor.shutdownNow();
+				logger.info("done shutting down peer threads");
 
 				// stop log executor (interrupts all log exec threads)
 				final ExtendedThreadPoolExecutor logMessageExecutor = injector.getInstance(LogMessageExecutor.class);
-				logger.info("shutting down log threads");
+				logger.info("done shutting down log threads");
 				logMessageExecutor.shutdownNow();
 
 				// stop all services
