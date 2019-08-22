@@ -20,12 +20,12 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.AsyncCallback;
 
-public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCallback.ChildrenCallback {
+class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCallback.ChildrenCallback {
 	private final CountDownLatch latch = new CountDownLatch(1);
 	private DataMessage value;
 	private boolean cancelled;
 
-	protected final static Logger logger = LoggerFactory.getLogger(DataMessageFuture.class);
+	private final static Logger logger = LoggerFactory.getLogger(DataMessageFuture.class);
 
 	private final ThinPeer thinPeer;
 	private final PeerLogDirectory peerLogDirectory;
@@ -110,7 +110,7 @@ public class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCal
 		if (!children.isEmpty()) {
 			if (logger.isDebugEnabled()) {
 				StringBuilder sb = new StringBuilder("children:\n");
-				children.stream().forEach(s -> sb.append(s).append('\n'));
+				children.forEach(s -> sb.append(s).append('\n'));
 				logger.debug(sb.toString());
 			}
 			process();

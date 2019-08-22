@@ -15,9 +15,9 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 @Singleton
-public class JeromqInRequestDispatcher extends AbstractExecutionThreadService {
+class JeromqInRequestDispatcher extends AbstractExecutionThreadService {
 
-	protected static final Logger logger = LoggerFactory.getLogger(JeromqInRequestDispatcher.class);
+	private static final Logger logger = LoggerFactory.getLogger(JeromqInRequestDispatcher.class);
 
 	// zmq stuff
 	private final String routerAddress, dealerAddress, proxyCtrlAddress;
@@ -34,7 +34,7 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService {
 		this.proxyCtrlAddress = proxyCtrlAddress;
 	}
 
-	protected void openConnections() {
+	private void openConnections() {
 		// to get requests for conc
 		this.router = context.createSocket(SocketType.ROUTER);
 		router.bind(routerAddress);
@@ -50,7 +50,7 @@ public class JeromqInRequestDispatcher extends AbstractExecutionThreadService {
 		logger.info("All connections open");
 	}
 
-	protected void closeConnections() {
+	private void closeConnections() {
 		if (router != null) {
 			router.close();
 		}

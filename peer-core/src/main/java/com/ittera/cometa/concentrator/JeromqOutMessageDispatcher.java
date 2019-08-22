@@ -24,9 +24,9 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 @Singleton
-public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
+class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 
-	protected static final Logger logger = LoggerFactory.getLogger(JeromqOutMessageDispatcher.class);
+	private static final Logger logger = LoggerFactory.getLogger(JeromqOutMessageDispatcher.class);
 
 	// counters
 	private final AtomicLong totalReadBlockingQueueNanos = new AtomicLong(0);
@@ -50,7 +50,7 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 		logger.info("Initialized OUT message dispatcher");
 	}
 
-	protected void openConnections() {
+	private void openConnections() {
 
 		repSocket = context.createSocket(SocketType.REP);
 		repSocket.bind(outCellAddress);
@@ -61,7 +61,7 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 		logger.info("All connections open");
 	}
 
-	protected void closeConnections() {
+	private void closeConnections() {
 
 		if (repSocket != null) {
 			repSocket.close();
@@ -122,7 +122,7 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 			// send multi-part message as received to SUBscribers
 			pubSocket.send(headerCntBuff, ZMQ.SNDMORE);
 			if (headerCount > 0) {
-				headerBuffs.stream().forEach(b -> pubSocket.send(b, ZMQ.SNDMORE));
+				headerBuffs.forEach(b -> pubSocket.send(b, ZMQ.SNDMORE));
 			}
 			pubSocket.send(msgBuff);
 		}

@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
  */
 public class Unwrapper {
 
-	protected static final Logger logger = LoggerFactory.getLogger(Unwrapper.class);
+	private static final Logger logger = LoggerFactory.getLogger(Unwrapper.class);
 
 	private static <T> T[] getArrayOf(Class<T> clazz, int length) {
 		return (T[]) Array.newInstance(clazz, length);

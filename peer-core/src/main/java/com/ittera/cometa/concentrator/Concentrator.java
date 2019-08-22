@@ -43,8 +43,6 @@ public class Concentrator {
 
 	private static final Properties properties = new Properties();
 
-	private static CustomClassloader customClassloader;
-
 	// zmq context -- gets injected to all other threads
 	private static final ZContext zmqContext;
 
@@ -87,8 +85,8 @@ public class Concentrator {
 		logger.info("Created and configured zmq context");
 	}
 
-	private static void terminateProxies(Properties properties) {
-		String proxyCtrlAddress = properties.getProperty("in.proxy.ctrl");
+	private static void terminateProxies() {
+		String proxyCtrlAddress = Concentrator.properties.getProperty("in.proxy.ctrl");
 		ZMQ.Socket ctrl = zmqContext.createSocket(SocketType.PAIR);
 		ctrl.connect(proxyCtrlAddress);
 		ctrl.send(ZMQ.PROXY_TERMINATE);
@@ -119,7 +117,7 @@ public class Concentrator {
 		System.exit(fatalCode.getCode());
 	}
 
-	private static void addEnvToProperties(Properties properties) {
+	private static void addEnvToProperties() {
 
 		// load from Environment variable or system property
 		String zookeeperUrl = System.getenv("ZOOKEEPER_URL");
@@ -131,16 +129,16 @@ public class Concentrator {
 			fatalExit(null, PeerFatalCode.ERROR_NO_ZOOKEEPER_URL_GIVEN);
 		}
 		// add to app properties
-		properties.setProperty("zookeeper_url", zookeeperUrl);
+		Concentrator.properties.setProperty("zookeeper_url", zookeeperUrl);
 	}
 
-	private static void registerSelfAsPeer(Properties properties, Injector injector) {
+	private static void registerSelfAsPeer(Injector injector) {
 
 		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
 
 		// connect to directory
 		try {
-			registry.connect(properties.getProperty("zookeeper_url"));
+			registry.connect(Concentrator.properties.getProperty("zookeeper_url"));
 		} catch (Exception ex) {
 			fatalExit(ex, PeerFatalCode.ERROR_CONNECTING_TO_DIRECTORY);
 		}
@@ -148,7 +146,7 @@ public class Concentrator {
 		// register self as new peer
 		try {
 			final Properties peerProperties = new Properties();
-			peerProperties.put("listenAddress", properties.getProperty("in.router"));
+			peerProperties.put("listenAddress", Concentrator.properties.getProperty("in.router"));
 			registry.registerPeer(uuid, peerProperties);
 		} catch (Exception ex) {
 			fatalExit(ex, PeerFatalCode.ERROR_REGISTERING_PEER);
@@ -170,14 +168,14 @@ public class Concentrator {
 		properties.put("id", uuid.toString());
 
 		// check and add env variables to app props
-		addEnvToProperties(properties);
+		addEnvToProperties();
 
 		// init custom classloader
 		List<URL> urls = new ArrayList<>();
 		if (options.classpath != null) {
 			// split by ':' and add each entry: each should be either a folder or a JAR (just as in $CLASSPATH)
 			Arrays.stream(options.classpath.split(":"))
-				.map(e -> new File(e))
+				.map(File::new)
 				.forEach(f -> {
 					try {
 						urls.add(f.toURI().toURL());
@@ -186,14 +184,14 @@ public class Concentrator {
 					}
 				});
 		}
-		customClassloader = new CustomClassloader(urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
+		CustomClassloader customClassloader = new CustomClassloader(urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
 		logger.info("initialized custom classloader with paths: {}", urls.toString());
 
 		// inject dependencies
 		final Injector injector = Guice.createInjector(new PeerGuiceModule(properties, zmqContext, customClassloader));
 
 		// register peer
-		registerSelfAsPeer(properties, injector);
+		registerSelfAsPeer(injector);
 
 		// init logs IO
 		if (options.offsetGiven && options.inLog == null) {
@@ -240,7 +238,7 @@ public class Concentrator {
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			try {
 				// terminate zmq proxies
-				terminateProxies(properties);
+				terminateProxies();
 
 				// close/destroy zmq context
 				closeZmqContext();

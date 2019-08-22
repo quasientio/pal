@@ -16,7 +16,6 @@ import com.ittera.cometa.common.lang.ObjectRef;
 
 import java.lang.reflect.*;
 
-import java.lang.reflect.Field;
 import java.util.UUID;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -49,7 +48,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	//<editor-fold desc="Private Auxiliary methods">
 
-	private Builder addParameter(Builder callBuilder, String parameterType, Object arg, ObjectRef argObjRef) {
+	private void addParameter(Builder callBuilder, String parameterType, Object arg, ObjectRef argObjRef) {
 
 		// TODO : deal with objectRef
 		Primitives.Parameter.Builder paramBuilder = Primitives.Parameter.newBuilder();
@@ -67,10 +66,9 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 				callBuilder.getClass().getName()));
 		}
 
-		return callBuilder;
 	}
 
-	private Builder addParameters(Builder callBuilder, String[] parameterTypes, Object[] args, ObjectRef[] argObjRefs) {
+	private void addParameters(Builder callBuilder, String[] parameterTypes, Object[] args, ObjectRef[] argObjRefs) {
 
 		for (int i = 0; parameterTypes != null && i < parameterTypes.length; i++) {
 			if (argObjRefs[i] != null) { //parameter is an objectref
@@ -82,11 +80,10 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 			}
 		}
 
-		return callBuilder;
 	}
 
-	private Builder addNamedParameter(Builder callBuilder, Parameter parameter, String paramName, String paramType,
-																		Object param, ObjectRef paramObjRef) {
+	private void addNamedParameter(Builder callBuilder, Parameter parameter, String paramName, String paramType,
+																 Object param, ObjectRef paramObjRef) {
 
 		// TODO : deal with objectRef
 		Primitives.Parameter.Builder paramBuilder = Primitives.Parameter.newBuilder();
@@ -106,10 +103,9 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 				callBuilder.getClass().getName()));
 		}
 
-		return callBuilder;
 	}
 
-	private Builder addParameters(Builder callBuilder, Context context, Object[] args, ObjectRef[] argObjRefs) {
+	private void addParameters(Builder callBuilder, Context context, Object[] args, ObjectRef[] argObjRefs) {
 		final CodeSignature codeSignature = (CodeSignature) context.getSignature();
 		Parameter[] parameters = codeSignature.getParameters();
 		String paramName, paramTypeName;
@@ -119,7 +115,6 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 			addNamedParameter(callBuilder, parameters[i], paramName, paramTypeName, args[i], argObjRefs[i]);
 		}
 
-		return callBuilder;
 	}
 
 
@@ -612,7 +607,7 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 		// set 'object'
 		if (!isVoid) {
-			Class objectClass = null;
+			Class objectClass;
 			if (accessibleObject instanceof Constructor) {
 				objectClass = declaringClass;
 			} else if (accessibleObject instanceof Method) {

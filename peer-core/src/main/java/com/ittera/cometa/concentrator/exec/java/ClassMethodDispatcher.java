@@ -41,7 +41,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 	@Override
 	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
 		return messageBuilder.buildClassMethod(peerUuid, ctxt, sender, storeObject(sender), args, Arrays.stream(args).map(
-			a -> storeObject(a)).toArray(ObjectRef[]::new));
+			this::storeObject).toArray(ObjectRef[]::new));
 	}
 
 	@Override
@@ -104,7 +104,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 		Class clazz = Class.forName(dataMessage.getClassMethodCall().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
 		AccessibleObject accessibleObject = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(),
-			dataMessage.getClassMethodCall().getParameterList().stream().map(p -> p.getValue()).collect(Collectors.toList()),
+			dataMessage.getClassMethodCall().getParameterList().stream().map(Primitives.Parameter::getValue).collect(Collectors.toList()),
 			dataMessage.getClassMethodCall().getName());
 		if (accessibleObject == null) {
 			throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types",

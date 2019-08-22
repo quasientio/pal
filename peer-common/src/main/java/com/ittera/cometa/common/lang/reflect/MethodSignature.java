@@ -4,8 +4,8 @@ import java.lang.reflect.Method;
 
 public class MethodSignature extends CodeSignature {
 
-	protected final Method method;
-	protected final Class returnType;
+	private final Method method;
+	private final Class returnType;
 
 	public MethodSignature(Class declaringType, String declaringTypeName, int modifiers, String name,
 												 Class[] exceptionTypes, String[] parameterNames, Class[] parameterTypes, Method method,
@@ -16,7 +16,7 @@ public class MethodSignature extends CodeSignature {
 		this.returnType = returnType;
 	}
 
-	public MethodSignature(Method method) throws NoSuchMethodException {
+	public MethodSignature(Method method) {
 		this(method.getDeclaringClass(), method.getDeclaringClass().getTypeName(), method.getModifiers(), method.getName(),
 			method.getExceptionTypes(), null, method.getParameterTypes(), method, method.getReturnType());
 	}

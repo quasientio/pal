@@ -2,7 +2,7 @@ package com.ittera.cometa.concentrator.exec.java;
 
 public class Void {
 
-	private static Void instance = new Void();
+	private static final Void instance = new Void();
 
 	private Void() {
 	}

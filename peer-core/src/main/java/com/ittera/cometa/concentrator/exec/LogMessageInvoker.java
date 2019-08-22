@@ -17,21 +17,21 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-public class LogMessageInvoker extends Thread {
+class LogMessageInvoker extends Thread {
 
-	protected static final Logger logger = LoggerFactory.getLogger(LogMessageInvoker.class);
+	private static final Logger logger = LoggerFactory.getLogger(LogMessageInvoker.class);
 
-	protected final AtomicLong requestsDispatched = new AtomicLong(0);
+	private final AtomicLong requestsDispatched = new AtomicLong(0);
 
 	// zmq stuff
 	private final ZContext zmqContext;
 	private final String inLogAddress;
 	private Socket socket;
 
-	protected final IncomingMessageDispatcher incomingMessageDispatcher;
-	protected final DispatcherConnector dispatcherConnector;
-	protected final DataMessageBuilder dataMessageBuilder;
-	protected final UUID peerUuid;
+	private final IncomingMessageDispatcher incomingMessageDispatcher;
+	private final DispatcherConnector dispatcherConnector;
+	private final DataMessageBuilder dataMessageBuilder;
+	private final UUID peerUuid;
 
 	public LogMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
 													 DataMessageBuilder dataMessageBuilder, String inLogAddress, IncomingMessageDispatcher
@@ -124,7 +124,7 @@ public class LogMessageInvoker extends Thread {
 		}
 	}
 
-	protected void closeConnections() {
+	private void closeConnections() {
 
 		if (socket != null) {
 			socket.close();
@@ -133,7 +133,7 @@ public class LogMessageInvoker extends Thread {
 		dispatcherConnector.closeThreadLocalSocket();
 	}
 
-	protected void dispatch(DataMessage requestMsg, long recordOffset) {
+	private void dispatch(DataMessage requestMsg, long recordOffset) {
 		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, false);
 		if (logger.isDebugEnabled()) {
 			logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",

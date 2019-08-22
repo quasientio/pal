@@ -24,6 +24,8 @@ import java.util.UUID;
 import java.util.List;
 import java.util.Optional;
 
+import static java.lang.Class.*;
+
 public class ConstructorDispatcher extends BaseDispatcher {
 
 	@Singleton
@@ -40,7 +42,7 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
 
 		return messageBuilder.buildConstructor(peerUuid, ctxt, sender, storeObject(sender), args, Arrays.stream(args).map(
-			a -> storeObject(a)).toArray(ObjectRef[]::new));
+			this::storeObject).toArray(ObjectRef[]::new));
 	}
 
 	@Override
@@ -96,7 +98,7 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	protected Object invokeIncoming(Optional<AccessibleObject> accessibleObject, Object target,
 																	List<Object> args, Optional<Object> value) throws Exception {
 		Constructor constructor = (Constructor) accessibleObject.get();
-		return constructor.newInstance(args.toArray(new Object[args.size()]));
+		return constructor.newInstance(args.toArray(new Object[0]));
 	}
 
 	@Override
@@ -123,8 +125,8 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	protected AccessibleObject loadAccessibleObject(DataMessage dataMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 		// TODO why are we not using ReflectionHelper to get the constructor?
-		Class clazz = Class.forName(dataMessage.getConstructorCall().getClass_().getName(), true,
+		Class clazz = forName(dataMessage.getConstructorCall().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
-		return clazz.getDeclaredConstructor((Class[]) parameterTypes.toArray(new Class[parameterTypes.size()]));
+		return clazz.getDeclaredConstructor(parameterTypes.toArray(new Class[0]));
 	}
 }

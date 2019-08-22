@@ -5,7 +5,6 @@ import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
-import java.io.UnsupportedEncodingException;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,6 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.stream.Stream;
 
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -44,7 +44,7 @@ import zmq.ZError;
 @Singleton
 public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 
-	protected static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageReader.class);
+	private static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageReader.class);
 
 	private volatile boolean acceptingConnections = false;
 	private volatile boolean connectionsOpen = false;
@@ -198,7 +198,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 			logInfo.getBootstrapServers(), initialOffset);
 	}
 
-	protected void openConnections() {
+	private void openConnections() {
 		this.consumer = new KafkaConsumer<>(consumerProperties);
 		//manual assignment of partition so we can control offset seek
 		topicPartition = new TopicPartition(kafkaTopic, 0);
@@ -231,7 +231,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 		logger.info("All connections open");
 	}
 
-	protected void closeConnections() {
+	private void closeConnections() {
 
 		if (consumer != null) {
 			consumer.close();
@@ -353,7 +353,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 
 	private boolean recordProducedOrDispatchingBySelf(Headers headers) {
 
-		return Arrays.asList("produced-by", "dispatching-by").stream().anyMatch(hdrName -> {
+		return Stream.of("produced-by", "dispatching-by").anyMatch(hdrName -> {
 			for (Header header : headers.headers(hdrName)) {
 				UUID uuidInHeader = UUIDUtils.fromBytes(header.value());
 				if (peerUuid.equals(uuidInHeader)) {

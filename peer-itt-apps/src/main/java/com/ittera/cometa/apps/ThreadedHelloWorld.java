@@ -12,6 +12,6 @@ public class ThreadedHelloWorld {
 		sayHello();
 
 		// say hello from new thread
-		new Thread(() -> sayHello()).start();
+		new Thread(ThreadedHelloWorld::sayHello).start();
 	}
 }

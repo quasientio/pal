@@ -48,8 +48,7 @@ class LogConfigurator {
 
 	private void readFromLog(LogInfo log, boolean inAndOutAreSameLog, Long initialOffset) throws Exception {
 		KafkaDataMessageReader logMessageReader = injector.getInstance(KafkaDataMessageReader.class);
-		boolean skipWrittenOffsets = inAndOutAreSameLog; // for clarity
-		logMessageReader.readFromLog(log.getName(), skipWrittenOffsets, initialOffset);
+		logMessageReader.readFromLog(log.getName(), inAndOutAreSameLog, initialOffset);
 	}
 
 	private void writeToLog(LogInfo outLog, LogInfo inLog) {

@@ -16,11 +16,11 @@ import java.util.concurrent.ExecutionException;
 
 public class ExtendedThreadPoolExecutor extends ThreadPoolExecutor {
 
-	protected static final Logger logger = LoggerFactory.getLogger(ExtendedThreadPoolExecutor.class);
+	private static final Logger logger = LoggerFactory.getLogger(ExtendedThreadPoolExecutor.class);
 
 
-	public ExtendedThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveSeconds,
-																		TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory) {
+	ExtendedThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveSeconds,
+														 TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory) {
 		super(corePoolSize, maximumPoolSize, keepAliveSeconds, unit, workQueue, threadFactory);
 		logger.info("Initialized executor, with corePoolSize={}, maximumPoolSize={}, keepAliveSeconds={}",
 			corePoolSize, maximumPoolSize, keepAliveSeconds);

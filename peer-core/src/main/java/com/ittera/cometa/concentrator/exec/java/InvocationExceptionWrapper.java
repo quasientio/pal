@@ -1,6 +1,6 @@
 package com.ittera.cometa.concentrator.exec.java;
 
-public class InvocationExceptionWrapper {
+class InvocationExceptionWrapper {
 
 	private final Exception exception;
 

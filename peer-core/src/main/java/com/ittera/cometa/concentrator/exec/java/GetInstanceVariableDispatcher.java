@@ -74,7 +74,6 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 
 		Class clazz = Class.forName(dataMessage.getInstanceFieldGet().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
-		AccessibleObject accessibleObject = clazz.getDeclaredField(dataMessage.getInstanceFieldGet().getField().getName());
-		return accessibleObject;
+		return clazz.getDeclaredField(dataMessage.getInstanceFieldGet().getField().getName());
 	}
 }

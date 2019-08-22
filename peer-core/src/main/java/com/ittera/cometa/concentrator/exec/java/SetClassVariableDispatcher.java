@@ -49,8 +49,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 
 		Class clazz = Class.forName(dataMessage.getStaticFieldPut().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
-		AccessibleObject accessibleObject = clazz.getDeclaredField(dataMessage.getStaticFieldPut().getField().getName());
-		return accessibleObject;
+		return clazz.getDeclaredField(dataMessage.getStaticFieldPut().getField().getName());
 	}
 
 	@Override

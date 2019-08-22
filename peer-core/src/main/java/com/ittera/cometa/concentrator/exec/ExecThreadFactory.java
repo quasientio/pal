@@ -21,27 +21,27 @@ public class ExecThreadFactory implements ThreadFactory {
 
 	private final List<Thread> createdThreads = new ArrayList<>();
 
-	protected ThreadGroup threadGroup;
-	protected final AtomicInteger threadCounter = new AtomicInteger(0);
+	private final ThreadGroup threadGroup;
+	private final AtomicInteger threadCounter = new AtomicInteger(0);
 
-	protected static final int THREAD_GROUP_MAX_PRIORITY = Thread.NORM_PRIORITY;
-	protected static final int THREAD_PRIORITY = Thread.NORM_PRIORITY;
-	protected static final boolean THREAD_GROUP_IS_DAEMON = false;
-	protected static final boolean THREAD_IS_DAEMON = false;
+	private static final int THREAD_GROUP_MAX_PRIORITY = Thread.NORM_PRIORITY;
+	private static final int THREAD_PRIORITY = Thread.NORM_PRIORITY;
+	private static final boolean THREAD_GROUP_IS_DAEMON = false;
+	private static final boolean THREAD_IS_DAEMON = false;
 
-	protected static final Logger logger = LoggerFactory.getLogger(ExecThreadFactory.class);
+	private static final Logger logger = LoggerFactory.getLogger(ExecThreadFactory.class);
 
-	protected final ExecChannelType execChannelType;
-	protected final DataMessageBuilder dataMessageBuilder;
-	protected final DispatcherConnector dispatcherConnector;
-	protected final IncomingMessageDispatcher incomingMessageDispatcher;
+	private final ExecChannelType execChannelType;
+	private final DataMessageBuilder dataMessageBuilder;
+	private final DispatcherConnector dispatcherConnector;
+	private final IncomingMessageDispatcher incomingMessageDispatcher;
 
 	// zmq stuff
-	protected final ZContext zmqContext;
-	protected final String zmqSocketAddress;
+	private final ZContext zmqContext;
+	private final String zmqSocketAddress;
 
-	protected final UUID peerUuid;
-	protected final ClassLoader classLoader;
+	private final UUID peerUuid;
+	private final ClassLoader classLoader;
 
 	enum ExecChannelType {
 		PEER("peer"), LOG("log");
@@ -105,7 +105,7 @@ public class ExecThreadFactory implements ThreadFactory {
 		return createdThreads;
 	}
 
-	protected void addCreatedThread(Thread t) {
+	private void addCreatedThread(Thread t) {
 		createdThreads.add(t);
 	}
 

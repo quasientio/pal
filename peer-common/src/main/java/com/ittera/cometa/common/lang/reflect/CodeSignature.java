@@ -7,13 +7,13 @@ import java.util.stream.IntStream;
 
 public abstract class CodeSignature extends Signature {
 
-	protected final Class[] exceptionTypes;
-	protected final String[] parameterNames;
-	protected final Class[] parameterTypes;
-	protected final Parameter[] parameters;
+	private final Class[] exceptionTypes;
+	private final String[] parameterNames;
+	private final Class[] parameterTypes;
+	private final Parameter[] parameters;
 
-	public CodeSignature(Class declaringType, String declaringTypeName, int modifiers, String name,
-											 Class[] exceptionTypes, String[] parameterNames, Class[] parameterTypes, Parameter[] parameters) {
+	CodeSignature(Class declaringType, String declaringTypeName, int modifiers, String name,
+								Class[] exceptionTypes, String[] parameterNames, Class[] parameterTypes, Parameter[] parameters) {
 		super(declaringType, declaringTypeName, modifiers, name);
 		this.exceptionTypes = Arrays.copyOf(exceptionTypes, exceptionTypes.length);
 		this.parameterTypes = Arrays.copyOf(parameterTypes, parameterTypes.length);

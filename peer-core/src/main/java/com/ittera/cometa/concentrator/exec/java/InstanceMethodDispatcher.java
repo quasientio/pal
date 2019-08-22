@@ -43,7 +43,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 	@Override
 	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
 		return messageBuilder.buildInstanceMethod(peerUuid, ctxt, sender, storeObject(sender), target, storeObject(target),
-			args, Arrays.stream(args).map(a -> storeObject(a)).toArray(ObjectRef[]::new));
+			args, Arrays.stream(args).map(this::storeObject).toArray(ObjectRef[]::new));
 	}
 
 	@Override
@@ -131,7 +131,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 		Class clazz = Class.forName(dataMessage.getInstanceMethodCall().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
 		AccessibleObject accessibleObject = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(),
-			dataMessage.getInstanceMethodCall().getParameterList().stream().map(p -> p.getValue()).collect(Collectors.toList()),
+			dataMessage.getInstanceMethodCall().getParameterList().stream().map(Primitives.Parameter::getValue).collect(Collectors.toList()),
 			dataMessage.getInstanceMethodCall().getName());
 		if (accessibleObject == null) {
 			//TODO perhaps this should be thrown by ReflectionHelper instead

@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ReflectionHelper {
 
-	protected static final Logger logger = LoggerFactory.getLogger(ReflectionHelper.class);
+	private static final Logger logger = LoggerFactory.getLogger(ReflectionHelper.class);
 
 	private static final Map<String, Method> matchedMethodsCache = new ConcurrentHashMap<>();
 

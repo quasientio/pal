@@ -53,11 +53,10 @@ public class ThinPeer {
 
 	private final UUID peerUuid = UUID.randomUUID();
 
-	private boolean allowP2P;
+	private final boolean allowP2P;
 
 	// static
-	protected final static Logger logger = LoggerFactory.getLogger(ThinPeer.class);
-	protected final DataMessageBuilder dataMessageBuilder;
+	private final static Logger logger = LoggerFactory.getLogger(ThinPeer.class);
 
 	// kafka stuff
 	private LogInfo inLog, outLog;
@@ -65,10 +64,10 @@ public class ThinPeer {
 	private final Duration pollingDuration;
 	private static final int PRECEDING_RECS = 50;
 
-	private final KafkaProducer producer;
+	private final KafkaProducer<String, DataMessage> producer;
 	private final KafkaConsumer<String, String> consumer;
 
-	private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap();
+	private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap<>();
 	private final ExecutorService singleThreadConsumerExecutor = Executors.newSingleThreadExecutor();
 
 	// zmq stuff
@@ -177,9 +176,6 @@ public class ThinPeer {
 		if (currentPeer != null) {
 			connectToPeer(currentPeer);
 		}
-
-		// configure msg builder
-		this.dataMessageBuilder = new ProtobufDataMessageBuilder();
 	}
 
 	private Properties loadKafkaProducerProps(Properties properties) {
@@ -280,7 +276,7 @@ public class ThinPeer {
 		return getMessageAtOffset(seek, true);
 	}
 
-	public DataMessage getMessageAtOffset(Long seek, boolean lookupCached) {
+	private DataMessage getMessageAtOffset(Long seek, boolean lookupCached) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
 		}
@@ -294,7 +290,7 @@ public class ThinPeer {
 			}
 		}
 
-		Map recordsRead = new HashMap<Long, ConsumerRecord>();
+		Map<Long, ConsumerRecord> recordsRead = new HashMap<>();
 		ConsumerRecord requestedRecord = null;
 
 		long actualSeekOffset =  (seek - PRECEDING_RECS < 0) ?  seek : seek - PRECEDING_RECS;
@@ -334,7 +330,7 @@ public class ThinPeer {
 			logger.debug("Getting {} messages starting @ offset #{}", numMessages, startOffset);
 		}
 		consumer.seek(inTopicPartition, startOffset);
-		List<ConsumerRecord> messages = new ArrayList();
+		List<ConsumerRecord> messages = new ArrayList<>();
 		boolean gotAllMessages = false;
 
 		while (!gotAllMessages) {
@@ -360,7 +356,7 @@ public class ThinPeer {
 	public void sendToLogAndForget(DataMessage message) {
 
 		// send to kafka
-		producer.send(new ProducerRecord(outLog.getName(), message.getMessageUuid(), message));
+		producer.send(new ProducerRecord<>(outLog.getName(), message.getMessageUuid(), message));
 		if (logger.isDebugEnabled()) {
 			logger.debug("Message sent to log, and we're done:\n{}", message);
 		}
@@ -371,7 +367,7 @@ public class ThinPeer {
 		final UUID requestMsgUuid = UUID.fromString(message.getMessageUuid());
 
 		// send to kafka
-		producer.send(new ProducerRecord(outLog.getName(), message.getMessageUuid(), message));
+		producer.send(new ProducerRecord<>(outLog.getName(), message.getMessageUuid(), message));
 		if (logger.isDebugEnabled()) {
 			logger.debug("Message sent to log:\n{}", message);
 		}
@@ -381,14 +377,11 @@ public class ThinPeer {
 
 		// addLogRequest callback
 		StringCallback addLogRequestCallback = (rc, path, ctx, name) -> {
-			switch (Code.get(rc)) {
-				case OK:
-					// set watch to get notified about changes to children
-					((ZkClient) peerLogDirectory).getChildren(outLog.getName(), requestMsgUuid, messageFuture, messageFuture,
-						null);
-					break;
-				default:
-					logger.error("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
+			if (Code.get(rc) == Code.OK) {// set watch to get notified about changes to children
+				((ZkClient) peerLogDirectory).getChildren(outLog.getName(), requestMsgUuid, messageFuture, messageFuture,
+					null);
+			} else {
+				logger.error("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
 			}
 		};
 
@@ -441,9 +434,9 @@ public class ThinPeer {
 
 	private DataMessage sendAndReceiveConsumingLog(DataMessage message) {
 		// send to kafka
-		Long sentRecordOffset;
+		long sentRecordOffset;
 		Future<RecordMetadata> recordMetadataFuture =
-			producer.send(new ProducerRecord(outLog.getName(), message.getMessageUuid(), message));
+			producer.send(new ProducerRecord<>(outLog.getName(), message.getMessageUuid(), message));
 		try {
 			RecordMetadata recordMetadata = recordMetadataFuture.get();
 			if (logger.isDebugEnabled()) {
@@ -545,11 +538,8 @@ public class ThinPeer {
 
 	private static String getRecordInfo(RecordMetadata recordMetadata) {
 
-		String builder = "{\n checksum: " + '\n' +
-			" timestamp: " + recordMetadata.timestamp() + '\n' +
-			" offset: " + recordMetadata.offset() + '\n' +
-			" #bytes in value: " + recordMetadata.serializedValueSize() + "\n}";
-		return builder;
+		return String.format("{%n timestamp: %d,%n offset: %d,%n #bytes in value: %d%n}",
+		recordMetadata.timestamp(),recordMetadata.offset(),recordMetadata.serializedValueSize());
 	}
 
 	public void close() {

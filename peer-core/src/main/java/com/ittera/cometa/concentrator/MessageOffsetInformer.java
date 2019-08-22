@@ -51,21 +51,19 @@ class MessageOffsetInformer implements Callback, Watcher {
 	private final LogInfo inLog;
 	private final UUID peerUuid;
 
-	protected static final Logger logger = LoggerFactory.getLogger(MessageOffsetInformer.class);
+	private static final Logger logger = LoggerFactory.getLogger(MessageOffsetInformer.class);
 
 	private final AsyncCallback.StringCallback addReplyCallback = new AsyncCallback.StringCallback() {
 		@Override
 		public void processResult(int rc, String path, Object ctx, String name) {
-			switch (Code.get(rc)) {
-				case OK:
-					if (logger.isDebugEnabled()) {
-						logger.debug("reply node created for message w/uuid: {}", message.getMessageUuid());
-					}
-					done = true;
-					break;
-				default:
-					logger.error("reply node NOT created (error code: {}) for message w/uuid: {}", rc,
-						message.getMessageUuid());
+			if (Code.get(rc) == Code.OK) {
+				if (logger.isDebugEnabled()) {
+					logger.debug("reply node created for message w/uuid: {}", message.getMessageUuid());
+				}
+				done = true;
+			} else {
+				logger.error("reply node NOT created (error code: {}) for message w/uuid: {}", rc,
+					message.getMessageUuid());
 			}
 		}
 	};

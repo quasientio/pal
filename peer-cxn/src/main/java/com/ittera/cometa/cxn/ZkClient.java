@@ -4,6 +4,7 @@ import com.ittera.cometa.*;
 import com.ittera.cometa.common.util.Strings;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 
 import java.util.*;
@@ -21,18 +22,18 @@ import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
 
 public class ZkClient implements Watcher, PeerLogDirectory {
 
-	protected static final Logger logger = LoggerFactory.getLogger(ZkClient.class);
+	private static final Logger logger = LoggerFactory.getLogger(ZkClient.class);
 
-	protected static final String PROPERTIES_SEP = "|";
-	static Charset loadedCharset;
+	private static final String PROPERTIES_SEP = "|";
+	private static Charset loadedCharset;
 
 	// root paths
-	protected static final String DEFAULT_ROOT_PATH = "/cometa";
-	protected static final String PEERS_SUBPATH = "/peers";
-	protected static final String LOGS_SUBPATH = "/logs";
-	protected static final String BROKERS_PATH = "/brokers/ids";
+	private static final String DEFAULT_ROOT_PATH = "/cometa";
+	private static final String PEERS_SUBPATH = "/peers";
+	private static final String LOGS_SUBPATH = "/logs";
+	private static final String BROKERS_PATH = "/brokers/ids";
 
-	public static final int SESSION_TIMEOUT = 10000;
+	private static final int SESSION_TIMEOUT = 10000;
 
 	private boolean brokersInfoLoaded;
 	private ZooKeeper zk;
@@ -497,7 +498,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 
 	@Override
 	public Set<LogInfo> getAllLogs() throws Exception {
-		Set<LogInfo> allLogs = new TreeSet();
+		Set<LogInfo> allLogs = new TreeSet<>();
 		List<String> logs = zk.getChildren(getLogsPath(), false);
 		for (String logName : logs) {
 			allLogs.add(getLogInfo(logName));
@@ -604,7 +605,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	@Override
 	public Set<PeerInfo> getAllPeers() throws Exception {
 
-		Set<PeerInfo> allPeers = new TreeSet();
+		Set<PeerInfo> allPeers = new TreeSet<>();
 		List<String> peers = zk.getChildren(getPeersPath(), false);
 		for (String uuid : peers) {
 			allPeers.add(getPeerInfo(UUID.fromString(uuid)));
@@ -654,12 +655,12 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		logger.info("Deleted root path node {}", getRootPath());
 	}
 
-	protected Stat getLogNodeStat(String logName) throws Exception {
+	private Stat getLogNodeStat(String logName) throws Exception {
 		String logNode = getLogsPath() + "/" + logName;
 		return zk.exists(logNode, null);
 	}
 
-	protected Stat getPeerNodeStat(UUID peerUuid) throws Exception {
+	private Stat getPeerNodeStat(UUID peerUuid) throws Exception {
 		String peerNode = getPeersPath() + "/" + peerUuid;
 		return zk.exists(peerNode, null);
 	}
@@ -674,15 +675,15 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		return zk != null && zk.getState().equals(ZooKeeper.States.CONNECTED);
 	}
 
-	public String getRootPath() {
+	private String getRootPath() {
 		return customRootPath != null ? customRootPath : DEFAULT_ROOT_PATH;
 	}
 
-	public String getPeersPath() {
+	private String getPeersPath() {
 		return getRootPath() + PEERS_SUBPATH;
 	}
 
-	public String getLogsPath() {
+	private String getLogsPath() {
 		return getRootPath() + LOGS_SUBPATH;
 	}
 
@@ -690,7 +691,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 		return customRootPath;
 	}
 
-	public void setCustomRootPath(String customRootPath) {
+	private void setCustomRootPath(String customRootPath) {
 		this.customRootPath = customRootPath;
 	}
 
@@ -727,7 +728,7 @@ public class ZkClient implements Watcher, PeerLogDirectory {
 	private Charset getEncodingCharset() {
 		if (loadedCharset == null) {
 			try {
-				loadedCharset = Charset.forName("UTF-8");
+				loadedCharset = StandardCharsets.UTF_8;
 			} catch (UnsupportedCharsetException e) {
 				logger.warn("No UTF-8 available for encoding/decoding. Falling back to default charset", e);
 				loadedCharset = Charset.defaultCharset();

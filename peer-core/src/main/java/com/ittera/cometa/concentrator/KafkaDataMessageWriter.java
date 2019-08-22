@@ -39,9 +39,9 @@ import zmq.ZError;
  */
 
 @Singleton
-public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
+class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 
-	protected static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageWriter.class);
+	private static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageWriter.class);
 
 	// kafka stuff
 	private KafkaProducer producer;
@@ -79,7 +79,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 		logger.info("Initialized kafka message writer");
 	}
 
-	public void openConnections() {
+	private void openConnections() {
 
 		// start subscriber
 		this.subscriber = zmqContext.createSocket(SocketType.SUB);
@@ -102,7 +102,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 		logger.info("All connections open - except kafka producer");
 	}
 
-	protected void closeConnections() {
+	private void closeConnections() {
 		if (producer != null) {
 			producer.close();
 		}
@@ -233,7 +233,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 			logger.debug("sending new message with uuid: {}", message.getMessageUuid());
 		}
 
-		ProducerRecord<String, DataMessage> newRecord = new ProducerRecord<String, DataMessage>(outLog.getName(), 0,
+		ProducerRecord<String, DataMessage> newRecord = new ProducerRecord<>(outLog.getName(), 0,
 			fromPeer.toString(), message, headers);
 
 		producer.send(newRecord, new MessageOffsetInformer(message, publishOffsets, offsetPublisher,

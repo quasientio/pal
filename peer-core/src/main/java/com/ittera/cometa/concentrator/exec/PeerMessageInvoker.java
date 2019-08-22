@@ -15,16 +15,16 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-public class PeerMessageInvoker extends Thread {
+class PeerMessageInvoker extends Thread {
 
-	protected static final Logger logger = LoggerFactory.getLogger(PeerMessageInvoker.class);
+	private static final Logger logger = LoggerFactory.getLogger(PeerMessageInvoker.class);
 
-	protected final AtomicLong requestsDispatched = new AtomicLong(0);
-	protected final AtomicLong requestsDismissed = new AtomicLong(0);
+	private final AtomicLong requestsDispatched = new AtomicLong(0);
+	private final AtomicLong requestsDismissed = new AtomicLong(0);
 
-	protected final IncomingMessageDispatcher incomingMessageDispatcher;
-	protected final DispatcherConnector dispatcherConnector;
-	protected final DataMessageBuilder dataMessageBuilder;
+	private final IncomingMessageDispatcher incomingMessageDispatcher;
+	private final DispatcherConnector dispatcherConnector;
+	private final DataMessageBuilder dataMessageBuilder;
 
 	// zmq stuff
 	private final ZContext zmqContext;
@@ -126,7 +126,7 @@ public class PeerMessageInvoker extends Thread {
 		}
 	}
 
-	protected void closeConnections() {
+	private void closeConnections() {
 
 		if (socket != null) {
 			socket.close();
@@ -134,7 +134,7 @@ public class PeerMessageInvoker extends Thread {
 		dispatcherConnector.closeThreadLocalSocket();
 	}
 
-	protected DataMessage dispatch(DataMessage requestMsg) {
+	private DataMessage dispatch(DataMessage requestMsg) {
 		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, true);
 		if (logger.isDebugEnabled()) {
 			logger.debug("Invoker dispatched peer request message uuid: {}, reply uuid: {}", requestMsg.getMessageUuid(),

@@ -72,10 +72,8 @@ public class KafkaBrokerInfo {
 			endpoints[i] = new KafkaBrokerEndpoint(protocolMap.getString(protocolKey), hostAndPort);
 		}
 
-		KafkaBrokerInfo kafkaBrokerInfo = new KafkaBrokerInfo(
+		return new KafkaBrokerInfo(
 			json.getInt("version"), json.getString("host"), json.getInt("port"),
 			json.getInt("jmx_port"), endpoints, json.getString("timestamp"));
-
-		return kafkaBrokerInfo;
 	}
 }

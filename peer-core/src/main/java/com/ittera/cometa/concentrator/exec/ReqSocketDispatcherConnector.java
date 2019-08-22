@@ -17,6 +17,7 @@ import org.zeromq.ZContext;
 import zmq.ZError;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,10 +28,9 @@ import javax.inject.Named;
 
 public class ReqSocketDispatcherConnector implements DispatcherConnector {
 
-	protected final static Logger logger = LoggerFactory.getLogger(ReqSocketDispatcherConnector.class);
+	private final static Logger logger = LoggerFactory.getLogger(ReqSocketDispatcherConnector.class);
 
 	private final ZContext zmqContext;
-	private final DataMessageBuilder messageBuilder;
 	private final String outCellAddress;
 
 //	@Inject
@@ -60,7 +60,6 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 	public ReqSocketDispatcherConnector(ZContext zmqContext, UUID peerUuid, DataMessageBuilder messageBuilder,
 																			@Named("out.cell") String outCellAddress) {
 		this.zmqContext = zmqContext;
-		this.messageBuilder = messageBuilder;
 		this.outCellAddress = outCellAddress;
 		this.WRITE_AHEAD_HEADER = messageBuilder.buildWriteAheadHeader(peerUuid);
 	}
@@ -70,7 +69,7 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 		return sendAndRecv(message, null);
 	}
 
-	private final DataMessage sendAndRecv(DataMessage message, @Nullable List<InternalHeader> headers) {
+	private DataMessage sendAndRecv(DataMessage message, @Nullable List<InternalHeader> headers) {
 		if (logger.isTraceEnabled()) {
 			logger.trace("sendAndRecv:in w/ message with uuid: {}", message.getMessageUuid());
 		}
@@ -134,7 +133,7 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 		}
 
 		// by sending out <write_ahead> header the Log Writer will serialize it with a <dispatching-by> header
-		List<InternalHeader> headers = Arrays.asList(this.WRITE_AHEAD_HEADER);
+		List<InternalHeader> headers = Collections.singletonList(this.WRITE_AHEAD_HEADER);
 		sendAndRecv(message, headers);
 	}
 

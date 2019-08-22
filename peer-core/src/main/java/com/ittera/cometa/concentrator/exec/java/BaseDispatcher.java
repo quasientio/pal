@@ -31,15 +31,15 @@ import javax.inject.Inject;
 
 public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatcher {
 
-	protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+	final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-	protected UUID peerUuid;
-	protected DataMessageBuilder messageBuilder;
-	protected ObjectService objectService;
-	protected DispatcherConnector connector;
+	UUID peerUuid;
+	DataMessageBuilder messageBuilder;
+	ObjectService objectService;
+	private DispatcherConnector connector;
 
 	//TODO load from config
-	protected static final boolean ENFORCE_JAVALANG_ACCESS = false;
+	private static final boolean ENFORCE_JAVALANG_ACCESS = false;
 
 	@Override
 	public final Object dispatch(Context ctxt, Object sender, Object target, Object[] args)
@@ -132,7 +132,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		Throwable exceptionWhileLoading = null, exceptionWhileInvoking = null;
 		Optional<AccessibleObject> accessibleObject = Optional.empty();
 		Object target = null;
-		Optional<Object> value = null;
+		Optional<Object> value = Optional.empty();
 		List<Object> args = null;
 
 		// Loading phase
@@ -193,7 +193,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		return afterExecReplyMsg;
 	}
 
-	protected final ObjectRef storeObject(Object object) {
+	final ObjectRef storeObject(Object object) {
 		return object != null ? objectService.storeObject(object) : null;
 	}
 
@@ -250,7 +250,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 *
 	 * @return
 	 */
-	protected Optional<Object> getValueFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject) {
+	Optional<Object> getValueFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject) {
 		return Optional.empty();
 	}
 
@@ -259,7 +259,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 *
 	 * @return
 	 */
-	protected Object getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
+	Object getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
 		throws ClassNotFoundException, ObjectNotFoundException {
 		return null;
 	}
@@ -272,11 +272,11 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 * @param exceptionWhileInvoking
 	 * @return
 	 */
-	protected final DataMessage wrapAfterExecThrowableMessage(String messageUuid,
-																														Optional<AccessibleObject> accessibleObject,
-																														ExecutableObjectType executableObjectType,
-																														Throwable exceptionWhileLoading,
-																														Throwable exceptionWhileInvoking) {
+	final DataMessage wrapAfterExecThrowableMessage(String messageUuid,
+																									Optional<AccessibleObject> accessibleObject,
+																									ExecutableObjectType executableObjectType,
+																									Throwable exceptionWhileLoading,
+																									Throwable exceptionWhileInvoking) {
 
 		Throwable throwable = exceptionWhileLoading != null ? exceptionWhileLoading : exceptionWhileInvoking;
 		return messageBuilder.buildAccessibleObjectThrowable(peerUuid, accessibleObject, executableObjectType,
@@ -284,22 +284,22 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	}
 
 	@Inject
-	protected final void setPeerUuid(UUID peerUuid) {
+	final void setPeerUuid(UUID peerUuid) {
 		this.peerUuid = peerUuid;
 	}
 
 	@Inject
-	protected final void setMessageBuilder(DataMessageBuilder messageBuilder) {
+	final void setMessageBuilder(DataMessageBuilder messageBuilder) {
 		this.messageBuilder = messageBuilder;
 	}
 
 	@Inject
-	protected final void setObjectService(ObjectService objectService) {
+	final void setObjectService(ObjectService objectService) {
 		this.objectService = objectService;
 	}
 
 	@Inject
-	protected final void setConnector(DispatcherConnector connector) {
+	final void setConnector(DispatcherConnector connector) {
 		this.connector = connector;
 	}
 

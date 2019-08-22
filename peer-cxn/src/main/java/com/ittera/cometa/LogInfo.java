@@ -3,7 +3,6 @@ package com.ittera.cometa;
 import com.ittera.cometa.util.ByteSizeConverter;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class LogInfo implements Comparable {
 
@@ -64,7 +63,7 @@ public class LogInfo implements Comparable {
 		} else {
 			List<String> urlList = new ArrayList<>();
 			for (KafkaBrokerInfo brokerInfo : brokerInfoSet) {
-				Arrays.stream(brokerInfo.getEndpoints()).map(ep -> ep.toURL()).forEach(u -> urlList.add(u));
+				Arrays.stream(brokerInfo.getEndpoints()).map(KafkaBrokerEndpoint::toURL).forEach(urlList::add);
 			}
 			this.bootstrapServers = String.join(",", urlList);
 		}

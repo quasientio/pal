@@ -74,8 +74,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 
 		Class clazz = Class.forName(dataMessage.getInstanceFieldPut().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
-		AccessibleObject accessibleObject = clazz.getDeclaredField(dataMessage.getInstanceFieldPut().getField().getName());
-		return accessibleObject;
+		return clazz.getDeclaredField(dataMessage.getInstanceFieldPut().getField().getName());
 	}
 
 	@Override

@@ -24,7 +24,7 @@ public class PeerOptions {
 	boolean helpNeeded;
 	String classpath;
 
-	PeerOptions(Options options) {
+	private PeerOptions(Options options) {
 		this.options = options;
 	}
 

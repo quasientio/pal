@@ -21,12 +21,12 @@ import java.util.UUID;
 
 import org.zeromq.ZContext;
 
-public class PeerGuiceModule extends AbstractModule {
+class PeerGuiceModule extends AbstractModule {
 
-	private Properties properties;
-	private ZContext zContext;
-	private UUID peerUuid;
-	private CustomClassloader customClassloader;
+	private final Properties properties;
+	private final ZContext zContext;
+	private final UUID peerUuid;
+	private final CustomClassloader customClassloader;
 
 	PeerGuiceModule(Properties properties, ZContext zContext, CustomClassloader customClassloader) {
 		this.properties = properties;
