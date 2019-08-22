@@ -1,9 +1,16 @@
 package com.ittera.cometa.concentrator;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import com.google.common.primitives.Ints;
+
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.messages.LogMessageHeader;
+import com.ittera.cometa.messages.UUIDUtils;
+import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -17,9 +24,7 @@ import org.apache.kafka.common.header.Header;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.Properties;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.zeromq.SocketType;
@@ -60,8 +65,7 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 	private LogInfo outLog, inLog;
 	private volatile boolean connectionsOpen = false;
 	private final AtomicInteger messagesSent = new AtomicInteger(0);
-	private Iterable<Header> SELF_PRODUCED_HEADERS;
-	private Iterable<Header> SELF_DISPATCHING_HEADERS;
+	private Header SELF_PRODUCED_HEADER, SELF_DISPATCHING_HEADER;
 
 	@Inject
 	public KafkaDataMessageWriter(@Named("key.serializer") String keySerializer,
@@ -90,6 +94,10 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 			logger.info("Publisher connected");
 		}
 
+		// create and store immutable headers (instead of creating with every send)
+		this.SELF_PRODUCED_HEADER = new LogMessageHeader("produced-by", UUIDUtils.toBytes(peerUuid));
+		this.SELF_DISPATCHING_HEADER = new LogMessageHeader("dispatching-by", UUIDUtils.toBytes(peerUuid));
+
 		connectionsOpen = true;
 		logger.info("All connections open - except kafka producer");
 	}
@@ -117,10 +125,6 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 		this.publishOffsets = publishOffsets;
 		producerProperties.put("bootstrap.servers", outLog.getBootstrapServers());
 
-		// create and store headers (instead of creating with every send)
-		this.SELF_PRODUCED_HEADERS = Arrays.asList(new LogMessageHeader("produced-by", peerUuid.toString().toUpperCase()));
-		this.SELF_DISPATCHING_HEADERS = Arrays.asList(new LogMessageHeader("dispatching-by", peerUuid.toString().toUpperCase()));
-
 		// start kafka writer
 		this.producer = new KafkaProducer<>(producerProperties);
 		logger.info("Will write to log: {}", outLog);
@@ -144,8 +148,30 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 
 		while (isRunning() && !Thread.interrupted()) {
 
+			int headerCount;
 			byte[] msg;
+			List<InternalHeader> headers = new ArrayList<>();
 			try {
+				byte[] buff;
+
+				// message is multi-part
+				// part 1. how many headers?
+				buff = subscriber.recv();
+				headerCount = Ints.fromByteArray(buff);
+
+				// part 2. [headers]
+				if (headerCount > 0) {
+					for (int i = 0; i < headerCount; i++) {
+						buff = subscriber.recv();
+						try {
+							headers.add(InternalHeader.parseFrom(buff));
+						} catch (InvalidProtocolBufferException e) {
+							logger.error("Error parsing internal header from byte array", e);
+						}
+					}
+				}
+
+				// part 3. message
 				msg = subscriber.recv();
 			} catch (ZMQException ex) {
 				int errorCode = ex.getErrorCode();
@@ -175,20 +201,40 @@ public class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 			if (dataMessage != null) {
 
 				// send to kafka immediately
-				sendToKafka(dataMessage, peerUuid);
+				sendToKafka(dataMessage, peerUuid, fromInternalToLog(headers));
 			}
 		}
 
 		closeConnections();
 	}
 
-	private void sendToKafka(DataMessage message, UUID fromPeer) {
+	private Iterable<Header> fromInternalToLog(List<InternalHeader> internalHeaders) {
+		List<Header> logHeaders = new ArrayList<>();
+		boolean isWriteAhead = false;
+		for (InternalHeader ih : internalHeaders) {
+			if (ih.getHeaderType().equals(Wrappers.InternalHeaderType.WRITE_AHEAD)) {
+				isWriteAhead = true;
+				logHeaders.add(SELF_DISPATCHING_HEADER);
+				break;
+			}
+		}
+
+		if (!isWriteAhead) {
+			// we don't need an InternalHeader, we assume it's self-produced
+			logHeaders.add(SELF_PRODUCED_HEADER);
+		}
+
+		return logHeaders;
+	}
+
+
+	private void sendToKafka(DataMessage message, UUID fromPeer, Iterable<Header> headers) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("sending new message with uuid: {}", message.getMessageUuid());
 		}
 
 		ProducerRecord<String, DataMessage> newRecord = new ProducerRecord<String, DataMessage>(outLog.getName(), 0,
-			fromPeer.toString(), message, this.SELF_PRODUCED_HEADERS);
+			fromPeer.toString(), message, headers);
 
 		producer.send(newRecord, new MessageOffsetInformer(message, publishOffsets, offsetPublisher,
 			peerLogDirectory, inLog, peerUuid));

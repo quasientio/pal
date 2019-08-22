@@ -31,22 +31,22 @@ public class IncomingMessageDispatcher {
 	@Inject
 	private SetInstanceVariableDispatcher setInstanceVariableDispatcher;
 
-	public DataMessage incomingCall(DataMessage dataMessage) {
+	public DataMessage incomingCall(DataMessage dataMessage, boolean isDirect) {
 
 		if (dataMessage.hasConstructorCall()) {
-			return constructorDispatcher.dispatchIncoming(dataMessage);
+			return constructorDispatcher.dispatchIncoming(dataMessage, isDirect);
 		} else if (dataMessage.hasClassMethodCall()) {
-			return classMethodDispatcher.dispatchIncoming(dataMessage);
+			return classMethodDispatcher.dispatchIncoming(dataMessage, isDirect);
 		} else if (dataMessage.hasInstanceMethodCall()) {
-			return instanceMethodDispatcher.dispatchIncoming(dataMessage);
+			return instanceMethodDispatcher.dispatchIncoming(dataMessage, isDirect);
 		} else if (dataMessage.hasStaticFieldGet()) {
-			return getClassVariableDispatcher.dispatchIncoming(dataMessage);
+			return getClassVariableDispatcher.dispatchIncoming(dataMessage, isDirect);
 		} else if (dataMessage.hasInstanceFieldGet()) {
-			return getInstanceVariableDispatcher.dispatchIncoming(dataMessage);
+			return getInstanceVariableDispatcher.dispatchIncoming(dataMessage, isDirect);
 		} else if (dataMessage.hasStaticFieldPut()) {
-			return setClassVariableDispatcher.dispatchIncoming(dataMessage);
+			return setClassVariableDispatcher.dispatchIncoming(dataMessage, isDirect);
 		} else if (dataMessage.hasInstanceFieldPut()) {
-			return setInstanceVariableDispatcher.dispatchIncoming(dataMessage);
+			return setInstanceVariableDispatcher.dispatchIncoming(dataMessage, isDirect);
 		} else {
 			throw new IllegalArgumentException(String.format("Incoming message with uuid ignored - no handler:%n%s",
 				dataMessage));

@@ -9,6 +9,19 @@ import "values.proto";
 option java_package = "com.ittera.cometa.messages.protobuf.data";
 option optimize_for = SPEED;
 
+enum InternalHeaderType {
+    /*
+     Sent before dispatching.
+     Value is the UUID of the receiving-dispatching peer, not the producer.
+    */
+    WRITE_AHEAD = 1;
+}
+
+message InternalHeader {
+    required InternalHeaderType headerType = 1;
+    optional string value = 2;
+}
+
 enum Type {
     STATIC_CONSTRUCTOR = 1;
     RETURN_CLASS = 2;

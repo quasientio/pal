@@ -2,13 +2,11 @@ package com.ittera.cometa.messages;
 
 import org.apache.kafka.common.header.Header;
 
-import java.io.UnsupportedEncodingException;
-
 public class LogMessageHeader implements Header {
 	private final String key;
-	private final String value;
+	private final byte[] value;
 
-	public LogMessageHeader(String key, String value) {
+	public LogMessageHeader(String key, byte[] value) {
 		this.key = key;
 		this.value = value;
 	}
@@ -18,11 +16,6 @@ public class LogMessageHeader implements Header {
 	}
 
 	public byte[] value() {
-		try {
-			return value.getBytes("UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-			return null;
-		}
+		return value;
 	}
 }

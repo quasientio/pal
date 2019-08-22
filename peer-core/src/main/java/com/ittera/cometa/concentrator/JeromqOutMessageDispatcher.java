@@ -1,6 +1,7 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.google.common.primitives.Ints;
+import com.ittera.cometa.messages.protobuf.data.Wrappers;
 
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.inject.Inject;
@@ -10,12 +11,14 @@ import com.google.inject.name.Named;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.zeromq.SocketType;
-import org.zeromq.ZMQ;
 import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
@@ -36,7 +39,7 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 	// zmq stuff
 	@Inject
 	private ZContext context;
-	private Socket broker, publisher;
+	private Socket repSocket, pubSocket;
 	private final String outCellAddress, outPubAddress;
 
 	@Inject
@@ -49,23 +52,23 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 
 	protected void openConnections() {
 
-		broker = context.createSocket(SocketType.REP);
-		broker.bind(outCellAddress);
+		repSocket = context.createSocket(SocketType.REP);
+		repSocket.bind(outCellAddress);
 
-		publisher = context.createSocket(SocketType.PUB);
-		publisher.connect(outPubAddress);
+		pubSocket = context.createSocket(SocketType.PUB);
+		pubSocket.connect(outPubAddress);
 
 		logger.info("All connections open");
 	}
 
 	protected void closeConnections() {
 
-		if (broker != null) {
-			broker.close();
+		if (repSocket != null) {
+			repSocket.close();
 		}
 
-		if (publisher != null) {
-			publisher.close();
+		if (pubSocket != null) {
+			pubSocket.close();
 		}
 
 		logger.info("All connections closed");
@@ -75,10 +78,27 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 	public final void run() {
 		while (isRunning() && !Thread.interrupted()) {
 
-			byte[] req;
+			byte[] headerCntBuff, msgBuff;
+			List<byte[]> headerBuffs = new ArrayList<>();
+			int headerCount;
+			List<Wrappers.InternalHeader> headers = new ArrayList<>();
 
 			try {
-				req = broker.recv();
+				// message is multi-part
+				// part 1. how many headers?
+				headerCntBuff = repSocket.recv();
+				headerCount = Ints.fromByteArray(headerCntBuff);
+
+				// part 2. [headers]
+				if (headerCount > 0) {
+					for (int i = 0; i < headerCount; i++) {
+						headerBuffs.add(repSocket.recv());
+					}
+				}
+
+				// part 3. message
+				msgBuff = repSocket.recv();
+
 			} catch (ZMQException ex) {
 				int errorCode = ex.getErrorCode();
 				if (errorCode == ZError.ETERM) {
@@ -96,34 +116,22 @@ public class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 				}
 			}
 
-			DataMessage dataMessage = null;
-			try {
-				dataMessage = DataMessage.parseFrom(req);
-			} catch (Exception e) {
-				logger.error("Caught exception parsing message", e);
+			// pretend message has no actors and send 0 back (should we do this after PUBlishing?)
+			repSocket.send("0");
+
+			// send multi-part message as received to SUBscribers
+			pubSocket.send(headerCntBuff, ZMQ.SNDMORE);
+			if (headerCount > 0) {
+				headerBuffs.stream().forEach(b -> pubSocket.send(b, ZMQ.SNDMORE));
 			}
-
-			// got a message
-			if (dataMessage != null) {
-				if (logger.isDebugEnabled()) {
-					logger.debug("Got for dispatch data message with uuid: " + dataMessage.getMessageUuid());
-				}
-
-				// send to subscribers
-				publisher.send(dataMessage.toByteArray());
-
-				// finally, if message has no actors, reply 0 to signal to go ahead with sent message
-				if (!hasActors(dataMessage)) {
-					broker.send("0");
-				}
-			}
+			pubSocket.send(msgBuff);
 		}
 
 		closeConnections();
 	}
 
 	//TODO
-	private boolean hasActors(DataMessage message) {
+	private boolean hasActors(/* headers or message */) {
 		return false;
 	}
 

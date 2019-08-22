@@ -134,7 +134,7 @@ public class LogMessageInvoker extends Thread {
 	}
 
 	protected void dispatch(DataMessage requestMsg, long recordOffset) {
-		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg);
+		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, false);
 		if (logger.isDebugEnabled()) {
 			logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",
 				requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());

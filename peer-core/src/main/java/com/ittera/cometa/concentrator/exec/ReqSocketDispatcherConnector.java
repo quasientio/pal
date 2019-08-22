@@ -1,6 +1,10 @@
 package com.ittera.cometa.concentrator.exec;
 
+import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+
+import com.google.common.primitives.Ints;
 
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
@@ -12,6 +16,11 @@ import org.zeromq.ZMQException;
 import org.zeromq.ZContext;
 import zmq.ZError;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.inject.Named;
@@ -21,8 +30,13 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 	protected final static Logger logger = LoggerFactory.getLogger(ReqSocketDispatcherConnector.class);
 
 	private final ZContext zmqContext;
-
+	private final DataMessageBuilder messageBuilder;
 	private final String outCellAddress;
+
+//	@Inject
+//	private UUID peerUuid;
+
+	private final InternalHeader WRITE_AHEAD_HEADER;
 
 	// flag to avoid creating the threadLocal socket when we're trying to close it before having been created
 	private final ThreadLocal<Boolean> threadSocketCreated = ThreadLocal.withInitial(() -> false);
@@ -43,15 +57,39 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 
 	@Singleton
 	@Inject
-	public ReqSocketDispatcherConnector(ZContext zmqContext, @Named("out.cell") String outCellAddress) {
+	public ReqSocketDispatcherConnector(ZContext zmqContext, UUID peerUuid, DataMessageBuilder messageBuilder,
+																			@Named("out.cell") String outCellAddress) {
 		this.zmqContext = zmqContext;
+		this.messageBuilder = messageBuilder;
 		this.outCellAddress = outCellAddress;
+		this.WRITE_AHEAD_HEADER = messageBuilder.buildWriteAheadHeader(peerUuid);
 	}
 
 	@Override
 	public final DataMessage sendAndRecv(DataMessage message) {
-		logger.trace("sendAndRecv:in w/ message with uuid: {}", message.getMessageUuid());
+		return sendAndRecv(message, null);
+	}
+
+	private final DataMessage sendAndRecv(DataMessage message, @Nullable List<InternalHeader> headers) {
+		if (logger.isTraceEnabled()) {
+			logger.trace("sendAndRecv:in w/ message with uuid: {}", message.getMessageUuid());
+		}
+
 		Socket outSocket = threadSocket.get();
+
+		if (headers != null && !headers.isEmpty()) {
+			// 1. send number of headers to follow,
+			outSocket.send(Ints.toByteArray(headers.size()), ZMQ.SNDMORE);
+
+			// 2. send all headers
+			for (InternalHeader header : headers) {
+				outSocket.send(header.toByteArray(), ZMQ.SNDMORE);
+			}
+		} else {
+			outSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
+		}
+
+		// send message
 		outSocket.send(message.toByteArray());
 
 		String rcvdString = null;
@@ -81,8 +119,23 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 			returnValue = null;
 		}
 
-		logger.trace("out w/ {}", returnValue);
+		if (logger.isTraceEnabled()) {
+			logger.trace("out w/ {}", returnValue);
+		}
 		return returnValue;
+	}
+
+	@Override
+	public void writeAhead(DataMessage message) {
+		if (logger.isTraceEnabled()) {
+			logger.trace("writeAhead:in w/ message with uuid: {},from {}",
+				message.getMessageUuid(),
+				message.getConcentratorUuid());
+		}
+
+		// by sending out <write_ahead> header the Log Writer will serialize it with a <dispatching-by> header
+		List<InternalHeader> headers = Arrays.asList(this.WRITE_AHEAD_HEADER);
+		sendAndRecv(message, headers);
 	}
 
 	@Override

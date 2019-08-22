@@ -4,4 +4,6 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 public interface DataMessageDispatcher {
 	DataMessage dispatchIncoming(DataMessage incomingCall);
+
+	DataMessage dispatchIncoming(DataMessage incomingCall, boolean isDirect);
 }

@@ -104,8 +104,13 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 
 	@Override
 	public DataMessage dispatchIncoming(DataMessage incomingCall) {
+		return dispatchIncoming(incomingCall, true);
+	}
+
+	@Override
+	public DataMessage dispatchIncoming(DataMessage incomingCall, boolean isDirect) {
 		if (logger.isTraceEnabled()) {
-			logger.trace("dispatchIncoming:in w/ message uuid: {}", incomingCall.getMessageUuid());
+			logger.trace("dispatchIncoming:in w/ message uuid: {}, isDirect: {}", incomingCall.getMessageUuid(), isDirect);
 		}
 
 		/**TODO: Verify that message is invokable:
@@ -118,6 +123,11 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		 * We should call an inner zmq service/connector and wait/get them, then execute that or go ahead and execute
 		 * this message.
 		 */
+
+		// message doesn't come from log so we write-ahead before executing
+		if (isDirect) {
+			connector.writeAhead(incomingCall);
+		}
 
 		Throwable exceptionWhileLoading = null, exceptionWhileInvoking = null;
 		Optional<AccessibleObject> accessibleObject = Optional.empty();

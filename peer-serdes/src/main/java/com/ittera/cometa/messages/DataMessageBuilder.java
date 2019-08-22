@@ -4,6 +4,7 @@ import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 
+import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
@@ -13,6 +14,11 @@ import java.util.Optional;
 import java.lang.reflect.AccessibleObject;
 
 public interface DataMessageBuilder {
+
+	/**
+	 * header builders
+	 */
+	Wrappers.InternalHeader buildWriteAheadHeader(UUID concentratorUuid);
 
 	/**
 	 * constructor builders

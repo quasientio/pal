@@ -2,6 +2,7 @@ package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PeerLogDirectory;
+import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import java.io.UnsupportedEncodingException;
@@ -298,7 +299,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 				final long messageOffset = record.offset();
 				lastOffsetRead = messageOffset;
 
-				if (!recordProducedBySelf(record.headers())) {
+				if (!recordProducedOrDispatchingBySelf(record.headers())) {
 					final DataMessage dataMessage = (DataMessage) record.value();
 
 					// send request to DEALER socket
@@ -307,6 +308,10 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 					logDealer.send(dataMessage.toByteArray(), 0);
 					if (logger.isDebugEnabled()) {
 						logger.debug("Dealt new log Data Message with uuid: {}", dataMessage.getMessageUuid());
+					}
+				} else {
+					if (logger.isDebugEnabled()) {
+						logger.debug("skipped msg with offset: {}", messageOffset);
 					}
 				}
 
@@ -346,24 +351,20 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 		closeConnections();
 	}
 
-	private boolean recordProducedBySelf(Headers headers) {
-		for (Header header : headers.headers("produced-by")) {
-			String valueAsStr;
-			try {
-				valueAsStr = new String(header.value(), "UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				logger.error("Cannot decode bytes into string", e);
-				continue;
-			}
+	private boolean recordProducedOrDispatchingBySelf(Headers headers) {
 
-			if (peerUuid.toString().equalsIgnoreCase(valueAsStr)) {
-				if (logger.isDebugEnabled()) {
-					logger.debug("skipping message produced-by self");
+		return Arrays.asList("produced-by", "dispatching-by").stream().anyMatch(hdrName -> {
+			for (Header header : headers.headers(hdrName)) {
+				UUID uuidInHeader = UUIDUtils.fromBytes(header.value());
+				if (peerUuid.equals(uuidInHeader)) {
+					if (logger.isDebugEnabled()) {
+						logger.debug("will skip message {} self", hdrName);
+					}
+					return true;
 				}
-				return true;
 			}
-		}
-		return false;
+			return false;
+		});
 	}
 
 	private Long nextOffset() {

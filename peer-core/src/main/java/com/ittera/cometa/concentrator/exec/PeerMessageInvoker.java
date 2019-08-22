@@ -135,7 +135,7 @@ public class PeerMessageInvoker extends Thread {
 	}
 
 	protected DataMessage dispatch(DataMessage requestMsg) {
-		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg);
+		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, true);
 		if (logger.isDebugEnabled()) {
 			logger.debug("Invoker dispatched peer request message uuid: {}, reply uuid: {}", requestMsg.getMessageUuid(),
 				replyMsg.getMessageUuid());

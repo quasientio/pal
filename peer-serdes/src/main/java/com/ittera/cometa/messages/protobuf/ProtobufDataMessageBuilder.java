@@ -1,13 +1,11 @@
 package com.ittera.cometa.messages.protobuf;
 
 import com.ittera.cometa.common.lang.reflect.*;
+import com.ittera.cometa.messages.protobuf.data.*;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
-import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Exceptions;
-import com.ittera.cometa.messages.protobuf.data.Fields;
-import com.ittera.cometa.messages.protobuf.data.Values;
-import com.ittera.cometa.messages.protobuf.data.Ctxt;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeaderType;
 import com.ittera.cometa.messages.protobuf.data.Fields.*;
 import com.ittera.cometa.messages.protobuf.data.Calls.*;
 import com.ittera.cometa.messages.protobuf.data.Values.*;
@@ -177,6 +175,17 @@ public final class ProtobufDataMessageBuilder implements DataMessageBuilder {
 
 	private Primitives.Class getWrappedClass(String className) {
 		return Wrapper.getWrappedClass(className);
+	}
+
+	//</editor-fold>
+
+	//<editor-fold desc="Header messages">
+	private InternalHeader.Builder buildInternalHeaderMessage() {
+		return InternalHeader.newBuilder().setHeaderType(InternalHeaderType.WRITE_AHEAD);
+	}
+
+	public InternalHeader buildWriteAheadHeader(UUID concentratorUuid) {
+		return buildInternalHeaderMessage().setValue(concentratorUuid.toString()).build();
 	}
 
 	//</editor-fold>
