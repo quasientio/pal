@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.stream.Stream;
 
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -46,11 +47,11 @@ public class LogReader extends AbstractExecutionThreadService {
 
 	private static final Logger logger = LoggerFactory.getLogger(LogReader.class);
 
-	private volatile boolean acceptingConnections = false;
+	private volatile boolean acceptingRequests = false;
 	private volatile boolean connectionsOpen = false;
+	private volatile boolean shutdownRequested = false;
 
 	// zmq stuff
-	@Inject
 	private ZContext zmqContext;
 	private Socket logDealer;
 	private Socket offsetSubscriber;
@@ -67,15 +68,13 @@ public class LogReader extends AbstractExecutionThreadService {
 	private Long initialOffset;
 	private String kafkaTopic;
 	private TopicPartition topicPartition;
-	private KafkaConsumer<String, String> consumer;
+	private Consumer<String, DataMessage> consumer;
 	private final Properties consumerProperties = new Properties();
 	private volatile long lastOffsetRead = -1;
 
 	// zookeeper
-	@Inject
 	private PeerLogDirectory peerLogDirectory;
 
-	@Inject
 	private UUID peerUuid;
 
 	// shared by threads OffsetUpdater and LogReader: TODO avoid sharing
@@ -165,11 +164,18 @@ public class LogReader extends AbstractExecutionThreadService {
 									 @Named("id") String concentratorId,
 									 @Named("pollDuration") String pollDuration,
 									 @Named("in.log") String inLogAddress,
-									 @Named("offset.pub") String offsetPubAddress) {
+									 @Named("offset.pub") String offsetPubAddress,
+									 ZContext zmqContext,
+									 PeerLogDirectory peerLogDirectory,
+									 UUID peerUuid) {
+		this.zmqContext = zmqContext;
+		this.peerUuid = peerUuid;
+		this.peerLogDirectory = peerLogDirectory;
+		// zmq addresses
 		this.inLogAddress = inLogAddress;
 		this.offsetPubAddress = offsetPubAddress;
-		this.pollDuration = Duration.of(Long.parseLong(pollDuration), ChronoUnit.MILLIS);
 		// prepare Kafka consumer
+		this.pollDuration = Duration.of(Long.parseLong(pollDuration), ChronoUnit.MILLIS);
 		consumerProperties.put("group.id", concentratorId);
 		consumerProperties.put("key.deserializer", keyDeserializer);
 		consumerProperties.put("value.deserializer", valueDeserializer);
@@ -182,8 +188,36 @@ public class LogReader extends AbstractExecutionThreadService {
 		for (String propKey : consumerProperties.stringPropertyNames()) {
 			propsStr.append(propKey).append('=').append(consumerProperties.getProperty(propKey)).append(", ");
 		}
-		logger.info("Initialized kafka publisher for concentrator with id '{}' and properties: [{}]",
+		logger.info("Initialized log reader for concentrator with id '{}' and properties: [{}]",
 			concentratorId, propsStr.toString());
+	}
+
+	/**
+	 * Used from unit tests with MockConsumer
+	 * @param zmqContext
+	 * @param inLogAddress
+	 * @param offsetPubAddress
+	 * @param peerLogDirectory
+	 * @param consumer
+	 * @param peerUuid
+	 * @param pollDuration
+	 */
+	LogReader(ZContext zmqContext,
+						String inLogAddress,
+						String offsetPubAddress,
+						PeerLogDirectory peerLogDirectory,
+						Consumer<String, DataMessage> consumer,
+						UUID peerUuid,
+						long pollDuration) {
+		this.zmqContext = zmqContext;
+		this.inLogAddress = inLogAddress;
+		this.offsetPubAddress = offsetPubAddress;
+		this.peerUuid = peerUuid;
+		this.peerLogDirectory = peerLogDirectory;
+		this.consumer = consumer;
+		this.pollDuration = Duration.of(pollDuration, ChronoUnit.MILLIS);
+
+		logger.info("Initialized log reader for concentrator with id '{}'", peerUuid);
 	}
 
 	public void readFromLog(String logName, boolean skipWrittenOffsets, Long initialOffset) throws Exception {
@@ -199,18 +233,20 @@ public class LogReader extends AbstractExecutionThreadService {
 	}
 
 	private void openConnections() {
-		this.consumer = new KafkaConsumer<>(consumerProperties);
-		//manual assignment of partition so we can control offset seek
-		topicPartition = new TopicPartition(kafkaTopic, 0);
-		final List<TopicPartition> topicPartitionList = Collections.singletonList(topicPartition);
-		consumer.assign(topicPartitionList);
-		if (initialOffset == null) {
-			consumer.seekToBeginning(topicPartitionList);
-		} else {
-			consumer.seek(topicPartition, initialOffset);
+		// only configure consumer if no consumer passed in constructor
+		if (consumer == null) {
+			this.consumer = new KafkaConsumer<>(consumerProperties);
+			//manual assignment of partition so we can control offset seek
+			topicPartition = new TopicPartition(kafkaTopic, 0);
+			final List<TopicPartition> topicPartitionList = Collections.singletonList(topicPartition);
+			consumer.assign(topicPartitionList);
+			if (initialOffset == null) {
+				consumer.seekToBeginning(topicPartitionList);
+			} else {
+				consumer.seek(topicPartition, initialOffset);
+			}
+			logger.info("Initialized kafka consumer");
 		}
-
-		logger.info("Initialized kafka consumer");
 
 		this.logDealer = zmqContext.createSocket(SocketType.DEALER);
 		logDealer.bind(inLogAddress);
@@ -263,20 +299,24 @@ public class LogReader extends AbstractExecutionThreadService {
 			}
 		}
 
-		ConsumerRecords<String, String> records;
-		long t0;
-
+		main_loop:
 		while (isRunning() && !Thread.interrupted()) {
 
-			if (!acceptingConnections) {
+			while (!acceptingRequests) {
 				try {
 					Thread.sleep(100);
 				} catch (InterruptedException e) {
-					break;
+					// break out via thread interrupt
+					break main_loop;
+				} // break out by stopping the service
+				if (shutdownRequested) { // we need a way out if the service is stopped while we're here
+					break main_loop;
 				}
 			}
 
 			// read from kafka
+			ConsumerRecords<String, DataMessage> records;
+			long t0;
 			t0 = System.nanoTime();
 			records = consumer.poll(pollDuration);
 			totalPollingNanos.getAndAdd(System.nanoTime() - t0);
@@ -408,9 +448,9 @@ public class LogReader extends AbstractExecutionThreadService {
 	protected void triggerShutdown() {
 
 		logger.info("Data message reader shutting down.");
-
 		//TODO: clean up, send uncommitted offset, etc.
-		acceptingConnections = false;
+		shutdownRequested = true;
+		acceptingRequests = false;
 	}
 
 	@Override
@@ -429,7 +469,11 @@ public class LogReader extends AbstractExecutionThreadService {
 		}
 	}
 
+	public boolean isAcceptingRequests() {
+		return acceptingRequests;
+	}
+
 	public void acceptConnections(boolean acceptConnections) {
-		this.acceptingConnections = acceptConnections;
+		this.acceptingRequests = acceptConnections;
 	}
 }
