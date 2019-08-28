@@ -206,8 +206,8 @@ public class Concentrator {
 
 		// set up managed services
 		final Set<Service> services = new HashSet<>();
-		services.add(injector.getInstance(KafkaDataMessageReader.class));
-		services.add(injector.getInstance(KafkaDataMessageWriter.class));
+		services.add(injector.getInstance(LogReader.class));
+		services.add(injector.getInstance(LogWriter.class));
 		services.add(injector.getInstance(JeromqOutMessageDispatcher.class));
 		services.add(injector.getInstance(JeromqInRequestDispatcher.class));
 
@@ -221,7 +221,7 @@ public class Concentrator {
 			public void healthy() {
 				// start accepting requests
 				logger.info("Service manager is healthy.");
-				KafkaDataMessageReader logMessageReader = injector.getInstance(KafkaDataMessageReader.class);
+				LogReader logMessageReader = injector.getInstance(LogReader.class);
 				logMessageReader.acceptConnections(true);
 
 				// We must prestart threads to create the REP sockets, and this must be done after DEALER

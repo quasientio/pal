@@ -26,7 +26,7 @@ import org.zeromq.ZMQ.Socket;
 import java.util.UUID;
 
 /**
- * Helper class used by KafkaDataMessageWriter to relate DataMessage with offset, so that we can asynchronously
+ * Helper class used by LogWriter to relate DataMessage with offset, so that we can asynchronously
  * write replies' offsets to peerLogDirectory (i.e. zookeeper).
  * <p>
  * Implements both Zookeeper Watcher and Kafka Producer Callback interfaces

@@ -39,9 +39,9 @@ import zmq.ZError;
  */
 
 @Singleton
-class KafkaDataMessageWriter extends AbstractExecutionThreadService {
+class LogWriter extends AbstractExecutionThreadService {
 
-	private static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageWriter.class);
+	private static final Logger logger = LoggerFactory.getLogger(LogWriter.class);
 
 	// kafka stuff
 	private KafkaProducer producer;
@@ -68,10 +68,10 @@ class KafkaDataMessageWriter extends AbstractExecutionThreadService {
 	private Header SELF_PRODUCED_HEADER, SELF_DISPATCHING_HEADER;
 
 	@Inject
-	public KafkaDataMessageWriter(@Named("key.serializer") String keySerializer,
-																@Named("value.serializer") String valueSerializer,
-																@Named("out.pub") String outPubAddress,
-																@Named("offset.pub") String offsetPubAddress) {
+	public LogWriter(@Named("key.serializer") String keySerializer,
+									 @Named("value.serializer") String valueSerializer,
+									 @Named("out.pub") String outPubAddress,
+									 @Named("offset.pub") String offsetPubAddress) {
 		this.outPubAddress = outPubAddress;
 		this.offsetPubAddress = offsetPubAddress;
 		producerProperties.put("key.serializer", keySerializer);

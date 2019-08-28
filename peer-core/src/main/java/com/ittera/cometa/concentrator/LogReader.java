@@ -42,9 +42,9 @@ import zmq.ZError;
  * We are reading everything from the log. Is it absolutely required? Can it be optional? If so, what to skip reading?
  */
 @Singleton
-public class KafkaDataMessageReader extends AbstractExecutionThreadService {
+public class LogReader extends AbstractExecutionThreadService {
 
-	private static final Logger logger = LoggerFactory.getLogger(KafkaDataMessageReader.class);
+	private static final Logger logger = LoggerFactory.getLogger(LogReader.class);
 
 	private volatile boolean acceptingConnections = false;
 	private volatile boolean connectionsOpen = false;
@@ -78,7 +78,7 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 	@Inject
 	private UUID peerUuid;
 
-	// shared by threads OffsetUpdater and KafkaDataMessageReader: TODO avoid sharing
+	// shared by threads OffsetUpdater and LogReader: TODO avoid sharing
 	final private AbstractQueue<Long> skipOffsets = new ConcurrentLinkedQueue<>();
 
 	private final class OffsetUpdater extends Thread {
@@ -156,16 +156,16 @@ public class KafkaDataMessageReader extends AbstractExecutionThreadService {
 	}
 
 	@Inject
-	public KafkaDataMessageReader(@Named("key.deserializer") String keyDeserializer,
-																@Named("value.deserializer") String valueDeserializer,
-																@Named("enable.auto.commit") String autoCommit,
-																@Named("auto.commit.interval.ms") String autoCommitInterval,
-																@Named("auto.offset.reset") String autoOffsetReset,
-																@Named("session.timeout.ms") String sessionTimeout,
-																@Named("id") String concentratorId,
-																@Named("pollDuration") String pollDuration,
-																@Named("in.log") String inLogAddress,
-																@Named("offset.pub") String offsetPubAddress) {
+	public LogReader(@Named("key.deserializer") String keyDeserializer,
+									 @Named("value.deserializer") String valueDeserializer,
+									 @Named("enable.auto.commit") String autoCommit,
+									 @Named("auto.commit.interval.ms") String autoCommitInterval,
+									 @Named("auto.offset.reset") String autoOffsetReset,
+									 @Named("session.timeout.ms") String sessionTimeout,
+									 @Named("id") String concentratorId,
+									 @Named("pollDuration") String pollDuration,
+									 @Named("in.log") String inLogAddress,
+									 @Named("offset.pub") String offsetPubAddress) {
 		this.inLogAddress = inLogAddress;
 		this.offsetPubAddress = offsetPubAddress;
 		this.pollDuration = Duration.of(Long.parseLong(pollDuration), ChronoUnit.MILLIS);
