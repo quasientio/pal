@@ -15,23 +15,25 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 @Singleton
-class JeromqInRequestDispatcher extends AbstractExecutionThreadService {
+class DirectRequestDispatcher extends AbstractExecutionThreadService {
 
-	private static final Logger logger = LoggerFactory.getLogger(JeromqInRequestDispatcher.class);
+	private static final Logger logger = LoggerFactory.getLogger(DirectRequestDispatcher.class);
 
 	// zmq stuff
 	private final String routerAddress, dealerAddress, proxyCtrlAddress;
 
-	@Inject
 	private ZContext context;
 	private Socket router, dealer, ctrl;
 
 	@Inject
-	public JeromqInRequestDispatcher(@Named("in.router") String routerAddress, @Named("in.dealer") String dealerAddress,
-																	 @Named("in.proxy.ctrl") String proxyCtrlAddress ) {
+	public DirectRequestDispatcher(@Named("in.router")String routerAddress,
+																 @Named("in.dealer") String dealerAddress,
+																 @Named("in.proxy.ctrl") String proxyCtrlAddress,
+																 ZContext context) {
 		this.routerAddress = routerAddress;
 		this.dealerAddress = dealerAddress;
 		this.proxyCtrlAddress = proxyCtrlAddress;
+		this.context = context;
 	}
 
 	private void openConnections() {
