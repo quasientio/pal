@@ -81,7 +81,6 @@ class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 			byte[] headerCntBuff, msgBuff;
 			List<byte[]> headerBuffs = new ArrayList<>();
 			int headerCount;
-			List<Wrappers.InternalHeader> headers = new ArrayList<>();
 
 			try {
 				// message is multi-part

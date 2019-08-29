@@ -1,4 +1,195 @@
 package com.ittera.cometa.concentrator;
 
+import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.Service;
+import com.google.common.util.concurrent.ServiceManager;
+
+import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.cxn.PeerLogDirectory;
+import com.ittera.cometa.cxn.ZkClient;
+import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+
+import org.apache.kafka.clients.producer.MockProducer;
+
+import static org.junit.Assert.*;
+
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.Test;
+
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
+
+import static org.hamcrest.Matchers.*;
+
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 public class LogWriterTest {
+	private ExecutorService execService = Executors.newSingleThreadExecutor();
+	private ZContext zmqContext;
+	private LogWriter logWriter;
+	private UUID peerUuid = UUID.randomUUID();
+	private ZkClient registry;
+	private ServiceManager manager;
+	private MockProducer<String, DataMessage> producer;
+	private LogInfo log;
+	private ZMQ.Socket pubSocket;
+	private final String OUT_PUB_ADDR = "inproc://pub";
+	private final String OFFSET_PUB_ADDR = "inproc://offsets";
+	private static final Set<String> createdLogs = new HashSet<>();
+	private final DataMessageBuilder msgBuilder = new ProtobufDataMessageBuilder();
+
+	private static final String TESTS_ZK_ROOT_PATH = "/cometa_tests";
+	private static final String ZK_HOST = "localhost:2181";
+
+	private ZContext createContext() {
+		ZContext ctxt = new ZContext();
+		ctxt.setLinger(1000);
+		ctxt.setRcvHWM(10000);
+		ctxt.setSndHWM(10000);
+		return ctxt;
+	}
+
+	private static void deleteCreatedLogs() throws Exception {
+		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
+		for (String log : createdLogs) {
+			zkCli.deleteLogNamed(log);
+			System.out.printf("Cleaned up left over log: %s%n", log);
+		}
+		zkCli.close();
+	}
+
+	private static void deleteTestRootPaths() throws Exception {
+		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
+		zkCli.deleteRootPaths();
+	}
+
+	@AfterClass
+	public static void afterAll() throws Exception {
+		deleteCreatedLogs();
+		deleteTestRootPaths();
+	}
+
+	@After
+	public void cleanup() throws Exception {
+		execService.shutdown();
+		execService.awaitTermination(2, TimeUnit.SECONDS);
+		this.registry = null;
+		this.zmqContext.close();
+	}
+
+	@Before
+	public void setup() throws Exception {
+		registry = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
+		zmqContext = this.createContext();
+		producer = new MockProducer<>();
+		logWriter = new LogWriter(
+			OUT_PUB_ADDR,
+			OFFSET_PUB_ADDR,
+			producer,
+			zmqContext,
+			registry,
+			peerUuid);
+
+		final Set<Service> services = new HashSet<>(Arrays.asList(this.logWriter));
+		manager = new ServiceManager(services);
+		log = registry.createLog("testapp");
+		createdLogs.add(log.getName());
+		logWriter.writeToLog(log, log, false);
+	}
+
+	@Test
+	public void noPublishedMsgs() throws Exception {
+		assertThat(logWriter.isRunning(), is(false));
+
+		// start services
+		manager.startAsync();
+		Thread.sleep(500);
+		assertThat(logWriter.isRunning(), is(true));
+
+		// we PUBlish no messages
+
+		// shut down
+		manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+
+		// assert NO published message is produced to the log
+		assertThat(producer.history().isEmpty(), is(true));
+	}
+
+	@Test
+	public void publishedMessages() throws Exception {
+		assertThat(logWriter.isRunning(), is(false));
+
+		// start services
+		manager.startAsync();
+		Thread.sleep(500);
+		assertThat(logWriter.isRunning(), is(true));
+
+		// we create outPub socket and PUBlish 1 messages
+		pubSocket = zmqContext.createSocket(SocketType.PUB);
+		pubSocket.connect(OUT_PUB_ADDR);
+
+		int messagesToSend = 15;
+		for (int i = 0; i < messagesToSend; i++) {
+			DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+			// no headers
+			pubSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
+			pubSocket.send(msg.toByteArray());
+		}
+
+		// give it a second
+		Thread.sleep(1500);
+
+		// shut down
+		manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+
+		// assert published messages are produced to the log
+		assertThat(producer.history().size(), is(messagesToSend));
+	}
+
+	@Test
+	public void publishedMessagesWithHeader() throws Exception {
+		assertThat(logWriter.isRunning(), is(false));
+
+		// start services
+		manager.startAsync();
+		Thread.sleep(500);
+		assertThat(logWriter.isRunning(), is(true));
+
+		// we create outPub socket and PUBlish 1 messages
+		pubSocket = zmqContext.createSocket(SocketType.PUB);
+		pubSocket.connect(OUT_PUB_ADDR);
+
+		InternalHeader header = msgBuilder.buildWriteAheadHeader(peerUuid);
+		List<InternalHeader> headers = Arrays.asList(header);
+		int messagesToSend = 5;
+		for (int i = 0; i < messagesToSend; i++) {
+			DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+			// 1. send number of headers to follow,
+			pubSocket.send(Ints.toByteArray(headers.size()), ZMQ.SNDMORE);
+			// 2. send all headers
+			for (InternalHeader hdr : headers) {
+				pubSocket.send(header.toByteArray(), ZMQ.SNDMORE);
+			}
+			// 3. send actual message
+			pubSocket.send(msg.toByteArray());
+		}
+
+		// give it a second
+		Thread.sleep(1500);
+
+		// shut down
+		manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+
+		// assert published messages are produced to the log
+		assertThat(producer.history().size(), is(messagesToSend));
+	}
 }

@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.ServiceManager;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.cxn.ZkClient;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
@@ -18,6 +19,7 @@ import org.apache.kafka.common.TopicPartition;
 import static org.junit.Assert.*;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -105,8 +107,9 @@ public class LogReaderTest {
 	private MockConsumer<String, DataMessage> consumer;
 	private LogInfo log;
 	private final int partition = 0;
-	private final String dealerAddr = "inproc://inlog_tests";
-	private final String offsetPubAddr = "inproc://offsets_tests";
+	private static final Set<String> createdLogs = new HashSet<>();
+	private final String DEALER_ADDR = "inproc://inlog_tests";
+	private final String OFFSET_PUB_ADDR = "inproc://offsets_tests";
 	private static final String TESTS_ZK_ROOT_PATH = "/cometa_tests";
 	private static final String ZK_HOST = "localhost:2181";
 
@@ -116,6 +119,26 @@ public class LogReaderTest {
 		ctxt.setRcvHWM(10000);
 		ctxt.setSndHWM(10000);
 		return ctxt;
+	}
+
+	private static void deleteCreatedLogs() throws Exception {
+		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
+		for (String log : createdLogs) {
+			zkCli.deleteLogNamed(log);
+			System.out.printf("Cleaned up left over log: %s%n", log);
+		}
+		zkCli.close();
+	}
+
+	private static void deleteTestRootPaths() throws Exception {
+		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
+		zkCli.deleteRootPaths();
+	}
+
+	@AfterClass
+	public static void afterAll() throws Exception {
+		deleteCreatedLogs();
+		deleteTestRootPaths();
 	}
 
 	@After
@@ -133,13 +156,14 @@ public class LogReaderTest {
 		this.consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
 		this.logReader = new LogReader(
 			zmqContext,
-			dealerAddr,
-			offsetPubAddr,
+			DEALER_ADDR,
+			OFFSET_PUB_ADDR,
 			registry,
 			consumer,
 			peerUuid,
 			10);
 		this.log = registry.createLog("testapp");
+		createdLogs.add(this.log.getName());
 		TopicPartition topicPartition = new TopicPartition(log.getName(), 0);
 		final List<TopicPartition> topicPartitionList = Collections.singletonList(topicPartition);
 		consumer.assign(topicPartitionList);
@@ -150,7 +174,7 @@ public class LogReaderTest {
 	}
 
 	@Test
-	public void notAcceptingConnections() throws Exception {
+	public void dontAcceptRequests() throws Exception {
 		assertThat(logReader.isRunning(), is(false));
 		assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -163,7 +187,7 @@ public class LogReaderTest {
 		assertThat(logReader.isAcceptingRequests(), is(false));
 
 		// start worker(s)
-		Worker logMsgInvoker = new Worker(this.zmqContext, this.dealerAddr);
+		Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
 		execService.submit(logMsgInvoker);
 
 		// send 1 message
@@ -179,11 +203,10 @@ public class LogReaderTest {
 
 		// shut down
 		manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
-		this.zmqContext.close();
 	}
 
 	@Test
-	public void startRunStop() throws Exception {
+	public void startRunNoMessages() throws Exception {
 		assertThat(logReader.isRunning(), is(false));
 		assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -195,7 +218,7 @@ public class LogReaderTest {
 		assertThat(logReader.isAcceptingRequests(), is(true));
 
 		// start worker(s)
-		Worker logMsgInvoker = new Worker(this.zmqContext, this.dealerAddr);
+		Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
 		execService.submit(logMsgInvoker);
 
 		// send no messages
@@ -212,7 +235,7 @@ public class LogReaderTest {
 	}
 
 	@Test
-	public void startRun1MessageStop() throws Exception {
+	public void consumeOneMessage() throws Exception {
 		assertThat(logReader.isRunning(), is(false));
 		assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -225,7 +248,7 @@ public class LogReaderTest {
 		assertThat(logReader.isAcceptingRequests(), is(true));
 
 		// start worker(s)
-		Worker logMsgInvoker = new Worker(this.zmqContext, this.dealerAddr);
+		Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
 		execService.submit(logMsgInvoker);
 
 		// send 1 message
@@ -251,7 +274,7 @@ public class LogReaderTest {
 	}
 
 	@Test
-	public void startRun100MessageStop() throws Exception {
+	public void consumeManyMessages() throws Exception {
 		assertThat(logReader.isRunning(), is(false));
 		assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -264,7 +287,7 @@ public class LogReaderTest {
 		assertThat(logReader.isAcceptingRequests(), is(true));
 
 		// start worker(s)
-		Worker logMsgInvoker = new Worker(this.zmqContext, this.dealerAddr);
+		Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
 		execService.submit(logMsgInvoker);
 
 		// send 1 message
@@ -272,7 +295,7 @@ public class LogReaderTest {
 		String key = peerUuid.toString();
 		Set<String> sentUuids = new TreeSet<>();
 
-		int msgsToSend = 100;
+		int msgsToSend = 30;
 		for (int i = 0; i < msgsToSend; i++) {
 			DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 			this.consumer.addRecord(new ConsumerRecord<>

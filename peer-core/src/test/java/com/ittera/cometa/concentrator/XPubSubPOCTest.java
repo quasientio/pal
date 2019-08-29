@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator.exec.java;
+package com.ittera.cometa.concentrator;
 
 import org.junit.Test;
 import org.zeromq.SocketType;

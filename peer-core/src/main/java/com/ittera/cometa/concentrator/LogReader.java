@@ -245,7 +245,7 @@ public class LogReader extends AbstractExecutionThreadService {
 			} else {
 				consumer.seek(topicPartition, initialOffset);
 			}
-			logger.info("Initialized kafka consumer");
+			logger.info("Initialized log consumer");
 		}
 
 		this.logDealer = zmqContext.createSocket(SocketType.DEALER);
@@ -271,7 +271,7 @@ public class LogReader extends AbstractExecutionThreadService {
 
 		if (consumer != null) {
 			consumer.close();
-			logger.info("Closed kafka consumer");
+			logger.info("Closed log consumer");
 		}
 
 		if (logDealer != null) {

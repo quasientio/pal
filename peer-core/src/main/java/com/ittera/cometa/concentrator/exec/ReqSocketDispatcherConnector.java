@@ -87,7 +87,7 @@ public class ReqSocketDispatcherConnector implements DispatcherConnector {
 			outSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
 		}
 
-		// send message
+		// 3. send actual message
 		outSocket.send(message.toByteArray());
 
 		String rcvdString = null;

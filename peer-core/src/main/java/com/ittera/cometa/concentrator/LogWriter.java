@@ -18,6 +18,7 @@ import com.google.inject.Singleton;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 import org.apache.kafka.common.header.Header;
@@ -44,21 +45,18 @@ class LogWriter extends AbstractExecutionThreadService {
 	private static final Logger logger = LoggerFactory.getLogger(LogWriter.class);
 
 	// kafka stuff
-	private KafkaProducer producer;
+	private Producer<String, DataMessage> producer;
 	private final Properties producerProperties = new Properties();
 
 	// zmq stuff
-	@Inject
 	private ZContext zmqContext;
 	private Socket subscriber;
 	private Socket offsetPublisher;
 	private final String outPubAddress, offsetPubAddress;
 
 	// zookeeper
-	@Inject
 	private PeerLogDirectory peerLogDirectory;
 
-	@Inject
 	private UUID peerUuid;
 
 	private boolean publishOffsets;
@@ -71,12 +69,42 @@ class LogWriter extends AbstractExecutionThreadService {
 	public LogWriter(@Named("key.serializer") String keySerializer,
 									 @Named("value.serializer") String valueSerializer,
 									 @Named("out.pub") String outPubAddress,
-									 @Named("offset.pub") String offsetPubAddress) {
+									 @Named("offset.pub") String offsetPubAddress,
+									 ZContext zmqContext,
+									 PeerLogDirectory peerLogDirectory,
+									 UUID peerUuid) {
+		this.zmqContext = zmqContext;
+		this.peerLogDirectory = peerLogDirectory;
+		this.peerUuid = peerUuid;
 		this.outPubAddress = outPubAddress;
 		this.offsetPubAddress = offsetPubAddress;
 		producerProperties.put("key.serializer", keySerializer);
 		producerProperties.put("value.serializer", valueSerializer);
-		logger.info("Initialized kafka message writer");
+		logger.info("Initialized log message writer");
+	}
+
+	/**
+	 * Used from unit tests with MockProducer
+	 *
+	 * @param outPubAddress
+	 * @param offsetPubAddress
+	 * @param zmqContext
+	 * @param peerLogDirectory
+	 * @param peerUuid
+	 */
+	LogWriter(@Named("out.pub") String outPubAddress,
+						@Named("offset.pub") String offsetPubAddress,
+						Producer<String, DataMessage> producer,
+						ZContext zmqContext,
+						PeerLogDirectory peerLogDirectory,
+						UUID peerUuid) {
+		this.producer = producer;
+		this.zmqContext = zmqContext;
+		this.peerLogDirectory = peerLogDirectory;
+		this.peerUuid = peerUuid;
+		this.outPubAddress = outPubAddress;
+		this.offsetPubAddress = offsetPubAddress;
+		logger.info("Initialized log message writer");
 	}
 
 	private void openConnections() {
@@ -125,8 +153,10 @@ class LogWriter extends AbstractExecutionThreadService {
 		this.publishOffsets = publishOffsets;
 		producerProperties.put("bootstrap.servers", outLog.getBootstrapServers());
 
-		// start kafka writer
-		this.producer = new KafkaProducer<>(producerProperties);
+		// create producer, if not assigned in constructor
+		if (this.producer == null) {
+			this.producer = new KafkaProducer<>(producerProperties);
+		}
 		logger.info("Will write to log: {}", outLog);
 	}
 
@@ -143,7 +173,7 @@ class LogWriter extends AbstractExecutionThreadService {
 		}
 
 		if (logger.isDebugEnabled()) {
-			logger.debug("Starting to dispatch messages to kafka");
+			logger.debug("Starting to dispatch messages to log");
 		}
 
 		while (isRunning() && !Thread.interrupted()) {
@@ -156,7 +186,11 @@ class LogWriter extends AbstractExecutionThreadService {
 
 				// message is multi-part
 				// part 1. how many headers?
-				buff = subscriber.recv();
+				buff = subscriber.recv(ZMQ.DONTWAIT);
+				if (buff == null) {
+					// TODO should we sleep a bit here?
+					continue;
+				}
 				headerCount = Ints.fromByteArray(buff);
 
 				// part 2. [headers]
