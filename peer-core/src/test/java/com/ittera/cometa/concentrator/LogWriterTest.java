@@ -31,6 +31,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class LogWriterTest {
 	private ExecutorService execService = Executors.newSingleThreadExecutor();
@@ -67,15 +68,10 @@ public class LogWriterTest {
 		zkCli.close();
 	}
 
-	private static void deleteTestRootPaths() throws Exception {
+	@AfterClass
+	public static void deleteTestRootPaths() throws Exception {
 		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
 		zkCli.deleteRootPaths();
-	}
-
-	@AfterClass
-	public static void afterAll() throws Exception {
-		deleteCreatedLogs();
-		deleteTestRootPaths();
 	}
 
 	@After
@@ -84,6 +80,7 @@ public class LogWriterTest {
 		execService.awaitTermination(2, TimeUnit.SECONDS);
 		this.registry = null;
 		this.zmqContext.close();
+		deleteCreatedLogs();
 	}
 
 	@Before
@@ -133,26 +130,36 @@ public class LogWriterTest {
 		Thread.sleep(500);
 		assertThat(logWriter.isRunning(), is(true));
 
-		// we create outPub socket and PUBlish 1 messages
+		// we create outPub socket and PUBlish some messages
 		pubSocket = zmqContext.createSocket(SocketType.PUB);
 		pubSocket.connect(OUT_PUB_ADDR);
 
 		int messagesToSend = 15;
+		List<DataMessage> msgsCreated = new ArrayList<>();
+		// create msgs
 		for (int i = 0; i < messagesToSend; i++) {
 			DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+			msgsCreated.add(msg);
+		}
+
+		// PUB them
+		msgsCreated.stream().forEach(msg -> {
 			// no headers
 			pubSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
 			pubSocket.send(msg.toByteArray());
-		}
+		});
 
-		// give it a second
+		// give it some time
 		Thread.sleep(1500);
 
 		// shut down
 		manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
 
 		// assert published messages are produced to the log
+		List<String> producedMsgUuids = producer.history().stream().map(r -> r.value().getMessageUuid()).collect(Collectors.toList());
+		List<String> sentMsgUuids = msgsCreated.stream().map(m -> m.getMessageUuid()).collect(Collectors.toList());
 		assertThat(producer.history().size(), is(messagesToSend));
+		assertThat(producedMsgUuids, is(sentMsgUuids));
 	}
 
 	@Test
@@ -164,15 +171,23 @@ public class LogWriterTest {
 		Thread.sleep(500);
 		assertThat(logWriter.isRunning(), is(true));
 
-		// we create outPub socket and PUBlish 1 messages
+		// we create outPub socket and PUBlish some messages with header
 		pubSocket = zmqContext.createSocket(SocketType.PUB);
 		pubSocket.connect(OUT_PUB_ADDR);
 
 		InternalHeader header = msgBuilder.buildWriteAheadHeader(peerUuid);
 		List<InternalHeader> headers = Arrays.asList(header);
 		int messagesToSend = 5;
+		List<DataMessage> msgsCreated = new ArrayList<>();
+
+		// create msgs
 		for (int i = 0; i < messagesToSend; i++) {
 			DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+			msgsCreated.add(msg);
+		}
+
+		// PUB them
+		msgsCreated.stream().forEach(msg -> {
 			// 1. send number of headers to follow,
 			pubSocket.send(Ints.toByteArray(headers.size()), ZMQ.SNDMORE);
 			// 2. send all headers
@@ -181,15 +196,18 @@ public class LogWriterTest {
 			}
 			// 3. send actual message
 			pubSocket.send(msg.toByteArray());
-		}
+		});
 
-		// give it a second
+		// give it some time
 		Thread.sleep(1500);
 
 		// shut down
 		manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
 
 		// assert published messages are produced to the log
+		List<String> producedMsgUuids = producer.history().stream().map(r -> r.value().getMessageUuid()).collect(Collectors.toList());
+		List<String> sentMsgUuids = msgsCreated.stream().map(m -> m.getMessageUuid()).collect(Collectors.toList());
 		assertThat(producer.history().size(), is(messagesToSend));
+		assertThat(producedMsgUuids, is(sentMsgUuids));
 	}
 }

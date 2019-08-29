@@ -98,7 +98,7 @@ class Worker implements Runnable {
  */
 public class LogReaderTest {
 
-	private ExecutorService execService = Executors.newSingleThreadExecutor();
+	private ExecutorService execService;
 	private ZContext zmqContext;
 	private LogReader logReader;
 	private UUID peerUuid = UUID.randomUUID();
@@ -107,7 +107,7 @@ public class LogReaderTest {
 	private MockConsumer<String, DataMessage> consumer;
 	private LogInfo log;
 	private final int partition = 0;
-	private static final Set<String> createdLogs = new HashSet<>();
+	private static Set<String> createdLogs = new HashSet<>();
 	private final String DEALER_ADDR = "inproc://inlog_tests";
 	private final String OFFSET_PUB_ADDR = "inproc://offsets_tests";
 	private static final String TESTS_ZK_ROOT_PATH = "/cometa_tests";
@@ -130,15 +130,10 @@ public class LogReaderTest {
 		zkCli.close();
 	}
 
-	private static void deleteTestRootPaths() throws Exception {
+	@AfterClass
+	public static void deleteTestRootPaths() throws Exception {
 		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
 		zkCli.deleteRootPaths();
-	}
-
-	@AfterClass
-	public static void afterAll() throws Exception {
-		deleteCreatedLogs();
-		deleteTestRootPaths();
 	}
 
 	@After
@@ -147,10 +142,12 @@ public class LogReaderTest {
 		execService.awaitTermination(2, TimeUnit.SECONDS);
 		this.registry = null;
 		this.zmqContext.close();
+		deleteCreatedLogs();
 	}
 
 	@Before
 	public void setup() throws Exception {
+		this.execService = Executors.newSingleThreadExecutor();
 		this.registry = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
 		this.zmqContext = this.createContext();
 		this.consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
