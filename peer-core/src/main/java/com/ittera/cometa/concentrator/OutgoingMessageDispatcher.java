@@ -1,7 +1,6 @@
 package com.ittera.cometa.concentrator;
 
 import com.google.common.primitives.Ints;
-import com.ittera.cometa.messages.protobuf.data.Wrappers;
 
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.inject.Inject;
@@ -24,9 +23,9 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 @Singleton
-class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
+class OutgoingMessageDispatcher extends AbstractExecutionThreadService {
 
-	private static final Logger logger = LoggerFactory.getLogger(JeromqOutMessageDispatcher.class);
+	private static final Logger logger = LoggerFactory.getLogger(OutgoingMessageDispatcher.class);
 
 	// counters
 	private final AtomicLong totalReadBlockingQueueNanos = new AtomicLong(0);
@@ -37,17 +36,18 @@ class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 	private final AtomicInteger messagesRcvd = new AtomicInteger(0);
 
 	// zmq stuff
-	@Inject
 	private ZContext context;
 	private Socket repSocket, pubSocket;
 	private final String outCellAddress, outPubAddress;
 
 	@Inject
-	public JeromqOutMessageDispatcher(@Named("out.cell") String outCellAddress,
-																		@Named("out.pub") String outPubAddress) {
+	public OutgoingMessageDispatcher(@Named("out.cell") String outCellAddress,
+																	 @Named("out.pub") String outPubAddress,
+																	 ZContext context) {
 		this.outCellAddress = outCellAddress;
 		this.outPubAddress = outPubAddress;
-		logger.info("Initialized OUT message dispatcher");
+		this.context = context;
+		logger.info("Initialized outgoing message dispatcher");
 	}
 
 	private void openConnections() {
@@ -83,9 +83,14 @@ class JeromqOutMessageDispatcher extends AbstractExecutionThreadService {
 			int headerCount;
 
 			try {
-				// message is multi-part
+				/* multi-part message request */
+
 				// part 1. how many headers?
-				headerCntBuff = repSocket.recv();
+				headerCntBuff = repSocket.recv(ZMQ.DONTWAIT);
+				if (headerCntBuff == null) {
+					// TODO should we sleep a bit here?
+					continue;
+				}
 				headerCount = Ints.fromByteArray(headerCntBuff);
 
 				// part 2. [headers]

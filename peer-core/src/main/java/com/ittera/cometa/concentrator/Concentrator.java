@@ -208,7 +208,7 @@ public class Concentrator {
 		final Set<Service> services = new HashSet<>();
 		services.add(injector.getInstance(LogReader.class));
 		services.add(injector.getInstance(LogWriter.class));
-		services.add(injector.getInstance(JeromqOutMessageDispatcher.class));
+		services.add(injector.getInstance(OutgoingMessageDispatcher.class));
 		services.add(injector.getInstance(DirectRequestDispatcher.class));
 
 		final ServiceManager manager = new ServiceManager(services);
