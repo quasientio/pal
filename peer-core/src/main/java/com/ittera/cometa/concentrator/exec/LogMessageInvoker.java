@@ -38,13 +38,36 @@ class LogMessageInvoker extends Thread {
 														 incomingMessageDispatcher, DispatcherConnector dispatcherConnector, UUID peerUuid) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
-		this.inLogAddress = inLogAddress;
 		this.dataMessageBuilder = dataMessageBuilder;
+		this.inLogAddress = inLogAddress;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = dispatcherConnector;
 		this.peerUuid = peerUuid;
 		if (logger.isDebugEnabled()) {
 			logger.debug("Initialized new log message invoker thread named: {} with inLogAddress: {}", name, inLogAddress);
+		}
+	}
+
+	/**
+	 * Constructor exclusive for unit-testing -- to avoid ExecutorService and ThreadFactory dependencies.
+	 * NOTE: dispatcherConnector is set to null, since it's not required
+	 *
+	 * @param zmqContext
+	 * @param dataMessageBuilder
+	 * @param inLogAddress
+	 * @param incomingMessageDispatcher
+	 * @param peerUuid
+	 */
+	LogMessageInvoker(ZContext zmqContext, DataMessageBuilder dataMessageBuilder, String inLogAddress,
+										IncomingMessageDispatcher incomingMessageDispatcher, UUID peerUuid) {
+		this.zmqContext = zmqContext;
+		this.dataMessageBuilder = dataMessageBuilder;
+		this.inLogAddress = inLogAddress;
+		this.incomingMessageDispatcher = incomingMessageDispatcher;
+		this.dispatcherConnector = null;
+		this.peerUuid = peerUuid;
+		if (logger.isDebugEnabled()) {
+			logger.debug("Initialized new log message invoker thread with inLogAddress: {}", inLogAddress);
 		}
 	}
 
@@ -130,7 +153,9 @@ class LogMessageInvoker extends Thread {
 			socket.close();
 		}
 
-		dispatcherConnector.closeThreadLocalSocket();
+		if (dispatcherConnector != null) {
+			dispatcherConnector.closeThreadLocalSocket();
+		}
 	}
 
 	private void dispatch(DataMessage requestMsg, long recordOffset) {
@@ -141,5 +166,9 @@ class LogMessageInvoker extends Thread {
 		}
 		requestsDispatched.getAndIncrement();
 		dataMessageBuilder.resetThreadLocalSequence();
+	}
+
+	public AtomicLong getRequestsDispatched() {
+		return requestsDispatched;
 	}
 }

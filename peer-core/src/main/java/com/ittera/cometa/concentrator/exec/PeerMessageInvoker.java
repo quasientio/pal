@@ -36,12 +36,33 @@ class PeerMessageInvoker extends Thread {
 															incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
-		this.dealerAddress = dealerAddress;
 		this.dataMessageBuilder = dataMessageBuilder;
+		this.dealerAddress = dealerAddress;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = dispatcherConnector;
 		if (logger.isDebugEnabled()) {
 			logger.debug("Initialized new peer message invoker thread named: {} with dealerAddress: {}", name, dealerAddress);
+		}
+	}
+
+	/**
+	 * Constructor exclusive for unit-testing -- to avoid ExecutorService and ThreadFactory dependencies.
+	 * NOTE: dispatcherConnector is set to null, since it's not required
+	 *
+	 * @param zmqContext
+	 * @param dataMessageBuilder
+	 * @param dealerAddress
+	 * @param incomingMessageDispatcher
+	 */
+	PeerMessageInvoker(ZContext zmqContext, DataMessageBuilder dataMessageBuilder, String dealerAddress,
+										 IncomingMessageDispatcher incomingMessageDispatcher) {
+		this.zmqContext = zmqContext;
+		this.dataMessageBuilder = dataMessageBuilder;
+		this.dealerAddress = dealerAddress;
+		this.incomingMessageDispatcher = incomingMessageDispatcher;
+		this.dispatcherConnector = null;
+		if (logger.isDebugEnabled()) {
+			logger.debug("Initialized new peer message invoker thread with dealerAddress: {}", dealerAddress);
 		}
 	}
 
@@ -131,7 +152,10 @@ class PeerMessageInvoker extends Thread {
 		if (socket != null) {
 			socket.close();
 		}
-		dispatcherConnector.closeThreadLocalSocket();
+
+		if (dispatcherConnector != null) {
+			dispatcherConnector.closeThreadLocalSocket();
+		}
 	}
 
 	private DataMessage dispatch(DataMessage requestMsg) {
@@ -143,5 +167,9 @@ class PeerMessageInvoker extends Thread {
 		requestsDispatched.getAndIncrement();
 		dataMessageBuilder.resetThreadLocalSequence();
 		return replyMsg;
+	}
+
+	public AtomicLong getRequestsDispatched() {
+		return requestsDispatched;
 	}
 }
