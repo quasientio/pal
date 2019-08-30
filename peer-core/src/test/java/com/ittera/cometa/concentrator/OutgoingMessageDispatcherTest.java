@@ -91,7 +91,7 @@ public class OutgoingMessageDispatcherTest {
 		Thread.sleep(500);
 		assertThat(outgoingMessageDispatcher.isRunning(), is(true));
 
-		// create REQ socket to simulate requests (IRL: ReqSocketDispatcherConnector)
+		// create REQ socket to simulate requests (IRL: DispatcherConnector)
 		Socket req = context.createSocket(SocketType.REQ);
 		req.connect(OUTCELL_ADDR);
 
@@ -138,7 +138,7 @@ public class OutgoingMessageDispatcherTest {
 		Thread.sleep(500);
 		assertThat(outgoingMessageDispatcher.isRunning(), is(true));
 
-		// create REQ socket to simulate requests (IRL: ReqSocketDispatcherConnector)
+		// create REQ socket to simulate requests (IRL: DispatcherConnector)
 		Socket req = context.createSocket(SocketType.REQ);
 		req.connect(OUTCELL_ADDR);
 

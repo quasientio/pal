@@ -7,7 +7,6 @@ import com.ittera.cometa.common.lang.ProxyDispatcher;
 import com.ittera.cometa.concentrator.exec.java.CustomClassloader;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 
-import com.ittera.cometa.concentrator.exec.*;
 import com.ittera.cometa.concentrator.exec.java.AspectProxyDispatcher;
 
 import com.ittera.cometa.messages.DataMessageBuilder;
@@ -41,7 +40,6 @@ class PeerGuiceModule extends AbstractModule {
 		Names.bindProperties(binder(), properties);
 
 		// bind implementations
-		bind(DispatcherConnector.class).to(com.ittera.cometa.concentrator.exec.ReqSocketDispatcherConnector.class);
 		bind(ProxyDispatcher.class).to(com.ittera.cometa.concentrator.exec.java.AspectProxyDispatcher.class);
 
 		// common and cxn library classes are not annotated with @Singleton
