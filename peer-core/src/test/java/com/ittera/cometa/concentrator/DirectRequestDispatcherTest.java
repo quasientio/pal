@@ -9,6 +9,8 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
+import org.zeromq.ZMQException;
+import zmq.ZError;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -48,11 +50,19 @@ public class DirectRequestDispatcherTest {
 					String from = socket.recvStr();
 					String msg = socket.recvStr();
 					socket.send(String.format("OK - worker <%s> got msg: %s from peer: %s", peerUuid, msg, from));
+				} catch (ZMQException ex) {
+					int errorCode = ex.getErrorCode();
+					if (errorCode == ZError.ETERM) {
+						break;
+					} else if (errorCode == ZError.EINTR) {
+						break;
+					}
 				} catch (Exception ex) {
 					socket.send("ERROR");
 				}
 			}
 
+			System.out.printf("worker '%s' exits%n", peerUuid);
 			this.socket.close();
 		}
 	}
@@ -130,14 +140,16 @@ public class DirectRequestDispatcherTest {
 
 	@After
 	public void cleanup() throws Exception {
-		// stop executor
-		execService.shutdownNow();
-		execService.awaitTermination(2, TimeUnit.SECONDS);
-		System.out.println("executor shut down");
-
 		// close local context
-		context.close();
-		System.out.println("local ctxt closed");
+		execService.submit(() -> {
+			context.close();
+			System.out.println("context terminated");
+		});
+
+		// stop executor
+		execService.shutdown();
+		execService.awaitTermination(3, TimeUnit.SECONDS);
+		System.out.println("executor shut down");
 	}
 
 	private void stopProxy() {

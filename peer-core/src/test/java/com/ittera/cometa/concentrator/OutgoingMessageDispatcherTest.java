@@ -54,11 +54,14 @@ public class OutgoingMessageDispatcherTest {
 	@After
 	public void cleanup() throws Exception {
 		// close local context
-		context.close();
+		execService.submit(() -> {
+			context.close();
+			System.out.println("context terminated");
+		});
 
 		// stop executor
-		execService.shutdownNow();
-		execService.awaitTermination(2, TimeUnit.SECONDS);
+		execService.shutdown();
+		execService.awaitTermination(3, TimeUnit.SECONDS);
 	}
 
 	private ZContext createContext() {

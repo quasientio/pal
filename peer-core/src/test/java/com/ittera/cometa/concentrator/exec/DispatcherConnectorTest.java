@@ -1,4 +1,4 @@
-package com.ittera.cometa.concentrator;
+package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 import com.ittera.cometa.messages.DataMessageBuilder;
