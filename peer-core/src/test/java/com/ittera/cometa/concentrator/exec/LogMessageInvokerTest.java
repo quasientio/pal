@@ -1,10 +1,13 @@
 package com.ittera.cometa.concentrator.exec;
 
+import com.ittera.cometa.concentrator.ZmqEnabledTest;
 import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -30,7 +33,8 @@ import org.mockito.stubbing.Answer;
 
 import static org.mockito.Mockito.*;
 
-public class LogMessageInvokerTest {
+public class LogMessageInvokerTest extends ZmqEnabledTest {
+	private static final Logger logger = LoggerFactory.getLogger("tests");
 	private final UUID peerUuid = UUID.randomUUID();
 	private final String INLOG_ADDR = "inproc://inlog";
 	private ZContext context;
@@ -61,7 +65,7 @@ public class LogMessageInvokerTest {
 				try {
 					constructor = String.class.getConstructor();
 				} catch (NoSuchMethodException e) {
-					e.printStackTrace();
+					logger.error("Error getting constructor", e);
 				}
 				DataMessage reply = msgBuilder.buildReturnValue(peerUuid, new String(), constructor, null,
 					false, incomingMsg.getMessageUuid());
@@ -82,7 +86,7 @@ public class LogMessageInvokerTest {
 		// close local context
 		execService.submit(() -> {
 			context.close();
-			System.out.println("context terminated");
+			logger.debug("context terminated");
 		});
 
 		// stop executor
@@ -90,14 +94,6 @@ public class LogMessageInvokerTest {
 		execService.awaitTermination(3, TimeUnit.SECONDS);
 
 		messageReplies.clear();
-	}
-
-	private ZContext createContext() {
-		ZContext ctxt = new ZContext();
-		ctxt.setLinger(1000);
-		ctxt.setRcvHWM(10000);
-		ctxt.setSndHWM(10000);
-		return ctxt;
 	}
 
 	@Test

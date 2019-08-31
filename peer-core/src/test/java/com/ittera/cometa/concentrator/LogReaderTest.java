@@ -23,6 +23,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -36,68 +38,70 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-/*
- a class for Workers (which REPly to Dealer) IRL: LogMessageInvoker's
- */
-class Worker implements Runnable {
-
-	private final UUID peerUuid = UUID.randomUUID();
-	private ZMQ.Socket socket;
-	private ZContext context;
-	private String dealerAddress;
-	private Set<String> rcvdMsgUuids = new TreeSet<>();
-
-	Worker(ZContext context, String dealerAddress) {
-		this.context = context;
-		this.dealerAddress = dealerAddress;
-		this.socket = this.context.createSocket(SocketType.REP);
-	}
-
-	@Override
-	public void run() {
-		// connect to dealer
-		this.socket.connect(this.dealerAddress);
-
-		// process requests
-		while (!Thread.interrupted()) {
-			//
-			try {
-				String offset = socket.recvStr();
-				long logOffset = Long.parseLong(offset);
-				System.out.printf("received offset = %d%n", logOffset);
-				byte[] req = socket.recv();
-				DataMessage msg = DataMessage.parseFrom(req);
-				System.out.printf("msg received = %s%n", msg);
-				rcvdMsgUuids.add(msg.getMessageUuid());
-			} catch (ZMQException ex) {
-				int errorCode = ex.getErrorCode();
-				if (errorCode == ZError.ETERM) {
-					System.err.println("context terminated");
-					break;
-				} else if (errorCode == ZError.EINTR) {
-					System.err.println("interrupted during recv()");
-					break;
-				} else {
-					ex.printStackTrace();
-				}
-			} catch (InvalidProtocolBufferException e) {
-				e.printStackTrace();
-			}
-		}
-
-		this.socket.close();
-	}
-
-	Set<String> getReceivedMessages() {
-		return rcvdMsgUuids;
-	}
-}
 
 /**
  * CAVEAT: this test doesn't cover Headers as they're not supported by MockConsumer
  */
-public class LogReaderTest {
+public class LogReaderTest extends ZmqEnabledTest {
 
+	/*
+	class for Workers (which REPly to Dealer) IRL: LogMessageInvoker's
+	*/
+	class Worker implements Runnable {
+
+		private final UUID peerUuid = UUID.randomUUID();
+		private ZMQ.Socket socket;
+		private ZContext context;
+		private String dealerAddress;
+		private Set<String> rcvdMsgUuids = new TreeSet<>();
+
+		Worker(ZContext context, String dealerAddress) {
+			this.context = context;
+			this.dealerAddress = dealerAddress;
+			this.socket = this.context.createSocket(SocketType.REP);
+		}
+
+		@Override
+		public void run() {
+			// connect to dealer
+			this.socket.connect(this.dealerAddress);
+
+			// process requests
+			while (!Thread.interrupted()) {
+				//
+				try {
+					String offset = socket.recvStr();
+					long logOffset = Long.parseLong(offset);
+					logger.debug("received offset = {}", logOffset);
+					byte[] req = socket.recv();
+					DataMessage msg = DataMessage.parseFrom(req);
+					logger.debug("msg received = {}", msg);
+					rcvdMsgUuids.add(msg.getMessageUuid());
+				} catch (ZMQException ex) {
+					int errorCode = ex.getErrorCode();
+					if (errorCode == ZError.ETERM) {
+						logger.warn("context terminated");
+						break;
+					} else if (errorCode == ZError.EINTR) {
+						logger.warn("interrupted during recv()");
+						break;
+					} else {
+						logger.error("unexpected error during recv()", ex);
+					}
+				} catch (InvalidProtocolBufferException e) {
+					logger.error("error receiving", e);
+				}
+			}
+
+			this.socket.close();
+		}
+
+		Set<String> getReceivedMessages() {
+			return rcvdMsgUuids;
+		}
+	}
+
+	private static final Logger logger = LoggerFactory.getLogger("tests");
 	private ExecutorService execService;
 	private ZContext zmqContext;
 	private LogReader logReader;
@@ -113,19 +117,11 @@ public class LogReaderTest {
 	private static final String TESTS_ZK_ROOT_PATH = "/cometa_tests";
 	private static final String ZK_HOST = "localhost:2181";
 
-	private ZContext createContext() {
-		ZContext ctxt = new ZContext();
-		ctxt.setLinger(1000);
-		ctxt.setRcvHWM(10000);
-		ctxt.setSndHWM(10000);
-		return ctxt;
-	}
-
 	private static void deleteCreatedLogs() throws Exception {
 		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
 		for (String log : createdLogs) {
 			zkCli.deleteLogNamed(log);
-			System.out.printf("Cleaned up left over log: %s%n", log);
+			logger.debug("Cleaned up left over log: {}", log);
 		}
 		zkCli.close();
 	}
@@ -258,7 +254,7 @@ public class LogReaderTest {
 
 		Thread.sleep(1500);
 		// assert received
-		System.out.printf("received: %s%n", String.join(",", logMsgInvoker.getReceivedMessages()));
+		logger.debug("received: {}", String.join(",", logMsgInvoker.getReceivedMessages()));
 		assertThat(logMsgInvoker.getReceivedMessages().size(), is(1));
 		assertThat(logMsgInvoker.getReceivedMessages().stream().anyMatch(u -> u.equals(msg.getMessageUuid())),
 			is(true));
@@ -302,7 +298,7 @@ public class LogReaderTest {
 
 		Thread.sleep(1500);
 		// assert received
-		System.out.printf("received: %s%n", String.join(",", logMsgInvoker.getReceivedMessages()));
+		logger.debug("received: {}", String.join(",", logMsgInvoker.getReceivedMessages()));
 		assertThat(logMsgInvoker.getReceivedMessages(), is(sentUuids));
 
 		// shut down

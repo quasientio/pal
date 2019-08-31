@@ -20,7 +20,12 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-public class DirectRequestDispatcherTest {
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+
+public class DirectRequestDispatcherTest extends ZmqEnabledTest {
+
+	private static final Logger logger = LoggerFactory.getLogger("tests");
 
 	/*
 	 a class for Workers (which REPly to Dealer) IRL: PeerMessageInvoker's
@@ -45,7 +50,7 @@ public class DirectRequestDispatcherTest {
 
 			// process requests
 			while (!Thread.interrupted()) {
-				System.out.printf("worker '%s' starts dispatching%n", peerUuid);
+				logger.debug("worker '{}' starts dispatching", peerUuid);
 				try {
 					String from = socket.recvStr();
 					String msg = socket.recvStr();
@@ -62,7 +67,7 @@ public class DirectRequestDispatcherTest {
 				}
 			}
 
-			System.out.printf("worker '%s' exits%n", peerUuid);
+			logger.debug("worker '{}' exits", peerUuid);
 			this.socket.close();
 		}
 	}
@@ -89,7 +94,7 @@ public class DirectRequestDispatcherTest {
 		@Override
 		public Object call() {
 			// connect to router
-			System.out.printf("new client with identity: %s%n", peerUuid.toString());
+			logger.debug("new client with identity: {}", peerUuid.toString());
 			this.socket.setIdentity(peerUuid.toString().getBytes(ZMQ.CHARSET));
 			this.socket.connect(this.routerAddress);
 
@@ -99,14 +104,14 @@ public class DirectRequestDispatcherTest {
 			msgsToSend.stream().forEach(m -> {
 				this.socket.send(peerUuid.toString(), ZMQ.SNDMORE);
 				this.socket.send(m, 0);
-				System.out.printf("sent req: %s%n", m);
+				logger.debug("sent req: {}", m);
 				String reply = this.socket.recvStr();
-				System.out.printf("got reply: %s%n", reply);
+				logger.debug("got reply: {}", reply);
 				replies.add(reply);
 			});
 
 			this.socket.close();
-			System.out.println("client is done");
+			logger.debug("client is done");
 			shutdownLatch.countDown();
 
 			return replies;
@@ -143,13 +148,13 @@ public class DirectRequestDispatcherTest {
 		// close local context
 		execService.submit(() -> {
 			context.close();
-			System.out.println("context terminated");
+			logger.debug("context terminated");
 		});
 
 		// stop executor
 		execService.shutdown();
 		execService.awaitTermination(3, TimeUnit.SECONDS);
-		System.out.println("executor shut down");
+		logger.debug("executor shut down");
 	}
 
 	private void stopProxy() {
@@ -160,13 +165,6 @@ public class DirectRequestDispatcherTest {
 		ctrl.close();
 	}
 
-	private ZContext createContext() {
-		ZContext ctxt = new ZContext();
-		ctxt.setLinger(1000);
-		ctxt.setRcvHWM(10000);
-		ctxt.setSndHWM(10000);
-		return ctxt;
-	}
 
 	private void initWorkers(int numberOfWorkers) {
 		workers = new ArrayList<>();
@@ -213,7 +211,7 @@ public class DirectRequestDispatcherTest {
 				replies = entry.getValue().get();
 			} catch (Exception e) {
 				fail();
-				e.printStackTrace();
+				logger.error("error getting future value", e);
 			}
 			replies.stream().forEach(r -> assertThat(r, containsString("from peer: " + cli.peerUuid.toString())));
 		});
@@ -225,6 +223,6 @@ public class DirectRequestDispatcherTest {
 
 		// close remote context
 		remoteCtxt.close();
-		System.out.println("remote ctxt closed");
+		logger.debug("remote ctxt closed");
 	}
 }

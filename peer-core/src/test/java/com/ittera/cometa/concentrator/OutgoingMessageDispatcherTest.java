@@ -15,6 +15,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -26,7 +28,8 @@ import java.util.concurrent.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
-public class OutgoingMessageDispatcherTest {
+public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
+	private static final Logger logger = LoggerFactory.getLogger("tests");
 
 	private final UUID peerUuid = UUID.randomUUID();
 	private final String OUTCELL_ADDR = "inproc://cell";
@@ -56,20 +59,12 @@ public class OutgoingMessageDispatcherTest {
 		// close local context
 		execService.submit(() -> {
 			context.close();
-			System.out.println("context terminated");
+			logger.debug("context terminated");
 		});
 
 		// stop executor
 		execService.shutdown();
 		execService.awaitTermination(3, TimeUnit.SECONDS);
-	}
-
-	private ZContext createContext() {
-		ZContext ctxt = new ZContext();
-		ctxt.setLinger(1000);
-		ctxt.setRcvHWM(10000);
-		ctxt.setSndHWM(10000);
-		return ctxt;
 	}
 
 	@Test
@@ -174,8 +169,7 @@ public class OutgoingMessageDispatcherTest {
 				try {
 					rcvdHeaders.add(InternalHeader.parseFrom(buff));
 				} catch (InvalidProtocolBufferException e) {
-					System.err.println("Error parsing internal header");
-					e.printStackTrace();
+					logger.error("Error parsing internal header", e);
 				}
 			}
 		}

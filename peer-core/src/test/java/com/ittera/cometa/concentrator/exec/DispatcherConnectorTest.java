@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator.exec;
 
+import com.ittera.cometa.concentrator.ZmqEnabledTest;
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
@@ -9,6 +10,8 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.google.common.primitives.Ints;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -28,7 +31,8 @@ import org.junit.Test;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
-public class DispatcherConnectorTest {
+public class DispatcherConnectorTest extends ZmqEnabledTest {
+	private static final Logger logger = LoggerFactory.getLogger("tests");
 
 	private final class OutgoingMessageDispatcherStub implements Runnable {
 		List<DataMessage> messagesReceived = new ArrayList<>();
@@ -72,7 +76,7 @@ public class DispatcherConnectorTest {
 					try {
 						messagesReceived.add(DataMessage.parseFrom(msgBuff));
 					} catch (InvalidProtocolBufferException e) {
-						e.printStackTrace();
+						logger.error("Error parsing receieved msg", e);
 					}
 
 					// reply: pretend message has no actors and send 0 back
@@ -125,14 +129,6 @@ public class DispatcherConnectorTest {
 		execService.awaitTermination(2, TimeUnit.SECONDS);
 
 		outDispatcherStub.clear();
-	}
-
-	private ZContext createContext() {
-		ZContext ctxt = new ZContext();
-		ctxt.setLinger(1000);
-		ctxt.setRcvHWM(10000);
-		ctxt.setSndHWM(10000);
-		return ctxt;
 	}
 
 	@Test

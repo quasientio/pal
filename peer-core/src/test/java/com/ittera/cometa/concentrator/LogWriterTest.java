@@ -21,6 +21,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -33,7 +35,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class LogWriterTest {
+public class LogWriterTest extends ZmqEnabledTest {
+	private static final Logger logger = LoggerFactory.getLogger("tests");
 	private ExecutorService execService = Executors.newSingleThreadExecutor();
 	private ZContext zmqContext;
 	private LogWriter logWriter;
@@ -51,19 +54,11 @@ public class LogWriterTest {
 	private static final String TESTS_ZK_ROOT_PATH = "/cometa_tests";
 	private static final String ZK_HOST = "localhost:2181";
 
-	private ZContext createContext() {
-		ZContext ctxt = new ZContext();
-		ctxt.setLinger(1000);
-		ctxt.setRcvHWM(10000);
-		ctxt.setSndHWM(10000);
-		return ctxt;
-	}
-
 	private static void deleteCreatedLogs() throws Exception {
 		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
 		for (String log : createdLogs) {
 			zkCli.deleteLogNamed(log);
-			System.out.printf("Cleaned up left over log: %s%n", log);
+			logger.debug("Cleaned up left over log: {}", log);
 		}
 		zkCli.close();
 	}

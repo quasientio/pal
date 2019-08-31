@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator.exec;
 
+import com.ittera.cometa.concentrator.ZmqEnabledTest;
 import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
@@ -10,6 +11,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -28,7 +31,8 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
-public class PeerMessageInvokerTest {
+public class PeerMessageInvokerTest extends ZmqEnabledTest {
+	private static final Logger logger = LoggerFactory.getLogger("tests");
 	private final UUID peerUuid = UUID.randomUUID();
 	private final String DEALER_ADDR = "inproc://deal";
 	private ZContext context;
@@ -58,7 +62,7 @@ public class PeerMessageInvokerTest {
 				try {
 					constructor = String.class.getConstructor();
 				} catch (NoSuchMethodException e) {
-					e.printStackTrace();
+					logger.error("Error getting constructor", e);
 				}
 				DataMessage reply = msgBuilder.buildReturnValue(peerUuid, new String(), constructor, null,
 					false, incomingMsg.getMessageUuid());
@@ -77,21 +81,13 @@ public class PeerMessageInvokerTest {
 		// close local context
 		execService.submit(() -> {
 			context.close();
-			System.out.println("context terminated");
+			logger.debug("context terminated");
 		});
 
 		// stop executor
 		execService.shutdown();
 		execService.awaitTermination(3, TimeUnit.SECONDS);
-		System.out.println("execService shut down");
-	}
-
-	private ZContext createContext() {
-		ZContext ctxt = new ZContext();
-		ctxt.setLinger(1000);
-		ctxt.setRcvHWM(10000);
-		ctxt.setSndHWM(10000);
-		return ctxt;
+		logger.debug("execService shut down");
 	}
 
 	@Test
