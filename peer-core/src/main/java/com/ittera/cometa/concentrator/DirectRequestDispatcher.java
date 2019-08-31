@@ -20,7 +20,8 @@ class DirectRequestDispatcher extends AbstractExecutionThreadService {
 	private static final Logger logger = LoggerFactory.getLogger(DirectRequestDispatcher.class);
 
 	// zmq stuff
-	private final String routerAddress, dealerAddress, proxyCtrlAddress;
+	private final String routerAddress, dealerAddress;
+	private final String PROXY_CTRL_ADDR = "inproc://rdprxyctrl";
 
 	private ZContext context;
 	private Socket router, dealer, ctrl;
@@ -28,11 +29,9 @@ class DirectRequestDispatcher extends AbstractExecutionThreadService {
 	@Inject
 	public DirectRequestDispatcher(@Named("in.router")String routerAddress,
 																 @Named("in.dealer") String dealerAddress,
-																 @Named("in.proxy.ctrl") String proxyCtrlAddress,
 																 ZContext context) {
 		this.routerAddress = routerAddress;
 		this.dealerAddress = dealerAddress;
-		this.proxyCtrlAddress = proxyCtrlAddress;
 		this.context = context;
 	}
 
@@ -47,9 +46,16 @@ class DirectRequestDispatcher extends AbstractExecutionThreadService {
 
 		// to get proxy termination command
 		this.ctrl = context.createSocket(SocketType.PAIR);
-		ctrl.bind(proxyCtrlAddress);
+		ctrl.bind(PROXY_CTRL_ADDR);
 
 		logger.info("All connections open");
+	}
+
+	private void sendProxyTermCmd() {
+		ZMQ.Socket ctrlCli = context.createSocket(SocketType.PAIR);
+		ctrlCli.connect(PROXY_CTRL_ADDR);
+		ctrlCli.send(ZMQ.PROXY_TERMINATE);
+		ctrlCli.close();
 	}
 
 	private void closeConnections() {
@@ -87,7 +93,7 @@ class DirectRequestDispatcher extends AbstractExecutionThreadService {
 
 	@Override
 	protected void triggerShutdown() {
-
+		sendProxyTermCmd();
 		closeConnections();
 
 		logger.info("IN Message dispatcher shutting down.");

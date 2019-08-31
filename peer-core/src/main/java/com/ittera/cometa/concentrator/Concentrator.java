@@ -85,15 +85,6 @@ public class Concentrator {
 		logger.info("Created and configured zmq context");
 	}
 
-	private static void terminateProxies() {
-		String proxyCtrlAddress = Concentrator.properties.getProperty("in.proxy.ctrl");
-		ZMQ.Socket ctrl = zmqContext.createSocket(SocketType.PAIR);
-		ctrl.connect(proxyCtrlAddress);
-		ctrl.send(ZMQ.PROXY_TERMINATE);
-		ctrl.close();
-		logger.info("Sent TERM cmd to proxies");
-	}
-
 	private static void closeZmqContext() {
 		zmqContext.close();
 		logger.info("Closed zmq context");
@@ -237,9 +228,6 @@ public class Concentrator {
 		// add shutdown hook
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			try {
-				// terminate zmq proxies
-				terminateProxies();
-
 				// close/destroy zmq context
 				closeZmqContext();
 

@@ -120,7 +120,6 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
 
 	private final String ROUTER_ADDR = "tcp://0.0.0.0:5671";
 	private final String DEALER_ADDR = "inproc://deal";
-	private final String PROXY_CTRL_ADDR = "inproc://ctrl-proxy";
 	private ZContext context;
 	private List<Worker> workers;
 	private List<Client> clients;
@@ -135,7 +134,6 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
 		this.directRequestDispatcher = new DirectRequestDispatcher(
 			ROUTER_ADDR,
 			DEALER_ADDR,
-			PROXY_CTRL_ADDR,
 			context);
 		initWorkers(3);
 
@@ -156,15 +154,6 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
 		execService.awaitTermination(3, TimeUnit.SECONDS);
 		logger.debug("executor shut down");
 	}
-
-	private void stopProxy() {
-		// stop proxy
-		Socket ctrl = context.createSocket(SocketType.PAIR);
-		ctrl.connect("inproc://ctrl-proxy");
-		ctrl.send(ZMQ.PROXY_TERMINATE);
-		ctrl.close();
-	}
-
 
 	private void initWorkers(int numberOfWorkers) {
 		workers = new ArrayList<>();
@@ -218,7 +207,6 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
 
 
 		// shut down
-		stopProxy();
 		manager.stopAsync();
 
 		// close remote context
