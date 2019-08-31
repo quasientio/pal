@@ -5,6 +5,7 @@ import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
+import java.nio.channels.ClosedSelectorException;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -96,9 +97,9 @@ public class LogReader extends AbstractExecutionThreadService {
 			}
 
 			String rcvd;
-			boolean breakOut = false;
 
-			while (!Thread.interrupted() && !breakOut) {
+main:
+			while (!Thread.interrupted()) {
 				rcvd = null;
 				try {
 					rcvd = offsetSubscriber.recvStr();
@@ -121,23 +122,26 @@ public class LogReader extends AbstractExecutionThreadService {
 
 				while (rcvd != null) {
 					long offset = Long.parseLong(rcvd);
-					rcvd = null;
 					skipOffsets.add(offset);
 					try {
 						rcvd = offsetSubscriber.recvStr();
+					} catch (ClosedSelectorException ex) {
+						if (logger.isDebugEnabled()) {
+							logger.debug("Caught ClosedSelectorException. Breaking out.");
+						}
+						break main;
 					} catch (ZMQException ex) {
 						int errorCode = ex.getErrorCode();
 						if (errorCode == ZError.ETERM) {
 							if (logger.isDebugEnabled()) {
 								logger.debug("Caught ETERM during blocking read. Breaking out.");
 							}
-							breakOut = true;
-							break;
+							break main;
 						} else if (errorCode == ZError.EINTR) {
 							if (logger.isDebugEnabled()) {
 								logger.debug("Caught EINTR during blocking read. Breaking out.");
 							}
-							break;
+							break main;
 						} else {
 							throw ex;
 						}
@@ -194,6 +198,7 @@ public class LogReader extends AbstractExecutionThreadService {
 
 	/**
 	 * Used from unit tests with MockConsumer
+	 *
 	 * @param zmqContext
 	 * @param inLogAddress
 	 * @param offsetPubAddress
@@ -299,7 +304,7 @@ public class LogReader extends AbstractExecutionThreadService {
 			}
 		}
 
-		main_loop:
+main_loop:
 		while (isRunning() && !Thread.interrupted()) {
 
 			while (!acceptingRequests) {

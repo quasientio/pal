@@ -15,6 +15,8 @@ import java.net.URL;
 
 import java.util.*;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -31,9 +33,7 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import org.zeromq.SocketType;
 import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
 
 public class Concentrator {
 
@@ -86,6 +86,9 @@ public class Concentrator {
 	}
 
 	private static void closeZmqContext() {
+		if (logger.isDebugEnabled()) {
+			logger.debug("Closing zmq context");
+		}
 		zmqContext.close();
 		logger.info("Closed zmq context");
 	}
@@ -227,9 +230,10 @@ public class Concentrator {
 
 		// add shutdown hook
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
 			try {
-				// close/destroy zmq context
-				closeZmqContext();
+				// stop services
+				manager.stopAsync();
 
 				// stop peer executor (interrupts all peer exec threads)
 				final ExtendedThreadPoolExecutor peerMessageExecutor = injector.getInstance(PeerMessageExecutor.class);
@@ -238,12 +242,22 @@ public class Concentrator {
 
 				// stop log executor (interrupts all log exec threads)
 				final ExtendedThreadPoolExecutor logMessageExecutor = injector.getInstance(LogMessageExecutor.class);
-				logger.info("done shutting down log threads");
 				logMessageExecutor.shutdownNow();
+				logger.info("done shutting down log threads");
 
-				// stop all services
-				manager.stopAsync().awaitStopped(3, TimeUnit.SECONDS);
+				// close zmq context asynchronously
+				singleExecutor.submit(() -> closeZmqContext());
+				singleExecutor.shutdown();
 
+				// wait a bit for services to stop
+				manager.awaitStopped(3, TimeUnit.SECONDS);
+
+				// wait a bit for exec service to finish closing zmq context
+				try {
+					singleExecutor.awaitTermination(2, TimeUnit.SECONDS);
+				} catch (InterruptedException e) {
+					logger.error("Unexpected interrupt while closing zmq ctxt", e);
+				}
 			} catch (TimeoutException ie) {
 				logger.error("Timeout exception in shutdown hook", ie);
 			} finally {
