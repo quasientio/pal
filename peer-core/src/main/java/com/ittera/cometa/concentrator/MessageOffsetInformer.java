@@ -1,5 +1,6 @@
 package com.ittera.cometa.concentrator;
 
+import com.google.common.primitives.Longs;
 import com.ittera.cometa.LogReply;
 import com.ittera.cometa.LogInfo;
 
@@ -7,6 +8,7 @@ import com.ittera.cometa.cxn.NoLogRequestNodeException;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.cxn.ZkClient;
 
+import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
 import org.apache.kafka.clients.producer.Callback;
@@ -21,6 +23,7 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 import java.util.UUID;
@@ -118,7 +121,8 @@ class MessageOffsetInformer implements Callback, Watcher {
 
 		// publish new record offset
 		if (publishOffsets) {
-			offsetPublisher.send(String.valueOf(recordMetadata.offset()), 0);
+			offsetPublisher.send(Longs.toByteArray(recordMetadata.offset()), ZMQ.SNDMORE);
+			offsetPublisher.send(UUIDUtils.toBytes(UUID.fromString(message.getMessageUuid())));
 		}
 		if (logger.isDebugEnabled()) {
 			logger.debug("New offset {} for message w/uuid: {}", recordMetadata.offset(), message.getMessageUuid());

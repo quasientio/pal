@@ -129,6 +129,9 @@ class OutgoingMessageDispatcher extends AbstractExecutionThreadService {
 				headerBuffs.forEach(b -> pubSocket.send(b, ZMQ.SNDMORE));
 			}
 			pubSocket.send(msgBuff);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Published new message with {} header(s) and {} bytes", headerCount, msgBuff.length);
+			}
 		}
 
 		closeConnections();

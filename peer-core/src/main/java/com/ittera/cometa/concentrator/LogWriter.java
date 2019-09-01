@@ -192,6 +192,9 @@ class LogWriter extends AbstractExecutionThreadService {
 					continue;
 				}
 				headerCount = Ints.fromByteArray(buff);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Receiving new message with {} header(s)", headerCount);
+				}
 
 				// part 2. [headers]
 				if (headerCount > 0) {

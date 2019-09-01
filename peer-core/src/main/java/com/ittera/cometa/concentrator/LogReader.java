@@ -5,31 +5,30 @@ import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 
-import java.nio.channels.ClosedSelectorException;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
+import java.util.stream.Stream;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.stream.Stream;
+import java.nio.channels.ClosedSelectorException;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
-
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
+
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
 import com.google.inject.name.Named;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-
+import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 
 import org.zeromq.SocketType;
@@ -96,13 +95,21 @@ public class LogReader extends AbstractExecutionThreadService {
 				logger.debug("Offset informer running");
 			}
 
-			String rcvd;
+			byte[] offsetBuff;
 
-main:
 			while (!Thread.interrupted()) {
-				rcvd = null;
+				long offset;
 				try {
-					rcvd = offsetSubscriber.recvStr();
+					// multi-part msg: 1) offset as byte[], 2) uuid as byte[]
+					offsetBuff = offsetSubscriber.recv();
+					offsetSubscriber.recv(); // read and discard UUID
+					offset = Longs.fromByteArray(offsetBuff);
+					skipOffsets.add(offset);
+				} catch (ClosedSelectorException ex) {
+					if (logger.isDebugEnabled()) {
+						logger.debug("Caught ClosedSelectorException. Breaking out.");
+					}
+					break;
 				} catch (ZMQException ex) {
 					int errorCode = ex.getErrorCode();
 					if (errorCode == ZError.ETERM) {
@@ -118,41 +125,6 @@ main:
 					} else {
 						throw ex;
 					}
-				}
-
-				while (rcvd != null) {
-					long offset = Long.parseLong(rcvd);
-					skipOffsets.add(offset);
-					try {
-						rcvd = offsetSubscriber.recvStr();
-					} catch (ClosedSelectorException ex) {
-						if (logger.isDebugEnabled()) {
-							logger.debug("Caught ClosedSelectorException. Breaking out.");
-						}
-						break main;
-					} catch (ZMQException ex) {
-						int errorCode = ex.getErrorCode();
-						if (errorCode == ZError.ETERM) {
-							if (logger.isDebugEnabled()) {
-								logger.debug("Caught ETERM during blocking read. Breaking out.");
-							}
-							break main;
-						} else if (errorCode == ZError.EINTR) {
-							if (logger.isDebugEnabled()) {
-								logger.debug("Caught EINTR during blocking read. Breaking out.");
-							}
-							break main;
-						} else {
-							throw ex;
-						}
-					}
-				}
-
-				// short pause, not to be eager
-				try {
-					Thread.sleep(1);
-				} catch (InterruptedException e) {
-					logger.error("Interrupted in sleep", e);
 				}
 			}
 		}

@@ -1,20 +1,17 @@
 package com.ittera.cometa.concentrator;
 
-import com.ittera.cometa.concentrator.exec.java.CustomClassloader;
+import com.ittera.cometa.concentrator.exec.java.SelfCaller;
 import com.ittera.cometa.cxn.PeerLogDirectory;
-
 import com.ittera.cometa.concentrator.exec.PeerMessageExecutor;
 import com.ittera.cometa.concentrator.exec.LogMessageExecutor;
 import com.ittera.cometa.concentrator.exec.ExtendedThreadPoolExecutor;
+import com.ittera.cometa.concentrator.exec.java.CustomClassloader;
 
 import java.io.InputStream;
 import java.io.File;
-
 import java.net.MalformedURLException;
 import java.net.URL;
-
 import java.util.*;
-
 import java.util.concurrent.*;
 
 import org.slf4j.LoggerFactory;
@@ -32,6 +29,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Parameters;
 
 import static picocli.CommandLine.Option;
 
@@ -62,6 +60,12 @@ public class Concentrator implements Callable<Integer> {
 
 	@Option(names = {"-h", "--help"}, usageHelp = true, description = "display this help message")
 	private boolean helpRequested = false;
+
+	@Parameters(index = "0", arity = "0..1")
+	private String className;
+
+	@Parameters(index = "1..*")
+	private List<String> argList;
 
 	// app properties
 	private final Properties properties = new Properties();
@@ -189,6 +193,50 @@ public class Concentrator implements Callable<Integer> {
 		logger.info("Registered self in peer directory");
 	}
 
+	private void shutdown(ServiceManager manager, Injector injector, boolean fast) {
+		ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
+		try {
+			// stop services
+			manager.stopAsync();
+
+			// stop peer executor (interrupts all peer exec threads)
+			final ExtendedThreadPoolExecutor peerMessageExecutor = injector.getInstance(PeerMessageExecutor.class);
+			peerMessageExecutor.shutdownNow();
+			logger.info("Done shutting down peer threads");
+
+			// stop log executor (interrupts all log exec threads)
+			final ExtendedThreadPoolExecutor logMessageExecutor = injector.getInstance(LogMessageExecutor.class);
+			logMessageExecutor.shutdownNow();
+			logger.info("Done shutting down log threads");
+
+			// close zmq context asynchronously
+			singleExecutor.submit(() -> closeZmqContext());
+			singleExecutor.shutdown();
+
+			// wait a bit for services to stop
+			if (fast) {
+				manager.awaitStopped(500, TimeUnit.MILLISECONDS);
+			} else {
+				manager.awaitStopped(3, TimeUnit.SECONDS);
+			}
+
+			// wait a bit for exec service to finish closing zmq context
+			try {
+				if (fast) {
+					singleExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+				} else {
+					singleExecutor.awaitTermination(2, TimeUnit.SECONDS);
+				}
+			} catch (InterruptedException e) {
+				logger.error("Unexpected interrupt while closing zmq ctxt", e);
+			}
+		} catch (TimeoutException ie) {
+			logger.error("Timeout exception in shutdown hook", ie);
+		} finally {
+			logger.info("This peer is done! bye");
+		}
+	}
+
 	public static void main(final String[] args) {
 		logger.info("peer::main called w/args: {}", String.join(" ", args));
 		int exitCode = new CommandLine(new Concentrator()).execute(args);
@@ -227,7 +275,8 @@ public class Concentrator implements Callable<Integer> {
 					}
 				});
 		}
-		CustomClassloader customClassloader = new CustomClassloader(urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
+		CustomClassloader customClassloader = new CustomClassloader(urls.toArray(new URL[0]),
+			Thread.currentThread().getContextClassLoader());
 		logger.info("Initialized custom classloader with paths: {}", urls.toString());
 
 		// inject dependencies
@@ -266,6 +315,12 @@ public class Concentrator implements Callable<Integer> {
 				// We must prestart threads to create the REP sockets, and this must be done after DEALER
 				injector.getInstance(PeerMessageExecutor.class).prestartAllCoreThreads();
 				injector.getInstance(LogMessageExecutor.class).prestartAllCoreThreads();
+
+				if (className != null) {
+					// self-call className.main() if given, and then we're done
+					injector.getInstance(SelfCaller.class).callMain(className, argList);
+					shutdown(manager, injector, true);
+				}
 			}
 
 			public void failure(Service service) {
@@ -274,44 +329,14 @@ public class Concentrator implements Callable<Integer> {
 		}, MoreExecutors.directExecutor());
 
 		// add shutdown hook
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-			ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
-			try {
-				// stop services
-				manager.stopAsync();
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown(manager, injector, false)));
 
-				// stop peer executor (interrupts all peer exec threads)
-				final ExtendedThreadPoolExecutor peerMessageExecutor = injector.getInstance(PeerMessageExecutor.class);
-				peerMessageExecutor.shutdownNow();
-				logger.info("Done shutting down peer threads");
+		// start services
+		manager.startAsync();
 
-				// stop log executor (interrupts all log exec threads)
-				final ExtendedThreadPoolExecutor logMessageExecutor = injector.getInstance(LogMessageExecutor.class);
-				logMessageExecutor.shutdownNow();
-				logger.info("Done shutting down log threads");
+		// wait here
+		manager.awaitStopped();
 
-				// close zmq context asynchronously
-				singleExecutor.submit(() -> closeZmqContext());
-				singleExecutor.shutdown();
-
-				// wait a bit for services to stop
-				manager.awaitStopped(3, TimeUnit.SECONDS);
-
-				// wait a bit for exec service to finish closing zmq context
-				try {
-					singleExecutor.awaitTermination(2, TimeUnit.SECONDS);
-				} catch (InterruptedException e) {
-					logger.error("Unexpected interrupt while closing zmq ctxt", e);
-				}
-			} catch (TimeoutException ie) {
-				logger.error("Timeout exception in shutdown hook", ie);
-			} finally {
-				logger.info("This peer is done! bye");
-			}
-		}));
-
-		//start services
-		manager.startAsync().awaitStopped();
 		return 0;
 	}
 }

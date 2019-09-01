@@ -31,6 +31,12 @@ public class IncomingMessageDispatcher {
 	@Inject
 	private SetInstanceVariableDispatcher setInstanceVariableDispatcher;
 
+	/**
+	 *
+	 * @param dataMessage Message to invoke
+	 * @param isDirect true if message comes from this or another peer, false if it comes from a log
+	 * @return the returnValue message
+	 */
 	public DataMessage incomingCall(DataMessage dataMessage, boolean isDirect) {
 
 		if (dataMessage.hasConstructorCall()) {
