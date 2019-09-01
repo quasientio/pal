@@ -14,12 +14,17 @@ import com.google.inject.Injector;
 class LogConfigurator {
 
 	protected static final Logger logger = LoggerFactory.getLogger(LogConfigurator.class);
-	private final PeerOptions peerOptions;
+	private final String inLogName;
+	private final String outLogName;
+	private final Long inLogOffset;
+
 	private final Properties appProps;
 	private final Injector injector;
 
-	LogConfigurator(PeerOptions peerOptions, Properties appProps, Injector injector) {
-		this.peerOptions = peerOptions;
+	LogConfigurator(String inLogName, Long inLogOffset, String outLogName, Properties appProps, Injector injector) {
+		this.inLogName = inLogName;
+		this.inLogOffset = inLogOffset;
+		this.outLogName = outLogName;
 		this.appProps = appProps;
 		this.injector = injector;
 	}
@@ -31,16 +36,16 @@ class LogConfigurator {
 		return registry.createLog(kafkaTopicPrefix);
 	}
 
-	private LogInfo registerGivenLog(LogInfo givenLogInfo) throws Exception {
+	private LogInfo getOrRegisterGivenLog(String logName) throws Exception {
 
 		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
 		final LogInfo logInfo;
 
 		// register given log if not registered
-		if (registry.logExists(givenLogInfo.getName())) {
-			logInfo = registry.getLogInfo(givenLogInfo.getName());
+		if (registry.logExists(logName)) {
+			logInfo = registry.getLogInfo(logName);
 		} else {
-			logInfo = registry.addGivenLog(givenLogInfo.getName());
+			logInfo = registry.addGivenLog(logName);
 		}
 
 		return logInfo;
@@ -62,15 +67,15 @@ class LogConfigurator {
 		// register log(s)
 		LogInfo inLog, outLog, newLog = null;
 
-		if (peerOptions.inLog != null) {
-			inLog = registerGivenLog(peerOptions.inLog);
+		if (inLogName != null) {
+			inLog = getOrRegisterGivenLog(inLogName);
 		} else { // no log given, create new
 			inLog = registerNewLog();
 			newLog = inLog;
 		}
 
-		if (peerOptions.outLog != null) {
-			outLog = registerGivenLog(peerOptions.outLog);
+		if (outLogName != null) {
+			outLog = getOrRegisterGivenLog(outLogName);
 		} else { // no log given, create new if not done already
 			if (newLog == null) {
 				newLog = registerNewLog();
@@ -80,7 +85,7 @@ class LogConfigurator {
 
 		// init log reader+writer
 		boolean inAndOutAreSame = inLog.equals(outLog);
-		readFromLog(inLog, inAndOutAreSame, peerOptions.offset);
+		readFromLog(inLog, inAndOutAreSame, inLogOffset);
 		writeToLog(outLog, inLog);
 	}
 }

@@ -15,10 +15,7 @@ import java.net.URL;
 
 import java.util.*;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
@@ -33,24 +30,51 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+
+import static picocli.CommandLine.Option;
+
 import org.zeromq.ZContext;
 
-public class Concentrator {
+@Command(name = "peer")
+public class Concentrator implements Callable<Integer> {
 
-	private static final Logger logger = LoggerFactory.getLogger(Concentrator.class);
+	@Option(names = {"-u", "--use-uuid"}, paramLabel = "PEER_UUID", description = "use given uuid")
+	private UUID uuid;
 
-	private static UUID uuid;
+	@Option(names = {"-r", "--read-log"}, paramLabel = "LOGNAME", description = "read from given log")
+	private String inLogName;
 
-	private static final Properties properties = new Properties();
+	@Option(names = {"-s", "--offset-start"}, paramLabel = "OFFSET_START",
+		description = "read from given offset (requires -l or -r)")
+	private Long inLogOffset;
+
+	@Option(names = {"-w", "--write-log"}, paramLabel = "LOGNAME", description = "write to given log")
+	private String outLogName;
+
+	@Option(names = {"-l", "--log"}, paramLabel = "LOGNAME", description = "read and write from/to given log")
+	private String logName;
+
+	@Option(names = {"-cp", "--classpath"}, paramLabel = "CLASSPATH",
+		description = "load classes from given folders/JARs")
+	private String classpath;
+
+	@Option(names = {"-h", "--help"}, usageHelp = true, description = "display this help message")
+	private boolean helpRequested = false;
+
+	// app properties
+	private final Properties properties = new Properties();
 
 	// zmq context -- gets injected to all other threads
-	private static final ZContext zmqContext;
+	private ZContext zmqContext;
 
+	// STATIC variables
+	private static final Logger logger = LoggerFactory.getLogger(Concentrator.class);
 	private static final String PROPERTIES_FILE = "/peer.properties";
-
 	private static final String LOGGING_CONFIG = "/peer-logging.xml";
 
-	// defaults for properties
+	// defaults for ZMQ properties
 	private static final String ZMQ_LINGER_DEFAULT = "1000";
 	private static final String ZMQ_RCVHWM_DEFAULT = "10000";
 	private static final String ZMQ_SNDHWM_DEFAULT = "10000";
@@ -68,7 +92,9 @@ public class Concentrator {
 			// for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
 			ie.printStackTrace();
 		}
+	}
 
+	private void loadProps() {
 		// load properties from file in classpath
 		try (final InputStream stream = Concentrator.class.getResourceAsStream(PROPERTIES_FILE)) {
 			properties.load(stream);
@@ -76,8 +102,10 @@ public class Concentrator {
 			fatalExit(ex, PeerFatalCode.ERROR_LOADING_PROPERTIES,
 				String.format("Make sure to have `%s` in the classpath", PROPERTIES_FILE));
 		}
+		logger.info("Loaded application properties from `{}`", PROPERTIES_FILE);
+	}
 
-		// initialize zmq context
+	private void initZContext() {
 		zmqContext = new ZContext();
 		zmqContext.setLinger(Integer.parseInt(properties.getProperty("ZMQ_LINGER", ZMQ_LINGER_DEFAULT)));
 		zmqContext.setRcvHWM(Integer.parseInt(properties.getProperty("ZMQ_RCVHWM", ZMQ_RCVHWM_DEFAULT)));
@@ -85,7 +113,7 @@ public class Concentrator {
 		logger.info("Created and configured zmq context");
 	}
 
-	private static void closeZmqContext() {
+	private void closeZmqContext() {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Closing zmq context");
 		}
@@ -93,11 +121,11 @@ public class Concentrator {
 		logger.info("Closed zmq context");
 	}
 
-	private static void fatalExit(Throwable ex, PeerFatalCode fatalCode) {
+	private void fatalExit(Throwable ex, PeerFatalCode fatalCode) {
 		fatalExit(ex, fatalCode, null);
 	}
 
-	private static void fatalExit(Throwable ex, PeerFatalCode fatalCode, String extraMessage) {
+	private void fatalExit(Throwable ex, PeerFatalCode fatalCode, String extraMessage) {
 		if (ex != null) {
 			logger.error(fatalCode.getMessage(), ex);
 		}
@@ -111,7 +139,19 @@ public class Concentrator {
 		System.exit(fatalCode.getCode());
 	}
 
-	private static void addEnvToProperties() {
+	private void validateInput() {
+		// if logName is given, assign to both in and out (overriding any of the latter values)
+		if (logName != null) {
+			inLogName = outLogName = logName;
+		}
+
+		// ensure that if offset was given, a log name to read from was also given
+		if (inLogOffset != null && inLogName == null) {
+			fatalExit(null, PeerFatalCode.ERROR_NO_LOG_GIVEN);
+		}
+	}
+
+	private void addEnvToProperties() {
 
 		// load from Environment variable or system property
 		String zookeeperUrl = System.getenv("ZOOKEEPER_URL");
@@ -123,16 +163,17 @@ public class Concentrator {
 			fatalExit(null, PeerFatalCode.ERROR_NO_ZOOKEEPER_URL_GIVEN);
 		}
 		// add to app properties
-		Concentrator.properties.setProperty("zookeeper_url", zookeeperUrl);
+		properties.setProperty("zookeeper_url", zookeeperUrl);
+		logger.info("Added env variables to properties");
 	}
 
-	private static void registerSelfAsPeer(Injector injector) {
+	private void registerSelfAsPeer(Injector injector) {
 
 		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
 
 		// connect to directory
 		try {
-			registry.connect(Concentrator.properties.getProperty("zookeeper_url"));
+			registry.connect(properties.getProperty("zookeeper_url"));
 		} catch (Exception ex) {
 			fatalExit(ex, PeerFatalCode.ERROR_CONNECTING_TO_DIRECTORY);
 		}
@@ -140,35 +181,43 @@ public class Concentrator {
 		// register self as new peer
 		try {
 			final Properties peerProperties = new Properties();
-			peerProperties.put("listenAddress", Concentrator.properties.getProperty("in.router"));
+			peerProperties.put("listenAddress", properties.getProperty("in.router"));
 			registry.registerPeer(uuid, peerProperties);
 		} catch (Exception ex) {
 			fatalExit(ex, PeerFatalCode.ERROR_REGISTERING_PEER);
 		}
+		logger.info("Registered self in peer directory");
 	}
 
 	public static void main(final String[] args) {
-
 		logger.info("peer::main called w/args: {}", String.join(" ", args));
+		int exitCode = new CommandLine(new Concentrator()).execute(args);
+		System.exit(exitCode);
+	}
 
-		// parse options
-		PeerOptions options = PeerOptions.parse(args);
-		if (options.helpNeeded) {
-			options.printHelp();
-			System.exit(0);
+	@Override
+	public Integer call() {
+
+		validateInput();
+
+		loadProps();
+
+		initZContext();
+
+		// set this peer's uuid if not given
+		if (uuid == null) {
+			uuid = UUID.randomUUID();
 		}
-		// set this peer's uuid
-		uuid = options.uuid != null ? options.uuid : UUID.randomUUID();
 		properties.put("id", uuid.toString());
 
-		// check and add env variables to app props
+		// add env variables to app props
 		addEnvToProperties();
 
 		// init custom classloader
 		List<URL> urls = new ArrayList<>();
-		if (options.classpath != null) {
+		if (classpath != null) {
 			// split by ':' and add each entry: each should be either a folder or a JAR (just as in $CLASSPATH)
-			Arrays.stream(options.classpath.split(":"))
+			Arrays.stream(classpath.split(":"))
 				.map(File::new)
 				.forEach(f -> {
 					try {
@@ -179,7 +228,7 @@ public class Concentrator {
 				});
 		}
 		CustomClassloader customClassloader = new CustomClassloader(urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
-		logger.info("initialized custom classloader with paths: {}", urls.toString());
+		logger.info("Initialized custom classloader with paths: {}", urls.toString());
 
 		// inject dependencies
 		final Injector injector = Guice.createInjector(new PeerGuiceModule(properties, zmqContext, customClassloader));
@@ -188,12 +237,8 @@ public class Concentrator {
 		registerSelfAsPeer(injector);
 
 		// init logs IO
-		if (options.offsetGiven && options.inLog == null) {
-			fatalExit(null, PeerFatalCode.ERROR_NO_LOG_GIVEN);
-		}
-
 		try {
-			new LogConfigurator(options, properties, injector).init();
+			new LogConfigurator(inLogName, inLogOffset, outLogName, properties, injector).init();
 		} catch (Exception ex) {
 			fatalExit(ex, PeerFatalCode.ERROR_INITIALIZING_LOGS);
 		}
@@ -238,12 +283,12 @@ public class Concentrator {
 				// stop peer executor (interrupts all peer exec threads)
 				final ExtendedThreadPoolExecutor peerMessageExecutor = injector.getInstance(PeerMessageExecutor.class);
 				peerMessageExecutor.shutdownNow();
-				logger.info("done shutting down peer threads");
+				logger.info("Done shutting down peer threads");
 
 				// stop log executor (interrupts all log exec threads)
 				final ExtendedThreadPoolExecutor logMessageExecutor = injector.getInstance(LogMessageExecutor.class);
 				logMessageExecutor.shutdownNow();
-				logger.info("done shutting down log threads");
+				logger.info("Done shutting down log threads");
 
 				// close zmq context asynchronously
 				singleExecutor.submit(() -> closeZmqContext());
@@ -266,6 +311,7 @@ public class Concentrator {
 		}));
 
 		//start services
-		manager.startAsync();
+		manager.startAsync().awaitStopped();
+		return 0;
 	}
 }
