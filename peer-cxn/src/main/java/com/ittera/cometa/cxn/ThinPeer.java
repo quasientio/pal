@@ -3,9 +3,7 @@ package com.ittera.cometa.cxn;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.PeerInfo;
-import com.ittera.cometa.messages.DataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
 
 import com.ittera.cometa.common.util.Strings;
@@ -64,7 +62,7 @@ public class ThinPeer {
 	private final Duration pollingDuration;
 	private static final int PRECEDING_RECS = 50;
 
-	private final KafkaProducer<String, DataMessage> producer;
+	private final KafkaProducer<String, ExecMessage> producer;
 	private final KafkaConsumer<String, String> consumer;
 
 	private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap<>();
@@ -236,7 +234,7 @@ public class ThinPeer {
 		peerSocket.connect(currentPeer.getListenAddress());
 	}
 
-	public DataMessage sendAndReceive(DataMessage message) throws ExecutionException, InterruptedException {
+	public ExecMessage sendAndReceive(ExecMessage message) throws ExecutionException, InterruptedException {
 		if (allowP2P && talkingToPeer) {
 			return sendToPeer(message);
 		} else {
@@ -244,7 +242,7 @@ public class ThinPeer {
 		}
 	}
 
-	public DataMessage waitFor(Wrappers.Type type, String fieldName) {
+	public ExecMessage waitFor(Wrappers.Type type, String fieldName) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
 		}
@@ -254,15 +252,15 @@ public class ThinPeer {
 		while (true) {
 			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
 			for (ConsumerRecord record : records) {
-				final DataMessage dataMessage = (DataMessage) record.value();
+				final ExecMessage execMessage = (ExecMessage) record.value();
 				long receivedMsgOffset = record.offset();
 
-				if (dataMessage.hasStaticFieldPutDone() &&
-					fieldName.equals(dataMessage.getStaticFieldPutDone().getField().getName())) {
+				if (execMessage.hasStaticFieldPutDone() &&
+					fieldName.equals(execMessage.getStaticFieldPutDone().getField().getName())) {
 					if (logger.isDebugEnabled()) {
-						logger.debug("Got matching message with offset {}:\n{}", receivedMsgOffset, dataMessage);
+						logger.debug("Got matching message with offset {}:\n{}", receivedMsgOffset, execMessage);
 					}
-					return dataMessage;
+					return execMessage;
 				} else {
 					if (logger.isDebugEnabled()) {
 						logger.debug("Skipping record with offset {}", receivedMsgOffset);
@@ -272,16 +270,16 @@ public class ThinPeer {
 		}
 	}
 
-	public DataMessage getMessageAtOffset(Long seek) {
+	public ExecMessage getMessageAtOffset(Long seek) {
 		return getMessageAtOffset(seek, true);
 	}
 
-	private DataMessage getMessageAtOffset(Long seek, boolean lookupCached) {
+	private ExecMessage getMessageAtOffset(Long seek, boolean lookupCached) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
 		}
 		if (lookupCached) {
-			DataMessage cachedMsg = getCachedMessageAtOffset(seek);
+			ExecMessage cachedMsg = getCachedMessageAtOffset(seek);
 			if (cachedMsg != null) {
 				if (logger.isDebugEnabled()) {
 					logger.debug("Got cached record at offset {}", seek);
@@ -313,13 +311,13 @@ public class ThinPeer {
 		}
 		// now swap last batch (map) of records read with the new one
 		this.lastRecordsRead = recordsRead;
-		return (DataMessage) requestedRecord.value();
+		return (ExecMessage) requestedRecord.value();
 	}
 
-	private DataMessage getCachedMessageAtOffset(Long offset) {
+	private ExecMessage getCachedMessageAtOffset(Long offset) {
 		ConsumerRecord cached = lastRecordsRead.get(offset);
 		if (cached != null) {
-			return (DataMessage) cached.value();
+			return (ExecMessage) cached.value();
 		}
 		return null;
 	}
@@ -353,7 +351,7 @@ public class ThinPeer {
 		return peerUuid;
 	}
 
-	public void sendToLogAndForget(DataMessage message) {
+	public void sendToLogAndForget(ExecMessage message) {
 
 		// send to kafka
 		producer.send(new ProducerRecord<>(outLog.getName(), message.getMessageUuid(), message));
@@ -362,7 +360,7 @@ public class ThinPeer {
 		}
 	}
 
-	public Future<DataMessage> sendToLogAsync(DataMessage message) {
+	public Future<ExecMessage> sendToLogAsync(ExecMessage message) {
 
 		final UUID requestMsgUuid = UUID.fromString(message.getMessageUuid());
 
@@ -372,7 +370,7 @@ public class ThinPeer {
 			logger.debug("Message sent to log:\n{}", message);
 		}
 
-		final DataMessageFuture messageFuture = new DataMessageFuture(this, peerLogDirectory,
+		final ExecMessageFuture messageFuture = new ExecMessageFuture(this, peerLogDirectory,
 			singleThreadConsumerExecutor, outLog.getName(), new LogRequest(requestMsgUuid));
 
 		// addLogRequest callback
@@ -404,11 +402,11 @@ public class ThinPeer {
 		return messageFuture;
 	}
 
-	private DataMessage sendToLogAndReceive(DataMessage message) throws ExecutionException, InterruptedException {
+	private ExecMessage sendToLogAndReceive(ExecMessage message) throws ExecutionException, InterruptedException {
 		return sendToLogAndReceive(message, false);
 	}
 
-	private DataMessage sendToLogAndReceive(DataMessage message, boolean consumeLogUntilReply)
+	private ExecMessage sendToLogAndReceive(ExecMessage message, boolean consumeLogUntilReply)
 		throws ExecutionException, InterruptedException {
 
 		if (!allowP2P || consumeLogUntilReply) {
@@ -419,11 +417,11 @@ public class ThinPeer {
 		return sendAsyncAndSwitchToPeer(message);
 	}
 
-	private DataMessage sendAsyncAndSwitchToPeer(DataMessage message) throws ExecutionException, InterruptedException {
-		Future<DataMessage> replyFuture = sendToLogAsync(message);
+	private ExecMessage sendAsyncAndSwitchToPeer(ExecMessage message) throws ExecutionException, InterruptedException {
+		Future<ExecMessage> replyFuture = sendToLogAsync(message);
 
 		// wait for reply (blocking)
-		DataMessage replyMsg = replyFuture.get();
+		ExecMessage replyMsg = replyFuture.get();
 
 		// switch to direct p2p talk
 		String concentratorUuid = replyMsg.getConcentratorUuid();
@@ -432,7 +430,7 @@ public class ThinPeer {
 		return replyMsg;
 	}
 
-	private DataMessage sendAndReceiveConsumingLog(DataMessage message) {
+	private ExecMessage sendAndReceiveConsumingLog(ExecMessage message) {
 		// send to kafka
 		long sentRecordOffset;
 		Future<RecordMetadata> recordMetadataFuture =
@@ -461,15 +459,15 @@ public class ThinPeer {
 				logger.debug("Received {} records", records.count());
 			}
 			for (ConsumerRecord record : records) {
-				final DataMessage dataMessage = (DataMessage) record.value();
+				final ExecMessage execMessage = (ExecMessage) record.value();
 				long receivedMsgOffset = record.offset();
-				if (dataMessage.hasFollowingUuid() && message.getMessageUuid().equals(dataMessage.getFollowingUuid())) {
+				if (execMessage.hasFollowingUuid() && message.getMessageUuid().equals(execMessage.getFollowingUuid())) {
 					if (logger.isDebugEnabled()) {
-						logger.debug("Got reply with offset {} and uuid {} ", receivedMsgOffset, dataMessage.getMessageUuid());
+						logger.debug("Got reply with offset {} and uuid {} ", receivedMsgOffset, execMessage.getMessageUuid());
 					}
 					// try switching to direct peer talk (i.e. p2p)
 					if (allowP2P) {
-						UUID concentratorUuid = UUID.fromString(dataMessage.getConcentratorUuid());
+						UUID concentratorUuid = UUID.fromString(execMessage.getConcentratorUuid());
 						PeerInfo newPeer = null;
 						try {
 							// we getPeerProperties and close after since we assume we'll get here only once
@@ -482,7 +480,7 @@ public class ThinPeer {
 						}
 					}
 
-					return dataMessage;
+					return execMessage;
 				} else {
 					if (logger.isDebugEnabled()) {
 						logger.debug("Skipping record with offset {}", receivedMsgOffset);
@@ -514,7 +512,7 @@ public class ThinPeer {
 		talkingToPeer = true;
 	}
 
-	private DataMessage sendToPeer(DataMessage message) {
+	private ExecMessage sendToPeer(ExecMessage message) {
 
 		// send message request to peer
 		peerSocket.send(message.toByteArray());
@@ -523,9 +521,9 @@ public class ThinPeer {
 		byte[] reply = peerSocket.recv(0);
 		final long waitEnd = System.currentTimeMillis();
 
-		DataMessage replyMsg = null;
+		ExecMessage replyMsg = null;
 		try {
-			replyMsg = DataMessage.parseFrom(reply);
+			replyMsg = ExecMessage.parseFrom(reply);
 			if (logger.isDebugEnabled()) {
 				logger.debug("Got reply message with uuid: {}, waited {} ms", replyMsg.getMessageUuid(), (waitEnd - waitStart));
 			}

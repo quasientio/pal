@@ -2,9 +2,9 @@ package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.concentrator.PeerException;
-import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
 import com.ittera.cometa.messages.UUIDUtils;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -34,14 +34,14 @@ public class SelfCaller {
 
 	private final UUID peerUuid;
 	private final IncomingMessageDispatcher incomingMessageDispatcher;
-	private final DataMessageBuilder messageBuilder;
+	private final ExecMessageBuilder messageBuilder;
 	private final ClassLoader customClassloader;
 
 	private final ZContext context;
 	private final String offsetPubAddress;
 
 	@Inject
-	SelfCaller(UUID peerUuid, IncomingMessageDispatcher incomingMessageDispatcher, DataMessageBuilder messageBuilder,
+	SelfCaller(UUID peerUuid, IncomingMessageDispatcher incomingMessageDispatcher, ExecMessageBuilder messageBuilder,
 						 CustomClassloader customClassloader, ZContext context, @Named("offset.pub") String offsetPubAddress) {
 		this.peerUuid = peerUuid;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
@@ -51,7 +51,7 @@ public class SelfCaller {
 		this.offsetPubAddress = offsetPubAddress;
 	}
 
-	public DataMessage callMain(String className, List<String> argList) {
+	public ExecMessage callMain(String className, List<String> argList) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Preparing message to call {}.main() with args: [{}]", className,
 				argList == null ? "" : String.join(",", argList));
@@ -66,12 +66,12 @@ public class SelfCaller {
 			parameters[0] = argList.toArray(new String[0]);
 		}
 
-		final List<DataMessage> replies = new ArrayList<>();
+		final List<ExecMessage> replies = new ArrayList<>();
 
 		// dispatch it with a new named thread, also provided with our custom classloader
 		Thread invokingThread = new Thread(() -> {
 			// build request message
-			DataMessage request = messageBuilder.buildClassMethod(peerUuid, className, "main",
+			ExecMessage request = messageBuilder.buildClassMethod(peerUuid, className, "main",
 				parameterTypesNamesArray, this, null, parameters, new ObjectRef[parameterTypes.length]);
 			replies.add(incomingMessageDispatcher.incomingCall(request, true));
 		});
@@ -91,7 +91,7 @@ public class SelfCaller {
 			logger.error("Thread interrupted", e);
 		}
 		// get reply message
-		final DataMessage reply = replies.get(0);
+		final ExecMessage reply = replies.get(0);
 
 		// wait for the reply message offset, to ensure all msg's from have been written to the log
 		boolean offsetPublished = false;
@@ -115,7 +115,7 @@ public class SelfCaller {
 		return reply;
 	}
 
-	public DataMessage callJar(String jarFile, List<String> argList) throws PeerException {
+	public ExecMessage callJar(String jarFile, List<String> argList) throws PeerException {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Call jar `{}` with args: [{}]",
 				jarFile, argList == null ? "" : String.join(",", argList));

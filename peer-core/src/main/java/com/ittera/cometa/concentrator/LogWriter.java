@@ -9,7 +9,7 @@ import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 
 import com.google.inject.Inject;
@@ -45,7 +45,7 @@ class LogWriter extends AbstractExecutionThreadService {
 	private static final Logger logger = LoggerFactory.getLogger(LogWriter.class);
 
 	// kafka stuff
-	private Producer<String, DataMessage> producer;
+	private Producer<String, ExecMessage> producer;
 	private final Properties producerProperties = new Properties();
 
 	// zmq stuff
@@ -94,7 +94,7 @@ class LogWriter extends AbstractExecutionThreadService {
 	 */
 	LogWriter(@Named("out.pub") String outPubAddress,
 						@Named("offset.pub") String offsetPubAddress,
-						Producer<String, DataMessage> producer,
+						Producer<String, ExecMessage> producer,
 						ZContext zmqContext,
 						PeerLogDirectory peerLogDirectory,
 						UUID peerUuid) {
@@ -227,18 +227,18 @@ class LogWriter extends AbstractExecutionThreadService {
 				}
 			}
 
-			DataMessage dataMessage = null;
+			ExecMessage execMessage = null;
 			try {
-				dataMessage = DataMessage.parseFrom(msg);
+				execMessage = ExecMessage.parseFrom(msg);
 			} catch (Exception e) {
 				logger.error("Caught exception parsing message", e);
 			}
 
 			// got a message
-			if (dataMessage != null) {
+			if (execMessage != null) {
 
 				// send to kafka immediately
-				sendToKafka(dataMessage, peerUuid, fromInternalToLog(headers));
+				sendToKafka(execMessage, peerUuid, fromInternalToLog(headers));
 			}
 		}
 
@@ -265,12 +265,12 @@ class LogWriter extends AbstractExecutionThreadService {
 	}
 
 
-	private void sendToKafka(DataMessage message, UUID fromPeer, Iterable<Header> headers) {
+	private void sendToKafka(ExecMessage message, UUID fromPeer, Iterable<Header> headers) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("sending new message with uuid: {}", message.getMessageUuid());
 		}
 
-		ProducerRecord<String, DataMessage> newRecord = new ProducerRecord<>(outLog.getName(), 0,
+		ProducerRecord<String, ExecMessage> newRecord = new ProducerRecord<>(outLog.getName(), 0,
 			fromPeer.toString(), message, headers);
 
 		producer.send(newRecord, new MessageOffsetInformer(message, publishOffsets, offsetPublisher,

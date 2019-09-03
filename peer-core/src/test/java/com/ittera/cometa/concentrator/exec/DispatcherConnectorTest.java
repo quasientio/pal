@@ -1,10 +1,9 @@
 package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.ZmqEnabledTest;
-import com.ittera.cometa.concentrator.exec.DispatcherConnector;
-import com.ittera.cometa.messages.DataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 
 import com.google.common.primitives.Ints;
@@ -35,7 +34,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 	private static final Logger logger = LoggerFactory.getLogger("tests");
 
 	private final class OutgoingMessageDispatcherStub implements Runnable {
-		List<DataMessage> messagesReceived = new ArrayList<>();
+		List<ExecMessage> messagesReceived = new ArrayList<>();
 		List<byte[]> headersReceived = new ArrayList<>();
 
 		void clear() {
@@ -74,7 +73,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 					// part 3. message
 					msgBuff = repSocket.recv();
 					try {
-						messagesReceived.add(DataMessage.parseFrom(msgBuff));
+						messagesReceived.add(ExecMessage.parseFrom(msgBuff));
 					} catch (InvalidProtocolBufferException e) {
 						logger.error("Error parsing receieved msg", e);
 					}
@@ -100,7 +99,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 	private ZContext context;
 	private ExecutorService execService;
 	private DispatcherConnector dispatcherConnector;
-	private final DataMessageBuilder msgBuilder = new ProtobufDataMessageBuilder();
+	private final ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
 	private final OutgoingMessageDispatcherStub outDispatcherStub = new OutgoingMessageDispatcherStub();
 	private InternalHeader WRITE_AHEAD_HEADER;
 
@@ -134,8 +133,8 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 	@Test
 	public void sendAndRecvOneMessage() throws Exception {
 		// sends msg and get reply
-		DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-		DataMessage returnedMsg = dispatcherConnector.sendAndRecv(msg);
+		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+		ExecMessage returnedMsg = dispatcherConnector.sendAndRecv(msg);
 
 		// should return same message as sent (if reply == 0), null otherwise
 		assertThat(returnedMsg, is(msg));
@@ -147,14 +146,14 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 	public void sendAndRecvMany() throws Exception {
 
 		int msgsToSend = 10;
-		List<DataMessage> sentMessages = new ArrayList<>();
-		List<DataMessage> returnedMessages = new ArrayList<>();
+		List<ExecMessage> sentMessages = new ArrayList<>();
+		List<ExecMessage> returnedMessages = new ArrayList<>();
 
 		// sends msgs and get replies
 		for (int i = 0; i < msgsToSend; i++) {
-			DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+			ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 			sentMessages.add(msg);
-			DataMessage returnedMsg = dispatcherConnector.sendAndRecv(msg);
+			ExecMessage returnedMsg = dispatcherConnector.sendAndRecv(msg);
 			returnedMessages.add(returnedMsg);
 		}
 
@@ -166,7 +165,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 	@Test
 	public void writeAhead() throws Exception {
 
-		DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 		dispatcherConnector.writeAhead(msg);
 
 		// verify messages received by stub

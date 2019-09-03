@@ -7,7 +7,7 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 
-public class DataMessageMatchers {
+public class ExecMessageMatchers {
 
 	/**
 	 * Matches if ReturnValue is of DeclaringClass

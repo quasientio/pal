@@ -3,7 +3,7 @@ package com.ittera.cometa.concentrator;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.messages.UUIDUtils;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -68,7 +68,7 @@ public class LogReader extends AbstractExecutionThreadService {
 	private Long initialOffset;
 	private String kafkaTopic;
 	private TopicPartition topicPartition;
-	private Consumer<String, DataMessage> consumer;
+	private Consumer<String, ExecMessage> consumer;
 	private final Properties consumerProperties = new Properties();
 	private volatile long lastOffsetRead = -1;
 
@@ -183,7 +183,7 @@ public class LogReader extends AbstractExecutionThreadService {
 						String inLogAddress,
 						String offsetPubAddress,
 						PeerLogDirectory peerLogDirectory,
-						Consumer<String, DataMessage> consumer,
+						Consumer<String, ExecMessage> consumer,
 						UUID peerUuid,
 						long pollDuration) {
 		this.zmqContext = zmqContext;
@@ -292,7 +292,7 @@ main_loop:
 			}
 
 			// read from kafka
-			ConsumerRecords<String, DataMessage> records;
+			ConsumerRecords<String, ExecMessage> records;
 			long t0;
 			t0 = System.nanoTime();
 			records = consumer.poll(pollDuration);
@@ -317,14 +317,14 @@ main_loop:
 				lastOffsetRead = messageOffset;
 
 				if (!recordProducedOrDispatchingBySelf(record.headers())) {
-					final DataMessage dataMessage = (DataMessage) record.value();
+					final ExecMessage execMessage = (ExecMessage) record.value();
 
 					// send request to DEALER socket
 					logDealer.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
 					logDealer.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
-					logDealer.send(dataMessage.toByteArray(), 0);
+					logDealer.send(execMessage.toByteArray(), 0);
 					if (logger.isDebugEnabled()) {
-						logger.debug("Dealt new log Data Message with uuid: {}", dataMessage.getMessageUuid());
+						logger.debug("Dealt new log Data Message with uuid: {}", execMessage.getMessageUuid());
 					}
 				} else {
 					if (logger.isDebugEnabled()) {

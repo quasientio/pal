@@ -18,10 +18,10 @@ import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.util.Classes;
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
-import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
 import org.slf4j.LoggerFactory;
@@ -29,12 +29,12 @@ import org.slf4j.Logger;
 
 import javax.inject.Inject;
 
-public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatcher {
+public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatcher {
 
 	final Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	UUID peerUuid;
-	DataMessageBuilder messageBuilder;
+	ExecMessageBuilder messageBuilder;
 	ObjectService objectService;
 	private DispatcherConnector connector;
 
@@ -51,10 +51,10 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		}
 
 		// 1. Wrap message
-		final DataMessage beforeExecMsg = wrapBeforeExecMessage(ctxt, sender, target, args);
+		final ExecMessage beforeExecMsg = wrapBeforeExecMessage(ctxt, sender, target, args);
 
 		// 2. Send message
-		final DataMessage beforeExecReplyMsg = connector.sendAndRecv(beforeExecMsg);
+		final ExecMessage beforeExecReplyMsg = connector.sendAndRecv(beforeExecMsg);
 
 		// TODO if beforeExecReplyMsg != beforeExecMsg, unpack and exec reply msg
 
@@ -73,10 +73,10 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		}
 
 		// 5. Wrap object or exception
-		final DataMessage afterExecMsg = wrapAfterExecMessage(ctxt, returnValue, objectRef, returnsVoid);
+		final ExecMessage afterExecMsg = wrapAfterExecMessage(ctxt, returnValue, objectRef, returnsVoid);
 
 		// 6. Send object or exception
-		final DataMessage afterExecReplyMsg = connector.sendAndRecv(afterExecMsg);
+		final ExecMessage afterExecReplyMsg = connector.sendAndRecv(afterExecMsg);
 
 		// TODO if afterExecReplyMsg != afterExecMsg, unpack exception or return value
 
@@ -103,12 +103,12 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	}
 
 	@Override
-	public DataMessage dispatchIncoming(DataMessage incomingCall) {
+	public ExecMessage dispatchIncoming(ExecMessage incomingCall) {
 		return dispatchIncoming(incomingCall, true);
 	}
 
 	@Override
-	public DataMessage dispatchIncoming(DataMessage incomingCall, boolean isDirect) {
+	public ExecMessage dispatchIncoming(ExecMessage incomingCall, boolean isDirect) {
 		if (logger.isTraceEnabled()) {
 			logger.trace("dispatchIncoming:in w/ message uuid: {}, isDirect: {}", incomingCall.getMessageUuid(), isDirect);
 		}
@@ -180,11 +180,11 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		}
 
 		// 9. Wrap object or exception
-		final DataMessage afterExecMsg = wrapAfterExecMessage(incomingCall, returnValue, objectRef, accessibleObject,
+		final ExecMessage afterExecMsg = wrapAfterExecMessage(incomingCall, returnValue, objectRef, accessibleObject,
 			exceptionWhileLoading, exceptionWhileInvoking);
 
 		// 10. Send object or exception, and receive
-		final DataMessage afterExecReplyMsg = connector.sendAndRecv(afterExecMsg);
+		final ExecMessage afterExecReplyMsg = connector.sendAndRecv(afterExecMsg);
 
 		// 11. Return received message
 		if (logger.isTraceEnabled()) {
@@ -198,16 +198,16 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	}
 
 	/**
-	 * @param dataMessage
-	 * @return List of loaded classes for each parameter, or null if dataMessage is not a call to constructor/method.
+	 * @param execMessage
+	 * @return List of loaded classes for each parameter, or null if execMessage is not a call to constructor/method.
 	 * @throws ClassNotFoundException
 	 */
-	private List<Class> getParameterTypesFromMessage(DataMessage dataMessage) throws ClassNotFoundException {
+	private List<Class> getParameterTypesFromMessage(ExecMessage execMessage) throws ClassNotFoundException {
 
 		final List<Class> paramClasses = new ArrayList<>();
-		List<Primitives.Parameter> parameterList = getParameterList(dataMessage);
+		List<Primitives.Parameter> parameterList = getParameterList(execMessage);
 
-		if (dataMessage.hasConstructorCall() || dataMessage.hasClassMethodCall() || dataMessage.hasInstanceMethodCall()) {
+		if (execMessage.hasConstructorCall() || execMessage.hasClassMethodCall() || execMessage.hasInstanceMethodCall()) {
 			for (Primitives.Parameter param : parameterList) {
 				Class paramClass = Classes.getClassForPrimitive(param.getType().getName());
 				if (paramClass == null) { // ie. not a primitive
@@ -222,10 +222,10 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		return paramClasses;
 	}
 
-	private List<Object> getArgsFromMessage(DataMessage dataMessage, List<Class> parameterTypes) {
+	private List<Object> getArgsFromMessage(ExecMessage execMessage, List<Class> parameterTypes) {
 
 		List<Object> args = new ArrayList<>();
-		List<Primitives.Parameter> parameterList = getParameterList(dataMessage);
+		List<Primitives.Parameter> parameterList = getParameterList(execMessage);
 
 		int i = 0;
 		if (parameterList != null) {
@@ -250,7 +250,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 *
 	 * @return
 	 */
-	Optional<Object> getValueFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject) {
+	Optional<Object> getValueFromMessage(ExecMessage execMessage, Optional<AccessibleObject> accessibleObject) {
 		return Optional.empty();
 	}
 
@@ -259,7 +259,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 *
 	 * @return
 	 */
-	Object getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
+	Object getTargetFromMessage(ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
 		throws ClassNotFoundException, ObjectNotFoundException {
 		return null;
 	}
@@ -272,7 +272,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 * @param exceptionWhileInvoking
 	 * @return
 	 */
-	final DataMessage wrapAfterExecThrowableMessage(String messageUuid,
+	final ExecMessage wrapAfterExecThrowableMessage(String messageUuid,
 																									Optional<AccessibleObject> accessibleObject,
 																									ExecutableObjectType executableObjectType,
 																									Throwable exceptionWhileLoading,
@@ -289,7 +289,7 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	}
 
 	@Inject
-	final void setMessageBuilder(DataMessageBuilder messageBuilder) {
+	final void setMessageBuilder(ExecMessageBuilder messageBuilder) {
 		this.messageBuilder = messageBuilder;
 	}
 
@@ -303,14 +303,14 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 		this.connector = connector;
 	}
 
-	abstract protected DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target,
+	abstract protected ExecMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target,
 																											 Object[] args);
 
 	// TODO generalize this method, using a Builder method taking Executable's
 	// TODO create a Builder.buildVoidReturnValue() method
-	abstract protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid);
+	abstract protected ExecMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid);
 
-	abstract protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
+	abstract protected ExecMessage wrapAfterExecMessage(ExecMessage execMessage, Object valueObject, ObjectRef valueObjRef,
 																											Optional<AccessibleObject> accessibleObject,
 																											Throwable exceptionWhileLoading, Throwable exceptionWhileInvoking);
 
@@ -340,15 +340,15 @@ public abstract class BaseDispatcher implements Dispatcher, DataMessageDispatche
 	 */
 	abstract protected ExecutableObjectType getExecutableObjectType();
 
-	abstract protected List<Primitives.Parameter> getParameterList(DataMessage dataMessage);
+	abstract protected List<Primitives.Parameter> getParameterList(ExecMessage execMessage);
 
 	/**
-	 * @param dataMessage
+	 * @param execMessage
 	 * @param parameterTypes Used only by constructor and method dispatchers
 	 * @param args           Used only by method dispatchers
 	 * @return
 	 * @throws ReflectiveOperationException
 	 */
-	abstract protected AccessibleObject loadAccessibleObject(DataMessage dataMessage, List<Class> parameterTypes,
+	abstract protected AccessibleObject loadAccessibleObject(ExecMessage execMessage, List<Class> parameterTypes,
 																													 List<Object> args) throws ReflectiveOperationException;
 }

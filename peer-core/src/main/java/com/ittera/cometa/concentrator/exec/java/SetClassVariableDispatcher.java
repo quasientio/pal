@@ -5,8 +5,8 @@ import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
-import com.ittera.cometa.messages.DataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
@@ -25,7 +25,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 
 	@Singleton
 	@Inject
-	public SetClassVariableDispatcher(UUID peerUuid, DataMessageBuilder messageBuilder, DispatcherConnector connector,
+	public SetClassVariableDispatcher(UUID peerUuid, ExecMessageBuilder messageBuilder, DispatcherConnector connector,
 																		ObjectService objectService) {
 		setPeerUuid(peerUuid);
 		setMessageBuilder(messageBuilder);
@@ -44,28 +44,28 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 	}
 
 	@Override
-	protected AccessibleObject loadAccessibleObject(Wrappers.DataMessage dataMessage, List<Class> parameterTypes,
+	protected AccessibleObject loadAccessibleObject(Wrappers.ExecMessage execMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 
-		Class clazz = Class.forName(dataMessage.getStaticFieldPut().getClass_().getName(), true,
+		Class clazz = Class.forName(execMessage.getStaticFieldPut().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
-		return clazz.getDeclaredField(dataMessage.getStaticFieldPut().getField().getName());
+		return clazz.getDeclaredField(execMessage.getStaticFieldPut().getField().getName());
 	}
 
 	@Override
-	protected Optional<Object> getValueFromMessage(final DataMessage dataMessage,
+	protected Optional<Object> getValueFromMessage(final ExecMessage execMessage,
 																								 final Optional<AccessibleObject> accessibleObject) {
 
 		final Object value;
 		final Field field = (Field) accessibleObject.get();
 
-		if (dataMessage.getStaticFieldPut().hasValueObject()) {
-			value = Unwrapper.unwrapObject(dataMessage.getStaticFieldPut().getValueObject(), field.getType());
+		if (execMessage.getStaticFieldPut().hasValueObject()) {
+			value = Unwrapper.unwrapObject(execMessage.getStaticFieldPut().getValueObject(), field.getType());
 			if (logger.isTraceEnabled()) {
 				logger.trace("Unwrapped value: {}", value);
 			}
 		} else {
-			value = objectService.lookupObject(ObjectRef.from(dataMessage.getStaticFieldPut().getValueObjectRef()));
+			value = objectService.lookupObject(ObjectRef.from(execMessage.getStaticFieldPut().getValueObjectRef()));
 			if (logger.isTraceEnabled()) {
 				logger.trace("Loaded value: {}", value);
 			}
@@ -75,10 +75,10 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
+	protected ExecMessage wrapAfterExecMessage(ExecMessage execMessage, Object valueObject, ObjectRef valueObjRef,
 																						 Optional<AccessibleObject> accessibleObject,
 																						 Throwable exceptionWhileLoading, Throwable exceptionWhileInvoking) {
-		String messageUuid = dataMessage.getMessageUuid();
+		String messageUuid = execMessage.getMessageUuid();
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
 			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getExecutableObjectType(),
 				exceptionWhileLoading, exceptionWhileInvoking);

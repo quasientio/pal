@@ -2,7 +2,7 @@ package com.ittera.cometa.cxn;
 
 import com.ittera.cometa.LogReply;
 import com.ittera.cometa.LogRequest;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import java.util.List;
 import java.util.Set;
@@ -20,12 +20,12 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.AsyncCallback;
 
-class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCallback.ChildrenCallback {
+class ExecMessageFuture implements Future<ExecMessage>, Watcher, AsyncCallback.ChildrenCallback {
 	private final CountDownLatch latch = new CountDownLatch(1);
-	private DataMessage value;
+	private ExecMessage value;
 	private boolean cancelled;
 
-	private final static Logger logger = LoggerFactory.getLogger(DataMessageFuture.class);
+	private final static Logger logger = LoggerFactory.getLogger(ExecMessageFuture.class);
 
 	private final ThinPeer thinPeer;
 	private final PeerLogDirectory peerLogDirectory;
@@ -33,7 +33,7 @@ class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCallback.C
 	private final LogRequest logRequest;
 	private final ExecutorService executorService;
 
-	DataMessageFuture(ThinPeer thinPeer, PeerLogDirectory peerLogDirectory,
+	ExecMessageFuture(ThinPeer thinPeer, PeerLogDirectory peerLogDirectory,
 										ExecutorService executorService, String logName, LogRequest logRequest) {
 		this.thinPeer = thinPeer;
 		this.peerLogDirectory = peerLogDirectory;
@@ -61,13 +61,13 @@ class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCallback.C
 	}
 
 	@Override
-	public DataMessage get() throws InterruptedException {
+	public ExecMessage get() throws InterruptedException {
 		latch.await();
 		return value;
 	}
 
 	@Override
-	public DataMessage get(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException {
+	public ExecMessage get(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException {
 		if (latch.await(timeout, unit)) {
 			return value;
 		} else {
@@ -80,7 +80,7 @@ class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCallback.C
 	 *
 	 * @param result
 	 */
-	private void put(DataMessage result) {
+	private void put(ExecMessage result) {
 		value = result;
 		latch.countDown();
 	}
@@ -138,12 +138,12 @@ class DataMessageFuture implements Future<DataMessage>, Watcher, AsyncCallback.C
 		// let the executor service fetch the message from the log
 		executorService.submit(() -> {
 			// set msg value to complete future
-			DataMessage messageReply = thinPeer.getMessageAtOffset(logReply.getOffset());
+			ExecMessage messageReply = thinPeer.getMessageAtOffset(logReply.getOffset());
 			if (logger.isDebugEnabled()) {
 				logger.debug("completing future reply msg w/uuid: {} for request w/uuid: {}",
 					messageReply.getMessageUuid(), messageReply.getFollowingUuid());
 			}
-			DataMessageFuture.this.put(messageReply);
+			ExecMessageFuture.this.put(messageReply);
 			// delete request and reply nodes
 			deleteRequestNode();
 		});

@@ -7,11 +7,11 @@ import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
 import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
-import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.*;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.*;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.*;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.HasDeclaringClassOf.*;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromClass.*;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromReflectable.*;
 
 import org.junit.*;
 
@@ -73,11 +73,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -120,11 +120,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -167,11 +167,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -214,11 +214,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -261,11 +261,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -308,11 +308,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -354,11 +354,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -401,11 +401,11 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForGetFieldTest target = new ClassForGetFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();

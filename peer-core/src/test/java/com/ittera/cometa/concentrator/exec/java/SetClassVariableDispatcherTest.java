@@ -6,11 +6,11 @@ import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 import com.ittera.cometa.common.lang.reflect.Signature;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.comesFromClass;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.comesFrom;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromClass.comesFromClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromReflectable.comesFrom;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -93,11 +93,11 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		String fieldClassName = "short.class";
 		short newFieldValue = 987;
 
-		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName,
 			fieldClassName, newFieldValue);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -141,11 +141,11 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		String fieldClassName = "byte[].class";
 		byte[] newFieldValue = "this is just a test".getBytes();
 
-		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName,
 			fieldClassName, newFieldValue);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -190,12 +190,12 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		String fieldClassName = "Boolean.class";
 		Boolean newFieldValue = true;
 
-		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName,
 			fieldClassName, newFieldValue);
 
 		// dispatch
 		assertFalse(ClassForPutStaticTest.someBoolean);
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -239,11 +239,11 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		String fieldClassName = "String.class";
 		String newFieldValue = "abnormally";
 
-		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName,
 			fieldClassName, newFieldValue);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -288,10 +288,10 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		LinkedList newFieldValue = new LinkedList();
 		ObjectRef valueObjRef = objectService.storeObject(newFieldValue);
 
-		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
+		ExecMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -335,12 +335,12 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		String fieldName = "aList";
 		LinkedList newFieldValue = null;
 
-		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName,
 			"List.class", newFieldValue);
 
 		// dispatch
 		assertThat(ClassForPutStaticTest.aList, notNullValue());
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -384,10 +384,10 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		Object[] newFieldValue = {1, "a", false, 9283.95d};
 		ObjectRef valueObjRef = objectService.storeObject(newFieldValue);
 
-		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
+		ExecMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -431,10 +431,10 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 		Exception newFieldValue = new Exception("not working");
 		ObjectRef valueObjRef = objectService.storeObject(newFieldValue);
 
-		DataMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
+		ExecMessage incomingMessage = messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();

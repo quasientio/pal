@@ -2,8 +2,8 @@ package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
 
-import com.ittera.cometa.messages.DataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -30,15 +30,15 @@ class LogMessageInvoker extends Thread {
 
 	private final IncomingMessageDispatcher incomingMessageDispatcher;
 	private final DispatcherConnector dispatcherConnector;
-	private final DataMessageBuilder dataMessageBuilder;
+	private final ExecMessageBuilder execMessageBuilder;
 	private final UUID peerUuid;
 
 	public LogMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
-													 DataMessageBuilder dataMessageBuilder, String inLogAddress, IncomingMessageDispatcher
+													 ExecMessageBuilder execMessageBuilder, String inLogAddress, IncomingMessageDispatcher
 														 incomingMessageDispatcher, DispatcherConnector dispatcherConnector, UUID peerUuid) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
-		this.dataMessageBuilder = dataMessageBuilder;
+		this.execMessageBuilder = execMessageBuilder;
 		this.inLogAddress = inLogAddress;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = dispatcherConnector;
@@ -53,15 +53,15 @@ class LogMessageInvoker extends Thread {
 	 * NOTE: dispatcherConnector is set to null, since it's not required
 	 *
 	 * @param zmqContext
-	 * @param dataMessageBuilder
+	 * @param execMessageBuilder
 	 * @param inLogAddress
 	 * @param incomingMessageDispatcher
 	 * @param peerUuid
 	 */
-	LogMessageInvoker(ZContext zmqContext, DataMessageBuilder dataMessageBuilder, String inLogAddress,
+	LogMessageInvoker(ZContext zmqContext, ExecMessageBuilder execMessageBuilder, String inLogAddress,
 										IncomingMessageDispatcher incomingMessageDispatcher, UUID peerUuid) {
 		this.zmqContext = zmqContext;
-		this.dataMessageBuilder = dataMessageBuilder;
+		this.execMessageBuilder = execMessageBuilder;
 		this.inLogAddress = inLogAddress;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = null;
@@ -78,7 +78,7 @@ class LogMessageInvoker extends Thread {
 		socket = zmqContext.createSocket(SocketType.REP);
 		socket.connect(inLogAddress);
 
-		DataMessage requestMsg;
+		ExecMessage requestMsg;
 
 		if (logger.isDebugEnabled()) {
 			logger.debug("Start getting requests from socket");
@@ -119,7 +119,7 @@ class LogMessageInvoker extends Thread {
 
 			// parse req
 			try {
-				requestMsg = DataMessage.parseFrom(req);
+				requestMsg = ExecMessage.parseFrom(req);
 			} catch (Exception e) {
 				logger.error("Caught exception parsing message", e);
 			}
@@ -158,14 +158,14 @@ class LogMessageInvoker extends Thread {
 		}
 	}
 
-	private void dispatch(DataMessage requestMsg, long recordOffset) {
-		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, false);
+	private void dispatch(ExecMessage requestMsg, long recordOffset) {
+		ExecMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, false);
 		if (logger.isDebugEnabled()) {
 			logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",
 				requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());
 		}
 		requestsDispatched.getAndIncrement();
-		dataMessageBuilder.resetThreadLocalSequence();
+		execMessageBuilder.resetThreadLocalSequence();
 	}
 
 	public AtomicLong getRequestsDispatched() {

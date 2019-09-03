@@ -7,9 +7,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.cxn.ZkClient;
-import com.ittera.cometa.messages.DataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
@@ -74,7 +74,7 @@ public class LogReaderTest extends ZmqEnabledTest {
 					long logOffset = Long.parseLong(offset);
 					logger.debug("received offset = {}", logOffset);
 					byte[] req = socket.recv();
-					DataMessage msg = DataMessage.parseFrom(req);
+					ExecMessage msg = ExecMessage.parseFrom(req);
 					logger.debug("msg received = {}", msg);
 					rcvdMsgUuids.add(msg.getMessageUuid());
 				} catch (ZMQException ex) {
@@ -108,7 +108,7 @@ public class LogReaderTest extends ZmqEnabledTest {
 	private UUID peerUuid = UUID.randomUUID();
 	private ZkClient registry;
 	private ServiceManager manager;
-	private MockConsumer<String, DataMessage> consumer;
+	private MockConsumer<String, ExecMessage> consumer;
 	private LogInfo log;
 	private final int partition = 0;
 	private static Set<String> createdLogs = new HashSet<>();
@@ -184,9 +184,9 @@ public class LogReaderTest extends ZmqEnabledTest {
 		execService.submit(logMsgInvoker);
 
 		// send 1 message
-		DataMessageBuilder msgBuilder = new ProtobufDataMessageBuilder();
+		ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
 		String key = peerUuid.toString();
-		DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
 		this.consumer.addRecord(new ConsumerRecord<>
 			(this.log.getName(), partition, 0, key, msg));
@@ -245,9 +245,9 @@ public class LogReaderTest extends ZmqEnabledTest {
 		execService.submit(logMsgInvoker);
 
 		// send 1 message
-		DataMessageBuilder msgBuilder = new ProtobufDataMessageBuilder();
+		ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
 		String key = peerUuid.toString();
-		DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
 		this.consumer.addRecord(new ConsumerRecord<>
 			(this.log.getName(), partition, 0, key, msg));
@@ -284,13 +284,13 @@ public class LogReaderTest extends ZmqEnabledTest {
 		execService.submit(logMsgInvoker);
 
 		// send 1 message
-		DataMessageBuilder msgBuilder = new ProtobufDataMessageBuilder();
+		ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
 		String key = peerUuid.toString();
 		Set<String> sentUuids = new TreeSet<>();
 
 		int msgsToSend = 30;
 		for (int i = 0; i < msgsToSend; i++) {
-			DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+			ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 			this.consumer.addRecord(new ConsumerRecord<>
 				(this.log.getName(), partition, i, key, msg));
 			sentUuids.add(msg.getMessageUuid());

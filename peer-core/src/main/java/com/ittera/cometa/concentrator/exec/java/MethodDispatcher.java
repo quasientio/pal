@@ -3,7 +3,7 @@ package com.ittera.cometa.concentrator.exec.java;
 import com.ittera.cometa.common.lang.ObjectRef;
 
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.AccessibleObject;
@@ -22,11 +22,11 @@ public abstract class MethodDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
+	protected ExecMessage wrapAfterExecMessage(ExecMessage execMessage, Object valueObject, ObjectRef valueObjRef,
 																						 Optional<AccessibleObject> accessibleObject, Throwable exceptionWhileLoading,
 																						 Throwable exceptionWhileInvoking) {
 
-		String messageUuid = dataMessage.getMessageUuid();
+		String messageUuid = execMessage.getMessageUuid();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
 			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getExecutableObjectType(),

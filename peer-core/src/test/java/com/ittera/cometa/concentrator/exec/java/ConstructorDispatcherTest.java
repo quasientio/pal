@@ -6,13 +6,13 @@ import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.junit.*;
 
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.comesFromClass;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.comesFrom;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromClass.comesFromClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromReflectable.comesFrom;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.junit.Assert.*;
 
 import org.junit.runner.RunWith;
@@ -56,7 +56,7 @@ class ClassForConstructorTest {
  * TODO:
  * - with remoteArgs
  * - with with objectRefs
- * - use DataMessageAssertions for dispatchIncoming* tests
+ * - use ExecMessageAssertions for dispatchIncoming* tests
  */
 @RunWith(MockitoJUnitRunner.class)
 public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
@@ -95,10 +95,10 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 	@Override
 	public void dispatchIncoming_noArgs_ok() {
 
-		DataMessage incomingMessage = messageBuilder.buildEmptyConstructor(peerUuid, targetClass.getName());
+		ExecMessage incomingMessage = messageBuilder.buildEmptyConstructor(peerUuid, targetClass.getName());
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -145,11 +145,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		Object[] args = {459};
 		ObjectRef[] argRefs = {null};
 
-		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
+		ExecMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
 			toNames(parameterTypes), args, argRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -194,11 +194,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		Object[] args = {true, 983309835l};
 		ObjectRef[] argRefs = {null, null};
 
-		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
+		ExecMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
 			toNames(parameterTypes), args, argRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
 		// expect
@@ -222,11 +222,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		Object[] args = {};
 		ObjectRef[] argRefs = {objRef};
 
-		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
+		ExecMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
 			toNames(parameterTypes), args, argRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		ObjectRef retObjRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
 		// expect
@@ -248,11 +248,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		Object[] args = {null};
 		ObjectRef[] argRefs = {null};
 
-		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
+		ExecMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
 			toNames(parameterTypes), args, argRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
 		// expect
@@ -279,11 +279,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 	 * String[] parameterTypesNamesArray = Arrays.stream(parameterTypes).map(p -> p.getName()).collect(toList()).
 	 * toArray(new String[0]);
 	 * <p>
-	 * DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
+	 * ExecMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
 	 * parameterTypesNamesArray, args, argRefs);
 	 * <p>
 	 * // dispatch
-	 * DataMessage replyMsg = dispatcher.dispatchIncoming(incomingMessage);
+	 * ExecMessage replyMsg = dispatcher.dispatchIncoming(incomingMessage);
 	 * <p>
 	 * // expect
 	 * verifyDispatcherCalledOnce();
@@ -328,11 +328,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		args[0] = new String[]{"hello ", "world", "!"}; //varargs must be wrapped in array of expected type
 		ObjectRef[] argRefs = {null};
 
-		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
+		ExecMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
 			toNames(parameterTypes), args, argRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
 		// expect
@@ -378,11 +378,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 		Object[] args = {"49385InvalidNumber1001"};
 		ObjectRef[] argRefs = {null};
 
-		DataMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
+		ExecMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid, targetClass.getName(),
 			toNames(parameterTypes), args, argRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();

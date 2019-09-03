@@ -6,10 +6,10 @@ import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 import com.ittera.cometa.common.ObjectService;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
 
 import com.ittera.cometa.concentrator.util.ReflectionHelper;
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
@@ -30,7 +30,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 
 	@Singleton
 	@Inject
-	public ClassMethodDispatcher(UUID peerUuid, DataMessageBuilder messageBuilder, DispatcherConnector connector,
+	public ClassMethodDispatcher(UUID peerUuid, ExecMessageBuilder messageBuilder, DispatcherConnector connector,
 															 ObjectService objectService) {
 		setPeerUuid(peerUuid);
 		setMessageBuilder(messageBuilder);
@@ -39,13 +39,13 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 	}
 
 	@Override
-	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
+	protected final ExecMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
 		return messageBuilder.buildClassMethod(peerUuid, ctxt, sender, storeObject(sender), args, Arrays.stream(args).map(
 			this::storeObject).toArray(ObjectRef[]::new));
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
+	protected ExecMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
 		final Optional<AccessibleObject> method = Optional.of(((MethodSignature) ctxt.getSignature()).getMethod());
 
@@ -86,29 +86,29 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 	}
 
 	@Override
-	protected List<Primitives.Parameter> getParameterList(DataMessage dataMessage) {
-		return dataMessage.getClassMethodCall().getParameterList();
+	protected List<Primitives.Parameter> getParameterList(ExecMessage execMessage) {
+		return execMessage.getClassMethodCall().getParameterList();
 	}
 
 	/**
-	 * @param dataMessage
+	 * @param execMessage
 	 * @param parameterTypes Not used here.
 	 * @param args
 	 * @return
 	 * @throws ReflectiveOperationException
 	 */
 	@Override
-	protected AccessibleObject loadAccessibleObject(DataMessage dataMessage, List<Class> parameterTypes,
+	protected AccessibleObject loadAccessibleObject(ExecMessage execMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 
-		Class clazz = Class.forName(dataMessage.getClassMethodCall().getClass_().getName(), true,
+		Class clazz = Class.forName(execMessage.getClassMethodCall().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
 		AccessibleObject accessibleObject = ReflectionHelper.getMethodToInvoke(clazz, args.toArray(),
-			dataMessage.getClassMethodCall().getParameterList().stream().map(Primitives.Parameter::getValue).collect(Collectors.toList()),
-			dataMessage.getClassMethodCall().getName());
+			execMessage.getClassMethodCall().getParameterList().stream().map(Primitives.Parameter::getValue).collect(Collectors.toList()),
+			execMessage.getClassMethodCall().getName());
 		if (accessibleObject == null) {
 			throw new NoSuchMethodException(String.format("Can't find method:%s in class:%s with given parameter types",
-				dataMessage.getClassMethodCall().getName(), clazz.getName()));
+				execMessage.getClassMethodCall().getName(), clazz.getName()));
 		}
 		return accessibleObject;
 	}

@@ -3,11 +3,11 @@ package com.ittera.cometa.messages.protobuf;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.kafka.common.serialization.Deserializer;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import java.util.Map;
 
-public class KafkaDeserializer implements Deserializer<DataMessage> {
+public class KafkaDeserializer implements Deserializer<ExecMessage> {
 
 	@Override
 	public void configure(Map map, boolean b) {
@@ -15,10 +15,10 @@ public class KafkaDeserializer implements Deserializer<DataMessage> {
 	}
 
 	@Override
-	public DataMessage deserialize(String s, byte[] bytes) {
-		DataMessage message;
+	public ExecMessage deserialize(String s, byte[] bytes) {
+		ExecMessage message;
 		try {
-			message = DataMessage.parseFrom(bytes);
+			message = ExecMessage.parseFrom(bytes);
 		} catch (InvalidProtocolBufferException e) {
 			throw new RuntimeException(e);
 		}

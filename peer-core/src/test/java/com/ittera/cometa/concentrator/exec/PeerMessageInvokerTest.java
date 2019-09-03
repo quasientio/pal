@@ -2,9 +2,9 @@ package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.ZmqEnabledTest;
 import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
-import com.ittera.cometa.messages.DataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.junit.After;
 import org.junit.Before;
@@ -40,7 +40,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
 	private ExecutorService execService;
 	private PeerMessageInvoker peerMessageInvoker;
 	private IncomingMessageDispatcher incomingMessageDispatcher;
-	private final DataMessageBuilder msgBuilder = new ProtobufDataMessageBuilder();
+	private final ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
 
 	@Before
 	public void setup() {
@@ -57,14 +57,14 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
 		when(incomingMessageDispatcher.incomingCall(any(), anyBoolean())).thenAnswer(
 			(Answer) invocation -> {
 				Object[] args = invocation.getArguments();
-				DataMessage incomingMsg = (DataMessage) args[0];
+				ExecMessage incomingMsg = (ExecMessage) args[0];
 				Constructor constructor = null;
 				try {
 					constructor = String.class.getConstructor();
 				} catch (NoSuchMethodException e) {
 					logger.error("Error getting constructor", e);
 				}
-				DataMessage reply = msgBuilder.buildReturnValue(peerUuid, new String(), constructor, null,
+				ExecMessage reply = msgBuilder.buildReturnValue(peerUuid, new String(), constructor, null,
 					false, incomingMsg.getMessageUuid());
 				return reply;
 			});
@@ -97,13 +97,13 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
 		execService.submit(peerMessageInvoker);
 
 		// deal msg
-		DataMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+		ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 		dealerSocket.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
 		dealerSocket.send(invokable.toByteArray(), 0);
 		// get reply
 		dealerSocket.recv(); //1st frame empty to emulate REP envelope
 		byte[] buff = dealerSocket.recv();
-		DataMessage reply = DataMessage.parseFrom(buff);
+		ExecMessage reply = ExecMessage.parseFrom(buff);
 
 		assertThat(peerMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(1)));
 		verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
@@ -120,18 +120,18 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
 
 		// deal msgs
 		int msgCount = 10;
-		List<DataMessage> msgsToInvoke = new ArrayList<>();
-		List<DataMessage> replyMessages = new ArrayList<>();
+		List<ExecMessage> msgsToInvoke = new ArrayList<>();
+		List<ExecMessage> replyMessages = new ArrayList<>();
 		for (int i = 0; i < msgCount; i++) {
 			// deal msg
-			DataMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+			ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 			dealerSocket.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
 			dealerSocket.send(invokable.toByteArray(), 0);
 			msgsToInvoke.add(invokable);
 			// get reply
 			dealerSocket.recv(); //1st frame empty to emulate REP envelope
 			byte[] buff = dealerSocket.recv();
-			DataMessage reply = DataMessage.parseFrom(buff);
+			ExecMessage reply = ExecMessage.parseFrom(buff);
 			replyMessages.add(reply);
 		}
 

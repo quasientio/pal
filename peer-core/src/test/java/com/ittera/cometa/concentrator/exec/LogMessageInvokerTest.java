@@ -2,9 +2,9 @@ package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.ZmqEnabledTest;
 import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
-import com.ittera.cometa.messages.DataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +42,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 	private ExecutorService execService;
 	private LogMessageInvoker logMessageInvoker;
 	private IncomingMessageDispatcher incomingMessageDispatcher;
-	private final DataMessageBuilder msgBuilder = new ProtobufDataMessageBuilder();
-	private List<DataMessage> messageReplies = new ArrayList<>();
+	private final ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
+	private List<ExecMessage> messageReplies = new ArrayList<>();
 
 	@Before
 	public void setup() {
@@ -60,14 +60,14 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 		when(incomingMessageDispatcher.incomingCall(any(), anyBoolean())).thenAnswer(
 			(Answer) invocation -> {
 				Object[] args = invocation.getArguments();
-				DataMessage incomingMsg = (DataMessage) args[0];
+				ExecMessage incomingMsg = (ExecMessage) args[0];
 				Constructor constructor = null;
 				try {
 					constructor = String.class.getConstructor();
 				} catch (NoSuchMethodException e) {
 					logger.error("Error getting constructor", e);
 				}
-				DataMessage reply = msgBuilder.buildReturnValue(peerUuid, new String(), constructor, null,
+				ExecMessage reply = msgBuilder.buildReturnValue(peerUuid, new String(), constructor, null,
 					false, incomingMsg.getMessageUuid());
 				messageReplies.add(reply);
 				return reply;
@@ -104,7 +104,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 
 		// deal msg
 		int fakeOffset = 0;
-		DataMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+		ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 		dealerSocket.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
 		dealerSocket.send(String.valueOf(fakeOffset++), ZMQ.SNDMORE);
 		dealerSocket.send(invokable.toByteArray(), 0);
@@ -130,9 +130,9 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 		// deal msg
 		int fakeOffset = 0;
 		int msgCount = 10;
-		List<DataMessage> msgsToInvoke = new ArrayList<>();
+		List<ExecMessage> msgsToInvoke = new ArrayList<>();
 		for (int i = 0; i < msgCount; i++) {
-			DataMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+			ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 			dealerSocket.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
 			dealerSocket.send(String.valueOf(fakeOffset++), ZMQ.SNDMORE);
 			dealerSocket.send(invokable.toByteArray(), 0);

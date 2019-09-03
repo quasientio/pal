@@ -38,7 +38,7 @@ enum Type {
     RETURN_VALUE = 13;
 }
 
-message DataMessage {
+message ExecMessage {
     required string concentratorUuid = 1;
     required string messageUuid = 2;
     required Type msgType = 3;

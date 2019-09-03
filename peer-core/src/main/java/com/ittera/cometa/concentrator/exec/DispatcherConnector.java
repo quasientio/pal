@@ -1,8 +1,8 @@
 package com.ittera.cometa.concentrator.exec;
 
-import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import com.google.common.primitives.Ints;
 
@@ -52,18 +52,18 @@ public class DispatcherConnector {
 
 	@Singleton
 	@Inject
-	public DispatcherConnector(ZContext zmqContext, UUID peerUuid, DataMessageBuilder messageBuilder,
+	public DispatcherConnector(ZContext zmqContext, UUID peerUuid, ExecMessageBuilder messageBuilder,
 														 @Named("out.cell") String outCellAddress) {
 		this.zmqContext = zmqContext;
 		this.outCellAddress = outCellAddress;
 		this.WRITE_AHEAD_HEADER = messageBuilder.buildWriteAheadHeader(peerUuid);
 	}
 
-	public DataMessage sendAndRecv(DataMessage message) {
+	public ExecMessage sendAndRecv(ExecMessage message) {
 		return sendAndRecv(message, null);
 	}
 
-	private DataMessage sendAndRecv(DataMessage message, @Nullable List<InternalHeader> headers) {
+	private ExecMessage sendAndRecv(ExecMessage message, @Nullable List<InternalHeader> headers) {
 		if (logger.isTraceEnabled()) {
 			logger.trace("sendAndRecv:in w/ message with uuid: {}", message.getMessageUuid());
 		}
@@ -101,7 +101,7 @@ public class DispatcherConnector {
 			}
 		}
 
-		DataMessage returnValue;
+		ExecMessage returnValue;
 		if ("0".equals(rcvdString)) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("0 means return same message");
@@ -118,7 +118,7 @@ public class DispatcherConnector {
 		return returnValue;
 	}
 
-	public void writeAhead(DataMessage message) {
+	public void writeAhead(ExecMessage message) {
 		if (logger.isTraceEnabled()) {
 			logger.trace("writeAhead:in w/ message with uuid: {},from {}",
 				message.getMessageUuid(),

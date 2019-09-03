@@ -6,9 +6,9 @@ import com.ittera.cometa.common.lang.ObjectRef;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
-import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 
@@ -26,7 +26,7 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 
 	@Singleton
 	@Inject
-	public GetInstanceVariableDispatcher(UUID peerUuid, DataMessageBuilder messageBuilder, DispatcherConnector connector,
+	public GetInstanceVariableDispatcher(UUID peerUuid, ExecMessageBuilder messageBuilder, DispatcherConnector connector,
 																			 ObjectService objectService) {
 		setPeerUuid(peerUuid);
 		setMessageBuilder(messageBuilder);
@@ -45,17 +45,17 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 	}
 
 	@Override
-	protected Object getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject) throws
+	protected Object getTargetFromMessage(ExecMessage execMessage, Optional<AccessibleObject> accessibleObject) throws
 		ObjectNotFoundException {
 		Object target;
-		if (dataMessage.getInstanceFieldGet().hasObject()) {
+		if (execMessage.getInstanceFieldGet().hasObject()) {
 			Class fieldType = ((Field) accessibleObject.get()).getType();
-			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldGet().getObject(), fieldType);
+			target = Unwrapper.unwrapObject(execMessage.getInstanceFieldGet().getObject(), fieldType);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Unwrapped target: {}", target);
 			}
 		} else {
-			ObjectRef targetObjRef = ObjectRef.from(dataMessage.getInstanceFieldGet().getObjectRef());
+			ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceFieldGet().getObjectRef());
 			if (objectService.containsObjectRef(targetObjRef)) {
 				target = objectService.lookupObject(targetObjRef);
 			} else {
@@ -69,11 +69,11 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 	}
 
 	@Override
-	protected AccessibleObject loadAccessibleObject(Wrappers.DataMessage dataMessage, List<Class> parameterTypes,
+	protected AccessibleObject loadAccessibleObject(Wrappers.ExecMessage execMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 
-		Class clazz = Class.forName(dataMessage.getInstanceFieldGet().getClass_().getName(), true,
+		Class clazz = Class.forName(execMessage.getInstanceFieldGet().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
-		return clazz.getDeclaredField(dataMessage.getInstanceFieldGet().getField().getName());
+		return clazz.getDeclaredField(execMessage.getInstanceFieldGet().getField().getName());
 	}
 }

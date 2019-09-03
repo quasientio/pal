@@ -9,7 +9,7 @@ import com.ittera.cometa.cxn.PeerLogDirectory;
 
 import com.ittera.cometa.concentrator.exec.java.AspectProxyDispatcher;
 
-import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
 
 import com.google.inject.name.Names;
 import com.google.inject.AbstractModule;
@@ -18,6 +18,7 @@ import com.google.inject.Provides;
 import java.util.Properties;
 import java.util.UUID;
 
+import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
 import org.zeromq.ZContext;
 
 class PeerGuiceModule extends AbstractModule {
@@ -44,8 +45,8 @@ class PeerGuiceModule extends AbstractModule {
 
 		// common and cxn library classes are not annotated with @Singleton
 		bind(ObjectService.class).to(com.ittera.cometa.common.BiMapObjectService.class).asEagerSingleton();
-		bind(DataMessageBuilder.class).
-			to(com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder.class).asEagerSingleton();
+		bind(ExecMessageBuilder.class).
+			to(ProtobufExecMessageBuilder.class).asEagerSingleton();
 		bind(PeerLogDirectory.class).to(com.ittera.cometa.cxn.ZkClient.class).asEagerSingleton();
 
 		// AspectProxy and DispatchForwarder's fields are static

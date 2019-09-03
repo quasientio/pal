@@ -6,13 +6,13 @@ import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.junit.*;
 
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.comesFromClass;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.comesFrom;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromClass.comesFromClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromReflectable.comesFrom;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.junit.Assert.*;
 import static org.hamcrest.Matchers.*;
 
@@ -110,11 +110,11 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		ObjectRef[] argObjRefs = {};
 		Object[] args = {};
 
-		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -164,11 +164,11 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Object[] args = {"hello"};
 		ObjectRef[] argObjRefs = {null};
 
-		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -219,11 +219,11 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Object[] args = {numberOfWordsToAdd};
 		ObjectRef[] argObjRefs = {null};
 
-		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -250,11 +250,11 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Object[] args = {null};
 		ObjectRef[] argObjRefs = {listObjRef};
 
-		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -278,11 +278,11 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Object[] args = {null};
 		ObjectRef[] argObjRefs = {null};
 
-		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -334,11 +334,11 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Object[] args = {words};
 		ObjectRef[] argObjRefs = {null};
 
-		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -389,11 +389,11 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Object[] args = {","};
 		ObjectRef[] argObjRefs = {null};
 
-		DataMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildInstanceMethod(peerUuid, targetClass.getName(), methodName,
 			target, targetObjRef, toNames(parameterTypes), args, argObjRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();

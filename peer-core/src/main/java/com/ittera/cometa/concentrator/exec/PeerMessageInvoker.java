@@ -1,8 +1,8 @@
 package com.ittera.cometa.concentrator.exec;
 
 import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
-import com.ittera.cometa.messages.DataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -24,7 +24,7 @@ class PeerMessageInvoker extends Thread {
 
 	private final IncomingMessageDispatcher incomingMessageDispatcher;
 	private final DispatcherConnector dispatcherConnector;
-	private final DataMessageBuilder dataMessageBuilder;
+	private final ExecMessageBuilder execMessageBuilder;
 
 	// zmq stuff
 	private final ZContext zmqContext;
@@ -32,11 +32,11 @@ class PeerMessageInvoker extends Thread {
 	private Socket socket;
 
 	public PeerMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
-														DataMessageBuilder dataMessageBuilder, String dealerAddress, IncomingMessageDispatcher
+														ExecMessageBuilder execMessageBuilder, String dealerAddress, IncomingMessageDispatcher
 															incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
-		this.dataMessageBuilder = dataMessageBuilder;
+		this.execMessageBuilder = execMessageBuilder;
 		this.dealerAddress = dealerAddress;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = dispatcherConnector;
@@ -50,14 +50,14 @@ class PeerMessageInvoker extends Thread {
 	 * NOTE: dispatcherConnector is set to null, since it's not required
 	 *
 	 * @param zmqContext
-	 * @param dataMessageBuilder
+	 * @param execMessageBuilder
 	 * @param dealerAddress
 	 * @param incomingMessageDispatcher
 	 */
-	PeerMessageInvoker(ZContext zmqContext, DataMessageBuilder dataMessageBuilder, String dealerAddress,
+	PeerMessageInvoker(ZContext zmqContext, ExecMessageBuilder execMessageBuilder, String dealerAddress,
 										 IncomingMessageDispatcher incomingMessageDispatcher) {
 		this.zmqContext = zmqContext;
-		this.dataMessageBuilder = dataMessageBuilder;
+		this.execMessageBuilder = execMessageBuilder;
 		this.dealerAddress = dealerAddress;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = null;
@@ -73,7 +73,7 @@ class PeerMessageInvoker extends Thread {
 		socket = zmqContext.createSocket(SocketType.REP);
 		socket.connect(dealerAddress);
 
-		DataMessage requestMsg, replyMsg;
+		ExecMessage requestMsg, replyMsg;
 
 		if (logger.isDebugEnabled()) {
 			logger.debug("Start getting requests from socket");
@@ -112,7 +112,7 @@ class PeerMessageInvoker extends Thread {
 
 			// parse req
 			try {
-				requestMsg = DataMessage.parseFrom(req);
+				requestMsg = ExecMessage.parseFrom(req);
 			} catch (Exception e) {
 				logger.error("Caught exception parsing message", e);
 			}
@@ -158,14 +158,14 @@ class PeerMessageInvoker extends Thread {
 		}
 	}
 
-	private DataMessage dispatch(DataMessage requestMsg) {
-		DataMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, true);
+	private ExecMessage dispatch(ExecMessage requestMsg) {
+		ExecMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, true);
 		if (logger.isDebugEnabled()) {
 			logger.debug("Invoker dispatched peer request message uuid: {}, reply uuid: {}", requestMsg.getMessageUuid(),
 				replyMsg.getMessageUuid());
 		}
 		requestsDispatched.getAndIncrement();
-		dataMessageBuilder.resetThreadLocalSequence();
+		execMessageBuilder.resetThreadLocalSequence();
 		return replyMsg;
 	}
 

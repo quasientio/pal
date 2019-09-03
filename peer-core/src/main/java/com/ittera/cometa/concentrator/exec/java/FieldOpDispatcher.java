@@ -5,7 +5,7 @@ import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
@@ -17,7 +17,7 @@ import java.util.Optional;
 public abstract class FieldOpDispatcher extends BaseDispatcher {
 
 	@Override
-	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target,
+	protected final ExecMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target,
 																										Object[] args) {
 		Object parameter = (args == null || args.length == 0) ? null : args[0];
 		return messageBuilder.buildFieldOp(peerUuid, ctxt, getBeforeExecMessageType(), sender, storeObject(sender),
@@ -25,7 +25,7 @@ public abstract class FieldOpDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
+	protected final ExecMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
 		Optional<AccessibleObject> field = Optional.of(((FieldSignature) ctxt.getSignature()).getField());
 
@@ -43,7 +43,7 @@ public abstract class FieldOpDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected List<Primitives.Parameter> getParameterList(DataMessage dataMessage) {
+	protected List<Primitives.Parameter> getParameterList(ExecMessage execMessage) {
 		return null;
 	}
 

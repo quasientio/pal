@@ -6,13 +6,13 @@ import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.junit.*;
 
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.comesFromClass;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.comesFrom;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromClass.comesFromClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromReflectable.comesFrom;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.junit.Assert.*;
 
 import org.junit.runner.RunWith;
@@ -78,11 +78,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, fieldClassName, newFieldValue);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -131,11 +131,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, fieldClassName, newFieldValue);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -184,11 +184,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, fieldClassName, newFieldValue);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -237,11 +237,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, fieldClassName, newFieldValue);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -290,11 +290,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, newValueObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -344,12 +344,12 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, "List.class", newFieldValue);
 
 		// dispatch
 		assertThat(target.aList, notNullValue());
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -398,11 +398,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, newValueObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -451,11 +451,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 		ClassForPutFieldTest target = new ClassForPutFieldTest();
 		ObjectRef targetObjRef = objectService.storeObject(target);
 
-		DataMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
+		ExecMessage incomingMessage = messageBuilder.buildPutObject(peerUuid, targetClass.getName(), fieldName,
 			targetObjRef, newValueObjRef);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();

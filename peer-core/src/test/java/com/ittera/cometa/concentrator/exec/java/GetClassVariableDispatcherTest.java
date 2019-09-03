@@ -7,13 +7,13 @@ import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 
 import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.junit.*;
 
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.comesFromClass;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.comesFrom;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromClass.comesFromClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromReflectable.comesFrom;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.junit.Assert.*;
 import static org.hamcrest.Matchers.*;
 
@@ -66,10 +66,10 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		String fieldName = "someShort";
 
-		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
+		ExecMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -107,10 +107,10 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		String fieldName = "bytes";
 
-		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
+		ExecMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -148,10 +148,10 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		String fieldName = "someInteger";
 
-		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
+		ExecMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -189,10 +189,10 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		String fieldName = "aString";
 
-		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
+		ExecMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -230,10 +230,10 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		String fieldName = "anObject";
 
-		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
+		ExecMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -271,10 +271,10 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		String fieldName = "aNullMap";
 
-		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
+		ExecMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -311,10 +311,10 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		String fieldName = "objects";
 
-		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
+		ExecMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -353,10 +353,10 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
 		String fieldName = "lastError";
 
-		DataMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
+		ExecMessage incomingMessage = messageBuilder.buildGetStatic(peerUuid, targetClass.getName(), fieldName);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();

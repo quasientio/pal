@@ -1,6 +1,6 @@
 package com.ittera.cometa.concentrator.exec;
 
-import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
 import com.ittera.cometa.concentrator.exec.java.IncomingMessageDispatcher;
 
 import com.ittera.cometa.common.util.Strings;
@@ -32,7 +32,7 @@ public class ExecThreadFactory implements ThreadFactory {
 	private static final Logger logger = LoggerFactory.getLogger(ExecThreadFactory.class);
 
 	private final ExecChannelType execChannelType;
-	private final DataMessageBuilder dataMessageBuilder;
+	private final ExecMessageBuilder execMessageBuilder;
 	private final DispatcherConnector dispatcherConnector;
 	private final IncomingMessageDispatcher incomingMessageDispatcher;
 
@@ -53,7 +53,7 @@ public class ExecThreadFactory implements ThreadFactory {
 		}
 	}
 
-	public ExecThreadFactory(ZContext zmqContext, String zmqSocketAddress, DataMessageBuilder dataMessageBuilder,
+	public ExecThreadFactory(ZContext zmqContext, String zmqSocketAddress, ExecMessageBuilder execMessageBuilder,
 													 IncomingMessageDispatcher incomingMessageDispatcher, DispatcherConnector dispatcherConnector,
 													 ExecChannelType execChannelType, ClassLoader classLoader, UUID peerUuid) {
 
@@ -63,7 +63,7 @@ public class ExecThreadFactory implements ThreadFactory {
 		threadGroup.setMaxPriority(THREAD_GROUP_MAX_PRIORITY);
 		this.zmqContext = zmqContext;
 		this.zmqSocketAddress = zmqSocketAddress;
-		this.dataMessageBuilder = dataMessageBuilder;
+		this.execMessageBuilder = execMessageBuilder;
 		this.dispatcherConnector = dispatcherConnector;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.classLoader = classLoader;
@@ -78,11 +78,11 @@ public class ExecThreadFactory implements ThreadFactory {
 		final Thread thread;
 		switch (execChannelType) {
 			case LOG:
-				thread = new LogMessageInvoker(threadGroup, r, newThreadName, zmqContext, dataMessageBuilder,
+				thread = new LogMessageInvoker(threadGroup, r, newThreadName, zmqContext, execMessageBuilder,
 					zmqSocketAddress, incomingMessageDispatcher, dispatcherConnector, peerUuid);
 				break;
 			case PEER:
-				thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext, dataMessageBuilder,
+				thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext, execMessageBuilder,
 					zmqSocketAddress, incomingMessageDispatcher, dispatcherConnector);
 				break;
 			default:

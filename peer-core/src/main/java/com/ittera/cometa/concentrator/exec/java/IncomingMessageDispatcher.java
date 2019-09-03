@@ -1,6 +1,6 @@
 package com.ittera.cometa.concentrator.exec.java;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import javax.inject.Singleton;
 import javax.inject.Inject;
@@ -33,29 +33,29 @@ public class IncomingMessageDispatcher {
 
 	/**
 	 *
-	 * @param dataMessage Message to invoke
+	 * @param execMessage Message to invoke
 	 * @param isDirect true if message comes from this or another peer, false if it comes from a log
 	 * @return the returnValue message
 	 */
-	public DataMessage incomingCall(DataMessage dataMessage, boolean isDirect) {
+	public ExecMessage incomingCall(ExecMessage execMessage, boolean isDirect) {
 
-		if (dataMessage.hasConstructorCall()) {
-			return constructorDispatcher.dispatchIncoming(dataMessage, isDirect);
-		} else if (dataMessage.hasClassMethodCall()) {
-			return classMethodDispatcher.dispatchIncoming(dataMessage, isDirect);
-		} else if (dataMessage.hasInstanceMethodCall()) {
-			return instanceMethodDispatcher.dispatchIncoming(dataMessage, isDirect);
-		} else if (dataMessage.hasStaticFieldGet()) {
-			return getClassVariableDispatcher.dispatchIncoming(dataMessage, isDirect);
-		} else if (dataMessage.hasInstanceFieldGet()) {
-			return getInstanceVariableDispatcher.dispatchIncoming(dataMessage, isDirect);
-		} else if (dataMessage.hasStaticFieldPut()) {
-			return setClassVariableDispatcher.dispatchIncoming(dataMessage, isDirect);
-		} else if (dataMessage.hasInstanceFieldPut()) {
-			return setInstanceVariableDispatcher.dispatchIncoming(dataMessage, isDirect);
+		if (execMessage.hasConstructorCall()) {
+			return constructorDispatcher.dispatchIncoming(execMessage, isDirect);
+		} else if (execMessage.hasClassMethodCall()) {
+			return classMethodDispatcher.dispatchIncoming(execMessage, isDirect);
+		} else if (execMessage.hasInstanceMethodCall()) {
+			return instanceMethodDispatcher.dispatchIncoming(execMessage, isDirect);
+		} else if (execMessage.hasStaticFieldGet()) {
+			return getClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+		} else if (execMessage.hasInstanceFieldGet()) {
+			return getInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+		} else if (execMessage.hasStaticFieldPut()) {
+			return setClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+		} else if (execMessage.hasInstanceFieldPut()) {
+			return setInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
 		} else {
 			throw new IllegalArgumentException(String.format("Incoming message with uuid ignored - no handler:%n%s",
-				dataMessage));
+				execMessage));
 		}
 	}
 }

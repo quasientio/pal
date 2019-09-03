@@ -1,6 +1,6 @@
 package com.ittera.cometa.messages.protobuf;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
@@ -9,11 +9,11 @@ import org.apache.kafka.common.serialization.Serializer;
 
 import java.util.Map;
 
-public class KafkaDataMessageSerde implements Serde<DataMessage> {
+public class KafkaExecMessageSerde implements Serde<ExecMessage> {
 
-	private final Serde<DataMessage> inner;
+	private final Serde<ExecMessage> inner;
 
-	public KafkaDataMessageSerde() {
+	public KafkaExecMessageSerde() {
 		inner = Serdes.serdeFrom(new KafkaSerializer(), new KafkaDeserializer());
 	}
 
@@ -30,12 +30,12 @@ public class KafkaDataMessageSerde implements Serde<DataMessage> {
 	}
 
 	@Override
-	public Serializer<DataMessage> serializer() {
+	public Serializer<ExecMessage> serializer() {
 		return inner.serializer();
 	}
 
 	@Override
-	public Deserializer<DataMessage> deserializer() {
+	public Deserializer<ExecMessage> deserializer() {
 		return inner.deserializer();
 	}
 }

@@ -4,7 +4,7 @@ import com.ittera.cometa.common.ObjectService;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
-import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
@@ -20,7 +20,7 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
 
 	@Singleton
 	@Inject
-	public GetClassVariableDispatcher(UUID peerUuid, DataMessageBuilder messageBuilder, DispatcherConnector connector,
+	public GetClassVariableDispatcher(UUID peerUuid, ExecMessageBuilder messageBuilder, DispatcherConnector connector,
 																		ObjectService objectService) {
 		setPeerUuid(peerUuid);
 		setMessageBuilder(messageBuilder);
@@ -39,11 +39,11 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
 	}
 
 	@Override
-	protected AccessibleObject loadAccessibleObject(Wrappers.DataMessage dataMessage, List<Class> parameterTypes,
+	protected AccessibleObject loadAccessibleObject(Wrappers.ExecMessage execMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 
-		Class clazz = Class.forName(dataMessage.getStaticFieldGet().getClass_().getName(), true,
+		Class clazz = Class.forName(execMessage.getStaticFieldGet().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
-		return clazz.getDeclaredField(dataMessage.getStaticFieldGet().getField().getName());
+		return clazz.getDeclaredField(execMessage.getStaticFieldGet().getField().getName());
 	}
 }

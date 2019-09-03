@@ -5,11 +5,11 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.ittera.cometa.messages.DataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeaderType;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.junit.After;
 import org.junit.Before;
@@ -38,7 +38,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 	private ServiceManager manager;
 	private ExecutorService execService;
 	private OutgoingMessageDispatcher outgoingMessageDispatcher;
-	private final DataMessageBuilder msgBuilder = new ProtobufDataMessageBuilder();
+	private final ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
 	private InternalHeader WRITE_AHEAD_HEADER;
 
 	@Before
@@ -99,7 +99,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 		sub.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
 		// send 1 message request
-		DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 		// send number of headers to follow (= 0), then message
 		req.send(Ints.toByteArray(0), ZMQ.SNDMORE);
 		req.send(msg.toByteArray());
@@ -114,7 +114,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 			// TODO
 		}
 		buff = sub.recv();
-		DataMessage publishedMsg = DataMessage.parseFrom(buff);
+		ExecMessage publishedMsg = ExecMessage.parseFrom(buff);
 
 		// verify message is what we sent
 		assertThat(publishedMsg, is(msg));
@@ -146,7 +146,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 		sub.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
 		// send 1 message request
-		DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 		List<InternalHeader> headers = Collections.singletonList(this.WRITE_AHEAD_HEADER);
 		// send number of headers to follow (= 1), followed by header, then message
 		req.send(Ints.toByteArray(headers.size()), ZMQ.SNDMORE);
@@ -174,7 +174,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 			}
 		}
 		buff = sub.recv();
-		DataMessage publishedMsg = DataMessage.parseFrom(buff);
+		ExecMessage publishedMsg = ExecMessage.parseFrom(buff);
 
 		// verify header and msg as expected
 		assertThat(rcvdHeaders.get(0).getHeaderType(), is(InternalHeaderType.WRITE_AHEAD));

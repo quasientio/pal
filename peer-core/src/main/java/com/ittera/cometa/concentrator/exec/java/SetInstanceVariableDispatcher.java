@@ -6,9 +6,9 @@ import com.ittera.cometa.common.lang.ObjectRef;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
-import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 
@@ -26,7 +26,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 
 	@Singleton
 	@Inject
-	public SetInstanceVariableDispatcher(UUID peerUuid, DataMessageBuilder messageBuilder, DispatcherConnector connector,
+	public SetInstanceVariableDispatcher(UUID peerUuid, ExecMessageBuilder messageBuilder, DispatcherConnector connector,
 																			 ObjectService objectService) {
 		setPeerUuid(peerUuid);
 		setMessageBuilder(messageBuilder);
@@ -45,17 +45,17 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 	}
 
 	@Override
-	protected Object getTargetFromMessage(DataMessage dataMessage, Optional<AccessibleObject> accessibleObject)
+	protected Object getTargetFromMessage(ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
 		throws ObjectNotFoundException {
 		Object target;
-		if (dataMessage.getInstanceFieldPut().hasObject()) {
+		if (execMessage.getInstanceFieldPut().hasObject()) {
 			Class fieldType = ((Field) accessibleObject.get()).getType();
-			target = Unwrapper.unwrapObject(dataMessage.getInstanceFieldPut().getObject(), fieldType);
+			target = Unwrapper.unwrapObject(execMessage.getInstanceFieldPut().getObject(), fieldType);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Unwrapped target: {}", target);
 			}
 		} else {
-			ObjectRef targetObjRef = ObjectRef.from(dataMessage.getInstanceFieldPut().getObjectRef());
+			ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceFieldPut().getObjectRef());
 			if (objectService.containsObjectRef(targetObjRef)) {
 				target = objectService.lookupObject(targetObjRef);
 			} else {
@@ -69,28 +69,28 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 	}
 
 	@Override
-	protected AccessibleObject loadAccessibleObject(Wrappers.DataMessage dataMessage, List<Class> parameterTypes,
+	protected AccessibleObject loadAccessibleObject(Wrappers.ExecMessage execMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 
-		Class clazz = Class.forName(dataMessage.getInstanceFieldPut().getClass_().getName(), true,
+		Class clazz = Class.forName(execMessage.getInstanceFieldPut().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
-		return clazz.getDeclaredField(dataMessage.getInstanceFieldPut().getField().getName());
+		return clazz.getDeclaredField(execMessage.getInstanceFieldPut().getField().getName());
 	}
 
 	@Override
-	protected Optional<Object> getValueFromMessage(final DataMessage dataMessage,
+	protected Optional<Object> getValueFromMessage(final ExecMessage execMessage,
 																								 final Optional<AccessibleObject> accessibleObject) {
 
 		final Object value;
 		final Field field = (Field) accessibleObject.get();
 
-		if (dataMessage.getInstanceFieldPut().hasValueObject()) {
-			value = Unwrapper.unwrapObject(dataMessage.getInstanceFieldPut().getValueObject(), field.getType());
+		if (execMessage.getInstanceFieldPut().hasValueObject()) {
+			value = Unwrapper.unwrapObject(execMessage.getInstanceFieldPut().getValueObject(), field.getType());
 			if (logger.isTraceEnabled()) {
 				logger.trace("Unwrapped value: {}", value);
 			}
 		} else {
-			value = objectService.lookupObject(ObjectRef.from(dataMessage.getInstanceFieldPut().getValueObjectRef()));
+			value = objectService.lookupObject(ObjectRef.from(execMessage.getInstanceFieldPut().getValueObjectRef()));
 			if (logger.isTraceEnabled()) {
 				logger.trace("Loaded value: {}", value);
 			}
@@ -99,10 +99,10 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
+	protected ExecMessage wrapAfterExecMessage(ExecMessage execMessage, Object valueObject, ObjectRef valueObjRef,
 																						 Optional<AccessibleObject> accessibleObject,
 																						 Throwable exceptionWhileLoading, Throwable exceptionWhileInvoking) {
-		String messageUuid = dataMessage.getMessageUuid();
+		String messageUuid = execMessage.getMessageUuid();
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
 			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getExecutableObjectType(),
 				exceptionWhileLoading, exceptionWhileInvoking);

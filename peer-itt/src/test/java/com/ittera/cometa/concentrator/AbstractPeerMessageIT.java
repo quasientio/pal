@@ -2,11 +2,11 @@ package com.ittera.cometa.concentrator;
 
 import com.ittera.cometa.cxn.ThinPeer;
 
-import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 import com.ittera.cometa.messages.protobuf.data.Fields.*;
-import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
 
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.ObjectService;
@@ -29,7 +29,7 @@ import com.google.inject.Guice;
 
 import static org.junit.Assert.*;
 
-public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
+public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 
 	protected final static Logger logger = LoggerFactory.getLogger("tests");
 
@@ -37,7 +37,7 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 
 	protected final static UUID clientId = UUID.randomUUID();
 
-	protected static DataMessageBuilder dataMessageBuilder;
+	protected static ExecMessageBuilder execMessageBuilder;
 	private static ThinPeer thinPeer;
 
 	@BeforeClass
@@ -48,12 +48,12 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 			@Override
 			protected void configure() {
 				bind(ObjectService.class).to(BiMapObjectService.class).asEagerSingleton();
-				bind(DataMessageBuilder.class).to(ProtobufDataMessageBuilder.class).asEagerSingleton();
+				bind(ExecMessageBuilder.class).to(ProtobufExecMessageBuilder.class).asEagerSingleton();
 			}
 		};
 
 		final Injector injector = Guice.createInjector(module);
-		dataMessageBuilder = injector.getInstance(DataMessageBuilder.class);
+		execMessageBuilder = injector.getInstance(ExecMessageBuilder.class);
 
 		final Properties properties = new Properties();
 		try (final InputStream stream = AbstractPeerMessageIT.class.getResourceAsStream(TEST_PROPERTIES_PATH)) {
@@ -62,7 +62,7 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 		thinPeer = new ThinPeer(properties);
 	}
 
-	protected DataMessage sendAndReceive(DataMessage message) throws Exception {
+	protected ExecMessage sendAndReceive(ExecMessage message) throws Exception {
 		return thinPeer.sendAndReceive(message);
 	}
 
@@ -90,7 +90,7 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 			parameterTypesNamesArray[i] = parameterTypes[i].getName();
 		}
 
-		DataMessage replyMsg = sendAndReceive(dataMessageBuilder.buildNonEmptyConstructor(clientId, className,
+		ExecMessage replyMsg = sendAndReceive(execMessageBuilder.buildNonEmptyConstructor(clientId, className,
 			parameterTypesNamesArray, args, argObjRefs));
 
 		// basic assertions
@@ -109,7 +109,7 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 	}
 
 	protected ReturnValue callEmptyConstructor(String className, String expectedThrowableType) throws Exception {
-		DataMessage replyMsg = sendAndReceive(dataMessageBuilder.buildEmptyConstructor(clientId, className));
+		ExecMessage replyMsg = sendAndReceive(execMessageBuilder.buildEmptyConstructor(clientId, className));
 
 		// basic assertions
 		if (expectedThrowableType != null) {
@@ -127,8 +127,8 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 	}
 
 	protected ReturnValue callGetStatic(String className, String fieldName, String expectedThrowableType) throws Exception {
-		DataMessage requestMsg = dataMessageBuilder.buildGetStatic(clientId, className, fieldName);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
+		ExecMessage requestMsg = execMessageBuilder.buildGetStatic(clientId, className, fieldName);
+		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
 		if (expectedThrowableType != null) {
@@ -147,8 +147,8 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 
 	protected void callPutStatic(String className, String fieldName, String fieldClassName,
 															 Object value, String expectedThrowableType) throws Exception {
-		DataMessage requestMsg = dataMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, value);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
+		ExecMessage requestMsg = execMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, value);
+		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
 		if (expectedThrowableType != null) {
@@ -167,8 +167,8 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 
 	protected ReturnValue callGetInstanceVar(String className, String fieldName, ObjectRef objRef,
 																					 String expectedThrowableType) throws Exception {
-		DataMessage requestMsg = dataMessageBuilder.buildGetObject(clientId, className, fieldName, objRef);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
+		ExecMessage requestMsg = execMessageBuilder.buildGetObject(clientId, className, fieldName, objRef);
+		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
 		if (expectedThrowableType != null) {
@@ -188,9 +188,9 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 	protected void callPutField(String className, String fieldName, ObjectRef targetObjRef,
 															String valueClassName, Object value, String expectedThrowableType) throws Exception {
 
-		DataMessage requestMsg = dataMessageBuilder.buildPutObject(clientId, className, fieldName, targetObjRef,
+		ExecMessage requestMsg = execMessageBuilder.buildPutObject(clientId, className, fieldName, targetObjRef,
 			valueClassName, value);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
+		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
 		if (expectedThrowableType != null) {
@@ -212,9 +212,9 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 	protected ReturnValue callClassMethod(String className, String methodName, String[] parameterTypeNames,
 																				Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType)
 		throws Exception {
-		DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName,
+		ExecMessage requestMsg = execMessageBuilder.buildClassMethod(clientId, className, methodName,
 			parameterTypeNames, this, null, parameters, paramObjRefs);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
+		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
 		if (expectedThrowableType != null) {
@@ -235,9 +235,9 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 	protected void callVoidClassMethod(String className, String methodName, String[] parameterTypeNames,
 																		 Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType)
 		throws Exception {
-		DataMessage requestMsg = dataMessageBuilder.buildClassMethod(clientId, className, methodName,
+		ExecMessage requestMsg = execMessageBuilder.buildClassMethod(clientId, className, methodName,
 			parameterTypeNames, this, null, parameters, paramObjRefs);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
+		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
 		if (expectedThrowableType != null) {
@@ -256,9 +256,9 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 
 	protected ReturnValue callInstanceMethod(String className, String methodName, ObjectRef targetObjRef, String[]
 		parameterTypeNames, Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType) throws Exception {
-		DataMessage requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, null,
+		ExecMessage requestMsg = execMessageBuilder.buildInstanceMethod(clientId, className, methodName, null,
 			targetObjRef, parameterTypeNames, parameters, paramObjRefs);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
+		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
 		if (expectedThrowableType != null) {
@@ -278,9 +278,9 @@ public abstract class AbstractPeerMessageIT extends DataMessageAssertions {
 	protected void callVoidInstanceMethod(String className, String methodName, ObjectRef targetObjRef, String[]
 		parameterTypeNames, Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType) throws Exception {
 
-		DataMessage requestMsg = dataMessageBuilder.buildInstanceMethod(clientId, className, methodName, null,
+		ExecMessage requestMsg = execMessageBuilder.buildInstanceMethod(clientId, className, methodName, null,
 			targetObjRef, parameterTypeNames, parameters, paramObjRefs);
-		DataMessage replyMsg = sendAndReceive(requestMsg);
+		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
 		if (expectedThrowableType != null) {

@@ -5,8 +5,8 @@ import com.ittera.cometa.common.ObjectService;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
-import com.ittera.cometa.messages.DataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
 
 import java.util.UUID;
 import java.util.Arrays;
@@ -28,7 +28,7 @@ public abstract class AbstractDispatcherTest {
 
 	protected ObjectService objectService = new BiMapObjectService();
 
-	protected DataMessageBuilder messageBuilder = new ProtobufDataMessageBuilder();
+	protected ExecMessageBuilder messageBuilder = new ProtobufExecMessageBuilder();
 
 	protected DispatcherConnector dispatcherConnector;
 

@@ -9,7 +9,7 @@ import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.cxn.ZkClient;
 
 import com.ittera.cometa.messages.UUIDUtils;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -29,7 +29,7 @@ import org.zeromq.ZMQ.Socket;
 import java.util.UUID;
 
 /**
- * Helper class used by LogWriter to relate DataMessage with offset, so that we can asynchronously
+ * Helper class used by LogWriter to relate ExecMessage with offset, so that we can asynchronously
  * write replies' offsets to peerLogDirectory (i.e. zookeeper).
  * <p>
  * Implements both Zookeeper Watcher and Kafka Producer Callback interfaces
@@ -44,7 +44,7 @@ import java.util.UUID;
  * <p>
  */
 class MessageOffsetInformer implements Callback, Watcher {
-	private final DataMessage message;
+	private final ExecMessage message;
 	private LogReply logReply;
 	private boolean done;
 	private final boolean publishOffsets;
@@ -92,7 +92,7 @@ class MessageOffsetInformer implements Callback, Watcher {
 		}
 	};
 
-	MessageOffsetInformer(DataMessage message, boolean publishOffsets, Socket offsetPublisher,
+	MessageOffsetInformer(ExecMessage message, boolean publishOffsets, Socket offsetPublisher,
 												PeerLogDirectory peerLogDirectory, LogInfo inLog, UUID peerUuid) {
 		this.message = message;
 		this.publishOffsets = publishOffsets;

@@ -8,10 +8,10 @@ import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
 
 import com.ittera.cometa.concentrator.exec.DispatcherConnector;
 
-import com.ittera.cometa.messages.DataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import javax.inject.Singleton;
 import javax.inject.Inject;
@@ -30,7 +30,7 @@ public class ConstructorDispatcher extends BaseDispatcher {
 
 	@Singleton
 	@Inject
-	public ConstructorDispatcher(UUID peerUuid, DataMessageBuilder messageBuilder, DispatcherConnector connector,
+	public ConstructorDispatcher(UUID peerUuid, ExecMessageBuilder messageBuilder, DispatcherConnector connector,
 															 ObjectService objectService) {
 		setPeerUuid(peerUuid);
 		setMessageBuilder(messageBuilder);
@@ -39,14 +39,14 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected final DataMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
+	protected final ExecMessage wrapBeforeExecMessage(Context ctxt, Object sender, Object target, Object[] args) {
 
 		return messageBuilder.buildConstructor(peerUuid, ctxt, sender, storeObject(sender), args, Arrays.stream(args).map(
 			this::storeObject).toArray(ObjectRef[]::new));
 	}
 
 	@Override
-	protected final DataMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
+	protected final ExecMessage wrapAfterExecMessage(Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
 		final Optional<AccessibleObject> constructor = Optional.of(((ConstructorSignature) ctxt.getSignature())
 			.getConstructor());
@@ -62,11 +62,11 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected DataMessage wrapAfterExecMessage(DataMessage dataMessage, Object valueObject, ObjectRef valueObjRef,
+	protected ExecMessage wrapAfterExecMessage(ExecMessage execMessage, Object valueObject, ObjectRef valueObjRef,
 																						 Optional<AccessibleObject> accessibleObject, Throwable exceptionWhileLoading,
 																						 Throwable exceptionWhileInvoking) {
 
-		String messageUuid = dataMessage.getMessageUuid();
+		String messageUuid = execMessage.getMessageUuid();
 
 		if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
 			return wrapAfterExecThrowableMessage(messageUuid, accessibleObject, getExecutableObjectType(),
@@ -117,15 +117,15 @@ public class ConstructorDispatcher extends BaseDispatcher {
 	}
 
 	@Override
-	protected List<Primitives.Parameter> getParameterList(DataMessage dataMessage) {
-		return dataMessage.getConstructorCall().getParameterList();
+	protected List<Primitives.Parameter> getParameterList(ExecMessage execMessage) {
+		return execMessage.getConstructorCall().getParameterList();
 	}
 
 	@Override
-	protected AccessibleObject loadAccessibleObject(DataMessage dataMessage, List<Class> parameterTypes,
+	protected AccessibleObject loadAccessibleObject(ExecMessage execMessage, List<Class> parameterTypes,
 																									List<Object> args) throws ReflectiveOperationException {
 		// TODO why are we not using ReflectionHelper to get the constructor?
-		Class clazz = forName(dataMessage.getConstructorCall().getClass_().getName(), true,
+		Class clazz = forName(execMessage.getConstructorCall().getClass_().getName(), true,
 			Thread.currentThread().getContextClassLoader());
 		return clazz.getDeclaredConstructor(parameterTypes.toArray(new Class[0]));
 	}

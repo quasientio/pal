@@ -7,10 +7,10 @@ import com.google.common.util.concurrent.ServiceManager;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PeerLogDirectory;
 import com.ittera.cometa.cxn.ZkClient;
-import com.ittera.cometa.messages.DataMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufDataMessageBuilder;
+import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.apache.kafka.clients.producer.MockProducer;
 
@@ -43,13 +43,13 @@ public class LogWriterTest extends ZmqEnabledTest {
 	private UUID peerUuid = UUID.randomUUID();
 	private ZkClient registry;
 	private ServiceManager manager;
-	private MockProducer<String, DataMessage> producer;
+	private MockProducer<String, ExecMessage> producer;
 	private LogInfo log;
 	private ZMQ.Socket pubSocket;
 	private final String OUT_PUB_ADDR = "inproc://pub";
 	private final String OFFSET_PUB_ADDR = "inproc://offsets";
 	private static final Set<String> createdLogs = new HashSet<>();
-	private final DataMessageBuilder msgBuilder = new ProtobufDataMessageBuilder();
+	private final ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
 
 	private static final String TESTS_ZK_ROOT_PATH = "/cometa_tests";
 	private static final String ZK_HOST = "localhost:2181";
@@ -130,10 +130,10 @@ public class LogWriterTest extends ZmqEnabledTest {
 		pubSocket.connect(OUT_PUB_ADDR);
 
 		int messagesToSend = 15;
-		List<DataMessage> msgsCreated = new ArrayList<>();
+		List<ExecMessage> msgsCreated = new ArrayList<>();
 		// create msgs
 		for (int i = 0; i < messagesToSend; i++) {
-			DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+			ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 			msgsCreated.add(msg);
 		}
 
@@ -173,11 +173,11 @@ public class LogWriterTest extends ZmqEnabledTest {
 		InternalHeader header = msgBuilder.buildWriteAheadHeader(peerUuid);
 		List<InternalHeader> headers = Arrays.asList(header);
 		int messagesToSend = 5;
-		List<DataMessage> msgsCreated = new ArrayList<>();
+		List<ExecMessage> msgsCreated = new ArrayList<>();
 
 		// create msgs
 		for (int i = 0; i < messagesToSend; i++) {
-			DataMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+			ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 			msgsCreated.add(msg);
 		}
 

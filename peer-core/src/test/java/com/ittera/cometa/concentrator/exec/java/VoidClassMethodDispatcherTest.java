@@ -1,7 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
 import com.ittera.cometa.common.lang.Dispatcher;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
@@ -10,9 +10,9 @@ import com.ittera.cometa.common.lang.reflect.MethodSignature;
 
 import org.junit.*;
 
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromClass.comesFromClass;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.ComesFromReflectable.comesFrom;
-import static com.ittera.cometa.concentrator.DataMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromClass.comesFromClass;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.ComesFromReflectable.comesFrom;
+import static com.ittera.cometa.concentrator.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.junit.Assert.*;
 
 import org.junit.runner.RunWith;
@@ -121,12 +121,12 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		ObjectRef[] argObjRefs = {};
 		Object[] args = {};
 
-		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
 		assertFalse(ClassForVoidClassMethodTest.slept);
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -176,13 +176,13 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Long millisToSleep = 5L;
 		Object[] args = {millisToSleep};
 
-		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// pre-assertion
 		assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -229,13 +229,13 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		long millisToSleep = 5L;
 		Object[] args = {millisToSleep};
 
-		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// pre-assertion
 		assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -258,13 +258,13 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Object[] args = {null};
 		ObjectRef[] argObjRefs = {objRef};
 
-		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// pre-assertion
 		assertThat(ClassForVoidClassMethodTest.millisSlept, is(0L));
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -285,13 +285,13 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Object[] args = {null};
 		ObjectRef[] argObjRefs = {null};
 
-		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// pre-assertion
 		assertThat(ClassForVoidClassMethodTest.verified, notNullValue());
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -340,11 +340,11 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Object[] args = {null, someNumbers};
 		ObjectRef[] argObjRefs = {objectService.storeObject(sumContainer), null};
 
-		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
@@ -393,11 +393,11 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Object[] args = {aList, 2};
 		ObjectRef[] argObjRefs = {null, null};
 
-		DataMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
+		ExecMessage incomingMessage = messageBuilder.buildClassMethod(peerUuid, targetClass.getName(), methodName,
 			toNames(parameterTypes), this, null, args, argObjRefs);
 
 		// dispatch
-		DataMessage replyMsg = ((DataMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
 		verifyDispatcherConnectorCalledOnce();
