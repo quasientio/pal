@@ -1,6 +1,6 @@
 <aspectj>
     <aspects>
-        <aspect name="com.ittera.cometa.concentrator.ConcentrateAspect"/>
+        <aspect name="com.ittera.cometa.core.PeerifyAspect"/>
     </aspects>
 
     <!-- use these options for debugging weaving: options="-verbose -debug -showWeaveInfo" -->
@@ -8,7 +8,7 @@
     <weaver options="-nowarn">
 
         <!-- peer classes -->
-        <exclude within="com.ittera.cometa.concentrator..*"/>
+        <exclude within="com.ittera.cometa.core..*"/>
 
         <!-- logging -->
         <exclude within="org.apache.logging..*"/>

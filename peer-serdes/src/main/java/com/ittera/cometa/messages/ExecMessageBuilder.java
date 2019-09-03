@@ -18,79 +18,79 @@ public interface ExecMessageBuilder {
 	/**
 	 * header builders
 	 */
-	Wrappers.InternalHeader buildWriteAheadHeader(UUID concentratorUuid);
+	Wrappers.InternalHeader buildWriteAheadHeader(UUID peerUuid);
 
 	/**
 	 * constructor builders
 	 */
-	ExecMessage buildEmptyConstructor(UUID concentratorUuid, String className);
+	ExecMessage buildEmptyConstructor(UUID peerUuid, String className);
 
-	ExecMessage buildNonEmptyConstructor(UUID concentratorUuid, String className, String[] parameterTypes, Object[] args,
+	ExecMessage buildNonEmptyConstructor(UUID peerUuid, String className, String[] parameterTypes, Object[] args,
 																			 ObjectRef[] argObjRefs);
 
-	ExecMessage buildConstructor(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+	ExecMessage buildConstructor(UUID peerUuid, Context context, Object sender, ObjectRef senderObjRef,
 															 Object[] args, ObjectRef[] argObjRefs);
 
 	/**
 	 * instance method builders
 	 */
-	ExecMessage buildInstanceMethod(UUID concentratorUuid, String className, String methodName, Object target,
+	ExecMessage buildInstanceMethod(UUID peerUuid, String className, String methodName, Object target,
 																	ObjectRef targetObjRef, String[] parameterTypes, Object[] args,
 																	ObjectRef[] argObjRefs);
 
-	ExecMessage buildInstanceMethod(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+	ExecMessage buildInstanceMethod(UUID peerUuid, Context context, Object sender, ObjectRef senderObjRef,
 																	Object target, ObjectRef targetObjRef, Object[] args, ObjectRef[] argObjRefs);
 
 	/**
 	 * class method builders
 	 */
-	ExecMessage buildClassMethod(UUID concentratorUuid, String className, String methodName, String[] parameterTypes,
+	ExecMessage buildClassMethod(UUID peerUuid, String className, String methodName, String[] parameterTypes,
 															 Object sender, ObjectRef senderObjRef, Object[] args, ObjectRef[] argObjRefs);
 
-	ExecMessage buildClassMethod(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+	ExecMessage buildClassMethod(UUID peerUuid, Context context, Object sender, ObjectRef senderObjRef,
 															 Object[] args, ObjectRef[] argObjRefs);
 
 	/**
 	 * field op builders
 	 */
-	ExecMessage buildFieldOp(UUID concentratorUuid, Context context, Type type, Object sender,
+	ExecMessage buildFieldOp(UUID peerUuid, Context context, Type type, Object sender,
 													 ObjectRef senderObjRef, Object target, ObjectRef targetObjRef, Object arg,
 													 ObjectRef argObjRef);
 
-	ExecMessage buildGetStatic(UUID concentratorUuid, String className, String fieldName);
+	ExecMessage buildGetStatic(UUID peerUuid, String className, String fieldName);
 
-	ExecMessage buildGetObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef);
+	ExecMessage buildGetObject(UUID peerUuid, String className, String fieldName, ObjectRef targetObjRef);
 
-	ExecMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueClassName,
+	ExecMessage buildPutStatic(UUID peerUuid, String className, String fieldName, String valueClassName,
 														 Object value);
 
-	ExecMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, ObjectRef valueObjectRef);
+	ExecMessage buildPutStatic(UUID peerUuid, String className, String fieldName, ObjectRef valueObjectRef);
 
-	ExecMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef,
+	ExecMessage buildPutObject(UUID peerUuid, String className, String fieldName, ObjectRef targetObjRef,
 														 String valueClassName, Object value);
 
-	ExecMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef,
+	ExecMessage buildPutObject(UUID peerUuid, String className, String fieldName, ObjectRef targetObjRef,
 														 ObjectRef valueObjectRef);
 
 	/**
 	 * field op done builders
 	 */
-	ExecMessage buildFieldOpDone(UUID concentratorUuid, AccessibleObject accessibleObject, Context context, Type type);
+	ExecMessage buildFieldOpDone(UUID peerUuid, AccessibleObject accessibleObject, Context context, Type type);
 
-	ExecMessage buildPutStaticDone(UUID concentratorUuid, AccessibleObject accessibleObject, String staticFieldPutUuid,
+	ExecMessage buildPutStaticDone(UUID peerUuid, AccessibleObject accessibleObject, String staticFieldPutUuid,
 																 String followingUuid);
 
 
-	ExecMessage buildPutObjectDone(UUID concentratorUuid, AccessibleObject accessibleObject, String instanceFieldPutUuid,
+	ExecMessage buildPutObjectDone(UUID peerUuid, AccessibleObject accessibleObject, String instanceFieldPutUuid,
 																 String followingUuid);
 
 	/**
 	 * return builders
 	 */
-	ExecMessage buildAccessibleObjectThrowable(UUID concentratorUuid, Optional<AccessibleObject> accessibleObject,
+	ExecMessage buildAccessibleObjectThrowable(UUID peerUuid, Optional<AccessibleObject> accessibleObject,
 																						 ExecutableObjectType type, Throwable throwable, String followingUuid);
 
-	ExecMessage buildReturnValue(UUID concentratorUuid, Object object, AccessibleObject accessibleObject,
+	ExecMessage buildReturnValue(UUID peerUuid, Object object, AccessibleObject accessibleObject,
 															 ObjectRef objectRef, boolean isVoid, String followingUuid);
 
 	/**

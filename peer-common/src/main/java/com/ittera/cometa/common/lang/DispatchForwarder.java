@@ -3,7 +3,7 @@ package com.ittera.cometa.common.lang;
 import javax.inject.Inject;
 
 /**
- * This class decouples the ConcentrateAspect from the dispatch calls in AspectProxyDispatcher, by means of the
+ * This class decouples the PeerifyAspect from the dispatch calls in AspectProxyDispatcher, by means of the
  * ProxyDispatcher interface, so that the aspect (and the peer-aj module) is not directly dependent on the *Dispatcher
  * classes (in the core module), imported by AspectProxyDispatcher. Therefore, peer-aj only needs to import peer-common.
  * This avoids a circular dependency at runtime, where peer-core depends on peer-aj (to classload the aspect)

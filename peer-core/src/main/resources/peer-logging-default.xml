@@ -8,8 +8,8 @@
 		</encoder>
 	</appender>
 
-	<appender name="concentrator" class="${file.appender.class}">
-		<file>${logs.dir}/concentrator.log</file>
+	<appender name="peer" class="${file.appender.class}">
+		<file>${logs.dir}/peer.log</file>
 		<encoder>
 			<pattern>%date %level [%thread] %logger{10} %msg%n</pattern>
 		</encoder>
@@ -31,7 +31,7 @@
 
 	<!-- LOGGERS -->
 	<logger name="com.ittera.cometa" level="info" additivity="false">
-		<appender-ref ref="concentrator"/>
+		<appender-ref ref="peer"/>
 	</logger>
 
 	<logger name="${kafka.logger.name}" level="warn" additivity="false">
@@ -43,7 +43,7 @@
 	</logger>
 
 	<root level="warn">
-		<appender-ref ref="concentrator"/>
+		<appender-ref ref="peer"/>
 	</root>
 
 </configuration>

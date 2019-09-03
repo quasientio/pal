@@ -424,8 +424,8 @@ public class ThinPeer {
 		ExecMessage replyMsg = replyFuture.get();
 
 		// switch to direct p2p talk
-		String concentratorUuid = replyMsg.getConcentratorUuid();
-		connectToPeer(UUID.fromString(concentratorUuid));
+		String peerUuid = replyMsg.getPeerUuid();
+		connectToPeer(UUID.fromString(peerUuid));
 
 		return replyMsg;
 	}
@@ -467,11 +467,11 @@ public class ThinPeer {
 					}
 					// try switching to direct peer talk (i.e. p2p)
 					if (allowP2P) {
-						UUID concentratorUuid = UUID.fromString(execMessage.getConcentratorUuid());
+						UUID peerUuid = UUID.fromString(execMessage.getPeerUuid());
 						PeerInfo newPeer = null;
 						try {
 							// we getPeerProperties and close after since we assume we'll get here only once
-							newPeer = peerLogDirectory.getPeerInfo(concentratorUuid);
+							newPeer = peerLogDirectory.getPeerInfo(peerUuid);
 						} catch (Exception ex) {
 							logger.error("Couldn't get peer properties", ex);
 						}

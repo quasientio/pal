@@ -1,3 +1,3 @@
 #!/bin/bash
 
-pkill -f java.*concentrator.Concentrator
+pkill -f java.*core.Main

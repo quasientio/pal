@@ -39,7 +39,7 @@ enum Type {
 }
 
 message ExecMessage {
-    required string concentratorUuid = 1;
+    required string peerUuid = 1;
     required string messageUuid = 2;
     required Type msgType = 3;
     required int64 threadId = 4 [default = -1];

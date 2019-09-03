@@ -118,10 +118,10 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	}
 
 
-	private ExecMessage.Builder newWrapperBuilder(Type msgType, UUID concentratorUuid, String followingUuid) {
+	private ExecMessage.Builder newWrapperBuilder(Type msgType, UUID peerUuid, String followingUuid) {
 
 		ExecMessage.Builder msgBuilder = ExecMessage.newBuilder()
-			.setConcentratorUuid(concentratorUuid.toString())
+			.setPeerUuid(peerUuid.toString())
 			.setMessageUuid(UUID.randomUUID().toString())
 			.setMsgType(msgType)
 			.setThreadId(Thread.currentThread().getId())
@@ -137,8 +137,8 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 		return msgBuilder;
 	}
 
-	private ExecMessage.Builder newWrapperBuilder(Type msgType, UUID concentratorUuid) {
-		return newWrapperBuilder(msgType, concentratorUuid, null);
+	private ExecMessage.Builder newWrapperBuilder(Type msgType, UUID peerUuid) {
+		return newWrapperBuilder(msgType, peerUuid, null);
 	}
 
 	/**
@@ -179,8 +179,8 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 		return InternalHeader.newBuilder().setHeaderType(InternalHeaderType.WRITE_AHEAD);
 	}
 
-	public InternalHeader buildWriteAheadHeader(UUID concentratorUuid) {
-		return buildInternalHeaderMessage().setValue(concentratorUuid.toString()).build();
+	public InternalHeader buildWriteAheadHeader(UUID peerUuid) {
+		return buildInternalHeaderMessage().setValue(peerUuid.toString()).build();
 	}
 
 	//</editor-fold>
@@ -188,7 +188,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	//<editor-fold desc="Constructor messages">
 
 
-	private ExecMessage buildConstructorMessage(UUID concentratorUuid, String className, Context context, Object sender,
+	private ExecMessage buildConstructorMessage(UUID peerUuid, String className, Context context, Object sender,
 																							ObjectRef senderObjRef, String[] parameterTypes, Object[] args,
 																							ObjectRef[] argObjRefs) {
 
@@ -204,23 +204,23 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 			constructorCallBuilder.setClass_(getWrappedClass(className));
 		}
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.CONSTRUCTOR, concentratorUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.CONSTRUCTOR, peerUuid)
 			.setConstructorCall(constructorCallBuilder);
 
 		return msgBuilder.build();
 	}
 
 	@Override
-	public ExecMessage buildEmptyConstructor(UUID concentratorUuid, String className) {
+	public ExecMessage buildEmptyConstructor(UUID peerUuid, String className) {
 
-		return buildConstructorMessage(concentratorUuid, className,
+		return buildConstructorMessage(peerUuid, className,
 			null, null, null, null, null, null);
 	}
 
 	/**
 	 * Args must be set either in args or argObjRefs. If null in both, value is assumed to be null.
 	 *
-	 * @param concentratorUuid
+	 * @param peerUuid
 	 * @param className
 	 * @param parameterTypes
 	 * @param args             Should be of same length as parameterTypes. For Strings, primitives and wrappers.
@@ -228,18 +228,18 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	 * @return
 	 */
 	@Override
-	public ExecMessage buildNonEmptyConstructor(UUID concentratorUuid, String className, String[] parameterTypes,
+	public ExecMessage buildNonEmptyConstructor(UUID peerUuid, String className, String[] parameterTypes,
 																							Object[] args, ObjectRef[] argObjRefs) {
 
-		return buildConstructorMessage(concentratorUuid, className, null, null, null,
+		return buildConstructorMessage(peerUuid, className, null, null, null,
 			parameterTypes, args, argObjRefs);
 	}
 
 	@Override
-	public ExecMessage buildConstructor(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+	public ExecMessage buildConstructor(UUID peerUuid, Context context, Object sender, ObjectRef senderObjRef,
 																			Object[] args, ObjectRef[] argObjRefs) {
 
-		return buildConstructorMessage(concentratorUuid, null, context, sender, senderObjRef,
+		return buildConstructorMessage(peerUuid, null, context, sender, senderObjRef,
 			null, args, argObjRefs);
 	}
 	//</editor-fold>
@@ -247,14 +247,14 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	//<editor-fold desc="Instance method messages">
 
 	@Override
-	public ExecMessage buildInstanceMethod(UUID concentratorUuid, String className, String methodName, Object target,
+	public ExecMessage buildInstanceMethod(UUID peerUuid, String className, String methodName, Object target,
 																				 ObjectRef targetObjRef, String[] parameterTypes, Object[] args,
 																				 ObjectRef[] argObjRefs) {
 
 		final InstanceMethodCall.Builder callBuilder = InstanceMethodCall.newBuilder();
 		addParameters(callBuilder, parameterTypes, args, argObjRefs);
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.INSTANCE_METHOD, concentratorUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.INSTANCE_METHOD, peerUuid)
 			.setInstanceMethodCall(callBuilder
 				.setClass_(getWrappedClass(className))
 				.setName(methodName)
@@ -264,7 +264,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	}
 
 	@Override
-	public ExecMessage buildInstanceMethod(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+	public ExecMessage buildInstanceMethod(UUID peerUuid, Context context, Object sender, ObjectRef senderObjRef,
 																				 Object target, ObjectRef targetObjRef, Object[] args, ObjectRef[] argObjRefs) {
 
 		final MethodSignature codeSignature = (MethodSignature) context.getSignature();
@@ -272,7 +272,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 		final InstanceMethodCall.Builder callBuilder = InstanceMethodCall.newBuilder();
 		addParameters(callBuilder, context, args, argObjRefs);
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.INSTANCE_METHOD, concentratorUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.INSTANCE_METHOD, peerUuid)
 			.setInstanceMethodCall(callBuilder
 				.setClass_(getWrappedClass(codeSignature.getDeclaringTypeName()))
 				.setName(codeSignature.getName())
@@ -287,14 +287,14 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	//<editor-fold desc="Class method messages">
 
 	@Override
-	public ExecMessage buildClassMethod(UUID concentratorUuid, String className, String methodName,
+	public ExecMessage buildClassMethod(UUID peerUuid, String className, String methodName,
 																			String[] parameterTypes, Object sender, ObjectRef senderObjRef, Object[] args,
 																			ObjectRef[] argObjRefs) {
 
 		final ClassMethodCall.Builder callBuilder = ClassMethodCall.newBuilder();
 		addParameters(callBuilder, parameterTypes, args, argObjRefs);
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.CLASS_METHOD, concentratorUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.CLASS_METHOD, peerUuid)
 			.setClassMethodCall(callBuilder
 				.setClass_(getWrappedClass(className))
 				.setName(methodName));
@@ -304,7 +304,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	}
 
 	@Override
-	public ExecMessage buildClassMethod(UUID concentratorUuid, Context context, Object sender, ObjectRef senderObjRef,
+	public ExecMessage buildClassMethod(UUID peerUuid, Context context, Object sender, ObjectRef senderObjRef,
 																			Object[] args, ObjectRef[] argObjRefs) {
 
 		final MethodSignature codeSignature = (MethodSignature) context.getSignature();
@@ -312,7 +312,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 		final ClassMethodCall.Builder callBuilder = ClassMethodCall.newBuilder();
 		addParameters(callBuilder, context, args, argObjRefs);
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.CLASS_METHOD, concentratorUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.CLASS_METHOD, peerUuid)
 			.setClassMethodCall(callBuilder
 				.setContext(getWrappedContext(context, sender, senderObjRef))
 				.setClass_(getWrappedClass(codeSignature.getDeclaringTypeName()))
@@ -325,7 +325,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 
 	//<editor-fold desc="Field Ops generic">
 	@Override
-	public ExecMessage buildFieldOp(UUID concentratorUuid, Context context, Type type, Object sender,
+	public ExecMessage buildFieldOp(UUID peerUuid, Context context, Type type, Object sender,
 																	ObjectRef senderObjRef, Object target, ObjectRef targetObjRef,
 																	Object arg, ObjectRef argObjRef) {
 
@@ -338,7 +338,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 		Ctxt.Context ctxt = getWrappedContext(context, sender, senderObjRef);
 
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(type, concentratorUuid);
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(type, peerUuid);
 		switch (type) {
 			case GET_FIELD:
 				msgBuilder.setInstanceFieldGet(InstanceFieldGet.newBuilder()
@@ -380,12 +380,12 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	}
 
 	@Override
-	public ExecMessage buildFieldOpDone(UUID concentratorUuid, AccessibleObject accessibleObject,
+	public ExecMessage buildFieldOpDone(UUID peerUuid, AccessibleObject accessibleObject,
 																			Context context, Type type) {
 
 		final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(type, concentratorUuid);
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(type, peerUuid);
 		switch (type) {
 			case PUT_FIELD_DONE:
 				msgBuilder.setInstanceFieldPutDone(InstanceFieldPutDone.newBuilder()
@@ -408,9 +408,9 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	//<editor-fold desc="Static field get messages">
 
 	@Override
-	public ExecMessage buildGetStatic(UUID concentratorUuid, String className, String fieldName) {
+	public ExecMessage buildGetStatic(UUID peerUuid, String className, String fieldName) {
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.GET_STATIC, concentratorUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.GET_STATIC, peerUuid)
 			.setStaticFieldGet(StaticFieldGet.newBuilder()
 				.setClass_(getWrappedClass(className))
 				.setField(getWrappedField(className, fieldName)));
@@ -423,9 +423,9 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	//<editor-fold desc="Instance field get messages">
 
 	@Override
-	public ExecMessage buildGetObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef) {
+	public ExecMessage buildGetObject(UUID peerUuid, String className, String fieldName, ObjectRef targetObjRef) {
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.GET_FIELD, concentratorUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.GET_FIELD, peerUuid)
 			.setInstanceFieldGet(InstanceFieldGet.newBuilder()
 				.setClass_(getWrappedClass(className))
 				.setObjectRef(targetObjRef.getRef())
@@ -439,10 +439,10 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	//<editor-fold desc="Static field put messages">
 
 	@Override
-	public ExecMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, String valueClassName,
+	public ExecMessage buildPutStatic(UUID peerUuid, String className, String fieldName, String valueClassName,
 																		Object value) {
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC, concentratorUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC, peerUuid)
 			.setStaticFieldPut(StaticFieldPut.newBuilder()
 				.setClass_(getWrappedClass(className))
 				.setField(getWrappedField((String) null, fieldName))
@@ -452,9 +452,9 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	}
 
 	@Override
-	public ExecMessage buildPutStatic(UUID concentratorUuid, String className, String fieldName, ObjectRef valueObjectRef) {
+	public ExecMessage buildPutStatic(UUID peerUuid, String className, String fieldName, ObjectRef valueObjectRef) {
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC, concentratorUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC, peerUuid)
 			.setStaticFieldPut(StaticFieldPut.newBuilder()
 				.setClass_(getWrappedClass(className))
 				.setField(getWrappedField((String) null, fieldName))
@@ -464,7 +464,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	}
 
 	@Override
-	public ExecMessage buildPutStaticDone(UUID concentratorUuid, AccessibleObject accessibleObject,
+	public ExecMessage buildPutStaticDone(UUID peerUuid, AccessibleObject accessibleObject,
 																				String staticFieldPutUuid, String followingUuid) {
 
 		final StaticFieldPutDone.Builder fieldBuilder = StaticFieldPutDone.newBuilder();
@@ -472,7 +472,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 			.setClass_(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
 			.setStaticFieldPutUuid(staticFieldPutUuid);
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC_DONE, concentratorUuid, followingUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_STATIC_DONE, peerUuid, followingUuid)
 			.setStaticFieldPutDone(fieldBuilder);
 		return msgBuilder.build();
 	}
@@ -483,10 +483,10 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	//<editor-fold desc="Instance field put messages">
 
 	@Override
-	public ExecMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef,
+	public ExecMessage buildPutObject(UUID peerUuid, String className, String fieldName, ObjectRef targetObjRef,
 																		String valueClassName, Object value) {
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD, concentratorUuid, null)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD, peerUuid, null)
 			.setInstanceFieldPut(InstanceFieldPut.newBuilder()
 				.setClass_(getWrappedClass(className))
 				.setObjectRef(targetObjRef.getRef())
@@ -497,10 +497,10 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	}
 
 	@Override
-	public ExecMessage buildPutObject(UUID concentratorUuid, String className, String fieldName, ObjectRef targetObjRef,
+	public ExecMessage buildPutObject(UUID peerUuid, String className, String fieldName, ObjectRef targetObjRef,
 																		ObjectRef valueObjectRef) {
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD, concentratorUuid, null)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD, peerUuid, null)
 			.setInstanceFieldPut(InstanceFieldPut.newBuilder()
 				.setClass_(getWrappedClass(className))
 				.setObjectRef(targetObjRef.getRef())
@@ -511,7 +511,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	}
 
 	@Override
-	public ExecMessage buildPutObjectDone(UUID concentratorUuid, AccessibleObject accessibleObject,
+	public ExecMessage buildPutObjectDone(UUID peerUuid, AccessibleObject accessibleObject,
 																				String instanceFieldPutUuid, String followingUuid) {
 
 		final Fields.InstanceFieldPutDone.Builder fieldBuilder = InstanceFieldPutDone.newBuilder();
@@ -519,7 +519,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 			.setClass_(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
 			.setInstanceFieldPutUuid(instanceFieldPutUuid);
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD_DONE, concentratorUuid, followingUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.PUT_FIELD_DONE, peerUuid, followingUuid)
 			.setInstanceFieldPutDone(fieldBuilder);
 
 		return msgBuilder.build();
@@ -529,7 +529,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 
 	//<editor-fold desc="Throwable messages">
 	@Override
-	public ExecMessage buildAccessibleObjectThrowable(UUID concentratorUuid, Optional<AccessibleObject> accessibleObject,
+	public ExecMessage buildAccessibleObjectThrowable(UUID peerUuid, Optional<AccessibleObject> accessibleObject,
 																										ExecutableObjectType executableObjectType, Throwable exception,
 																										String followingUuid) {
 
@@ -562,7 +562,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 			}
 		}
 
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.THROWABLE, concentratorUuid, followingUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.THROWABLE, peerUuid, followingUuid)
 			.setRaisedThrowable(thrBuilder
 				.setClass_(getWrappedClass(exception.getClass().getName()))
 				.setThrowable(buildThrowableMessage(exception)));
@@ -598,7 +598,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 
 	//<editor-fold desc="Return value messages">
 	@Override
-	public ExecMessage buildReturnValue(UUID concentratorUuid, Object object, AccessibleObject accessibleObject,
+	public ExecMessage buildReturnValue(UUID peerUuid, Object object, AccessibleObject accessibleObject,
 																			ObjectRef objectRef, boolean isVoid, String followingUuid) {
 
 		final ReturnValue.Builder valueBuilder = Values.ReturnValue.newBuilder();
@@ -636,7 +636,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 		}
 
 		// set 'class'
-		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.RETURN_VALUE, concentratorUuid, followingUuid)
+		final ExecMessage.Builder msgBuilder = newWrapperBuilder(Type.RETURN_VALUE, peerUuid, followingUuid)
 			.setReturnValue(valueBuilder
 				.setIsVoid(isVoid)
 				.setClazz(getWrappedClass(declaringClass)));

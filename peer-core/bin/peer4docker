@@ -13,4 +13,4 @@ JMX_PROPS="-Dcom.sun.management.jmxremote \
 
 CLASSPATH=classes:libs/*
 
-java $JMX_PROPS $JVM_OPTS -cp $CLASSPATH com.ittera.cometa.concentrator.Concentrator $MAIN_ARGS
+java $JMX_PROPS $JVM_OPTS -cp $CLASSPATH com.ittera.cometa.core

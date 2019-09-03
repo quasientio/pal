@@ -35,7 +35,7 @@ public final class BiMapObjectService implements ObjectService {
 
 	private static final Logger logger = LoggerFactory.getLogger(BiMapObjectService.class);
 
-	//A map for all objects created by the Concentrator.
+	//A map for all objects created by the this peer
 	private static final BiMap<ObjectRef, BiMapObjectService.IdentifiableObject> objectBiMap = HashBiMap.create();
 	private static final BiMap<ObjectRef, BiMapObjectService.IdentifiableObject> syncdObjectMap =
 		Maps.synchronizedBiMap(objectBiMap);
