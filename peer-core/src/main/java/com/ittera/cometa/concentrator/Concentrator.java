@@ -156,7 +156,7 @@ public class Concentrator implements Callable<Integer> {
 		// set argList
 		if (jarFile != null) { // if -jar, all positional parameters are considered its args
 			argList = cmdArgList;
-		} else if (!cmdArgList.isEmpty()) {  // else, first is considered the mainClass
+		} else if (cmdArgList != null) {  // else, first is considered the mainClass
 			className = cmdArgList.get(0);
 			argList = cmdArgList.subList(1, cmdArgList.size());
 		}
