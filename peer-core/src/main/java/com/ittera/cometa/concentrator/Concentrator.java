@@ -55,22 +55,29 @@ public class Concentrator implements Callable<Integer> {
 	private String logName;
 
 	@Option(names = {"-cp", "--classpath"}, paramLabel = "CLASSPATH",
-		description = "load classes from given folders/JARs")
+		description = "load classes from given folders/jars")
 	private String classpath;
+
+	@Option(names = {"-jar"}, paramLabel = "JAR_FILE", description = "execute jar file")
+	private String jarFile;
+
+	@Parameters(hidden = true)
+	private List<String> cmdArgList;
+
+	// argList and className will be populated from cmdArgList
+	private List<String> argList;
+	private String className;
+
+	@Option(names = {"-d", "--as-daemon"}, description = "keep running after call to mainClass/jar returns")
+	private boolean asDaemon = false;
 
 	@Option(names = {"-h", "--help"}, usageHelp = true, description = "display this help message")
 	private boolean helpRequested = false;
 
-	@Parameters(index = "0", arity = "0..1")
-	private String className;
-
-	@Parameters(index = "1..*")
-	private List<String> argList;
-
 	// app properties
 	private final Properties properties = new Properties();
 
-	// zmq context -- gets injected to all other threads
+	// zmq context
 	private ZContext zmqContext;
 
 	// STATIC variables
@@ -103,7 +110,7 @@ public class Concentrator implements Callable<Integer> {
 		try (final InputStream stream = Concentrator.class.getResourceAsStream(PROPERTIES_FILE)) {
 			properties.load(stream);
 		} catch (Exception ex) {
-			fatalExit(ex, PeerFatalCode.ERROR_LOADING_PROPERTIES,
+			fatalExit(ex, PeerException.FatalCode.ERROR_LOADING_PROPERTIES,
 				String.format("Make sure to have `%s` in the classpath", PROPERTIES_FILE));
 		}
 		logger.info("Loaded application properties from `{}`", PROPERTIES_FILE);
@@ -125,11 +132,15 @@ public class Concentrator implements Callable<Integer> {
 		logger.info("Closed zmq context");
 	}
 
-	private void fatalExit(Throwable ex, PeerFatalCode fatalCode) {
+	private void fatalExit(PeerException peerException) {
+		fatalExit(peerException, peerException.getFatalCode());
+	}
+
+	private void fatalExit(Throwable ex, PeerException.FatalCode fatalCode) {
 		fatalExit(ex, fatalCode, null);
 	}
 
-	private void fatalExit(Throwable ex, PeerFatalCode fatalCode, String extraMessage) {
+	private void fatalExit(Throwable ex, PeerException.FatalCode fatalCode, String extraMessage) {
 		if (ex != null) {
 			logger.error(fatalCode.getMessage(), ex);
 		}
@@ -137,13 +148,23 @@ public class Concentrator implements Callable<Integer> {
 		if (extraMessage != null) {
 			System.err.println(extraMessage);
 		}
-		if (ex != null) {
-			ex.printStackTrace();
-		}
 		System.exit(fatalCode.getCode());
 	}
 
 	private void validateInput() {
+
+		// set argList
+		if (jarFile != null) { // if -jar, all positional parameters are considered its args
+			argList = cmdArgList;
+		} else if (!cmdArgList.isEmpty()) {  // else, first is considered the mainClass
+			className = cmdArgList.get(0);
+			argList = cmdArgList.subList(1, cmdArgList.size());
+		}
+
+		if (asDaemon && (className == null && jarFile == null)) {
+			System.err.println("WARNING: -d (--as-daemon) option only relevant with mainClass or -jar.");
+		}
+
 		// if logName is given, assign to both in and out (overriding any of the latter values)
 		if (logName != null) {
 			inLogName = outLogName = logName;
@@ -151,7 +172,7 @@ public class Concentrator implements Callable<Integer> {
 
 		// ensure that if offset was given, a log name to read from was also given
 		if (inLogOffset != null && inLogName == null) {
-			fatalExit(null, PeerFatalCode.ERROR_NO_LOG_GIVEN);
+			fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
 		}
 	}
 
@@ -164,7 +185,7 @@ public class Concentrator implements Callable<Integer> {
 		}
 
 		if (zookeeperUrl == null) {
-			fatalExit(null, PeerFatalCode.ERROR_NO_ZOOKEEPER_URL_GIVEN);
+			fatalExit(null, PeerException.FatalCode.ERROR_NO_ZOOKEEPER_URL_GIVEN);
 		}
 		// add to app properties
 		properties.setProperty("zookeeper_url", zookeeperUrl);
@@ -179,7 +200,7 @@ public class Concentrator implements Callable<Integer> {
 		try {
 			registry.connect(properties.getProperty("zookeeper_url"));
 		} catch (Exception ex) {
-			fatalExit(ex, PeerFatalCode.ERROR_CONNECTING_TO_DIRECTORY);
+			fatalExit(ex, PeerException.FatalCode.ERROR_CONNECTING_TO_DIRECTORY);
 		}
 
 		// register self as new peer
@@ -188,7 +209,7 @@ public class Concentrator implements Callable<Integer> {
 			peerProperties.put("listenAddress", properties.getProperty("in.router"));
 			registry.registerPeer(uuid, peerProperties);
 		} catch (Exception ex) {
-			fatalExit(ex, PeerFatalCode.ERROR_REGISTERING_PEER);
+			fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_PEER);
 		}
 		logger.info("Registered self in peer directory");
 	}
@@ -275,6 +296,14 @@ public class Concentrator implements Callable<Integer> {
 					}
 				});
 		}
+		if (jarFile != null) {
+			try {
+				urls.add(new File(jarFile).toURI().toURL());
+			} catch (MalformedURLException ex) {
+				logger.error("Error adding JAR file as URL for custom classloader", ex);
+			}
+		}
+
 		CustomClassloader customClassloader = new CustomClassloader(urls.toArray(new URL[0]),
 			Thread.currentThread().getContextClassLoader());
 		logger.info("Initialized custom classloader with paths: {}", urls.toString());
@@ -289,7 +318,7 @@ public class Concentrator implements Callable<Integer> {
 		try {
 			new LogConfigurator(inLogName, inLogOffset, outLogName, properties, injector).init();
 		} catch (Exception ex) {
-			fatalExit(ex, PeerFatalCode.ERROR_INITIALIZING_LOGS);
+			fatalExit(ex, PeerException.FatalCode.ERROR_INITIALIZING_LOGS);
 		}
 
 		// set up managed services
@@ -316,15 +345,28 @@ public class Concentrator implements Callable<Integer> {
 				injector.getInstance(PeerMessageExecutor.class).prestartAllCoreThreads();
 				injector.getInstance(LogMessageExecutor.class).prestartAllCoreThreads();
 
+				// now call target (main class or JAR file), if given
+				boolean selfCalled = false;
 				if (className != null) {
 					// self-call className.main() if given, and then we're done
 					injector.getInstance(SelfCaller.class).callMain(className, argList);
+					selfCalled = true;
+				} else if (jarFile != null) { // NOTE: jarFile was previously added to classpath
+					// self-call Main-Class found in manifest, and we're done
+					try {
+						injector.getInstance(SelfCaller.class).callJar(jarFile, argList);
+					} catch (PeerException e) {
+						fatalExit(e);
+					}
+					selfCalled = true;
+				}
+				if (selfCalled && !asDaemon) {
 					shutdown(manager, injector, true);
 				}
 			}
 
 			public void failure(Service service) {
-				fatalExit(service.failureCause(), PeerFatalCode.ERROR_SERVICE_MANAGER_FAILED);
+				fatalExit(service.failureCause(), PeerException.FatalCode.ERROR_SERVICE_MANAGER_FAILED);
 			}
 		}, MoreExecutors.directExecutor());
 

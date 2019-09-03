@@ -1,7 +1,7 @@
 package com.ittera.cometa.concentrator.exec.java;
 
-import com.google.common.primitives.Longs;
 import com.ittera.cometa.common.lang.ObjectRef;
+import com.ittera.cometa.concentrator.PeerException;
 import com.ittera.cometa.messages.DataMessageBuilder;
 import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
@@ -9,9 +9,12 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.DataMessage;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import com.google.common.primitives.Longs;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
 import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
@@ -55,15 +58,15 @@ public class SelfCaller {
 		}
 
 		// prepare arrays for message construction
-		Class[] parameterTypes = new Class[]{String[].class};
-		String[] parameterTypesNamesArray = new String[parameterTypes.length];
+		final Class[] parameterTypes = new Class[]{String[].class};
+		final String[] parameterTypesNamesArray = new String[parameterTypes.length];
 		IntStream.range(0, parameterTypes.length).forEach(i -> parameterTypesNamesArray[i] = parameterTypes[i].getName());
-		Object[] parameters = new Object[]{new String[]{}};
+		final Object[] parameters = new Object[]{new String[]{}};
 		if (argList != null) {
 			parameters[0] = argList.toArray(new String[0]);
 		}
 
-		List<DataMessage> replies = new ArrayList<>();
+		final List<DataMessage> replies = new ArrayList<>();
 
 		// dispatch it with a new named thread, also provided with our custom classloader
 		Thread invokingThread = new Thread(() -> {
@@ -76,7 +79,7 @@ public class SelfCaller {
 		invokingThread.setContextClassLoader(customClassloader);
 
 		// prepare offset subscriber
-		Socket offsetSubscriber = context.createSocket(SocketType.SUB);
+		final Socket offsetSubscriber = context.createSocket(SocketType.SUB);
 		offsetSubscriber.connect(offsetPubAddress);
 		offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
@@ -88,7 +91,7 @@ public class SelfCaller {
 			logger.error("Thread interrupted", e);
 		}
 		// get reply message
-		DataMessage reply = replies.get(0);
+		final DataMessage reply = replies.get(0);
 
 		// wait for the reply message offset, to ensure all msg's from have been written to the log
 		boolean offsetPublished = false;
@@ -110,5 +113,25 @@ public class SelfCaller {
 			logger.debug("Returning reply message with offset={} and uuid={}", offset, uuid);
 		}
 		return reply;
+	}
+
+	public DataMessage callJar(String jarFile, List<String> argList) throws PeerException {
+		if (logger.isDebugEnabled()) {
+			logger.debug("Call jar `{}` with args: [{}]",
+				jarFile, argList == null ? "" : String.join(",", argList));
+		}
+
+		final Attributes attributes;
+		try (JarFile jar = new JarFile(jarFile)) {
+			attributes = jar.getManifest().getMainAttributes();
+		} catch (IOException e) {
+			logger.error("Error loading JAR file", e);
+			return null;
+		}
+		final String mainClass = attributes.getValue("Main-Class");
+		if (mainClass == null) {
+			throw new PeerException(PeerException.FatalCode.ERROR_NO_MAINCLASS_IN_JAR_MANIFEST);
+		}
+		return callMain(mainClass, argList);
 	}
 }
