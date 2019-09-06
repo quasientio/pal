@@ -2,7 +2,7 @@ package com.ittera.cometa.core;
 
 import com.ittera.cometa.LogInfo;
 
-import com.ittera.cometa.cxn.PeerLogDirectory;
+import com.ittera.cometa.cxn.PALDirectory;
 
 import java.util.Properties;
 
@@ -31,21 +31,21 @@ class LogConfigurator {
 
 	private LogInfo registerNewLog() throws Exception {
 
-		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
+		final PALDirectory palDirectory = injector.getInstance(PALDirectory.class);
 		final String kafkaTopicPrefix = appProps.getProperty("kafkaTopic");
-		return registry.createLog(kafkaTopicPrefix);
+		return palDirectory.newLog(kafkaTopicPrefix);
 	}
 
 	private LogInfo getOrRegisterGivenLog(String logName) throws Exception {
 
-		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
+		final PALDirectory palDirectory = injector.getInstance(PALDirectory.class);
 		final LogInfo logInfo;
 
 		// register given log if not registered
-		if (registry.logExists(logName)) {
-			logInfo = registry.getLogInfo(logName);
+		if (palDirectory.logExists(logName)) {
+			logInfo = palDirectory.getLogInfo(logName);
 		} else {
-			logInfo = registry.addGivenLog(logName);
+			logInfo = palDirectory.registerLog(logName);
 		}
 
 		return logInfo;

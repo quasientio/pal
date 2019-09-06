@@ -9,9 +9,6 @@ public class LogInfo implements Comparable {
 	// name of node in zk
 	private final String name;
 
-	// in zk node stat
-	private long zk_ctime;
-
 	// in zk node data
 	private UUID uuid;
 
@@ -67,14 +64,6 @@ public class LogInfo implements Comparable {
 			}
 			this.bootstrapServers = String.join(",", urlList);
 		}
-	}
-
-	public void setZk_ctime(long ctime) {
-		this.zk_ctime = ctime;
-	}
-
-	public long getZk_ctime() {
-		return zk_ctime;
 	}
 
 	public String getHumanReadableByteSize() {
@@ -143,7 +132,6 @@ public class LogInfo implements Comparable {
 	public String toFullString() {
 		return "LogInfo{" +
 			"name='" + name + '\'' +
-			", zk_ctime=" + zk_ctime +
 			", uuid=" + uuid +
 			", startOffset=" + startOffset +
 			", endOffset=" + endOffset +

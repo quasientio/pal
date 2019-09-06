@@ -6,9 +6,6 @@ ZK_URL="localhost:2181"
 PEERS_ROOT="/cometa/peers"
 LOGS_ROOT="/cometa/logs"
 
-PEERS_TESTS_ROOT="/cometa_tests/peers"
-LOGS_TESTS_ROOT="/cometa_tests/logs"
-
 zk = zc.zk.ZooKeeper(ZK_URL)
 
 print("Deleting peers")
@@ -17,23 +14,10 @@ for peer in sorted(peers):
 	zk.delete("%s/%s" % (PEERS_ROOT, peer))
 	print(peer + " deleted.")
 
-print("Deleting test peers")
-peers = zk.children(PEERS_TESTS_ROOT)
-for peer in sorted(peers):
-	zk.delete("%s/%s" % (PEERS_TESTS_ROOT, peer))
-	print(peer + " deleted.")
-
 print("\nDeleting logs")
 logs = zk.children(LOGS_ROOT)
 for log in sorted(logs):
 	logPath = "%s/%s" % (LOGS_ROOT,log)
-	zk.delete_recursive(logPath)
-	print(log + " recursively deleted.")
-
-print("\nDeleting test logs")
-logs = zk.children(LOGS_TESTS_ROOT)
-for log in sorted(logs):
-	logPath = "%s/%s" % (LOGS_TESTS_ROOT,log)
 	zk.delete_recursive(logPath)
 	print(log + " recursively deleted.")
 

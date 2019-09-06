@@ -2,10 +2,8 @@ package com.ittera.cometa.core;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import com.google.common.primitives.Ints;
-
 import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.cxn.PeerLogDirectory;
+import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
@@ -16,12 +14,13 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.google.inject.Singleton;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
+import com.google.common.primitives.Ints;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
-
 import org.apache.kafka.common.header.Header;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,12 +53,13 @@ class LogWriter extends AbstractExecutionThreadService {
 	private Socket offsetPublisher;
 	private final String outPubAddress, offsetPubAddress;
 
-	// zookeeper
-	private PeerLogDirectory peerLogDirectory;
+	// pal directory
+	private PALDirectory palDirectory;
 
 	private UUID peerUuid;
 
 	private boolean publishOffsets;
+	private boolean writeReplyNodes;
 	private LogInfo outLog, inLog;
 	private volatile boolean connectionsOpen = false;
 	private final AtomicInteger messagesSent = new AtomicInteger(0);
@@ -70,14 +70,16 @@ class LogWriter extends AbstractExecutionThreadService {
 									 @Named("value.serializer") String valueSerializer,
 									 @Named("out.pub") String outPubAddress,
 									 @Named("offset.pub") String offsetPubAddress,
+									 @Named("log.registerReplies") String writeReplyNodesStr,
 									 ZContext zmqContext,
-									 PeerLogDirectory peerLogDirectory,
+									 PALDirectory palDirectory,
 									 UUID peerUuid) {
 		this.zmqContext = zmqContext;
-		this.peerLogDirectory = peerLogDirectory;
+		this.palDirectory = palDirectory;
 		this.peerUuid = peerUuid;
 		this.outPubAddress = outPubAddress;
 		this.offsetPubAddress = offsetPubAddress;
+		this.writeReplyNodes = writeReplyNodesStr == null || Boolean.parseBoolean(writeReplyNodesStr);
 		producerProperties.put("key.serializer", keySerializer);
 		producerProperties.put("value.serializer", valueSerializer);
 		logger.info("Initialized log message writer");
@@ -89,21 +91,23 @@ class LogWriter extends AbstractExecutionThreadService {
 	 * @param outPubAddress
 	 * @param offsetPubAddress
 	 * @param zmqContext
-	 * @param peerLogDirectory
+	 * @param palDirectory
 	 * @param peerUuid
 	 */
 	LogWriter(@Named("out.pub") String outPubAddress,
 						@Named("offset.pub") String offsetPubAddress,
+						boolean writeReplyNodes,
 						Producer<String, ExecMessage> producer,
 						ZContext zmqContext,
-						PeerLogDirectory peerLogDirectory,
+						PALDirectory palDirectory,
 						UUID peerUuid) {
 		this.producer = producer;
 		this.zmqContext = zmqContext;
-		this.peerLogDirectory = peerLogDirectory;
+		this.palDirectory = palDirectory;
 		this.peerUuid = peerUuid;
 		this.outPubAddress = outPubAddress;
 		this.offsetPubAddress = offsetPubAddress;
+		this.writeReplyNodes = writeReplyNodes;
 		logger.info("Initialized log message writer");
 	}
 
@@ -273,8 +277,12 @@ class LogWriter extends AbstractExecutionThreadService {
 		ProducerRecord<String, ExecMessage> newRecord = new ProducerRecord<>(outLog.getName(), 0,
 			fromPeer.toString(), message, headers);
 
-		producer.send(newRecord, new MessageOffsetInformer(message, publishOffsets, offsetPublisher,
-			peerLogDirectory, inLog, peerUuid));
+		if (publishOffsets || writeReplyNodes) {
+			producer.send(newRecord, new MessageOffsetInformer(message, publishOffsets, writeReplyNodes, offsetPublisher,
+				palDirectory, inLog, peerUuid));
+		} else {
+			producer.send(newRecord);
+		}
 		messagesSent.getAndIncrement();
 		if (logger.isDebugEnabled()) {
 			logger.debug("new message sent with uuid: {} replying to message uuid: {}", message.getMessageUuid(),

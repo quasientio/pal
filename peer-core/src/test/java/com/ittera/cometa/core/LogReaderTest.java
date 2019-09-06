@@ -2,11 +2,10 @@ package com.ittera.cometa.core;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
-
 import com.google.protobuf.InvalidProtocolBufferException;
+
 import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.cxn.PeerLogDirectory;
-import com.ittera.cometa.cxn.ZkClient;
+import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.ExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
@@ -16,28 +15,29 @@ import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.TopicPartition;
 
-import static org.junit.Assert.*;
+import org.apache.curator.test.TestingServer;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-import static org.hamcrest.Matchers.*;
-
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.*;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.hamcrest.Matchers.*;
 
 /**
  * CAVEAT: this test doesn't cover Headers as they're not supported by MockConsumer
@@ -49,7 +49,6 @@ public class LogReaderTest extends ZmqEnabledTest {
 	*/
 	class Worker implements Runnable {
 
-		private final UUID peerUuid = UUID.randomUUID();
 		private ZMQ.Socket socket;
 		private ZContext context;
 		private String dealerAddress;
@@ -106,7 +105,8 @@ public class LogReaderTest extends ZmqEnabledTest {
 	private ZContext zmqContext;
 	private LogReader logReader;
 	private UUID peerUuid = UUID.randomUUID();
-	private ZkClient registry;
+	private PALDirectory palDirectory;
+	private TestingServer testingServer;
 	private ServiceManager manager;
 	private MockConsumer<String, ExecMessage> consumer;
 	private LogInfo log;
@@ -114,48 +114,42 @@ public class LogReaderTest extends ZmqEnabledTest {
 	private static Set<String> createdLogs = new HashSet<>();
 	private final String DEALER_ADDR = "inproc://inlog_tests";
 	private final String OFFSET_PUB_ADDR = "inproc://offsets_tests";
-	private static final String TESTS_ZK_ROOT_PATH = "/cometa_tests";
-	private static final String ZK_HOST = "localhost:2181";
+	private static final int TEST_PORT = 2182;
+	private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
 
-	private static void deleteCreatedLogs() throws Exception {
-		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
+	private void deleteCreatedLogs() throws Exception {
 		for (String log : createdLogs) {
-			zkCli.deleteLogNamed(log);
+			palDirectory.unregisterLog(log);
 			logger.debug("Cleaned up left over log: {}", log);
 		}
-		zkCli.close();
-	}
-
-	@AfterClass
-	public static void deleteTestRootPaths() throws Exception {
-		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
-		zkCli.deleteRootPaths();
 	}
 
 	@After
 	public void cleanup() throws Exception {
 		execService.shutdown();
 		execService.awaitTermination(2, TimeUnit.SECONDS);
-		this.registry = null;
-		this.zmqContext.close();
+		zmqContext.close();
 		deleteCreatedLogs();
+		palDirectory.close();
+		testingServer.close();
 	}
 
 	@Before
 	public void setup() throws Exception {
-		this.execService = Executors.newSingleThreadExecutor();
-		this.registry = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
-		this.zmqContext = this.createContext();
-		this.consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
-		this.logReader = new LogReader(
+		execService = Executors.newSingleThreadExecutor();
+		testingServer = new TestingServer(TEST_PORT, true);
+		palDirectory = new PALDirectory(CONNECTION_STR);
+		zmqContext = this.createContext();
+		consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+		logReader = new LogReader(
 			zmqContext,
 			DEALER_ADDR,
 			OFFSET_PUB_ADDR,
-			registry,
+			palDirectory,
 			consumer,
 			peerUuid,
 			10);
-		this.log = registry.createLog("testapp");
+		log = palDirectory.newLog("testapp");
 		createdLogs.add(this.log.getName());
 		TopicPartition topicPartition = new TopicPartition(log.getName(), 0);
 		final List<TopicPartition> topicPartitionList = Collections.singletonList(topicPartition);

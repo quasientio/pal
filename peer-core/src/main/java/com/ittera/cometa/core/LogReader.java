@@ -1,7 +1,7 @@
 package com.ittera.cometa.core;
 
 import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.cxn.PeerLogDirectory;
+import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
@@ -72,8 +72,8 @@ public class LogReader extends AbstractExecutionThreadService {
 	private final Properties consumerProperties = new Properties();
 	private volatile long lastOffsetRead = -1;
 
-	// zookeeper
-	private PeerLogDirectory peerLogDirectory;
+	// pal directory
+	private PALDirectory palDirectory;
 
 	private UUID peerUuid;
 
@@ -142,11 +142,11 @@ public class LogReader extends AbstractExecutionThreadService {
 									 @Named("in.log") String inLogAddress,
 									 @Named("offset.pub") String offsetPubAddress,
 									 ZContext zmqContext,
-									 PeerLogDirectory peerLogDirectory,
+									 PALDirectory palDirectory,
 									 UUID peerUuid) {
 		this.zmqContext = zmqContext;
 		this.peerUuid = peerUuid;
-		this.peerLogDirectory = peerLogDirectory;
+		this.palDirectory = palDirectory;
 		// zmq addresses
 		this.inLogAddress = inLogAddress;
 		this.offsetPubAddress = offsetPubAddress;
@@ -174,7 +174,7 @@ public class LogReader extends AbstractExecutionThreadService {
 	 * @param zmqContext
 	 * @param inLogAddress
 	 * @param offsetPubAddress
-	 * @param peerLogDirectory
+	 * @param palDirectory
 	 * @param consumer
 	 * @param peerUuid
 	 * @param pollDuration
@@ -182,7 +182,7 @@ public class LogReader extends AbstractExecutionThreadService {
 	LogReader(ZContext zmqContext,
 						String inLogAddress,
 						String offsetPubAddress,
-						PeerLogDirectory peerLogDirectory,
+						PALDirectory palDirectory,
 						Consumer<String, ExecMessage> consumer,
 						UUID peerUuid,
 						long pollDuration) {
@@ -190,7 +190,7 @@ public class LogReader extends AbstractExecutionThreadService {
 		this.inLogAddress = inLogAddress;
 		this.offsetPubAddress = offsetPubAddress;
 		this.peerUuid = peerUuid;
-		this.peerLogDirectory = peerLogDirectory;
+		this.palDirectory = palDirectory;
 		this.consumer = consumer;
 		this.pollDuration = Duration.of(pollDuration, ChronoUnit.MILLIS);
 
@@ -202,7 +202,7 @@ public class LogReader extends AbstractExecutionThreadService {
 		this.kafkaTopic = logName;
 		this.skipWrittenOffsets = skipWrittenOffsets;
 		this.initialOffset = initialOffset;
-		LogInfo logInfo = peerLogDirectory.getLogInfo(logName);
+		LogInfo logInfo = palDirectory.getLogInfo(logName);
 
 		consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
 		logger.info("Now reading from log: {} and bootstrapServers: {}, starting at offset: {}", logInfo.getName(),

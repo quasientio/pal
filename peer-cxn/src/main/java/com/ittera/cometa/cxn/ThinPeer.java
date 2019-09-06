@@ -8,9 +8,6 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers;
 
 import com.ittera.cometa.common.util.Strings;
 
-import org.apache.zookeeper.AsyncCallback.StringCallback;
-import org.apache.zookeeper.KeeperException.Code;
-
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -74,8 +71,8 @@ public class ThinPeer {
 	private PeerInfo currentPeer;
 	private boolean talkingToPeer = false;
 
-	// zookeeper
-	private PeerLogDirectory peerLogDirectory;
+	// PAL directory
+	private PALDirectory palDirectory;
 
 	public ThinPeer(Properties properties) throws Exception {
 		this(properties, null, null, null);
@@ -112,11 +109,11 @@ public class ThinPeer {
 				" or the 'zookeeper_url' system property. (Example: -Dzookeeper_url=localhost:2181)");
 		}
 		logger.info("Using ZOOKEEPER_URL = {}", zookeeperUrl);
-		this.peerLogDirectory = ZkClient.getConnectedClient(zookeeperUrl);
+		this.palDirectory = new PALDirectory(zookeeperUrl);
 		try {
 			// register self as new peer TODO fill properties
 			final Properties peerProperties = new Properties();
-			peerLogDirectory.registerPeer(peerUuid, peerProperties);
+			palDirectory.registerPeer(peerUuid, peerProperties);
 		} catch (Exception ex) {
 			logger.error("Error registering peer", ex);
 		}
@@ -126,22 +123,22 @@ public class ThinPeer {
 		LogInfo lastLog = null;
 		if (this.inLog == null) {
 			// get last log with prefix = kafkaTopicPrefix
-			lastLog = peerLogDirectory.getLastLog(kafkaTopicPrefix);
+			lastLog = palDirectory.getLastLog(kafkaTopicPrefix);
 			this.inLog = lastLog;
 		} else {
 			if (this.inLog.getBootstrapServers() == null) {
-				this.inLog.setBrokerInfoSet(peerLogDirectory.getKafkaBrokers());
+				this.inLog.setBrokerInfoSet(palDirectory.getKafkaBrokers());
 			}
 		}
 
 		if (outLog == null) {
 			if (lastLog == null) {
-				lastLog = peerLogDirectory.getLastLog(kafkaTopicPrefix);
+				lastLog = palDirectory.getLastLog(kafkaTopicPrefix);
 			}
 			this.outLog = lastLog;
 		} else {
 			if (this.outLog.getBootstrapServers() == null) {
-				this.outLog.setBrokerInfoSet(peerLogDirectory.getKafkaBrokers());
+				this.outLog.setBrokerInfoSet(palDirectory.getKafkaBrokers());
 			}
 		}
 		logger.info("Will read from log: {} and write to log: {}", this.inLog, this.outLog);
@@ -291,7 +288,7 @@ public class ThinPeer {
 		Map<Long, ConsumerRecord> recordsRead = new HashMap<>();
 		ConsumerRecord requestedRecord = null;
 
-		long actualSeekOffset =  (seek - PRECEDING_RECS < 0) ?  seek : seek - PRECEDING_RECS;
+		long actualSeekOffset = (seek - PRECEDING_RECS < 0) ? seek : seek - PRECEDING_RECS;
 		if (logger.isDebugEnabled()) {
 			logger.debug("Seek to offset #{}", actualSeekOffset);
 		}
@@ -360,7 +357,7 @@ public class ThinPeer {
 		}
 	}
 
-	public Future<ExecMessage> sendToLogAsync(ExecMessage message) {
+	public Future<ExecMessage> sendToLogAndAsyncProcessReqAndRepNodes(ExecMessage message) {
 
 		final UUID requestMsgUuid = UUID.fromString(message.getMessageUuid());
 
@@ -370,20 +367,9 @@ public class ThinPeer {
 			logger.debug("Message sent to log:\n{}", message);
 		}
 
-		final ExecMessageFuture messageFuture = new ExecMessageFuture(this, peerLogDirectory,
+		final ExecMessageFuture messageFuture = new ExecMessageFuture(this, palDirectory,
 			singleThreadConsumerExecutor, outLog.getName(), new LogRequest(requestMsgUuid));
 
-		// addLogRequest callback
-		StringCallback addLogRequestCallback = (rc, path, ctx, name) -> {
-			if (Code.get(rc) == Code.OK) {// set watch to get notified about changes to children
-				((ZkClient) peerLogDirectory).getChildren(outLog.getName(), requestMsgUuid, messageFuture, messageFuture,
-					null);
-			} else {
-				logger.error("Not OK adding log request for {}, error code: {}", requestMsgUuid, rc);
-			}
-		};
-
-		// asynchronously create req node in zk
 		LogRequest logRequest;
 		if (!outLog.equals(inLog)) {
 			// if we are reading from a different log, ask for reply to be written to that log (our inLog)
@@ -392,8 +378,9 @@ public class ThinPeer {
 			logRequest = new LogRequest(requestMsgUuid);
 		}
 
+		// asynchronously create req node
 		try {
-			((ZkClient) peerLogDirectory).addLogRequest(outLog.getName(), logRequest, addLogRequestCallback, null);
+			palDirectory.addLogRequestAsync(outLog.getName(), logRequest, messageFuture);
 		} catch (Exception e) {
 			logger.error("Couldn't add request node to directory", e);
 			return null;
@@ -418,7 +405,7 @@ public class ThinPeer {
 	}
 
 	private ExecMessage sendAsyncAndSwitchToPeer(ExecMessage message) throws ExecutionException, InterruptedException {
-		Future<ExecMessage> replyFuture = sendToLogAsync(message);
+		Future<ExecMessage> replyFuture = sendToLogAndAsyncProcessReqAndRepNodes(message);
 
 		// wait for reply (blocking)
 		ExecMessage replyMsg = replyFuture.get();
@@ -471,7 +458,7 @@ public class ThinPeer {
 						PeerInfo newPeer = null;
 						try {
 							// we getPeerProperties and close after since we assume we'll get here only once
-							newPeer = peerLogDirectory.getPeerInfo(peerUuid);
+							newPeer = palDirectory.getPeerInfo(peerUuid);
 						} catch (Exception ex) {
 							logger.error("Couldn't get peer properties", ex);
 						}
@@ -494,7 +481,7 @@ public class ThinPeer {
 		PeerInfo newPeer = null;
 		try {
 			// we getPeerProperties and close after since we assume we'll get here only once
-			newPeer = peerLogDirectory.getPeerInfo(peerUuid);
+			newPeer = palDirectory.getPeerInfo(peerUuid);
 		} catch (Exception ex) {
 			logger.error("Couldn't get peer properties", ex);
 		}
@@ -537,7 +524,7 @@ public class ThinPeer {
 	private static String getRecordInfo(RecordMetadata recordMetadata) {
 
 		return String.format("{%n timestamp: %d,%n offset: %d,%n #bytes in value: %d%n}",
-		recordMetadata.timestamp(),recordMetadata.offset(),recordMetadata.serializedValueSize());
+			recordMetadata.timestamp(), recordMetadata.offset(), recordMetadata.serializedValueSize());
 	}
 
 	public void close() {

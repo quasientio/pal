@@ -13,30 +13,58 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.CuratorEvent;
+import org.apache.curator.framework.api.CuratorEventType;
+import org.apache.curator.framework.api.CuratorWatcher;
+import org.apache.curator.framework.api.BackgroundCallback;
+
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.WatchedEvent;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.AsyncCallback;
-
-class ExecMessageFuture implements Future<ExecMessage>, Watcher, AsyncCallback.ChildrenCallback {
-	private final CountDownLatch latch = new CountDownLatch(1);
-	private ExecMessage value;
-	private boolean cancelled;
+/**
+ * How ExecMessageFuture is used by class X:
+ * 1. X sends an ExecMessage sent to the log. It does not wait for the reply consuming the log.
+ * 2. X then creates an instance of ExecMessageFuture representing the message, holding required references
+ * 3. X adds a Request Node to ZK asynchronously, with the instance of ExecMessageFuture as BackgroundCallback
+ * 4. When the BackgroundCallback method, processResult(), is called, a call to getChildren() is made on the
+ * Request Node, also asynchronously, setting itself as BackgroundCallback, and as a CuratorWatcher
+ * 5. When the BackgroundCallback method is called with the children evt type, if getChildren() is !empty, it calls
+ * process(). This is possible, but not likely. It's more likely that children will be empty, and later the
+ * CuratorWatcher callback will receive the event of having a new child (i.e. the replyNode).
+ * 6. When/If the CuratorWatcher callback method, process(WatchedEvent) is called, if the request node's children has
+ * changed, then it calls process()
+ * 7. When process() is called (either from step 5 or 6), it gets the reply node, and then uses the message offset
+ * to retrieve the message from the log. Fetching the reply node is the only synchronous call to ZK by this class, but
+ * as the rest of process(), it's invoked asynchronously by the executor service. At the end of process(), the actual
+ * message reply retrieved from is put() in the future, completing it.
+ *
+ * See ExecMessageFutureTest for an example
+ */
+class ExecMessageFuture implements
+	BackgroundCallback,
+	CuratorWatcher,
+	Future<ExecMessage> {
 
 	private final static Logger logger = LoggerFactory.getLogger(ExecMessageFuture.class);
 
+	private final CountDownLatch latch = new CountDownLatch(1);
+	private ExecMessage value;
+	private boolean cancelled;
 	private final ThinPeer thinPeer;
-	private final PeerLogDirectory peerLogDirectory;
+	private final PALDirectory palDirectory;
 	private final String logName;
 	private final LogRequest logRequest;
 	private final ExecutorService executorService;
 
-	ExecMessageFuture(ThinPeer thinPeer, PeerLogDirectory peerLogDirectory,
+	ExecMessageFuture(ThinPeer thinPeer, PALDirectory palDirectory,
 										ExecutorService executorService, String logName, LogRequest logRequest) {
 		this.thinPeer = thinPeer;
-		this.peerLogDirectory = peerLogDirectory;
+		this.palDirectory = palDirectory;
 		this.executorService = executorService;
 		this.logName = logName;
 		this.logRequest = logRequest;
@@ -87,32 +115,13 @@ class ExecMessageFuture implements Future<ExecMessage>, Watcher, AsyncCallback.C
 
 	// </editor-fold>
 
-	// <editor-fold defaultstate="collapsed" desc="Zk Watcher Interface">
+	// <editor-fold defaultstate="collapsed" desc="Curator Watcher Interface">
 	@Override
 	public void process(WatchedEvent evt) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("NodeChildrenChanged event: {} for node of request: {}", evt, logRequest);
 		}
-
-		if (evt.getType() == Event.EventType.NodeChildrenChanged) {
-			process();
-		}
-	}
-	// </editor-fold>
-
-	// <editor-fold defaultstate="collapsed" desc="Zk Callback Interface">
-	@Override
-	public void processResult(int rc, String path, Object ctx, List<String> children) {
-		if (logger.isDebugEnabled()) {
-			logger.debug("getChildren returned for request: {}, with {} children", logRequest, children.size());
-		}
-
-		if (!children.isEmpty()) {
-			if (logger.isDebugEnabled()) {
-				StringBuilder sb = new StringBuilder("children:\n");
-				children.forEach(s -> sb.append(s).append('\n'));
-				logger.debug(sb.toString());
-			}
+		if (evt.getType() == Watcher.Event.EventType.NodeChildrenChanged) {
 			process();
 		}
 	}
@@ -129,14 +138,14 @@ class ExecMessageFuture implements Future<ExecMessage>, Watcher, AsyncCallback.C
 			return;
 		}
 
-		final LogReply logReply = getReplyNode();
-
-		if (logReply == null) {
-			logger.warn("Null reply for request node {}. May haven been already processed -> ignoring.", logRequest);
-		}
-
-		// let the executor service fetch the message from the log
+		// let the executor service fetch the replyNode from ZK, and the message from the log
 		executorService.submit(() -> {
+			final LogReply logReply = getReplyNode();
+
+			if (logReply == null) {
+				logger.warn("Null reply for request node {}. May haven been already processed -> ignoring.", logRequest);
+			}
+
 			// set msg value to complete future
 			ExecMessage messageReply = thinPeer.getMessageAtOffset(logReply.getOffset());
 			if (logger.isDebugEnabled()) {
@@ -153,7 +162,7 @@ class ExecMessageFuture implements Future<ExecMessage>, Watcher, AsyncCallback.C
 
 		LogReply logReply = null;
 		try {
-			Set<LogReply> replySet = peerLogDirectory.getRepliesTo(logName, logRequest);
+			Set<LogReply> replySet = palDirectory.getRepliesTo(logName, logRequest);
 			if (!replySet.isEmpty()) {
 				logReply = replySet.iterator().next();
 			}
@@ -166,9 +175,41 @@ class ExecMessageFuture implements Future<ExecMessage>, Watcher, AsyncCallback.C
 
 	private void deleteRequestNode() {
 		try {
-			peerLogDirectory.deleteLogRequest(logName, logRequest);
+			palDirectory.deleteLogRequestAsync(logName, logRequest);
 		} catch (Exception e) {
 			logger.error("Error deleting directory request node: {} for log: {}", logRequest, logName);
 		}
 	}
+
+
+	// <editor-fold defaultstate="collapsed" desc="BackgroundCallback Interface">
+	@Override
+	public void processResult(CuratorFramework curatorFramework, CuratorEvent curatorEvent) throws Exception {
+		// LogRequest node is created
+		if (curatorEvent.getType().equals(CuratorEventType.CREATE)) {
+			if (KeeperException.Code.get(curatorEvent.getResultCode()) == KeeperException.Code.OK) {
+				// set watch to get notified about changes to children
+				palDirectory.getRequestNodeChildrenAsyncWithWatch(logName, logRequest.getUuid(), this,
+					this);
+			} else {
+				logger.error("Not OK adding log request for {}, error code: {}", logRequest.getUuid(),
+					curatorEvent.getResultCode());
+			}
+		} // getChildren(requestNode) returns
+		else if (curatorEvent.getType().equals(CuratorEventType.CHILDREN)) {
+			List<String> children = curatorEvent.getChildren();
+			if (logger.isDebugEnabled()) {
+				logger.debug("getChildren returned for request: {}, with {} children", logRequest, children.size());
+			}
+			if (!children.isEmpty()) {
+				if (logger.isDebugEnabled()) {
+					StringBuilder sb = new StringBuilder("children:\n");
+					children.forEach(s -> sb.append(s).append('\n'));
+					logger.debug(sb.toString());
+				}
+				process();
+			}
+		}
+	}
+	// </editor-fold>
 }

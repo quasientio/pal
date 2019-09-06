@@ -1,7 +1,7 @@
 package com.ittera.cometa.core;
 
 import com.ittera.cometa.core.exec.java.SelfCaller;
-import com.ittera.cometa.cxn.PeerLogDirectory;
+import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.core.exec.PeerMessageExecutor;
 import com.ittera.cometa.core.exec.LogMessageExecutor;
 import com.ittera.cometa.core.exec.ExtendedThreadPoolExecutor;
@@ -193,25 +193,17 @@ public class Main implements Callable<Integer> {
 	}
 
 	private void registerSelfAsPeer(Injector injector) {
-
-		final PeerLogDirectory registry = injector.getInstance(PeerLogDirectory.class);
-
-		// connect to directory
-		try {
-			registry.connect(properties.getProperty("zookeeper_url"));
-		} catch (Exception ex) {
-			fatalExit(ex, PeerException.FatalCode.ERROR_CONNECTING_TO_DIRECTORY);
-		}
+		final PALDirectory palDirectory = injector.getInstance(PALDirectory.class);
 
 		// register self as new peer
 		try {
 			final Properties peerProperties = new Properties();
 			peerProperties.put("listenAddress", properties.getProperty("in.router"));
-			registry.registerPeer(uuid, peerProperties);
+			palDirectory.registerPeer(uuid, peerProperties);
 		} catch (Exception ex) {
 			fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_PEER);
 		}
-		logger.info("Registered self in peer directory");
+		logger.info("Registered self in directory");
 	}
 
 	private void shutdown(ServiceManager manager, Injector injector, boolean fast) {
@@ -229,6 +221,10 @@ public class Main implements Callable<Integer> {
 			final ExtendedThreadPoolExecutor logMessageExecutor = injector.getInstance(LogMessageExecutor.class);
 			logMessageExecutor.shutdownNow();
 			logger.info("Done shutting down log threads");
+
+			// close zookeeper conn
+			final PALDirectory palDirectory = injector.getInstance(PALDirectory.class);
+			palDirectory.close();
 
 			// close zmq context asynchronously
 			singleExecutor.submit(() -> closeZmqContext());

@@ -5,7 +5,7 @@ import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.DispatchForwarder;
 import com.ittera.cometa.common.lang.ProxyDispatcher;
 import com.ittera.cometa.core.exec.java.CustomClassloader;
-import com.ittera.cometa.cxn.PeerLogDirectory;
+import com.ittera.cometa.cxn.PALDirectory;
 
 import com.ittera.cometa.core.exec.java.AspectProxyDispatcher;
 
@@ -47,7 +47,7 @@ class PeerGuiceModule extends AbstractModule {
 		bind(ObjectService.class).to(com.ittera.cometa.common.BiMapObjectService.class).asEagerSingleton();
 		bind(ExecMessageBuilder.class).
 			to(ProtobufExecMessageBuilder.class).asEagerSingleton();
-		bind(PeerLogDirectory.class).to(com.ittera.cometa.cxn.ZkClient.class).asEagerSingleton();
+		bind(PALDirectory.class).asEagerSingleton();
 
 		// AspectProxy and DispatchForwarder's fields are static
 		requestStaticInjection(AspectProxyDispatcher.class);

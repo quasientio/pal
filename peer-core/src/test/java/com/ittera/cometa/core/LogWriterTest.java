@@ -5,27 +5,28 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 
 import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.cxn.PeerLogDirectory;
-import com.ittera.cometa.cxn.ZkClient;
+import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.ExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
+import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.producer.MockProducer;
+import org.apache.kafka.common.Cluster;
+
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
 
 import static org.junit.Assert.*;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.zeromq.SocketType;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
 
 import static org.hamcrest.Matchers.*;
 
@@ -41,7 +42,8 @@ public class LogWriterTest extends ZmqEnabledTest {
 	private ZContext zmqContext;
 	private LogWriter logWriter;
 	private UUID peerUuid = UUID.randomUUID();
-	private ZkClient registry;
+	private PALDirectory palDirectory;
+	private TestingServer testingServer;
 	private ServiceManager manager;
 	private MockProducer<String, ExecMessage> producer;
 	private LogInfo log;
@@ -51,49 +53,44 @@ public class LogWriterTest extends ZmqEnabledTest {
 	private static final Set<String> createdLogs = new HashSet<>();
 	private final ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
 
-	private static final String TESTS_ZK_ROOT_PATH = "/cometa_tests";
-	private static final String ZK_HOST = "localhost:2181";
+	private static final int TEST_PORT = 2182;
+	private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
 
-	private static void deleteCreatedLogs() throws Exception {
-		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
+	private void deleteCreatedLogs() throws Exception {
 		for (String log : createdLogs) {
-			zkCli.deleteLogNamed(log);
+			palDirectory.unregisterLog(log);
 			logger.debug("Cleaned up left over log: {}", log);
 		}
-		zkCli.close();
-	}
-
-	@AfterClass
-	public static void deleteTestRootPaths() throws Exception {
-		PeerLogDirectory zkCli = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
-		zkCli.deleteRootPaths();
 	}
 
 	@After
 	public void cleanup() throws Exception {
 		execService.shutdown();
 		execService.awaitTermination(2, TimeUnit.SECONDS);
-		this.registry = null;
 		this.zmqContext.close();
 		deleteCreatedLogs();
+		palDirectory.close();
+		testingServer.close();
 	}
 
 	@Before
 	public void setup() throws Exception {
-		registry = ZkClient.getConnectedClient(ZK_HOST, TESTS_ZK_ROOT_PATH);
+		testingServer = new TestingServer(TEST_PORT, true);
+		palDirectory = new PALDirectory(CONNECTION_STR);
 		zmqContext = this.createContext();
-		producer = new MockProducer<>();
+		producer = new MockProducer<>(Cluster.empty(), true, null, null, null);
 		logWriter = new LogWriter(
 			OUT_PUB_ADDR,
 			OFFSET_PUB_ADDR,
+			true,
 			producer,
 			zmqContext,
-			registry,
+			palDirectory,
 			peerUuid);
 
 		final Set<Service> services = new HashSet<>(Arrays.asList(this.logWriter));
 		manager = new ServiceManager(services);
-		log = registry.createLog("testapp");
+		log = this.palDirectory.newLog("testapp");
 		createdLogs.add(log.getName());
 		logWriter.writeToLog(log, log, false);
 	}
