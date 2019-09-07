@@ -14,7 +14,8 @@ public class PeerException extends Exception {
 		ERROR_INITIALIZING_LOGS(5, "Error initializing IN/OUT logs"),
 		ERROR_SERVICE_MANAGER_FAILED(6, "Service manager failure"),
 		ERROR_NO_ZOOKEEPER_URL_GIVEN(7, "Missing zookeeper URL"),
-		ERROR_NO_MAINCLASS_IN_JAR_MANIFEST(8, "No Main-Class in MANIFEST");
+		ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST(8, "JAR not found or missing MANIFEST"),
+		ERROR_NO_MAINCLASS_IN_JAR_MANIFEST(9, "No Main-Class in MANIFEST");
 
 		private final int code;
 		private final String message;

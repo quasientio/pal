@@ -122,11 +122,12 @@ public class SelfCaller {
 		}
 
 		final Attributes attributes;
+
 		try (JarFile jar = new JarFile(jarFile)) {
 			attributes = jar.getManifest().getMainAttributes();
 		} catch (IOException e) {
-			logger.error("Error loading JAR file", e);
-			return null;
+			logger.error("Error loading Manifest from JAR", e);
+			throw new PeerException(PeerException.FatalCode.ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST);
 		}
 		final String mainClass = attributes.getValue("Main-Class");
 		if (mainClass == null) {
