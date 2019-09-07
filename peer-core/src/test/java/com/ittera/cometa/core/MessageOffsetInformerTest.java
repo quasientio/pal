@@ -116,7 +116,6 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 		MessageOffsetInformer offsetInformer = new MessageOffsetInformer(replyMessage, publishOffsets, writeReplyNodes,
 			offsetPublisher, palDirectory, log, peerUuid);
 		producer.send(newRecord, offsetInformer);
-		producer.completeNext();
 
 		while (!offsetInformer.isDone()) {
 			Thread.sleep(100);
@@ -157,7 +156,6 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 		MessageOffsetInformer offsetInformer = new MessageOffsetInformer(replyMessage, publishOffsets, writeReplyNodes,
 			offsetPublisher, palDirectory, log, peerUuid);
 		producer.send(newRecord, offsetInformer);
-		producer.completeNext();
 
 		// NOW, wait a bit and then add log request to directory
 		Thread.sleep(300);
@@ -215,7 +213,6 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 		MessageOffsetInformer offsetInformer = new MessageOffsetInformer(replyMessage, publishOffsets, writeReplyNodes,
 			offsetPublisher, palDirectory, log, peerUuid);
 		Future<RecordMetadata> recordMetadataFuture = producer.send(newRecord, offsetInformer);
-		producer.completeNext();
 
 		while (!offsetInformer.isDone()) {
 			Thread.sleep(100);
