@@ -427,8 +427,13 @@ public class PALDirectory {
 	}
 
 	private void createSubPaths() throws Exception {
-		curator.create().creatingParentsIfNeeded().forPath(getLogsPath());
-		curator.create().creatingParentsIfNeeded().forPath(getPeersPath());
+		if (curator.checkExists().forPath(getLogsPath()) == null) {
+			curator.create().creatingParentsIfNeeded().forPath(getLogsPath());
+
+		}
+		if (curator.checkExists().forPath(getPeersPath()) == null) {
+			curator.create().creatingParentsIfNeeded().forPath(getPeersPath());
+		}
 	}
 
 	private static CuratorFramework newCuratorInstance(String connectionString) {
