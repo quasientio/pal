@@ -324,7 +324,7 @@ main_loop:
 					logDealer.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
 					logDealer.send(execMessage.toByteArray(), 0);
 					if (logger.isDebugEnabled()) {
-						logger.debug("Dealt new log Data Message with uuid: {}", execMessage.getMessageUuid());
+						logger.debug("Dealt new log message with uuid: {}", execMessage.getMessageUuid());
 					}
 				} else {
 					if (logger.isDebugEnabled()) {
@@ -424,7 +424,7 @@ main_loop:
 	@Override
 	protected void triggerShutdown() {
 
-		logger.info("Data message reader shutting down.");
+		logger.info("Log reader shutting down.");
 		//TODO: clean up, send uncommitted offset, etc.
 		shutdownRequested = true;
 		acceptingRequests = false;
@@ -433,7 +433,7 @@ main_loop:
 	@Override
 	protected void shutDown() {
 
-		logger.info("Data message reader shut down.");
+		logger.info("Log reader shut down.");
 	}
 
 	protected void printDebugStats() {

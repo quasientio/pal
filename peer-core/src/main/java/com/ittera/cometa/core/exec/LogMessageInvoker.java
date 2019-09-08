@@ -134,7 +134,7 @@ class LogMessageInvoker extends Thread {
 				if (logger.isDebugEnabled()) {
 					final long took = System.currentTimeMillis() - started;
 					if (logger.isDebugEnabled()) {
-						logger.debug("Dispatched data message with uuid: {} in {} millisecs", requestMsg.getMessageUuid(), took);
+						logger.debug("Dispatched log message with uuid: {} in {} millisecs", requestMsg.getMessageUuid(), took);
 					}
 				}
 			}

@@ -293,13 +293,13 @@ class LogWriter extends AbstractExecutionThreadService {
 	@Override
 	protected void triggerShutdown() {
 
-		logger.info("Data message writer shutting down.");
+		logger.info("Log writer shutting down.");
 	}
 
 	@Override
 	protected void shutDown() {
 
-		logger.info("Data message writer shut down.");
+		logger.info("Log writer shut down.");
 	}
 
 	@Override
