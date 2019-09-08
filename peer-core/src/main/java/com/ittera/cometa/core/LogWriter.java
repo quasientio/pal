@@ -115,7 +115,7 @@ class LogWriter extends AbstractExecutionThreadService {
 
 		// start subscriber
 		this.subscriber = zmqContext.createSocket(SocketType.SUB);
-		subscriber.bind(outPubAddress);
+		subscriber.connect(outPubAddress);
 		subscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
 		logger.info("Subscriber connected");
 

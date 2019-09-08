@@ -1,5 +1,6 @@
 package com.ittera.cometa.core;
 
+import com.ittera.cometa.common.util.Strings;
 import com.ittera.cometa.core.exec.java.SelfCaller;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.core.exec.PeerMessageExecutor;
@@ -54,6 +55,9 @@ public class Main implements Callable<Integer> {
 	@Option(names = {"-l", "--log"}, paramLabel = "LOGNAME", description = "read and write from/to given log")
 	private String logName;
 
+	@Option(names = {"-tp", "--tcp-pub"}, paramLabel = "[HOST:]PORT", description = "publish messages to TCP socket")
+	private String tcpPub;
+
 	@Option(names = {"-cp", "--classpath"}, paramLabel = "CLASSPATH",
 		description = "load classes from given folders/jars")
 	private String classpath;
@@ -85,10 +89,23 @@ public class Main implements Callable<Integer> {
 	private static final String PROPERTIES_FILE = "/peer.properties";
 	private static final String LOGGING_CONFIG = "/peer-logging.xml";
 
-	// defaults for ZMQ properties
-	private static final String ZMQ_LINGER_DEFAULT = "1000";
-	private static final String ZMQ_RCVHWM_DEFAULT = "10000";
-	private static final String ZMQ_SNDHWM_DEFAULT = "10000";
+	private static final class ZMQProps {
+		// defaults for ZMQ properties
+		private static final String ZMQ_LINGER_DEFAULT = "1000";
+		private static final String ZMQ_RCVHWM_DEFAULT = "10000";
+		private static final String ZMQ_SNDHWM_DEFAULT = "10000";
+
+		// internal ZMQ channel names
+		private static final Properties inprocChannels = new Properties();
+
+		static {
+			inprocChannels.put("in.log", "inproc://inlog");
+			inprocChannels.put("in.dealer", "inproc://deal");
+			inprocChannels.put("out.cell", "inproc://cell");
+			inprocChannels.put("out.pub.inproc", "inproc://pub");
+			inprocChannels.put("offset.pub", "inproc://offsets");
+		}
+	}
 
 	static {
 		// configure logging
@@ -118,9 +135,9 @@ public class Main implements Callable<Integer> {
 
 	private void initZContext() {
 		zmqContext = new ZContext();
-		zmqContext.setLinger(Integer.parseInt(properties.getProperty("ZMQ_LINGER", ZMQ_LINGER_DEFAULT)));
-		zmqContext.setRcvHWM(Integer.parseInt(properties.getProperty("ZMQ_RCVHWM", ZMQ_RCVHWM_DEFAULT)));
-		zmqContext.setSndHWM(Integer.parseInt(properties.getProperty("ZMQ_SNDHWM", ZMQ_SNDHWM_DEFAULT)));
+		zmqContext.setLinger(Integer.parseInt(properties.getProperty("ZMQ_LINGER", ZMQProps.ZMQ_LINGER_DEFAULT)));
+		zmqContext.setRcvHWM(Integer.parseInt(properties.getProperty("ZMQ_RCVHWM", ZMQProps.ZMQ_RCVHWM_DEFAULT)));
+		zmqContext.setSndHWM(Integer.parseInt(properties.getProperty("ZMQ_SNDHWM", ZMQProps.ZMQ_SNDHWM_DEFAULT)));
 		logger.info("Created and configured zmq context");
 	}
 
@@ -176,7 +193,7 @@ public class Main implements Callable<Integer> {
 		}
 	}
 
-	private void addEnvToProperties() {
+	private void addMiscProperties() {
 
 		// load from Environment variable or system property
 		String zookeeperUrl = System.getenv("ZOOKEEPER_URL");
@@ -189,7 +206,21 @@ public class Main implements Callable<Integer> {
 		}
 		// add to app properties
 		properties.setProperty("zookeeper_url", zookeeperUrl);
-		logger.info("Added env variables to properties");
+
+		// are we publishing via TCP, or just internally
+		if (tcpPub != null) {
+			String hostname = "0.0.0.0";
+			int port;
+			if (tcpPub.contains(":")) {
+				hostname = Strings.stringBefore(tcpPub, ":");
+				port = Integer.parseInt(Strings.stringAfter(tcpPub, ":"));
+			} else {
+				port = Integer.parseInt(tcpPub);
+			}
+			properties.put("out.pub", String.format("tcp://%s:%d", hostname, port));
+		} else {
+			properties.put("out.pub", ZMQProps.inprocChannels.getProperty("out.pub.inproc"));
+		}
 	}
 
 	private void registerSelfAsPeer(Injector injector) {
@@ -269,14 +300,17 @@ public class Main implements Callable<Integer> {
 
 		initZContext();
 
+		// add zmq channel names to properties
+		properties.putAll(ZMQProps.inprocChannels);
+
 		// set this peer's uuid if not given
 		if (uuid == null) {
 			uuid = UUID.randomUUID();
 		}
 		properties.put("id", uuid.toString());
 
-		// add env variables to app props
-		addEnvToProperties();
+		// add misc variables to app props
+		addMiscProperties();
 
 		// init custom classloader
 		List<URL> urls = new ArrayList<>();

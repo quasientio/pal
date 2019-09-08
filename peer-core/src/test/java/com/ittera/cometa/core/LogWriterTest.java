@@ -124,7 +124,7 @@ public class LogWriterTest extends ZmqEnabledTest {
 
 		// we create outPub socket and PUBlish some messages
 		pubSocket = zmqContext.createSocket(SocketType.PUB);
-		pubSocket.connect(OUT_PUB_ADDR);
+		pubSocket.bind(OUT_PUB_ADDR);
 
 		int messagesToSend = 15;
 		List<ExecMessage> msgsCreated = new ArrayList<>();
@@ -165,7 +165,7 @@ public class LogWriterTest extends ZmqEnabledTest {
 
 		// we create outPub socket and PUBlish some messages with header
 		pubSocket = zmqContext.createSocket(SocketType.PUB);
-		pubSocket.connect(OUT_PUB_ADDR);
+		pubSocket.bind(OUT_PUB_ADDR);
 
 		InternalHeader header = msgBuilder.buildWriteAheadHeader(peerUuid);
 		List<InternalHeader> headers = Arrays.asList(header);

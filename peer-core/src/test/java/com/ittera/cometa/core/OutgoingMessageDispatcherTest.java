@@ -95,7 +95,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 
 		// create SUB socket to simulate LogWriter
 		Socket sub = context.createSocket(SocketType.SUB);
-		sub.bind(OUTPUB_ADDR);
+		sub.connect(OUTPUB_ADDR);
 		sub.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
 		// send 1 message request
@@ -142,7 +142,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 
 		// create SUB socket to simulate LogWriter
 		Socket sub = context.createSocket(SocketType.SUB);
-		sub.bind(OUTPUB_ADDR);
+		sub.connect(OUTPUB_ADDR);
 		sub.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
 		// send 1 message request

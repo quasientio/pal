@@ -56,7 +56,7 @@ class OutgoingMessageDispatcher extends AbstractExecutionThreadService {
 		repSocket.bind(outCellAddress);
 
 		pubSocket = context.createSocket(SocketType.PUB);
-		pubSocket.connect(outPubAddress);
+		pubSocket.bind(outPubAddress);
 
 		logger.info("All connections open");
 	}
