@@ -26,6 +26,7 @@
         <logback.classic.version>1.2.3</logback.classic.version>
         <logback.core.version>1.2.3</logback.core.version>
         <kafka.clients.version>2.3.0</kafka.clients.version>
+        <kafka.streams.version>2.3.0</kafka.streams.version>
         <commons.lang3.version>3.9</commons.lang3.version>
         <picocli.version>4.0.0-beta-2</picocli.version>
         <jeromq.version>0.5.1</jeromq.version>
