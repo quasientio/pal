@@ -17,10 +17,9 @@ message Object {
     required Class class = 4;
     optional bool isArray = 5 [default = false];
     repeated Object arrayValue = 6;
-    optional int64 created = 7;
-    optional string ref = 8;
-    required bool isNull = 9;
-    required bool isVoid = 10 [default = false];
+    optional string ref = 7;
+    required bool isNull = 8;
+    required bool isVoid = 9 [default = false];
 }
 
 message Field {

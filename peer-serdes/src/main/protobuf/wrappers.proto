@@ -42,25 +42,24 @@ message ExecMessage {
     required string peerUuid = 1;
     required string messageUuid = 2;
     required Type msgType = 3;
-    required int64 threadId = 4 [default = -1];
-    required string threadName = 5;
-    required int64 currentTime = 6;
-    optional int64 dispatchSeq = 7;
-    optional int64 builderSeq = 8;
-    optional string followingUuid = 9;
+    required string threadName = 4;
+    required string currentTime = 5;
+    optional int32 dispatchSeq = 6;
+    optional int32 builderSeq = 7;
+    optional string followingUuid = 8;
 
     oneof content {
-        ConstructorCall constructorCall = 10;
-        InstanceMethodCall instanceMethodCall = 11;
-        ClassMethodCall classMethodCall = 12;
-        ClInitCall clinitCall = 13;
-        StaticFieldGet staticFieldGet = 14;
-        StaticFieldPut staticFieldPut = 15;
-        InstanceFieldGet instanceFieldGet = 16;
-        InstanceFieldPut instanceFieldPut = 17;
-        StaticFieldPutDone staticFieldPutDone = 18;
-        InstanceFieldPutDone instanceFieldPutDone = 19;
-        RaisedThrowable raisedThrowable = 20;
-        ReturnValue returnValue = 21;
+        ConstructorCall constructorCall = 9;
+        InstanceMethodCall instanceMethodCall = 10;
+        ClassMethodCall classMethodCall = 11;
+        ClInitCall clinitCall = 12;
+        StaticFieldGet staticFieldGet = 13;
+        StaticFieldPut staticFieldPut = 14;
+        InstanceFieldGet instanceFieldGet = 15;
+        InstanceFieldPut instanceFieldPut = 16;
+        StaticFieldPutDone staticFieldPutDone = 17;
+        InstanceFieldPutDone instanceFieldPutDone = 18;
+        RaisedThrowable raisedThrowable = 19;
+        ReturnValue returnValue = 20;
     }
 }

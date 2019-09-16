@@ -1,6 +1,9 @@
 package com.ittera.cometa.messages.protobuf;
 
 import com.ittera.cometa.common.lang.reflect.*;
+import com.ittera.cometa.common.lang.Context;
+import com.ittera.cometa.common.lang.ObjectRef;
+
 import com.ittera.cometa.messages.protobuf.data.*;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
@@ -11,14 +14,13 @@ import com.ittera.cometa.messages.protobuf.data.Calls.*;
 import com.ittera.cometa.messages.protobuf.data.Values.*;
 import com.ittera.cometa.messages.ExecMessageBuilder;
 
-import com.ittera.cometa.common.lang.Context;
-import com.ittera.cometa.common.lang.ObjectRef;
-
 import java.lang.reflect.*;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,18 +31,21 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 
 	protected static final Logger logger = LoggerFactory.getLogger(ProtobufExecMessageBuilder.class);
 
+	// ISO 8601 with millis (fraction-of-second) + TZ (no name, only offset)
+	private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+
 	//<editor-fold desc="Thread-local sequence stamping methods">
 
-	private final ThreadLocal<AtomicLong> threadDispatchSequence = ThreadLocal.withInitial(() -> new AtomicLong(1));
+	private final ThreadLocal<AtomicInteger> threadDispatchSequence = ThreadLocal.withInitial(() -> new AtomicInteger(1));
 
-	private final ThreadLocal<AtomicLong> threadBuilderSequence = ThreadLocal.withInitial(() -> new AtomicLong(1));
+	private final ThreadLocal<AtomicInteger> threadBuilderSequence = ThreadLocal.withInitial(() -> new AtomicInteger(1));
 
 	public ProtobufExecMessageBuilder() {
 	}
 
 	@Override
 	public void resetThreadLocalSequence() {
-		threadBuilderSequence.set(new AtomicLong(1));
+		threadBuilderSequence.set(new AtomicInteger(1));
 		threadDispatchSequence.get().getAndIncrement();
 	}
 
@@ -124,11 +129,10 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 			.setPeerUuid(peerUuid.toString())
 			.setMessageUuid(UUID.randomUUID().toString())
 			.setMsgType(msgType)
-			.setThreadId(Thread.currentThread().getId())
 			.setThreadName(Thread.currentThread().getName())
-			.setDispatchSeq(threadDispatchSequence.get().longValue())
+			.setDispatchSeq(threadDispatchSequence.get().intValue())
 			.setBuilderSeq(threadBuilderSequence.get().getAndIncrement())
-			.setCurrentTime(System.currentTimeMillis());
+			.setCurrentTime(dtf.format(ZonedDateTime.now()));
 
 		if (followingUuid != null && !followingUuid.isEmpty()) {
 			msgBuilder.setFollowingUuid(followingUuid);
@@ -223,8 +227,8 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 	 * @param peerUuid
 	 * @param className
 	 * @param parameterTypes
-	 * @param args             Should be of same length as parameterTypes. For Strings, primitives and wrappers.
-	 * @param argObjRefs       Should be of same length as parameterTypes. For objectrefs.
+	 * @param args           Should be of same length as parameterTypes. For Strings, primitives and wrappers.
+	 * @param argObjRefs     Should be of same length as parameterTypes. For objectrefs.
 	 * @return
 	 */
 	@Override
