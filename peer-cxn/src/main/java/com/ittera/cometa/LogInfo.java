@@ -4,7 +4,7 @@ import com.ittera.cometa.util.ByteSizeConverter;
 
 import java.util.*;
 
-public class LogInfo implements Comparable {
+public class LogInfo extends UTCTimestampedInfo implements Comparable {
 
 	// name of node in zk
 	private final String name;

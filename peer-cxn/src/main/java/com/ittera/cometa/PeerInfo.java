@@ -3,19 +3,23 @@ package com.ittera.cometa;
 import java.util.Objects;
 import java.util.UUID;
 
-public class PeerInfo implements Comparable {
+public class PeerInfo extends UTCTimestampedInfo implements Comparable {
 
 	// name of node in zk
 	private UUID uuid;
 
-	// in zk node stat
-	private long zk_ctime;
-
 	// in zk node data
 	private String listenAddress;
 
+	private String name;
+
 	public PeerInfo(UUID uuid) {
 		setUuid(uuid);
+	}
+
+	public PeerInfo(UUID uuid, String name) {
+		setUuid(uuid);
+		setName(name);
 	}
 
 	public UUID getUuid() {
@@ -34,12 +38,12 @@ public class PeerInfo implements Comparable {
 		this.listenAddress = listenAddress;
 	}
 
-	public void setZk_ctime(long ctime) {
-		this.zk_ctime = ctime;
+	public String getName() {
+		return name;
 	}
 
-	public long getZk_ctime() {
-		return zk_ctime;
+	public void setName(String name) {
+		this.name = name;
 	}
 
 	@Override
@@ -63,6 +67,7 @@ public class PeerInfo implements Comparable {
 
 	@Override
 	public String toString() {
-		return "peer uuid: " + getUuid() + " listen-addr: " + getListenAddress();
+		return "peer uuid: " + getUuid() + " name: " + (getName() == null ? "<undefined>" : getName())
+			+ " listen-addr: " + getListenAddress();
 	}
 }

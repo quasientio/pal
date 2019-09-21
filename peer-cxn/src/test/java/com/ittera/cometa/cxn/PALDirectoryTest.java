@@ -18,6 +18,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.*;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -117,6 +119,13 @@ public class PALDirectoryTest {
 		// verify
 		assertThat(peerInfo.getUuid(), is(peerUuid));
 		assertThat(peerInfo.getListenAddress(), is(peerProps.get("listenAddress")));
+
+		// verify ctime and mtime (which are in UTC) are within last second
+		OffsetDateTime now = OffsetDateTime.now();
+		assertThat(peerInfo.getCTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
+		assertThat(peerInfo.getCTime().isBefore(now), is(true));
+		assertThat(peerInfo.getMTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
+		assertThat(peerInfo.getMTime().isBefore(now), is(true));
 	}
 
 	@Test
@@ -235,8 +244,15 @@ public class PALDirectoryTest {
 
 		LogInfo returnedLogInfo = palDirectory.getLogInfo(logName);
 
-		// verify
+		// verify returned logInfo
 		assertThat(returnedLogInfo, is(newLogInfo));
+
+		// verify ctime and mtime (which are in UTC) are within last second
+		OffsetDateTime now = OffsetDateTime.now();
+		assertThat(returnedLogInfo.getCTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
+		assertThat(returnedLogInfo.getCTime().isBefore(now), is(true));
+		assertThat(returnedLogInfo.getMTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
+		assertThat(returnedLogInfo.getMTime().isBefore(now), is(true));
 	}
 
 	@Test

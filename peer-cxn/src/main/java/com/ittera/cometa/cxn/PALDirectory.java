@@ -11,6 +11,7 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 
 import org.apache.zookeeper.CreateMode;
 
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,12 +94,15 @@ public class PALDirectory {
 		if (!peerExists(peerUuid)) {
 			throw new NoPeerInfoNodeException(String.format("Node for peer: %s does not exist", peerUuid));
 		}
-		PeerInfo peerInfo = new PeerInfo(peerUuid);
-		Properties props = getProperties(getPeerPath(peerUuid));
-		String listenAddress = props.getProperty("listenAddress");
+		final Properties props = getProperties(getPeerPath(peerUuid));
+		final PeerInfo peerInfo = new PeerInfo(peerUuid);
+		final Stat stat = curator.checkExists().forPath(getPeerPath(peerUuid));
+		final String listenAddress = props.getProperty("listenAddress");
 		if (listenAddress != null) {
 			peerInfo.setListenAddress(listenAddress);
 		}
+		peerInfo.setCtime(stat.getCtime());
+		peerInfo.setMtime(stat.getMtime());
 		return peerInfo;
 	}
 
@@ -146,9 +150,13 @@ public class PALDirectory {
 		if (!logExists(logName)) {
 			throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
 		}
-		Properties props = getProperties(getLogPath(logName));
-		UUID uuid = UUID.fromString(props.getProperty("uuid"));
-		return new LogInfo(logName, getKafkaBrokers(), uuid);
+		final Properties props = getProperties(getLogPath(logName));
+		final UUID uuid = UUID.fromString(props.getProperty("uuid"));
+		final Stat stat = curator.checkExists().forPath(getLogPath(logName));
+		final LogInfo logInfo = new LogInfo(logName, getKafkaBrokers(), uuid);
+		logInfo.setCtime(stat.getCtime());
+		logInfo.setMtime(stat.getMtime());
+		return logInfo;
 	}
 
 	public boolean logExists(String logName) throws Exception {
