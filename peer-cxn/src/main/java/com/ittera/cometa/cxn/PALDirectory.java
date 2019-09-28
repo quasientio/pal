@@ -101,6 +101,10 @@ public class PALDirectory {
 		if (listenAddress != null) {
 			peerInfo.setListenAddress(listenAddress);
 		}
+		final String peerName = props.getProperty("name");
+		if (peerName != null) {
+			peerInfo.setName(peerName);
+		}
 		peerInfo.setCtime(stat.getCtime());
 		peerInfo.setMtime(stat.getMtime());
 		return peerInfo;

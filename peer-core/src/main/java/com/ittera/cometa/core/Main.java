@@ -45,6 +45,9 @@ public class Main implements Callable<Integer> {
 	@Option(names = {"-u", "--use-uuid"}, paramLabel = "PEER_UUID", description = "use given uuid")
 	private UUID uuid;
 
+	@Option(names = {"-n", "--name"}, arity = "1", paramLabel = "PEER_NAME", description = "name for this peer")
+	private String name;
+
 	@Option(names = {"-li", "--log-in"}, paramLabel = "LOGNAME", description = "read from given log")
 	private String inLogName;
 
@@ -253,6 +256,9 @@ public class Main implements Callable<Integer> {
 		try {
 			final Properties peerProperties = new Properties();
 			peerProperties.put("listenAddress", properties.getProperty("in.req.tcp"));
+			if (name != null) {
+				peerProperties.put("name", name);
+			}
 			palDirectory.registerPeer(uuid, peerProperties);
 		} catch (Exception ex) {
 			fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_PEER);

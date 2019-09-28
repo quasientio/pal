@@ -106,8 +106,10 @@ public class PALDirectoryTest {
 	@Test
 	public void getPeerInfo_peerExists_peerInfo() throws Exception {
 		UUID peerUuid = UUID.randomUUID();
+		String peerName = "testing peer";
 		Properties peerProps = new Properties();
 		peerProps.put("listenAddress", "tcp://127.0.0.1:5671");
+		peerProps.put("name", peerName);
 		palDirectory.registerPeer(peerUuid, peerProps);
 		createdPeers.add(peerUuid);
 
@@ -118,6 +120,7 @@ public class PALDirectoryTest {
 
 		// verify
 		assertThat(peerInfo.getUuid(), is(peerUuid));
+		assertThat(peerInfo.getName(), is(peerName));
 		assertThat(peerInfo.getListenAddress(), is(peerProps.get("listenAddress")));
 
 		// verify ctime and mtime (which are in UTC) are within last second
