@@ -369,7 +369,7 @@ public class Main implements Callable<Integer> {
 
 		// inject dependencies
 		final Injector injector = Guice.createInjector(
-			new PeerGuiceModule(properties, runOptions, zmqContext, customClassloader));
+			new PeerWiring(properties, runOptions, zmqContext, customClassloader));
 
 		// register peer
 		registerSelfAsPeer(injector);

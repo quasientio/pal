@@ -20,16 +20,16 @@ import org.zeromq.ZContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class PeerGuiceModule extends AbstractModule {
+class PeerWiring extends AbstractModule {
 
-	private static final Logger logger = LoggerFactory.getLogger(PeerGuiceModule.class);
+	private static final Logger logger = LoggerFactory.getLogger(PeerWiring.class);
 	private final Properties properties;
 	private final ZContext zContext;
 	private final UUID peerUuid;
 	private final CustomClassloader customClassloader;
 	private final EnumSet<RunOptions> runOptions;
 
-	PeerGuiceModule(Properties properties, EnumSet<RunOptions> runOptions, ZContext zContext, CustomClassloader customClassloader) {
+	PeerWiring(Properties properties, EnumSet<RunOptions> runOptions, ZContext zContext, CustomClassloader customClassloader) {
 		if (logger.isDebugEnabled()) {
 			printProperties(properties);
 		}
