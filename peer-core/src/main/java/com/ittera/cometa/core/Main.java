@@ -252,7 +252,7 @@ public class Main implements Callable<Integer> {
 		// register self as new peer
 		try {
 			final Properties peerProperties = new Properties();
-			peerProperties.put("listenAddress", properties.getProperty("in.router"));
+			peerProperties.put("listenAddress", properties.getProperty("in.req.tcp"));
 			palDirectory.registerPeer(uuid, peerProperties);
 		} catch (Exception ex) {
 			fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_PEER);

@@ -27,7 +27,7 @@ class DirectRequestDispatcher extends AbstractExecutionThreadService {
 	private Socket router, dealer, ctrl;
 
 	@Inject
-	public DirectRequestDispatcher(@Named("in.router")String routerAddress,
+	public DirectRequestDispatcher(@Named("in.req.tcp")String routerAddress,
 																 @Named("in.dealer") String dealerAddress,
 																 ZContext context) {
 		this.routerAddress = routerAddress;
