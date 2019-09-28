@@ -14,6 +14,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Stream;
+
+import static java.lang.String.format;
 
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
@@ -55,6 +58,9 @@ public class Main implements Callable<Integer> {
 	@Option(names = {"-l", "--log"}, paramLabel = "LOGNAME", description = "read and write from/to given log")
 	private String logName;
 
+	@Option(names = {"-ll", "--logless"}, paramLabel = "LOGLESS", description = "run without log IO")
+	private boolean logless = false;
+
 	@Option(names = {"-tp", "--tcp-pub"}, paramLabel = "[HOST:]PORT", description = "publish messages to TCP socket")
 	private String tcpPub;
 
@@ -80,6 +86,9 @@ public class Main implements Callable<Integer> {
 
 	// app properties
 	private final Properties properties = new Properties();
+
+	// run options
+	private EnumSet<RunOptions> runOptions;
 
 	// zmq context
 	private ZContext zmqContext;
@@ -182,15 +191,29 @@ public class Main implements Callable<Integer> {
 			System.err.println("WARNING: -d (--as-daemon) option only relevant with mainClass or -jar.");
 		}
 
-		// if logName is given, assign to both in and out (overriding any of the latter values)
-		if (logName != null) {
-			inLogName = outLogName = logName;
-		}
+		if (logless) {
+			runOptions = EnumSet.of(RunOptions.LOGLESS);
+			if (Stream.of(logName, inLogName, outLogName).anyMatch(Objects::nonNull)) {
+				System.err.println("WARNING: -ll (--logless) option takes precedence. All other log (-l) options ignored.");
+			}
+		} else {
+			// if logName is given, assign to both in and out (overriding any of the latter values)
+			if (logName != null) {
+				inLogName = outLogName = logName;
+				runOptions = EnumSet.of(RunOptions.INLOG_SAME_AS_OUTLOG);
+			}
 
 		// ensure that if offset was given, a log name to read from was also given
 		if (inLogOffset != null && inLogName == null) {
 			fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
 		}
+	}
+
+		if (runOptions == null) {
+			runOptions = EnumSet.noneOf(RunOptions.class);
+		}
+
+		logger.info("Running with options: {}", runOptions);
 	}
 
 	private void addMiscProperties() {
@@ -217,7 +240,7 @@ public class Main implements Callable<Integer> {
 			} else {
 				port = Integer.parseInt(tcpPub);
 			}
-			properties.put("out.pub", String.format("tcp://%s:%d", hostname, port));
+			properties.put("out.pub", format("tcp://%s:%d", hostname, port));
 		} else {
 			properties.put("out.pub", ZMQProps.inprocChannels.getProperty("out.pub.inproc"));
 		}
@@ -339,22 +362,27 @@ public class Main implements Callable<Integer> {
 		logger.info("Initialized custom classloader with paths: {}", urls.toString());
 
 		// inject dependencies
-		final Injector injector = Guice.createInjector(new PeerGuiceModule(properties, zmqContext, customClassloader));
+		final Injector injector = Guice.createInjector(
+			new PeerGuiceModule(properties, runOptions, zmqContext, customClassloader));
 
 		// register peer
 		registerSelfAsPeer(injector);
 
 		// init logs IO
-		try {
-			new LogConfigurator(inLogName, inLogOffset, outLogName, properties, injector).init();
-		} catch (Exception ex) {
-			fatalExit(ex, PeerException.FatalCode.ERROR_INITIALIZING_LOGS);
+		if (!runOptions.contains(RunOptions.LOGLESS)) {
+			try {
+				new LogConfigurator(inLogName, inLogOffset, outLogName, properties, runOptions, injector).init();
+			} catch (Exception ex) {
+				fatalExit(ex, PeerException.FatalCode.ERROR_INITIALIZING_LOGS);
+			}
 		}
 
 		// set up managed services
 		final Set<Service> services = new HashSet<>();
-		services.add(injector.getInstance(LogReader.class));
-		services.add(injector.getInstance(LogWriter.class));
+		if (!runOptions.contains(RunOptions.LOGLESS)) {
+			services.add(injector.getInstance(LogReader.class));
+			services.add(injector.getInstance(LogWriter.class));
+		}
 		services.add(injector.getInstance(OutgoingMessageDispatcher.class));
 		services.add(injector.getInstance(DirectRequestDispatcher.class));
 
@@ -367,9 +395,13 @@ public class Main implements Callable<Integer> {
 
 			public void healthy() {
 				// start accepting requests
-				logger.info("Service manager is healthy.");
-				LogReader logMessageReader = injector.getInstance(LogReader.class);
-				logMessageReader.acceptConnections(true);
+				logger.info("All managed services ready");
+
+				if (!runOptions.contains(RunOptions.LOGLESS)) {
+					LogReader logMessageReader = injector.getInstance(LogReader.class);
+					logMessageReader.acceptConnections(true);
+					injector.getInstance(LogMessageExecutor.class).prestartAllCoreThreads();
+				}
 
 				// We must prestart threads to create the REP sockets, and this must be done after DEALER
 				injector.getInstance(PeerMessageExecutor.class).prestartAllCoreThreads();

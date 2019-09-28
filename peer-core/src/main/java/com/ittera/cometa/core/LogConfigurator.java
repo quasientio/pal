@@ -4,6 +4,7 @@ import com.ittera.cometa.LogInfo;
 
 import com.ittera.cometa.cxn.PALDirectory;
 
+import java.util.EnumSet;
 import java.util.Properties;
 
 import org.slf4j.LoggerFactory;
@@ -17,15 +18,17 @@ class LogConfigurator {
 	private final String inLogName;
 	private final String outLogName;
 	private final Long inLogOffset;
-
 	private final Properties appProps;
 	private final Injector injector;
+	private final EnumSet<RunOptions> runOptions;
 
-	LogConfigurator(String inLogName, Long inLogOffset, String outLogName, Properties appProps, Injector injector) {
+	LogConfigurator(String inLogName, Long inLogOffset, String outLogName, Properties appProps,
+									EnumSet<RunOptions> runOptions, Injector injector) {
 		this.inLogName = inLogName;
 		this.inLogOffset = inLogOffset;
 		this.outLogName = outLogName;
 		this.appProps = appProps;
+		this.runOptions = runOptions;
 		this.injector = injector;
 	}
 
@@ -84,8 +87,7 @@ class LogConfigurator {
 		}
 
 		// init log reader+writer
-		boolean inAndOutAreSame = inLog.equals(outLog);
-		readFromLog(inLog, inAndOutAreSame, inLogOffset);
+		readFromLog(inLog, runOptions.contains(RunOptions.INLOG_SAME_AS_OUTLOG), inLogOffset);
 		writeToLog(outLog, inLog);
 	}
 }

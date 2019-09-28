@@ -2,6 +2,7 @@ package com.ittera.cometa.core.exec.java;
 
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.core.PeerException;
+import com.ittera.cometa.core.RunOptions;
 import com.ittera.cometa.messages.ExecMessageBuilder;
 import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
@@ -36,19 +37,21 @@ public class SelfCaller {
 	private final IncomingMessageDispatcher incomingMessageDispatcher;
 	private final ExecMessageBuilder messageBuilder;
 	private final ClassLoader customClassloader;
-
 	private final ZContext context;
 	private final String offsetPubAddress;
+	private final EnumSet<RunOptions> runOptions;
 
 	@Inject
 	SelfCaller(UUID peerUuid, IncomingMessageDispatcher incomingMessageDispatcher, ExecMessageBuilder messageBuilder,
-						 CustomClassloader customClassloader, ZContext context, @Named("offset.pub") String offsetPubAddress) {
+						 CustomClassloader customClassloader, ZContext context, @Named("offset.pub") String offsetPubAddress,
+						 EnumSet<RunOptions> runOptions) {
 		this.peerUuid = peerUuid;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.messageBuilder = messageBuilder;
 		this.customClassloader = customClassloader;
 		this.context = context;
 		this.offsetPubAddress = offsetPubAddress;
+		this.runOptions = runOptions;
 	}
 
 	public ExecMessage callMain(String className, List<String> argList) {
@@ -79,9 +82,12 @@ public class SelfCaller {
 		invokingThread.setContextClassLoader(customClassloader);
 
 		// prepare offset subscriber
-		final Socket offsetSubscriber = context.createSocket(SocketType.SUB);
-		offsetSubscriber.connect(offsetPubAddress);
-		offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
+		Socket offsetSubscriber = null;
+		if (!runOptions.contains(RunOptions.LOGLESS)) {
+			offsetSubscriber = context.createSocket(SocketType.SUB);
+			offsetSubscriber.connect(offsetPubAddress);
+			offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
+		}
 
 		// start thread and wait for completion
 		invokingThread.start();
@@ -94,23 +100,27 @@ public class SelfCaller {
 		final ExecMessage reply = replies.get(0);
 
 		// wait for the reply message offset, to ensure all msg's from have been written to the log
-		boolean offsetPublished = false;
-		long offset = -1;
-		UUID uuid = null;
-		while (!offsetPublished) {
-			// multi-part msg: 1) offset as byte[], 2) uuid as byte[]
-			offset = Longs.fromByteArray(offsetSubscriber.recv());
-			uuid = UUIDUtils.fromBytes(offsetSubscriber.recv());
-			if (reply.getMessageUuid().equalsIgnoreCase(uuid.toString())) {
-				offsetPublished = true;
+		if (!runOptions.contains(RunOptions.LOGLESS)) {
+			boolean offsetPublished = false;
+			long offset = -1;
+			UUID uuid = null;
+			while (!offsetPublished) {
+				// multi-part msg: 1) offset as byte[], 2) uuid as byte[]
+				offset = Longs.fromByteArray(offsetSubscriber.recv());
+				uuid = UUIDUtils.fromBytes(offsetSubscriber.recv());
+				if (reply.getMessageUuid().equalsIgnoreCase(uuid.toString())) {
+					offsetPublished = true;
+				}
 			}
-		}
-
-		// close socket
-		offsetSubscriber.close();
-
-		if (logger.isDebugEnabled()) {
-			logger.debug("Returning reply message with offset={} and uuid={}", offset, uuid);
+			// close socket
+			offsetSubscriber.close();
+			if (logger.isDebugEnabled()) {
+				logger.debug("Returning reply message with offset={} and uuid={}", offset, uuid);
+			}
+		} else {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Returning reply message with uuid={}", reply.getMessageUuid());
+			}
 		}
 		return reply;
 	}
