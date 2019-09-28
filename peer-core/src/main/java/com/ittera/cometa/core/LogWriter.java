@@ -82,7 +82,7 @@ class LogWriter extends AbstractExecutionThreadService {
 		this.writeReplyNodes = writeReplyNodesStr == null || Boolean.parseBoolean(writeReplyNodesStr);
 		producerProperties.put("key.serializer", keySerializer);
 		producerProperties.put("value.serializer", valueSerializer);
-		logger.info("Initialized log message writer");
+		logger.info("Created log message writer");
 	}
 
 	/**
@@ -108,7 +108,7 @@ class LogWriter extends AbstractExecutionThreadService {
 		this.outPubAddress = outPubAddress;
 		this.offsetPubAddress = offsetPubAddress;
 		this.writeReplyNodes = writeReplyNodes;
-		logger.info("Initialized log message writer");
+		logger.info("Created log message writer");
 	}
 
 	private void openConnections() {

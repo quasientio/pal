@@ -164,7 +164,7 @@ public class LogReader extends AbstractExecutionThreadService {
 		for (String propKey : consumerProperties.stringPropertyNames()) {
 			propsStr.append(propKey).append('=').append(consumerProperties.getProperty(propKey)).append(", ");
 		}
-		logger.info("Initialized log reader for peer with id '{}' and properties: [{}]",
+		logger.info("Created log reader for peer with id '{}' and properties: [{}]",
 			peerId, propsStr.toString());
 	}
 
@@ -194,7 +194,7 @@ public class LogReader extends AbstractExecutionThreadService {
 		this.consumer = consumer;
 		this.pollDuration = Duration.of(pollDuration, ChronoUnit.MILLIS);
 
-		logger.info("Initialized log reader for peer with id '{}'", peerUuid);
+		logger.info("Created log reader for peer with id '{}'", peerUuid);
 	}
 
 	public void readFromLog(String logName, boolean skipWrittenOffsets, Long initialOffset) throws Exception {

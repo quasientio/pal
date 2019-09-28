@@ -45,14 +45,14 @@ public class Main implements Callable<Integer> {
 	@Option(names = {"-u", "--use-uuid"}, paramLabel = "PEER_UUID", description = "use given uuid")
 	private UUID uuid;
 
-	@Option(names = {"-r", "--read-log"}, paramLabel = "LOGNAME", description = "read from given log")
+	@Option(names = {"-li", "--log-in"}, paramLabel = "LOGNAME", description = "read from given log")
 	private String inLogName;
 
-	@Option(names = {"-s", "--offset-start"}, paramLabel = "OFFSET_START",
-		description = "read from given offset (requires -l or -r)")
+	@Option(names = {"-ls", "--log-start"}, paramLabel = "OFFSET_START",
+		description = "start reading from given offset")
 	private Long inLogOffset;
 
-	@Option(names = {"-w", "--write-log"}, paramLabel = "LOGNAME", description = "write to given log")
+	@Option(names = {"-lo", "--log-out"}, paramLabel = "LOGNAME", description = "write to given log")
 	private String outLogName;
 
 	@Option(names = {"-l", "--log"}, paramLabel = "LOGNAME", description = "read and write from/to given log")
@@ -137,7 +137,7 @@ public class Main implements Callable<Integer> {
 			properties.load(stream);
 		} catch (Exception ex) {
 			fatalExit(ex, PeerException.FatalCode.ERROR_LOADING_PROPERTIES,
-				String.format("Make sure to have `%s` in the classpath", PROPERTIES_FILE));
+				format("Make sure to have `%s` in the classpath", PROPERTIES_FILE));
 		}
 		logger.info("Loaded application properties from `{}`", PROPERTIES_FILE);
 	}
@@ -203,11 +203,11 @@ public class Main implements Callable<Integer> {
 				runOptions = EnumSet.of(RunOptions.INLOG_SAME_AS_OUTLOG);
 			}
 
-		// ensure that if offset was given, a log name to read from was also given
-		if (inLogOffset != null && inLogName == null) {
-			fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
+			// ensure that if offset was given, a log name to read from was also given
+			if (inLogOffset != null && inLogName == null) {
+				fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
+			}
 		}
-	}
 
 		if (runOptions == null) {
 			runOptions = EnumSet.noneOf(RunOptions.class);
@@ -281,7 +281,7 @@ public class Main implements Callable<Integer> {
 			palDirectory.close();
 
 			// close zmq context asynchronously
-			singleExecutor.submit(() -> closeZmqContext());
+			singleExecutor.submit(this::closeZmqContext);
 			singleExecutor.shutdown();
 
 			// wait a bit for services to stop
@@ -403,9 +403,8 @@ public class Main implements Callable<Integer> {
 					injector.getInstance(LogMessageExecutor.class).prestartAllCoreThreads();
 				}
 
-				// We must prestart threads to create the REP sockets, and this must be done after DEALER
+				// prestart threads to create the REP sockets; this must be done after DEALER
 				injector.getInstance(PeerMessageExecutor.class).prestartAllCoreThreads();
-				injector.getInstance(LogMessageExecutor.class).prestartAllCoreThreads();
 
 				// now call target (main class or JAR file), if given
 				boolean selfCalled = false;
