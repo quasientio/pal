@@ -41,12 +41,15 @@ import java.util.concurrent.Executors;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import javax.annotation.Nullable;
+
 /**
  * This class is not thread-safe. For multi-threaded scenarios, use different instances.
  */
 public class ThinPeer {
 
-	private final UUID peerUuid = UUID.randomUUID();
+	private final UUID defaultPeerUuid = UUID.randomUUID();
+	private UUID peerUuid;
 
 	private final boolean allowP2P;
 
@@ -55,25 +58,26 @@ public class ThinPeer {
 
 	// kafka stuff
 	private LogInfo inLog, outLog;
-	private final TopicPartition inTopicPartition;
-	private final Duration pollingDuration;
+	private TopicPartition inTopicPartition;
+	private Duration pollingDuration;
 	private static final int PRECEDING_RECS = 50;
 
-	private final KafkaProducer<String, ExecMessage> producer;
-	private final KafkaConsumer<String, String> consumer;
+	private KafkaProducer<String, ExecMessage> producer;
+	private KafkaConsumer<String, String> consumer;
 
 	private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap<>();
-	private final ExecutorService singleThreadConsumerExecutor = Executors.newSingleThreadExecutor();
+	private ExecutorService singleThreadConsumerExecutor;
 
 	// zmq stuff
 	private final ZContext zmqContext;
 	private final Socket peerSocket;
 	private PeerInfo currentPeer;
-	private boolean talkingToPeer = false;
+	private boolean talkingToPeer;
 
 	// PAL directory
 	private PALDirectory palDirectory;
 
+	// convenience constructors
 	public ThinPeer(Properties properties) throws Exception {
 		this(properties, null, null, null);
 	}
@@ -86,17 +90,31 @@ public class ThinPeer {
 		this(properties, initialPeer, logInfo, logInfo);
 	}
 
+	public ThinPeer(Properties properties, PeerInfo initialPeer) throws Exception {
+		this(properties, initialPeer, null);
+	}
+
 	public ThinPeer(Properties properties, LogInfo inLog, LogInfo outLog) throws Exception {
 		this(properties, null, inLog, outLog);
 	}
 
-	public ThinPeer(Properties properties, PeerInfo initialPeer, LogInfo inLog, LogInfo outLog) throws Exception {
+	// THE constructor
+	public ThinPeer(@Nullable Properties properties, @Nullable PeerInfo initialPeer, @Nullable LogInfo inLog,
+									@Nullable LogInfo outLog) throws Exception {
 		logger.info("Initializing ThinPeer with props from: {}, initialPeer: {}, inLog: {}, outLog: {}",
 			properties, initialPeer, inLog, outLog);
 
+		final boolean logless = initialPeer != null;
 		this.inLog = inLog;
 		this.outLog = outLog;
 		this.currentPeer = initialPeer;
+
+		// set this peer's UUID
+		if (properties != null && properties.getProperty("uuid") != null) {
+			this.peerUuid = UUID.fromString(properties.getProperty("uuid"));
+		} else {
+			this.peerUuid = defaultPeerUuid;
+		}
 
 		// configure p2p
 		this.allowP2P = Boolean.parseBoolean(load_property("peer.allowP2P", properties, "true"));
@@ -113,63 +131,77 @@ public class ThinPeer {
 		try {
 			// register self as new peer TODO fill properties
 			final Properties peerProperties = new Properties();
+			if (properties != null && properties.getProperty("name") != null) {
+				peerProperties.put("name", properties.getProperty("name"));
+			}
 			palDirectory.registerPeer(peerUuid, peerProperties);
 		} catch (Exception ex) {
 			logger.error("Error registering peer", ex);
 		}
 
-		// configure log(s) to connect to; fill bootstrap servers if only log names given
-		String kafkaTopicPrefix = load_property("kafkaTopicPrefix", properties);
-		LogInfo lastLog = null;
-		if (this.inLog == null) {
-			// get last log with prefix = kafkaTopicPrefix
-			lastLog = palDirectory.getLastLog(kafkaTopicPrefix);
-			this.inLog = lastLog;
-		} else {
-			if (this.inLog.getBootstrapServers() == null) {
-				this.inLog.setBrokerInfoSet(palDirectory.getKafkaBrokers());
-			}
-		}
-
-		if (outLog == null) {
-			if (lastLog == null) {
+		if (!logless) {
+			// configure log(s) to connect to; fill bootstrap servers if only log names given
+			String kafkaTopicPrefix = load_property("kafkaTopicPrefix", properties);
+			LogInfo lastLog = null;
+			if (this.inLog == null) {
+				// get last log with prefix = kafkaTopicPrefix
 				lastLog = palDirectory.getLastLog(kafkaTopicPrefix);
+				this.inLog = lastLog;
+			} else {
+				if (this.inLog.getBootstrapServers() == null) {
+					this.inLog.setBrokerInfoSet(palDirectory.getKafkaBrokers());
+				}
 			}
-			this.outLog = lastLog;
-		} else {
-			if (this.outLog.getBootstrapServers() == null) {
-				this.outLog.setBrokerInfoSet(palDirectory.getKafkaBrokers());
+
+			if (outLog == null) {
+				if (lastLog == null) {
+					lastLog = palDirectory.getLastLog(kafkaTopicPrefix);
+				}
+				this.outLog = lastLog;
+			} else {
+				if (this.outLog.getBootstrapServers() == null) {
+					this.outLog.setBrokerInfoSet(palDirectory.getKafkaBrokers());
+				}
 			}
+			logger.info("Will read from log: {} and write to log: {}", this.inLog, this.outLog);
+
+			// configure kafka producer
+			Properties kafkaProducerProps = loadKafkaProducerProps(properties);
+			kafkaProducerProps.put("client.id", peerUuid.toString());
+			kafkaProducerProps.put("bootstrap.servers", this.outLog.getBootstrapServers());
+			this.producer = new KafkaProducer<>(kafkaProducerProps);
+			logger.info("Kafka producer initialized. Will connect to bootstrap servers: {}", this.outLog.getBootstrapServers());
+
+			// configure kafka consumer
+			Properties kafkaConsumerProps = loadKafkaConsumerProps(properties);
+			kafkaConsumerProps.put("group.id", peerUuid.toString());
+			kafkaConsumerProps.put("bootstrap.servers", this.inLog.getBootstrapServers());
+			this.consumer = new KafkaConsumer<>(kafkaConsumerProps);
+			logger.info("Kafka consumer initialized. Will connect to bootstrap servers: {}", this.inLog.getBootstrapServers());
+
+			// configure kafka misc
+			pollingDuration = Duration.of(Long.parseLong(load_property("pollDuration", properties)), ChronoUnit.MILLIS);
+
+			// manual assignment of partition so we can control offset seek
+			inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
+			consumer.assign(Collections.singletonList(inTopicPartition));
+
+			// init executor
+			singleThreadConsumerExecutor = Executors.newSingleThreadExecutor();
 		}
-		logger.info("Will read from log: {} and write to log: {}", this.inLog, this.outLog);
-
-		// configure kafka producer
-		Properties kafkaProducerProps = loadKafkaProducerProps(properties);
-		kafkaProducerProps.put("client.id", peerUuid.toString());
-		kafkaProducerProps.put("bootstrap.servers", this.outLog.getBootstrapServers());
-		this.producer = new KafkaProducer<>(kafkaProducerProps);
-		logger.info("Kafka producer initialized. Will connect to bootstrap servers: {}", this.outLog.getBootstrapServers());
-
-		// configure kafka consumer
-		Properties kafkaConsumerProps = loadKafkaConsumerProps(properties);
-		kafkaConsumerProps.put("group.id", peerUuid.toString());
-		kafkaConsumerProps.put("bootstrap.servers", this.inLog.getBootstrapServers());
-		this.consumer = new KafkaConsumer<>(kafkaConsumerProps);
-		logger.info("Kafka consumer initialized. Will connect to bootstrap servers: {}", this.inLog.getBootstrapServers());
-
-		// configure kafka misc
-		pollingDuration = Duration.of(Long.parseLong(load_property("pollDuration", properties)), ChronoUnit.MILLIS);
-
-		// manual assignment of partition so we can control offset seek
-		inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
-		consumer.assign(Collections.singletonList(inTopicPartition));
 
 		// configure ZMQ
 		logger.info("Initializing zmq context");
 		this.zmqContext = new ZContext();
 		this.peerSocket = zmqContext.createSocket(SocketType.REQ);
 		if (currentPeer != null) {
-			connectToPeer(currentPeer);
+			if (currentPeer.getListenAddress() != null) {
+				connectToPeer(currentPeer);
+			} else if (currentPeer.getUuid() != null) {
+				connectToPeer(currentPeer.getUuid());
+			} else {
+				throw new RuntimeException("Cannot connect to peer without UUID or listen address");
+			}
 		}
 	}
 
@@ -205,8 +237,8 @@ public class ThinPeer {
 	 * 1) given properties object, 2) System properties, 3) ENV (uppercase variable)
 	 * If not found, return defaultValue if given
 	 */
-	private static String load_property(String propertyName, Properties properties, String defaultValue) {
-		if (properties.containsKey(propertyName)) {
+	private static String load_property(String propertyName, @Nullable Properties properties, @Nullable String defaultValue) {
+		if (properties != null && properties.containsKey(propertyName)) {
 			logger.debug("loading value of '{}' from properties object", propertyName);
 			return properties.getProperty(propertyName);
 		} else if (System.getProperty(propertyName) != null) {
@@ -493,7 +525,7 @@ public class ThinPeer {
 	}
 
 	private void connectToPeer(PeerInfo peerInfo) {
-		logger.info("Switching to direct talk with {}", peerInfo);
+		logger.info("Now in direct talk with {}", peerInfo);
 		currentPeer = peerInfo;
 		connectSocket();
 		talkingToPeer = true;
@@ -529,20 +561,32 @@ public class ThinPeer {
 
 	public void close() {
 
-		singleThreadConsumerExecutor.shutdown();
-		logger.info("Consumer executor service shut down");
-
+		// close socket-related resources
 		try {
-			peerSocket.close();
-			logger.info("Peer socket closed.");
-			zmqContext.destroy();
-			logger.info("Zmq context closed.");
+			if (peerSocket != null) {
+				peerSocket.close();
+				logger.info("Peer socket closed.");
+			}
+			if (zmqContext != null) {
+				zmqContext.destroy();
+				logger.info("Zmq context closed.");
+			}
 		} catch (Exception ex) {
-			logger.error("Error closing zmq connection", ex);
+			logger.error("Error freeing zmq resources", ex);
 		}
-		producer.close();
-		logger.info("Log producer closed.");
-		consumer.close();
-		logger.info("Log consumer closed.");
+
+		// close log-related resources
+		if (producer != null) {
+			producer.close();
+			logger.info("Log producer closed.");
+		}
+		if (consumer != null) {
+			consumer.close();
+			logger.info("Log consumer closed.");
+		}
+		if (singleThreadConsumerExecutor != null) {
+			singleThreadConsumerExecutor.shutdown();
+			logger.info("Consumer executor service shut down");
+		}
 	}
 }

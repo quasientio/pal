@@ -130,7 +130,7 @@ public class LogInfo extends UTCTimestampedInfo implements Comparable {
 	}
 
 	public String toFullString() {
-		return "LogInfo{" +
+		return "Log{" +
 			"name='" + name + '\'' +
 			", uuid=" + uuid +
 			", startOffset=" + startOffset +

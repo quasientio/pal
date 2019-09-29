@@ -22,6 +22,10 @@ public class PeerInfo extends UTCTimestampedInfo implements Comparable {
 		setName(name);
 	}
 
+	public PeerInfo(String listenAddress) {
+		setListenAddress(listenAddress);
+	}
+
 	public UUID getUuid() {
 		return uuid;
 	}
@@ -56,8 +60,8 @@ public class PeerInfo extends UTCTimestampedInfo implements Comparable {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 		PeerInfo peerInfo = (PeerInfo) o;
-		return uuid.equals(peerInfo.uuid) &&
-			listenAddress.equals(peerInfo.listenAddress);
+		return Objects.equals(uuid, peerInfo.uuid) &&
+			Objects.equals(listenAddress, peerInfo.listenAddress);
 	}
 
 	@Override
@@ -67,7 +71,10 @@ public class PeerInfo extends UTCTimestampedInfo implements Comparable {
 
 	@Override
 	public String toString() {
-		return "peer uuid: " + getUuid() + " name: " + (getName() == null ? "<undefined>" : getName())
-			+ " listen-addr: " + getListenAddress();
+		return "Peer{" +
+			"uuid=" + uuid +
+			", listenAddress='" + listenAddress + '\'' +
+			", name='" + name + '\'' +
+			'}';
 	}
 }
