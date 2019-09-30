@@ -249,13 +249,43 @@ public class Main implements Callable<Integer> {
 		}
 	}
 
+	private String getJMXAddress() {
+		final String jmxRemote = System.getProperty("com.sun.management.jmxremote");
+		if ("false".equalsIgnoreCase(jmxRemote)) {
+			return null;
+		}
+		final String jmxRemotePortStr = System.getProperty("com.sun.management.jmxremote.port");
+		Integer jmxRemotePort = jmxRemotePortStr != null ? Integer.parseInt(jmxRemotePortStr) : null;
+		String jmxRemoteHost = System.getProperty("java.rmi.server.hostname");
+		if (jmxRemoteHost == null) { // if local.only, then we assume hostname = 'localhost'
+			String localOnly = System.getProperty("com.sun.management.jmxremote.local.only");
+			if (localOnly != null && !"false".equalsIgnoreCase(localOnly)) {
+				jmxRemoteHost = "localhost";
+			}
+		}
+		if (jmxRemoteHost != null && jmxRemotePort != null) {
+			return format("%s:%d", jmxRemoteHost, jmxRemotePort);
+		} else {
+			return null;
+		}
+	}
+
 	private void registerSelfAsPeer(Injector injector) {
 		final PALDirectory palDirectory = injector.getInstance(PALDirectory.class);
 
 		// register self as new peer
 		try {
 			final Properties peerProperties = new Properties();
-			peerProperties.put("listenAddress", properties.getProperty("in.req.tcp"));
+			// public listening interfaces
+			peerProperties.put("reqAddress", properties.getProperty("in.req.tcp"));
+			if (properties.getProperty("out.pub").startsWith("tcp://")) { // only register PUB addr if over tcp
+				peerProperties.put("pubAddress", properties.getProperty("out.pub"));
+			}
+			String jmxAddress = getJMXAddress();
+			if (jmxAddress != null) {
+				peerProperties.put("jmxAddress", jmxAddress);
+			}
+			// other info
 			if (name != null) {
 				peerProperties.put("name", name);
 			}

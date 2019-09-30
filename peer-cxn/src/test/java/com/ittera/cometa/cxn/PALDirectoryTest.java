@@ -74,7 +74,7 @@ public class PALDirectoryTest {
 
 		UUID peerUuid = UUID.randomUUID();
 		Properties peerProps = new Properties();
-		peerProps.put("listenAddress", "tcp://127.0.0.1:5671");
+		peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
 
 		// pre-assertions
 		assertThat(palDirectory.peerExists(peerUuid), is(false));
@@ -108,7 +108,9 @@ public class PALDirectoryTest {
 		UUID peerUuid = UUID.randomUUID();
 		String peerName = "testing peer";
 		Properties peerProps = new Properties();
-		peerProps.put("listenAddress", "tcp://127.0.0.1:5671");
+		peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
+		peerProps.put("pubAddress", "tcp://localhost:7777");
+		peerProps.put("jmxAddress", "localhost:9012");
 		peerProps.put("name", peerName);
 		palDirectory.registerPeer(peerUuid, peerProps);
 		createdPeers.add(peerUuid);
@@ -121,7 +123,12 @@ public class PALDirectoryTest {
 		// verify
 		assertThat(peerInfo.getUuid(), is(peerUuid));
 		assertThat(peerInfo.getName(), is(peerName));
-		assertThat(peerInfo.getListenAddress(), is(peerProps.get("listenAddress")));
+		assertThat(peerInfo.getReqAddress(), is(notNullValue()));
+		assertThat(peerInfo.getPubAddress(), is(notNullValue()));
+		assertThat(peerInfo.getJmxAddress(), is(notNullValue()));
+		assertThat(peerInfo.getReqAddress(), is(peerProps.get("reqAddress")));
+		assertThat(peerInfo.getPubAddress(), is(peerProps.get("pubAddress")));
+		assertThat(peerInfo.getJmxAddress(), is(peerProps.get("jmxAddress")));
 
 		// verify ctime and mtime (which are in UTC) are within last second
 		OffsetDateTime now = OffsetDateTime.now();
@@ -135,7 +142,7 @@ public class PALDirectoryTest {
 	public void unregisterPeer_existingPeer_peerDeleted() throws Exception {
 
 		Properties peerProps = new Properties();
-		peerProps.put("listenAddress", "tcp://127.0.0.1:5671");
+		peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
 
 		// create
 		UUID peerUuid = UUID.randomUUID();
@@ -166,7 +173,7 @@ public class PALDirectoryTest {
 			// create a peer
 			UUID peerUuid = UUID.randomUUID();
 			Properties peerProps = new Properties();
-			peerProps.put("listenAddress", "tcp://127.0.0.1:5671");
+			peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
 			palDirectory.registerPeer(peerUuid, peerProps);
 			createdPeers.add(peerUuid);
 		}

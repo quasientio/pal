@@ -15,17 +15,19 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 
-public class PALDirectory {
+public class PALDirectory implements AutoCloseable {
 
 	private static final Logger logger = LoggerFactory.getLogger(PALDirectory.class);
 
@@ -90,6 +92,18 @@ public class PALDirectory {
 		}
 	}
 
+	private static void setFieldValueUnlessNull(Object target, String fieldName, Object value) {
+		if (value != null) {
+			try {
+				Field field = PeerInfo.class.getDeclaredField(fieldName);
+				field.setAccessible(true);
+				field.set(target, value);
+			} catch (IllegalAccessException | NoSuchFieldException e) {
+				logger.error("Error setting field value in object", e);
+			}
+		}
+	}
+
 	public PeerInfo getPeerInfo(UUID peerUuid) throws Exception {
 		if (!peerExists(peerUuid)) {
 			throw new NoPeerInfoNodeException(String.format("Node for peer: %s does not exist", peerUuid));
@@ -97,14 +111,10 @@ public class PALDirectory {
 		final Properties props = getProperties(getPeerPath(peerUuid));
 		final PeerInfo peerInfo = new PeerInfo(peerUuid);
 		final Stat stat = curator.checkExists().forPath(getPeerPath(peerUuid));
-		final String listenAddress = props.getProperty("listenAddress");
-		if (listenAddress != null) {
-			peerInfo.setListenAddress(listenAddress);
-		}
-		final String peerName = props.getProperty("name");
-		if (peerName != null) {
-			peerInfo.setName(peerName);
-		}
+		// set bean fields reflectively
+		Stream.of("name", "reqAddress", "pubAddress", "jmxAddress").forEach(fldName -> {
+			setFieldValueUnlessNull(peerInfo, fldName, props.getProperty(fldName));
+		});
 		peerInfo.setCtime(stat.getCtime());
 		peerInfo.setMtime(stat.getMtime());
 		return peerInfo;

@@ -117,11 +117,11 @@ public class ThinPeer {
 		}
 
 		// configure p2p
-		this.allowP2P = Boolean.parseBoolean(load_property("peer.allowP2P", properties, "true"));
+		this.allowP2P = Boolean.parseBoolean(loadProperty("peer.allowP2P", properties, "true"));
 		logger.info("This peer will {}communicate P2P", allowP2P ? "" : "NOT ");
 
 		// configure zookeeper
-		String zookeeperUrl = load_property("zookeeper_url", properties);
+		String zookeeperUrl = loadProperty("zookeeper_url", properties);
 		if (zookeeperUrl == null) {
 			throw new RuntimeException("Couldn't connect to zookeeper. Please set the environment variable 'ZOOKEEPER_URL'" +
 				" or the 'zookeeper_url' system property. (Example: -Dzookeeper_url=localhost:2181)");
@@ -141,7 +141,7 @@ public class ThinPeer {
 
 		if (!logless) {
 			// configure log(s) to connect to; fill bootstrap servers if only log names given
-			String kafkaTopicPrefix = load_property("kafkaTopicPrefix", properties);
+			String kafkaTopicPrefix = loadProperty("kafkaTopicPrefix", properties);
 			LogInfo lastLog = null;
 			if (this.inLog == null) {
 				// get last log with prefix = kafkaTopicPrefix
@@ -180,7 +180,7 @@ public class ThinPeer {
 			logger.info("Kafka consumer initialized. Will connect to bootstrap servers: {}", this.inLog.getBootstrapServers());
 
 			// configure kafka misc
-			pollingDuration = Duration.of(Long.parseLong(load_property("pollDuration", properties)), ChronoUnit.MILLIS);
+			pollingDuration = Duration.of(Long.parseLong(loadProperty("pollDuration", properties)), ChronoUnit.MILLIS);
 
 			// manual assignment of partition so we can control offset seek
 			inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
@@ -195,7 +195,7 @@ public class ThinPeer {
 		this.zmqContext = new ZContext();
 		this.peerSocket = zmqContext.createSocket(SocketType.REQ);
 		if (currentPeer != null) {
-			if (currentPeer.getListenAddress() != null) {
+			if (currentPeer.getReqAddress() != null) {
 				connectToPeer(currentPeer);
 			} else if (currentPeer.getUuid() != null) {
 				connectToPeer(currentPeer.getUuid());
@@ -237,7 +237,7 @@ public class ThinPeer {
 	 * 1) given properties object, 2) System properties, 3) ENV (uppercase variable)
 	 * If not found, return defaultValue if given
 	 */
-	private static String load_property(String propertyName, @Nullable Properties properties, @Nullable String defaultValue) {
+	private static String loadProperty(String propertyName, @Nullable Properties properties, @Nullable String defaultValue) {
 		if (properties != null && properties.containsKey(propertyName)) {
 			logger.debug("loading value of '{}' from properties object", propertyName);
 			return properties.getProperty(propertyName);
@@ -254,13 +254,13 @@ public class ThinPeer {
 		return null;
 	}
 
-	private static String load_property(String propertyName, Properties properties) {
-		return load_property(propertyName, properties, null);
+	private static String loadProperty(String propertyName, Properties properties) {
+		return loadProperty(propertyName, properties, null);
 	}
 
 	private void connectSocket() {
 		peerSocket.setIdentity(("Dual-Peer-" + peerUuid.toString()).getBytes(ZMQ.CHARSET));
-		peerSocket.connect(currentPeer.getListenAddress());
+		peerSocket.connect(currentPeer.getReqAddress());
 	}
 
 	public ExecMessage sendAndReceive(ExecMessage message) throws ExecutionException, InterruptedException {
@@ -512,7 +512,6 @@ public class ThinPeer {
 	public void connectToPeer(UUID peerUuid) {
 		PeerInfo newPeer = null;
 		try {
-			// we getPeerProperties and close after since we assume we'll get here only once
 			newPeer = palDirectory.getPeerInfo(peerUuid);
 		} catch (Exception ex) {
 			logger.error("Couldn't get peer properties", ex);

@@ -27,7 +27,6 @@ public class MessageStreamer {
 	private Socket subscriber;
 	private final String host;
 	private final int port;
-	private boolean stopped;
 	private long receivedMessagesCount;
 
 	public MessageStreamer(String host, int port) {
@@ -89,19 +88,13 @@ public class MessageStreamer {
 			int errorCode = ex.getErrorCode();
 			if (errorCode == ZError.ETERM) {
 				logger.warn("Caught ETERM during blocking read, returning null", ex);
-				System.err.println("Caught ETERM during blocking read, returning null");
-				ex.printStackTrace();
 			} else if (errorCode == ZError.EINTR) {
 				logger.warn("Caught EINTR during blocking read, returning null.", ex);
-				System.err.println("Caught EINTR during blocking read, returning null");
-				ex.printStackTrace();
 			} else {
 				logger.warn("Unknown exception, returning null.", ex);
-				ex.printStackTrace();
 			}
 		} catch (InvalidProtocolBufferException e) {
 			logger.error("Caught exception parsing message. Will return null", e);
-			e.printStackTrace();
 		} finally {
 			return message;
 		}
@@ -110,7 +103,6 @@ public class MessageStreamer {
 	public void close() {
 		subscriber.close();
 		zContext.close();
-		stopped = true;
 	}
 
 
