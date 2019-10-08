@@ -3,9 +3,4 @@
 #Kafka doesn't like something in the classpath we export in setenv.sh
 unset CLASSPATH
 
-
-$KAFKA_HOME/bin/zookeeper-server-start.sh -daemon $KAFKA_HOME/config/zookeeper.properties
-
-sleep 3
-
 JMX_PORT=10121 $KAFKA_HOME/bin/kafka-server-start.sh -daemon $KAFKA_HOME/config/server.properties
