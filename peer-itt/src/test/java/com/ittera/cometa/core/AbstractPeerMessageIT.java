@@ -2,11 +2,11 @@ package com.ittera.cometa.core;
 
 import com.ittera.cometa.cxn.ThinPeer;
 
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
 import com.ittera.cometa.messages.protobuf.data.Fields.*;
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.ObjectService;
@@ -37,7 +37,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 
 	protected final static UUID clientId = UUID.randomUUID();
 
-	protected static ExecMessageBuilder execMessageBuilder;
+	protected static MessageBuilder messageBuilder;
 	private static ThinPeer thinPeer;
 
 	@BeforeClass
@@ -48,12 +48,12 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 			@Override
 			protected void configure() {
 				bind(ObjectService.class).to(BiMapObjectService.class).asEagerSingleton();
-				bind(ExecMessageBuilder.class).to(ProtobufExecMessageBuilder.class).asEagerSingleton();
+				bind(MessageBuilder.class).to(ProtobufMessageBuilder.class).asEagerSingleton();
 			}
 		};
 
 		final Injector injector = Guice.createInjector(module);
-		execMessageBuilder = injector.getInstance(ExecMessageBuilder.class);
+		messageBuilder = injector.getInstance(MessageBuilder.class);
 
 		final Properties properties = new Properties();
 		try (final InputStream stream = AbstractPeerMessageIT.class.getResourceAsStream(TEST_PROPERTIES_PATH)) {
@@ -90,7 +90,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 			parameterTypesNamesArray[i] = parameterTypes[i].getName();
 		}
 
-		ExecMessage replyMsg = sendAndReceive(execMessageBuilder.buildNonEmptyConstructor(clientId, className,
+		ExecMessage replyMsg = sendAndReceive(messageBuilder.buildNonEmptyConstructor(clientId, className,
 			parameterTypesNamesArray, args, argObjRefs));
 
 		// basic assertions
@@ -109,7 +109,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 	}
 
 	protected ReturnValue callEmptyConstructor(String className, String expectedThrowableType) throws Exception {
-		ExecMessage replyMsg = sendAndReceive(execMessageBuilder.buildEmptyConstructor(clientId, className));
+		ExecMessage replyMsg = sendAndReceive(messageBuilder.buildEmptyConstructor(clientId, className));
 
 		// basic assertions
 		if (expectedThrowableType != null) {
@@ -127,7 +127,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 	}
 
 	protected ReturnValue callGetStatic(String className, String fieldName, String expectedThrowableType) throws Exception {
-		ExecMessage requestMsg = execMessageBuilder.buildGetStatic(clientId, className, fieldName);
+		ExecMessage requestMsg = messageBuilder.buildGetStatic(clientId, className, fieldName);
 		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
@@ -147,7 +147,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 
 	protected void callPutStatic(String className, String fieldName, String fieldClassName,
 															 Object value, String expectedThrowableType) throws Exception {
-		ExecMessage requestMsg = execMessageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, value);
+		ExecMessage requestMsg = messageBuilder.buildPutStatic(clientId, className, fieldName, fieldClassName, value);
 		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
@@ -167,7 +167,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 
 	protected ReturnValue callGetInstanceVar(String className, String fieldName, ObjectRef objRef,
 																					 String expectedThrowableType) throws Exception {
-		ExecMessage requestMsg = execMessageBuilder.buildGetObject(clientId, className, fieldName, objRef);
+		ExecMessage requestMsg = messageBuilder.buildGetObject(clientId, className, fieldName, objRef);
 		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
 		// basic assertions
@@ -188,7 +188,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 	protected void callPutField(String className, String fieldName, ObjectRef targetObjRef,
 															String valueClassName, Object value, String expectedThrowableType) throws Exception {
 
-		ExecMessage requestMsg = execMessageBuilder.buildPutObject(clientId, className, fieldName, targetObjRef,
+		ExecMessage requestMsg = messageBuilder.buildPutObject(clientId, className, fieldName, targetObjRef,
 			valueClassName, value);
 		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
@@ -212,7 +212,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 	protected ReturnValue callClassMethod(String className, String methodName, String[] parameterTypeNames,
 																				Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType)
 		throws Exception {
-		ExecMessage requestMsg = execMessageBuilder.buildClassMethod(clientId, className, methodName,
+		ExecMessage requestMsg = messageBuilder.buildClassMethod(clientId, className, methodName,
 			parameterTypeNames, this, null, parameters, paramObjRefs);
 		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
@@ -235,7 +235,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 	protected void callVoidClassMethod(String className, String methodName, String[] parameterTypeNames,
 																		 Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType)
 		throws Exception {
-		ExecMessage requestMsg = execMessageBuilder.buildClassMethod(clientId, className, methodName,
+		ExecMessage requestMsg = messageBuilder.buildClassMethod(clientId, className, methodName,
 			parameterTypeNames, this, null, parameters, paramObjRefs);
 		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
@@ -256,7 +256,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 
 	protected ReturnValue callInstanceMethod(String className, String methodName, ObjectRef targetObjRef, String[]
 		parameterTypeNames, Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType) throws Exception {
-		ExecMessage requestMsg = execMessageBuilder.buildInstanceMethod(clientId, className, methodName, null,
+		ExecMessage requestMsg = messageBuilder.buildInstanceMethod(clientId, className, methodName, null,
 			targetObjRef, parameterTypeNames, parameters, paramObjRefs);
 		ExecMessage replyMsg = sendAndReceive(requestMsg);
 
@@ -278,7 +278,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 	protected void callVoidInstanceMethod(String className, String methodName, ObjectRef targetObjRef, String[]
 		parameterTypeNames, Object[] parameters, ObjectRef[] paramObjRefs, String expectedThrowableType) throws Exception {
 
-		ExecMessage requestMsg = execMessageBuilder.buildInstanceMethod(clientId, className, methodName, null,
+		ExecMessage requestMsg = messageBuilder.buildInstanceMethod(clientId, className, methodName, null,
 			targetObjRef, parameterTypeNames, parameters, paramObjRefs);
 		ExecMessage replyMsg = sendAndReceive(requestMsg);
 

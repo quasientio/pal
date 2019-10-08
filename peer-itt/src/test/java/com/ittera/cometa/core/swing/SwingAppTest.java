@@ -4,8 +4,8 @@ import com.ittera.cometa.common.lang.ObjectRef;
 
 import com.ittera.cometa.cxn.ThinPeer;
 
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import java.util.Properties;
@@ -14,7 +14,7 @@ import java.io.InputStream;
 
 public class SwingAppTest {
 
-	protected static final ExecMessageBuilder execMessageBuilder = new ProtobufExecMessageBuilder();
+	protected static final MessageBuilder MESSAGE_BUILDER = new ProtobufMessageBuilder();
 
 	protected static final String className = "com.ittera.cometa.apps.SwingApp";
 	protected static final String TEST_PROPERTIES_PATH = "/tests.properties";
@@ -35,7 +35,7 @@ public class SwingAppTest {
 		}
 		Object[] parameters = new Object[]{new String[]{}};
 
-		ExecMessage requestMsg = execMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(),
+		ExecMessage requestMsg = MESSAGE_BUILDER.buildClassMethod(thinPeer.getPeerUuid(),
 			className, methodName, parameterTypesNamesArray, null, null, parameters,
 			new ObjectRef[parameterTypes.length]);
 		ExecMessage replyMsg = thinPeer.sendAndReceive(requestMsg);

@@ -8,7 +8,7 @@ import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
 
 import com.ittera.cometa.core.exec.DispatcherConnector;
 
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
@@ -30,7 +30,7 @@ public class ConstructorDispatcher extends BaseDispatcher {
 
 	@Singleton
 	@Inject
-	public ConstructorDispatcher(UUID peerUuid, ExecMessageBuilder messageBuilder, DispatcherConnector connector,
+	public ConstructorDispatcher(UUID peerUuid, MessageBuilder messageBuilder, DispatcherConnector connector,
 															 ObjectService objectService) {
 		setPeerUuid(peerUuid);
 		setMessageBuilder(messageBuilder);

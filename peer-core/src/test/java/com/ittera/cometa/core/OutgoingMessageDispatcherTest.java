@@ -5,8 +5,8 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.ittera.cometa.messages.ExecMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeaderType;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
@@ -38,7 +38,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 	private ServiceManager manager;
 	private ExecutorService execService;
 	private OutgoingMessageDispatcher outgoingMessageDispatcher;
-	private final ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
+	private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 	private InternalHeader WRITE_AHEAD_HEADER;
 
 	@Before

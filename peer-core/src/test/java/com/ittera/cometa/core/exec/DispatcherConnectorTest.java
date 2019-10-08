@@ -1,8 +1,8 @@
 package com.ittera.cometa.core.exec;
 
 import com.ittera.cometa.core.ZmqEnabledTest;
-import com.ittera.cometa.messages.ExecMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 
@@ -99,7 +99,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 	private ZContext context;
 	private ExecutorService execService;
 	private DispatcherConnector dispatcherConnector;
-	private final ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
+	private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 	private final OutgoingMessageDispatcherStub outDispatcherStub = new OutgoingMessageDispatcherStub();
 	private InternalHeader WRITE_AHEAD_HEADER;
 

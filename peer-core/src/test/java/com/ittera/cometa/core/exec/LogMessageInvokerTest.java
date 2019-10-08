@@ -2,8 +2,8 @@ package com.ittera.cometa.core.exec;
 
 import com.ittera.cometa.core.ZmqEnabledTest;
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
-import com.ittera.cometa.messages.ExecMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.slf4j.Logger;
@@ -42,7 +42,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 	private ExecutorService execService;
 	private LogMessageInvoker logMessageInvoker;
 	private IncomingMessageDispatcher incomingMessageDispatcher;
-	private final ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
+	private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 	private List<ExecMessage> messageReplies = new ArrayList<>();
 
 	@Before

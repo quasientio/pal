@@ -4,8 +4,8 @@ import com.ittera.cometa.common.lang.ObjectRef;
 
 import com.ittera.cometa.cxn.ThinPeer;
 
-import com.ittera.cometa.messages.ExecMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
@@ -16,7 +16,7 @@ import java.io.InputStream;
 
 public class SwingAppActor {
 
-	protected static final ExecMessageBuilder execMessageBuilder = new ProtobufExecMessageBuilder();
+	protected static final MessageBuilder MESSAGE_BUILDER = new ProtobufMessageBuilder();
 
 	protected static final String swingAppClassName = "com.ittera.cometa.apps.SwingApp";
 	protected static final String TEST_PROPERTIES_PATH = "/tests.properties";
@@ -39,7 +39,7 @@ public class SwingAppActor {
 		Object[] parameters = new Object[]{new String[]{}};
 
 
-		final ExecMessage mainRequest = execMessageBuilder.buildClassMethod(thinPeer.getPeerUuid(),
+		final ExecMessage mainRequest = MESSAGE_BUILDER.buildClassMethod(thinPeer.getPeerUuid(),
 			swingAppClassName, methodName, parameterTypesNamesArray, null, null,
 			parameters, new ObjectRef[parameterTypes.length]);
 
@@ -51,7 +51,7 @@ public class SwingAppActor {
 		thinPeer.waitFor(Type.PUT_STATIC_DONE, fieldName);
 
 		// now get the jframe
-		ExecMessage requestMsg = execMessageBuilder.buildGetStatic(thinPeer.getPeerUuid(), swingAppClassName, fieldName);
+		ExecMessage requestMsg = MESSAGE_BUILDER.buildGetStatic(thinPeer.getPeerUuid(), swingAppClassName, fieldName);
 		ExecMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
 		Primitives.Object myFrame = replyMsg.getReturnValue().getObject();
 
@@ -63,7 +63,7 @@ public class SwingAppActor {
 			methodName = "setVisible";
 			parameters = new Object[]{false};
 			parameterTypesNamesArray = new String[]{"boolean"};
-			requestMsg = execMessageBuilder.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
+			requestMsg = MESSAGE_BUILDER.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
 				methodName, null, ObjectRef.from(myFrame.getRef()), parameterTypesNamesArray, parameters,
 				new ObjectRef[parameters.length]);
 			thinPeer.sendAndReceive(requestMsg);
@@ -72,7 +72,7 @@ public class SwingAppActor {
 
 			// reset visible = true
 			parameters = new Object[]{Boolean.TRUE};
-			requestMsg = execMessageBuilder.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
+			requestMsg = MESSAGE_BUILDER.buildInstanceMethod(thinPeer.getPeerUuid(), fieldClassName,
 				methodName, null, ObjectRef.from(myFrame.getRef()), parameterTypesNamesArray, parameters,
 				new ObjectRef[parameters.length]);
 			thinPeer.sendAndReceive(requestMsg);

@@ -2,7 +2,7 @@ package com.ittera.cometa.core.exec;
 
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import java.util.UUID;
@@ -30,15 +30,15 @@ class LogMessageInvoker extends Thread {
 
 	private final IncomingMessageDispatcher incomingMessageDispatcher;
 	private final DispatcherConnector dispatcherConnector;
-	private final ExecMessageBuilder execMessageBuilder;
+	private final MessageBuilder messageBuilder;
 	private final UUID peerUuid;
 
 	public LogMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
-													 ExecMessageBuilder execMessageBuilder, String inLogAddress, IncomingMessageDispatcher
+													 MessageBuilder messageBuilder, String inLogAddress, IncomingMessageDispatcher
 														 incomingMessageDispatcher, DispatcherConnector dispatcherConnector, UUID peerUuid) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
-		this.execMessageBuilder = execMessageBuilder;
+		this.messageBuilder = messageBuilder;
 		this.inLogAddress = inLogAddress;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = dispatcherConnector;
@@ -53,15 +53,15 @@ class LogMessageInvoker extends Thread {
 	 * NOTE: dispatcherConnector is set to null, since it's not required
 	 *
 	 * @param zmqContext
-	 * @param execMessageBuilder
+	 * @param messageBuilder
 	 * @param inLogAddress
 	 * @param incomingMessageDispatcher
 	 * @param peerUuid
 	 */
-	LogMessageInvoker(ZContext zmqContext, ExecMessageBuilder execMessageBuilder, String inLogAddress,
+	LogMessageInvoker(ZContext zmqContext, MessageBuilder messageBuilder, String inLogAddress,
 										IncomingMessageDispatcher incomingMessageDispatcher, UUID peerUuid) {
 		this.zmqContext = zmqContext;
-		this.execMessageBuilder = execMessageBuilder;
+		this.messageBuilder = messageBuilder;
 		this.inLogAddress = inLogAddress;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = null;
@@ -165,7 +165,7 @@ class LogMessageInvoker extends Thread {
 				requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());
 		}
 		requestsDispatched.getAndIncrement();
-		execMessageBuilder.resetThreadLocalSequence();
+		messageBuilder.resetThreadLocalSequence();
 	}
 
 	public AtomicLong getRequestsDispatched() {

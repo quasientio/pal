@@ -1,6 +1,6 @@
 package com.ittera.cometa.core.exec;
 
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
@@ -52,7 +52,7 @@ public class DispatcherConnector {
 
 	@Singleton
 	@Inject
-	public DispatcherConnector(ZContext zmqContext, UUID peerUuid, ExecMessageBuilder messageBuilder,
+	public DispatcherConnector(ZContext zmqContext, UUID peerUuid, MessageBuilder messageBuilder,
 														 @Named("out.cell") String outCellAddress) {
 		this.zmqContext = zmqContext;
 		this.outCellAddress = outCellAddress;

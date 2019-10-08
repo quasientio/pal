@@ -1,7 +1,7 @@
 package com.ittera.cometa.core.exec;
 
 import com.ittera.cometa.core.exec.java.CustomClassloader;
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 
@@ -29,13 +29,13 @@ public class PeerMessageExecutor extends ExtendedThreadPoolExecutor {
 														 @Named("peer.maximumPoolSize") String maximumPoolSize,
 														 @Named("peer.keepAliveSeconds") String keepAliveSeconds,
 														 ZContext zmqContext, @Named("in.dealer") String zmqSocketAddress,
-														 ExecMessageBuilder execMessageBuilder, IncomingMessageDispatcher
+														 MessageBuilder messageBuilder, IncomingMessageDispatcher
 															 incomingMessageDispatcher, DispatcherConnector dispatcherConnector,
 														 CustomClassloader customClassloader, UUID peerUuid) {
 
 		super(Integer.parseInt(corePoolSize), Integer.parseInt(maximumPoolSize), Integer.parseInt(keepAliveSeconds),
 			TimeUnit.SECONDS, new SynchronousQueue<>(), new ExecThreadFactory(zmqContext, zmqSocketAddress,
-				execMessageBuilder, incomingMessageDispatcher, dispatcherConnector, ExecThreadFactory.ExecChannelType.PEER,
+				messageBuilder, incomingMessageDispatcher, dispatcherConnector, ExecThreadFactory.ExecChannelType.PEER,
 				customClassloader, peerUuid));
 	}
 }

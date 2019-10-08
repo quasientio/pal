@@ -18,7 +18,7 @@ import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.util.Classes;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
@@ -34,7 +34,7 @@ public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatche
 	final Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	UUID peerUuid;
-	ExecMessageBuilder messageBuilder;
+	MessageBuilder messageBuilder;
 	ObjectService objectService;
 	private DispatcherConnector connector;
 
@@ -289,7 +289,7 @@ public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatche
 	}
 
 	@Inject
-	final void setMessageBuilder(ExecMessageBuilder messageBuilder) {
+	final void setMessageBuilder(MessageBuilder messageBuilder) {
 		this.messageBuilder = messageBuilder;
 	}
 

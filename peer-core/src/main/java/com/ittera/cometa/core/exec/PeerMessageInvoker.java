@@ -1,7 +1,7 @@
 package com.ittera.cometa.core.exec;
 
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,7 +24,7 @@ class PeerMessageInvoker extends Thread {
 
 	private final IncomingMessageDispatcher incomingMessageDispatcher;
 	private final DispatcherConnector dispatcherConnector;
-	private final ExecMessageBuilder execMessageBuilder;
+	private final MessageBuilder messageBuilder;
 
 	// zmq stuff
 	private final ZContext zmqContext;
@@ -32,11 +32,11 @@ class PeerMessageInvoker extends Thread {
 	private Socket socket;
 
 	public PeerMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
-														ExecMessageBuilder execMessageBuilder, String dealerAddress, IncomingMessageDispatcher
+														MessageBuilder messageBuilder, String dealerAddress, IncomingMessageDispatcher
 															incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
 		super(group, target, name);
 		this.zmqContext = zmqContext;
-		this.execMessageBuilder = execMessageBuilder;
+		this.messageBuilder = messageBuilder;
 		this.dealerAddress = dealerAddress;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = dispatcherConnector;
@@ -50,14 +50,14 @@ class PeerMessageInvoker extends Thread {
 	 * NOTE: dispatcherConnector is set to null, since it's not required
 	 *
 	 * @param zmqContext
-	 * @param execMessageBuilder
+	 * @param messageBuilder
 	 * @param dealerAddress
 	 * @param incomingMessageDispatcher
 	 */
-	PeerMessageInvoker(ZContext zmqContext, ExecMessageBuilder execMessageBuilder, String dealerAddress,
+	PeerMessageInvoker(ZContext zmqContext, MessageBuilder messageBuilder, String dealerAddress,
 										 IncomingMessageDispatcher incomingMessageDispatcher) {
 		this.zmqContext = zmqContext;
-		this.execMessageBuilder = execMessageBuilder;
+		this.messageBuilder = messageBuilder;
 		this.dealerAddress = dealerAddress;
 		this.incomingMessageDispatcher = incomingMessageDispatcher;
 		this.dispatcherConnector = null;
@@ -165,7 +165,7 @@ class PeerMessageInvoker extends Thread {
 				replyMsg.getMessageUuid());
 		}
 		requestsDispatched.getAndIncrement();
-		execMessageBuilder.resetThreadLocalSequence();
+		messageBuilder.resetThreadLocalSequence();
 		return replyMsg;
 	}
 

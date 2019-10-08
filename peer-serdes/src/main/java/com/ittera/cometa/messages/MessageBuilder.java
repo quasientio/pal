@@ -13,7 +13,7 @@ import java.util.Optional;
 
 import java.lang.reflect.AccessibleObject;
 
-public interface ExecMessageBuilder {
+public interface MessageBuilder {
 
 	/**
 	 * header builders

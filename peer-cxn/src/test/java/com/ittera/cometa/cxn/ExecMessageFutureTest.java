@@ -3,8 +3,8 @@ package com.ittera.cometa.cxn;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.LogReply;
 import com.ittera.cometa.LogRequest;
-import com.ittera.cometa.messages.ExecMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.junit.After;
@@ -36,7 +36,7 @@ public class ExecMessageFutureTest {
 
 	private static final Set<String> createdLogs = new HashSet<>();
 
-	private final ExecMessageBuilder messageBuilder = new ProtobufExecMessageBuilder();
+	private final MessageBuilder messageBuilder = new ProtobufMessageBuilder();
 	private static final UUID peerUuid = UUID.randomUUID();
 	private ThinPeer thinPeer; // mocked!
 	private PALDirectory palDirectory;

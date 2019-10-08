@@ -6,8 +6,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PALDirectory;
-import com.ittera.cometa.messages.ExecMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -178,7 +178,7 @@ public class LogReaderTest extends ZmqEnabledTest {
 		execService.submit(logMsgInvoker);
 
 		// send 1 message
-		ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
+		MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 		String key = peerUuid.toString();
 		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
@@ -239,7 +239,7 @@ public class LogReaderTest extends ZmqEnabledTest {
 		execService.submit(logMsgInvoker);
 
 		// send 1 message
-		ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
+		MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 		String key = peerUuid.toString();
 		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
@@ -278,7 +278,7 @@ public class LogReaderTest extends ZmqEnabledTest {
 		execService.submit(logMsgInvoker);
 
 		// send 1 message
-		ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
+		MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 		String key = peerUuid.toString();
 		Set<String> sentUuids = new TreeSet<>();
 

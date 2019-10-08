@@ -2,8 +2,8 @@ package com.ittera.cometa.core.exec;
 
 import com.ittera.cometa.core.ZmqEnabledTest;
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
-import com.ittera.cometa.messages.ExecMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.junit.After;
@@ -40,7 +40,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
 	private ExecutorService execService;
 	private PeerMessageInvoker peerMessageInvoker;
 	private IncomingMessageDispatcher incomingMessageDispatcher;
-	private final ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
+	private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 
 	@Before
 	public void setup() {

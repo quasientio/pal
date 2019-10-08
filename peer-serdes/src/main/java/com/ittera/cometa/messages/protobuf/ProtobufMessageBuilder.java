@@ -12,7 +12,7 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeaderType;
 import com.ittera.cometa.messages.protobuf.data.Fields.*;
 import com.ittera.cometa.messages.protobuf.data.Calls.*;
 import com.ittera.cometa.messages.protobuf.data.Values.*;
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 
 import java.lang.reflect.*;
 
@@ -27,9 +27,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.Message.Builder;
 
-public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
+public final class ProtobufMessageBuilder implements MessageBuilder {
 
-	protected static final Logger logger = LoggerFactory.getLogger(ProtobufExecMessageBuilder.class);
+	protected static final Logger logger = LoggerFactory.getLogger(ProtobufMessageBuilder.class);
 
 	// ISO 8601 with millis (fraction-of-second) + TZ (no name, only offset)
 	private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
@@ -40,7 +40,7 @@ public final class ProtobufExecMessageBuilder implements ExecMessageBuilder {
 
 	private final ThreadLocal<AtomicInteger> threadBuilderSequence = ThreadLocal.withInitial(() -> new AtomicInteger(1));
 
-	public ProtobufExecMessageBuilder() {
+	public ProtobufMessageBuilder() {
 	}
 
 	@Override

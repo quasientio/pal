@@ -6,8 +6,8 @@ import com.google.common.util.concurrent.ServiceManager;
 
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PALDirectory;
-import com.ittera.cometa.messages.ExecMessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
@@ -51,7 +51,7 @@ public class LogWriterTest extends ZmqEnabledTest {
 	private final String OUT_PUB_ADDR = "inproc://pub";
 	private final String OFFSET_PUB_ADDR = "inproc://offsets";
 	private static final Set<String> createdLogs = new HashSet<>();
-	private final ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
+	private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 
 	private static final int TEST_PORT = 2182;
 	private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);

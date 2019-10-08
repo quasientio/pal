@@ -4,7 +4,7 @@ import com.ittera.cometa.common.ObjectService;
 
 import com.ittera.cometa.core.exec.DispatcherConnector;
 
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 
@@ -20,7 +20,7 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
 
 	@Singleton
 	@Inject
-	public GetClassVariableDispatcher(UUID peerUuid, ExecMessageBuilder messageBuilder, DispatcherConnector connector,
+	public GetClassVariableDispatcher(UUID peerUuid, MessageBuilder messageBuilder, DispatcherConnector connector,
 																		ObjectService objectService) {
 		setPeerUuid(peerUuid);
 		setMessageBuilder(messageBuilder);

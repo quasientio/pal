@@ -9,7 +9,7 @@ import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 
 import com.ittera.cometa.core.util.ReflectionHelper;
 import com.ittera.cometa.core.exec.DispatcherConnector;
@@ -30,7 +30,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 
 	@Singleton
 	@Inject
-	public ClassMethodDispatcher(UUID peerUuid, ExecMessageBuilder messageBuilder, DispatcherConnector connector,
+	public ClassMethodDispatcher(UUID peerUuid, MessageBuilder messageBuilder, DispatcherConnector connector,
 															 ObjectService objectService) {
 		setPeerUuid(peerUuid);
 		setMessageBuilder(messageBuilder);

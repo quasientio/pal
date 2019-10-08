@@ -3,7 +3,7 @@ package com.ittera.cometa.core.exec.java;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.core.PeerException;
 import com.ittera.cometa.core.RunOptions;
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
@@ -35,14 +35,14 @@ public class SelfCaller {
 
 	private final UUID peerUuid;
 	private final IncomingMessageDispatcher incomingMessageDispatcher;
-	private final ExecMessageBuilder messageBuilder;
+	private final MessageBuilder messageBuilder;
 	private final ClassLoader customClassloader;
 	private final ZContext context;
 	private final String offsetPubAddress;
 	private final EnumSet<RunOptions> runOptions;
 
 	@Inject
-	SelfCaller(UUID peerUuid, IncomingMessageDispatcher incomingMessageDispatcher, ExecMessageBuilder messageBuilder,
+	SelfCaller(UUID peerUuid, IncomingMessageDispatcher incomingMessageDispatcher, MessageBuilder messageBuilder,
 						 CustomClassloader customClassloader, ZContext context, @Named("offset.pub") String offsetPubAddress,
 						 EnumSet<RunOptions> runOptions) {
 		this.peerUuid = peerUuid;

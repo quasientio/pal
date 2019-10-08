@@ -2,7 +2,7 @@ package com.ittera.cometa.messages;
 
 import com.google.common.primitives.Ints;
 
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 
@@ -64,7 +64,7 @@ public class MessageStreamerTest {
 		ZContext context = createContext();
 		String address = String.format("tcp://%s:%d", host, port);
 		logger.debug("Will use address: {}", address);
-		ExecMessageBuilder msgBuilder = new ProtobufExecMessageBuilder();
+		MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 		ExecutorService executor = getExecutor(2);
 		List<InternalHeader> headers = new ArrayList<>();
 		boolean done = false;

@@ -5,9 +5,9 @@ import com.google.common.primitives.Longs;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.cxn.PALDirectory;
-import com.ittera.cometa.messages.ExecMessageBuilder;
+import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.UUIDUtils;
-import com.ittera.cometa.messages.protobuf.ProtobufExecMessageBuilder;
+import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.apache.curator.test.TestingServer;
@@ -43,7 +43,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
 	private static final Set<String> createdLogs = new HashSet<>();
 
-	private final ExecMessageBuilder messageBuilder = new ProtobufExecMessageBuilder();
+	private final MessageBuilder messageBuilder = new ProtobufMessageBuilder();
 	private static final UUID peerUuid = UUID.randomUUID();
 	private PALDirectory palDirectory;
 	private TestingServer testingServer;
