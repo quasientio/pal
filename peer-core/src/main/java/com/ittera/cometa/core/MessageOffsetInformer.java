@@ -8,7 +8,6 @@ import com.ittera.cometa.common.util.Strings;
 import com.ittera.cometa.cxn.NoLogRequestNodeException;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.UUIDUtils;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.BackgroundCallback;
@@ -48,7 +47,8 @@ class MessageOffsetInformer implements
 	CuratorWatcher,
 	Callback {
 
-	private final ExecMessage message;
+	private final UUID messageUuid;
+	private final UUID followingUuid;
 	private LogReply logReply;
 	private boolean done;
 	private final boolean publishOffsets;
@@ -61,9 +61,10 @@ class MessageOffsetInformer implements
 
 	private static final Logger logger = LoggerFactory.getLogger(MessageOffsetInformer.class);
 
-	MessageOffsetInformer(ExecMessage message, boolean publishOffsets, boolean writeReplyNodes, Socket offsetPublisher,
-												PALDirectory palDirectory, LogInfo inLog, UUID peerUuid) {
-		this.message = message;
+	MessageOffsetInformer(UUID messageUuid, UUID followingUuid, boolean publishOffsets, boolean writeReplyNodes,
+												Socket offsetPublisher, PALDirectory palDirectory, LogInfo inLog, UUID peerUuid) {
+		this.messageUuid = messageUuid;
+		this.followingUuid = followingUuid;
 		this.publishOffsets = publishOffsets;
 		this.writeReplyNodes = writeReplyNodes;
 		this.offsetPublisher = offsetPublisher;
@@ -92,16 +93,15 @@ class MessageOffsetInformer implements
 		// publish new record offset
 		if (publishOffsets) {
 			offsetPublisher.send(Longs.toByteArray(recordMetadata.offset()), ZMQ.SNDMORE);
-			offsetPublisher.send(UUIDUtils.toBytes(UUID.fromString(message.getMessageUuid())));
+			offsetPublisher.send(UUIDUtils.toBytes(messageUuid));
 		}
 		if (logger.isDebugEnabled()) {
-			logger.debug("New offset {} for message w/uuid: {}", recordMetadata.offset(), message.getMessageUuid());
+			logger.debug("New offset {} for message w/uuid: {}", recordMetadata.offset(), messageUuid);
 		}
 
 		// if message is reply, save offset to zookeeper
-		if (writeReplyNodes && message.hasFollowingUuid()) {
-			this.logReply = new LogReply(UUID.fromString(message.getMessageUuid()), peerUuid,
-				UUID.fromString(message.getFollowingUuid()), recordMetadata.offset());
+		if (writeReplyNodes && followingUuid != null) {
+			this.logReply = new LogReply(messageUuid, peerUuid, followingUuid, recordMetadata.offset());
 			try {
 				palDirectory.addLogReplyAsync(inLog.getName(), logReply, this);
 			} catch (NoLogRequestNodeException nrne) {
@@ -110,15 +110,14 @@ class MessageOffsetInformer implements
 				}
 				// request node doesn't exist yet, add ourselves as watcher to get notified when created
 				try {
-					palDirectory.logRequestExistsAsync(inLog.getName(), UUID.fromString(message.getFollowingUuid()),
-						this, this);
+					palDirectory.logRequestExistsAsync(inLog.getName(), followingUuid, this, this);
 				} catch (Exception ex) {
 					logger.error("Error in call to logRequestExistsAsync()", ex);
 					lastError = ex;
 				}
 			} catch (Exception ex) {
 				logger.error("Unhandled error creating reply message offset for request w/uuid: {}. Giving up.",
-					message.getFollowingUuid(), ex);
+					followingUuid, ex);
 				lastError = ex;
 			}
 		}
@@ -144,7 +143,7 @@ class MessageOffsetInformer implements
 				palDirectory.addLogReplyAsync(inLog.getName(), logReply, this);
 			} catch (Exception ex) {
 				logger.error("Error creating reply message offset for request w/uuid: {}. Giving up.",
-					message.getFollowingUuid(), ex);
+					followingUuid, ex);
 				lastError = ex;
 			}
 		}
@@ -165,19 +164,19 @@ class MessageOffsetInformer implements
 			}
 			String eventNode = Strings.stringAfterLast(curatorEvent.getName(), "/");
 			// callback is about the Reply node
-			if (message.getMessageUuid().equalsIgnoreCase(eventNode)) {
+			if (messageUuid.toString().equalsIgnoreCase(eventNode)) {
 				if (Code.get(curatorEvent.getResultCode()) == Code.OK) {
 					if (logger.isDebugEnabled()) {
-						logger.debug("reply node now created for message w/uuid: {}", message.getMessageUuid());
+						logger.debug("reply node now created for message w/uuid: {}", messageUuid);
 					}
 					done = true;
 				} else {
 					logger.error("reply node NOT created (error code: {}) for message w/uuid: {}", curatorEvent.getResultCode(),
-						message.getMessageUuid());
+						messageUuid);
 				}
 			}
 			// callback is about the Request node
-			else if (message.getFollowingUuid().equalsIgnoreCase(eventNode)) {
+			else if (followingUuid != null && followingUuid.toString().equalsIgnoreCase(eventNode)) {
 				if (Code.get(curatorEvent.getResultCode()) == Code.OK) {
 					if (logger.isDebugEnabled()) {
 						logger.debug("node exists now: will retry to write reply node");
@@ -185,12 +184,12 @@ class MessageOffsetInformer implements
 					try {
 						palDirectory.addLogReplyAsync(inLog.getName(), logReply, this);
 					} catch (Exception ex) {
-						logger.error("Unhandled error creating request node w/uuid: {}. Giving up.", message.getFollowingUuid(), ex);
+						logger.error("Unhandled error creating reply node w/uuid: {}. Giving up.", followingUuid, ex);
 						lastError = ex;
 					}
 				} else {
 					logger.error("request node NOT created (error code: {}) for message w/uuid: {}", curatorEvent.getResultCode(),
-						message.getFollowingUuid());
+						followingUuid);
 				}
 			}
 		}

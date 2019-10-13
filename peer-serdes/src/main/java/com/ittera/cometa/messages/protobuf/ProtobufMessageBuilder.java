@@ -6,6 +6,7 @@ import com.ittera.cometa.common.lang.ObjectRef;
 
 import com.ittera.cometa.messages.protobuf.data.*;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeaderType;
@@ -647,6 +648,27 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
 
 		return msgBuilder.build();
 	}
+	//</editor-fold>
 
+	//<editor-fold desc="Intercept messages">
+	@Override
+	public InterceptRequest buildInterceptRequest(UUID peerUuid, String className, String methodName, String fieldName,
+																								String callbackClassName, String callbackMethodName) {
+		final InterceptRequest.Builder msgBuilder = InterceptRequest.newBuilder()
+			.setPeerUuid(peerUuid.toString())
+			.setMessageUuid(UUID.randomUUID().toString())
+			.setClazz(className)
+			.setCallbackClass(callbackClassName)
+			.setCallbackMethod(callbackMethodName);
+
+		// set nullable fields
+		if (methodName != null) {
+			msgBuilder.setMethod(methodName);
+		}
+		if (fieldName != null) {
+			msgBuilder.setField(fieldName);
+		}
+		return msgBuilder.build();
+	}
 	//</editor-fold>
 }

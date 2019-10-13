@@ -6,6 +6,10 @@ import java.util.UUID;
 
 public class UUIDUtils {
 
+	public static byte[] toBytes(String uuid) {
+		return toBytes(UUID.fromString(uuid));
+	}
+
 	public static byte[] toBytes(UUID uuid) {
 
 		byte[] lsbB = Longs.toByteArray(uuid.getLeastSignificantBits());

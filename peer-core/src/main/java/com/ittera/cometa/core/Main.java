@@ -31,6 +31,9 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import org.zeromq.SocketType;
+import org.zeromq.ZMQ.Socket;
+
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
@@ -95,6 +98,7 @@ public class Main implements Callable<Integer> {
 
 	// zmq context
 	private ZContext zmqContext;
+	private Socket syncSocket;
 
 	// STATIC variables
 	private static final Logger logger = LoggerFactory.getLogger(Main.class);
@@ -116,6 +120,7 @@ public class Main implements Callable<Integer> {
 			inprocChannels.put("out.cell", "inproc://cell");
 			inprocChannels.put("out.pub.inproc", "inproc://pub");
 			inprocChannels.put("offset.pub", "inproc://offsets");
+			inprocChannels.put("sync.ready", "inproc://sync_ready");
 		}
 	}
 
@@ -151,6 +156,10 @@ public class Main implements Callable<Integer> {
 		zmqContext.setRcvHWM(Integer.parseInt(properties.getProperty("ZMQ_RCVHWM", ZMQProps.ZMQ_RCVHWM_DEFAULT)));
 		zmqContext.setSndHWM(Integer.parseInt(properties.getProperty("ZMQ_SNDHWM", ZMQProps.ZMQ_SNDHWM_DEFAULT)));
 		logger.info("Created and configured zmq context");
+
+		// start ready socket
+		syncSocket = zmqContext.createSocket(SocketType.PULL);
+		syncSocket.bind(ZMQProps.inprocChannels.getProperty("sync.ready"));
 	}
 
 	private void closeZmqContext() {
@@ -190,20 +199,25 @@ public class Main implements Callable<Integer> {
 			argList = cmdArgList.subList(1, cmdArgList.size());
 		}
 
+		// warn if daemon flag does not apply
 		if (asDaemon && (className == null && jarFile == null)) {
 			System.err.println("WARNING: -d (--as-daemon) option only relevant with mainClass or -jar.");
 		}
 
+		// verify and set log options
 		if (logless) {
 			runOptions = EnumSet.of(RunOptions.LOGLESS);
 			if (Stream.of(logName, inLogName, outLogName).anyMatch(Objects::nonNull)) {
 				System.err.println("WARNING: -ll (--logless) option takes precedence. All other log (-l) options ignored.");
 			}
 		} else {
+			// set INLOG_SAME_AS_OUTLOG
+			if (inLogName == null && outLogName == null) {
+				runOptions = EnumSet.of(RunOptions.INLOG_SAME_AS_OUTLOG);
+			}
 			// if logName is given, assign to both in and out (overriding any of the latter values)
 			if (logName != null) {
 				inLogName = outLogName = logName;
-				runOptions = EnumSet.of(RunOptions.INLOG_SAME_AS_OUTLOG);
 			}
 
 			// ensure that if offset was given, a log name to read from was also given
@@ -212,6 +226,7 @@ public class Main implements Callable<Integer> {
 			}
 		}
 
+		// default to empty RunOptions
 		if (runOptions == null) {
 			runOptions = EnumSet.noneOf(RunOptions.class);
 		}
@@ -297,6 +312,9 @@ public class Main implements Callable<Integer> {
 	}
 
 	private void shutdown(ServiceManager manager, Injector injector, boolean fast) {
+		if (logger.isDebugEnabled()) {
+			logger.debug("We are shutting down ...");
+		}
 		ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
 		try {
 			// stop services
@@ -342,6 +360,19 @@ public class Main implements Callable<Integer> {
 		} finally {
 			logger.info("This peer is done! bye");
 		}
+	}
+
+	private void collectGoSignals(int numberOfSignals) {
+		CountDownLatch latch = new CountDownLatch(numberOfSignals);
+		while (latch.getCount() > 0) {
+			String rcvd = syncSocket.recvStr();
+			if (rcvd.equalsIgnoreCase("go!")) {
+				latch.countDown();
+			} else {
+				logger.warn("ignoring unexpected msg: '{}'", rcvd);
+			}
+		}
+		syncSocket.close();
 	}
 
 	public static void main(final String[] args) {
@@ -392,7 +423,6 @@ public class Main implements Callable<Integer> {
 				logger.error("Error adding JAR file as URL for custom classloader", ex);
 			}
 		}
-
 		CustomClassloader customClassloader = new CustomClassloader(urls.toArray(new URL[0]),
 			Thread.currentThread().getContextClassLoader());
 		logger.info("Initialized custom classloader with paths: {}", urls.toString());
@@ -400,6 +430,8 @@ public class Main implements Callable<Integer> {
 		// inject dependencies
 		final Injector injector = Guice.createInjector(
 			new PeerWiring(properties, runOptions, zmqContext, customClassloader));
+		// circular dependency must be resolved explicitly
+		customClassloader.setInterceptProcessor(injector.getInstance(InterceptProcessor.class));
 
 		// register peer
 		registerSelfAsPeer(injector);
@@ -423,43 +455,14 @@ public class Main implements Callable<Integer> {
 		services.add(injector.getInstance(DirectRequestDispatcher.class));
 
 		final ServiceManager manager = new ServiceManager(services);
-
 		manager.addListener(new ServiceManager.Listener() {
 			public void stopped() {
 				logger.info("Service manager stopped.");
 			}
 
 			public void healthy() {
-				// start accepting requests
-				logger.info("All managed services ready");
-
-				if (!runOptions.contains(RunOptions.LOGLESS)) {
-					LogReader logMessageReader = injector.getInstance(LogReader.class);
-					logMessageReader.acceptConnections(true);
-					injector.getInstance(LogMessageExecutor.class).prestartAllCoreThreads();
-				}
-
-				// prestart threads to create the REP sockets; this must be done after DEALER
-				injector.getInstance(PeerMessageExecutor.class).prestartAllCoreThreads();
-
-				// now call target (main class or JAR file), if given
-				boolean selfCalled = false;
-				if (className != null) {
-					// self-call className.main() if given, and then we're done
-					injector.getInstance(SelfCaller.class).callMain(className, argList);
-					selfCalled = true;
-				} else if (jarFile != null) { // NOTE: jarFile was previously added to classpath
-					// self-call Main-Class found in manifest, and we're done
-					try {
-						injector.getInstance(SelfCaller.class).callJar(jarFile, argList);
-					} catch (PeerException e) {
-						fatalExit(e);
-					}
-					selfCalled = true;
-				}
-				if (selfCalled && !asDaemon) {
-					shutdown(manager, injector, true);
-				}
+				logger.info("Managed services ready");
+				manager.startupTimes().forEach((key, value) -> logger.info("Service '{}' started in {} ms", key, value));
 			}
 
 			public void failure(Service service) {
@@ -473,9 +476,43 @@ public class Main implements Callable<Integer> {
 		// start services
 		manager.startAsync();
 
-		// wait here
-		manager.awaitStopped();
+		// wait for all services up
+		manager.awaitHealthy();
 
+		// double-check by collecting all READY signals from services before proceeding
+		collectGoSignals(services.size());
+
+		// start accepting Log requests
+		if (!runOptions.contains(RunOptions.LOGLESS)) {
+			LogReader logMessageReader = injector.getInstance(LogReader.class);
+			logMessageReader.acceptRequests(true);
+			injector.getInstance(LogMessageExecutor.class).prestartAllCoreThreads();
+		}
+
+		// prestart threads to create the REP sockets; this must be done after DEALER
+		injector.getInstance(PeerMessageExecutor.class).prestartAllCoreThreads();
+
+		// now call target (main class or JAR file), if given
+		boolean selfCalled = false;
+		if (className != null) {
+			// self-call className.main() if given, and then we're done
+			injector.getInstance(SelfCaller.class).callMain(className, argList);
+			selfCalled = true;
+		} else if (jarFile != null) { // NOTE: jarFile was previously added to classpath
+			// self-call Main-Class found in manifest
+			try {
+				injector.getInstance(SelfCaller.class).callJar(jarFile, argList);
+			} catch (PeerException e) {
+				fatalExit(e);
+			}
+			selfCalled = true;
+		}
+		if (selfCalled && !asDaemon) {
+			shutdown(manager, injector, true);
+		} else {
+			// wait here
+			manager.awaitStopped();
+		}
 		return 0;
 	}
 }

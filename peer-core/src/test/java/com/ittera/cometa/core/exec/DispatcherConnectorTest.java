@@ -2,8 +2,10 @@ package com.ittera.cometa.core.exec;
 
 import com.ittera.cometa.core.ZmqEnabledTest;
 import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 
 import com.google.common.primitives.Ints;
@@ -23,6 +25,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static java.lang.String.format;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,7 +38,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 	private static final Logger logger = LoggerFactory.getLogger("tests");
 
 	private final class OutgoingMessageDispatcherStub implements Runnable {
-		List<ExecMessage> messagesReceived = new ArrayList<>();
+		List<Object> messagesReceived = new ArrayList<>();
 		List<byte[]> headersReceived = new ArrayList<>();
 
 		void clear() {
@@ -49,16 +53,20 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 
 			while (!Thread.interrupted()) {
 
-				byte[] headerCntBuff, msgBuff;
+				byte[] headerCntBuff, msgBuff, typeBuff, uuidBuff, followingUuidBuff;
 				List<byte[]> headerBuffs = new ArrayList<>();
 				int headerCount;
 
 				try {
-					// part 1. how many headers?
-					headerCntBuff = repSocket.recv(ZMQ.DONTWAIT);
-					if (headerCntBuff == null) {
+					// part 0. get type of message to follow
+					typeBuff = repSocket.recv(ZMQ.DONTWAIT);
+					if (typeBuff == null) {
 						continue;
 					}
+					MessageType messageType = MessageType.values[Ints.fromByteArray(typeBuff)];
+
+					// part 1. how many headers?
+					headerCntBuff = repSocket.recv();
 					headerCount = Ints.fromByteArray(headerCntBuff);
 
 					// part 2. [headers]
@@ -70,10 +78,22 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 						}
 					}
 
-					// part 3. message
+					// part 3. message uuid
+					uuidBuff = repSocket.recv();
+
+					// part 4. followingUuid
+					followingUuidBuff = repSocket.recv();
+
+					// part 5. message
 					msgBuff = repSocket.recv();
 					try {
-						messagesReceived.add(ExecMessage.parseFrom(msgBuff));
+						if (messageType.equals(MessageType.ExecMessage)) {
+							messagesReceived.add(ExecMessage.parseFrom(msgBuff));
+						} else if (messageType.equals(MessageType.InterceptRequest)) {
+							messagesReceived.add(InterceptRequest.parseFrom(msgBuff));
+						} else {
+							throw new RuntimeException(format("unhandled message type: %s", messageType));
+						}
 					} catch (InvalidProtocolBufferException e) {
 						logger.error("Error parsing receieved msg", e);
 					}
@@ -131,10 +151,10 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 	}
 
 	@Test
-	public void sendAndRecvOneMessage() throws Exception {
+	public void sendExecMessage() throws Exception {
 		// sends msg and get reply
 		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-		ExecMessage returnedMsg = dispatcherConnector.sendAndRecv(msg);
+		ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg);
 
 		// should return same message as sent (if reply == 0), null otherwise
 		assertThat(returnedMsg, is(msg));
@@ -143,7 +163,19 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 	}
 
 	@Test
-	public void sendAndRecvMany() throws Exception {
+	public void sendInterceptRequestMessage() throws Exception {
+		// sends msg and get reply
+		InterceptRequest msg = msgBuilder.buildInterceptRequest(peerUuid, "java.io.PrintStream",
+			"println", null, this.getClass().getName(), "someCallbackMethod");
+		boolean ok = dispatcherConnector.sendInterceptRequestMessage(msg);
+
+		assertThat(ok, is(true));
+		assertThat(outDispatcherStub.messagesReceived.size(), is(1));
+		assertThat(outDispatcherStub.messagesReceived, is(Collections.singletonList(msg)));
+	}
+
+	@Test
+	public void sendExecMessageMany() throws Exception {
 
 		int msgsToSend = 10;
 		List<ExecMessage> sentMessages = new ArrayList<>();
@@ -153,7 +185,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 		for (int i = 0; i < msgsToSend; i++) {
 			ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 			sentMessages.add(msg);
-			ExecMessage returnedMsg = dispatcherConnector.sendAndRecv(msg);
+			ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg);
 			returnedMessages.add(returnedMsg);
 		}
 

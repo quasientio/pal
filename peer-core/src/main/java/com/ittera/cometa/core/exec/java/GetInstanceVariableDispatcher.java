@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.Optional;
 
+@Singleton
 public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 
-	@Singleton
 	@Inject
 	public GetInstanceVariableDispatcher(UUID peerUuid, MessageBuilder messageBuilder, DispatcherConnector connector,
 																			 ObjectService objectService) {

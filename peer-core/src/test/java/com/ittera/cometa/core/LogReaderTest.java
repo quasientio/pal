@@ -1,19 +1,26 @@
 package com.ittera.cometa.core;
 
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.core.kafka.internals.RecordHeaders;
 import com.ittera.cometa.cxn.PALDirectory;
+import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.record.TimestampType;
 
 import org.apache.curator.test.TestingServer;
 
@@ -69,13 +76,22 @@ public class LogReaderTest extends ZmqEnabledTest {
 			while (!Thread.interrupted()) {
 				//
 				try {
-					String offset = socket.recvStr();
-					long logOffset = Long.parseLong(offset);
+					byte[] buff = socket.recv();
+					long logOffset = Longs.fromByteArray(buff);
 					logger.debug("received offset = {}", logOffset);
+					buff = socket.recv();
+					MessageType msgType = MessageType.values[Ints.fromByteArray(buff)];
+					logger.debug("received msg type = {}", msgType);
 					byte[] req = socket.recv();
-					ExecMessage msg = ExecMessage.parseFrom(req);
-					logger.debug("msg received = {}", msg);
-					rcvdMsgUuids.add(msg.getMessageUuid());
+					if (msgType.equals(MessageType.ExecMessage)) {
+						ExecMessage msg = ExecMessage.parseFrom(req);
+						logger.debug("msg received = {}", msg);
+						rcvdMsgUuids.add(msg.getMessageUuid());
+					} else {
+						InterceptRequest msg = InterceptRequest.parseFrom(req);
+						logger.debug("msg received = {}", msg);
+						rcvdMsgUuids.add(msg.getMessageUuid());
+					}
 				} catch (ZMQException ex) {
 					int errorCode = ex.getErrorCode();
 					if (errorCode == ZError.ETERM) {
@@ -108,14 +124,16 @@ public class LogReaderTest extends ZmqEnabledTest {
 	private PALDirectory palDirectory;
 	private TestingServer testingServer;
 	private ServiceManager manager;
-	private MockConsumer<String, ExecMessage> consumer;
+	private MockConsumer<String, byte[]> consumer;
 	private LogInfo log;
 	private final int partition = 0;
 	private static Set<String> createdLogs = new HashSet<>();
 	private final String DEALER_ADDR = "inproc://inlog_tests";
 	private final String OFFSET_PUB_ADDR = "inproc://offsets_tests";
+	private final String SYNC_SOCKET_ADDRESS = "inproc://sync_socket";
 	private static final int TEST_PORT = 2182;
 	private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
+	private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
 
 	private void deleteCreatedLogs() throws Exception {
 		for (String log : createdLogs) {
@@ -142,12 +160,15 @@ public class LogReaderTest extends ZmqEnabledTest {
 		zmqContext = this.createContext();
 		consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
 		logReader = new LogReader(
+			UUID.randomUUID(),
 			zmqContext,
+			SYNC_SOCKET_ADDRESS,
+			servicesThreadGroup,
+			"LogReaderTest-Service",
 			DEALER_ADDR,
 			OFFSET_PUB_ADDR,
 			palDirectory,
 			consumer,
-			peerUuid,
 			10);
 		log = palDirectory.newLog("testapp");
 		createdLogs.add(this.log.getName());
@@ -155,7 +176,6 @@ public class LogReaderTest extends ZmqEnabledTest {
 		final List<TopicPartition> topicPartitionList = Collections.singletonList(topicPartition);
 		consumer.assign(topicPartitionList);
 		consumer.seek(topicPartition, 0);
-
 		final Set<Service> services = new HashSet<>(Arrays.asList(this.logReader));
 		this.manager = new ServiceManager(services);
 	}
@@ -177,13 +197,18 @@ public class LogReaderTest extends ZmqEnabledTest {
 		Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
 		execService.submit(logMsgInvoker);
 
+		// prepare headers
+		RecordHeaders headers = new RecordHeaders(Collections.singleton(
+			new LogMessageHeader("type", Ints.toByteArray(MessageType.ExecMessage.ordinal()))));
+
 		// send 1 message
 		MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 		String key = peerUuid.toString();
 		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-
-		this.consumer.addRecord(new ConsumerRecord<>
-			(this.log.getName(), partition, 0, key, msg));
+		ConsumerRecord<String, byte[]> record = new ConsumerRecord<>
+			(this.log.getName(), partition, 0, 0, TimestampType.CREATE_TIME, 0L,
+				key.getBytes().length, msg.toByteArray().length, key, msg.toByteArray(), headers);
+		this.consumer.addRecord(record);
 
 		// assert received = 0
 		assertThat(logMsgInvoker.getReceivedMessages().size(), is(0));
@@ -201,7 +226,7 @@ public class LogReaderTest extends ZmqEnabledTest {
 		manager.startAsync();
 		Thread.sleep(500);
 		assertThat(logReader.isRunning(), is(true));
-		logReader.acceptConnections(true);
+		logReader.acceptRequests(true);
 		assertThat(logReader.isAcceptingRequests(), is(true));
 
 		// start worker(s)
@@ -222,7 +247,7 @@ public class LogReaderTest extends ZmqEnabledTest {
 	}
 
 	@Test
-	public void consumeOneMessage() throws Exception {
+	public void consumeExecMessage() throws Exception {
 		assertThat(logReader.isRunning(), is(false));
 		assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -231,22 +256,28 @@ public class LogReaderTest extends ZmqEnabledTest {
 		Thread.sleep(500);
 		assertThat(logReader.isRunning(), is(true));
 
-		logReader.acceptConnections(true);
+		logReader.acceptRequests(true);
 		assertThat(logReader.isAcceptingRequests(), is(true));
 
 		// start worker(s)
 		Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
 		execService.submit(logMsgInvoker);
 
+		// prepare headers
+		RecordHeaders headers = new RecordHeaders(Collections.singleton(
+			new LogMessageHeader("type", Ints.toByteArray(MessageType.ExecMessage.ordinal()))));
+
 		// send 1 message
 		MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 		String key = peerUuid.toString();
 		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
-		this.consumer.addRecord(new ConsumerRecord<>
-			(this.log.getName(), partition, 0, key, msg));
+		ConsumerRecord<String, byte[]> record = new ConsumerRecord<>
+			(this.log.getName(), partition, 0, 0, TimestampType.CREATE_TIME, 0L,
+				key.getBytes().length, msg.toByteArray().length, key, msg.toByteArray(), headers);
+		this.consumer.addRecord(record);
 
-		Thread.sleep(1500);
+		Thread.sleep(500);
 		// assert received
 		logger.debug("received: {}", String.join(",", logMsgInvoker.getReceivedMessages()));
 		assertThat(logMsgInvoker.getReceivedMessages().size(), is(1));
@@ -254,7 +285,50 @@ public class LogReaderTest extends ZmqEnabledTest {
 			is(true));
 
 		// shut down
-		consumer.wakeup();
+		manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+		assertThat(logReader.isRunning(), is(false));
+		assertThat(logReader.isAcceptingRequests(), is(false));
+	}
+
+	@Test
+	public void consumeInterceptRequestMessage() throws Exception {
+		assertThat(logReader.isRunning(), is(false));
+		assertThat(logReader.isAcceptingRequests(), is(false));
+
+		// start services
+		manager.startAsync();
+		Thread.sleep(500);
+		assertThat(logReader.isRunning(), is(true));
+
+		logReader.acceptRequests(true);
+		assertThat(logReader.isAcceptingRequests(), is(true));
+
+		// start worker(s)
+		Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
+		execService.submit(logMsgInvoker);
+
+		// prepare headers
+		RecordHeaders headers = new RecordHeaders(Collections.singleton(
+			new LogMessageHeader("type", Ints.toByteArray(MessageType.InterceptRequest.ordinal()))));
+
+		// send 1 message
+		MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+		String key = peerUuid.toString();
+		InterceptRequest msg = msgBuilder.buildInterceptRequest(peerUuid, "java.io.PrintStream",
+			"println", null, this.getClass().getName(), "someCallbackMethod");
+		ConsumerRecord<String, byte[]> record = new ConsumerRecord<>
+			(this.log.getName(), partition, 0, 0, TimestampType.CREATE_TIME, 0L,
+				key.getBytes().length, msg.toByteArray().length, key, msg.toByteArray(), headers);
+		this.consumer.addRecord(record);
+
+		Thread.sleep(500);
+		// assert received
+		logger.debug("received: {}", String.join(",", logMsgInvoker.getReceivedMessages()));
+		assertThat(logMsgInvoker.getReceivedMessages().size(), is(1));
+		assertThat(logMsgInvoker.getReceivedMessages().stream().anyMatch(u -> u.equals(msg.getMessageUuid())),
+			is(true));
+
+		// shut down
 		manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
 		assertThat(logReader.isRunning(), is(false));
 		assertThat(logReader.isAcceptingRequests(), is(false));
@@ -270,14 +344,18 @@ public class LogReaderTest extends ZmqEnabledTest {
 		Thread.sleep(500);
 		assertThat(logReader.isRunning(), is(true));
 
-		logReader.acceptConnections(true);
+		logReader.acceptRequests(true);
 		assertThat(logReader.isAcceptingRequests(), is(true));
 
 		// start worker(s)
 		Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
 		execService.submit(logMsgInvoker);
 
-		// send 1 message
+		// prepare headers
+		RecordHeaders headers = new RecordHeaders(Collections.singleton(
+			new LogMessageHeader("type", Ints.toByteArray(MessageType.ExecMessage.ordinal()))));
+
+		// send many messages
 		MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 		String key = peerUuid.toString();
 		Set<String> sentUuids = new TreeSet<>();
@@ -285,18 +363,19 @@ public class LogReaderTest extends ZmqEnabledTest {
 		int msgsToSend = 30;
 		for (int i = 0; i < msgsToSend; i++) {
 			ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-			this.consumer.addRecord(new ConsumerRecord<>
-				(this.log.getName(), partition, i, key, msg));
+			ConsumerRecord<String, byte[]> record = new ConsumerRecord<>
+				(this.log.getName(), partition, i, 0, TimestampType.CREATE_TIME, 0L,
+					key.getBytes().length, msg.toByteArray().length, key, msg.toByteArray(), headers);
+			this.consumer.addRecord(record);
 			sentUuids.add(msg.getMessageUuid());
 		}
 
-		Thread.sleep(1500);
+		Thread.sleep(500);
 		// assert received
 		logger.debug("received: {}", String.join(",", logMsgInvoker.getReceivedMessages()));
 		assertThat(logMsgInvoker.getReceivedMessages(), is(sentUuids));
 
 		// shut down
-		consumer.wakeup();
 		manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
 		assertThat(logReader.isRunning(), is(false));
 		assertThat(logReader.isAcceptingRequests(), is(false));

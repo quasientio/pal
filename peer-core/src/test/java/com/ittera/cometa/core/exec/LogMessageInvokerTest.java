@@ -3,8 +3,13 @@ package com.ittera.cometa.core.exec;
 import com.ittera.cometa.core.ZmqEnabledTest;
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
+
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +48,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 	private LogMessageInvoker logMessageInvoker;
 	private IncomingMessageDispatcher incomingMessageDispatcher;
 	private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
-	private List<ExecMessage> messageReplies = new ArrayList<>();
+	private List<ExecMessage> execMessageReplies = new ArrayList<>();
+	private List<Boolean> interceptReqMessageResults = new ArrayList<>();
 
 	@Before
 	public void setup() {
@@ -56,7 +62,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 		/* mock incomingMessageDispatcher */
 		incomingMessageDispatcher = mock(IncomingMessageDispatcher.class);
 
-		// stub incomingCall to return a message which seems valid reply
+		// stub incomingCall for ExecMessage
 		when(incomingMessageDispatcher.incomingCall(any(), anyBoolean())).thenAnswer(
 			(Answer) invocation -> {
 				Object[] args = invocation.getArguments();
@@ -69,16 +75,21 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 				}
 				ExecMessage reply = msgBuilder.buildReturnValue(peerUuid, new String(), constructor, null,
 					false, incomingMsg.getMessageUuid());
-				messageReplies.add(reply);
+				execMessageReplies.add(reply);
 				return reply;
 			});
+
+		// stub incomingCall for InterceptRequestMessage
+		when(incomingMessageDispatcher.incomingCall(any())).thenAnswer((Answer<Boolean>) invocationOnMock -> {
+			interceptReqMessageResults.add(true);
+			return true;
+		});
 
 		this.logMessageInvoker = new LogMessageInvoker(
 			context,
 			msgBuilder,
 			INLOG_ADDR,
-			incomingMessageDispatcher,
-			peerUuid);
+			incomingMessageDispatcher);
 	}
 
 	@After
@@ -93,11 +104,11 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 		execService.shutdown();
 		execService.awaitTermination(3, TimeUnit.SECONDS);
 
-		messageReplies.clear();
+		execMessageReplies.clear();
 	}
 
 	@Test
-	public void invokeOneMessage() throws Exception {
+	public void invokeExecMessage() throws Exception {
 
 		// start invoker thread
 		execService.submit(logMessageInvoker);
@@ -106,7 +117,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 		int fakeOffset = 0;
 		ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 		dealerSocket.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
-		dealerSocket.send(String.valueOf(fakeOffset++), ZMQ.SNDMORE);
+		dealerSocket.send(Longs.toByteArray(fakeOffset++), ZMQ.SNDMORE);
+		dealerSocket.send(Ints.toByteArray(MessageType.ExecMessage.ordinal()), ZMQ.SNDMORE);
 		dealerSocket.send(invokable.toByteArray(), 0);
 
 		// wait for msg to be rcvd
@@ -115,10 +127,34 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 		}
 		verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
 
-		assertThat(messageReplies.size(), is(1));
+		assertThat(execMessageReplies.size(), is(1));
 
 		// assert reply msg followsUuid of original
-		assertThat(messageReplies.get(0).getFollowingUuid(), is(invokable.getMessageUuid()));
+		assertThat(execMessageReplies.get(0).getFollowingUuid(), is(invokable.getMessageUuid()));
+	}
+
+	@Test
+	public void invokeInterceptRequestMessage() throws Exception {
+
+		// start invoker thread
+		execService.submit(logMessageInvoker);
+
+		// deal msg
+		int fakeOffset = 0;
+		InterceptRequest invokable = msgBuilder.buildInterceptRequest(peerUuid, "java.io.PrintStream",
+			"println", null, this.getClass().getName(), "someCallbackMethod");
+		dealerSocket.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
+		dealerSocket.send(Longs.toByteArray(fakeOffset++), ZMQ.SNDMORE);
+		dealerSocket.send(Ints.toByteArray(MessageType.InterceptRequest.ordinal()), ZMQ.SNDMORE);
+		dealerSocket.send(invokable.toByteArray(), 0);
+
+		// wait for msg to be rcvd
+		while (logMessageInvoker.getRequestsDispatched().get() < 1) {
+			Thread.sleep(100);
+		}
+		verify(incomingMessageDispatcher, times(1)).incomingCall(any());
+
+		assertThat(interceptReqMessageResults.size(), is(1));
 	}
 
 	@Test
@@ -134,7 +170,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 		for (int i = 0; i < msgCount; i++) {
 			ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 			dealerSocket.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
-			dealerSocket.send(String.valueOf(fakeOffset++), ZMQ.SNDMORE);
+			dealerSocket.send(Longs.toByteArray(fakeOffset++), ZMQ.SNDMORE);
+			dealerSocket.send(Ints.toByteArray(MessageType.ExecMessage.ordinal()), ZMQ.SNDMORE);
 			dealerSocket.send(invokable.toByteArray(), 0);
 			msgsToInvoke.add(invokable);
 		}
@@ -146,11 +183,11 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 
 		// assert number of calls
 		verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), anyBoolean());
-		assertThat(messageReplies.size(), is(msgCount));
+		assertThat(execMessageReplies.size(), is(msgCount));
 
 		// assert reply msg followsUuid of original
 		for (int i = 0; i < msgCount; i++) {
-			assertThat(messageReplies.get(i).getFollowingUuid(), is(msgsToInvoke.get(i).getMessageUuid()));
+			assertThat(execMessageReplies.get(i).getFollowingUuid(), is(msgsToInvoke.get(i).getMessageUuid()));
 		}
 	}
 }

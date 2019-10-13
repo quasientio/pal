@@ -26,9 +26,9 @@ import java.util.Optional;
 import javax.inject.Singleton;
 import javax.inject.Inject;
 
+@Singleton
 public class ClassMethodDispatcher extends MethodDispatcher {
 
-	@Singleton
 	@Inject
 	public ClassMethodDispatcher(UUID peerUuid, MessageBuilder messageBuilder, DispatcherConnector connector,
 															 ObjectService objectService) {

@@ -2,16 +2,15 @@ package com.ittera.cometa.core;
 
 import com.google.common.primitives.Ints;
 
-import com.google.common.util.concurrent.AbstractExecutionThreadService;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
-import com.google.inject.name.Named;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import javax.inject.Named;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.ittera.cometa.messages.MessageType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -22,8 +21,11 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Singleton
-class OutgoingMessageDispatcher extends AbstractExecutionThreadService {
+class OutgoingMessageDispatcher extends ConnectedService {
 
 	private static final Logger logger = LoggerFactory.getLogger(OutgoingMessageDispatcher.class);
 
@@ -36,73 +38,61 @@ class OutgoingMessageDispatcher extends AbstractExecutionThreadService {
 	private final AtomicInteger messagesRcvd = new AtomicInteger(0);
 
 	// zmq stuff
-	private ZContext context;
 	private Socket repSocket, pubSocket;
 	private final String outCellAddress, outPubAddress;
 
 	@Inject
-	public OutgoingMessageDispatcher(@Named("out.cell") String outCellAddress,
-																	 @Named("out.pub") String outPubAddress,
-																	 ZContext context) {
+	public OutgoingMessageDispatcher(UUID peerUuid,
+																	 ZContext context,
+																	 @Named("sync.ready") String syncSocketAddress,
+																	 ThreadGroup serviceThreadGroup,
+																	 @Named("OutgoingMessageDispatcher.service") String serviceName,
+																	 @Named("out.cell") String outCellAddress,
+																	 @Named("out.pub") String outPubAddress) {
+		super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
 		this.outCellAddress = outCellAddress;
 		this.outPubAddress = outPubAddress;
-		this.context = context;
-		logger.info("Initialized outgoing message dispatcher");
-	}
-
-	private void openConnections() {
-
-		repSocket = context.createSocket(SocketType.REP);
-		repSocket.bind(outCellAddress);
-
-		pubSocket = context.createSocket(SocketType.PUB);
-		pubSocket.bind(outPubAddress);
-
-		logger.info("All connections open");
-	}
-
-	private void closeConnections() {
-
-		if (repSocket != null) {
-			repSocket.close();
-		}
-
-		if (pubSocket != null) {
-			pubSocket.close();
-		}
-
-		logger.info("All connections closed");
 	}
 
 	@Override
-	public final void run() {
-		while (isRunning() && !Thread.interrupted()) {
+	protected void openConnections() {
+		// open REP and PUB sockets
+		repSocket = zmqContext.createSocket(SocketType.REP);
+		repSocket.bind(outCellAddress);
+		pubSocket = zmqContext.createSocket(SocketType.PUB);
+		pubSocket.bind(outPubAddress);
+	}
 
-			byte[] headerCntBuff, msgBuff;
+
+	@Override
+	public final void run() {
+		while (!Thread.interrupted()) {
+			byte[] headerCntBuff, typeBuff, uuidBuff, followingUuidBuff, msgBuff;
 			List<byte[]> headerBuffs = new ArrayList<>();
 			int headerCount;
-
 			try {
-				/* multi-part message request */
-
-				// part 1. how many headers?
-				headerCntBuff = repSocket.recv(ZMQ.DONTWAIT);
-				if (headerCntBuff == null) {
-					// TODO should we sleep a bit here?
+				/* MULTI-PART message request */
+				// part 0. get type of message to follow
+				typeBuff = repSocket.recv(ZMQ.DONTWAIT);
+				if (typeBuff == null) {
 					continue;
 				}
+				MessageType messageType = MessageType.values[Ints.fromByteArray(typeBuff)];
+				// part 1. how many headers
+				headerCntBuff = repSocket.recv();
 				headerCount = Ints.fromByteArray(headerCntBuff);
-
 				// part 2. [headers]
 				if (headerCount > 0) {
 					for (int i = 0; i < headerCount; i++) {
 						headerBuffs.add(repSocket.recv());
 					}
 				}
-
-				// part 3. message
+				// part 3. message uuid
+				uuidBuff = repSocket.recv();
+				// part 4. followingUuid
+				followingUuidBuff = repSocket.recv();
+				// part 5. actual message
 				msgBuff = repSocket.recv();
-
 			} catch (ZMQException ex) {
 				int errorCode = ex.getErrorCode();
 				if (errorCode == ZError.ETERM) {
@@ -124,39 +114,41 @@ class OutgoingMessageDispatcher extends AbstractExecutionThreadService {
 			repSocket.send("0");
 
 			// send multi-part message as received to SUBscribers
+			pubSocket.send(typeBuff, ZMQ.SNDMORE);
 			pubSocket.send(headerCntBuff, ZMQ.SNDMORE);
 			if (headerCount > 0) {
 				headerBuffs.forEach(b -> pubSocket.send(b, ZMQ.SNDMORE));
 			}
+			pubSocket.send(uuidBuff, ZMQ.SNDMORE);
+			pubSocket.send(followingUuidBuff, ZMQ.SNDMORE);
 			pubSocket.send(msgBuff);
 			if (logger.isDebugEnabled()) {
 				logger.debug("Published new message with {} header(s) and {} bytes", headerCount, msgBuff.length);
 			}
 		}
+	}
 
-		closeConnections();
+	@Override
+	protected void closeConnections() {
+		if (repSocket != null) {
+			try {
+				repSocket.close();
+			} catch (Exception e) {
+				logger.debug("Error closing REP socket", e);
+			}
+		}
+		if (pubSocket != null) {
+			try {
+				pubSocket.close();
+			} catch (Exception e) {
+				logger.debug("Error closing PUB socket", e);
+			}
+		}
 	}
 
 	//TODO
 	private boolean hasActors(/* headers or message */) {
 		return false;
-	}
-
-	@Override
-	protected void triggerShutdown() {
-
-		logger.info("OUT Message dispatcher shutting down.");
-	}
-
-	@Override
-	protected void startUp() {
-		openConnections();
-	}
-
-	@Override
-	protected void shutDown() {
-
-		logger.info("OUT Message dispatcher shut down");
 	}
 
 	protected void printDebugStats() {

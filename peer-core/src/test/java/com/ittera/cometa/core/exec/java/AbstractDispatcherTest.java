@@ -2,9 +2,7 @@ package com.ittera.cometa.core.exec.java;
 
 import com.ittera.cometa.common.BiMapObjectService;
 import com.ittera.cometa.common.ObjectService;
-
 import com.ittera.cometa.core.exec.DispatcherConnector;
-
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 
@@ -33,22 +31,21 @@ public abstract class AbstractDispatcherTest {
 	protected DispatcherConnector dispatcherConnector;
 
 	protected AbstractDispatcherTest() {
-
-		// set up mock dispatcher so it returns always the sent message
+		// set up mock dispatcher so it returns always the sent message (for ExecMessages)
 		dispatcherConnector = mock(DispatcherConnector.class);
-		when(dispatcherConnector.sendAndRecv(any())).then(AdditionalAnswers.returnsFirstArg());
+		when(dispatcherConnector.sendExecMessage(any())).then(AdditionalAnswers.returnsFirstArg());
 	}
 
-	private void verifyDispatcherConnectorCalledTimes(int n) {
-		verify(dispatcherConnector, times(n)).sendAndRecv(any());
+	private void verifyDispatcherConnectorSendExecMessageCalledTimes(int n) {
+		verify(dispatcherConnector, times(n)).sendExecMessage(any());
 	}
 
-	protected void verifyDispatcherConnectorCalledTwice() {
-		verifyDispatcherConnectorCalledTimes(2);
+	protected void verifyDispatcherConnectorSendExecMessageCalledTwice() {
+		verifyDispatcherConnectorSendExecMessageCalledTimes(2);
 	}
 
-	protected void verifyDispatcherConnectorCalledOnce() {
-		verifyDispatcherConnectorCalledTimes(1);
+	protected void verifyDispatcherConnectorSendExecMessageCalledOnce() {
+		verifyDispatcherConnectorSendExecMessageCalledTimes(1);
 	}
 
 	protected String[] toNames(Class[] types) {

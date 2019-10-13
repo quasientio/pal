@@ -7,6 +7,7 @@ import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 
 import java.util.UUID;
 import java.util.Optional;
@@ -92,6 +93,9 @@ public interface MessageBuilder {
 
 	ExecMessage buildReturnValue(UUID peerUuid, Object object, AccessibleObject accessibleObject,
 															 ObjectRef objectRef, boolean isVoid, String followingUuid);
+
+	InterceptRequest buildInterceptRequest(UUID peerUuid, String className, String methodName, String fieldName,
+																				 String callbackClassName, String callbackMethodName);
 
 	/**
 	 * other

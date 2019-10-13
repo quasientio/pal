@@ -79,7 +79,7 @@ public class ExecThreadFactory implements ThreadFactory {
 		switch (execChannelType) {
 			case LOG:
 				thread = new LogMessageInvoker(threadGroup, r, newThreadName, zmqContext, messageBuilder,
-					zmqSocketAddress, incomingMessageDispatcher, dispatcherConnector, peerUuid);
+					zmqSocketAddress, incomingMessageDispatcher, dispatcherConnector);
 				break;
 			case PEER:
 				thread = new PeerMessageInvoker(threadGroup, r, newThreadName, zmqContext, messageBuilder,

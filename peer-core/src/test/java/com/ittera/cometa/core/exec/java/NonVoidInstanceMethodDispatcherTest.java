@@ -85,7 +85,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertThat(returned, is(value.toUpperCase()));
 	}
 
@@ -110,7 +110,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(2));
 		String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
@@ -140,7 +140,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertEquals(value + args[0], returned);
 	}
 
@@ -165,7 +165,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(2));
 		String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
@@ -195,7 +195,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertThat(returned, is(String.valueOf(floatArg)));
 	}
 
@@ -219,7 +219,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(2));
 		String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
@@ -250,7 +250,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(3));
 		String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
@@ -280,7 +280,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(2));
 		String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
@@ -311,7 +311,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertThat(returned, is("package::class::method"));
 	}
 
@@ -337,7 +337,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(2));
 		String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
@@ -370,7 +370,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		} catch (NullPointerException npe) {
 			// all good
 		}
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 	}
 
 	@Test
@@ -393,7 +393,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(1));
 		assertThat(replyMsg.getRaisedThrowable().getThrowable().getType(),

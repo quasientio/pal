@@ -1,8 +1,11 @@
 package com.ittera.cometa.core.exec;
 
 import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 
 import com.google.common.primitives.Ints;
 
@@ -25,6 +28,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.inject.Named;
 
+@Singleton
 public class DispatcherConnector {
 
 	private final static Logger logger = LoggerFactory.getLogger(DispatcherConnector.class);
@@ -37,7 +41,7 @@ public class DispatcherConnector {
 	// flag to avoid creating the threadLocal socket when we're trying to close it before having been created
 	private final ThreadLocal<Boolean> threadSocketCreated = ThreadLocal.withInitial(() -> false);
 
-	// per-thread REP socket to send out messages
+	// per-thread REQ socket to send out messages
 	private final ThreadLocal<Socket> threadSocket = new ThreadLocal<Socket>() {
 		protected Socket initialValue() {
 			Socket worker = zmqContext.createSocket(SocketType.REQ);
@@ -50,7 +54,6 @@ public class DispatcherConnector {
 		}
 	};
 
-	@Singleton
 	@Inject
 	public DispatcherConnector(ZContext zmqContext, UUID peerUuid, MessageBuilder messageBuilder,
 														 @Named("out.cell") String outCellAddress) {
@@ -59,31 +62,22 @@ public class DispatcherConnector {
 		this.WRITE_AHEAD_HEADER = messageBuilder.buildWriteAheadHeader(peerUuid);
 	}
 
-	public ExecMessage sendAndRecv(ExecMessage message) {
-		return sendAndRecv(message, null);
+	public ExecMessage sendExecMessage(ExecMessage message) {
+		return sendExecMessage(message, null);
 	}
 
-	private ExecMessage sendAndRecv(ExecMessage message, @Nullable List<InternalHeader> headers) {
+	public boolean sendInterceptRequestMessage(InterceptRequest message) {
+		return sendInterceptRequest(message, null);
+	}
+
+	private ExecMessage sendExecMessage(ExecMessage message, @Nullable List<InternalHeader> headers) {
 		if (logger.isTraceEnabled()) {
-			logger.trace("sendAndRecv:in w/ message with uuid: {}", message.getMessageUuid());
+			logger.trace("sendExecMessage:in w/ message with uuid: {}", message.getMessageUuid());
 		}
-
 		Socket outSocket = threadSocket.get();
-
-		if (headers != null && !headers.isEmpty()) {
-			// 1. send number of headers to follow,
-			outSocket.send(Ints.toByteArray(headers.size()), ZMQ.SNDMORE);
-
-			// 2. send all headers
-			for (InternalHeader header : headers) {
-				outSocket.send(header.toByteArray(), ZMQ.SNDMORE);
-			}
-		} else {
-			outSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
-		}
-
-		// 3. send actual message
-		outSocket.send(message.toByteArray());
+		UUID followingUuid = message.hasFollowingUuid() ? UUID.fromString(message.getFollowingUuid()) : null;
+		send(outSocket, message.toByteArray(), MessageType.ExecMessage, UUID.fromString(message.getMessageUuid()),
+			followingUuid, headers);
 
 		String rcvdString = null;
 		try {
@@ -111,11 +105,78 @@ public class DispatcherConnector {
 			logger.error("We should not get here");
 			returnValue = null;
 		}
-
 		if (logger.isTraceEnabled()) {
 			logger.trace("out w/ {}", returnValue);
 		}
 		return returnValue;
+	}
+
+	private boolean sendInterceptRequest(InterceptRequest message, @Nullable List<InternalHeader> headers) {
+		if (logger.isTraceEnabled()) {
+			logger.trace("sendInterceptRequest:in w/ message with uuid: {}", message.getMessageUuid());
+		}
+
+		Socket outSocket = threadSocket.get();
+		send(outSocket, message.toByteArray(), MessageType.InterceptRequest, UUID.fromString(message.getMessageUuid()),
+			null, headers);
+
+		String rcvdString = null;
+		try {
+			rcvdString = outSocket.recvStr();
+		} catch (ZMQException ex) {
+			int errorCode = ex.getErrorCode();
+			if (errorCode == ZError.ETERM) {
+				logger.warn("Caught ETERM during blocking read. Will close socket");
+				outSocket.close();
+				return false;
+			} else if (errorCode == ZError.EINTR) {
+				logger.warn("Caught EINTR during blocking read. Will close socket.");
+				outSocket.close();
+				return false;
+			}
+		}
+
+		boolean ok = "0".equals(rcvdString);
+
+		if (!ok) {
+			logger.error("Intercept request message sent, but got unexpected reply: {}", rcvdString);
+		}
+		if (logger.isTraceEnabled()) {
+			logger.trace("out w/ {}", ok);
+		}
+		return ok;
+	}
+
+	private void send(Socket outSocket, byte[] message, MessageType messageType, UUID messageUuid,
+										@Nullable UUID followingUuid, @Nullable List<InternalHeader> headers) {
+
+		// 0. send type of message to follow
+		outSocket.send(Ints.toByteArray(messageType.ordinal()), ZMQ.SNDMORE);
+
+		if (headers != null && !headers.isEmpty()) {
+			// 1. send number of headers to follow,
+			outSocket.send(Ints.toByteArray(headers.size()), ZMQ.SNDMORE);
+
+			// 2. send all headers
+			for (InternalHeader header : headers) {
+				outSocket.send(header.toByteArray(), ZMQ.SNDMORE);
+			}
+		} else {
+			outSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
+		}
+
+		// 3. send message uuid
+		outSocket.send(UUIDUtils.toBytes(messageUuid), ZMQ.SNDMORE);
+
+		// 4. send followingUuid
+		if (followingUuid != null) {
+			outSocket.send(UUIDUtils.toBytes(followingUuid), ZMQ.SNDMORE);
+		} else {
+			outSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
+		}
+
+		// 5. send actual message
+		outSocket.send(message);
 	}
 
 	public void writeAhead(ExecMessage message) {
@@ -127,10 +188,10 @@ public class DispatcherConnector {
 
 		// by sending out <write_ahead> header the Log Writer will serialize it with a <dispatching-by> header
 		List<InternalHeader> headers = Collections.singletonList(this.WRITE_AHEAD_HEADER);
-		sendAndRecv(message, headers);
+		sendExecMessage(message, headers);
 	}
 
-	public void closeThreadLocalSocket() {
+	void closeThreadLocalSocket() {
 		if (threadSocketCreated.get()) {
 			Socket outSocket = threadSocket.get();
 			if (outSocket != null) {

@@ -2,9 +2,11 @@ package com.ittera.cometa.core;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -120,11 +122,13 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
 
 	private final String ROUTER_ADDR = "tcp://0.0.0.0:5671";
 	private final String DEALER_ADDR = "inproc://deal";
+	private final String SYNC_SOCKET_ADDRESS = "inproc://sync_socket";
 	private ZContext context;
 	private List<Worker> workers;
 	private List<Client> clients;
 	private ServiceManager manager;
 	private ExecutorService execService;
+	private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
 	private DirectRequestDispatcher directRequestDispatcher;
 
 	@Before
@@ -132,9 +136,13 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
 		this.context = createContext();
 		this.execService = Executors.newCachedThreadPool();
 		this.directRequestDispatcher = new DirectRequestDispatcher(
+			UUID.randomUUID(),
+			context,
+			SYNC_SOCKET_ADDRESS,
+			servicesThreadGroup,
+			"DirectRequestTest-Service",
 			ROUTER_ADDR,
-			DEALER_ADDR,
-			context);
+			DEALER_ADDR);
 		initWorkers(3);
 
 		final Set<Service> services = new HashSet<>(Arrays.asList(this.directRequestDispatcher));
@@ -204,7 +212,6 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
 			}
 			replies.stream().forEach(r -> assertThat(r, containsString("from peer: " + cli.peerUuid.toString())));
 		});
-
 
 		// shut down
 		manager.stopAsync();

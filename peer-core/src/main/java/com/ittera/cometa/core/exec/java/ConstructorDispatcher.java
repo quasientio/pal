@@ -26,9 +26,9 @@ import java.util.Optional;
 
 import static java.lang.Class.*;
 
+@Singleton
 public class ConstructorDispatcher extends BaseDispatcher {
 
-	@Singleton
 	@Inject
 	public ConstructorDispatcher(UUID peerUuid, MessageBuilder messageBuilder, DispatcherConnector connector,
 															 ObjectService objectService) {

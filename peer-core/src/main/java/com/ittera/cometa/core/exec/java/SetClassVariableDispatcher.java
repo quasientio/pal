@@ -21,9 +21,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.Optional;
 
+@Singleton
 public class SetClassVariableDispatcher extends SetFieldDispatcher {
 
-	@Singleton
 	@Inject
 	public SetClassVariableDispatcher(UUID peerUuid, MessageBuilder messageBuilder, DispatcherConnector connector,
 																		ObjectService objectService) {

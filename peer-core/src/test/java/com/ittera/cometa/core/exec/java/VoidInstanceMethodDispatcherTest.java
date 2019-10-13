@@ -92,7 +92,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertThat(returned, is(Void.getInstance()));
 		assertThat(target.wordsCollected.size(), is(2));
 	}
@@ -117,7 +117,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
@@ -146,7 +146,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertThat(returned, is(Void.getInstance()));
 		assertThat(target.wordsCollected.size(), is(1));
 	}
@@ -171,7 +171,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(1));
@@ -201,7 +201,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertThat(returned, is(Void.getInstance()));
 		assertThat(target.wordsCollected.size(), is(numberOfWordsToAdd));
 	}
@@ -226,7 +226,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
@@ -257,7 +257,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(2));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
@@ -285,7 +285,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
@@ -315,7 +315,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertThat(returned, is(Void.getInstance()));
 		assertThat(target.wordsCollected.size(), is(4));
 	}
@@ -341,7 +341,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
@@ -373,7 +373,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		} catch (IllegalArgumentException iae) {
 			// all good
 		}
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 	}
 
 	@Test
@@ -396,7 +396,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(1));
 		assertFalse(replyMsg.hasReturnValue());

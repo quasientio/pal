@@ -1,6 +1,7 @@
 package com.ittera.cometa.core.exec.java;
 
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 
 import javax.inject.Singleton;
 import javax.inject.Inject;
@@ -57,5 +58,10 @@ public class IncomingMessageDispatcher {
 			throw new IllegalArgumentException(String.format("Incoming message with uuid ignored - no handler:%n%s",
 				execMessage));
 		}
+	}
+
+	public boolean incomingCall(InterceptRequest interceptMessage) {
+
+		return false;
 	}
 }

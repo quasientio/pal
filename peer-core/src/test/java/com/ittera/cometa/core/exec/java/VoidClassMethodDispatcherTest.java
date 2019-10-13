@@ -107,7 +107,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertThat(returned, is(Void.getInstance()));
 		assertTrue(ClassForVoidClassMethodTest.slept);
 	}
@@ -129,7 +129,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(0));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
@@ -161,7 +161,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertThat(returned, is(Void.getInstance()));
 		assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
 	}
@@ -185,7 +185,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(0));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
@@ -215,7 +215,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertThat(returned, is(Void.getInstance()));
 		assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
 	}
@@ -238,7 +238,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(0));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
@@ -267,7 +267,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
@@ -294,7 +294,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(0));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
@@ -323,7 +323,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
 		// expect
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 		assertThat(returned, is(Void.getInstance()));
 		assertThat(sumContainer.size(), is(1));
 		assertThat(sumContainer.get(0), is(LongStream.of(someNumbers).sum()));
@@ -347,7 +347,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(1));
 		assertTrue(replyMsg.getReturnValue().getIsVoid());
@@ -380,7 +380,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		} catch (NullPointerException npe) {
 			// all good
 		}
-		verifyDispatcherConnectorCalledTwice();
+		verifyDispatcherConnectorSendExecMessageCalledTwice();
 	}
 
 	@Test
@@ -400,7 +400,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 		ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
 		// expect
-		verifyDispatcherConnectorCalledOnce();
+		verifyDispatcherConnectorSendExecMessageCalledOnce();
 		assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
 		assertThat(objectService.size(), is(0));
 		assertThat(replyMsg.getRaisedThrowable().getThrowable().getType(),

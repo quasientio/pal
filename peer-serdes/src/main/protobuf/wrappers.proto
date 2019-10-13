@@ -63,3 +63,15 @@ message ExecMessage {
         ReturnValue returnValue = 20;
     }
 }
+
+message InterceptRequest {
+    required string peerUuid = 1;
+    required string messageUuid = 2;
+    required string clazz = 3;
+    oneof executable {
+        string field = 4;
+        string method = 5;
+    }
+    required string callbackClass = 6;
+    required string callbackMethod = 7;
+}

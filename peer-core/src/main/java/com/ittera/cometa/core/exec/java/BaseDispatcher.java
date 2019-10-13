@@ -54,7 +54,7 @@ public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatche
 		final ExecMessage beforeExecMsg = wrapBeforeExecMessage(ctxt, sender, target, args);
 
 		// 2. Send message
-		final ExecMessage beforeExecReplyMsg = connector.sendAndRecv(beforeExecMsg);
+		final ExecMessage beforeExecReplyMsg = connector.sendExecMessage(beforeExecMsg);
 
 		// TODO if beforeExecReplyMsg != beforeExecMsg, unpack and exec reply msg
 
@@ -76,7 +76,7 @@ public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatche
 		final ExecMessage afterExecMsg = wrapAfterExecMessage(ctxt, returnValue, objectRef, returnsVoid);
 
 		// 6. Send object or exception
-		final ExecMessage afterExecReplyMsg = connector.sendAndRecv(afterExecMsg);
+		final ExecMessage afterExecReplyMsg = connector.sendExecMessage(afterExecMsg);
 
 		// TODO if afterExecReplyMsg != afterExecMsg, unpack exception or return value
 
@@ -184,7 +184,7 @@ public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatche
 			exceptionWhileLoading, exceptionWhileInvoking);
 
 		// 10. Send object or exception, and receive
-		final ExecMessage afterExecReplyMsg = connector.sendAndRecv(afterExecMsg);
+		final ExecMessage afterExecReplyMsg = connector.sendExecMessage(afterExecMsg);
 
 		// 11. Return received message
 		if (logger.isTraceEnabled()) {

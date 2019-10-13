@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class KafkaExecMessageSerde implements Serde<ExecMessage> {
 
-	private final Serde<ExecMessage> inner;
+	private final Serde inner;
 
 	public KafkaExecMessageSerde() {
 		inner = Serdes.serdeFrom(new KafkaSerializer(), new KafkaDeserializer());

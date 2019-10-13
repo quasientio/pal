@@ -1,5 +1,6 @@
 package com.ittera.cometa.cxn;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.LogReply;
 import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
@@ -147,7 +148,12 @@ class ExecMessageFuture implements
 			}
 
 			// set msg value to complete future
-			ExecMessage messageReply = thinPeer.getMessageAtOffset(logReply.getOffset());
+			ExecMessage messageReply = null;
+			try {
+				messageReply = thinPeer.getMessageAtOffset(logReply.getOffset());
+			} catch (InvalidProtocolBufferException e) {
+				logger.error("Error deserializing reply message for req w/uuid: {}", logRequest.getUuid(), e);
+			}
 			if (logger.isDebugEnabled()) {
 				logger.debug("completing future reply msg w/uuid: {} for request w/uuid: {}",
 					messageReply.getMessageUuid(), messageReply.getFollowingUuid());

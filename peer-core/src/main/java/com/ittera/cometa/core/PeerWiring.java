@@ -28,12 +28,14 @@ class PeerWiring extends AbstractModule {
 	private final UUID peerUuid;
 	private final CustomClassloader customClassloader;
 	private final EnumSet<RunOptions> runOptions;
+	private final ThreadGroup serviceThreadGroup = new ThreadGroup("service-threads");
 
 	PeerWiring(Properties properties, EnumSet<RunOptions> runOptions, ZContext zContext, CustomClassloader customClassloader) {
 		if (logger.isDebugEnabled()) {
 			printProperties(properties);
 		}
 		this.properties = properties;
+		addServiceNamesToProps();
 		this.runOptions = runOptions;
 		this.zContext = zContext;
 		this.peerUuid = UUID.fromString(properties.getProperty("id"));
@@ -47,7 +49,15 @@ class PeerWiring extends AbstractModule {
 		for (String key : keys) {
 			sb.append("\n").append(key).append(":").append(props.getProperty(key));
 		}
-		logger.debug("initializing guice module with properties:{}", sb.toString());
+		logger.debug("Created guice module with properties:{}", sb.toString());
+	}
+
+	private void addServiceNamesToProps() {
+		// use underscore in names to better filter service-related traces
+		properties.setProperty("LogReader.service", "Log_Reader");
+		properties.setProperty("LogWriter.service", "Log_Writer");
+		properties.setProperty("DirectRequestDispatcher.service", "Direct_Request_Dispatcher");
+		properties.setProperty("OutgoingMessageDispatcher.service", "Outgoing_Message_Dispatcher");
 	}
 
 	@Override
@@ -77,6 +87,11 @@ class PeerWiring extends AbstractModule {
 	@Provides
 	UUID getPeerUuid() {
 		return peerUuid;
+	}
+
+	@Provides
+	ThreadGroup getServiceThreadGroup() {
+		return serviceThreadGroup;
 	}
 
 	@Provides

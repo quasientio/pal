@@ -1,102 +1,61 @@
 package com.ittera.cometa.core.exec;
 
-import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 
+import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
-import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-class LogMessageInvoker extends Thread {
-
-	private static final Logger logger = LoggerFactory.getLogger(LogMessageInvoker.class);
-
-	private final AtomicLong requestsDispatched = new AtomicLong(0);
-
-	// zmq stuff
-	private final ZContext zmqContext;
-	private final String inLogAddress;
-	private Socket socket;
-
-	private final IncomingMessageDispatcher incomingMessageDispatcher;
-	private final DispatcherConnector dispatcherConnector;
-	private final MessageBuilder messageBuilder;
-	private final UUID peerUuid;
+class LogMessageInvoker extends AbstractMessageInvokerThread {
 
 	public LogMessageInvoker(ThreadGroup group, Runnable target, String name, ZContext zmqContext,
-													 MessageBuilder messageBuilder, String inLogAddress, IncomingMessageDispatcher
-														 incomingMessageDispatcher, DispatcherConnector dispatcherConnector, UUID peerUuid) {
-		super(group, target, name);
-		this.zmqContext = zmqContext;
-		this.messageBuilder = messageBuilder;
-		this.inLogAddress = inLogAddress;
-		this.incomingMessageDispatcher = incomingMessageDispatcher;
-		this.dispatcherConnector = dispatcherConnector;
-		this.peerUuid = peerUuid;
-		if (logger.isDebugEnabled()) {
-			logger.debug("Initialized new log message invoker thread named: {} with inLogAddress: {}", name, inLogAddress);
-		}
+													 MessageBuilder messageBuilder, String dealerAddress, IncomingMessageDispatcher
+														 incomingMessageDispatcher, DispatcherConnector dispatcherConnector) {
+		super(group, target, name, zmqContext, messageBuilder, dealerAddress, incomingMessageDispatcher,
+			dispatcherConnector);
 	}
 
-	/**
-	 * Constructor exclusive for unit-testing -- to avoid ExecutorService and ThreadFactory dependencies.
-	 * NOTE: dispatcherConnector is set to null, since it's not required
-	 *
-	 * @param zmqContext
-	 * @param messageBuilder
-	 * @param inLogAddress
-	 * @param incomingMessageDispatcher
-	 * @param peerUuid
-	 */
-	LogMessageInvoker(ZContext zmqContext, MessageBuilder messageBuilder, String inLogAddress,
-										IncomingMessageDispatcher incomingMessageDispatcher, UUID peerUuid) {
-		this.zmqContext = zmqContext;
-		this.messageBuilder = messageBuilder;
-		this.inLogAddress = inLogAddress;
-		this.incomingMessageDispatcher = incomingMessageDispatcher;
-		this.dispatcherConnector = null;
-		this.peerUuid = peerUuid;
-		if (logger.isDebugEnabled()) {
-			logger.debug("Initialized new log message invoker thread with inLogAddress: {}", inLogAddress);
-		}
+	LogMessageInvoker(ZContext zmqContext, MessageBuilder messageBuilder, String dealerAddress,
+										IncomingMessageDispatcher incomingMessageDispatcher) {
+		super(zmqContext, messageBuilder, dealerAddress, incomingMessageDispatcher);
 	}
+
 
 	@Override
 	public void run() {
 
 		// create REP socket
 		socket = zmqContext.createSocket(SocketType.REP);
-		socket.connect(inLogAddress);
-
-		ExecMessage requestMsg;
+		socket.connect(dealerAddress);
 
 		if (logger.isDebugEnabled()) {
 			logger.debug("Start getting requests from socket");
 		}
 		while (!Thread.interrupted()) {
 
-			String offset;
 			long logOffset;
-			byte[] req;
+			MessageType msgType;
+			byte[] msg;
 
 			// recv req
 			try {
-				offset = socket.recvStr();
+				byte[] buff = socket.recv();
+				logOffset = Longs.fromByteArray(buff);
 				if (logger.isDebugEnabled()) {
-					logger.debug("Getting message with kafka offset: {}", offset);
+					logger.debug("Getting message with kafka offset: {}", logOffset);
 				}
-				logOffset = Long.parseLong(offset);
-				req = socket.recv();
+				buff = socket.recv();
+				msgType = MessageType.values[Ints.fromByteArray(buff)];
+				msg = socket.recv();
 			} catch (ZMQException ex) {
 				int errorCode = ex.getErrorCode();
 				if (errorCode == ZError.ETERM) {
@@ -114,18 +73,25 @@ class LogMessageInvoker extends Thread {
 				}
 			}
 
-			requestMsg = null;
+			Object requestMsg = null;
 			long started = System.currentTimeMillis();
 
 			// parse req
 			try {
-				requestMsg = ExecMessage.parseFrom(req);
+				if (msgType.equals(MessageType.ExecMessage)) {
+					requestMsg = ExecMessage.parseFrom(msg);
+				} else if (msgType.equals(MessageType.InterceptRequest)) {
+					requestMsg = InterceptRequest.parseFrom(msg);
+				} else {
+					logger.error("Received unknown message type: {}", msgType);
+				}
 			} catch (Exception e) {
 				logger.error("Caught exception parsing message", e);
 			}
 
 			if (logger.isDebugEnabled()) {
-				logger.debug("Received req message with uuid: {}", requestMsg != null ? requestMsg.getMessageUuid() : null);
+				logger.debug("Received message with offset: {}, type: {}, uuid: {}",
+					logOffset, msgType, getMessageUuid(requestMsg));
 			}
 
 			// dispatch it
@@ -134,41 +100,12 @@ class LogMessageInvoker extends Thread {
 				if (logger.isDebugEnabled()) {
 					final long took = System.currentTimeMillis() - started;
 					if (logger.isDebugEnabled()) {
-						logger.debug("Dispatched log message with uuid: {} in {} millisecs", requestMsg.getMessageUuid(), took);
+						logger.debug("Dispatched log message with uuid: {} in {} millisecs", getMessageUuid(requestMsg), took);
 					}
 				}
 			}
 		}
 
 		closeConnections();
-
-		if (logger.isDebugEnabled()) {
-			logger.debug("Stopped log executor thread: {}, dispatched={}", getName(), requestsDispatched.get());
-		}
-	}
-
-	private void closeConnections() {
-
-		if (socket != null) {
-			socket.close();
-		}
-
-		if (dispatcherConnector != null) {
-			dispatcherConnector.closeThreadLocalSocket();
-		}
-	}
-
-	private void dispatch(ExecMessage requestMsg, long recordOffset) {
-		ExecMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, false);
-		if (logger.isDebugEnabled()) {
-			logger.debug("Invoker dispatched log request message uuid: {} and recordOffset: {}, reply uuid: {}",
-				requestMsg.getMessageUuid(), recordOffset, replyMsg.getMessageUuid());
-		}
-		requestsDispatched.getAndIncrement();
-		messageBuilder.resetThreadLocalSequence();
-	}
-
-	public AtomicLong getRequestsDispatched() {
-		return requestsDispatched;
 	}
 }

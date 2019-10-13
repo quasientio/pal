@@ -2,8 +2,8 @@ package com.ittera.cometa.core;
 
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.cxn.PALDirectory;
+import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.UUIDUtils;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -14,22 +14,24 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.nio.channels.ClosedSelectorException;
 
-import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
-import com.google.inject.name.Named;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
+import javax.inject.Named;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import com.google.common.primitives.Longs;
-import com.google.common.util.concurrent.AbstractExecutionThreadService;
+import com.google.common.primitives.Ints;
 
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
@@ -43,16 +45,13 @@ import zmq.ZError;
  * We are reading everything from the log. Is it absolutely required? Can it be optional? If so, what to skip reading?
  */
 @Singleton
-public class LogReader extends AbstractExecutionThreadService {
+public class LogReader extends ConnectedService {
 
 	private static final Logger logger = LoggerFactory.getLogger(LogReader.class);
 
 	private volatile boolean acceptingRequests = false;
-	private volatile boolean connectionsOpen = false;
-	private volatile boolean shutdownRequested = false;
 
 	// zmq stuff
-	private ZContext zmqContext;
 	private Socket logDealer;
 	private Socket offsetSubscriber;
 	private final String inLogAddress, offsetPubAddress;
@@ -68,14 +67,12 @@ public class LogReader extends AbstractExecutionThreadService {
 	private Long initialOffset;
 	private String kafkaTopic;
 	private TopicPartition topicPartition;
-	private Consumer<String, ExecMessage> consumer;
+	private Consumer<String, byte[]> consumer;
 	private final Properties consumerProperties = new Properties();
 	private volatile long lastOffsetRead = -1;
 
 	// pal directory
 	private PALDirectory palDirectory;
-
-	private UUID peerUuid;
 
 	// shared by threads OffsetUpdater and LogReader: TODO avoid sharing
 	final private AbstractQueue<Long> skipOffsets = new ConcurrentLinkedQueue<>();
@@ -85,23 +82,26 @@ public class LogReader extends AbstractExecutionThreadService {
 		private final Socket offsetSubscriber;
 
 		OffsetUpdater(Socket offsetSubscriber) {
-			super("Offset informer");
+			super("offset-updater");
 			this.offsetSubscriber = offsetSubscriber;
 		}
 
 		@Override
 		public void run() {
 			if (logger.isDebugEnabled()) {
-				logger.debug("Offset informer running");
+				logger.debug("OffsetUpdater running");
 			}
 
 			byte[] offsetBuff;
 
-			while (!Thread.interrupted()) {
+			while (!shutdownRequested && !Thread.interrupted()) {
 				long offset;
 				try {
 					// multi-part msg: 1) offset as byte[], 2) uuid as byte[]
-					offsetBuff = offsetSubscriber.recv();
+					offsetBuff = offsetSubscriber.recv(ZMQ.DONTWAIT);
+					if (offsetBuff == null) {
+						continue;
+					}
 					offsetSubscriber.recv(); // read and discard UUID
 					offset = Longs.fromByteArray(offsetBuff);
 					skipOffsets.add(offset);
@@ -131,7 +131,12 @@ public class LogReader extends AbstractExecutionThreadService {
 	}
 
 	@Inject
-	public LogReader(@Named("key.deserializer") String keyDeserializer,
+	public LogReader(UUID peerUuid,
+									 ZContext context,
+									 @Named("sync.ready") String syncSocketAddress,
+									 ThreadGroup serviceThreadGroup,
+									 @Named("LogReader.service") String serviceName,
+									 @Named("key.deserializer") String keyDeserializer,
 									 @Named("value.deserializer") String valueDeserializer,
 									 @Named("enable.auto.commit") String autoCommit,
 									 @Named("auto.commit.interval.ms") String autoCommitInterval,
@@ -141,11 +146,8 @@ public class LogReader extends AbstractExecutionThreadService {
 									 @Named("pollDuration") String pollDuration,
 									 @Named("in.log") String inLogAddress,
 									 @Named("offset.pub") String offsetPubAddress,
-									 ZContext zmqContext,
-									 PALDirectory palDirectory,
-									 UUID peerUuid) {
-		this.zmqContext = zmqContext;
-		this.peerUuid = peerUuid;
+									 PALDirectory palDirectory) {
+		super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
 		this.palDirectory = palDirectory;
 		// zmq addresses
 		this.inLogAddress = inLogAddress;
@@ -159,57 +161,47 @@ public class LogReader extends AbstractExecutionThreadService {
 		consumerProperties.put("auto.commit.interval.ms", autoCommitInterval);
 		consumerProperties.put("auto.offset.reset", autoOffsetReset);
 		consumerProperties.put("session.timeout.ms", sessionTimeout);
-
 		StringBuilder propsStr = new StringBuilder();
 		for (String propKey : consumerProperties.stringPropertyNames()) {
 			propsStr.append(propKey).append('=').append(consumerProperties.getProperty(propKey)).append(", ");
 		}
-		logger.info("Created log reader for peer with id '{}' and properties: [{}]",
-			peerId, propsStr.toString());
+		logger.info("Created log reader for peer with id '{}' and properties: [{}]", peerUuid, propsStr.toString());
 	}
 
 	/**
 	 * Used from unit tests with MockConsumer
-	 *
-	 * @param zmqContext
-	 * @param inLogAddress
-	 * @param offsetPubAddress
-	 * @param palDirectory
-	 * @param consumer
-	 * @param peerUuid
-	 * @param pollDuration
 	 */
-	LogReader(ZContext zmqContext,
+	LogReader(UUID peerUuid,
+						ZContext context,
+						@Named("sync.ready") String syncSocketAddress,
+						ThreadGroup serviceThreadGroup,
+						String serviceName,
 						String inLogAddress,
 						String offsetPubAddress,
 						PALDirectory palDirectory,
-						Consumer<String, ExecMessage> consumer,
-						UUID peerUuid,
+						Consumer<String, byte[]> consumer,
 						long pollDuration) {
-		this.zmqContext = zmqContext;
+		super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
 		this.inLogAddress = inLogAddress;
 		this.offsetPubAddress = offsetPubAddress;
-		this.peerUuid = peerUuid;
 		this.palDirectory = palDirectory;
 		this.consumer = consumer;
 		this.pollDuration = Duration.of(pollDuration, ChronoUnit.MILLIS);
-
 		logger.info("Created log reader for peer with id '{}'", peerUuid);
 	}
 
 	public void readFromLog(String logName, boolean skipWrittenOffsets, Long initialOffset) throws Exception {
-
 		this.kafkaTopic = logName;
 		this.skipWrittenOffsets = skipWrittenOffsets;
 		this.initialOffset = initialOffset;
 		LogInfo logInfo = palDirectory.getLogInfo(logName);
-
 		consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
-		logger.info("Now reading from log: {} and bootstrapServers: {}, starting at offset: {}", logInfo.getName(),
-			logInfo.getBootstrapServers(), initialOffset);
+		logger.info("Reading from log: {} and bootstrapServers: {}, starting at offset: {}, {}skipping written offsets",
+			logInfo.getName(), logInfo.getBootstrapServers(), initialOffset, skipWrittenOffsets ? "" : "NOT ");
 	}
 
-	private void openConnections() {
+	@Override
+	protected void openConnections() {
 		// only configure consumer if no consumer passed in constructor
 		if (consumer == null) {
 			this.consumer = new KafkaConsumer<>(consumerProperties);
@@ -222,116 +214,72 @@ public class LogReader extends AbstractExecutionThreadService {
 			} else {
 				consumer.seek(topicPartition, initialOffset);
 			}
-			logger.info("Initialized log consumer");
 		}
-
 		this.logDealer = zmqContext.createSocket(SocketType.DEALER);
 		logDealer.bind(inLogAddress);
-
 		// subscriber to get the offsets written by the message writer
 		if (skipWrittenOffsets) {
 			this.offsetSubscriber = zmqContext.createSocket(SocketType.SUB);
 			offsetSubscriber.connect(offsetPubAddress);
 			offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
-
 			new OffsetUpdater(offsetSubscriber).start();
-			logger.info("Initialized offset notifier thread");
 		}
-
-		logger.info("Initialized zmq sockets");
-
-		connectionsOpen = true;
-		logger.info("All connections open");
-	}
-
-	private void closeConnections() {
-
-		if (consumer != null) {
-			consumer.close();
-			logger.info("Closed log consumer");
-		}
-
-		if (logDealer != null) {
-			logDealer.close();
-		}
-
-		if (offsetSubscriber != null) {
-			offsetSubscriber.close();
-		}
-
-		logger.info("All connections closed");
 	}
 
 	@Override
 	public final void run() {
-
-		long iterations = 0;
-
-		//wait for connections established
-		while (!connectionsOpen) {
-			try {
-				Thread.sleep(300);
-			} catch (InterruptedException e) {
-				//what to do
-			}
-		}
-
 main_loop:
-		while (isRunning() && !Thread.interrupted()) {
+		while (!Thread.interrupted()) {
 
 			while (!acceptingRequests) {
 				try {
 					Thread.sleep(100);
 				} catch (InterruptedException e) {
-					// break out via thread interrupt
-					break main_loop;
-				} // break out by stopping the service
-				if (shutdownRequested) { // we need a way out if the service is stopped while we're here
 					break main_loop;
 				}
 			}
 
 			// read from kafka
-			ConsumerRecords<String, ExecMessage> records;
+			ConsumerRecords<String, byte[]> records;
 			long t0;
 			t0 = System.nanoTime();
-			records = consumer.poll(pollDuration);
+			try {
+				records = consumer.poll(pollDuration);
+			} catch (InterruptException e) {
+				break main_loop;
+			}
 			totalPollingNanos.getAndAdd(System.nanoTime() - t0);
 			totalPolls.getAndIncrement();
-
+			if (logger.isTraceEnabled()) {
+				logger.trace("{} messages read during poll of {}", records.count(), pollDuration);
+			}
 			if (logger.isDebugEnabled() && records.count() > 0) {
 				logger.debug("Records read: {}", records.count());
 			}
 
 			// process records if any
 			for (ConsumerRecord record : records) {
-
 				messagesRcvd.getAndIncrement();
-
 				if (logger.isDebugEnabled()) {
 					logger.debug("Processing received record # {} with offset {} :\n {}", messagesRcvd, record.offset(),
 						record);
 				}
-
 				final long messageOffset = record.offset();
 				lastOffsetRead = messageOffset;
-
 				if (!recordProducedOrDispatchingBySelf(record.headers())) {
-					final ExecMessage execMessage = (ExecMessage) record.value();
-
 					// send request to DEALER socket
 					logDealer.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
-					logDealer.send(String.valueOf(messageOffset), ZMQ.SNDMORE);
-					logDealer.send(execMessage.toByteArray(), 0);
+					logDealer.send(Longs.toByteArray(messageOffset), ZMQ.SNDMORE);
+					logDealer.send(Ints.toByteArray(getMessageType(record.headers()).ordinal()), ZMQ.SNDMORE);
+					logDealer.send((byte[]) record.value(), 0);
 					if (logger.isDebugEnabled()) {
-						logger.debug("Dealt new log message with uuid: {}", execMessage.getMessageUuid());
+						logger.debug("Dealt new log message with offset: {}", messageOffset);
 					}
 				} else {
 					if (logger.isDebugEnabled()) {
-						logger.debug("skipped msg with offset: {}", messageOffset);
+						logger.debug("Skipped msg with offset: {}", messageOffset);
 					}
 				}
-
 				// get next offset to poll
 				if (skipWrittenOffsets) {
 					Long nextOffset = nextOffset();
@@ -345,14 +293,12 @@ main_loop:
 					}
 				}
 			}
-
 			// short pause, not to be eager
 			try {
 				Thread.sleep(1);
 			} catch (InterruptedException e) {
 				break;
 			}
-
 			// get next offset to poll
 			if (skipWrittenOffsets) {
 				Long nextOffset = nextOffset();
@@ -364,18 +310,41 @@ main_loop:
 				}
 			}
 		}
+	}
 
-		closeConnections();
+	@Override
+	protected void closeConnections() {
+		if (consumer != null) {
+			try {
+				consumer.close();
+			} catch (Exception e) {
+				logger.debug("Error closing consumer", e);
+			}
+		}
+		if (logDealer != null) {
+			try {
+				logDealer.close();
+			} catch (Exception e) {
+				logger.debug("Error closing dealer", e);
+			}
+		}
+		if (offsetSubscriber != null) {
+			try {
+				offsetSubscriber.close();
+			} catch (Exception e) {
+				logger.debug("Error closing offset subscriber", e);
+			}
+		}
+		//TODO: send uncommitted offset, etc.
 	}
 
 	private boolean recordProducedOrDispatchingBySelf(Headers headers) {
-
 		return Stream.of("produced-by", "dispatching-by").anyMatch(hdrName -> {
 			for (Header header : headers.headers(hdrName)) {
 				UUID uuidInHeader = UUIDUtils.fromBytes(header.value());
 				if (peerUuid.equals(uuidInHeader)) {
 					if (logger.isDebugEnabled()) {
-						logger.debug("will skip message {} self", hdrName);
+						logger.debug("Will skip message {} self", hdrName);
 					}
 					return true;
 				}
@@ -384,30 +353,32 @@ main_loop:
 		});
 	}
 
+	private MessageType getMessageType(Headers headers) {
+		for (Header header : headers.headers("type")) {
+			return MessageType.values[Ints.fromByteArray(header.value())];
+		}
+		return MessageType.Unknown;
+	}
+
 	private Long nextOffset() {
 		if (logger.isTraceEnabled()) {
 			final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
 			logger.trace("in w/ lastOffsetRead = {}, and queue: {}", lastOffsetRead, queueStr);
 		}
-
 		// initial candidate == last read + 1
 		Long nextToRead = lastOffsetRead + 1;
-
 		Long nextOffsetToSkip = skipOffsets.peek();
-
 		// clean up all possible offsets up to and including last read
 		while ((nextOffsetToSkip != null) && (nextOffsetToSkip < nextToRead)) {
 			skipOffsets.poll();
 			nextOffsetToSkip = skipOffsets.peek();
 		}
-
 		// while queue not empty, pop next offsets in sequence
 		while (nextToRead.equals(nextOffsetToSkip)) {
 			skipOffsets.poll();
 			nextToRead++;
 			nextOffsetToSkip = skipOffsets.peek();
 		}
-
 		if (logger.isTraceEnabled()) {
 			final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
 			logger.trace("out w/ nextToRead = {} with lastOffsetRead = {}, and final queue: {}",
@@ -417,26 +388,12 @@ main_loop:
 	}
 
 	@Override
-	protected void startUp() {
-		openConnections();
-	}
-
-	@Override
-	protected void triggerShutdown() {
-
-		logger.info("Log reader shutting down.");
-		//TODO: clean up, send uncommitted offset, etc.
-		shutdownRequested = true;
+	protected void triggerStop() {
+		super.triggerStop();
 		acceptingRequests = false;
 	}
 
-	@Override
-	protected void shutDown() {
-
-		logger.info("Log reader shut down.");
-	}
-
-	protected void printDebugStats() {
+	protected void logDebugStats() {
 		if (logger.isDebugEnabled()) {
 			logger.debug("--------STATS--------");
 			logger.debug("# of messages received from k-log: {}", messagesRcvd.get());
@@ -450,7 +407,7 @@ main_loop:
 		return acceptingRequests;
 	}
 
-	public void acceptConnections(boolean acceptConnections) {
-		this.acceptingRequests = acceptConnections;
+	public void acceptRequests(boolean acceptRequests) {
+		this.acceptingRequests = acceptRequests;
 	}
 }

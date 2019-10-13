@@ -47,7 +47,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 	private static final UUID peerUuid = UUID.randomUUID();
 	private PALDirectory palDirectory;
 	private TestingServer testingServer;
-	private MockProducer<String, ExecMessage> producer;
+	private MockProducer<String, byte[]> producer;
 	private ZMQ.Socket offsetPublisher;
 	private ZContext zmqContext;
 	private final String offsetPubAddress = "inproc://offsets";
@@ -111,10 +111,10 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 		}
 
 		// create and send ProducerRecord w/ MessageOffsetInformer callback
-		ProducerRecord<String, ExecMessage> newRecord = new ProducerRecord<>(log.getName(),
-			0, peerUuid.toString(), replyMessage);
-		MessageOffsetInformer offsetInformer = new MessageOffsetInformer(replyMessage, publishOffsets, writeReplyNodes,
-			offsetPublisher, palDirectory, log, peerUuid);
+		ProducerRecord<String, byte[]> newRecord = new ProducerRecord<>(log.getName(),
+			0, peerUuid.toString(), replyMessage.toByteArray());
+		MessageOffsetInformer offsetInformer = new MessageOffsetInformer(UUID.fromString(replyMessage.getMessageUuid()),
+			requestUuid, publishOffsets, writeReplyNodes, offsetPublisher, palDirectory, log, peerUuid);
 		producer.send(newRecord, offsetInformer);
 
 		while (!offsetInformer.isDone()) {
@@ -151,10 +151,10 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 		// DON'T ADD log request to directory just yet
 
 		// create and send ProducerRecord w/ MessageOffsetInformer callback
-		ProducerRecord<String, ExecMessage> newRecord = new ProducerRecord<>(log.getName(),
-			0, peerUuid.toString(), replyMessage);
-		MessageOffsetInformer offsetInformer = new MessageOffsetInformer(replyMessage, publishOffsets, writeReplyNodes,
-			offsetPublisher, palDirectory, log, peerUuid);
+		ProducerRecord<String, byte[]> newRecord = new ProducerRecord<>(log.getName(),
+			0, peerUuid.toString(), replyMessage.toByteArray());
+		MessageOffsetInformer offsetInformer = new MessageOffsetInformer(UUID.fromString(replyMessage.getMessageUuid()),
+			requestUuid, publishOffsets, writeReplyNodes, offsetPublisher, palDirectory, log, peerUuid);
 		producer.send(newRecord, offsetInformer);
 
 		// NOW, wait a bit and then add log request to directory
@@ -208,10 +208,10 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 		}
 
 		// create and send ProducerRecord w/ MessageOffsetInformer callback
-		ProducerRecord<String, ExecMessage> newRecord = new ProducerRecord<>(log.getName(),
-			0, peerUuid.toString(), replyMessage);
-		MessageOffsetInformer offsetInformer = new MessageOffsetInformer(replyMessage, publishOffsets, writeReplyNodes,
-			offsetPublisher, palDirectory, log, peerUuid);
+		ProducerRecord<String, byte[]> newRecord = new ProducerRecord<>(log.getName(),
+			0, peerUuid.toString(), replyMessage.toByteArray());
+		MessageOffsetInformer offsetInformer = new MessageOffsetInformer(UUID.fromString(replyMessage.getMessageUuid()),
+			requestUuid, publishOffsets, writeReplyNodes, offsetPublisher, palDirectory, log, peerUuid);
 		Future<RecordMetadata> recordMetadataFuture = producer.send(newRecord, offsetInformer);
 
 		while (!offsetInformer.isDone()) {

@@ -16,9 +16,9 @@ import java.lang.reflect.AccessibleObject;
 import java.util.List;
 import java.util.UUID;
 
+@Singleton
 public class GetClassVariableDispatcher extends GetFieldDispatcher {
 
-	@Singleton
 	@Inject
 	public GetClassVariableDispatcher(UUID peerUuid, MessageBuilder messageBuilder, DispatcherConnector connector,
 																		ObjectService objectService) {

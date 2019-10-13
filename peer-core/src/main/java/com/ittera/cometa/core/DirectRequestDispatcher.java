@@ -1,21 +1,21 @@
 package com.ittera.cometa.core;
 
-import com.google.common.util.concurrent.AbstractExecutionThreadService;
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
-import com.google.inject.name.Named;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.UUID;
 
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Singleton
-class DirectRequestDispatcher extends AbstractExecutionThreadService {
+class DirectRequestDispatcher extends ConnectedService {
 
 	private static final Logger logger = LoggerFactory.getLogger(DirectRequestDispatcher.class);
 
@@ -23,85 +23,74 @@ class DirectRequestDispatcher extends AbstractExecutionThreadService {
 	private final String routerAddress, dealerAddress;
 	private final String PROXY_CTRL_ADDR = "inproc://rdprxyctrl";
 
-	private ZContext context;
 	private Socket router, dealer, ctrl;
 
 	@Inject
-	public DirectRequestDispatcher(@Named("in.req.tcp")String routerAddress,
-																 @Named("in.dealer") String dealerAddress,
-																 ZContext context) {
+	public DirectRequestDispatcher(UUID peerUuid,
+																 ZContext context,
+																 @Named("sync.ready") String syncSocketAddress,
+																 ThreadGroup serviceThreadGroup,
+																 @Named("DirectRequestDispatcher.service") String serviceName,
+																 @Named("in.req.tcp") String routerAddress,
+																 @Named("in.dealer") String dealerAddress) {
+		super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
 		this.routerAddress = routerAddress;
 		this.dealerAddress = dealerAddress;
-		this.context = context;
 	}
 
-	private void openConnections() {
+	@Override
+	protected void openConnections() {
 		// to get requests for conc
-		this.router = context.createSocket(SocketType.ROUTER);
+		this.router = zmqContext.createSocket(SocketType.ROUTER);
 		router.bind(routerAddress);
-
 		// to send requests to conc
-		this.dealer = context.createSocket(SocketType.DEALER);
+		this.dealer = zmqContext.createSocket(SocketType.DEALER);
 		dealer.bind(dealerAddress);
-
 		// to get proxy termination command
-		this.ctrl = context.createSocket(SocketType.PAIR);
+		this.ctrl = zmqContext.createSocket(SocketType.PAIR);
 		ctrl.bind(PROXY_CTRL_ADDR);
+	}
 
-		logger.info("All connections open");
+	@Override
+	public final void run() {
+		// create router-dealer proxy
+		ZMQ.proxy(router, dealer, null, ctrl);
+	}
+
+	@Override
+	protected void closeConnections() {
+		if (router != null) {
+			try {
+				router.close();
+			} catch (Exception e) {
+				logger.debug("Error closing router", e);
+			}
+		}
+		if (dealer != null) {
+			try {
+				dealer.close();
+			} catch (Exception e) {
+				logger.debug("Error closing dealer", e);
+			}
+		}
+		if (ctrl != null) {
+			try {
+				ctrl.close();
+			} catch (Exception e) {
+				logger.debug("Error closing ctrl socket", e);
+			}
+		}
 	}
 
 	private void sendProxyTermCmd() {
-		ZMQ.Socket ctrlCli = context.createSocket(SocketType.PAIR);
+		ZMQ.Socket ctrlCli = zmqContext.createSocket(SocketType.PAIR);
 		ctrlCli.connect(PROXY_CTRL_ADDR);
 		ctrlCli.send(ZMQ.PROXY_TERMINATE);
 		ctrlCli.close();
 	}
 
-	private void closeConnections() {
-		if (router != null) {
-			router.close();
-		}
-
-		if (dealer != null) {
-			dealer.close();
-		}
-
-		if (ctrl != null) {
-			ctrl.close();
-		}
-
-		logger.info("All connections closed");
-	}
-
 	@Override
-	public final void run() {
-
-		logger.info("Running router-dealer proxy");
-
-		// create router-dealer proxy
-		ZMQ.proxy(router, dealer, null, ctrl);
-		logger.info("Finished running router-dealer proxy");
-	}
-
-	@Override
-	protected void startUp() {
-		openConnections();
-
-		logger.info("Initialized IN message dispatcher");
-	}
-
-	@Override
-	protected void triggerShutdown() {
+	protected void triggerStop() {
 		sendProxyTermCmd();
-		closeConnections();
-
-		logger.info("IN Message dispatcher shutting down.");
-	}
-
-	@Override
-	protected void shutDown() {
-
-		logger.info("IN Message dispatcher shut down");
 	}
 }

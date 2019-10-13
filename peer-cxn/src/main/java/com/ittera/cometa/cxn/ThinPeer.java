@@ -1,11 +1,13 @@
 package com.ittera.cometa.cxn;
 
+import com.google.common.primitives.Ints;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.PeerInfo;
+import com.ittera.cometa.messages.LogMessageHeader;
+import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
-
 import com.ittera.cometa.common.util.Strings;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -15,6 +17,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.header.Header;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,12 +64,14 @@ public class ThinPeer {
 	private TopicPartition inTopicPartition;
 	private Duration pollingDuration;
 	private static final int PRECEDING_RECS = 50;
+	private static final int PRODUCER_PARTITION = 0;
 
-	private KafkaProducer<String, ExecMessage> producer;
-	private KafkaConsumer<String, String> consumer;
+	private KafkaProducer<String, byte[]> producer;
+	private KafkaConsumer<String, byte[]> consumer;
 
 	private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap<>();
 	private ExecutorService singleThreadConsumerExecutor;
+	private final Map<String, Header> HEADERS = new HashMap<>();
 
 	// zmq stuff
 	private final ZContext zmqContext;
@@ -188,6 +193,12 @@ public class ThinPeer {
 
 			// init executor
 			singleThreadConsumerExecutor = Executors.newSingleThreadExecutor();
+
+			// create and store immutable headers (instead of creating with every send)
+			this.HEADERS.put("EXEC_MSG_TYPE_HEADER",
+				new LogMessageHeader("type", Ints.toByteArray(MessageType.ExecMessage.ordinal())));
+			this.HEADERS.put("INTERCEPT_MSG_TYPE_HEADER",
+				new LogMessageHeader("type", Ints.toByteArray(MessageType.InterceptRequest.ordinal())));
 		}
 
 		// configure ZMQ
@@ -263,7 +274,8 @@ public class ThinPeer {
 		peerSocket.connect(currentPeer.getReqAddress());
 	}
 
-	public ExecMessage sendAndReceive(ExecMessage message) throws ExecutionException, InterruptedException {
+	public ExecMessage sendAndReceive(ExecMessage message) throws ExecutionException, InterruptedException,
+		InvalidProtocolBufferException {
 		if (allowP2P && talkingToPeer) {
 			return sendToPeer(message);
 		} else {
@@ -271,7 +283,7 @@ public class ThinPeer {
 		}
 	}
 
-	public ExecMessage waitFor(Wrappers.Type type, String fieldName) {
+	public ExecMessage waitFor(Wrappers.Type type, String fieldName) throws InvalidProtocolBufferException {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
 		}
@@ -279,11 +291,10 @@ public class ThinPeer {
 		//consumer.seek(inTopicPartition, sentRecordOffset);
 
 		while (true) {
-			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
-			for (ConsumerRecord record : records) {
-				final ExecMessage execMessage = (ExecMessage) record.value();
+			ConsumerRecords<String, byte[]> records = consumer.poll(pollingDuration);
+			for (ConsumerRecord<String, byte[]> record : records) {
+				final ExecMessage execMessage = ExecMessage.parseFrom(record.value());
 				long receivedMsgOffset = record.offset();
-
 				if (execMessage.hasStaticFieldPutDone() &&
 					fieldName.equals(execMessage.getStaticFieldPutDone().getField().getName())) {
 					if (logger.isDebugEnabled()) {
@@ -299,11 +310,11 @@ public class ThinPeer {
 		}
 	}
 
-	public ExecMessage getMessageAtOffset(Long seek) {
+	public ExecMessage getMessageAtOffset(Long seek) throws InvalidProtocolBufferException {
 		return getMessageAtOffset(seek, true);
 	}
 
-	private ExecMessage getMessageAtOffset(Long seek, boolean lookupCached) {
+	private ExecMessage getMessageAtOffset(Long seek, boolean lookupCached) throws InvalidProtocolBufferException {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
 		}
@@ -318,7 +329,7 @@ public class ThinPeer {
 		}
 
 		Map<Long, ConsumerRecord> recordsRead = new HashMap<>();
-		ConsumerRecord requestedRecord = null;
+		ConsumerRecord<String, byte[]> requestedRecord = null;
 
 		long actualSeekOffset = (seek - PRECEDING_RECS < 0) ? seek : seek - PRECEDING_RECS;
 		if (logger.isDebugEnabled()) {
@@ -327,7 +338,7 @@ public class ThinPeer {
 		consumer.seek(inTopicPartition, actualSeekOffset);
 
 		while (requestedRecord == null) {
-			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
+			ConsumerRecords<String, byte[]> records = consumer.poll(pollingDuration);
 			if (logger.isDebugEnabled()) {
 				logger.debug("Read {} records during poll", records.count());
 			}
@@ -340,13 +351,13 @@ public class ThinPeer {
 		}
 		// now swap last batch (map) of records read with the new one
 		this.lastRecordsRead = recordsRead;
-		return (ExecMessage) requestedRecord.value();
+		return ExecMessage.parseFrom(requestedRecord.value());
 	}
 
-	private ExecMessage getCachedMessageAtOffset(Long offset) {
-		ConsumerRecord cached = lastRecordsRead.get(offset);
+	private ExecMessage getCachedMessageAtOffset(Long offset) throws InvalidProtocolBufferException {
+		ConsumerRecord<String, byte[]> cached = lastRecordsRead.get(offset);
 		if (cached != null) {
-			return (ExecMessage) cached.value();
+			return ExecMessage.parseFrom(cached.value());
 		}
 		return null;
 	}
@@ -361,7 +372,7 @@ public class ThinPeer {
 		boolean gotAllMessages = false;
 
 		while (!gotAllMessages) {
-			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
+			ConsumerRecords<String, byte[]> records = consumer.poll(pollingDuration);
 			if (logger.isDebugEnabled()) {
 				logger.debug("got {} records after poll", records.count());
 			}
@@ -380,10 +391,21 @@ public class ThinPeer {
 		return peerUuid;
 	}
 
-	public void sendToLogAndForget(ExecMessage message) {
+	private Iterable<Header> getHeadersForMessage(MessageType messageType) {
+		// set headers
+		final List<Header> logHeaders = new ArrayList<>();
+		if (messageType.equals(MessageType.ExecMessage)) {
+			logHeaders.add(HEADERS.get("EXEC_MSG_TYPE_HEADER"));
+		} else if (messageType.equals(MessageType.InterceptRequest)) {
+			logHeaders.add(HEADERS.get("INTERCEPT_MSG_TYPE_HEADER"));
+		}
+		return logHeaders;
+	}
 
+	public void sendToLogAndForget(ExecMessage message) {
 		// send to kafka
-		producer.send(new ProducerRecord<>(outLog.getName(), message.getMessageUuid(), message));
+		producer.send(new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(),
+			message.toByteArray(), getHeadersForMessage(MessageType.ExecMessage)));
 		if (logger.isDebugEnabled()) {
 			logger.debug("Message sent to log, and we're done:\n{}", message);
 		}
@@ -392,11 +414,11 @@ public class ThinPeer {
 	public Future<ExecMessage> sendToLogAndAsyncProcessReqAndRepNodes(ExecMessage message) {
 
 		final UUID requestMsgUuid = UUID.fromString(message.getMessageUuid());
-
 		// send to kafka
-		producer.send(new ProducerRecord<>(outLog.getName(), message.getMessageUuid(), message));
+		producer.send(new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(),
+			message.toByteArray(), getHeadersForMessage(MessageType.ExecMessage)));
 		if (logger.isDebugEnabled()) {
-			logger.debug("Message sent to log:\n{}", message);
+			logger.debug("Message sent to log:\n{} ({} bytes)", message, message.toByteArray().length);
 		}
 
 		final ExecMessageFuture messageFuture = new ExecMessageFuture(this, palDirectory,
@@ -421,12 +443,13 @@ public class ThinPeer {
 		return messageFuture;
 	}
 
-	private ExecMessage sendToLogAndReceive(ExecMessage message) throws ExecutionException, InterruptedException {
+	private ExecMessage sendToLogAndReceive(ExecMessage message) throws ExecutionException, InterruptedException,
+		InvalidProtocolBufferException {
 		return sendToLogAndReceive(message, false);
 	}
 
 	private ExecMessage sendToLogAndReceive(ExecMessage message, boolean consumeLogUntilReply)
-		throws ExecutionException, InterruptedException {
+		throws ExecutionException, InterruptedException, InvalidProtocolBufferException {
 
 		if (!allowP2P || consumeLogUntilReply) {
 			return sendAndReceiveConsumingLog(message);
@@ -449,11 +472,12 @@ public class ThinPeer {
 		return replyMsg;
 	}
 
-	private ExecMessage sendAndReceiveConsumingLog(ExecMessage message) {
+	private ExecMessage sendAndReceiveConsumingLog(ExecMessage message) throws InvalidProtocolBufferException {
 		// send to kafka
 		long sentRecordOffset;
 		Future<RecordMetadata> recordMetadataFuture =
-			producer.send(new ProducerRecord<>(outLog.getName(), message.getMessageUuid(), message));
+			producer.send(new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(),
+				message.toByteArray(), getHeadersForMessage(MessageType.ExecMessage)));
 		try {
 			RecordMetadata recordMetadata = recordMetadataFuture.get();
 			if (logger.isDebugEnabled()) {
@@ -473,12 +497,12 @@ public class ThinPeer {
 
 		//wait for the reply to the sent message (reply should contain following = sentRecordOffset in message)
 		while (true) {
-			ConsumerRecords<String, String> records = consumer.poll(pollingDuration);
+			ConsumerRecords<String, byte[]> records = consumer.poll(pollingDuration);
 			if (records.count() != 0 && logger.isDebugEnabled()) {
 				logger.debug("Received {} records", records.count());
 			}
-			for (ConsumerRecord record : records) {
-				final ExecMessage execMessage = (ExecMessage) record.value();
+			for (ConsumerRecord<String, byte[]> record : records) {
+				final ExecMessage execMessage = ExecMessage.parseFrom(record.value());
 				long receivedMsgOffset = record.offset();
 				if (execMessage.hasFollowingUuid() && message.getMessageUuid().equals(execMessage.getFollowingUuid())) {
 					if (logger.isDebugEnabled()) {
