@@ -130,20 +130,8 @@ class OutgoingMessageDispatcher extends ConnectedService {
 
 	@Override
 	protected void closeConnections() {
-		if (repSocket != null) {
-			try {
-				repSocket.close();
-			} catch (Exception e) {
-				logger.debug("Error closing REP socket", e);
-			}
-		}
-		if (pubSocket != null) {
-			try {
-				pubSocket.close();
-			} catch (Exception e) {
-				logger.debug("Error closing PUB socket", e);
-			}
-		}
+		closeConnection(repSocket, "Error closing REP socket");
+		closeConnection(pubSocket, "Error closing PUB socket");
 	}
 
 	//TODO

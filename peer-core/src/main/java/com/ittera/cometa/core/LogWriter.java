@@ -254,26 +254,8 @@ class LogWriter extends ConnectedService {
 
 	@Override
 	protected void closeConnections() {
-		if (producer != null) {
-			try {
-				producer.close();
-			} catch (Exception e) {
-				logger.debug("Error closing producer", e);
-			}
-		}
-		if (subscriber != null) {
-			try {
-				subscriber.close();
-			} catch (Exception e) {
-				logger.debug("Error closing subscriber", e);
-			}
-		}
-		if (offsetPublisher != null) {
-			try {
-				offsetPublisher.close();
-			} catch (Exception e) {
-				logger.debug("Error offset publisher", e);
-			}
-		}
+		closeConnection(producer, "Error closing producer");
+		closeConnection(subscriber, "Error closing subscriber");
+		closeConnection(offsetPublisher, "Error offset publisher");
 	}
 }

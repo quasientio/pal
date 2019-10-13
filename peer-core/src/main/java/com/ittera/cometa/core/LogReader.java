@@ -314,27 +314,9 @@ main_loop:
 
 	@Override
 	protected void closeConnections() {
-		if (consumer != null) {
-			try {
-				consumer.close();
-			} catch (Exception e) {
-				logger.debug("Error closing consumer", e);
-			}
-		}
-		if (logDealer != null) {
-			try {
-				logDealer.close();
-			} catch (Exception e) {
-				logger.debug("Error closing dealer", e);
-			}
-		}
-		if (offsetSubscriber != null) {
-			try {
-				offsetSubscriber.close();
-			} catch (Exception e) {
-				logger.debug("Error closing offset subscriber", e);
-			}
-		}
+		closeConnection(consumer, "Error closing consumer");
+		closeConnection(logDealer, "Error closing dealer");
+		closeConnection(offsetSubscriber, "Error closing offset subscriber");
 		//TODO: send uncommitted offset, etc.
 	}
 

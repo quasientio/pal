@@ -40,10 +40,10 @@ class DirectRequestDispatcher extends ConnectedService {
 
 	@Override
 	protected void openConnections() {
-		// to get requests for conc
+		// to get requests for dispatchers
 		this.router = zmqContext.createSocket(SocketType.ROUTER);
 		router.bind(routerAddress);
-		// to send requests to conc
+		// to send requests to dispatchers
 		this.dealer = zmqContext.createSocket(SocketType.DEALER);
 		dealer.bind(dealerAddress);
 		// to get proxy termination command
@@ -59,27 +59,9 @@ class DirectRequestDispatcher extends ConnectedService {
 
 	@Override
 	protected void closeConnections() {
-		if (router != null) {
-			try {
-				router.close();
-			} catch (Exception e) {
-				logger.debug("Error closing router", e);
-			}
-		}
-		if (dealer != null) {
-			try {
-				dealer.close();
-			} catch (Exception e) {
-				logger.debug("Error closing dealer", e);
-			}
-		}
-		if (ctrl != null) {
-			try {
-				ctrl.close();
-			} catch (Exception e) {
-				logger.debug("Error closing ctrl socket", e);
-			}
-		}
+		closeConnection(router, "Error closing router");
+		closeConnection(dealer, "Error closing dealer");
+		closeConnection(ctrl, "Error closing ctrl socket");
 	}
 
 	private void sendProxyTermCmd() {

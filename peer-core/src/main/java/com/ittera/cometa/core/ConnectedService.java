@@ -6,10 +6,13 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
+import java.io.Closeable;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
 
 /**
  * A base class for our guava-managed services (previously extending AbstractExecutionThreadService)
@@ -76,6 +79,16 @@ public abstract class ConnectedService extends AbstractService {
 	protected abstract void openConnections();
 
 	protected abstract void closeConnections();
+
+	protected final void closeConnection(@Nullable Closeable closeable, String msgForException) {
+		if (closeable != null) {
+			try {
+				closeable.close();
+			} catch (Exception e) {
+				logger.debug(msgForException, e);
+			}
+		}
+	}
 
 	protected void triggerStop() {
 		shutdownRequested = true;  // this should drive only the stopping of secondary threads
