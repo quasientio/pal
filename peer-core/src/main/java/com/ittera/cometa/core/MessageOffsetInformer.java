@@ -1,13 +1,11 @@
 package com.ittera.cometa.core;
 
-import com.google.common.primitives.Longs;
-
 import com.ittera.cometa.LogReply;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.common.util.Strings;
+import com.ittera.cometa.core.messages.PublishedOffsetMsg;
 import com.ittera.cometa.cxn.NoLogRequestNodeException;
 import com.ittera.cometa.cxn.PALDirectory;
-import com.ittera.cometa.messages.UUIDUtils;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.BackgroundCallback;
@@ -25,7 +23,6 @@ import org.apache.zookeeper.WatchedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 import java.util.UUID;
@@ -91,12 +88,12 @@ class MessageOffsetInformer implements
 	public void onCompletion(RecordMetadata recordMetadata, Exception e) {
 
 		// publish new record offset
-		if (publishOffsets) {
-			offsetPublisher.send(Longs.toByteArray(recordMetadata.offset()), ZMQ.SNDMORE);
-			offsetPublisher.send(UUIDUtils.toBytes(messageUuid));
-		}
 		if (logger.isDebugEnabled()) {
 			logger.debug("New offset {} for message w/uuid: {}", recordMetadata.offset(), messageUuid);
+		}
+		if (publishOffsets) {
+			PublishedOffsetMsg offsetMsg = new PublishedOffsetMsg(recordMetadata.offset(), messageUuid);
+			offsetMsg.send(offsetPublisher);
 		}
 
 		// if message is reply, save offset to zookeeper

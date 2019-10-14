@@ -1,13 +1,12 @@
 package com.ittera.cometa.core;
 
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.core.kafka.internals.RecordHeaders;
+import com.ittera.cometa.core.messages.InboundLogMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.MessageBuilder;
@@ -24,10 +23,7 @@ import org.apache.kafka.common.record.TimestampType;
 
 import org.apache.curator.test.TestingServer;
 
-import org.zeromq.SocketType;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
-import org.zeromq.ZMQException;
+import org.zeromq.*;
 import zmq.ZError;
 
 import java.util.*;
@@ -74,22 +70,18 @@ public class LogReaderTest extends ZmqEnabledTest {
 
 			// process requests
 			while (!Thread.interrupted()) {
-				//
+				ZMsg zmsg = null;
+				InboundLogMsg logMsg = null;
 				try {
-					byte[] buff = socket.recv();
-					long logOffset = Longs.fromByteArray(buff);
-					logger.debug("received offset = {}", logOffset);
-					buff = socket.recv();
-					MessageType msgType = MessageType.values[Ints.fromByteArray(buff)];
-					logger.debug("received msg type = {}", msgType);
-					byte[] req = socket.recv();
-					if (msgType.equals(MessageType.ExecMessage)) {
-						ExecMessage msg = ExecMessage.parseFrom(req);
-						logger.debug("msg received = {}", msg);
+					zmsg = ZMsg.recvMsg(socket);
+					logMsg = InboundLogMsg.from(zmsg);
+					if (logMsg.getMessageType().equals(MessageType.ExecMessage)) {
+						ExecMessage msg = ExecMessage.parseFrom(logMsg.getBody());
+						logger.debug("ExecMessage received = {}", msg);
 						rcvdMsgUuids.add(msg.getMessageUuid());
 					} else {
-						InterceptRequest msg = InterceptRequest.parseFrom(req);
-						logger.debug("msg received = {}", msg);
+						InterceptRequest msg = InterceptRequest.parseFrom(logMsg.getBody());
+						logger.debug("InterceptRequest msg received = {}", msg);
 						rcvdMsgUuids.add(msg.getMessageUuid());
 					}
 				} catch (ZMQException ex) {
@@ -102,9 +94,17 @@ public class LogReaderTest extends ZmqEnabledTest {
 						break;
 					} else {
 						logger.error("unexpected error during recv()", ex);
+						throw(ex);
 					}
-				} catch (InvalidProtocolBufferException e) {
-					logger.error("error receiving", e);
+				} catch (Exception e) {
+					logger.error("error parsing received message", e);
+				} finally {
+					if (zmsg != null) {
+						zmsg.destroy();
+					}
+					if (logMsg != null) {
+						logMsg.destroy();
+					}
 				}
 			}
 

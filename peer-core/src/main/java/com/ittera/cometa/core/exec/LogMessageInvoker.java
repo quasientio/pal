@@ -1,9 +1,7 @@
 package com.ittera.cometa.core.exec;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
-
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
+import com.ittera.cometa.core.messages.InboundLogMsg;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
@@ -13,6 +11,7 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
+import org.zeromq.ZMsg;
 import zmq.ZError;
 
 class LogMessageInvoker extends AbstractMessageInvokerThread {
@@ -29,7 +28,6 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 		super(zmqContext, messageBuilder, dealerAddress, incomingMessageDispatcher);
 	}
 
-
 	@Override
 	public void run() {
 
@@ -41,21 +39,15 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 			logger.debug("Start getting requests from socket");
 		}
 		while (!Thread.interrupted()) {
-
-			long logOffset;
-			MessageType msgType;
-			byte[] msg;
-
 			// recv req
+			ZMsg zmsg = null;
+			InboundLogMsg msg = null;
 			try {
-				byte[] buff = socket.recv();
-				logOffset = Longs.fromByteArray(buff);
+				zmsg = ZMsg.recvMsg(socket);
+				msg = InboundLogMsg.from(zmsg);
 				if (logger.isDebugEnabled()) {
-					logger.debug("Getting message with kafka offset: {}", logOffset);
+					logger.debug("Getting message with kafka offset: {}", msg.getOffset());
 				}
-				buff = socket.recv();
-				msgType = MessageType.values[Ints.fromByteArray(buff)];
-				msg = socket.recv();
 			} catch (ZMQException ex) {
 				int errorCode = ex.getErrorCode();
 				if (errorCode == ZError.ETERM) {
@@ -71,6 +63,16 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 				} else {
 					throw ex;
 				}
+			} catch(Exception e) {
+				logger.error("Error receiving/parsing message", e);
+			} finally {
+				if (zmsg != null) {
+					zmsg.destroy();
+				}
+			}
+
+			if (msg == null) {
+				continue;
 			}
 
 			Object requestMsg = null;
@@ -78,12 +80,12 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 
 			// parse req
 			try {
-				if (msgType.equals(MessageType.ExecMessage)) {
-					requestMsg = ExecMessage.parseFrom(msg);
-				} else if (msgType.equals(MessageType.InterceptRequest)) {
-					requestMsg = InterceptRequest.parseFrom(msg);
+				if (msg.getMessageType().equals(MessageType.ExecMessage)) {
+					requestMsg = ExecMessage.parseFrom(msg.getBody());
+				} else if (msg.getMessageType().equals(MessageType.InterceptRequest)) {
+					requestMsg = InterceptRequest.parseFrom(msg.getBody());
 				} else {
-					logger.error("Received unknown message type: {}", msgType);
+					logger.error("Received unknown message type: {}", msg.getMessageType());
 				}
 			} catch (Exception e) {
 				logger.error("Caught exception parsing message", e);
@@ -91,12 +93,12 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 
 			if (logger.isDebugEnabled()) {
 				logger.debug("Received message with offset: {}, type: {}, uuid: {}",
-					logOffset, msgType, getMessageUuid(requestMsg));
+					msg.getOffset(), msg.getMessageType(), getMessageUuid(requestMsg));
 			}
 
 			// dispatch it
 			if (requestMsg != null) {
-				dispatch(requestMsg, logOffset);
+				dispatch(requestMsg, msg.getOffset());
 				if (logger.isDebugEnabled()) {
 					final long took = System.currentTimeMillis() - started;
 					if (logger.isDebugEnabled()) {
@@ -104,6 +106,8 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 					}
 				}
 			}
+			// clean up
+			msg.destroy();
 		}
 
 		closeConnections();

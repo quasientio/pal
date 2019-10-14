@@ -1,9 +1,11 @@
 package com.ittera.cometa.core;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.core.messages.PublishedOffsetMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageType;
-import com.ittera.cometa.messages.UUIDUtils;
+import com.ittera.cometa.common.util.UUIDUtils;
+import com.ittera.cometa.core.messages.InboundLogMsg;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -30,14 +32,10 @@ import javax.inject.Named;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import com.google.common.primitives.Longs;
 import com.google.common.primitives.Ints;
 
-import org.zeromq.SocketType;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
+import org.zeromq.*;
 import org.zeromq.ZMQ.Socket;
-import org.zeromq.ZMQException;
 import zmq.ZError;
 
 /**
@@ -78,7 +76,6 @@ public class LogReader extends ConnectedService {
 	final private AbstractQueue<Long> skipOffsets = new ConcurrentLinkedQueue<>();
 
 	private final class OffsetUpdater extends Thread {
-
 		private final Socket offsetSubscriber;
 
 		OffsetUpdater(Socket offsetSubscriber) {
@@ -91,20 +88,14 @@ public class LogReader extends ConnectedService {
 			if (logger.isDebugEnabled()) {
 				logger.debug("OffsetUpdater running");
 			}
-
-			byte[] offsetBuff;
-
 			while (!shutdownRequested && !Thread.interrupted()) {
-				long offset;
 				try {
-					// multi-part msg: 1) offset as byte[], 2) uuid as byte[]
-					offsetBuff = offsetSubscriber.recv(ZMQ.DONTWAIT);
-					if (offsetBuff == null) {
+					ZMsg zmsg = ZMsg.recvMsg(offsetSubscriber, ZMQ.DONTWAIT);
+					if (zmsg == null) {
 						continue;
 					}
-					offsetSubscriber.recv(); // read and discard UUID
-					offset = Longs.fromByteArray(offsetBuff);
-					skipOffsets.add(offset);
+					PublishedOffsetMsg msg = PublishedOffsetMsg.from(zmsg);
+					skipOffsets.add(msg.getOffset());
 				} catch (ClosedSelectorException ex) {
 					if (logger.isDebugEnabled()) {
 						logger.debug("Caught ClosedSelectorException. Breaking out.");
@@ -268,10 +259,9 @@ main_loop:
 				lastOffsetRead = messageOffset;
 				if (!recordProducedOrDispatchingBySelf(record.headers())) {
 					// send request to DEALER socket
-					logDealer.send("", ZMQ.SNDMORE); //1st frame empty to emulate REQ envelope
-					logDealer.send(Longs.toByteArray(messageOffset), ZMQ.SNDMORE);
-					logDealer.send(Ints.toByteArray(getMessageType(record.headers()).ordinal()), ZMQ.SNDMORE);
-					logDealer.send((byte[]) record.value(), 0);
+					InboundLogMsg msg = new InboundLogMsg(getMessageType(record.headers()),
+						messageOffset, (byte[]) record.value());
+					msg.send(logDealer);
 					if (logger.isDebugEnabled()) {
 						logger.debug("Dealt new log message with offset: {}", messageOffset);
 					}

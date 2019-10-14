@@ -1,10 +1,11 @@
 package com.ittera.cometa.core;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.MessageType;
-import com.ittera.cometa.messages.UUIDUtils;
+import com.ittera.cometa.common.util.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 
@@ -13,7 +14,6 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import com.google.common.primitives.Ints;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -26,11 +26,8 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.zeromq.SocketType;
-import org.zeromq.ZMQ;
-import org.zeromq.ZContext;
+import org.zeromq.*;
 import org.zeromq.ZMQ.Socket;
-import org.zeromq.ZMQException;
 import zmq.ZError;
 
 /**
@@ -144,48 +141,17 @@ class LogWriter extends ConnectedService {
 			logger.debug("Starting to dispatch messages to log");
 		}
 		while (!Thread.interrupted()) {
-			int headerCount;
-			byte[] msg;
-			UUID msgUuid;
-			UUID followingUuid = null;
-			List<InternalHeader> headers = new ArrayList<>();
-			MessageType messageType;
+			OutboundMsg msg = null;
+			ZMsg zmsg = null;
 			try {
-				byte[] buff;
-				/* MULTI-PART message */
-				// part 0. get type of message to follow
-				buff = subscriber.recv(ZMQ.DONTWAIT);
-				if (buff == null) {
+				zmsg = ZMsg.recvMsg(subscriber, ZMQ.DONTWAIT);
+				if (zmsg == null) {
 					continue;
 				}
-				messageType = MessageType.values[Ints.fromByteArray(buff)];
-				// part 1. how many headers?
-				buff = subscriber.recv(ZMQ.DONTWAIT);
-				headerCount = Ints.fromByteArray(buff);
+				msg = OutboundMsg.from(zmsg);
 				if (logger.isDebugEnabled()) {
-					logger.debug("Receiving new message with {} header(s)", headerCount);
+					logger.debug("Received new message ({} bytes)", msg.contentSize());
 				}
-				// part 2. [headers]
-				if (headerCount > 0) {
-					for (int i = 0; i < headerCount; i++) {
-						buff = subscriber.recv();
-						try {
-							headers.add(InternalHeader.parseFrom(buff));
-						} catch (InvalidProtocolBufferException e) {
-							logger.error("Error parsing internal header from byte array", e);
-						}
-					}
-				}
-				// part 3. message uuid
-				buff = subscriber.recv();
-				msgUuid = UUIDUtils.fromBytes(buff);
-				// part 4. followingUuid
-				buff = subscriber.recv();
-				if (Ints.fromByteArray(buff) != 0) {
-					followingUuid = UUIDUtils.fromBytes(buff);
-				}
-				// part 5. message
-				msg = subscriber.recv();
 			} catch (ZMQException ex) {
 				int errorCode = ex.getErrorCode();
 				if (errorCode == ZError.ETERM) {
@@ -201,16 +167,25 @@ class LogWriter extends ConnectedService {
 				} else {
 					throw ex;
 				}
+			} catch (Exception e) {
+				logger.error("Error parsing received message", e);
+			} finally {
+				if (zmsg != null) {
+					zmsg.destroy();
+				}
 			}
-			// set headers
-			List<Header> logHeaders = fromInternalToLog(headers);
-			if (messageType.equals(MessageType.ExecMessage)) {
-				logHeaders.add(HEADERS.get("EXEC_MSG_TYPE_HEADER"));
-			} else {
-				logHeaders.add(HEADERS.get("INTERCEPT_MSG_TYPE_HEADER"));
+			if (msg != null) {
+				// set headers
+				List<Header> logHeaders = fromInternalToLog(msg.getHeaders());
+				if (msg.getMessageType().equals(MessageType.ExecMessage)) {
+					logHeaders.add(HEADERS.get("EXEC_MSG_TYPE_HEADER"));
+				} else {
+					logHeaders.add(HEADERS.get("INTERCEPT_MSG_TYPE_HEADER"));
+				}
+				// send to kafka immediately
+				sendToKafka(msg.getBody(), msg.getMessageUuid(), msg.getFollowingUuid(), peerUuid, logHeaders);
+				msg.destroy();
 			}
-			// send to kafka immediately
-			sendToKafka(msg, msgUuid, followingUuid, peerUuid, logHeaders);
 		}
 	}
 

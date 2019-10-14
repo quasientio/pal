@@ -6,7 +6,7 @@ import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.UUIDUtils;
+import com.ittera.cometa.common.util.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
@@ -16,9 +16,9 @@ import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.Cluster;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,9 +30,9 @@ import java.util.concurrent.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
-import org.zeromq.SocketType;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class MessageOffsetInformerTest extends ZmqEnabledTest {
 

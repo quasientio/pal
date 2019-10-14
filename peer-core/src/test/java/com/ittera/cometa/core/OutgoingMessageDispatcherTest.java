@@ -1,13 +1,11 @@
 package com.ittera.cometa.core;
 
-import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
-import com.google.protobuf.InvalidProtocolBufferException;
 
+import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
-import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeaderType;
@@ -22,6 +20,7 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
+import org.zeromq.ZMsg;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -97,35 +96,20 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 
 		// send 1 message request
 		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-		// send type of message
-		req.send(Ints.toByteArray(MessageType.ExecMessage.ordinal()), ZMQ.SNDMORE);
-		// send number of headers to follow (= 0)
-		req.send(Ints.toByteArray(0), ZMQ.SNDMORE);
-		// send message uuid
-		req.send(UUIDUtils.toBytes(msg.getMessageUuid()), ZMQ.SNDMORE);
-		// send followingUuid
-		req.send(Ints.toByteArray(0), ZMQ.SNDMORE);
-		// send message
-		req.send(msg.toByteArray());
+		OutboundMsg outMsg = new OutboundMsg(MessageType.ExecMessage, null, UUID.fromString(msg.getMessageUuid()),
+			null, msg.toByteArray());
+		outMsg.send(req);
+
 		// expect a 0-reply
 		String reply = req.recvStr();
 		assertThat(reply, is("0"));
 
 		// check if it was published
-		byte[] buff = sub.recv();  // get message type
-		MessageType msgType = MessageType.values[Ints.fromByteArray(buff)];
-		assertThat(msgType, is(MessageType.ExecMessage));
-		buff = sub.recv(); // get headers
-		int headerCount = Ints.fromByteArray(buff);
-		assertThat(headerCount, is(0));
-		buff = sub.recv(); // get message uuid
-		assertThat(UUIDUtils.fromBytes(buff).toString(), is(msg.getMessageUuid()));
-		buff = sub.recv(); // get followingUuid
-		assertThat(Ints.fromByteArray(buff), is(0));
-		buff = sub.recv(); // get message
-		ExecMessage publishedMsg = ExecMessage.parseFrom(buff);
+		OutboundMsg publishedOutMsg = OutboundMsg.from(ZMsg.recvMsg(sub));
+		assertThat(publishedOutMsg, is(outMsg));
 
-		// verify message is what we sent
+		// verify exec message is what we sent
+		ExecMessage publishedMsg = ExecMessage.parseFrom(publishedOutMsg.getBody());
 		assertThat(publishedMsg, is(msg));
 
 		// close local sockets
@@ -157,35 +141,20 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 		// send 1 message request
 		InterceptRequest msg = msgBuilder.buildInterceptRequest(peerUuid, "java.io.PrintStream",
 			"println", null, this.getClass().getName(), "someCallbackMethod");
-		// send type of message
-		req.send(Ints.toByteArray(MessageType.InterceptRequest.ordinal()), ZMQ.SNDMORE);
-		// send number of headers to follow (= 0)
-		req.send(Ints.toByteArray(0), ZMQ.SNDMORE);
-		// send message uuid
-		req.send(UUIDUtils.toBytes(msg.getMessageUuid()), ZMQ.SNDMORE);
-		// send followingUuid
-		req.send(Ints.toByteArray(0), ZMQ.SNDMORE);
-		// send message
-		req.send(msg.toByteArray());
+		OutboundMsg outMsg = new OutboundMsg(MessageType.InterceptRequest,
+			null, UUID.fromString(msg.getMessageUuid()), null, msg.toByteArray());
+		outMsg.send(req);
+
 		// expect a 0-reply
 		String reply = req.recvStr();
 		assertThat(reply, is("0"));
 
 		// check if it was published
-		byte[] buff = sub.recv();  // get message type
-		MessageType msgType = MessageType.values[Ints.fromByteArray(buff)];
-		assertThat(msgType, is(MessageType.InterceptRequest));
-		buff = sub.recv(); // get headers
-		int headerCount = Ints.fromByteArray(buff);
-		assertThat(headerCount, is(0));
-		buff = sub.recv(); // get message uuid
-		assertThat(UUIDUtils.fromBytes(buff).toString(), is(msg.getMessageUuid()));
-		buff = sub.recv(); // get followingUuid
-		assertThat(Ints.fromByteArray(buff), is(0));
-		buff = sub.recv(); // get message
-		InterceptRequest publishedMsg = InterceptRequest.parseFrom(buff);
+		OutboundMsg publishedOutMsg = OutboundMsg.from(ZMsg.recvMsg(sub));
+		assertThat(publishedOutMsg, is(outMsg));
 
 		// verify message is what we sent
+		InterceptRequest publishedMsg = InterceptRequest.parseFrom(publishedOutMsg.getBody());
 		assertThat(publishedMsg, is(msg));
 
 		// close local sockets
@@ -217,52 +186,23 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 		// send 1 message request
 		ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 		List<InternalHeader> headers = Collections.singletonList(this.WRITE_AHEAD_HEADER);
-		// send type of message
-		req.send(Ints.toByteArray(MessageType.ExecMessage.ordinal()), ZMQ.SNDMORE);
-		// send number of headers to follow (= 1), followed by header, then message
-		req.send(Ints.toByteArray(headers.size()), ZMQ.SNDMORE);
-		for (InternalHeader header : headers) {
-			req.send(header.toByteArray(), ZMQ.SNDMORE);
-		}
-		// send message uuid
-		req.send(UUIDUtils.toBytes(msg.getMessageUuid()), ZMQ.SNDMORE);
-		// send followingUuid
-		UUID madeUpFollowingUuid = UUID.randomUUID();
-		req.send(UUIDUtils.toBytes(madeUpFollowingUuid), ZMQ.SNDMORE);
-		// send actual message
-		req.send(msg.toByteArray());
+		OutboundMsg outMsg = new OutboundMsg(MessageType.ExecMessage, headers, UUID.fromString(msg.getMessageUuid()),
+			null, msg.toByteArray());
+		outMsg.send(req);
+
 		// expect a 0-reply
 		String reply = req.recvStr();
 		assertThat(reply, is("0"));
 
 		// get what was published
-		byte[] buff = sub.recv();  // get message type
-		MessageType msgType = MessageType.values[Ints.fromByteArray(buff)];
-		assertThat(msgType, is(MessageType.ExecMessage));
-		buff = sub.recv(); // get headers
-		int headerCount = Ints.fromByteArray(buff);
-		assertThat(headerCount, is(1));
-		List<InternalHeader> rcvdHeaders = new ArrayList<>();
-		if (headerCount > 0) {
-			for (int i = 0; i < headerCount; i++) {
-				buff = sub.recv();
-				try {
-					rcvdHeaders.add(InternalHeader.parseFrom(buff));
-				} catch (InvalidProtocolBufferException e) {
-					logger.error("Error parsing internal header", e);
-				}
-			}
-		}
-		buff = sub.recv(); // get message uuid
-		assertThat(UUIDUtils.fromBytes(buff).toString(), is(msg.getMessageUuid()));
-		buff = sub.recv(); // get followingUuid
-		assertThat(UUIDUtils.fromBytes(buff), is(madeUpFollowingUuid));
-		buff = sub.recv(); // get message
-		ExecMessage publishedMsg = ExecMessage.parseFrom(buff);
+		OutboundMsg publishedOutMsg = OutboundMsg.from(ZMsg.recvMsg(sub));
+		assertThat(publishedOutMsg, is(outMsg));
 
+		// verify exec message is what we sent
+		ExecMessage publishedMsg = ExecMessage.parseFrom(publishedOutMsg.getBody());
 		// verify header and msg as expected
-		assertThat(rcvdHeaders.get(0).getHeaderType(), is(InternalHeaderType.WRITE_AHEAD));
-		assertThat(rcvdHeaders.get(0).getValue(), is(peerUuid.toString()));
+		assertThat(publishedOutMsg.getHeaders().get(0).getHeaderType(), is(InternalHeaderType.WRITE_AHEAD));
+		assertThat(publishedOutMsg.getHeaders().get(0).getValue(), is(peerUuid.toString()));
 		assertThat(publishedMsg, is(msg));
 
 		// close local sockets

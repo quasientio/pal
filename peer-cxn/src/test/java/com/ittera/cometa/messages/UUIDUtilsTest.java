@@ -1,6 +1,8 @@
 package com.ittera.cometa.messages;
 
 import static org.hamcrest.CoreMatchers.*;
+
+import com.ittera.cometa.common.util.UUIDUtils;
 import org.junit.Test;
 
 import java.util.UUID;

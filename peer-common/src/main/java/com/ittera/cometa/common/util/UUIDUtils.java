@@ -1,4 +1,4 @@
-package com.ittera.cometa.messages;
+package com.ittera.cometa.common.util;
 
 import com.google.common.primitives.Longs;
 

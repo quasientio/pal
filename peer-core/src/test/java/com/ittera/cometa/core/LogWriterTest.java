@@ -1,12 +1,12 @@
 package com.ittera.cometa.core;
 
-import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
@@ -171,21 +171,14 @@ public class LogWriterTest extends ZmqEnabledTest {
 
 		// PUB them
 		msgsCreated.forEach(msg -> {
-			// msg type
-			pubSocket.send(Ints.toByteArray(MessageType.ExecMessage.ordinal()), ZMQ.SNDMORE);
-			// no headers
-			pubSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
-			// msg uuid
-			pubSocket.send(getMessageUuid(msg), ZMQ.SNDMORE);
-			// followingUuid
-			String followingUuid = getFollowingUuid(msg);
-			if (followingUuid != null) {
-				pubSocket.send(followingUuid, ZMQ.SNDMORE);
-			} else {
-				pubSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
-			}
-			// msg
-			pubSocket.send(msg.toByteArray());
+			MessageType msgType = msg instanceof ExecMessage ? MessageType.ExecMessage :
+				MessageType.InterceptRequest;
+			OutboundMsg outMsg = new OutboundMsg(msgType,
+				null,
+				UUID.fromString(getMessageUuid(msg)),
+				getFollowingUuid(msg) == null ? null : UUID.fromString(getFollowingUuid(msg)),
+				msg.toByteArray());
+			outMsg.send(pubSocket);
 		});
 
 		// give it some time
@@ -229,37 +222,22 @@ public class LogWriterTest extends ZmqEnabledTest {
 		pubSocket = zmqContext.createSocket(SocketType.PUB);
 		pubSocket.bind(OUT_PUB_ADDR);
 
-		InternalHeader header = msgBuilder.buildWriteAheadHeader(peerUuid);
-		List<InternalHeader> headers = Arrays.asList(header);
 		int messagesToSend = 5;
 		List<ExecMessage> msgsCreated = new ArrayList<>();
-
-		// create msgs
 		for (int i = 0; i < messagesToSend; i++) {
 			ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 			msgsCreated.add(msg);
 		}
 
 		// PUB them
+		List<InternalHeader> headers = Arrays.asList(msgBuilder.buildWriteAheadHeader(peerUuid));
 		msgsCreated.stream().forEach(msg -> {
-			// 0. send type of message to follow
-			pubSocket.send(Ints.toByteArray(MessageType.ExecMessage.ordinal()), ZMQ.SNDMORE);
-			// 1. send number of headers to follow,
-			pubSocket.send(Ints.toByteArray(headers.size()), ZMQ.SNDMORE);
-			// 2. send all headers
-			for (InternalHeader hdr : headers) {
-				pubSocket.send(hdr.toByteArray(), ZMQ.SNDMORE);
-			}
-			// 3. msg uuid
-			pubSocket.send(msg.getMessageUuid(), ZMQ.SNDMORE);
-			// 4. followingUuid
-			if (msg.hasFollowingUuid()) {
-				pubSocket.send(msg.getFollowingUuid(), ZMQ.SNDMORE);
-			} else {
-				pubSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
-			}
-			// 5. send actual message
-			pubSocket.send(msg.toByteArray());
+			OutboundMsg outMsg = new OutboundMsg(MessageType.ExecMessage,
+				headers,
+				UUID.fromString(getMessageUuid(msg)),
+				getFollowingUuid(msg) == null ? null : UUID.fromString(getFollowingUuid(msg)),
+				msg.toByteArray());
+			outMsg.send(pubSocket);
 		});
 
 		// give it some time

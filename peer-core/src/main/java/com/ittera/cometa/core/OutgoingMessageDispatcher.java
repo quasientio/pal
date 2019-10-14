@@ -1,24 +1,17 @@
 package com.ittera.cometa.core;
 
-import com.google.common.primitives.Ints;
+import com.ittera.cometa.core.messages.OutboundMsg;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.inject.Named;
 
-import com.ittera.cometa.messages.MessageType;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.zeromq.SocketType;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
+import org.zeromq.*;
 import org.zeromq.ZMQ.Socket;
-import org.zeromq.ZMQException;
 import zmq.ZError;
 
 import org.slf4j.Logger;
@@ -63,36 +56,20 @@ class OutgoingMessageDispatcher extends ConnectedService {
 		pubSocket.bind(outPubAddress);
 	}
 
-
 	@Override
 	public final void run() {
 		while (!Thread.interrupted()) {
-			byte[] headerCntBuff, typeBuff, uuidBuff, followingUuidBuff, msgBuff;
-			List<byte[]> headerBuffs = new ArrayList<>();
-			int headerCount;
+			OutboundMsg msg = null;
+			ZMsg zmsg = null;
 			try {
-				/* MULTI-PART message request */
-				// part 0. get type of message to follow
-				typeBuff = repSocket.recv(ZMQ.DONTWAIT);
-				if (typeBuff == null) {
+				zmsg = ZMsg.recvMsg(repSocket, ZMQ.DONTWAIT);
+				if (zmsg == null) {
 					continue;
 				}
-				MessageType messageType = MessageType.values[Ints.fromByteArray(typeBuff)];
-				// part 1. how many headers
-				headerCntBuff = repSocket.recv();
-				headerCount = Ints.fromByteArray(headerCntBuff);
-				// part 2. [headers]
-				if (headerCount > 0) {
-					for (int i = 0; i < headerCount; i++) {
-						headerBuffs.add(repSocket.recv());
-					}
+				msg = OutboundMsg.from(zmsg);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Received new message ({} bytes)", msg.contentSize());
 				}
-				// part 3. message uuid
-				uuidBuff = repSocket.recv();
-				// part 4. followingUuid
-				followingUuidBuff = repSocket.recv();
-				// part 5. actual message
-				msgBuff = repSocket.recv();
 			} catch (ZMQException ex) {
 				int errorCode = ex.getErrorCode();
 				if (errorCode == ZError.ETERM) {
@@ -108,22 +85,29 @@ class OutgoingMessageDispatcher extends ConnectedService {
 				} else {
 					throw ex;
 				}
+			} catch (Exception e) {
+				logger.error("Error parsing received message", e);
+			} finally {
+				if (zmsg != null) {
+					zmsg.destroy();
+				}
+			}
+			// reply to message
+			if (msg != null) {
+				// pretend message has no actors and send 0 back (should we do this after PUBlishing?)
+				repSocket.send("0");
+			} else {
+				repSocket.send("1"); //  1 == error
 			}
 
-			// pretend message has no actors and send 0 back (should we do this after PUBlishing?)
-			repSocket.send("0");
-
-			// send multi-part message as received to SUBscribers
-			pubSocket.send(typeBuff, ZMQ.SNDMORE);
-			pubSocket.send(headerCntBuff, ZMQ.SNDMORE);
-			if (headerCount > 0) {
-				headerBuffs.forEach(b -> pubSocket.send(b, ZMQ.SNDMORE));
-			}
-			pubSocket.send(uuidBuff, ZMQ.SNDMORE);
-			pubSocket.send(followingUuidBuff, ZMQ.SNDMORE);
-			pubSocket.send(msgBuff);
-			if (logger.isDebugEnabled()) {
-				logger.debug("Published new message with {} header(s) and {} bytes", headerCount, msgBuff.length);
+			// publish message
+			if (msg != null) {
+				msg.send(pubSocket, false);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Published new message ({} bytes)", msg.contentSize());
+				}
+				// clean up
+				msg.destroy();
 			}
 		}
 	}

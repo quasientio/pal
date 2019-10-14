@@ -4,7 +4,7 @@ import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.core.PeerException;
 import com.ittera.cometa.core.RunOptions;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.UUIDUtils;
+import com.ittera.cometa.common.util.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 
 import javax.inject.Inject;

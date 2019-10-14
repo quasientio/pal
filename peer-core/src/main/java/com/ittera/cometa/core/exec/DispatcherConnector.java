@@ -1,22 +1,17 @@
 package com.ittera.cometa.core.exec;
 
+import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
-import com.ittera.cometa.messages.UUIDUtils;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 
-import com.google.common.primitives.Ints;
-
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
-import org.zeromq.SocketType;
-import org.zeromq.ZMQ;
+import org.zeromq.*;
 import org.zeromq.ZMQ.Socket;
-import org.zeromq.ZMQException;
-import org.zeromq.ZContext;
 import zmq.ZError;
 
 import java.util.Collections;
@@ -75,10 +70,13 @@ public class DispatcherConnector {
 			logger.trace("sendExecMessage:in w/ message with uuid: {}", message.getMessageUuid());
 		}
 		Socket outSocket = threadSocket.get();
+		// send
 		UUID followingUuid = message.hasFollowingUuid() ? UUID.fromString(message.getFollowingUuid()) : null;
-		send(outSocket, message.toByteArray(), MessageType.ExecMessage, UUID.fromString(message.getMessageUuid()),
-			followingUuid, headers);
+		final OutboundMsg msg = new OutboundMsg(MessageType.ExecMessage, headers,
+			UUID.fromString(message.getMessageUuid()), followingUuid, message.toByteArray());
+		msg.send(outSocket, true);
 
+		// receive
 		String rcvdString = null;
 		try {
 			rcvdString = outSocket.recvStr();
@@ -117,9 +115,12 @@ public class DispatcherConnector {
 		}
 
 		Socket outSocket = threadSocket.get();
-		send(outSocket, message.toByteArray(), MessageType.InterceptRequest, UUID.fromString(message.getMessageUuid()),
-			null, headers);
+		// send
+		final OutboundMsg msg = new OutboundMsg(MessageType.InterceptRequest, headers,
+			UUID.fromString(message.getMessageUuid()), null, message.toByteArray());
+		msg.send(outSocket, true);
 
+		// receive
 		String rcvdString = null;
 		try {
 			rcvdString = outSocket.recvStr();
@@ -145,38 +146,6 @@ public class DispatcherConnector {
 			logger.trace("out w/ {}", ok);
 		}
 		return ok;
-	}
-
-	private void send(Socket outSocket, byte[] message, MessageType messageType, UUID messageUuid,
-										@Nullable UUID followingUuid, @Nullable List<InternalHeader> headers) {
-
-		// 0. send type of message to follow
-		outSocket.send(Ints.toByteArray(messageType.ordinal()), ZMQ.SNDMORE);
-
-		if (headers != null && !headers.isEmpty()) {
-			// 1. send number of headers to follow,
-			outSocket.send(Ints.toByteArray(headers.size()), ZMQ.SNDMORE);
-
-			// 2. send all headers
-			for (InternalHeader header : headers) {
-				outSocket.send(header.toByteArray(), ZMQ.SNDMORE);
-			}
-		} else {
-			outSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
-		}
-
-		// 3. send message uuid
-		outSocket.send(UUIDUtils.toBytes(messageUuid), ZMQ.SNDMORE);
-
-		// 4. send followingUuid
-		if (followingUuid != null) {
-			outSocket.send(UUIDUtils.toBytes(followingUuid), ZMQ.SNDMORE);
-		} else {
-			outSocket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
-		}
-
-		// 5. send actual message
-		outSocket.send(message);
 	}
 
 	public void writeAhead(ExecMessage message) {
