@@ -6,14 +6,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * For Ant-path matching: https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/util/AntPathMatcher.html
+ * For Ant-path matching:
+ * https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/util/AntPathMatcher.html
  */
-
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Before {
-	String clazz();
-	String method() default "";
-	String field() default "";
-	String[] args() default {};
+  String clazz();
+
+  String method() default "";
+
+  String field() default "";
+
+  String[] args() default {};
 }

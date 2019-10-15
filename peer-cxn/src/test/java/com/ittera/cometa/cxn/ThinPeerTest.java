@@ -1,6 +1,4 @@
 package com.ittera.cometa.cxn;
 
-//TODO
-public class ThinPeerTest {
-
-}
+// TODO
+public class ThinPeerTest {}

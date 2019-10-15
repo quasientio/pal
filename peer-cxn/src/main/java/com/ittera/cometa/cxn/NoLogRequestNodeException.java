@@ -4,18 +4,18 @@ import com.ittera.cometa.LogRequest;
 
 public class NoLogRequestNodeException extends Exception {
 
-	private LogRequest logRequest;
+  private LogRequest logRequest;
 
-	public NoLogRequestNodeException(String message) {
-		super(message);
-	}
+  public NoLogRequestNodeException(String message) {
+    super(message);
+  }
 
-	public NoLogRequestNodeException(String message, LogRequest logRequest) {
-		super(message);
-		this.logRequest = logRequest;
-	}
+  public NoLogRequestNodeException(String message, LogRequest logRequest) {
+    super(message);
+    this.logRequest = logRequest;
+  }
 
-	public LogRequest getLogRequest() {
-		return logRequest;
-	}
+  public LogRequest getLogRequest() {
+    return logRequest;
+  }
 }

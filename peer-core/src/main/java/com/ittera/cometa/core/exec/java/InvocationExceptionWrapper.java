@@ -2,13 +2,13 @@ package com.ittera.cometa.core.exec.java;
 
 class InvocationExceptionWrapper {
 
-	private final Exception exception;
+  private final Exception exception;
 
-	InvocationExceptionWrapper(Exception exception) {
-		this.exception = exception;
-	}
+  InvocationExceptionWrapper(Exception exception) {
+    this.exception = exception;
+  }
 
-	public Exception getException() {
-		return exception;
-	}
+  public Exception getException() {
+    return exception;
+  }
 }

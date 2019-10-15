@@ -1,25 +1,23 @@
 package com.ittera.cometa.messages;
 
 import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 import com.ittera.cometa.common.util.UUIDUtils;
-import org.junit.Test;
-
 import java.util.UUID;
-
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 public class UUIDUtilsTest {
 
-	@Test
-	public void toFromBytes() {
+  @Test
+  public void toFromBytes() {
 
-		UUID uuid = UUID.randomUUID();
+    UUID uuid = UUID.randomUUID();
 
-		// 8 + 8 bytes
-		byte[] uuidBytes = UUIDUtils.toBytes(uuid);
+    // 8 + 8 bytes
+    byte[] uuidBytes = UUIDUtils.toBytes(uuid);
 
-		assertThat(uuidBytes.length, is(16));
-		assertThat(UUIDUtils.fromBytes(uuidBytes), is(uuid));
-	}
+    assertThat(uuidBytes.length, is(16));
+    assertThat(UUIDUtils.fromBytes(uuidBytes), is(uuid));
+  }
 }

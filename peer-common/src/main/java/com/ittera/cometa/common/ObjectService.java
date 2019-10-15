@@ -4,21 +4,21 @@ import com.ittera.cometa.common.lang.ObjectRef;
 
 public interface ObjectService {
 
-	ObjectRef storeObject(Object object);
+  ObjectRef storeObject(Object object);
 
-	Object lookupObject(ObjectRef objectRef);
+  Object lookupObject(ObjectRef objectRef);
 
-	ObjectRef lookupObjectRef(Object object);
+  ObjectRef lookupObjectRef(Object object);
 
-	void clear();
+  void clear();
 
-	int size();
+  int size();
 
-	boolean isEmpty();
+  boolean isEmpty();
 
-	boolean containsValue(Object object);
+  boolean containsValue(Object object);
 
-	boolean containsObjectRef(ObjectRef objectRef);
+  boolean containsObjectRef(ObjectRef objectRef);
 
-	Object remove(ObjectRef objectRef);
+  Object remove(ObjectRef objectRef);
 }

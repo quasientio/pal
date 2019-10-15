@@ -1,126 +1,124 @@
 package com.ittera.cometa.core.messages;
 
-import com.ittera.cometa.messages.MessageType;
-
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-
-import org.zeromq.ZFrame;
-import org.zeromq.ZMsg;
-
+import com.ittera.cometa.messages.MessageType;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.stream.Stream;
+import org.zeromq.ZFrame;
+import org.zeromq.ZMsg;
 
 public class InboundLogMsg extends BaseMsg {
-	/**
-	 * FRAMES:
-	 * -------
-	 * 0 [empty REQ envelope]: ""  NOTE: ONLY ON SEND (i.e. build())
-	 * 1. type of message    : int (MessageType)
-	 * 2. offset             : long
-	 * 3. message body       : byte[]
-	 */
+  /**
+   *
+   *
+   * <pre>
+   * FRAMES:
+   * -------
+   * 0 [empty REQ envelope]: ""  NOTE: ONLY ON SEND (i.e. build())
+   * 1. type of message    : int (MessageType)
+   * 2. offset             : long
+   * 3. message body       : byte[]
+   * </pre>
+   */
+  private static final int ACTUAL_FRAMES = 3;
 
-	private static final int ACTUAL_FRAMES = 3;
+  // fields
+  private MessageType messageType;
+  private long offset;
+  private byte[] body;
 
-	// fields
-	private MessageType messageType;
-	private long offset;
-	private byte[] body;
+  private InboundLogMsg() {
+    zmsg = new ZMsg();
+  }
 
+  public InboundLogMsg(MessageType messageType, long offset, byte[] body) {
+    this();
+    Stream.of(messageType, offset, body).forEach(Objects::requireNonNull);
+    this.messageType = messageType;
+    this.offset = offset;
+    this.body = body;
+    build();
+  }
 
-	private InboundLogMsg() {
-		zmsg = new ZMsg();
-	}
+  @Override
+  protected final void build() {
+    // for safety
+    if (!zmsg.isEmpty()) {
+      zmsg.destroy();
+    }
+    // 0. emulate empty REQ envelope since this message is sent directly by a DEALER
+    zmsg.add(new ZFrame(""));
 
-	public InboundLogMsg(MessageType messageType, long offset, byte[] body) {
-		this();
-		Stream.of(messageType, offset, body).forEach(Objects::requireNonNull);
-		this.messageType = messageType;
-		this.offset = offset;
-		this.body = body;
-		build();
-	}
+    // 1. type of message
+    zmsg.add(Ints.toByteArray(messageType.ordinal()));
 
-	@Override
-	protected final void build() {
-		// for safety
-		if (!zmsg.isEmpty()) {
-			zmsg.destroy();
-		}
-		// 0. emulate empty REQ envelope since this message is sent directly by a DEALER
-		zmsg.add(new ZFrame(""));
+    // 2. message offset
+    zmsg.add(Longs.toByteArray(offset));
 
-		// 1. type of message
-		zmsg.add(Ints.toByteArray(messageType.ordinal()));
+    // 3. message body
+    zmsg.add(body);
+  }
 
-		// 2. message offset
-		zmsg.add(Longs.toByteArray(offset));
+  public static InboundLogMsg from(ZMsg zMsg) {
+    InboundLogMsg msg = new InboundLogMsg();
+    assert zMsg.size() <= ACTUAL_FRAMES + 1;
+    // set fields
+    Iterator<ZFrame> it = zMsg.iterator();
+    // if from() is called not having sent the message, the empty REQ envelope must be discarded
+    if (zMsg.size() > ACTUAL_FRAMES) {
+      it.next();
+    }
+    byte[] data = it.next().getData();
+    msg.messageType = MessageType.values[Ints.fromByteArray(data)];
+    msg.offset = Longs.fromByteArray(it.next().getData());
+    msg.body = it.next().getData();
+    msg.build();
+    return msg;
+  }
 
-		// 3. message body
-		zmsg.add(body);
-	}
+  /** BEWARE equals() does not take zmsg object into account */
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    InboundLogMsg that = (InboundLogMsg) o;
+    return offset == that.offset
+        && messageType == that.messageType
+        && Arrays.equals(body, that.body);
+  }
 
-	public static InboundLogMsg from(ZMsg zMsg) {
-		InboundLogMsg msg = new InboundLogMsg();
-		assert zMsg.size() <= ACTUAL_FRAMES + 1;
-		// set fields
-		Iterator<ZFrame> it = zMsg.iterator();
-		// if from() is called not having sent the message, the empty REQ envelope must be discarded
-		if (zMsg.size() > ACTUAL_FRAMES) {
-			it.next();
-		}
-		byte[] data = it.next().getData();
-		msg.messageType = MessageType.values[Ints.fromByteArray(data)];
-		msg.offset = Longs.fromByteArray(it.next().getData());
-		msg.body = it.next().getData();
-		msg.build();
-		return msg;
-	}
+  /** BEWARE hashCode() does not take zmsg object into account */
+  @Override
+  public int hashCode() {
+    int result = Objects.hash(messageType, offset);
+    result = 31 * result + Arrays.hashCode(body);
+    return result;
+  }
 
-	/**
-	 * BEWARE equals() does not take zmsg object into account
-	 */
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
-		InboundLogMsg that = (InboundLogMsg) o;
-		return offset == that.offset &&
-			messageType == that.messageType &&
-			Arrays.equals(body, that.body);
-	}
+  @Override
+  public String toString() {
+    return "InboundLogMsg{"
+        + "messageType="
+        + messageType
+        + ", offset="
+        + offset
+        + ", body="
+        + Arrays.toString(body)
+        + '}';
+  }
 
-	/**
-	 * BEWARE hashCode() does not take zmsg object into account
-	 */
-	@Override
-	public int hashCode() {
-		int result = Objects.hash(messageType, offset);
-		result = 31 * result + Arrays.hashCode(body);
-		return result;
-	}
+  public MessageType getMessageType() {
+    return messageType;
+  }
 
-	@Override
-	public String toString() {
-		return "InboundLogMsg{" +
-			"messageType=" + messageType +
-			", offset=" + offset +
-			", body=" + Arrays.toString(body) +
-			'}';
-	}
+  public long getOffset() {
+    return offset;
+  }
 
-	public MessageType getMessageType() {
-		return messageType;
-	}
-
-	public long getOffset() {
-		return offset;
-	}
-
-	public byte[] getBody() {
-		return body;
-	}
+  public byte[] getBody() {
+    return body;
+  }
 }
