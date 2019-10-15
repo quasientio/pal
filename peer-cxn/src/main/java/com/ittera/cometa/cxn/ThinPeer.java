@@ -1,6 +1,5 @@
 package com.ittera.cometa.cxn;
 
-import com.google.common.primitives.Ints;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.PeerInfo;
@@ -27,6 +26,8 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Properties;
@@ -43,6 +44,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.common.primitives.Ints;
 
 import javax.annotation.Nullable;
 
@@ -582,14 +584,21 @@ public class ThinPeer {
 			recordMetadata.timestamp(), recordMetadata.offset(), recordMetadata.serializedValueSize());
 	}
 
-	public void close() {
-
-		// close socket-related resources
-		try {
-			if (peerSocket != null) {
-				peerSocket.close();
-				logger.info("Peer socket closed.");
+	private void close(Closeable resource, String msg) {
+		if (resource != null) {
+			try {
+				resource.close();
+				logger.info(msg);
+			} catch (IOException e) {
+				logger.warn("Error closing resource", e);
 			}
+		}
+	}
+
+	public void close() {
+		// close socket-related resources
+		close(peerSocket,"Peer socket closed.");
+		try {
 			if (zmqContext != null) {
 				zmqContext.destroy();
 				logger.info("Zmq context closed.");
@@ -599,14 +608,8 @@ public class ThinPeer {
 		}
 
 		// close log-related resources
-		if (producer != null) {
-			producer.close();
-			logger.info("Log producer closed.");
-		}
-		if (consumer != null) {
-			consumer.close();
-			logger.info("Log consumer closed.");
-		}
+		close(producer,"Log producer closed.");
+		close(consumer,"Log consumer closed.");
 		if (singleThreadConsumerExecutor != null) {
 			singleThreadConsumerExecutor.shutdown();
 			logger.info("Consumer executor service shut down");
