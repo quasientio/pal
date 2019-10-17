@@ -1,40 +1,14 @@
 package com.ittera.cometa.core.messages;
 
 import org.zeromq.ZMQ;
-import org.zeromq.ZMsg;
 
-public abstract class BaseMsg<T> {
+public abstract class BaseMsg {
 
-  protected ZMsg zmsg;
+  protected int size = -1;
+  // Non-blocking (as opposed to ZMsg.send() with no flag, which is blocking)
+  public abstract boolean send(ZMQ.Socket socket);
 
-  protected abstract void build();
-
-  /** ZMsg facade */
-  public boolean send(ZMQ.Socket socket, boolean destroy) {
-    return zmsg.send(socket, destroy);
-  }
-
-  public boolean send(ZMQ.Socket socket) {
-    return zmsg.send(socket);
-  }
-
-  public long contentSize() {
-    return zmsg.contentSize();
-  }
-
-  public void destroy() {
-    zmsg.destroy();
-  }
-
-  public int size() {
-    return zmsg.size();
-  }
-
-  public boolean isEmpty() {
-    return zmsg.isEmpty();
-  }
-
-  public ZMsg getInner() {
-    return zmsg.duplicate();
+  public int getSize() {
+    return size;
   }
 }

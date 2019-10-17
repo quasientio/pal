@@ -8,8 +8,7 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import java.util.*;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
-import org.zeromq.ZFrame;
-import org.zeromq.ZMsg;
+import org.zeromq.ZMQ;
 
 public class OutboundMsg extends BaseMsg {
 
@@ -29,16 +28,12 @@ public class OutboundMsg extends BaseMsg {
    */
 
   // fields
-  private MessageType messageType;
+  private final MessageType messageType;
 
-  private List<Wrappers.InternalHeader> headers = new ArrayList<>();
-  private UUID messageUuid;
-  @Nullable private UUID followingUuid;
-  private byte[] body;
-
-  private OutboundMsg() {
-    zmsg = new ZMsg();
-  }
+  @Nullable private final List<Wrappers.InternalHeader> headers;
+  private final UUID messageUuid;
+  @Nullable private final UUID followingUuid;
+  private final byte[] body;
 
   public OutboundMsg(
       MessageType messageType,
@@ -46,87 +41,154 @@ public class OutboundMsg extends BaseMsg {
       UUID messageUuid,
       @Nullable UUID followingUuid,
       byte[] body) {
-    this();
     Stream.of(messageType, messageUuid, body).forEach(Objects::requireNonNull);
     this.messageType = messageType;
-    if (headers != null && !headers.isEmpty()) {
-      this.headers = headers;
-    }
+    this.headers = headers;
     this.messageUuid = messageUuid;
     this.followingUuid = followingUuid;
     this.body = body;
-    build();
+  }
+
+  private OutboundMsg(
+      MessageType messageType,
+      @Nullable List<Wrappers.InternalHeader> headers,
+      UUID messageUuid,
+      @Nullable UUID followingUuid,
+      byte[] body,
+      int size) {
+    this(messageType, headers, messageUuid, followingUuid, body);
+    this.size = size;
   }
 
   @Override
-  protected final void build() {
-    // 1. type of message
-    zmsg.add(Ints.toByteArray(messageType.ordinal()));
+  public boolean send(ZMQ.Socket socket) {
+    if (socket == null) {
+      throw new IllegalArgumentException("Socket is null");
+    }
 
-    // 2. headers to follow
-    if (headers.isEmpty()) {
-      zmsg.add(Ints.toByteArray(0));
-    } else {
-      zmsg.add(Ints.toByteArray(headers.size()));
+    size = 0;
+    byte[] buff;
+    // 1. type of message
+    buff = Ints.toByteArray(messageType.ordinal());
+    size += buff.length;
+    if (!socket.send(buff, ZMQ.SNDMORE)) {
+      return false;
+    }
+
+    // 2. # of headers to follow
+    final int headersCnt = headers != null ? headers.size() : 0;
+    buff = Ints.toByteArray(headersCnt);
+    size += buff.length;
+    if (!socket.send(buff, ZMQ.SNDMORE)) {
+      return false;
     }
 
     // 3. headers
-    for (Wrappers.InternalHeader header : headers) {
-      zmsg.add(header.toByteArray());
+    if (headers != null && !headers.isEmpty()) {
+      for (Wrappers.InternalHeader header : headers) {
+        buff = header.toByteArray();
+        size += buff.length;
+        if (!socket.send(buff, ZMQ.SNDMORE)) {
+          return false;
+        }
+      }
     }
 
     // 4. message uuid
-    zmsg.add(UUIDUtils.toBytes(messageUuid));
+    buff = UUIDUtils.toBytes(messageUuid);
+    size += buff.length;
+    if (!socket.send(buff, ZMQ.SNDMORE)) {
+      return false;
+    }
 
     // 5. followingUuid
-    if (followingUuid != null) {
-      zmsg.add(UUIDUtils.toBytes(followingUuid));
-    } else {
-      zmsg.add(Ints.toByteArray(0));
+    buff = followingUuid == null ? Ints.toByteArray(0) : UUIDUtils.toBytes(followingUuid);
+    size += buff.length;
+    if (!socket.send(buff, ZMQ.SNDMORE)) {
+      return false;
     }
 
     // 6. message body
-    zmsg.add(body);
+    size += body.length;
+    if (!socket.send(body, 0)) {
+      return false;
+    }
+
+    return true;
   }
 
-  public static OutboundMsg from(ZMsg zMsg) throws InvalidProtocolBufferException {
-    // duplicate ZMsg contents
-    OutboundMsg msg = new OutboundMsg();
+  // blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
+  // ready, then all are)
+  public static OutboundMsg recvMsg(ZMQ.Socket socket, boolean blocking)
+      throws InvalidProtocolBufferException {
+    if (socket == null) {
+      throw new IllegalArgumentException("Socket is null");
+    }
+    int flag = blocking ? 0 : ZMQ.DONTWAIT;
+    byte[] buff = socket.recv(flag);
+    if (!blocking && buff == null) {
+      return null;
+    }
 
-    // set fields
-    Iterator<ZFrame> it = zMsg.iterator();
-    byte[] data = it.next().getData();
-    msg.messageType = MessageType.values[Ints.fromByteArray(data)];
-    int headerCount = Ints.fromByteArray(it.next().getData());
+    // 1. type of message
+    int msgSize = buff.length;
+    final MessageType messageType = MessageType.values[Ints.fromByteArray(buff)];
+    // 2. # of headers to follow
+    buff = socket.recv();
+    msgSize += buff.length;
+    final int headerCount = Ints.fromByteArray(buff);
+    // 3. headers
+    final List<Wrappers.InternalHeader> headers;
     if (headerCount > 0) {
+      headers = new ArrayList<>();
       for (int i = 0; i < headerCount; i++) {
-        msg.headers.add(Wrappers.InternalHeader.parseFrom(it.next().getData()));
+        buff = socket.recv();
+        msgSize += buff.length;
+        headers.add(Wrappers.InternalHeader.parseFrom(buff));
       }
+    } else {
+      headers = null;
     }
-    msg.messageUuid = UUIDUtils.fromBytes(it.next().getData());
-    byte[] followingUuidData = it.next().getData();
-    if (Ints.fromByteArray(followingUuidData) != 0) {
-      msg.followingUuid = UUIDUtils.fromBytes(followingUuidData);
+
+    // 4. message uuid
+    buff = socket.recv();
+    msgSize += buff.length;
+    final UUID messageUuid = UUIDUtils.fromBytes(buff);
+
+    // 5. followingUuid
+    buff = socket.recv();
+    msgSize += buff.length;
+    final UUID followingUuid;
+    if (Ints.fromByteArray(buff) != 0) {
+      followingUuid = UUIDUtils.fromBytes(buff);
+    } else {
+      followingUuid = null;
     }
-    msg.body = it.next().getData();
-    msg.build();
-    return msg;
+
+    // 6. message body
+    final byte[] body = socket.recv();
+    msgSize += body.length;
+
+    return new OutboundMsg(messageType, headers, messageUuid, followingUuid, body, msgSize);
   }
 
-  /** BEWARE equals() does not take zmsg object into account */
+  // default is non-blocking
+  public static OutboundMsg recvMsg(ZMQ.Socket socket) throws InvalidProtocolBufferException {
+    return recvMsg(socket, false);
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     OutboundMsg that = (OutboundMsg) o;
     return messageType == that.messageType
-        && headers.equals(that.headers)
+        && Objects.equals(headers, that.headers)
         && messageUuid.equals(that.messageUuid)
         && Objects.equals(followingUuid, that.followingUuid)
         && Arrays.equals(body, that.body);
   }
 
-  /** BEWARE hashCode() does not take zmsg object into account */
   @Override
   public int hashCode() {
     int result = Objects.hash(messageType, headers, messageUuid, followingUuid);
@@ -147,6 +209,8 @@ public class OutboundMsg extends BaseMsg {
         + followingUuid
         + ", body="
         + Arrays.toString(body)
+        + ", size="
+        + (getSize() == -1 ? "<unknown>" : getSize())
         + '}';
   }
 

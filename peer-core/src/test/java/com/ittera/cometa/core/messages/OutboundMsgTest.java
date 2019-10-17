@@ -14,67 +14,55 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
 public class OutboundMsgTest extends ZmqEnabledTest {
   private MessageBuilder messageBuilder = new ProtobufMessageBuilder();
+  private static final Logger logger = LoggerFactory.getLogger("tests");
 
   @Test
-  public void send() {
+  public void sendWithNullables() throws InvalidProtocolBufferException {
     UUID execMessageUuid = UUID.randomUUID();
     UUID followingMessageUuid = null;
     byte[] body = "whatever".getBytes();
     List<InternalHeader> headers = null;
 
     // with null headers and followingUuid
-    OutboundMsg msg =
+    OutboundMsg msgOut =
         new OutboundMsg(
             MessageType.ExecMessage, headers, execMessageUuid, followingMessageUuid, body);
 
+    // verify getters
+    assertThat(msgOut.getMessageType(), is(MessageType.ExecMessage));
+    assertThat(msgOut.getHeaders(), is(nullValue()));
+    assertThat(msgOut.getMessageUuid(), is(execMessageUuid));
+    assertThat(msgOut.getFollowingUuid(), is(nullValue()));
+    assertThat(msgOut.getBody(), is(body));
+
     // send
     String socketAddr = "inproc://here";
-    assertThat(msg.isEmpty(), is(false));
     ZContext zContext = createContext();
     ZMQ.Socket in = zContext.createSocket(SocketType.REP);
     in.bind(socketAddr);
     ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
     out.connect(socketAddr);
-    msg.send(out);
+    msgOut.send(out);
 
-    // verify destroyed
-    assertThat(msg.isEmpty(), is(true));
+    // receive and compare
+    OutboundMsg msgIn = OutboundMsg.recvMsg(in, true);
+    assertThat(msgIn, is(msgOut));
 
     out.close();
+    in.close();
     zContext.destroy();
   }
 
   @Test
-  public void buildWithNullables() {
-    UUID execMessageUuid = UUID.randomUUID();
-    UUID followingMessageUuid = null;
-    byte[] body = "whatever".getBytes();
-    List<InternalHeader> headers = null;
-
-    // with null headers and followingUuid
-    OutboundMsg msg =
-        new OutboundMsg(
-            MessageType.ExecMessage, headers, execMessageUuid, followingMessageUuid, body);
-
-    // verify # of frames
-    assertThat(msg.size(), is(5));
-
-    // verify getters
-    assertThat(msg.getMessageType(), is(MessageType.ExecMessage));
-    assertThat(msg.getHeaders(), is(empty()));
-    assertThat(msg.getMessageUuid(), is(execMessageUuid));
-    assertThat(msg.getFollowingUuid(), is(nullValue()));
-    assertThat(msg.getBody(), is(body));
-  }
-
-  @Test
-  public void build() {
+  public void send() throws InvalidProtocolBufferException {
     UUID interceptMessageUuid = UUID.randomUUID();
     UUID followingMessageUuid = UUID.randomUUID();
     byte[] body = "whatever".getBytes();
@@ -82,7 +70,7 @@ public class OutboundMsgTest extends ZmqEnabledTest {
     List<InternalHeader> headers = Collections.singletonList(writeAhead);
 
     // with all values filled
-    OutboundMsg msg =
+    OutboundMsg msgOut =
         new OutboundMsg(
             MessageType.InterceptRequest,
             headers,
@@ -90,39 +78,32 @@ public class OutboundMsgTest extends ZmqEnabledTest {
             followingMessageUuid,
             body);
 
-    // verify # of frames
-    assertThat(msg.size(), is(5 + headers.size()));
-
     // verify getters
-    assertThat(msg.getMessageType(), is(MessageType.InterceptRequest));
-    assertThat(msg.getHeaders().size(), is(1));
-    assertThat(msg.getHeaders().get(0), is(writeAhead));
-    assertThat(msg.getMessageUuid(), is(interceptMessageUuid));
-    assertThat(msg.getFollowingUuid(), is(followingMessageUuid));
-    assertThat(msg.getBody(), is(body));
-  }
+    assertThat(msgOut.getMessageType(), is(MessageType.InterceptRequest));
+    assertThat(msgOut.getHeaders().size(), is(1));
+    assertThat(msgOut.getHeaders().get(0), is(writeAhead));
+    assertThat(msgOut.getMessageUuid(), is(interceptMessageUuid));
+    assertThat(msgOut.getFollowingUuid(), is(followingMessageUuid));
+    assertThat(msgOut.getBody(), is(body));
 
-  @Test
-  public void from() throws InvalidProtocolBufferException {
-    UUID execMessageUuid = UUID.randomUUID();
-    UUID followingMessageUuid = UUID.randomUUID();
-    byte[] body = "whatever".getBytes();
-    InternalHeader writeAhead = messageBuilder.buildWriteAheadHeader(UUID.randomUUID());
-    List<InternalHeader> headers = Collections.singletonList(writeAhead);
+    // send
+    String socketAddr = "inproc://here";
+    ZContext zContext = createContext();
+    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
+    in.bind(socketAddr);
+    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
+    out.connect(socketAddr);
+    msgOut.send(out);
+    logger.debug("sent msgOut= {}", msgOut);
 
-    OutboundMsg msg1 =
-        new OutboundMsg(
-            MessageType.ExecMessage, headers, execMessageUuid, followingMessageUuid, body);
-    // construct from inner (duplicate)
-    OutboundMsg msg2 = OutboundMsg.from(msg1.getInner());
+    // receive and compare
+    OutboundMsg msgIn = OutboundMsg.recvMsg(in, true);
+    logger.debug("received msgIn= {}", msgIn);
+    assertThat(msgIn, is(msgOut));
 
-    // verify equal contents
-    assertTrue(msg2 != msg1);
-    assertThat(msg2, is(msg1));
-
-    // clean up
-    msg1.destroy();
-    msg2.destroy();
+    out.close();
+    in.close();
+    zContext.destroy();
   }
 
   @Test

@@ -9,7 +9,6 @@ import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
-import org.zeromq.ZMsg;
 import zmq.ZError;
 
 class LogMessageInvoker extends AbstractMessageInvokerThread {
@@ -54,11 +53,9 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
     }
     while (!Thread.interrupted()) {
       // recv req
-      ZMsg zmsg = null;
       InboundLogMsg msg = null;
       try {
-        zmsg = ZMsg.recvMsg(socket);
-        msg = InboundLogMsg.from(zmsg);
+        msg = InboundLogMsg.recvMsg(socket, true);
         if (logger.isDebugEnabled()) {
           logger.debug("Getting message with kafka offset: {}", msg.getOffset());
         }
@@ -79,10 +76,6 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
         }
       } catch (Exception e) {
         logger.error("Error receiving/parsing message", e);
-      } finally {
-        if (zmsg != null) {
-          zmsg.destroy();
-        }
       }
 
       if (msg == null) {
@@ -126,8 +119,6 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
           }
         }
       }
-      // clean up
-      msg.destroy();
     }
 
     closeConnections();

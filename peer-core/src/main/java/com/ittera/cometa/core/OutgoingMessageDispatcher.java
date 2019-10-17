@@ -57,15 +57,14 @@ class OutgoingMessageDispatcher extends ConnectedService {
   public final void run() {
     while (!Thread.interrupted()) {
       OutboundMsg msg = null;
-      ZMsg zmsg = null;
       try {
-        zmsg = ZMsg.recvMsg(repSocket, ZMQ.DONTWAIT);
-        if (zmsg == null) {
+        msg = OutboundMsg.recvMsg(repSocket);
+        if (msg == null) {
           continue;
         }
-        msg = OutboundMsg.from(zmsg);
         if (logger.isDebugEnabled()) {
-          logger.debug("Received new message ({} bytes)", msg.contentSize());
+          logger.debug(
+              "Received new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
         }
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
@@ -84,10 +83,6 @@ class OutgoingMessageDispatcher extends ConnectedService {
         }
       } catch (Exception e) {
         logger.error("Error parsing received message", e);
-      } finally {
-        if (zmsg != null) {
-          zmsg.destroy();
-        }
       }
       // reply to message
       if (msg != null) {
@@ -99,12 +94,11 @@ class OutgoingMessageDispatcher extends ConnectedService {
 
       // publish message
       if (msg != null) {
-        msg.send(pubSocket, false);
+        msg.send(pubSocket);
         if (logger.isDebugEnabled()) {
-          logger.debug("Published new message ({} bytes)", msg.contentSize());
+          logger.debug(
+              "Published new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
         }
-        // clean up
-        msg.destroy();
       }
     }
   }

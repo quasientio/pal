@@ -84,11 +84,10 @@ public class LogReader extends ConnectedService {
       }
       while (!shutdownRequested && !Thread.interrupted()) {
         try {
-          ZMsg zmsg = ZMsg.recvMsg(offsetSubscriber, ZMQ.DONTWAIT);
-          if (zmsg == null) {
+          PublishedOffsetMsg msg = PublishedOffsetMsg.recvMsg(offsetSubscriber);
+          if (msg == null) {
             continue;
           }
-          PublishedOffsetMsg msg = PublishedOffsetMsg.from(zmsg);
           skipOffsets.add(msg.getOffset());
         } catch (ClosedSelectorException ex) {
           if (logger.isDebugEnabled()) {

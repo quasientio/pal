@@ -24,7 +24,6 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
-import org.zeromq.ZMsg;
 
 public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
@@ -107,7 +106,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     assertThat(reply, is("0"));
 
     // check if it was published
-    OutboundMsg publishedOutMsg = OutboundMsg.from(ZMsg.recvMsg(sub));
+    OutboundMsg publishedOutMsg = OutboundMsg.recvMsg(sub, true);
     assertThat(publishedOutMsg, is(outMsg));
 
     // verify exec message is what we sent
@@ -163,7 +162,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     assertThat(reply, is("0"));
 
     // check if it was published
-    OutboundMsg publishedOutMsg = OutboundMsg.from(ZMsg.recvMsg(sub));
+    OutboundMsg publishedOutMsg = OutboundMsg.recvMsg(sub, true);
     assertThat(publishedOutMsg, is(outMsg));
 
     // verify message is what we sent
@@ -213,7 +212,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     assertThat(reply, is("0"));
 
     // get what was published
-    OutboundMsg publishedOutMsg = OutboundMsg.from(ZMsg.recvMsg(sub));
+    OutboundMsg publishedOutMsg = OutboundMsg.recvMsg(sub, true);
     assertThat(publishedOutMsg, is(outMsg));
 
     // verify exec message is what we sent

@@ -2,73 +2,45 @@ package com.ittera.cometa.core.messages;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 
 import com.ittera.cometa.core.ZmqEnabledTest;
 import com.ittera.cometa.messages.MessageType;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
 public class InboundLogMsgTest extends ZmqEnabledTest {
+  private static final Logger logger = LoggerFactory.getLogger("tests");
 
   @Test
   public void send() {
     long offset = 199;
     byte[] body = "whatever".getBytes();
 
-    InboundLogMsg msg = new InboundLogMsg(MessageType.ExecMessage, offset, body);
+    InboundLogMsg msgOut = new InboundLogMsg(MessageType.ExecMessage, offset, body);
 
     // send
     String socketAddr = "inproc://here";
-    assertThat(msg.isEmpty(), is(false));
     ZContext zContext = createContext();
+    ZMQ.Socket out = zContext.createSocket(SocketType.DEALER);
+    out.bind(socketAddr);
     ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.bind(socketAddr);
-    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
-    out.connect(socketAddr);
-    msg.send(out);
+    in.connect(socketAddr);
+    msgOut.send(out);
+    logger.debug("sent msgOut= {}", msgOut);
 
-    // verify destroyed
-    assertThat(msg.isEmpty(), is(true));
+    // receive and compare
+    InboundLogMsg msgIn = InboundLogMsg.recvMsg(in, true);
+    logger.debug("received msgIn= {}", msgIn);
+    assertThat(msgIn, is(msgOut));
 
+    // close
     out.close();
+    in.close();
     zContext.destroy();
-  }
-
-  @Test
-  public void build() {
-    long offset = 199;
-    byte[] body = "whatever".getBytes();
-
-    InboundLogMsg msg = new InboundLogMsg(MessageType.ExecMessage, offset, body);
-
-    // verify # of frames == 3 actual frames + Empty initial frame to emulate REQ body
-    assertThat(msg.size(), is(3 + 1));
-
-    // verify getters
-    assertThat(msg.getMessageType(), is(MessageType.ExecMessage));
-    assertThat(msg.getOffset(), is(offset));
-    assertThat(msg.getBody(), is(body));
-  }
-
-  @Test
-  public void from() {
-    long offset = 199;
-    byte[] body = "whatever".getBytes();
-
-    InboundLogMsg msg1 = new InboundLogMsg(MessageType.ExecMessage, offset, body);
-    // construct from inner (duplicate)
-    InboundLogMsg msg2 = InboundLogMsg.from(msg1.getInner());
-
-    // verify equal contents
-    assertTrue(msg2 != msg1);
-    assertThat(msg2, is(msg1));
-
-    // clean up
-    msg1.destroy();
-    msg2.destroy();
   }
 
   @Test

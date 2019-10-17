@@ -60,11 +60,9 @@ public class LogReaderTest extends ZmqEnabledTest {
 
       // process requests
       while (!Thread.interrupted()) {
-        ZMsg zmsg = null;
         InboundLogMsg logMsg = null;
         try {
-          zmsg = ZMsg.recvMsg(socket);
-          logMsg = InboundLogMsg.from(zmsg);
+          logMsg = InboundLogMsg.recvMsg(socket, true);
           if (logMsg.getMessageType().equals(MessageType.ExecMessage)) {
             ExecMessage msg = ExecMessage.parseFrom(logMsg.getBody());
             logger.debug("ExecMessage received = {}", msg);
@@ -88,13 +86,6 @@ public class LogReaderTest extends ZmqEnabledTest {
           }
         } catch (Exception e) {
           logger.error("error parsing received message", e);
-        } finally {
-          if (zmsg != null) {
-            zmsg.destroy();
-          }
-          if (logMsg != null) {
-            logMsg.destroy();
-          }
         }
       }
 

@@ -44,18 +44,19 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 
       while (!Thread.interrupted()) {
         OutboundMsg msg = null;
-        ZMsg zmsg = null;
         try {
-          zmsg = ZMsg.recvMsg(repSocket, ZMQ.DONTWAIT);
-          if (zmsg == null) {
+          msg = OutboundMsg.recvMsg(repSocket);
+          if (msg == null) {
             continue;
           }
-          msg = OutboundMsg.from(zmsg);
           if (logger.isDebugEnabled()) {
-            logger.debug("Received new message ({} bytes)", msg.contentSize());
+            logger.debug(
+                "Received new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
           }
           // add headers & message to lists for verification
-          headersReceived.addAll(msg.getHeaders());
+          if (msg.getHeaders() != null) {
+            headersReceived.addAll(msg.getHeaders());
+          }
           if (msg.getMessageType().equals(MessageType.ExecMessage)) {
             messagesReceived.add(ExecMessage.parseFrom(msg.getBody()));
           } else if (msg.getMessageType().equals(MessageType.InterceptRequest)) {
@@ -82,13 +83,6 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
           }
         } catch (Exception e) {
           logger.error("Error parsing received message", e);
-        } finally {
-          if (zmsg != null) {
-            zmsg.destroy();
-          }
-          if (msg != null) {
-            msg.destroy();
-          }
         }
       }
     }

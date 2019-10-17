@@ -145,15 +145,14 @@ class LogWriter extends ConnectedService {
     }
     while (!Thread.interrupted()) {
       OutboundMsg msg = null;
-      ZMsg zmsg = null;
       try {
-        zmsg = ZMsg.recvMsg(subscriber, ZMQ.DONTWAIT);
-        if (zmsg == null) {
+        msg = OutboundMsg.recvMsg(subscriber);
+        if (msg == null) {
           continue;
         }
-        msg = OutboundMsg.from(zmsg);
         if (logger.isDebugEnabled()) {
-          logger.debug("Received new message ({} bytes)", msg.contentSize());
+          logger.debug(
+              "Received new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
         }
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
@@ -172,10 +171,6 @@ class LogWriter extends ConnectedService {
         }
       } catch (Exception e) {
         logger.error("Error parsing received message", e);
-      } finally {
-        if (zmsg != null) {
-          zmsg.destroy();
-        }
       }
       if (msg != null) {
         // set headers
@@ -188,7 +183,6 @@ class LogWriter extends ConnectedService {
         // send to kafka immediately
         sendToKafka(
             msg.getBody(), msg.getMessageUuid(), msg.getFollowingUuid(), peerUuid, logHeaders);
-        msg.destroy();
       }
     }
   }
@@ -196,11 +190,13 @@ class LogWriter extends ConnectedService {
   private List<Header> fromInternalToLog(List<InternalHeader> internalHeaders) {
     List<Header> logHeaders = new ArrayList<>();
     boolean isWriteAhead = false;
-    for (InternalHeader ih : internalHeaders) {
-      if (ih.getHeaderType().equals(Wrappers.InternalHeaderType.WRITE_AHEAD)) {
-        isWriteAhead = true;
-        logHeaders.add(HEADERS.get("SELF_DISPATCHING_HEADER"));
-        break;
+    if (internalHeaders != null) {
+      for (InternalHeader ih : internalHeaders) {
+        if (ih.getHeaderType().equals(Wrappers.InternalHeaderType.WRITE_AHEAD)) {
+          isWriteAhead = true;
+          logHeaders.add(HEADERS.get("SELF_DISPATCHING_HEADER"));
+          break;
+        }
       }
     }
     if (!isWriteAhead) {

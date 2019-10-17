@@ -82,7 +82,7 @@ public class DispatcherConnector {
             UUID.fromString(message.getMessageUuid()),
             followingUuid,
             message.toByteArray());
-    msg.send(outSocket, true);
+    msg.send(outSocket);
 
     // receive
     String rcvdString = null;
@@ -132,7 +132,7 @@ public class DispatcherConnector {
             UUID.fromString(message.getMessageUuid()),
             null,
             message.toByteArray());
-    msg.send(outSocket, true);
+    msg.send(outSocket);
 
     // receive
     String rcvdString = null;
