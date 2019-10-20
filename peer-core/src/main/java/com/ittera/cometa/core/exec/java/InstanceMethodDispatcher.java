@@ -7,7 +7,6 @@ import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 import com.ittera.cometa.core.exec.DispatcherConnector;
-import com.ittera.cometa.core.util.ReflectionHelper;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
