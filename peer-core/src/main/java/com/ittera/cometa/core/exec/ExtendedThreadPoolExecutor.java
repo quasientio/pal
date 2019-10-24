@@ -66,7 +66,9 @@ public class ExtendedThreadPoolExecutor extends ThreadPoolExecutor {
   public List<Runnable> shutdownNow() {
 
     ExecThreadFactory execThreadFactory = (ExecThreadFactory) getThreadFactory();
-    logger.info("Sending interrupt to {} threads", execThreadFactory.getCreatedThreads().size());
+    if (!execThreadFactory.getCreatedThreads().isEmpty()) {
+      logger.info("Sending interrupt to {} threads", execThreadFactory.getCreatedThreads().size());
+    }
     for (Thread thread : execThreadFactory.getCreatedThreads()) {
       thread.interrupt();
     }

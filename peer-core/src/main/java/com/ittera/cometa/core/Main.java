@@ -86,10 +86,17 @@ public class Main implements Callable<Integer> {
   private String tcpPub;
 
   @Option(
-      names = {"-cp", "--classpath"},
-      paramLabel = "CLASSPATH",
-      description = "load classes from given folders/jars")
-  private String classpath;
+      names = {"-r", "--tcp-req"},
+      paramLabel = "[HOST:]PORT",
+      description =
+          "listen for requests on TCP socket (default: localhost:random_port)\n--tcp-req=no to accept no requests over TCP")
+  private String tcpReq;
+
+  @Option(
+      names = {"-h", "--help"},
+      usageHelp = true,
+      description = "display this help message")
+  private boolean helpRequested = false;
 
   @Option(
       names = {"-jar"},
@@ -257,12 +264,35 @@ public class Main implements Callable<Integer> {
       }
     }
 
-    // default to empty RunOptions
-    if (runOptions == null) {
-      runOptions = EnumSet.noneOf(RunOptions.class);
+    // set TCP options
+    final String tcpReqGiven = getParameter("TCP_REQ", tcpReq);
+    final boolean reqless = tcpReqGiven != null && tcpReqGiven.equalsIgnoreCase("no");
+    if (reqless) {
+      runOptions.add(RunOptions.REQLESS);
     }
 
     logger.info("Running with options: {}", runOptions);
+  }
+
+  public static int findOpenPort() throws IOException {
+    final ServerSocket tmpSocket = new ServerSocket(0, 0);
+    try {
+      return tmpSocket.getLocalPort();
+    } finally {
+      tmpSocket.close();
+    }
+  }
+
+  // load from 1) cmd-line or 2) env variable
+  private static String getParameter(String envKey, String paramValue) {
+    if (paramValue != null && !paramValue.isEmpty()) {
+      return paramValue;
+    }
+    final String envVar = System.getenv(envKey);
+    if (envVar != null) {
+      return envVar.trim();
+    }
+    return null;
   }
 
   private void addMiscProperties() {
@@ -291,7 +321,35 @@ public class Main implements Callable<Integer> {
       }
       properties.put("out.pub", format("tcp://%s:%d", hostname, port));
     } else {
-      properties.put("out.pub", ZMQProps.inprocChannels.getProperty("out.pub.inproc"));
+      properties.setProperty("out.pub", ZMQProps.inprocChannels.getProperty("out.pub.inproc"));
+    }
+
+    // are we listening for requests over TCP
+    if (!runOptions.contains(RunOptions.REQLESS)) {
+      String hostname = "0.0.0.0";
+      int port = 0;
+      String tcpReqGiven = getParameter("TCP_REQ", tcpReq);
+      if (tcpReqGiven != null && !tcpReqGiven.isEmpty()) {
+        final String portStr;
+        if (tcpReqGiven.contains(":")) {
+          hostname = Strings.stringBefore(tcpReqGiven, ":");
+          portStr = Strings.stringAfter(tcpReqGiven, ":");
+        } else {
+          portStr = tcpReqGiven;
+        }
+        try {
+          port = Integer.parseInt(portStr);
+        } catch (NumberFormatException e) {
+          fatalExit(e, PeerException.FatalCode.ERROR_PARSING_REQ_PORT_NUMBER);
+        }
+      } else { // default is to listen on 0.0.0.0:RANDOM_PORT
+        try {
+          port = findOpenPort();
+        } catch (IOException e) {
+          fatalExit(null, PeerException.FatalCode.ERROR_FINDING_REQ_SOCKET);
+        }
+      }
+      properties.setProperty("in.req.tcp", format("tcp://%s:%d", hostname, port));
     }
   }
 
@@ -323,7 +381,9 @@ public class Main implements Callable<Integer> {
     try {
       final Properties peerProperties = new Properties();
       // public listening interfaces
-      peerProperties.put("reqAddress", properties.getProperty("in.req.tcp"));
+      if (!runOptions.contains(RunOptions.REQLESS)) {
+        peerProperties.put("reqAddress", properties.getProperty("in.req.tcp"));
+      }
       if (properties
           .getProperty("out.pub")
           .startsWith("tcp://")) { // only register PUB addr if over tcp
@@ -491,7 +551,9 @@ public class Main implements Callable<Integer> {
       services.add(injector.getInstance(LogWriter.class));
     }
     services.add(injector.getInstance(OutgoingMessageDispatcher.class));
-    services.add(injector.getInstance(DirectRequestDispatcher.class));
+    if (!runOptions.contains(RunOptions.REQLESS)) {
+      services.add(injector.getInstance(DirectRequestDispatcher.class));
+    }
 
     final ServiceManager manager = new ServiceManager(services);
     manager.addListener(
@@ -533,7 +595,9 @@ public class Main implements Callable<Integer> {
     }
 
     // prestart threads to create the REP sockets; this must be done after DEALER
-    injector.getInstance(PeerMessageExecutor.class).prestartAllCoreThreads();
+    if (!runOptions.contains(RunOptions.REQLESS)) {
+      injector.getInstance(PeerMessageExecutor.class).prestartAllCoreThreads();
+    }
 
     // now call target (main class or JAR file), if given
     boolean selfCalled = false;
