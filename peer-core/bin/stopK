@@ -1,6 +1,0 @@
-#!/bin/bash
-
-#Kafka doesn't like something in the classpath we export in setenv.sh
-unset CLASSPATH
-
-$KAFKA_HOME/bin/kafka-server-stop.sh 

@@ -1,9 +1,5 @@
 #!/bin/sh
 
-JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA"
-
-MAIN_ARGS=$@
-
 JMX_PROPS="-Dcom.sun.management.jmxremote \
 	-Djava.rmi.server.hostname=$JMX_HOST \
 	-Dcom.sun.management.jmxremote.port=$JMX_PORT \
@@ -11,6 +7,8 @@ JMX_PROPS="-Dcom.sun.management.jmxremote \
 	-Dcom.sun.management.jmxremote.authenticate=false \
 	-Dcom.sun.management.jmxremote.ssl=false"
 
-CLASSPATH=classes:libs/*
+JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA -noverify"
 
-java $JMX_PROPS $JVM_OPTS -cp $CLASSPATH com.ittera.cometa.core
+MAIN_ARGS="$@"
+
+java $JVM_OPTS $JMX_PROPS -jar peer-core-*.jar $MAIN_ARGS

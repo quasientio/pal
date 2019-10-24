@@ -1,0 +1,21 @@
+###################################################################
+# zk-peer-compose.yml
+#
+# CMD's (from `docker` dir):   docker-compose --project-directory .. -f zk-peer-compose.yml up/config
+###################################################################
+
+version: '3.7'
+
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    network_mode: "host"
+
+  peer:
+    build:
+      context: .
+    image: peer
+    network_mode: "host"
+    env_file: peer.env
+    depends_on:
+      - zookeeper
