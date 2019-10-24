@@ -413,15 +413,15 @@ public class Main implements Callable<Integer> {
     if (classpath != null) {
       // colon-separated list of classpath entries where each is either a folder or a JAR file
       Arrays.stream(classpath.split(":"))
-          .map(File::new)
-          .forEach(
-              f -> {
-                try {
-                  urls.add(f.toURI().toURL());
-                } catch (MalformedURLException ex) {
-                  logger.error("Error adding classpath entry as URL for custom classloader", ex);
-                }
-              });
+        .map(File::new)
+        .forEach(
+          f -> {
+            try {
+              urls.add(f.toURI().toURL());
+            } catch (MalformedURLException ex) {
+              logger.error("Error adding classpath entry as URL for custom classloader", ex);
+            }
+          });
     }
     if (jarFile != null) {
       try {
@@ -430,8 +430,7 @@ public class Main implements Callable<Integer> {
         logger.error("Error adding JAR file as URL for custom classloader", ex);
       }
     }
-    return new CustomClassloader(
-        urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
+    return new CustomClassloader(urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
   }
 
   private void registerSelfAsPeer(Injector injector) {
@@ -464,6 +463,7 @@ public class Main implements Callable<Integer> {
     logger.info("Registered self in directory");
   }
 
+
   private Set<Service> createManagedServices(Injector injector) {
     final Set<Service> services = new HashSet<>();
     if (!runOptions.contains(RunOptions.LOGLESS)) {
@@ -480,23 +480,23 @@ public class Main implements Callable<Integer> {
   private ServiceManager createServiceManager(Iterable<Service> services) {
     final ServiceManager manager = new ServiceManager(services);
     manager.addListener(
-        new ServiceManager.Listener() {
-          public void stopped() {
-            logger.info("Service manager stopped.");
-          }
+      new ServiceManager.Listener() {
+        public void stopped() {
+          logger.info("Service manager stopped.");
+        }
 
-          public void healthy() {
-            logger.info("Managed services ready");
-            manager
-                .startupTimes()
-                .forEach((key, value) -> logger.info("Service '{}' started in {} ms", key, value));
-          }
+        public void healthy() {
+          logger.info("Managed services ready");
+          manager
+            .startupTimes()
+            .forEach((key, value) -> logger.info("Service '{}' started in {} ms", key, value));
+        }
 
-          public void failure(Service service) {
-            fatalExit(service.failureCause(), PeerException.FatalCode.ERROR_SERVICE_MANAGER_FAILED);
-          }
-        },
-        MoreExecutors.directExecutor());
+        public void failure(Service service) {
+          fatalExit(service.failureCause(), PeerException.FatalCode.ERROR_SERVICE_MANAGER_FAILED);
+        }
+      },
+      MoreExecutors.directExecutor());
     return manager;
   }
 
@@ -610,7 +610,7 @@ public class Main implements Callable<Integer> {
     }
 
     // set up managed services
-    final Set<Service> services = createManagedServices(injector);
+		final Set<Service> services = createManagedServices(injector);
     final ServiceManager manager = createServiceManager(services);
 
     // add shutdown hook
