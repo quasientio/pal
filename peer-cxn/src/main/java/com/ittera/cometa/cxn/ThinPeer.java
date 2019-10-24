@@ -126,15 +126,14 @@ public class ThinPeer {
     this.allowP2P = Boolean.parseBoolean(loadProperty("peer.allowP2P", properties, "true"));
     logger.info("This peer will {}communicate P2P", allowP2P ? "" : "NOT ");
 
-    // configure zookeeper
-    String zookeeperUrl = loadProperty("zookeeper_url", properties);
-    if (zookeeperUrl == null) {
+    // configure PAL directory
+    String palDirectoryUrl = loadProperty("pal_directory", properties);
+    if (palDirectoryUrl == null) {
       throw new RuntimeException(
-          "Couldn't connect to zookeeper. Please set the environment variable 'ZOOKEEPER_URL'"
-              + " or the 'zookeeper_url' system property. (Example: -Dzookeeper_url=localhost:2181)");
+          "Couldn't connect to PAL Directory. Please set the environment variable 'PAL_DIRECTORY'");
     }
-    logger.info("Using ZOOKEEPER_URL = {}", zookeeperUrl);
-    this.palDirectory = new PALDirectory(zookeeperUrl);
+    logger.info("Using PAL_DIRECTORY = {}", palDirectoryUrl);
+    this.palDirectory = new PALDirectory(palDirectoryUrl);
     try {
       // register self as new peer TODO fill properties
       final Properties peerProperties = new Properties();
@@ -255,17 +254,13 @@ public class ThinPeer {
 
   /**
    * Get a property's value, by performing a search in the following order: 1) given properties
-   * object, 2) System properties, 3) ENV (uppercase variable) If not found, return defaultValue if
-   * given
+   * object, 2) ENV (uppercase variable) If not found, return defaultValue if given
    */
   private static String loadProperty(
       String propertyName, @Nullable Properties properties, @Nullable String defaultValue) {
     if (properties != null && properties.containsKey(propertyName)) {
       logger.debug("loading value of '{}' from properties object", propertyName);
       return properties.getProperty(propertyName);
-    } else if (System.getProperty(propertyName) != null) {
-      logger.debug("loading value of '{}' from system properties", propertyName);
-      return System.getProperty(propertyName);
     } else if (System.getenv(propertyName.toUpperCase()) != null) {
       logger.debug("loading value of '{}' from ENV", propertyName.toUpperCase());
       return System.getenv(propertyName.toUpperCase());

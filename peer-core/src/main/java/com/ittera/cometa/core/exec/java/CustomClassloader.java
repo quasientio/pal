@@ -3,13 +3,17 @@ package com.ittera.cometa.core.exec.java;
 import com.ittera.cometa.core.InterceptProcessor;
 import java.net.URL;
 import java.net.URLClassLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CustomClassloader extends URLClassLoader {
 
+  private static final Logger logger = LoggerFactory.getLogger(CustomClassloader.class);
   private InterceptProcessor interceptProcessor;
 
   public CustomClassloader(URL[] urls, ClassLoader parent) {
     super(urls, parent);
+    logger.info("Initialized custom classloader with paths: {}", urls.toString());
   }
 
   protected Class<?> findClass(String name) throws ClassNotFoundException {

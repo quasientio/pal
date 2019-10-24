@@ -189,7 +189,7 @@ public class LogReader extends ConnectedService {
     LogInfo logInfo = palDirectory.getLogInfo(logName);
     consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
     logger.info(
-        "Reading from log: {} and bootstrapServers: {}, starting at offset: {}, {}skipping written offsets",
+        "Reading from log: {}, w/ bootstrapServers: {}, starting at offset: {}, {}skipping written offsets",
         logInfo.getName(),
         logInfo.getBootstrapServers(),
         initialOffset,

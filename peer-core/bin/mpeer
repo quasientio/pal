@@ -1,7 +1,4 @@
-#!/bin/bash
-
-JMX_PORT=9012
-JMX_HOST=localhost
+#!/bin/sh
 
 JMX_PROPS="-Dcom.sun.management.jmxremote \
 	-Djava.rmi.server.hostname=$JMX_HOST \

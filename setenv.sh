@@ -15,12 +15,6 @@ export SJK_PATH=$PEER_CORE_HOME/tools/lib/sjk-plus-0.5.1.jar
 export PATH=$PEER_CORE_HOME/bin:$JAVA_HOME/bin:$PATH
 
 #############
-# ENV variables 
-#
-# needed by peer and integration tests (peer-itt)
-export ZOOKEEPER_URL=localhost:2181
-
-#############
 # Aliases to work with peer (in and outside containers)
 #
 # kills peer process when running as jar (peer script)

@@ -49,7 +49,7 @@ public class PALDirectory implements AutoCloseable {
   private boolean brokersInfoLoaded;
 
   @Inject
-  public PALDirectory(@Named("zookeeper_url") String connectionString) {
+  public PALDirectory(@Named("paldir_url") String connectionString) {
     this(connectionString, null);
   }
 

@@ -1,0 +1,13 @@
+export JMX_HOST=localhost
+export JMX_PORT=9012
+#export NO_COLOR=
+
+# The following properties can be given as args to the `peer` command, but you probably want these in a file
+#export PEER_NAME=node1
+#export PEER_UUID=fe1f28f0-914d-4582-9406-c6f1727c4868
+export PAL_DIRECTORY=localhost:2181
+#export LOG=no
+#export IN_LOG=
+#export OUT_LOG=
+#export TCP_REQ=
+#export TCP_PUB=

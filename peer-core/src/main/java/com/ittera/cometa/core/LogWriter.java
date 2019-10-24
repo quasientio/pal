@@ -136,6 +136,10 @@ class LogWriter extends ConnectedService {
     if (this.producer == null) {
       this.producer = new KafkaProducer<>(producerProperties);
     }
+    logger.info(
+        "Writing to log: {}, w/ bootstrapServers: {}",
+        outLog.getName(),
+        outLog.getBootstrapServers());
   }
 
   @Override

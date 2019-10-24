@@ -18,12 +18,13 @@ import com.ittera.cometa.core.exec.java.CustomClassloader;
 import com.ittera.cometa.core.exec.java.SelfCaller;
 import com.ittera.cometa.cxn.PALDirectory;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.ServerSocket;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -33,64 +34,76 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
-@Command(name = "peer")
+@Command(
+    name = "peer",
+    sortOptions = false,
+    customSynopsis = {
+      "peer [OPTIONS] class [args...]",
+      "            (to execute a class)",
+      "or     peer [OPTIONS] -jar jarFile [args...]",
+      "            (to execute a jar file)",
+    })
 public class Main implements Callable<Integer> {
+  @Option(
+      names = {"-c", "-cp", "--classpath"},
+      paramLabel = "CLASSPATH",
+      description = "load classes from given folders/jars")
+  private String classpath;
 
   @Option(
-      names = {"-u", "--use-uuid"},
-      paramLabel = "PEER_UUID",
-      description = "use given uuid")
-  private UUID uuid;
+      names = {"-d", "--dir"},
+      defaultValue = "localhost:2181",
+      description = "PAL directory URL (default: ${DEFAULT-VALUE})")
+  private String palDirectory; // corresponding ENV var: PAL_DIRECTORY
+
+  @Option(
+      names = {"-u", "--uuid"},
+      description = "uuid for this peer (default: random)")
+  private UUID uuid; // corresponding ENV var: PEER_UUID
 
   @Option(
       names = {"-n", "--name"},
       arity = "1",
-      paramLabel = "PEER_NAME",
       description = "name for this peer")
-  private String name;
+  private String name; // corresponding ENV var: PEER_NAME
 
   @Option(
-      names = {"-li", "--log-in"},
-      paramLabel = "LOGNAME",
-      description = "read from given log")
-  private String inLogName;
-
-  @Option(
-      names = {"-ls", "--log-start"},
-      paramLabel = "OFFSET_START",
-      description = "start reading from given offset")
-  private Long inLogOffset;
-
-  @Option(
-      names = {"-lo", "--log-out"},
-      paramLabel = "LOGNAME",
-      description = "write to given log")
-  private String outLogName;
+      names = {"-m", "--as-daemon"},
+      description = "keep running after call to mainClass/jar returns")
+  private boolean asDaemon = false;
 
   @Option(
       names = {"-l", "--log"},
-      paramLabel = "LOGNAME",
-      description = "read and write from/to given log")
-  private String logName;
+      description = "read and write from/to given log\n--log=no to run without log IO")
+  private String log; // corresponding ENV var: LOG
 
   @Option(
-      names = {"-ll", "--logless"},
-      paramLabel = "LOGLESS",
-      description = "run without log IO")
-  private boolean logless = false;
+      names = {"-i", "--in-log"},
+      description = "read from given log")
+  private String inLog; // corresponding ENV var: IN_LOG
 
   @Option(
-      names = {"-tp", "--tcp-pub"},
+      names = {"-s", "--start-at"},
+      description = "start reading from given offset")
+  private Long logOffset;
+
+  @Option(
+      names = {"-o", "--out-log"},
+      description = "write to given log")
+  private String outLog; // corresponding ENV var: OUT_LOG
+
+  @Option(
+      names = {"-p", "--tcp-pub"},
       paramLabel = "[HOST:]PORT",
       description = "publish messages to TCP socket")
-  private String tcpPub;
+  private String tcpPub; // corresponding ENV var: TCP_PUB
 
   @Option(
       names = {"-r", "--tcp-req"},
       paramLabel = "[HOST:]PORT",
       description =
           "listen for requests on TCP socket (default: localhost:random_port)\n--tcp-req=no to accept no requests over TCP")
-  private String tcpReq;
+  private String tcpReq; // corresponding ENV var: TCP_REQ
 
   @Option(
       names = {"-h", "--help"},
@@ -100,8 +113,8 @@ public class Main implements Callable<Integer> {
 
   @Option(
       names = {"-jar"},
-      paramLabel = "JAR_FILE",
-      description = "execute jar file")
+      description = "execute jar file",
+      hidden = true)
   private String jarFile;
 
   @Parameters(hidden = true)
@@ -110,17 +123,6 @@ public class Main implements Callable<Integer> {
   // argList and className will be populated from cmdArgList
   private List<String> argList;
   private String className;
-
-  @Option(
-      names = {"-d", "--as-daemon"},
-      description = "keep running after call to mainClass/jar returns")
-  private boolean asDaemon = false;
-
-  @Option(
-      names = {"-h", "--help"},
-      usageHelp = true,
-      description = "display this help message")
-  private boolean helpRequested = false;
 
   // app properties
   private final Properties properties = new Properties();
@@ -226,6 +228,38 @@ public class Main implements Callable<Integer> {
     System.exit(fatalCode.getCode());
   }
 
+  // load from 1) cmd-line or 2) env variable
+  private static String getParameter(String envKey, String paramValue) {
+    if (paramValue != null && !paramValue.isEmpty()) {
+      return paramValue;
+    }
+    final String envVar = System.getenv(envKey);
+    if (envVar != null && !envVar.trim().isEmpty()) {
+      return envVar.trim();
+    }
+    return null;
+  }
+
+  private static UUID getParameter(String envKey, UUID paramValue) {
+    final String uuidAsString =
+        getParameter(envKey, paramValue == null ? null : paramValue.toString());
+    if (uuidAsString != null) {
+      return UUID.fromString(uuidAsString);
+    }
+    return null;
+  }
+
+  private void setEmptyParamsFromEnv() {
+    palDirectory = getParameter("PAL_DIRECTORY", palDirectory);
+    name = getParameter("PEER_NAME", name);
+    uuid = getParameter("PEER_UUID", uuid);
+    log = getParameter("LOG", log);
+    inLog = getParameter("IN_LOG", inLog);
+    outLog = getParameter("OUT_LOG", outLog);
+    tcpReq = getParameter("TCP_REQ", tcpReq);
+    tcpPub = getParameter("TCP_PUB", tcpPub);
+  }
+
   private void validateInput() {
 
     // set argList
@@ -241,32 +275,33 @@ public class Main implements Callable<Integer> {
       System.err.println("WARNING: -d (--as-daemon) option only relevant with mainClass or -jar.");
     }
 
-    // verify and set log options
+    // verify and set run options
+    runOptions = EnumSet.noneOf(RunOptions.class);
+    if (log != null && (inLog != null || outLog != null)) {
+      System.err.println(
+          "WARNING: with --log (LOG), --in-log (IN_LOG) and --out-log (OUT_LOG) options are ignored.");
+    }
+    final boolean logless = log != null && log.equalsIgnoreCase("no");
     if (logless) {
-      runOptions = EnumSet.of(RunOptions.LOGLESS);
-      if (Stream.of(logName, inLogName, outLogName).anyMatch(Objects::nonNull)) {
-        System.err.println(
-            "WARNING: -ll (--logless) option takes precedence. All other log (-l) options ignored.");
-      }
+      runOptions.add(RunOptions.LOGLESS);
     } else {
       // set INLOG_SAME_AS_OUTLOG
-      if (inLogName == null && outLogName == null) {
-        runOptions = EnumSet.of(RunOptions.INLOG_SAME_AS_OUTLOG);
+      if (inLog == null && outLog == null) {
+        runOptions.add(RunOptions.INLOG_SAME_AS_OUTLOG);
       }
       // if logName is given, assign to both in and out (overriding any of the latter values)
-      if (logName != null) {
-        inLogName = outLogName = logName;
+      if (log != null) {
+        inLog = outLog = log;
       }
 
       // ensure that if offset was given, a log name to read from was also given
-      if (inLogOffset != null && inLogName == null) {
+      if (logOffset != null && inLog == null) {
         fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
       }
     }
 
     // set TCP options
-    final String tcpReqGiven = getParameter("TCP_REQ", tcpReq);
-    final boolean reqless = tcpReqGiven != null && tcpReqGiven.equalsIgnoreCase("no");
+    final boolean reqless = tcpReq != null && tcpReq.equalsIgnoreCase("no");
     if (reqless) {
       runOptions.add(RunOptions.REQLESS);
     }
@@ -283,43 +318,38 @@ public class Main implements Callable<Integer> {
     }
   }
 
-  // load from 1) cmd-line or 2) env variable
-  private static String getParameter(String envKey, String paramValue) {
-    if (paramValue != null && !paramValue.isEmpty()) {
-      return paramValue;
-    }
-    final String envVar = System.getenv(envKey);
-    if (envVar != null) {
-      return envVar.trim();
-    }
-    return null;
-  }
-
   private void addMiscProperties() {
 
-    // load from Environment variable or system property
-    String zookeeperUrl = System.getenv("ZOOKEEPER_URL");
-    if (zookeeperUrl == null) {
-      zookeeperUrl = System.getProperty("zookeeper_url");
+    if (logger.isDebugEnabled()) {
+      logger.debug("Environment variables:");
+      System.getenv().entrySet().forEach(e -> logger.debug("{}={}", e.getKey(), e.getValue()));
     }
 
-    if (zookeeperUrl == null) {
-      fatalExit(null, PeerException.FatalCode.ERROR_NO_ZOOKEEPER_URL_GIVEN);
+    // set this peer's UUID if given from param or ENV, otherwise create random UUID
+    if (uuid == null) {
+      final String envUuid = System.getenv("PEER_UUID");
+      if (envUuid != null) {
+        uuid = UUID.fromString(envUuid.trim());
+      } else {
+        uuid = UUID.randomUUID();
+      }
     }
-    // add to app properties
-    properties.setProperty("zookeeper_url", zookeeperUrl);
+    properties.put("id", uuid.toString());
+
+    // add Directory url to app properties
+    properties.setProperty("paldir_url", palDirectory);
 
     // are we publishing via TCP, or just internally
     if (tcpPub != null) {
-      String hostname = "0.0.0.0";
       int port;
+      String hostname = "0.0.0.0";
       if (tcpPub.contains(":")) {
         hostname = Strings.stringBefore(tcpPub, ":");
         port = Integer.parseInt(Strings.stringAfter(tcpPub, ":"));
       } else {
         port = Integer.parseInt(tcpPub);
       }
-      properties.put("out.pub", format("tcp://%s:%d", hostname, port));
+      properties.setProperty("out.pub", format("tcp://%s:%d", hostname, port));
     } else {
       properties.setProperty("out.pub", ZMQProps.inprocChannels.getProperty("out.pub.inproc"));
     }
@@ -328,14 +358,13 @@ public class Main implements Callable<Integer> {
     if (!runOptions.contains(RunOptions.REQLESS)) {
       String hostname = "0.0.0.0";
       int port = 0;
-      String tcpReqGiven = getParameter("TCP_REQ", tcpReq);
-      if (tcpReqGiven != null && !tcpReqGiven.isEmpty()) {
+      if (tcpReq != null) {
         final String portStr;
-        if (tcpReqGiven.contains(":")) {
-          hostname = Strings.stringBefore(tcpReqGiven, ":");
-          portStr = Strings.stringAfter(tcpReqGiven, ":");
+        if (tcpReq.contains(":")) {
+          hostname = Strings.stringBefore(tcpReq, ":");
+          portStr = Strings.stringAfter(tcpReq, ":");
         } else {
-          portStr = tcpReqGiven;
+          portStr = tcpReq;
         }
         try {
           port = Integer.parseInt(portStr);
@@ -361,9 +390,14 @@ public class Main implements Callable<Integer> {
     final String jmxRemotePortStr = System.getProperty("com.sun.management.jmxremote.port");
     Integer jmxRemotePort = jmxRemotePortStr != null ? Integer.parseInt(jmxRemotePortStr) : null;
     String jmxRemoteHost = System.getProperty("java.rmi.server.hostname");
-    if (jmxRemoteHost == null) { // if local.only, then we assume hostname = 'localhost'
-      String localOnly = System.getProperty("com.sun.management.jmxremote.local.only");
-      if (localOnly != null && !"false".equalsIgnoreCase(localOnly)) {
+    if (jmxRemoteHost == null) {
+      final String localOnly = System.getProperty("com.sun.management.jmxremote.local.only");
+      // see if JMX_HOST env variable exists
+      final String hostEnv = System.getenv("JMX_HOST");
+      if (hostEnv != null && !hostEnv.isEmpty()) {
+        jmxRemoteHost = hostEnv;
+      } // if local.only, then we assume hostname = 'localhost'
+      else if (localOnly != null && !"false".equalsIgnoreCase(localOnly)) {
         jmxRemoteHost = "localhost";
       }
     }
@@ -372,6 +406,32 @@ public class Main implements Callable<Integer> {
     } else {
       return null;
     }
+  }
+
+  private CustomClassloader createCustomClassloader() {
+    List<URL> urls = new ArrayList<>();
+    if (classpath != null) {
+      // colon-separated list of classpath entries where each is either a folder or a JAR file
+      Arrays.stream(classpath.split(":"))
+          .map(File::new)
+          .forEach(
+              f -> {
+                try {
+                  urls.add(f.toURI().toURL());
+                } catch (MalformedURLException ex) {
+                  logger.error("Error adding classpath entry as URL for custom classloader", ex);
+                }
+              });
+    }
+    if (jarFile != null) {
+      try {
+        urls.add(new File(jarFile).toURI().toURL());
+      } catch (MalformedURLException ex) {
+        logger.error("Error adding JAR file as URL for custom classloader", ex);
+      }
+    }
+    return new CustomClassloader(
+        urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
   }
 
   private void registerSelfAsPeer(Injector injector) {
@@ -386,7 +446,7 @@ public class Main implements Callable<Integer> {
       }
       if (properties
           .getProperty("out.pub")
-          .startsWith("tcp://")) { // only register PUB addr if over tcp
+          .startsWith("tcp://")) { // only register PUB addr if over TCP
         peerProperties.put("pubAddress", properties.getProperty("out.pub"));
       }
       String jmxAddress = getJMXAddress();
@@ -402,6 +462,42 @@ public class Main implements Callable<Integer> {
       fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_PEER);
     }
     logger.info("Registered self in directory");
+  }
+
+  private Set<Service> createManagedServices(Injector injector) {
+    final Set<Service> services = new HashSet<>();
+    if (!runOptions.contains(RunOptions.LOGLESS)) {
+      services.add(injector.getInstance(LogReader.class));
+      services.add(injector.getInstance(LogWriter.class));
+    }
+    services.add(injector.getInstance(OutgoingMessageDispatcher.class));
+    if (!runOptions.contains(RunOptions.REQLESS)) {
+      services.add(injector.getInstance(DirectRequestDispatcher.class));
+    }
+    return services;
+  }
+
+  private ServiceManager createServiceManager(Iterable<Service> services) {
+    final ServiceManager manager = new ServiceManager(services);
+    manager.addListener(
+        new ServiceManager.Listener() {
+          public void stopped() {
+            logger.info("Service manager stopped.");
+          }
+
+          public void healthy() {
+            logger.info("Managed services ready");
+            manager
+                .startupTimes()
+                .forEach((key, value) -> logger.info("Service '{}' started in {} ms", key, value));
+          }
+
+          public void failure(Service service) {
+            fatalExit(service.failureCause(), PeerException.FatalCode.ERROR_SERVICE_MANAGER_FAILED);
+          }
+        },
+        MoreExecutors.directExecutor());
+    return manager;
   }
 
   private void shutdown(ServiceManager manager, Injector injector, boolean fast) {
@@ -479,51 +575,21 @@ public class Main implements Callable<Integer> {
   @Override
   public Integer call() {
 
+    setEmptyParamsFromEnv();
     validateInput();
-
     loadProps();
 
+    // initialize ZMQ and local sockets
     initZContext();
 
     // add zmq channel names to properties
     properties.putAll(ZMQProps.inprocChannels);
 
-    // set this peer's uuid if not given
-    if (uuid == null) {
-      uuid = UUID.randomUUID();
-    }
-    properties.put("id", uuid.toString());
-
     // add misc variables to app props
     addMiscProperties();
 
     // init custom classloader
-    List<URL> urls = new ArrayList<>();
-    if (classpath != null) {
-      // split by ':' and add each entry: each should be either a folder or a JAR (just as in
-      // $CLASSPATH)
-      Arrays.stream(classpath.split(":"))
-          .map(File::new)
-          .forEach(
-              f -> {
-                try {
-                  urls.add(f.toURI().toURL());
-                } catch (MalformedURLException ex) {
-                  logger.error("Error adding classpath entry as URL for custom classloader", ex);
-                }
-              });
-    }
-    if (jarFile != null) {
-      try {
-        urls.add(new File(jarFile).toURI().toURL());
-      } catch (MalformedURLException ex) {
-        logger.error("Error adding JAR file as URL for custom classloader", ex);
-      }
-    }
-    CustomClassloader customClassloader =
-        new CustomClassloader(
-            urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
-    logger.info("Initialized custom classloader with paths: {}", urls.toString());
+    final CustomClassloader customClassloader = createCustomClassloader();
 
     // inject dependencies
     final Injector injector =
@@ -537,43 +603,15 @@ public class Main implements Callable<Integer> {
     // init logs IO
     if (!runOptions.contains(RunOptions.LOGLESS)) {
       try {
-        new LogConfigurator(inLogName, inLogOffset, outLogName, properties, runOptions, injector)
-            .init();
+        new LogConfigurator(inLog, logOffset, outLog, properties, runOptions, injector).init();
       } catch (Exception ex) {
         fatalExit(ex, PeerException.FatalCode.ERROR_INITIALIZING_LOGS);
       }
     }
 
     // set up managed services
-    final Set<Service> services = new HashSet<>();
-    if (!runOptions.contains(RunOptions.LOGLESS)) {
-      services.add(injector.getInstance(LogReader.class));
-      services.add(injector.getInstance(LogWriter.class));
-    }
-    services.add(injector.getInstance(OutgoingMessageDispatcher.class));
-    if (!runOptions.contains(RunOptions.REQLESS)) {
-      services.add(injector.getInstance(DirectRequestDispatcher.class));
-    }
-
-    final ServiceManager manager = new ServiceManager(services);
-    manager.addListener(
-        new ServiceManager.Listener() {
-          public void stopped() {
-            logger.info("Service manager stopped.");
-          }
-
-          public void healthy() {
-            logger.info("Managed services ready");
-            manager
-                .startupTimes()
-                .forEach((key, value) -> logger.info("Service '{}' started in {} ms", key, value));
-          }
-
-          public void failure(Service service) {
-            fatalExit(service.failureCause(), PeerException.FatalCode.ERROR_SERVICE_MANAGER_FAILED);
-          }
-        },
-        MoreExecutors.directExecutor());
+    final Set<Service> services = createManagedServices(injector);
+    final ServiceManager manager = createServiceManager(services);
 
     // add shutdown hook
     Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown(manager, injector, false)));

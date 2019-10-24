@@ -31,8 +31,8 @@ class PeerWiring extends AbstractModule {
       EnumSet<RunOptions> runOptions,
       ZContext zContext,
       CustomClassloader customClassloader) {
-    if (logger.isDebugEnabled()) {
-      printProperties(properties);
+    if (logger.isInfoEnabled()) {
+      logger.info("Created guice module with properties:{}", printedProperties(properties));
     }
     this.properties = properties;
     addServiceNamesToProps();
@@ -42,14 +42,14 @@ class PeerWiring extends AbstractModule {
     this.customClassloader = customClassloader;
   }
 
-  private static void printProperties(Properties props) {
+  private static String printedProperties(Properties props) {
     final StringBuilder sb = new StringBuilder();
     final List<String> keys = new ArrayList<>(props.stringPropertyNames());
     Collections.sort(keys);
     for (String key : keys) {
       sb.append("\n").append(key).append(":").append(props.getProperty(key));
     }
-    logger.debug("Created guice module with properties:{}", sb.toString());
+    return sb.toString();
   }
 
   private void addServiceNamesToProps() {
