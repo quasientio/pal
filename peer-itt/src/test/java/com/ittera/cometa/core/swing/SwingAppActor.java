@@ -55,7 +55,7 @@ public class SwingAppActor {
     // now get the jframe
     ExecMessage requestMsg =
         MESSAGE_BUILDER.buildGetStatic(thinPeer.getPeerUuid(), swingAppClassName, fieldName);
-    ExecMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
+    ExecMessage replyMsg = thinPeer.sendAndReceive(requestMsg, true);
     Primitives.Object myFrame = replyMsg.getReturnValue().getObject();
 
     for (int i = 0; i < 5; i++) {
@@ -76,7 +76,7 @@ public class SwingAppActor {
               parameterTypesNamesArray,
               parameters,
               new ObjectRef[parameters.length]);
-      thinPeer.sendAndReceive(requestMsg);
+      thinPeer.sendAndReceive(requestMsg, true);
 
       sleep(1);
 
@@ -92,7 +92,7 @@ public class SwingAppActor {
               parameterTypesNamesArray,
               parameters,
               new ObjectRef[parameters.length]);
-      thinPeer.sendAndReceive(requestMsg);
+      thinPeer.sendAndReceive(requestMsg, true);
     }
 
     // finalize

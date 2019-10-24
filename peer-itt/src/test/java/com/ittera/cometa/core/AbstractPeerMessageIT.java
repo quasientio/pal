@@ -58,7 +58,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
   }
 
   protected ExecMessage sendAndReceive(ExecMessage message) throws Exception {
-    return thinPeer.sendAndReceive(message);
+    return thinPeer.sendAndReceive(message, true);
   }
 
   @AfterClass

@@ -42,6 +42,6 @@ public class SwingAppTest {
             null,
             parameters,
             new ObjectRef[parameterTypes.length]);
-    ExecMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
+    ExecMessage replyMsg = thinPeer.sendAndReceive(requestMsg, true);
   }
 }

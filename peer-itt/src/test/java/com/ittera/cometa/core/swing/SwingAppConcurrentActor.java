@@ -56,7 +56,7 @@ public class SwingAppConcurrentActor {
               parameters,
               new ObjectRef[parameters.length]);
       try {
-        thinPeer.sendAndReceive(requestMsg);
+        thinPeer.sendAndReceive(requestMsg, true);
       } catch (Exception e) {
         e.printStackTrace();
       }
@@ -110,7 +110,7 @@ public class SwingAppConcurrentActor {
     // now get the jframe
     ExecMessage requestMsg =
         MESSAGE_BUILDER.buildGetStatic(thinPeer.getPeerUuid(), swingAppClassName, fieldName);
-    ExecMessage replyMsg = thinPeer.sendAndReceive(requestMsg);
+    ExecMessage replyMsg = thinPeer.sendAndReceive(requestMsg, true);
     Primitives.Object myFrame = replyMsg.getReturnValue().getObject();
 
     // start some actors and pass them the frame to play with

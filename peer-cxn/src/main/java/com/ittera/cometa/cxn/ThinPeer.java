@@ -280,12 +280,12 @@ public class ThinPeer {
     peerSocket.connect(currentPeer.getReqAddress());
   }
 
-  public ExecMessage sendAndReceive(ExecMessage message)
+  public ExecMessage sendAndReceive(ExecMessage message, boolean consumeLogUntilReply)
       throws ExecutionException, InterruptedException, InvalidProtocolBufferException {
     if (allowP2P && talkingToPeer) {
       return sendToPeer(message);
     } else {
-      return sendToLogAndReceive(message);
+      return sendToLogAndReceive(message, consumeLogUntilReply);
     }
   }
 
@@ -467,20 +467,30 @@ public class ThinPeer {
     return messageFuture;
   }
 
-  private ExecMessage sendToLogAndReceive(ExecMessage message)
-      throws ExecutionException, InterruptedException, InvalidProtocolBufferException {
-    return sendToLogAndReceive(message, false);
-  }
-
   private ExecMessage sendToLogAndReceive(ExecMessage message, boolean consumeLogUntilReply)
       throws ExecutionException, InterruptedException, InvalidProtocolBufferException {
 
-    if (!allowP2P || consumeLogUntilReply) {
+    if (!allowP2P) {
       return sendAndReceiveConsumingLog(message);
     }
 
-    // default behavior (consumeLogUntilReply=false) is to wait for Future reply on directory
-    return sendAsyncAndSwitchToPeer(message);
+    if (consumeLogUntilReply) {
+      return sendToLogConsumeAndSwitchToPeer(message);
+    } else {
+      // wait for Future reply on directory
+      return sendAsyncAndSwitchToPeer(message);
+    }
+  }
+
+  private ExecMessage sendToLogConsumeAndSwitchToPeer(ExecMessage message)
+      throws InvalidProtocolBufferException {
+    ExecMessage replyMsg = sendAndReceiveConsumingLog(message);
+
+    // switch to direct p2p talk
+    String peerUuid = replyMsg.getPeerUuid();
+    connectToPeer(UUID.fromString(peerUuid));
+
+    return replyMsg;
   }
 
   private ExecMessage sendAsyncAndSwitchToPeer(ExecMessage message)
@@ -581,9 +591,6 @@ public class ThinPeer {
     }
     if (newPeer != null && !newPeer.equals(currentPeer)) {
       connectToPeer(newPeer);
-    } else {
-      throw new IllegalArgumentException(
-          String.format("peer entry w/uuid: %s not found in directory", peerUuid));
     }
   }
 
