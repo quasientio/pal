@@ -258,7 +258,7 @@ public class LogReader extends ConnectedService {
         messagesRcvd.getAndIncrement();
         if (logger.isDebugEnabled()) {
           logger.debug(
-              "Processing received record # {} with offset {} :\n {}",
+              "Processing received record #{} with offset {} :\n {}",
               messagesRcvd,
               record.offset(),
               record);
