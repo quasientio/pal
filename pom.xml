@@ -3,7 +3,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ittera.cometa</groupId>
-    <artifactId>peer</artifactId>
+    <artifactId>peer-all</artifactId>
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <name>peer</name>
@@ -96,13 +96,13 @@
 
 
     <modules>
-        <module>peer-common</module>
-        <module>peer-core</module>
-        <module>peer-aj</module>
-        <module>peer-serdes</module>
-        <module>peer-cxn</module>
-        <module>peer-itt-apps</module>
-        <module>peer-itt</module>
+        <module>common</module>
+        <module>core</module>
+        <module>aspects</module>
+        <module>serdes</module>
+        <module>cxn</module>
+        <module>itt-apps</module>
+        <module>itt</module>
     </modules>
 
 </project>

@@ -4,7 +4,7 @@ WORKING_DIR=`pwd`
 #############
 # PATH exports
 #
-export PEER_CORE_HOME=$WORKING_DIR/peer-core
+export PEER_CORE_HOME=$WORKING_DIR/core
 
 # Paths needed by some tools in bin/
 export JLINE_HOME='/usr/share/java'
@@ -18,7 +18,7 @@ export PATH=$PEER_CORE_HOME/bin:$JAVA_HOME/bin:$PATH
 # Aliases to work with peer (in and outside containers)
 #
 # kills peer process when running as jar (peer script)
-alias k='pkill -9 -f peer-core'
+alias k='pkill -9 -f core'
 
 # kills docker instance running peer process 
 alias kd='docker kill peer'
