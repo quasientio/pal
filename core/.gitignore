@@ -1,4 +1,5 @@
 apps/
 conf/
+Dockerfile
 docker-compose.yml
 *~
