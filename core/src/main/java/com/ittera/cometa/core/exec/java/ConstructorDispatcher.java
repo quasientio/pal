@@ -92,9 +92,15 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
 
   @Override
   protected final Object invoke(Context ctxt, Object sender, Object target, Object[] args) {
-
+    if (logger.isTraceEnabled()) {
+      logger.trace(
+          "invoke w/ ctxt: {}, sender: {}, target: {}, args: {}",
+          ctxt,
+          sender,
+          target,
+          Arrays.toString(args));
+    }
     final Constructor constructor = ((ConstructorSignature) ctxt.getSignature()).getConstructor();
-
     Object newObject;
     constructor.setAccessible(true);
     try {
@@ -114,6 +120,14 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
       List<Object> args,
       Optional<Object> value)
       throws Exception {
+    if (logger.isTraceEnabled()) {
+      logger.trace(
+          "invokeIncoming:in w/ accessibleObject: {}, target: {}, args: {}, value: {}",
+          accessibleObject,
+          target,
+          args,
+          value);
+    }
     Constructor constructor = (Constructor) accessibleObject.get();
     return constructor.newInstance(args.toArray(new Object[0]));
   }

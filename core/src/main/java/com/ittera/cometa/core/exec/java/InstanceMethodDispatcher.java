@@ -70,7 +70,14 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
 
   @Override
   protected final Object invoke(Context ctxt, Object sender, Object target, Object[] args) {
-
+    if (logger.isTraceEnabled()) {
+      logger.trace(
+          "invoke w/ ctxt: {}, sender: {}, target: {}, args: {}",
+          ctxt,
+          sender,
+          target,
+          Arrays.toString(args));
+    }
     final MethodSignature methodSignature = (MethodSignature) ctxt.getSignature();
     Method method = methodSignature.getMethod();
 

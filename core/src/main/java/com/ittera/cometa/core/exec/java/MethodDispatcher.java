@@ -17,7 +17,14 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
       List<Object> args,
       Optional<Object> value)
       throws Exception {
-
+    if (logger.isTraceEnabled()) {
+      logger.trace(
+          "invokeIncoming:in w/ accessibleObject: {}, target: {}, args: {}, value: {}",
+          accessibleObject,
+          target,
+          args,
+          value);
+    }
     Method method = (Method) accessibleObject.get();
     return method.invoke(target, args.toArray());
   }
