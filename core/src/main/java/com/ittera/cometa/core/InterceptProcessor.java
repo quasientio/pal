@@ -4,41 +4,32 @@ import static java.lang.String.format;
 
 import com.ittera.cometa.common.lang.annotation.Before;
 import com.ittera.cometa.core.exec.DispatcherConnector;
-import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.zeromq.ZContext;
 
 @Singleton
 public class InterceptProcessor {
 
   private static final Logger logger = LoggerFactory.getLogger(InterceptProcessor.class);
   private final UUID peerUuid;
-  private final PALDirectory palDirectory;
-  private final ZContext zmqContext;
   private final MessageBuilder messageBuilder;
   private final DispatcherConnector connector;
 
   @Inject
-  InterceptProcessor(
-      UUID peerUuid,
-      PALDirectory palDirectory,
-      ZContext zmqContext,
-      MessageBuilder messageBuilder,
-      DispatcherConnector connector) {
+  InterceptProcessor(UUID peerUuid, MessageBuilder messageBuilder, DispatcherConnector connector) {
     this.peerUuid = peerUuid;
-    this.palDirectory = palDirectory;
-    this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
     this.connector = connector;
   }
@@ -55,22 +46,32 @@ public class InterceptProcessor {
       Annotation annotation = method.getDeclaredAnnotation(Before.class);
       if (annotation != null) {
         Class<? extends Annotation> type = annotation.annotationType();
-        String className, methodName, fieldName;
+        String className, methodName, fieldName, fieldOpType;
+        String[] parameterTypes;
         try {
           className = (String) type.getDeclaredMethod("clazz").invoke(annotation, (Object[]) null);
           methodName =
               (String) type.getDeclaredMethod("method").invoke(annotation, (Object[]) null);
+          // parameter types are extracted from the callback signature
+          parameterTypes =
+              Arrays.stream(method.getParameterTypes()).map(Class::getName).toArray(String[]::new);
           fieldName = (String) type.getDeclaredMethod("field").invoke(annotation, (Object[]) null);
-          //							String[] args() default {};
+          fieldOpType =
+              (String) type.getDeclaredMethod("fieldOpType").invoke(annotation, (Object[]) null);
           if (logger.isDebugEnabled()) {
             logger.debug(
-                " className: {}, methodName: {}, fieldName: {}", className, methodName, fieldName);
+                "className: {}, methodName: {}, parameterTypes: {}, fieldName: {}, fieldOpType: {}",
+                className,
+                methodName,
+                Arrays.toString(parameterTypes),
+                fieldName,
+                fieldOpType);
           }
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
           logger.error(
               format(
-                  "Error processing @before annotation found in method '%s' of class '%s",
-                  method.getName(), clazz.getName()),
+                  "Error processing annotation '%s' found in method '%s' of class '%s",
+                  annotation, method.getName(), clazz.getName()),
               e);
           continue;
         }
@@ -78,13 +79,19 @@ public class InterceptProcessor {
         // build and queue request message
         interceptRequests.add(
             messageBuilder.buildInterceptRequest(
-                peerUuid, className, methodName, fieldName, clazz.getName(), method.getName()));
+                peerUuid,
+                InterceptType.BEFORE,
+                className,
+                methodName,
+                Arrays.asList(parameterTypes),
+                clazz.getName(),
+                method.getName()));
       }
     }
 
     // TODO process @After annotation
 
     // send all messages at once
-    interceptRequests.forEach(connector::sendInterceptRequestMessage);
+    interceptRequests.forEach(connector::sendOutInterceptRequestMessage);
   }
 }

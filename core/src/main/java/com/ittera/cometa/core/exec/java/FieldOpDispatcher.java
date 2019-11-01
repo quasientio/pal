@@ -11,7 +11,7 @@ import java.lang.reflect.AccessibleObject;
 import java.util.List;
 import java.util.Optional;
 
-public abstract class FieldOpDispatcher extends BaseDispatcher {
+public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
 
   @Override
   protected final ExecMessage wrapBeforeExecMessage(

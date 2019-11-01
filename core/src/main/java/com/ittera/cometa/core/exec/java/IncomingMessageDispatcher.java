@@ -1,7 +1,8 @@
 package com.ittera.cometa.core.exec.java;
 
+import com.ittera.cometa.core.exec.UnsupportedMessageException;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.slf4j.Logger;
@@ -23,12 +24,16 @@ public class IncomingMessageDispatcher {
   @Inject private GetInstanceVariableDispatcher getInstanceVariableDispatcher;
   @Inject private SetInstanceVariableDispatcher setInstanceVariableDispatcher;
 
+  // intercept dispatcher
+  @Inject private InterceptMessageDispatcher interceptMessageDispatcher;
+
   /**
    * @param execMessage Message to invoke
    * @param isDirect true if message comes from this or another peer, false if it comes from a log
    * @return the returnValue message
    */
-  public ExecMessage incomingCall(ExecMessage execMessage, boolean isDirect) {
+  public ExecMessage incomingCall(ExecMessage execMessage, boolean isDirect)
+      throws UnsupportedMessageException {
 
     if (execMessage.hasConstructorCall()) {
       return constructorDispatcher.dispatchIncoming(execMessage, isDirect);
@@ -45,15 +50,15 @@ public class IncomingMessageDispatcher {
     } else if (execMessage.hasInstanceFieldPut()) {
       return setInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
     } else {
-      throw new IllegalArgumentException(
+      throw new UnsupportedMessageException(
           String.format("Incoming message ignored - no handler:%n%s", execMessage));
     }
   }
 
-  public boolean incomingCall(InterceptRequest interceptMessage) {
+  public boolean incomingIntercept(InterceptRequest interceptMessage, boolean isDirect) {
     if (logger.isDebugEnabled()) {
       logger.debug(String.format("incomingCall with intercept msg:%n%s", interceptMessage));
     }
-    return false;
+    return interceptMessageDispatcher.dispatchIncoming(interceptMessage, isDirect);
   }
 }

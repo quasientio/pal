@@ -327,5 +327,10 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>io.github.azagniotov</groupId>
+            <artifactId>ant-style-path-matcher</artifactId>
+            <version>${antpath.matcher}</version>
+        </dependency>
     </dependencies>
 </project>

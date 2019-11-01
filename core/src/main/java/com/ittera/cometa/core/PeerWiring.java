@@ -8,6 +8,7 @@ import com.ittera.cometa.common.lang.DispatchForwarder;
 import com.ittera.cometa.common.lang.ProxyDispatcher;
 import com.ittera.cometa.core.exec.java.AspectProxyDispatcher;
 import com.ittera.cometa.core.exec.java.CustomClassloader;
+import com.ittera.cometa.core.exec.java.InterceptMessageDispatcher;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
@@ -66,6 +67,8 @@ class PeerWiring extends AbstractModule {
     Names.bindProperties(binder(), properties);
 
     // bind implementations
+    bind(InterceptMessageDispatcher.class)
+        .to(com.ittera.cometa.core.exec.java.BaseInterceptMessageDispatcher.class);
     bind(ProxyDispatcher.class).to(com.ittera.cometa.core.exec.java.AspectProxyDispatcher.class);
 
     // common and cxn library classes are not annotated with @Singleton

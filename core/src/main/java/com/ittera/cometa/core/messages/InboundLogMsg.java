@@ -1,6 +1,5 @@
 package com.ittera.cometa.core.messages;
 
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.ittera.cometa.messages.MessageType;
 import java.util.Arrays;
@@ -52,7 +51,7 @@ public class InboundLogMsg extends BaseMsg {
       return false;
     }
     // 1. type of message
-    byte[] buff = Ints.toByteArray(messageType.ordinal());
+    byte[] buff = String.valueOf(messageType.ordinal()).getBytes(ZMQ.CHARSET);
     size += buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
@@ -86,7 +85,8 @@ public class InboundLogMsg extends BaseMsg {
     }
     // 1. type of message
     int msgSize = buff.length;
-    final MessageType messageType = MessageType.values[Ints.fromByteArray(buff)];
+    final MessageType messageType =
+        MessageType.values[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
     // 2. message offset
     buff = socket.recv();
     msgSize += buff.length;

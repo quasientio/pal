@@ -1,9 +1,10 @@
 package com.ittera.cometa.core.exec;
 
+import com.google.protobuf.AbstractMessage;
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -14,8 +15,7 @@ import org.zeromq.ZMQ;
 /** Base class for Log and Peer Invoker threads */
 public abstract class AbstractMessageInvokerThread extends Thread {
 
-  protected static final Logger logger =
-      LoggerFactory.getLogger(AbstractMessageInvokerThread.class);
+  protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   private final AtomicLong requestsDispatched = new AtomicLong(0);
   private final AtomicLong requestsDismissed = new AtomicLong(0);
@@ -106,7 +106,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
   public abstract void run();
 
-  protected final void dispatch(Object msg, Long recordOffset) {
+  protected final void dispatch(AbstractMessage msg, Long recordOffset) {
     if (msg instanceof ExecMessage) {
       dispatch((ExecMessage) msg, recordOffset);
     } else if (msg instanceof InterceptRequest) {
@@ -121,25 +121,33 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   }
 
   private ExecMessage dispatch(ExecMessage requestMsg, @Nullable Long recordOffset) {
-    // assumption: if recordOffset is Null, this is a peer (i.e. direct) request
-    boolean isDirectRequest = recordOffset == null;
-    ExecMessage replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, isDirectRequest);
-    if (logger.isDebugEnabled()) {
-      logger.debug(
-          "Invoker dispatched request message uuid: {} and recordOffset: {}, reply uuid: {}",
-          requestMsg.getMessageUuid(),
-          recordOffset,
-          replyMsg.getMessageUuid());
+    final boolean isDirectRequest = recordOffset == null;
+
+    ExecMessage replyMsg = null;
+    try {
+      replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, isDirectRequest);
+    } catch (UnsupportedMessageException e) {
+      logger.error("Unsupported incoming message", e);
     }
-    updateCounters();
+    if (replyMsg != null) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Invoker dispatched Exec Message w/uuid: {} and recordOffset: {}, reply uuid: {}",
+            requestMsg.getMessageUuid(),
+            recordOffset,
+            replyMsg.getMessageUuid());
+      }
+      updateCounters();
+    }
     return replyMsg;
   }
 
-  private void dispatch(InterceptRequest interceptMsg, Long recordOffset) {
-    boolean result = incomingMessageDispatcher.incomingCall(interceptMsg);
+  private void dispatch(InterceptRequest interceptMsg, @Nullable Long recordOffset) {
+    final boolean isDirectRequest = recordOffset == null;
+    boolean result = incomingMessageDispatcher.incomingIntercept(interceptMsg, isDirectRequest);
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Invoker dispatched request message uuid: {} and recordOffset: {}, reply: {}",
+          "Invoker dispatched Intercept Request w/uuid: {} and recordOffset: {}, reply: {}",
           interceptMsg.getMessageUuid(),
           recordOffset,
           result);

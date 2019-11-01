@@ -8,7 +8,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Optional;
 
-public abstract class MethodDispatcher extends BaseDispatcher {
+public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
 
   @Override
   protected Object invokeIncoming(

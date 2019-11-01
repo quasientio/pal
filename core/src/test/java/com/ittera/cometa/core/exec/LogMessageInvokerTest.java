@@ -9,11 +9,13 @@ import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.core.messages.InboundLogMsg;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -43,7 +45,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
   private List<Boolean> interceptReqMessageResults = new ArrayList<>();
 
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     this.context = createContext();
     this.execService = Executors.newCachedThreadPool();
     // simulate LogReader's DEALER socket
@@ -79,7 +81,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
                 });
 
     // stub incomingCall for InterceptRequestMessage
-    when(incomingMessageDispatcher.incomingCall(any()))
+    when(incomingMessageDispatcher.incomingIntercept(any(), anyBoolean()))
         .thenAnswer(
             (Answer<Boolean>)
                 invocationOnMock -> {
@@ -145,9 +147,10 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     InterceptRequest invokable =
         msgBuilder.buildInterceptRequest(
             peerUuid,
+            Intercepts.InterceptType.BEFORE,
             "java.io.PrintStream",
             "println",
-            null,
+            Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
     InboundLogMsg msg =
@@ -158,7 +161,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     while (logMessageInvoker.getRequestsDispatched().get() < 1) {
       Thread.sleep(100);
     }
-    verify(incomingMessageDispatcher, times(1)).incomingCall(any());
+    verify(incomingMessageDispatcher, times(1)).incomingIntercept(any(), anyBoolean());
 
     assertThat(interceptReqMessageResults.size(), is(1));
   }

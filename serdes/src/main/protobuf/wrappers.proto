@@ -11,10 +11,11 @@ option optimize_for = SPEED;
 
 enum InternalHeaderType {
     /*
-     Sent before dispatching.
+     Sent before dispatching a received message.
      Value is the UUID of the receiving-dispatching peer, not the producer.
     */
     WRITE_AHEAD = 1;
+    INCOMING_INTERCEPT_REQ = 2;
 }
 
 message InternalHeader {
@@ -62,16 +63,4 @@ message ExecMessage {
         RaisedThrowable raisedThrowable = 19;
         ReturnValue returnValue = 20;
     }
-}
-
-message InterceptRequest {
-    required string peerUuid = 1;
-    required string messageUuid = 2;
-    required string clazz = 3;
-    oneof executable {
-        string field = 4;
-        string method = 5;
-    }
-    required string callbackClass = 6;
-    required string callbackMethod = 7;
 }

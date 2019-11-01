@@ -1,11 +1,12 @@
 package com.ittera.cometa.core.exec;
 
+import com.google.protobuf.AbstractMessage;
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.core.messages.InboundLogMsg;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
@@ -82,7 +83,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
         continue;
       }
 
-      Object requestMsg = null;
+      AbstractMessage requestMsg = null;
       long started = System.currentTimeMillis();
 
       // parse req

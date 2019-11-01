@@ -601,7 +601,7 @@ public class ThinPeer {
     talkingToPeer = true;
   }
 
-  private ExecMessage sendToPeer(ExecMessage message) {
+  public ExecMessage sendToPeer(ExecMessage message) {
 
     // send message request to peer
     peerSocket.send(message.toByteArray());

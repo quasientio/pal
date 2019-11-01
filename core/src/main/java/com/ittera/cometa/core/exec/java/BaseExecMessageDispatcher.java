@@ -1,14 +1,12 @@
 package com.ittera.cometa.core.exec.java;
 
-import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.common.lang.ObjectNotFoundException;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.util.Classes;
-import com.ittera.cometa.core.exec.DispatcherConnector;
-import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.core.exec.ExecPhase;
 import com.ittera.cometa.messages.protobuf.Unwrapper;
 import com.ittera.cometa.messages.protobuf.data.Primitives;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
@@ -18,19 +16,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-import javax.inject.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatcher {
-
-  final Logger logger = LoggerFactory.getLogger(this.getClass());
-
-  UUID peerUuid;
-  MessageBuilder messageBuilder;
-  ObjectService objectService;
-  private DispatcherConnector connector;
+abstract class BaseExecMessageDispatcher extends AbstractDispatcher
+    implements Dispatcher, ExecMessageDispatcher {
 
   // TODO load from config
   private static final boolean ENFORCE_JAVALANG_ACCESS = false;
@@ -52,7 +40,8 @@ public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatche
     final ExecMessage beforeExecMsg = wrapBeforeExecMessage(ctxt, sender, target, args);
 
     // 2. Send message
-    final ExecMessage beforeExecReplyMsg = connector.sendExecMessage(beforeExecMsg);
+    final ExecMessage beforeExecReplyMsg =
+        connector.sendExecMessage(beforeExecMsg, ExecPhase.BEFORE);
 
     // TODO if beforeExecReplyMsg != beforeExecMsg, unpack and exec reply msg
 
@@ -75,7 +64,7 @@ public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatche
         wrapAfterExecMessage(ctxt, returnValue, objectRef, returnsVoid);
 
     // 6. Send object or exception
-    final ExecMessage afterExecReplyMsg = connector.sendExecMessage(afterExecMsg);
+    final ExecMessage afterExecReplyMsg = connector.sendExecMessage(afterExecMsg, ExecPhase.AFTER);
 
     // TODO if afterExecReplyMsg != afterExecMsg, unpack exception or return value
 
@@ -192,7 +181,7 @@ public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatche
             exceptionWhileInvoking);
 
     // 10. Send object or exception, and receive
-    final ExecMessage afterExecReplyMsg = connector.sendExecMessage(afterExecMsg);
+    final ExecMessage afterExecReplyMsg = connector.sendExecMessage(afterExecMsg, ExecPhase.AFTER);
 
     // 11. Return received message
     if (logger.isTraceEnabled()) {
@@ -238,19 +227,31 @@ public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatche
 
   private List<Object> getArgsFromMessage(ExecMessage execMessage, List<Class> parameterTypes) {
 
-    List<Object> args = new ArrayList<>();
-    List<Primitives.Parameter> parameterList = getParameterList(execMessage);
+    final List<Object> args = new ArrayList<>();
+    final List<Primitives.Parameter> parameterList = getParameterList(execMessage);
 
     int i = 0;
     if (parameterList != null) {
       for (Primitives.Parameter parameter : parameterList) {
+        if (logger.isTraceEnabled()) {
+          logger.trace("getting arg from param #{}: {}", i, parameter);
+        }
         Primitives.Object obj = parameter.getValue();
         if (obj.getIsNull()) {
           args.add(null);
-        } else if (obj.hasRef()) {
-          args.add(objectService.lookupObject(ObjectRef.from(obj.getRef())));
         } else {
-          args.add(Unwrapper.unwrapObject(obj, parameterTypes.get(i)));
+          Object lookedUpObj = null;
+          if (obj.hasRef()) {
+            // First try to fetch object by reference (works only with locally-instantiated/stored
+            // objects)
+            lookedUpObj = objectService.lookupObject(ObjectRef.from(obj.getRef()));
+          }
+          if (lookedUpObj != null) {
+            args.add(lookedUpObj);
+          } else {
+            // If not found by reference, unwrap value
+            args.add(Unwrapper.unwrapObject(obj, parameterTypes.get(i)));
+          }
         }
         i++;
       }
@@ -298,26 +299,6 @@ public abstract class BaseDispatcher implements Dispatcher, ExecMessageDispatche
         exceptionWhileLoading != null ? exceptionWhileLoading : exceptionWhileInvoking;
     return messageBuilder.buildAccessibleObjectThrowable(
         peerUuid, accessibleObject, executableObjectType, throwable, messageUuid);
-  }
-
-  @Inject
-  final void setPeerUuid(UUID peerUuid) {
-    this.peerUuid = peerUuid;
-  }
-
-  @Inject
-  final void setMessageBuilder(MessageBuilder messageBuilder) {
-    this.messageBuilder = messageBuilder;
-  }
-
-  @Inject
-  final void setObjectService(ObjectService objectService) {
-    this.objectService = objectService;
-  }
-
-  @Inject
-  final void setConnector(DispatcherConnector connector) {
-    this.connector = connector;
   }
 
   protected abstract ExecMessage wrapBeforeExecMessage(

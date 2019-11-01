@@ -153,14 +153,10 @@ public final class Wrapper {
       logger.trace(
           "in getWrappedObject with object: {}, class: {}, objectRef: {}", object, t, objectRef);
     }
-
     final Primitives.Object.Builder builder = Primitives.Object.newBuilder();
-    boolean gotObjectRef = objectRef != null;
-
-    if (!gotObjectRef && !isWrappable(object)) {
+    if (objectRef == null && !isWrappable(object)) {
       throw new NonWrappableObjectException(object);
     }
-
     return getWrappedObjectAux(builder, object, t, objectRef);
   }
 

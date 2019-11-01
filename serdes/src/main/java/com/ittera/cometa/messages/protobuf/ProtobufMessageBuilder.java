@@ -5,18 +5,20 @@ import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.*;
 import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import com.ittera.cometa.messages.protobuf.data.*;
 import com.ittera.cometa.messages.protobuf.data.Calls.*;
 import com.ittera.cometa.messages.protobuf.data.Fields.*;
 import com.ittera.cometa.messages.protobuf.data.Values.*;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeaderType;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import java.lang.reflect.*;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -180,12 +182,20 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Header messages">
-  private InternalHeader.Builder buildInternalHeaderMessage() {
-    return InternalHeader.newBuilder().setHeaderType(InternalHeaderType.WRITE_AHEAD);
+  private InternalHeader.Builder buildInternalHeaderMessage(InternalHeaderType headerType) {
+    return InternalHeader.newBuilder().setHeaderType(headerType);
   }
 
+  @Override
   public InternalHeader buildWriteAheadHeader(UUID peerUuid) {
-    return buildInternalHeaderMessage().setValue(peerUuid.toString()).build();
+    return buildInternalHeaderMessage(InternalHeaderType.WRITE_AHEAD)
+        .setValue(peerUuid.toString())
+        .build();
+  }
+
+  @Override
+  public InternalHeader buildIncomingInterceptRequestHeader() {
+    return buildInternalHeaderMessage(InternalHeaderType.INCOMING_INTERCEPT_REQ).build();
   }
 
   // </editor-fold>
@@ -370,6 +380,62 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
 
     return msgBuilder.build();
   }
+
+  private void setParameters(
+      ClassMethodCall.Builder callBuilder, List<Primitives.Parameter> parameters) {
+    for (Primitives.Parameter param : parameters) {
+      callBuilder.addParameter(param);
+    }
+  }
+
+  // build ClassMethodCall with another message's parameter list
+  private ExecMessage buildClassMethodWithMessageParameters(
+      UUID peerUuid, String className, String methodName, ExecMessage otherMessage) {
+    final ClassMethodCall.Builder callBuilder = ClassMethodCall.newBuilder();
+    final String fieldParamType;
+    switch (otherMessage.getMsgType()) {
+      case CONSTRUCTOR:
+        setParameters(callBuilder, otherMessage.getConstructorCall().getParameterList());
+        break;
+      case INSTANCE_METHOD:
+        setParameters(callBuilder, otherMessage.getInstanceMethodCall().getParameterList());
+        break;
+      case CLASS_METHOD:
+        setParameters(callBuilder, otherMessage.getClassMethodCall().getParameterList());
+        break;
+      case PUT_STATIC:
+        // Q: is this right? Or should we use valueObject.class.name if present?
+        fieldParamType = otherMessage.getStaticFieldPut().getField().getClass_().getName();
+        Primitives.Object object = otherMessage.getStaticFieldPut().getValueObject();
+        String objectRef = otherMessage.getStaticFieldPut().getValueObjectRef();
+        addParameter(callBuilder, fieldParamType, object, ObjectRef.from(objectRef));
+        break;
+      case PUT_FIELD:
+        fieldParamType = otherMessage.getInstanceFieldPut().getField().getClass_().getName();
+        object = otherMessage.getInstanceFieldPut().getValueObject();
+        objectRef = otherMessage.getInstanceFieldPut().getValueObjectRef();
+        addParameter(callBuilder, fieldParamType, object, ObjectRef.from(objectRef));
+        break;
+      case GET_STATIC:
+        fieldParamType = otherMessage.getStaticFieldGet().getField().getClass_().getName();
+        addParameter(callBuilder, fieldParamType, null, null);
+        break;
+      case GET_FIELD:
+        fieldParamType = otherMessage.getInstanceFieldGet().getField().getClass_().getName();
+        addParameter(callBuilder, fieldParamType, null, null);
+        break;
+      default:
+        logger.error("Unsupported msg type: {}", otherMessage.getMsgType());
+    }
+
+    final ExecMessage.Builder msgBuilder =
+        newWrapperBuilder(Type.CLASS_METHOD, peerUuid)
+            .setClassMethodCall(
+                callBuilder.setClass_(getWrappedClass(className)).setName(methodName));
+
+    return msgBuilder.build();
+  }
+
   // </editor-fold>
 
   // <editor-fold desc="Field Ops generic">
@@ -771,27 +837,64 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
   @Override
   public InterceptRequest buildInterceptRequest(
       UUID peerUuid,
+      InterceptType type,
       String className,
       String methodName,
-      String fieldName,
+      List<String> parameterTypes,
       String callbackClassName,
       String callbackMethodName) {
     final InterceptRequest.Builder msgBuilder =
         InterceptRequest.newBuilder()
             .setPeerUuid(peerUuid.toString())
+            .setType(type)
             .setMessageUuid(UUID.randomUUID().toString())
             .setClazz(className)
+            .setMethod(
+                Intercepts.InterceptableMethod.newBuilder()
+                    .setName(methodName)
+                    .addAllParameterType(parameterTypes)
+                    .build())
             .setCallbackClass(callbackClassName)
             .setCallbackMethod(callbackMethodName);
 
-    // set nullable fields
-    if (methodName != null) {
-      msgBuilder.setMethod(methodName);
-    }
-    if (fieldName != null) {
-      msgBuilder.setField(fieldName);
-    }
     return msgBuilder.build();
+  }
+
+  @Override
+  public InterceptRequest buildInterceptRequest(
+      UUID peerUuid,
+      InterceptType type,
+      String className,
+      String fieldName,
+      Intercepts.FieldOpType fieldOpType,
+      String callbackClassName,
+      String callbackMethodName) {
+    final InterceptRequest.Builder msgBuilder =
+        InterceptRequest.newBuilder()
+            .setPeerUuid(peerUuid.toString())
+            .setType(type)
+            .setMessageUuid(UUID.randomUUID().toString())
+            .setClazz(className)
+            .setField(
+                Intercepts.InterceptableField.newBuilder()
+                    .setName(fieldName)
+                    .setType(fieldOpType)
+                    .build())
+            .setCallbackClass(callbackClassName)
+            .setCallbackMethod(callbackMethodName);
+
+    return msgBuilder.build();
+  }
+
+  @Override
+  public ExecMessage buildCallbackForInterceptRequest(
+      UUID peerUuid, ExecMessage interceptedMessage, InterceptRequest interceptRequest) {
+
+    return buildClassMethodWithMessageParameters(
+        peerUuid,
+        interceptRequest.getCallbackClass(),
+        interceptRequest.getCallbackMethod(),
+        interceptedMessage);
   }
   // </editor-fold>
 }

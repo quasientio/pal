@@ -6,6 +6,7 @@ import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.util.UUIDUtils;
 import com.ittera.cometa.core.PeerException;
 import com.ittera.cometa.core.RunOptions;
+import com.ittera.cometa.core.exec.UnsupportedMessageException;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
 import java.io.IOException;
@@ -88,7 +89,12 @@ public class SelfCaller {
                       null,
                       parameters,
                       new ObjectRef[parameterTypes.length]);
-              replies.add(incomingMessageDispatcher.incomingCall(request, true));
+              try {
+                ExecMessage reply = incomingMessageDispatcher.incomingCall(request, true);
+                replies.add(reply);
+              } catch (UnsupportedMessageException e) {
+                logger.error("Unsupported message", e);
+              }
             });
     invokingThread.setName("self-caller");
     invokingThread.setContextClassLoader(customClassloader);
@@ -110,6 +116,9 @@ public class SelfCaller {
     }
     // get reply message
     final ExecMessage reply = replies.get(0);
+    if (reply == null) {
+      return null;
+    }
 
     // wait for the reply message offset, to ensure all msg's from have been written to the log
     if (!runOptions.contains(RunOptions.LOGLESS)) {

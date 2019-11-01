@@ -28,11 +28,12 @@ public abstract class AbstractDispatcherTest {
   protected AbstractDispatcherTest() {
     // set up mock dispatcher so it returns always the sent message (for ExecMessages)
     dispatcherConnector = mock(DispatcherConnector.class);
-    when(dispatcherConnector.sendExecMessage(any())).then(AdditionalAnswers.returnsFirstArg());
+    when(dispatcherConnector.sendExecMessage(any(), any()))
+        .then(AdditionalAnswers.returnsFirstArg());
   }
 
   private void verifyDispatcherConnectorSendExecMessageCalledTimes(int n) {
-    verify(dispatcherConnector, times(n)).sendExecMessage(any());
+    verify(dispatcherConnector, times(n)).sendExecMessage(any(), any());
   }
 
   protected void verifyDispatcherConnectorSendExecMessageCalledTwice() {

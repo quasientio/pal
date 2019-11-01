@@ -107,7 +107,8 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
           final long took = System.currentTimeMillis() - started;
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Dispatched and sent direct message reply with uuid: {} in {} millisecs",
+                "Dispatched and sent direct message w/uuid: {} in reply to request w/uuid: {} in {} millisecs",
+                replyMsg.getMessageUuid(),
                 requestMsg.getMessageUuid(),
                 took);
           }

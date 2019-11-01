@@ -5,5 +5,5 @@ public enum MessageType {
   InterceptRequest,
   Unknown;
 
-  public static final MessageType values[] = values();
+  public static final MessageType[] values = values();
 }

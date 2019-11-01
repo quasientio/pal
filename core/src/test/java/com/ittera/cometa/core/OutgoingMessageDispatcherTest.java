@@ -5,12 +5,15 @@ import static org.junit.Assert.assertThat;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
+import com.ittera.cometa.core.exec.ExecPhase;
+import com.ittera.cometa.core.messages.InterceptsMsg;
 import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeaderType;
 import java.util.*;
@@ -39,6 +42,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
   private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
   private InternalHeader WRITE_AHEAD_HEADER;
+  private List<InternalHeader> INCOMING_INTERCEPT_REQ_HEADERS;
 
   @Before
   public void setup() {
@@ -55,6 +59,8 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
             OUTCELL_ADDR,
             OUTPUB_ADDR);
     final Set<Service> services = new HashSet<>(Arrays.asList(this.outgoingMessageDispatcher));
+    this.INCOMING_INTERCEPT_REQ_HEADERS =
+        Collections.singletonList(msgBuilder.buildIncomingInterceptRequestHeader());
     this.manager = new ServiceManager(services);
   }
 
@@ -78,7 +84,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 
     // start service
     manager.startAsync();
-    Thread.sleep(500);
+    Thread.sleep(300);
     assertThat(outgoingMessageDispatcher.isRunning(), is(true));
 
     // create REQ socket to simulate requests (IRL: DispatcherConnector)
@@ -95,6 +101,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     OutboundMsg outMsg =
         new OutboundMsg(
             MessageType.ExecMessage,
+            ExecPhase.BEFORE,
             null,
             UUID.fromString(msg.getMessageUuid()),
             null,
@@ -122,12 +129,56 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendInterceptRequestMessage() throws Exception {
+  public void registerInterceptRequestMessage() throws Exception {
     assertThat(outgoingMessageDispatcher.isRunning(), is(false));
 
     // start service
     manager.startAsync();
-    Thread.sleep(500);
+    Thread.sleep(300);
+    assertThat(outgoingMessageDispatcher.isRunning(), is(true));
+
+    // create REQ socket to simulate requests (IRL: DispatcherConnector)
+    Socket req = context.createSocket(SocketType.REQ);
+    req.connect(OUTCELL_ADDR);
+
+    // send 1 message request
+    InterceptRequest msg =
+        msgBuilder.buildInterceptRequest(
+            peerUuid,
+            Intercepts.InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "println",
+            Collections.singletonList("java.lang.String"),
+            this.getClass().getName(),
+            "someCallbackMethod");
+    OutboundMsg outMsg =
+        new OutboundMsg(
+            MessageType.InterceptRequest,
+            null,
+            INCOMING_INTERCEPT_REQ_HEADERS,
+            UUID.fromString(msg.getMessageUuid()),
+            null,
+            msg.toByteArray());
+    outMsg.send(req);
+
+    // expect a 0-reply
+    String reply = req.recvStr();
+    assertThat(reply, is("0"));
+
+    // close local sockets
+    req.close();
+
+    // shut down
+    manager.stopAsync();
+  }
+
+  @Test
+  public void sendOutInterceptRequestMessage() throws Exception {
+    assertThat(outgoingMessageDispatcher.isRunning(), is(false));
+
+    // start service
+    manager.startAsync();
+    Thread.sleep(300);
     assertThat(outgoingMessageDispatcher.isRunning(), is(true));
 
     // create REQ socket to simulate requests (IRL: DispatcherConnector)
@@ -143,14 +194,16 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     InterceptRequest msg =
         msgBuilder.buildInterceptRequest(
             peerUuid,
+            Intercepts.InterceptType.BEFORE,
             "java.io.PrintStream",
             "println",
-            null,
+            Collections.singletonList("java.lang.String"),
             this.getClass().getName(),
             "someCallbackMethod");
     OutboundMsg outMsg =
         new OutboundMsg(
             MessageType.InterceptRequest,
+            null,
             null,
             UUID.fromString(msg.getMessageUuid()),
             null,
@@ -183,7 +236,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 
     // start service
     manager.startAsync();
-    Thread.sleep(500);
+    Thread.sleep(300);
     assertThat(outgoingMessageDispatcher.isRunning(), is(true));
 
     // create REQ socket to simulate requests (IRL: DispatcherConnector)
@@ -201,6 +254,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     OutboundMsg outMsg =
         new OutboundMsg(
             MessageType.ExecMessage,
+            ExecPhase.BEFORE,
             headers,
             UUID.fromString(msg.getMessageUuid()),
             null,
@@ -227,6 +281,89 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     req.close();
     sub.close();
 
+    // shut down
+    manager.stopAsync();
+  }
+
+  @Test
+  public void sendInterceptRequestAndMatchingExecMessage() throws Exception {
+    assertThat(outgoingMessageDispatcher.isRunning(), is(false));
+
+    // start service
+    manager.startAsync();
+    Thread.sleep(300);
+    assertThat(outgoingMessageDispatcher.isRunning(), is(true));
+
+    // create REQ socket to simulate requests (IRL: DispatcherConnector)
+    Socket req = context.createSocket(SocketType.REQ);
+    req.connect(OUTCELL_ADDR);
+
+    // send intercept request
+    InterceptRequest interceptRequest =
+        msgBuilder.buildInterceptRequest(
+            peerUuid,
+            Intercepts.InterceptType.BEFORE,
+            "java.util.ArrayList",
+            "new",
+            Collections.emptyList(),
+            this.getClass().getName(),
+            "someCallbackMethod");
+
+    OutboundMsg outMsg =
+        new OutboundMsg(
+            MessageType.InterceptRequest,
+            null,
+            INCOMING_INTERCEPT_REQ_HEADERS,
+            UUID.fromString(interceptRequest.getMessageUuid()),
+            null,
+            interceptRequest.toByteArray());
+    outMsg.send(req);
+    logger.debug("Sent intercept req: {}", outMsg);
+
+    // expect a 0-reply
+    String reply = req.recvStr();
+    assertThat(reply, is("0"));
+
+    // send a matching ExecMessage with non-matching phase (ExecPhase = AFTER)
+    ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
+    outMsg =
+        new OutboundMsg(
+            MessageType.ExecMessage,
+            ExecPhase.AFTER,
+            null,
+            UUID.fromString(msg.getMessageUuid()),
+            null,
+            msg.toByteArray());
+    outMsg.send(req);
+    logger.debug("Sent exec message: {}", outMsg);
+
+    // verify if it gets intercepted
+    InterceptsMsg interceptsMsg = InterceptsMsg.recvMsg(req, true);
+    logger.debug("Got intercepted request: {}", interceptsMsg);
+    assertThat(interceptsMsg.getIntercepts(), nullValue());
+
+    // now send a matching ExecMessage
+    msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
+    outMsg =
+        new OutboundMsg(
+            MessageType.ExecMessage,
+            ExecPhase.BEFORE,
+            null,
+            UUID.fromString(msg.getMessageUuid()),
+            null,
+            msg.toByteArray());
+    outMsg.send(req);
+    logger.debug("Sent exec message: {}", outMsg);
+
+    // verify if it gets intercepted
+    interceptsMsg = InterceptsMsg.recvMsg(req, true);
+    logger.debug("Got intercepted request: {}", interceptsMsg);
+    assertThat(interceptsMsg.getIntercepts(), notNullValue());
+    assertThat(interceptsMsg.getIntercepts().size(), is(1));
+    assertThat(interceptsMsg.getIntercepts().get(0), is(interceptRequest));
+
+    // close local sockets
+    req.close();
     // shut down
     manager.stopAsync();
   }

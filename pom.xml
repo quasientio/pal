@@ -36,6 +36,7 @@
         <protobuf.version>3.8.0</protobuf.version>
         <org.json.version>20180813</org.json.version>
         <google.format.version>2.9</google.format.version>
+        <antpath.matcher>1.0.0</antpath.matcher>
 
         <!-- LOGGING -->
         <logs.dir>logs</logs.dir>

@@ -13,9 +13,10 @@ import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -327,9 +328,10 @@ public class LogReaderTest extends ZmqEnabledTest {
     InterceptRequest msg =
         msgBuilder.buildInterceptRequest(
             peerUuid,
+            Intercepts.InterceptType.BEFORE,
             "java.io.PrintStream",
             "println",
-            null,
+            Collections.EMPTY_LIST,
             this.getClass().getName(),
             "someCallbackMethod");
     ConsumerRecord<String, byte[]> record =

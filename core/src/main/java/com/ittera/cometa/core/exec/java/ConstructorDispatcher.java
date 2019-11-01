@@ -22,7 +22,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 @Singleton
-public class ConstructorDispatcher extends BaseDispatcher {
+public class ConstructorDispatcher extends BaseExecMessageDispatcher {
 
   @Inject
   public ConstructorDispatcher(

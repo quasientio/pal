@@ -47,7 +47,7 @@ public class XPubSubPOCTest {
         }
       }
       this.socket.close();
-      System.out.printf("publisher w/ uuid <%s> is finished%n", peerUuid);
+      System.out.printf("publisher w/uuid <%s> is finished%n", peerUuid);
     }
   }
 
@@ -95,7 +95,7 @@ public class XPubSubPOCTest {
       }
 
       this.socket.close();
-      System.out.printf("subscriber w/ uuid <%s> is finished%n", peerUuid);
+      System.out.printf("subscriber w/uuid <%s> is finished%n", peerUuid);
       shutdownLatch.countDown();
 
       return received;

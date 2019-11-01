@@ -1,0 +1,41 @@
+syntax = "proto2";
+package messages.protobuf.intercepts;
+
+option java_package = "com.ittera.cometa.messages.protobuf";
+option optimize_for = SPEED;
+
+enum InterceptType {
+    BEFORE = 1;
+    AFTER = 2;
+    AROUND = 3;
+    BEFORE_ASYNC = 4;
+    AFTER_ASYNC = 5;
+}
+
+enum FieldOpType {
+    GET = 1;
+    PUT = 2;
+}
+
+message InterceptableMethod {
+    required string name = 1;
+    repeated string parameterType = 2;
+}
+
+message InterceptableField {
+    required string name = 1;
+    required FieldOpType type = 2;
+}
+
+message InterceptRequest {
+    required string peerUuid = 1;
+    required string messageUuid = 2;
+    required InterceptType type = 3;
+    required string clazz = 4;
+    oneof interceptable {
+        InterceptableField field = 5;
+        InterceptableMethod method = 6;
+    }
+    required string callbackClass = 7;
+    required string callbackMethod = 8;
+}

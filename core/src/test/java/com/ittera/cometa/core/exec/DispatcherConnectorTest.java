@@ -6,16 +6,19 @@ import static org.junit.Assert.assertThat;
 
 import com.ittera.cometa.core.ZmqEnabledTest;
 import com.ittera.cometa.core.messages.OutboundMsg;
+import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -97,13 +100,20 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   private final OutgoingMessageDispatcherStub outDispatcherStub =
       new OutgoingMessageDispatcherStub();
   private InternalHeader WRITE_AHEAD_HEADER;
+  private static final int TEST_PORT = 2182;
+  private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
+  private TestingServer testingServer;
+  private PALDirectory palDirectory;
 
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     this.WRITE_AHEAD_HEADER = msgBuilder.buildWriteAheadHeader(peerUuid);
     this.context = createContext();
     this.execService = Executors.newCachedThreadPool();
-    this.dispatcherConnector = new DispatcherConnector(context, peerUuid, msgBuilder, OUTCELL_ADDR);
+    testingServer = new TestingServer(TEST_PORT, true);
+    palDirectory = new PALDirectory(CONNECTION_STR);
+    this.dispatcherConnector =
+        new DispatcherConnector(context, peerUuid, msgBuilder, palDirectory, OUTCELL_ADDR);
 
     // simulate OutgoingMessageDispatcher
     execService.submit(outDispatcherStub);
@@ -119,13 +129,15 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     execService.awaitTermination(2, TimeUnit.SECONDS);
 
     outDispatcherStub.clear();
+    palDirectory.close();
+    testingServer.close();
   }
 
   @Test
   public void sendExecMessage() throws Exception {
     // sends msg and get reply
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-    ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg);
+    ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg, ExecPhase.BEFORE);
 
     // should return same message as sent (if reply == 0), null otherwise
     assertThat(returnedMsg, is(msg));
@@ -139,14 +151,15 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     InterceptRequest msg =
         msgBuilder.buildInterceptRequest(
             peerUuid,
+            Intercepts.InterceptType.BEFORE,
             "java.io.PrintStream",
             "println",
-            null,
+            Collections.EMPTY_LIST,
             this.getClass().getName(),
             "someCallbackMethod");
-    boolean ok = dispatcherConnector.sendInterceptRequestMessage(msg);
+    int resultCode = dispatcherConnector.sendOutInterceptRequestMessage(msg);
 
-    assertThat(ok, is(true));
+    assertThat(resultCode, is(0));
     assertThat(outDispatcherStub.messagesReceived.size(), is(1));
     assertThat(outDispatcherStub.messagesReceived, is(Collections.singletonList(msg)));
   }
@@ -161,7 +174,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     for (int i = 0; i < msgsToSend; i++) {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       sentMessages.add(msg);
-      ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg);
+      ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg, ExecPhase.BEFORE);
       returnedMessages.add(returnedMsg);
     }
 

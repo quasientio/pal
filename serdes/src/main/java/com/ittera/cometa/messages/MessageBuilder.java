@@ -3,11 +3,14 @@ package com.ittera.cometa.messages;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
+import com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import com.ittera.cometa.messages.protobuf.data.Wrappers;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
 import java.lang.reflect.AccessibleObject;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,6 +18,8 @@ public interface MessageBuilder {
 
   /** header builders */
   Wrappers.InternalHeader buildWriteAheadHeader(UUID peerUuid);
+
+  Wrappers.InternalHeader buildIncomingInterceptRequestHeader();
 
   /** constructor builders */
   ExecMessage buildEmptyConstructor(UUID peerUuid, String className);
@@ -144,13 +149,28 @@ public interface MessageBuilder {
       boolean isVoid,
       String followingUuid);
 
+  /** intercept requests */
   InterceptRequest buildInterceptRequest(
       UUID peerUuid,
+      InterceptType type,
       String className,
       String methodName,
-      String fieldName,
+      List<String> parameterTypes,
       String callbackClassName,
       String callbackMethodName);
+
+  InterceptRequest buildInterceptRequest(
+      UUID peerUuid,
+      InterceptType type,
+      String className,
+      String fieldName,
+      FieldOpType fieldOpType,
+      String callbackClassName,
+      String callbackMethodName);
+
+  /** callbacks from intercept requests */
+  ExecMessage buildCallbackForInterceptRequest(
+      UUID peerUuid, ExecMessage interceptedMessage, InterceptRequest interceptRequest);
 
   /** other */
   void resetThreadLocalSequence();

@@ -16,7 +16,9 @@ public @interface Before {
 
   String method() default "";
 
+  String[] parameterTypes() default {};
+
   String field() default "";
 
-  String[] args() default {};
+  String fieldOpType() default "";
 }

@@ -8,13 +8,15 @@ import com.google.common.util.concurrent.ServiceManager;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.core.exec.ExecPhase;
 import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -161,9 +163,10 @@ public class LogWriterTest extends ZmqEnabledTest {
       InterceptRequest msg =
           msgBuilder.buildInterceptRequest(
               peerUuid,
+              Intercepts.InterceptType.BEFORE,
               "java.io.PrintStream",
               "println",
-              null,
+              Collections.EMPTY_LIST,
               this.getClass().getName(),
               "someCallbackMethod");
       msgsCreated.add(msg);
@@ -174,9 +177,11 @@ public class LogWriterTest extends ZmqEnabledTest {
         msg -> {
           MessageType msgType =
               msg instanceof ExecMessage ? MessageType.ExecMessage : MessageType.InterceptRequest;
+          ExecPhase execPhase = msg instanceof ExecMessage ? ExecPhase.BEFORE : null;
           OutboundMsg outMsg =
               new OutboundMsg(
                   msgType,
+                  execPhase,
                   null,
                   UUID.fromString(getMessageUuid(msg)),
                   getFollowingUuid(msg) == null ? null : UUID.fromString(getFollowingUuid(msg)),
@@ -241,6 +246,7 @@ public class LogWriterTest extends ZmqEnabledTest {
               OutboundMsg outMsg =
                   new OutboundMsg(
                       MessageType.ExecMessage,
+                      ExecPhase.BEFORE,
                       headers,
                       UUID.fromString(getMessageUuid(msg)),
                       getFollowingUuid(msg) == null ? null : UUID.fromString(getFollowingUuid(msg)),

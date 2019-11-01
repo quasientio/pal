@@ -39,7 +39,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     this.context = createContext();
     this.execService = Executors.newCachedThreadPool();
     // simulate DirectRequestDispatcher's DEALER socket
