@@ -74,6 +74,8 @@
                     <artifactSet>
                         <excludes>
                             <exclude>org.aspectj:aspectjtools:*</exclude>
+                            <exclude>com.fasterxml.jackson.*</exclude>
+                            <exclude>org.rocksdb:rocksdbjni:*</exclude>
                             <!-- exclude zookeeper dependencies -->
                             <exclude>com.github.spotbugs:spotbugs-annotations</exclude>
                             <exclude>com.google.code.findbugs:jsr305</exclude>
