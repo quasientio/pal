@@ -1,9 +1,9 @@
-package com.ittera.cometa.messages.protobuf;
+package com.ittera.cometa.messages;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.*;
 
-import com.ittera.cometa.messages.protobuf.data.Primitives;
+import com.ittera.cometa.messages.protobuf.Primitives;
 import java.util.List;
 import org.junit.Test;
 

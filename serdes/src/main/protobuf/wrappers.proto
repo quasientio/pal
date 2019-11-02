@@ -1,29 +1,15 @@
 syntax = "proto2";
-package messages.protobuf.data;
+package messages.protobuf;
 
 import "calls.proto";
 import "fields.proto";
 import "exceptions.proto";
 import "values.proto";
 
-option java_package = "com.ittera.cometa.messages.protobuf.data";
+option java_package = "com.ittera.cometa.messages.protobuf";
 option optimize_for = SPEED;
 
-enum InternalHeaderType {
-    /*
-     Sent before dispatching a received message.
-     Value is the UUID of the receiving-dispatching peer, not the producer.
-    */
-    WRITE_AHEAD = 1;
-    INCOMING_INTERCEPT_REQ = 2;
-}
-
-message InternalHeader {
-    required InternalHeaderType headerType = 1;
-    optional string value = 2;
-}
-
-enum Type {
+enum ExecMessageType {
     STATIC_CONSTRUCTOR = 1;
     RETURN_CLASS = 2;
     CONSTRUCTOR = 3;
@@ -42,7 +28,7 @@ enum Type {
 message ExecMessage {
     required string peerUuid = 1;
     required string messageUuid = 2;
-    required Type msgType = 3;
+    required ExecMessageType msgType = 3;
     required string threadName = 4;
     required string currentTime = 5;
     optional int32 dispatchSeq = 6;

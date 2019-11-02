@@ -2,8 +2,8 @@ package com.ittera.cometa.messages;
 
 import com.google.common.primitives.Ints;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.ittera.cometa.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Headers;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -50,7 +50,7 @@ public class MessageStreamer {
   private ExecMessage getNext() {
     byte[] buff;
     int headerCount;
-    List<Wrappers.InternalHeader> headers = new ArrayList<>();
+    List<Headers.InternalHeader> headers = new ArrayList<>();
 
     ExecMessage message = null;
     try {
@@ -67,7 +67,7 @@ public class MessageStreamer {
         for (int i = 0; i < headerCount; i++) {
           buff = subscriber.recv();
           try {
-            headers.add(Wrappers.InternalHeader.parseFrom(buff));
+            headers.add(Headers.InternalHeader.parseFrom(buff));
           } catch (InvalidProtocolBufferException e) {
             logger.error("Error parsing header from byte array", e);
           }

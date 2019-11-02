@@ -3,8 +3,8 @@ package com.ittera.cometa.core.exec.java;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
 import java.lang.reflect.AccessibleObject;
 import java.util.List;
 import java.util.UUID;
@@ -27,18 +27,18 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
   }
 
   @Override
-  protected final Type getBeforeExecMessageType() {
-    return Type.GET_STATIC;
+  protected final ExecMessageType getBeforeExecMessageType() {
+    return ExecMessageType.GET_STATIC;
   }
 
   @Override
-  protected final Type getAfterExecMessageType() {
-    return Type.RETURN_VALUE;
+  protected final ExecMessageType getAfterExecMessageType() {
+    return ExecMessageType.RETURN_VALUE;
   }
 
   @Override
   protected AccessibleObject loadAccessibleObject(
-      Wrappers.ExecMessage execMessage, List<Class> parameterTypes, List<Object> args)
+      ExecMessage execMessage, List<Class> parameterTypes, List<Object> args)
       throws ReflectiveOperationException {
 
     Class clazz =

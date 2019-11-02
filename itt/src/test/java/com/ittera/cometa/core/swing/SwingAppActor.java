@@ -3,10 +3,10 @@ package com.ittera.cometa.core.swing;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.cxn.ThinPeer;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.protobuf.Primitives;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
 import java.io.InputStream;
 import java.util.Properties;
 
@@ -50,7 +50,7 @@ public class SwingAppActor {
 
     // wait for put of JFrame field;
     String fieldName = "frame";
-    thinPeer.waitFor(Type.PUT_STATIC_DONE, fieldName);
+    thinPeer.waitFor(ExecMessageType.PUT_STATIC_DONE, fieldName);
 
     // now get the jframe
     ExecMessage requestMsg =

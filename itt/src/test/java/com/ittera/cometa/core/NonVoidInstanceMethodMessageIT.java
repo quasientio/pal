@@ -3,8 +3,8 @@ package com.ittera.cometa.core;
 import static org.junit.Assert.*;
 
 import com.ittera.cometa.common.lang.ObjectRef;
-import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
+import com.ittera.cometa.messages.Unwrapper;
+import com.ittera.cometa.messages.protobuf.Values.ReturnValue;
 import org.junit.Test;
 
 /**

@@ -2,10 +2,10 @@ package com.ittera.cometa.core;
 
 import static org.junit.Assert.*;
 
-import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.Unwrapper;
+import com.ittera.cometa.messages.protobuf.Primitives;
+import com.ittera.cometa.messages.protobuf.Values.ReturnValue;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 
 public class ExecMessageAssertions {
 

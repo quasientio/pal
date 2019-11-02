@@ -4,7 +4,7 @@ import com.google.protobuf.AbstractMessage;
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;

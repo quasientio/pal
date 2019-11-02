@@ -4,7 +4,7 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
 import com.ittera.cometa.messages.protobuf.Intercepts;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
 import java.util.Arrays;
 import java.util.Collections;

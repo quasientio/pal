@@ -1,6 +1,6 @@
 package com.ittera.cometa.core.exec.java;
 
-import com.ittera.cometa.messages.protobuf.data.Primitives;
+import com.ittera.cometa.messages.protobuf.Primitives;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;

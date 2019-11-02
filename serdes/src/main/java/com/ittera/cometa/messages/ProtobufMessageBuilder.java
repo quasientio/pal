@@ -1,20 +1,23 @@
-package com.ittera.cometa.messages.protobuf;
+package com.ittera.cometa.messages;
 
 import com.google.protobuf.Message.Builder;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.*;
-import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.protobuf.Calls.*;
+import com.ittera.cometa.messages.protobuf.Ctxt;
+import com.ittera.cometa.messages.protobuf.Exceptions;
+import com.ittera.cometa.messages.protobuf.Fields.*;
+import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
+import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
+import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
-import com.ittera.cometa.messages.protobuf.data.*;
-import com.ittera.cometa.messages.protobuf.data.Calls.*;
-import com.ittera.cometa.messages.protobuf.data.Fields.*;
-import com.ittera.cometa.messages.protobuf.data.Values.*;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeaderType;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.protobuf.Primitives;
+import com.ittera.cometa.messages.protobuf.Values;
+import com.ittera.cometa.messages.protobuf.Values.*;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
 import java.lang.reflect.*;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -127,7 +130,8 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
     }
   }
 
-  private ExecMessage.Builder newWrapperBuilder(Type msgType, UUID peerUuid, String followingUuid) {
+  private ExecMessage.Builder newWrapperBuilder(
+      ExecMessageType msgType, UUID peerUuid, String followingUuid) {
 
     ExecMessage.Builder msgBuilder =
         ExecMessage.newBuilder()
@@ -146,7 +150,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
     return msgBuilder;
   }
 
-  private ExecMessage.Builder newWrapperBuilder(Type msgType, UUID peerUuid) {
+  private ExecMessage.Builder newWrapperBuilder(ExecMessageType msgType, UUID peerUuid) {
     return newWrapperBuilder(msgType, peerUuid, null);
   }
 
@@ -225,7 +229,8 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
     }
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.CONSTRUCTOR, peerUuid).setConstructorCall(constructorCallBuilder);
+        newWrapperBuilder(ExecMessageType.CONSTRUCTOR, peerUuid)
+            .setConstructorCall(constructorCallBuilder);
 
     return msgBuilder.build();
   }
@@ -289,7 +294,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
     addParameters(callBuilder, parameterTypes, args, argObjRefs);
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.INSTANCE_METHOD, peerUuid)
+        newWrapperBuilder(ExecMessageType.INSTANCE_METHOD, peerUuid)
             .setInstanceMethodCall(
                 callBuilder
                     .setClass_(getWrappedClass(className))
@@ -316,7 +321,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
     addParameters(callBuilder, context, args, argObjRefs);
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.INSTANCE_METHOD, peerUuid)
+        newWrapperBuilder(ExecMessageType.INSTANCE_METHOD, peerUuid)
             .setInstanceMethodCall(
                 callBuilder
                     .setClass_(getWrappedClass(codeSignature.getDeclaringTypeName()))
@@ -348,7 +353,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
     addParameters(callBuilder, parameterTypes, args, argObjRefs);
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.CLASS_METHOD, peerUuid)
+        newWrapperBuilder(ExecMessageType.CLASS_METHOD, peerUuid)
             .setClassMethodCall(
                 callBuilder.setClass_(getWrappedClass(className)).setName(methodName));
 
@@ -370,7 +375,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
     addParameters(callBuilder, context, args, argObjRefs);
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.CLASS_METHOD, peerUuid)
+        newWrapperBuilder(ExecMessageType.CLASS_METHOD, peerUuid)
             .setClassMethodCall(
                 callBuilder
                     .setContext(getWrappedContext(context, sender, senderObjRef))
@@ -429,7 +434,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
     }
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.CLASS_METHOD, peerUuid)
+        newWrapperBuilder(ExecMessageType.CLASS_METHOD, peerUuid)
             .setClassMethodCall(
                 callBuilder.setClass_(getWrappedClass(className)).setName(methodName));
 
@@ -443,7 +448,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
   public ExecMessage buildFieldOp(
       UUID peerUuid,
       Context context,
-      Type type,
+      ExecMessageType type,
       Object sender,
       ObjectRef senderObjRef,
       Object target,
@@ -509,7 +514,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
 
   @Override
   public ExecMessage buildFieldOpDone(
-      UUID peerUuid, AccessibleObject accessibleObject, Context context, Type type) {
+      UUID peerUuid, AccessibleObject accessibleObject, Context context, ExecMessageType type) {
 
     final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
 
@@ -541,7 +546,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
   public ExecMessage buildGetStatic(UUID peerUuid, String className, String fieldName) {
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.GET_STATIC, peerUuid)
+        newWrapperBuilder(ExecMessageType.GET_STATIC, peerUuid)
             .setStaticFieldGet(
                 StaticFieldGet.newBuilder()
                     .setClass_(getWrappedClass(className))
@@ -559,7 +564,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
       UUID peerUuid, String className, String fieldName, ObjectRef targetObjRef) {
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.GET_FIELD, peerUuid)
+        newWrapperBuilder(ExecMessageType.GET_FIELD, peerUuid)
             .setInstanceFieldGet(
                 InstanceFieldGet.newBuilder()
                     .setClass_(getWrappedClass(className))
@@ -578,7 +583,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
       UUID peerUuid, String className, String fieldName, String valueClassName, Object value) {
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.PUT_STATIC, peerUuid)
+        newWrapperBuilder(ExecMessageType.PUT_STATIC, peerUuid)
             .setStaticFieldPut(
                 StaticFieldPut.newBuilder()
                     .setClass_(getWrappedClass(className))
@@ -593,7 +598,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
       UUID peerUuid, String className, String fieldName, ObjectRef valueObjectRef) {
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.PUT_STATIC, peerUuid)
+        newWrapperBuilder(ExecMessageType.PUT_STATIC, peerUuid)
             .setStaticFieldPut(
                 StaticFieldPut.newBuilder()
                     .setClass_(getWrappedClass(className))
@@ -617,7 +622,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
         .setStaticFieldPutUuid(staticFieldPutUuid);
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.PUT_STATIC_DONE, peerUuid, followingUuid)
+        newWrapperBuilder(ExecMessageType.PUT_STATIC_DONE, peerUuid, followingUuid)
             .setStaticFieldPutDone(fieldBuilder);
     return msgBuilder.build();
   }
@@ -636,7 +641,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
       Object value) {
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.PUT_FIELD, peerUuid, null)
+        newWrapperBuilder(ExecMessageType.PUT_FIELD, peerUuid, null)
             .setInstanceFieldPut(
                 InstanceFieldPut.newBuilder()
                     .setClass_(getWrappedClass(className))
@@ -656,7 +661,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
       ObjectRef valueObjectRef) {
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.PUT_FIELD, peerUuid, null)
+        newWrapperBuilder(ExecMessageType.PUT_FIELD, peerUuid, null)
             .setInstanceFieldPut(
                 InstanceFieldPut.newBuilder()
                     .setClass_(getWrappedClass(className))
@@ -674,14 +679,14 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
       String instanceFieldPutUuid,
       String followingUuid) {
 
-    final Fields.InstanceFieldPutDone.Builder fieldBuilder = InstanceFieldPutDone.newBuilder();
+    final InstanceFieldPutDone.Builder fieldBuilder = InstanceFieldPutDone.newBuilder();
     fieldBuilder
         .setField(getWrappedField((Field) accessibleObject))
         .setClass_(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
         .setInstanceFieldPutUuid(instanceFieldPutUuid);
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.PUT_FIELD_DONE, peerUuid, followingUuid)
+        newWrapperBuilder(ExecMessageType.PUT_FIELD_DONE, peerUuid, followingUuid)
             .setInstanceFieldPutDone(fieldBuilder);
 
     return msgBuilder.build();
@@ -730,7 +735,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
     }
 
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.THROWABLE, peerUuid, followingUuid)
+        newWrapperBuilder(ExecMessageType.THROWABLE, peerUuid, followingUuid)
             .setRaisedThrowable(
                 thrBuilder
                     .setClass_(getWrappedClass(exception.getClass().getName()))
@@ -825,7 +830,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
 
     // set 'class'
     final ExecMessage.Builder msgBuilder =
-        newWrapperBuilder(Type.RETURN_VALUE, peerUuid, followingUuid)
+        newWrapperBuilder(ExecMessageType.RETURN_VALUE, peerUuid, followingUuid)
             .setReturnValue(
                 valueBuilder.setIsVoid(isVoid).setClazz(getWrappedClass(declaringClass)));
 

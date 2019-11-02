@@ -8,7 +8,7 @@ import com.ittera.cometa.core.PeerException;
 import com.ittera.cometa.core.RunOptions;
 import com.ittera.cometa.core.exec.UnsupportedMessageException;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.io.IOException;
 import java.util.*;
 import java.util.jar.Attributes;

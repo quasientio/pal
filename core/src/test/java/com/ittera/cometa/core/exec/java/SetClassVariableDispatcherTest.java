@@ -12,7 +12,7 @@ import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 import com.ittera.cometa.common.lang.reflect.Signature;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.util.LinkedList;
 import org.junit.*;
 import org.junit.runner.RunWith;

@@ -4,10 +4,10 @@ import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.Unwrapper;
+import com.ittera.cometa.messages.protobuf.Wrappers;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -32,13 +32,13 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
   }
 
   @Override
-  protected final Type getBeforeExecMessageType() {
-    return Type.PUT_STATIC;
+  protected final ExecMessageType getBeforeExecMessageType() {
+    return ExecMessageType.PUT_STATIC;
   }
 
   @Override
-  protected final Type getAfterExecMessageType() {
-    return Type.PUT_STATIC_DONE;
+  protected final ExecMessageType getAfterExecMessageType() {
+    return ExecMessageType.PUT_STATIC_DONE;
   }
 
   @Override

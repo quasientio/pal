@@ -2,7 +2,7 @@ package com.ittera.cometa.core.exec.java;
 
 import com.ittera.cometa.core.exec.UnsupportedMessageException;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.slf4j.Logger;

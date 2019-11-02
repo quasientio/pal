@@ -4,7 +4,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.common.util.UUIDUtils;
 import com.ittera.cometa.core.exec.ExecPhase;
 import com.ittera.cometa.messages.MessageType;
-import com.ittera.cometa.messages.protobuf.data.Wrappers;
+import com.ittera.cometa.messages.protobuf.Headers;
 import java.util.*;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -32,7 +32,7 @@ public class OutboundMsg extends BaseMsg {
   private final MessageType messageType;
 
   @Nullable final ExecPhase execPhase;
-  @Nullable private final List<Wrappers.InternalHeader> headers;
+  @Nullable private final List<Headers.InternalHeader> headers;
   private final UUID messageUuid;
   @Nullable private final UUID followingUuid;
   private final byte[] body;
@@ -40,7 +40,7 @@ public class OutboundMsg extends BaseMsg {
   public OutboundMsg(
       MessageType messageType,
       @Nullable ExecPhase execPhase,
-      @Nullable List<Wrappers.InternalHeader> headers,
+      @Nullable List<Headers.InternalHeader> headers,
       UUID messageUuid,
       @Nullable UUID followingUuid,
       byte[] body) {
@@ -59,7 +59,7 @@ public class OutboundMsg extends BaseMsg {
   private OutboundMsg(
       MessageType messageType,
       @Nullable ExecPhase execPhase,
-      @Nullable List<Wrappers.InternalHeader> headers,
+      @Nullable List<Headers.InternalHeader> headers,
       UUID messageUuid,
       @Nullable UUID followingUuid,
       byte[] body,
@@ -102,7 +102,7 @@ public class OutboundMsg extends BaseMsg {
 
     // headers
     if (headers != null && !headers.isEmpty()) {
-      for (Wrappers.InternalHeader header : headers) {
+      for (Headers.InternalHeader header : headers) {
         buff = header.toByteArray();
         size += buff.length;
         if (!socket.send(buff, ZMQ.SNDMORE)) {
@@ -169,13 +169,13 @@ public class OutboundMsg extends BaseMsg {
     msgSize += buff.length;
     final int headerCount = Integer.parseInt(new String(buff, ZMQ.CHARSET));
     // headers
-    final List<Wrappers.InternalHeader> headers;
+    final List<Headers.InternalHeader> headers;
     if (headerCount > 0) {
       headers = new ArrayList<>();
       for (int i = 0; i < headerCount; i++) {
         buff = socket.recv();
         msgSize += buff.length;
-        headers.add(Wrappers.InternalHeader.parseFrom(buff));
+        headers.add(Headers.InternalHeader.parseFrom(buff));
       }
     } else {
       headers = null;
@@ -258,7 +258,7 @@ public class OutboundMsg extends BaseMsg {
     return execPhase;
   }
 
-  public List<Wrappers.InternalHeader> getHeaders() {
+  public List<Headers.InternalHeader> getHeaders() {
     return headers;
   }
 

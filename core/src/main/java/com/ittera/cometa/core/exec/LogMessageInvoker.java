@@ -6,7 +6,7 @@ import com.ittera.cometa.core.messages.InboundLogMsg;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;

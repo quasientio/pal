@@ -3,7 +3,7 @@ package com.ittera.cometa.cxn;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.LogReply;
 import com.ittera.cometa.LogRequest;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;

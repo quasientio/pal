@@ -11,7 +11,7 @@ public final class Intercepts {
   public static void registerAllExtensions(com.google.protobuf.ExtensionRegistry registry) {
     registerAllExtensions((com.google.protobuf.ExtensionRegistryLite) registry);
   }
-  /** Protobuf enum {@code messages.protobuf.intercepts.InterceptType} */
+  /** Protobuf enum {@code messages.protobuf.InterceptType} */
   public enum InterceptType implements com.google.protobuf.ProtocolMessageEnum {
     /** <code>BEFORE = 1;</code> */
     BEFORE(1),
@@ -101,10 +101,10 @@ public final class Intercepts {
       this.value = value;
     }
 
-    // @@protoc_insertion_point(enum_scope:messages.protobuf.intercepts.InterceptType)
+    // @@protoc_insertion_point(enum_scope:messages.protobuf.InterceptType)
   }
 
-  /** Protobuf enum {@code messages.protobuf.intercepts.FieldOpType} */
+  /** Protobuf enum {@code messages.protobuf.FieldOpType} */
   public enum FieldOpType implements com.google.protobuf.ProtocolMessageEnum {
     /** <code>GET = 1;</code> */
     GET(1),
@@ -176,12 +176,12 @@ public final class Intercepts {
       this.value = value;
     }
 
-    // @@protoc_insertion_point(enum_scope:messages.protobuf.intercepts.FieldOpType)
+    // @@protoc_insertion_point(enum_scope:messages.protobuf.FieldOpType)
   }
 
   public interface InterceptableMethodOrBuilder
       extends
-      // @@protoc_insertion_point(interface_extends:messages.protobuf.intercepts.InterceptableMethod)
+      // @@protoc_insertion_point(interface_extends:messages.protobuf.InterceptableMethod)
       com.google.protobuf.MessageOrBuilder {
 
     /** <code>required string name = 1;</code> */
@@ -200,10 +200,10 @@ public final class Intercepts {
     /** <code>repeated string parameterType = 2;</code> */
     com.google.protobuf.ByteString getParameterTypeBytes(int index);
   }
-  /** Protobuf type {@code messages.protobuf.intercepts.InterceptableMethod} */
+  /** Protobuf type {@code messages.protobuf.InterceptableMethod} */
   public static final class InterceptableMethod extends com.google.protobuf.GeneratedMessageV3
       implements
-      // @@protoc_insertion_point(message_implements:messages.protobuf.intercepts.InterceptableMethod)
+      // @@protoc_insertion_point(message_implements:messages.protobuf.InterceptableMethod)
       InterceptableMethodOrBuilder {
     private static final long serialVersionUID = 0L;
     // Use InterceptableMethod.newBuilder() to construct.
@@ -287,14 +287,14 @@ public final class Intercepts {
 
     public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
       return com.ittera.cometa.messages.protobuf.Intercepts
-          .internal_static_messages_protobuf_intercepts_InterceptableMethod_descriptor;
+          .internal_static_messages_protobuf_InterceptableMethod_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return com.ittera.cometa.messages.protobuf.Intercepts
-          .internal_static_messages_protobuf_intercepts_InterceptableMethod_fieldAccessorTable
+          .internal_static_messages_protobuf_InterceptableMethod_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod.class,
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod.Builder.class);
@@ -540,22 +540,22 @@ public final class Intercepts {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /** Protobuf type {@code messages.protobuf.intercepts.InterceptableMethod} */
+    /** Protobuf type {@code messages.protobuf.InterceptableMethod} */
     public static final class Builder
         extends com.google.protobuf.GeneratedMessageV3.Builder<Builder>
         implements
-        // @@protoc_insertion_point(builder_implements:messages.protobuf.intercepts.InterceptableMethod)
+        // @@protoc_insertion_point(builder_implements:messages.protobuf.InterceptableMethod)
         com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethodOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_intercepts_InterceptableMethod_descriptor;
+            .internal_static_messages_protobuf_InterceptableMethod_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_intercepts_InterceptableMethod_fieldAccessorTable
+            .internal_static_messages_protobuf_InterceptableMethod_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod.class,
                 com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod.Builder.class);
@@ -589,7 +589,7 @@ public final class Intercepts {
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor getDescriptorForType() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_intercepts_InterceptableMethod_descriptor;
+            .internal_static_messages_protobuf_InterceptableMethod_descriptor;
       }
 
       @java.lang.Override
@@ -871,10 +871,10 @@ public final class Intercepts {
         return super.mergeUnknownFields(unknownFields);
       }
 
-      // @@protoc_insertion_point(builder_scope:messages.protobuf.intercepts.InterceptableMethod)
+      // @@protoc_insertion_point(builder_scope:messages.protobuf.InterceptableMethod)
     }
 
-    // @@protoc_insertion_point(class_scope:messages.protobuf.intercepts.InterceptableMethod)
+    // @@protoc_insertion_point(class_scope:messages.protobuf.InterceptableMethod)
     private static final com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod
         DEFAULT_INSTANCE;
 
@@ -917,7 +917,7 @@ public final class Intercepts {
 
   public interface InterceptableFieldOrBuilder
       extends
-      // @@protoc_insertion_point(interface_extends:messages.protobuf.intercepts.InterceptableField)
+      // @@protoc_insertion_point(interface_extends:messages.protobuf.InterceptableField)
       com.google.protobuf.MessageOrBuilder {
 
     /** <code>required string name = 1;</code> */
@@ -927,15 +927,15 @@ public final class Intercepts {
     /** <code>required string name = 1;</code> */
     com.google.protobuf.ByteString getNameBytes();
 
-    /** <code>required .messages.protobuf.intercepts.FieldOpType type = 2;</code> */
+    /** <code>required .messages.protobuf.FieldOpType type = 2;</code> */
     boolean hasType();
-    /** <code>required .messages.protobuf.intercepts.FieldOpType type = 2;</code> */
+    /** <code>required .messages.protobuf.FieldOpType type = 2;</code> */
     com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType getType();
   }
-  /** Protobuf type {@code messages.protobuf.intercepts.InterceptableField} */
+  /** Protobuf type {@code messages.protobuf.InterceptableField} */
   public static final class InterceptableField extends com.google.protobuf.GeneratedMessageV3
       implements
-      // @@protoc_insertion_point(message_implements:messages.protobuf.intercepts.InterceptableField)
+      // @@protoc_insertion_point(message_implements:messages.protobuf.InterceptableField)
       InterceptableFieldOrBuilder {
     private static final long serialVersionUID = 0L;
     // Use InterceptableField.newBuilder() to construct.
@@ -1020,14 +1020,14 @@ public final class Intercepts {
 
     public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
       return com.ittera.cometa.messages.protobuf.Intercepts
-          .internal_static_messages_protobuf_intercepts_InterceptableField_descriptor;
+          .internal_static_messages_protobuf_InterceptableField_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return com.ittera.cometa.messages.protobuf.Intercepts
-          .internal_static_messages_protobuf_intercepts_InterceptableField_fieldAccessorTable
+          .internal_static_messages_protobuf_InterceptableField_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField.class,
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField.Builder.class);
@@ -1069,11 +1069,11 @@ public final class Intercepts {
 
     public static final int TYPE_FIELD_NUMBER = 2;
     private int type_;
-    /** <code>required .messages.protobuf.intercepts.FieldOpType type = 2;</code> */
+    /** <code>required .messages.protobuf.FieldOpType type = 2;</code> */
     public boolean hasType() {
       return ((bitField0_ & 0x00000002) != 0);
     }
-    /** <code>required .messages.protobuf.intercepts.FieldOpType type = 2;</code> */
+    /** <code>required .messages.protobuf.FieldOpType type = 2;</code> */
     public com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType getType() {
       @SuppressWarnings("deprecation")
       com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType result =
@@ -1272,22 +1272,22 @@ public final class Intercepts {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /** Protobuf type {@code messages.protobuf.intercepts.InterceptableField} */
+    /** Protobuf type {@code messages.protobuf.InterceptableField} */
     public static final class Builder
         extends com.google.protobuf.GeneratedMessageV3.Builder<Builder>
         implements
-        // @@protoc_insertion_point(builder_implements:messages.protobuf.intercepts.InterceptableField)
+        // @@protoc_insertion_point(builder_implements:messages.protobuf.InterceptableField)
         com.ittera.cometa.messages.protobuf.Intercepts.InterceptableFieldOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_intercepts_InterceptableField_descriptor;
+            .internal_static_messages_protobuf_InterceptableField_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_intercepts_InterceptableField_fieldAccessorTable
+            .internal_static_messages_protobuf_InterceptableField_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField.class,
                 com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField.Builder.class);
@@ -1321,7 +1321,7 @@ public final class Intercepts {
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor getDescriptorForType() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_intercepts_InterceptableField_descriptor;
+            .internal_static_messages_protobuf_InterceptableField_descriptor;
       }
 
       @java.lang.Override
@@ -1517,11 +1517,11 @@ public final class Intercepts {
       }
 
       private int type_ = 1;
-      /** <code>required .messages.protobuf.intercepts.FieldOpType type = 2;</code> */
+      /** <code>required .messages.protobuf.FieldOpType type = 2;</code> */
       public boolean hasType() {
         return ((bitField0_ & 0x00000002) != 0);
       }
-      /** <code>required .messages.protobuf.intercepts.FieldOpType type = 2;</code> */
+      /** <code>required .messages.protobuf.FieldOpType type = 2;</code> */
       public com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType getType() {
         @SuppressWarnings("deprecation")
         com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType result =
@@ -1530,7 +1530,7 @@ public final class Intercepts {
             ? com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType.GET
             : result;
       }
-      /** <code>required .messages.protobuf.intercepts.FieldOpType type = 2;</code> */
+      /** <code>required .messages.protobuf.FieldOpType type = 2;</code> */
       public Builder setType(com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType value) {
         if (value == null) {
           throw new NullPointerException();
@@ -1540,7 +1540,7 @@ public final class Intercepts {
         onChanged();
         return this;
       }
-      /** <code>required .messages.protobuf.intercepts.FieldOpType type = 2;</code> */
+      /** <code>required .messages.protobuf.FieldOpType type = 2;</code> */
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000002);
         type_ = 1;
@@ -1560,10 +1560,10 @@ public final class Intercepts {
         return super.mergeUnknownFields(unknownFields);
       }
 
-      // @@protoc_insertion_point(builder_scope:messages.protobuf.intercepts.InterceptableField)
+      // @@protoc_insertion_point(builder_scope:messages.protobuf.InterceptableField)
     }
 
-    // @@protoc_insertion_point(class_scope:messages.protobuf.intercepts.InterceptableField)
+    // @@protoc_insertion_point(class_scope:messages.protobuf.InterceptableField)
     private static final com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField
         DEFAULT_INSTANCE;
 
@@ -1606,7 +1606,7 @@ public final class Intercepts {
 
   public interface InterceptRequestOrBuilder
       extends
-      // @@protoc_insertion_point(interface_extends:messages.protobuf.intercepts.InterceptRequest)
+      // @@protoc_insertion_point(interface_extends:messages.protobuf.InterceptRequest)
       com.google.protobuf.MessageOrBuilder {
 
     /** <code>required string peerUuid = 1;</code> */
@@ -1623,9 +1623,9 @@ public final class Intercepts {
     /** <code>required string messageUuid = 2;</code> */
     com.google.protobuf.ByteString getMessageUuidBytes();
 
-    /** <code>required .messages.protobuf.intercepts.InterceptType type = 3;</code> */
+    /** <code>required .messages.protobuf.InterceptType type = 3;</code> */
     boolean hasType();
-    /** <code>required .messages.protobuf.intercepts.InterceptType type = 3;</code> */
+    /** <code>required .messages.protobuf.InterceptType type = 3;</code> */
     com.ittera.cometa.messages.protobuf.Intercepts.InterceptType getType();
 
     /** <code>required string clazz = 4;</code> */
@@ -1635,18 +1635,18 @@ public final class Intercepts {
     /** <code>required string clazz = 4;</code> */
     com.google.protobuf.ByteString getClazzBytes();
 
-    /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+    /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
     boolean hasField();
-    /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+    /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
     com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField getField();
-    /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+    /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
     com.ittera.cometa.messages.protobuf.Intercepts.InterceptableFieldOrBuilder getFieldOrBuilder();
 
-    /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+    /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
     boolean hasMethod();
-    /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+    /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
     com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod getMethod();
-    /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+    /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
     com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethodOrBuilder
         getMethodOrBuilder();
 
@@ -1667,10 +1667,10 @@ public final class Intercepts {
     public com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.InterceptableCase
         getInterceptableCase();
   }
-  /** Protobuf type {@code messages.protobuf.intercepts.InterceptRequest} */
+  /** Protobuf type {@code messages.protobuf.InterceptRequest} */
   public static final class InterceptRequest extends com.google.protobuf.GeneratedMessageV3
       implements
-      // @@protoc_insertion_point(message_implements:messages.protobuf.intercepts.InterceptRequest)
+      // @@protoc_insertion_point(message_implements:messages.protobuf.InterceptRequest)
       InterceptRequestOrBuilder {
     private static final long serialVersionUID = 0L;
     // Use InterceptRequest.newBuilder() to construct.
@@ -1833,14 +1833,14 @@ public final class Intercepts {
 
     public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
       return com.ittera.cometa.messages.protobuf.Intercepts
-          .internal_static_messages_protobuf_intercepts_InterceptRequest_descriptor;
+          .internal_static_messages_protobuf_InterceptRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return com.ittera.cometa.messages.protobuf.Intercepts
-          .internal_static_messages_protobuf_intercepts_InterceptRequest_fieldAccessorTable
+          .internal_static_messages_protobuf_InterceptRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.class,
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.Builder.class);
@@ -1955,11 +1955,11 @@ public final class Intercepts {
 
     public static final int TYPE_FIELD_NUMBER = 3;
     private int type_;
-    /** <code>required .messages.protobuf.intercepts.InterceptType type = 3;</code> */
+    /** <code>required .messages.protobuf.InterceptType type = 3;</code> */
     public boolean hasType() {
       return ((bitField0_ & 0x00000004) != 0);
     }
-    /** <code>required .messages.protobuf.intercepts.InterceptType type = 3;</code> */
+    /** <code>required .messages.protobuf.InterceptType type = 3;</code> */
     public com.ittera.cometa.messages.protobuf.Intercepts.InterceptType getType() {
       @SuppressWarnings("deprecation")
       com.ittera.cometa.messages.protobuf.Intercepts.InterceptType result =
@@ -2003,18 +2003,18 @@ public final class Intercepts {
     }
 
     public static final int FIELD_FIELD_NUMBER = 5;
-    /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+    /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
     public boolean hasField() {
       return interceptableCase_ == 5;
     }
-    /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+    /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
     public com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField getField() {
       if (interceptableCase_ == 5) {
         return (com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField) interceptable_;
       }
       return com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField.getDefaultInstance();
     }
-    /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+    /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
     public com.ittera.cometa.messages.protobuf.Intercepts.InterceptableFieldOrBuilder
         getFieldOrBuilder() {
       if (interceptableCase_ == 5) {
@@ -2024,11 +2024,11 @@ public final class Intercepts {
     }
 
     public static final int METHOD_FIELD_NUMBER = 6;
-    /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+    /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
     public boolean hasMethod() {
       return interceptableCase_ == 6;
     }
-    /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+    /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
     public com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod getMethod() {
       if (interceptableCase_ == 6) {
         return (com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod) interceptable_;
@@ -2036,7 +2036,7 @@ public final class Intercepts {
       return com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod
           .getDefaultInstance();
     }
-    /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+    /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
     public com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethodOrBuilder
         getMethodOrBuilder() {
       if (interceptableCase_ == 6) {
@@ -2429,22 +2429,22 @@ public final class Intercepts {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /** Protobuf type {@code messages.protobuf.intercepts.InterceptRequest} */
+    /** Protobuf type {@code messages.protobuf.InterceptRequest} */
     public static final class Builder
         extends com.google.protobuf.GeneratedMessageV3.Builder<Builder>
         implements
-        // @@protoc_insertion_point(builder_implements:messages.protobuf.intercepts.InterceptRequest)
+        // @@protoc_insertion_point(builder_implements:messages.protobuf.InterceptRequest)
         com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_intercepts_InterceptRequest_descriptor;
+            .internal_static_messages_protobuf_InterceptRequest_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_intercepts_InterceptRequest_fieldAccessorTable
+            .internal_static_messages_protobuf_InterceptRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.class,
                 com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.Builder.class);
@@ -2488,7 +2488,7 @@ public final class Intercepts {
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor getDescriptorForType() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_intercepts_InterceptRequest_descriptor;
+            .internal_static_messages_protobuf_InterceptRequest_descriptor;
       }
 
       @java.lang.Override
@@ -2844,11 +2844,11 @@ public final class Intercepts {
       }
 
       private int type_ = 1;
-      /** <code>required .messages.protobuf.intercepts.InterceptType type = 3;</code> */
+      /** <code>required .messages.protobuf.InterceptType type = 3;</code> */
       public boolean hasType() {
         return ((bitField0_ & 0x00000004) != 0);
       }
-      /** <code>required .messages.protobuf.intercepts.InterceptType type = 3;</code> */
+      /** <code>required .messages.protobuf.InterceptType type = 3;</code> */
       public com.ittera.cometa.messages.protobuf.Intercepts.InterceptType getType() {
         @SuppressWarnings("deprecation")
         com.ittera.cometa.messages.protobuf.Intercepts.InterceptType result =
@@ -2857,7 +2857,7 @@ public final class Intercepts {
             ? com.ittera.cometa.messages.protobuf.Intercepts.InterceptType.BEFORE
             : result;
       }
-      /** <code>required .messages.protobuf.intercepts.InterceptType type = 3;</code> */
+      /** <code>required .messages.protobuf.InterceptType type = 3;</code> */
       public Builder setType(com.ittera.cometa.messages.protobuf.Intercepts.InterceptType value) {
         if (value == null) {
           throw new NullPointerException();
@@ -2867,7 +2867,7 @@ public final class Intercepts {
         onChanged();
         return this;
       }
-      /** <code>required .messages.protobuf.intercepts.InterceptType type = 3;</code> */
+      /** <code>required .messages.protobuf.InterceptType type = 3;</code> */
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000004);
         type_ = 1;
@@ -2939,11 +2939,11 @@ public final class Intercepts {
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField.Builder,
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableFieldOrBuilder>
           fieldBuilder_;
-      /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+      /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
       public boolean hasField() {
         return interceptableCase_ == 5;
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+      /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
       public com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField getField() {
         if (fieldBuilder_ == null) {
           if (interceptableCase_ == 5) {
@@ -2960,7 +2960,7 @@ public final class Intercepts {
               .getDefaultInstance();
         }
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+      /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
       public Builder setField(
           com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField value) {
         if (fieldBuilder_ == null) {
@@ -2975,7 +2975,7 @@ public final class Intercepts {
         interceptableCase_ = 5;
         return this;
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+      /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
       public Builder setField(
           com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField.Builder
               builderForValue) {
@@ -2988,7 +2988,7 @@ public final class Intercepts {
         interceptableCase_ = 5;
         return this;
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+      /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
       public Builder mergeField(
           com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField value) {
         if (fieldBuilder_ == null) {
@@ -3015,7 +3015,7 @@ public final class Intercepts {
         interceptableCase_ = 5;
         return this;
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+      /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
       public Builder clearField() {
         if (fieldBuilder_ == null) {
           if (interceptableCase_ == 5) {
@@ -3032,12 +3032,12 @@ public final class Intercepts {
         }
         return this;
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+      /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
       public com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField.Builder
           getFieldBuilder() {
         return getFieldFieldBuilder().getBuilder();
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+      /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
       public com.ittera.cometa.messages.protobuf.Intercepts.InterceptableFieldOrBuilder
           getFieldOrBuilder() {
         if ((interceptableCase_ == 5) && (fieldBuilder_ != null)) {
@@ -3051,7 +3051,7 @@ public final class Intercepts {
               .getDefaultInstance();
         }
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableField field = 5;</code> */
+      /** <code>optional .messages.protobuf.InterceptableField field = 5;</code> */
       private com.google.protobuf.SingleFieldBuilderV3<
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField,
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableField.Builder,
@@ -3085,11 +3085,11 @@ public final class Intercepts {
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod.Builder,
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethodOrBuilder>
           methodBuilder_;
-      /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+      /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
       public boolean hasMethod() {
         return interceptableCase_ == 6;
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+      /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
       public com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod getMethod() {
         if (methodBuilder_ == null) {
           if (interceptableCase_ == 6) {
@@ -3106,7 +3106,7 @@ public final class Intercepts {
               .getDefaultInstance();
         }
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+      /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
       public Builder setMethod(
           com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod value) {
         if (methodBuilder_ == null) {
@@ -3121,7 +3121,7 @@ public final class Intercepts {
         interceptableCase_ = 6;
         return this;
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+      /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
       public Builder setMethod(
           com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod.Builder
               builderForValue) {
@@ -3134,7 +3134,7 @@ public final class Intercepts {
         interceptableCase_ = 6;
         return this;
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+      /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
       public Builder mergeMethod(
           com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod value) {
         if (methodBuilder_ == null) {
@@ -3161,7 +3161,7 @@ public final class Intercepts {
         interceptableCase_ = 6;
         return this;
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+      /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
       public Builder clearMethod() {
         if (methodBuilder_ == null) {
           if (interceptableCase_ == 6) {
@@ -3178,12 +3178,12 @@ public final class Intercepts {
         }
         return this;
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+      /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
       public com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod.Builder
           getMethodBuilder() {
         return getMethodFieldBuilder().getBuilder();
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+      /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
       public com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethodOrBuilder
           getMethodOrBuilder() {
         if ((interceptableCase_ == 6) && (methodBuilder_ != null)) {
@@ -3197,7 +3197,7 @@ public final class Intercepts {
               .getDefaultInstance();
         }
       }
-      /** <code>optional .messages.protobuf.intercepts.InterceptableMethod method = 6;</code> */
+      /** <code>optional .messages.protobuf.InterceptableMethod method = 6;</code> */
       private com.google.protobuf.SingleFieldBuilderV3<
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod,
               com.ittera.cometa.messages.protobuf.Intercepts.InterceptableMethod.Builder,
@@ -3356,10 +3356,10 @@ public final class Intercepts {
         return super.mergeUnknownFields(unknownFields);
       }
 
-      // @@protoc_insertion_point(builder_scope:messages.protobuf.intercepts.InterceptRequest)
+      // @@protoc_insertion_point(builder_scope:messages.protobuf.InterceptRequest)
     }
 
-    // @@protoc_insertion_point(class_scope:messages.protobuf.intercepts.InterceptRequest)
+    // @@protoc_insertion_point(class_scope:messages.protobuf.InterceptRequest)
     private static final com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest
         DEFAULT_INSTANCE;
 
@@ -3401,17 +3401,17 @@ public final class Intercepts {
   }
 
   private static final com.google.protobuf.Descriptors.Descriptor
-      internal_static_messages_protobuf_intercepts_InterceptableMethod_descriptor;
+      internal_static_messages_protobuf_InterceptableMethod_descriptor;
   private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_messages_protobuf_intercepts_InterceptableMethod_fieldAccessorTable;
+      internal_static_messages_protobuf_InterceptableMethod_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-      internal_static_messages_protobuf_intercepts_InterceptableField_descriptor;
+      internal_static_messages_protobuf_InterceptableField_descriptor;
   private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_messages_protobuf_intercepts_InterceptableField_fieldAccessorTable;
+      internal_static_messages_protobuf_InterceptableField_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-      internal_static_messages_protobuf_intercepts_InterceptRequest_descriptor;
+      internal_static_messages_protobuf_InterceptRequest_descriptor;
   private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_messages_protobuf_intercepts_InterceptRequest_fieldAccessorTable;
+      internal_static_messages_protobuf_InterceptRequest_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor getDescriptor() {
     return descriptor;
@@ -3421,49 +3421,48 @@ public final class Intercepts {
 
   static {
     java.lang.String[] descriptorData = {
-      "\n\020intercepts.proto\022\034messages.protobuf.in"
-          + "tercepts\":\n\023InterceptableMethod\022\014\n\004name\030"
-          + "\001 \002(\t\022\025\n\rparameterType\030\002 \003(\t\"[\n\022Intercep"
-          + "tableField\022\014\n\004name\030\001 \002(\t\0227\n\004type\030\002 \002(\0162)"
-          + ".messages.protobuf.intercepts.FieldOpTyp"
-          + "e\"\313\002\n\020InterceptRequest\022\020\n\010peerUuid\030\001 \002(\t"
-          + "\022\023\n\013messageUuid\030\002 \002(\t\0229\n\004type\030\003 \002(\0162+.me"
-          + "ssages.protobuf.intercepts.InterceptType"
-          + "\022\r\n\005clazz\030\004 \002(\t\022A\n\005field\030\005 \001(\01320.message"
-          + "s.protobuf.intercepts.InterceptableField"
-          + "H\000\022C\n\006method\030\006 \001(\01321.messages.protobuf.i"
-          + "ntercepts.InterceptableMethodH\000\022\025\n\rcallb"
-          + "ackClass\030\007 \002(\t\022\026\n\016callbackMethod\030\010 \002(\tB\017"
-          + "\n\rinterceptable*U\n\rInterceptType\022\n\n\006BEFO"
-          + "RE\020\001\022\t\n\005AFTER\020\002\022\n\n\006AROUND\020\003\022\020\n\014BEFORE_AS"
-          + "YNC\020\004\022\017\n\013AFTER_ASYNC\020\005*\037\n\013FieldOpType\022\007\n"
-          + "\003GET\020\001\022\007\n\003PUT\020\002B\'\n#com.ittera.cometa.mes"
-          + "sages.protobufH\001"
+      "\n\020intercepts.proto\022\021messages.protobuf\":\n"
+          + "\023InterceptableMethod\022\014\n\004name\030\001 \002(\t\022\025\n\rpa"
+          + "rameterType\030\002 \003(\t\"P\n\022InterceptableField\022"
+          + "\014\n\004name\030\001 \002(\t\022,\n\004type\030\002 \002(\0162\036.messages.p"
+          + "rotobuf.FieldOpType\"\252\002\n\020InterceptRequest"
+          + "\022\020\n\010peerUuid\030\001 \002(\t\022\023\n\013messageUuid\030\002 \002(\t\022"
+          + ".\n\004type\030\003 \002(\0162 .messages.protobuf.Interc"
+          + "eptType\022\r\n\005clazz\030\004 \002(\t\0226\n\005field\030\005 \001(\0132%."
+          + "messages.protobuf.InterceptableFieldH\000\0228"
+          + "\n\006method\030\006 \001(\0132&.messages.protobuf.Inter"
+          + "ceptableMethodH\000\022\025\n\rcallbackClass\030\007 \002(\t\022"
+          + "\026\n\016callbackMethod\030\010 \002(\tB\017\n\rinterceptable"
+          + "*U\n\rInterceptType\022\n\n\006BEFORE\020\001\022\t\n\005AFTER\020\002"
+          + "\022\n\n\006AROUND\020\003\022\020\n\014BEFORE_ASYNC\020\004\022\017\n\013AFTER_"
+          + "ASYNC\020\005*\037\n\013FieldOpType\022\007\n\003GET\020\001\022\007\n\003PUT\020\002"
+          + "B\'\n#com.ittera.cometa.messages.protobufH"
+          + "\001"
     };
     descriptor =
         com.google.protobuf.Descriptors.FileDescriptor.internalBuildGeneratedFileFrom(
             descriptorData, new com.google.protobuf.Descriptors.FileDescriptor[] {});
-    internal_static_messages_protobuf_intercepts_InterceptableMethod_descriptor =
+    internal_static_messages_protobuf_InterceptableMethod_descriptor =
         getDescriptor().getMessageTypes().get(0);
-    internal_static_messages_protobuf_intercepts_InterceptableMethod_fieldAccessorTable =
+    internal_static_messages_protobuf_InterceptableMethod_fieldAccessorTable =
         new com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-            internal_static_messages_protobuf_intercepts_InterceptableMethod_descriptor,
+            internal_static_messages_protobuf_InterceptableMethod_descriptor,
             new java.lang.String[] {
               "Name", "ParameterType",
             });
-    internal_static_messages_protobuf_intercepts_InterceptableField_descriptor =
+    internal_static_messages_protobuf_InterceptableField_descriptor =
         getDescriptor().getMessageTypes().get(1);
-    internal_static_messages_protobuf_intercepts_InterceptableField_fieldAccessorTable =
+    internal_static_messages_protobuf_InterceptableField_fieldAccessorTable =
         new com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-            internal_static_messages_protobuf_intercepts_InterceptableField_descriptor,
+            internal_static_messages_protobuf_InterceptableField_descriptor,
             new java.lang.String[] {
               "Name", "Type",
             });
-    internal_static_messages_protobuf_intercepts_InterceptRequest_descriptor =
+    internal_static_messages_protobuf_InterceptRequest_descriptor =
         getDescriptor().getMessageTypes().get(2);
-    internal_static_messages_protobuf_intercepts_InterceptRequest_fieldAccessorTable =
+    internal_static_messages_protobuf_InterceptRequest_fieldAccessorTable =
         new com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-            internal_static_messages_protobuf_intercepts_InterceptRequest_descriptor,
+            internal_static_messages_protobuf_InterceptRequest_descriptor,
             new java.lang.String[] {
               "PeerUuid",
               "MessageUuid",

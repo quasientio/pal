@@ -3,12 +3,12 @@ package com.ittera.cometa.messages;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
+import com.ittera.cometa.messages.protobuf.Headers;
 import com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
-import com.ittera.cometa.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
 import java.lang.reflect.AccessibleObject;
 import java.util.List;
 import java.util.Optional;
@@ -17,9 +17,9 @@ import java.util.UUID;
 public interface MessageBuilder {
 
   /** header builders */
-  Wrappers.InternalHeader buildWriteAheadHeader(UUID peerUuid);
+  Headers.InternalHeader buildWriteAheadHeader(UUID peerUuid);
 
-  Wrappers.InternalHeader buildIncomingInterceptRequestHeader();
+  Headers.InternalHeader buildIncomingInterceptRequestHeader();
 
   /** constructor builders */
   ExecMessage buildEmptyConstructor(UUID peerUuid, String className);
@@ -83,7 +83,7 @@ public interface MessageBuilder {
   ExecMessage buildFieldOp(
       UUID peerUuid,
       Context context,
-      Type type,
+      ExecMessageType type,
       Object sender,
       ObjectRef senderObjRef,
       Object target,
@@ -119,7 +119,7 @@ public interface MessageBuilder {
 
   /** field op done builders */
   ExecMessage buildFieldOpDone(
-      UUID peerUuid, AccessibleObject accessibleObject, Context context, Type type);
+      UUID peerUuid, AccessibleObject accessibleObject, Context context, ExecMessageType type);
 
   ExecMessage buildPutStaticDone(
       UUID peerUuid,

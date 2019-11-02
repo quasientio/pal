@@ -9,7 +9,7 @@ import com.ittera.cometa.common.BiMapObjectService;
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import java.util.Arrays;
 import java.util.UUID;
 import org.junit.Before;

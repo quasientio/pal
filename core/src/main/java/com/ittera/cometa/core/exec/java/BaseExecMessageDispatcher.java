@@ -7,10 +7,10 @@ import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.util.Classes;
 import com.ittera.cometa.core.exec.ExecPhase;
-import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.Unwrapper;
+import com.ittera.cometa.messages.protobuf.Primitives;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -336,7 +336,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
   protected abstract boolean returnsVoid(Optional<AccessibleObject> accessibleObject);
 
-  protected abstract Type getBeforeExecMessageType();
+  protected abstract ExecMessageType getBeforeExecMessageType();
 
   /**
    * We need this method and the ExecutableObjectType enum for cases where a Field, Constructor or

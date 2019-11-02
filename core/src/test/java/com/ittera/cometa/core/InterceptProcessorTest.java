@@ -7,9 +7,9 @@ import static org.mockito.Mockito.*;
 
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
-import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;

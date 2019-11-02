@@ -1,10 +1,10 @@
-package com.ittera.cometa.messages.protobuf;
+package com.ittera.cometa.messages;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.*;
 
-import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Primitives.Field;
+import com.ittera.cometa.messages.protobuf.Primitives;
+import com.ittera.cometa.messages.protobuf.Primitives.Field;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;

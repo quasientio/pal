@@ -2,7 +2,7 @@ package com.ittera.cometa.core;
 
 import com.ittera.cometa.core.exec.java.InterceptRequestEntry;
 import com.ittera.cometa.messages.protobuf.Intercepts;
-import com.ittera.cometa.messages.protobuf.data.Wrappers;
+import com.ittera.cometa.messages.protobuf.Wrappers;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

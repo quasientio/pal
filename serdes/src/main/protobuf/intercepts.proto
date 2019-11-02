@@ -1,5 +1,5 @@
 syntax = "proto2";
-package messages.protobuf.intercepts;
+package messages.protobuf;
 
 option java_package = "com.ittera.cometa.messages.protobuf";
 option optimize_for = SPEED;

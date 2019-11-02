@@ -7,8 +7,8 @@ import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.MessageType;
-import com.ittera.cometa.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.InternalHeader;
+import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
+import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.inject.Inject;
@@ -196,7 +196,7 @@ class LogWriter extends ConnectedService {
     boolean isWriteAhead = false;
     if (internalHeaders != null) {
       for (InternalHeader ih : internalHeaders) {
-        if (ih.getHeaderType().equals(Wrappers.InternalHeaderType.WRITE_AHEAD)) {
+        if (ih.getHeaderType().equals(InternalHeaderType.WRITE_AHEAD)) {
           isWriteAhead = true;
           logHeaders.add(HEADERS.get("SELF_DISPATCHING_HEADER"));
           break;

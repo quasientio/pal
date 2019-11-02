@@ -3,8 +3,8 @@ package com.ittera.cometa.core.swing;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.cxn.ThinPeer;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.io.InputStream;
 import java.util.Properties;
 

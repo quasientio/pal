@@ -4,9 +4,9 @@ import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
-import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.protobuf.Primitives;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
 import java.lang.reflect.AccessibleObject;
 import java.util.List;
 import java.util.Optional;
@@ -63,5 +63,5 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
 
   protected abstract boolean returnsVoid();
 
-  protected abstract Type getAfterExecMessageType();
+  protected abstract ExecMessageType getAfterExecMessageType();
 }

@@ -1,11 +1,10 @@
 syntax = "proto2";
-package messages.protobuf.data;
+package messages.protobuf;
 
 import "primitives.proto";
 import "ctxt.proto";
 
-option java_package = "com.ittera.cometa.messages.protobuf.data";
-option java_outer_classname = "Calls";
+option java_package = "com.ittera.cometa.messages.protobuf";
 option optimize_for = SPEED;
 
 message ConstructorCall {

@@ -11,7 +11,7 @@ import com.ittera.cometa.core.exec.java.CustomClassloader;
 import com.ittera.cometa.core.exec.java.InterceptMessageDispatcher;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -8,8 +8,8 @@ import com.ittera.cometa.PeerInfo;
 import com.ittera.cometa.common.util.Strings;
 import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.MessageType;
-import com.ittera.cometa.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
@@ -289,7 +289,7 @@ public class ThinPeer {
     }
   }
 
-  public ExecMessage waitFor(Wrappers.Type type, String fieldName)
+  public ExecMessage waitFor(Wrappers.ExecMessageType type, String fieldName)
       throws InvalidProtocolBufferException {
     if (logger.isDebugEnabled()) {
       logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);

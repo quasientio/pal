@@ -1,7 +1,7 @@
-package com.ittera.cometa.messages.protobuf;
+package com.ittera.cometa.messages;
 
 import com.ittera.cometa.common.util.Classes;
-import com.ittera.cometa.messages.protobuf.data.Primitives;
+import com.ittera.cometa.messages.protobuf.Primitives;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.util.Optional;

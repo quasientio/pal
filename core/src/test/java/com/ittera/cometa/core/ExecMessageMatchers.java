@@ -1,7 +1,7 @@
 package com.ittera.cometa.core;
 
-import com.ittera.cometa.messages.protobuf.data.Fields;
-import com.ittera.cometa.messages.protobuf.data.Values.ReturnValue;
+import com.ittera.cometa.messages.protobuf.Fields;
+import com.ittera.cometa.messages.protobuf.Values.ReturnValue;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;

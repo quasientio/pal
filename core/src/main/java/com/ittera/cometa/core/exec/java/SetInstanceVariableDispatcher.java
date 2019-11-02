@@ -5,10 +5,10 @@ import com.ittera.cometa.common.lang.ObjectNotFoundException;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.Unwrapper;
-import com.ittera.cometa.messages.protobuf.data.Wrappers;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.Unwrapper;
+import com.ittera.cometa.messages.protobuf.Wrappers;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -33,13 +33,13 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
   }
 
   @Override
-  protected final Type getBeforeExecMessageType() {
-    return Type.PUT_FIELD;
+  protected final ExecMessageType getBeforeExecMessageType() {
+    return ExecMessageType.PUT_FIELD;
   }
 
   @Override
-  protected final Type getAfterExecMessageType() {
-    return Type.PUT_FIELD_DONE;
+  protected final ExecMessageType getAfterExecMessageType() {
+    return ExecMessageType.PUT_FIELD_DONE;
   }
 
   @Override

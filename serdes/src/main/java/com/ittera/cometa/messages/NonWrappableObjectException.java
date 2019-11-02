@@ -1,4 +1,4 @@
-package com.ittera.cometa.messages.protobuf;
+package com.ittera.cometa.messages;
 
 public class NonWrappableObjectException extends RuntimeException {
 

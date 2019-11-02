@@ -1,6 +1,6 @@
 package com.ittera.cometa.messages;
 
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.streams.KeyValue;

@@ -9,9 +9,9 @@ import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.data.Primitives;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.data.Wrappers.Type;
+import com.ittera.cometa.messages.protobuf.Primitives;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
@@ -138,8 +138,8 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   }
 
   @Override
-  protected final Type getBeforeExecMessageType() {
-    return Type.CONSTRUCTOR;
+  protected final ExecMessageType getBeforeExecMessageType() {
+    return ExecMessageType.CONSTRUCTOR;
   }
 
   @Override
