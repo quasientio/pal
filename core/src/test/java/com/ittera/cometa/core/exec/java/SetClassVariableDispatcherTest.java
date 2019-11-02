@@ -3,9 +3,14 @@ package com.ittera.cometa.core.exec.java;
 import static com.ittera.cometa.core.ExecMessageMatchers.ComesFromClass.comesFromClass;
 import static com.ittera.cometa.core.ExecMessageMatchers.ComesFromReflectable.comesFrom;
 import static com.ittera.cometa.core.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
-import static org.hamcrest.Matchers.*;
-import static org.hamcrest.core.IsInstanceOf.instanceOf;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.Dispatcher;
@@ -14,7 +19,8 @@ import com.ittera.cometa.common.lang.reflect.FieldSignature;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import java.util.LinkedList;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 

@@ -1,15 +1,23 @@
 package com.ittera.cometa.cxn;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.LogReply;
 import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.PeerInfo;
-import java.time.*;
+import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.curator.framework.api.BackgroundCallback;

@@ -3,7 +3,9 @@ package com.ittera.cometa.core.messages;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import javax.annotation.Nullable;
 import org.zeromq.ZMQ;
 

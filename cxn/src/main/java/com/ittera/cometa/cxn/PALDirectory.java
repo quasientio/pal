@@ -1,12 +1,21 @@
 package com.ittera.cometa.cxn;
 
-import com.ittera.cometa.*;
+import com.ittera.cometa.KafkaBrokerInfo;
+import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.LogReply;
+import com.ittera.cometa.LogRequest;
+import com.ittera.cometa.PeerInfo;
 import com.ittera.cometa.common.util.Strings;
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;

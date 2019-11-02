@@ -1,6 +1,7 @@
 package com.ittera.cometa.core;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.messages.Unwrapper;

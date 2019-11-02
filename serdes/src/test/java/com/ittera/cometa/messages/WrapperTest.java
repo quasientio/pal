@@ -1,7 +1,11 @@
 package com.ittera.cometa.messages;
 
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.ittera.cometa.messages.protobuf.Primitives;
 import com.ittera.cometa.messages.protobuf.Primitives.Field;

@@ -1,6 +1,6 @@
 package com.ittera.cometa.core.exec.java;
 
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import com.ittera.cometa.common.BiMapObjectService;

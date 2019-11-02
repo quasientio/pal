@@ -1,7 +1,10 @@
 package com.ittera.cometa.core.messages;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.core.ZmqEnabledTest;

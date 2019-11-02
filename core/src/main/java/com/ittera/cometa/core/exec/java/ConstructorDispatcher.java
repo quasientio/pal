@@ -1,6 +1,6 @@
 package com.ittera.cometa.core.exec.java;
 
-import static java.lang.Class.*;
+import static java.lang.Class.forName;
 
 import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.Context;

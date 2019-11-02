@@ -1,6 +1,6 @@
 package com.ittera.cometa.cxn;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import com.ittera.cometa.KafkaBrokerInfo;
 import org.junit.Test;

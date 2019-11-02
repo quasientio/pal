@@ -1,6 +1,9 @@
 package com.ittera.cometa.apps.swing;
 
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 public class SwingApp {
   private JPanel panel1;

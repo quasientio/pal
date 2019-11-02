@@ -1,7 +1,12 @@
 package com.ittera.cometa;
 
 import com.ittera.cometa.util.ByteSizeConverter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 public class LogInfo extends UTCTimestampedInfo implements Comparable {
 

@@ -1,6 +1,7 @@
 package com.ittera.cometa.core.messages;
 
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 
 import com.ittera.cometa.core.ZmqEnabledTest;

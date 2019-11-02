@@ -1,7 +1,7 @@
 package com.ittera.cometa.messages;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
 import com.ittera.cometa.common.util.UUIDUtils;
 import java.util.UUID;
