@@ -9,9 +9,9 @@ import com.ittera.cometa.common.lang.reflect.MethodSignature;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.Unwrapper;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessageType;
 import com.ittera.cometa.messages.protobuf.Primitives;
-import com.ittera.cometa.messages.protobuf.Wrappers;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -98,8 +98,8 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   }
 
   @Override
-  protected final Wrappers.ExecMessageType getBeforeExecMessageType() {
-    return Wrappers.ExecMessageType.INSTANCE_METHOD;
+  protected final ExecMessageType getBeforeExecMessageType() {
+    return ExecMessageType.INSTANCE_METHOD;
   }
 
   @Override

@@ -2,8 +2,8 @@ package com.ittera.cometa.messages;
 
 import com.google.common.primitives.Ints;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;

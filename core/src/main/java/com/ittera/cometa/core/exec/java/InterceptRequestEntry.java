@@ -3,8 +3,8 @@ package com.ittera.cometa.core.exec.java;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
 import java.util.Arrays;
 import java.util.Collections;
@@ -20,7 +20,7 @@ public class InterceptRequestEntry {
   private final String paramTypes;
   private final int numberOfParams;
   private final boolean isMethod;
-  private final Intercepts.InterceptRequest interceptRequestMessage;
+  private final Intercepts.InterceptMessage interceptMessage;
 
   // Not safe-thread, which is fine since we only deal with InterceptRequestEntry objects from a
   // single thread
@@ -31,22 +31,21 @@ public class InterceptRequestEntry {
           .withIgnoreCase()
           .build();
 
-  public InterceptRequestEntry(Intercepts.InterceptRequest interceptRequestMessage) {
-    this.isMethod = interceptRequestMessage.hasMethod();
+  public InterceptRequestEntry(Intercepts.InterceptMessage interceptMessage) {
+    this.isMethod = interceptMessage.hasMethod();
     // create executable pattern to match
     this.pattern =
         format(
             "%s.%s",
-            interceptRequestMessage.getClazz(),
+            interceptMessage.getClazz(),
             isMethod
-                ? interceptRequestMessage.getMethod().getName()
-                : interceptRequestMessage.getField().getName());
+                ? interceptMessage.getMethod().getName()
+                : interceptMessage.getField().getName());
     // add param info
     if (isMethod) {
-      this.numberOfParams = interceptRequestMessage.getMethod().getParameterTypeCount();
+      this.numberOfParams = interceptMessage.getMethod().getParameterTypeCount();
       if (numberOfParams > 0) {
-        this.paramTypes =
-            String.join(",", interceptRequestMessage.getMethod().getParameterTypeList());
+        this.paramTypes = String.join(",", interceptMessage.getMethod().getParameterTypeList());
       } else {
         this.paramTypes = "";
       }
@@ -54,7 +53,7 @@ public class InterceptRequestEntry {
       numberOfParams = 0;
       paramTypes = null;
     }
-    this.interceptRequestMessage = interceptRequestMessage;
+    this.interceptMessage = interceptMessage;
   }
 
   private static String[] toNames(Class[] types) {
@@ -165,7 +164,7 @@ public class InterceptRequestEntry {
     }
   }
 
-  public Intercepts.InterceptRequest getInterceptRequestMessage() {
-    return interceptRequestMessage;
+  public Intercepts.InterceptMessage getInterceptMessage() {
+    return interceptMessage;
   }
 }

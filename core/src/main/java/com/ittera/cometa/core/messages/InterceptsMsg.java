@@ -1,7 +1,8 @@
 package com.ittera.cometa.core.messages;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
+import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import java.util.*;
 import javax.annotation.Nullable;
 import org.zeromq.ZMQ;
@@ -15,18 +16,18 @@ public class InterceptsMsg extends BaseMsg {
    * FRAMES:
    * -------
    * 1. intercept reqs contained    : int
-   * 2. InterceptRequest*           : byte[]* (InterceptRequest)
+   * 2. InterceptMessage*           : byte[]* (InterceptMessage)
    * </pre>
    */
 
   // fields
-  @Nullable private final List<InterceptRequest> intercepts;
+  @Nullable private final List<InterceptMessage> intercepts;
 
-  public InterceptsMsg(@Nullable List<InterceptRequest> intercepts) {
+  public InterceptsMsg(@Nullable List<Intercepts.InterceptMessage> intercepts) {
     this.intercepts = intercepts;
   }
 
-  private InterceptsMsg(@Nullable List<InterceptRequest> intercepts, int size) {
+  private InterceptsMsg(@Nullable List<Intercepts.InterceptMessage> intercepts, int size) {
     this(intercepts);
     this.size = size;
   }
@@ -51,8 +52,8 @@ public class InterceptsMsg extends BaseMsg {
     // 2. intercepts
     if (interceptsCount > 0) {
       int interceptsSent = 0;
-      for (InterceptRequest interceptRequest : intercepts) {
-        buff = interceptRequest.toByteArray();
+      for (InterceptMessage interceptMessage : intercepts) {
+        buff = interceptMessage.toByteArray();
         size += buff.length;
         if (!socket.send(buff, ++interceptsSent < interceptsCount ? ZMQ.SNDMORE : 0)) {
           return false;
@@ -79,19 +80,19 @@ public class InterceptsMsg extends BaseMsg {
     // 1. number of intercepts
     final int interceptCount = Integer.parseInt(new String(buff, ZMQ.CHARSET));
     // 2. intercepts
-    final List<InterceptRequest> interceptRequests;
+    final List<Intercepts.InterceptMessage> interceptMessages;
     if (interceptCount > 0) {
-      interceptRequests = new ArrayList<>();
+      interceptMessages = new ArrayList<>();
       for (int i = 0; i < interceptCount; i++) {
         buff = socket.recv();
         msgSize += buff.length;
-        interceptRequests.add(InterceptRequest.parseFrom(buff));
+        interceptMessages.add(InterceptMessage.parseFrom(buff));
       }
     } else {
-      interceptRequests = null;
+      interceptMessages = null;
     }
 
-    return new InterceptsMsg(interceptRequests, msgSize);
+    return new InterceptsMsg(interceptMessages, msgSize);
   }
 
   // default is non-blocking
@@ -100,7 +101,7 @@ public class InterceptsMsg extends BaseMsg {
   }
 
   @Nullable
-  public List<InterceptRequest> getIntercepts() {
+  public List<Intercepts.InterceptMessage> getIntercepts() {
     return intercepts;
   }
 

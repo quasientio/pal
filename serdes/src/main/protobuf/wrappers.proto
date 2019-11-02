@@ -1,52 +1,15 @@
 syntax = "proto2";
 package messages.protobuf;
 
-import "calls.proto";
-import "fields.proto";
-import "exceptions.proto";
-import "values.proto";
+import "exec.proto";
+import "intercepts.proto";
 
 option java_package = "com.ittera.cometa.messages.protobuf";
 option optimize_for = SPEED;
 
-enum ExecMessageType {
-    STATIC_CONSTRUCTOR = 1;
-    RETURN_CLASS = 2;
-    CONSTRUCTOR = 3;
-    INSTANCE_METHOD = 4;
-    CLASS_METHOD = 5;
-    GET_STATIC = 6;
-    GET_FIELD = 7;
-    PUT_STATIC = 8;
-    PUT_FIELD = 9;
-    PUT_STATIC_DONE = 10;
-    PUT_FIELD_DONE = 11;
-    THROWABLE = 12;
-    RETURN_VALUE = 13;
-}
-
-message ExecMessage {
-    required string peerUuid = 1;
-    required string messageUuid = 2;
-    required ExecMessageType msgType = 3;
-    required string threadName = 4;
-    required string currentTime = 5;
-    optional int32 dispatchSeq = 6;
-    optional int32 builderSeq = 7;
-    optional string followingUuid = 8;
-
+message Message {
     oneof content {
-        ConstructorCall constructorCall = 9;
-        InstanceMethodCall instanceMethodCall = 10;
-        ClassMethodCall classMethodCall = 11;
-        ClInitCall clinitCall = 12;
-        StaticFieldGet staticFieldGet = 13;
-        StaticFieldPut staticFieldPut = 14;
-        InstanceFieldGet instanceFieldGet = 15;
-        InstanceFieldPut instanceFieldPut = 16;
-        StaticFieldPutDone staticFieldPutDone = 17;
-        InstanceFieldPutDone instanceFieldPutDone = 18;
-        RaisedThrowable raisedThrowable = 19;
-        ReturnValue returnValue = 20;
+        ExecMessage execMessage = 1;
+        InterceptMessage interceptMessage = 2;
     }
 }

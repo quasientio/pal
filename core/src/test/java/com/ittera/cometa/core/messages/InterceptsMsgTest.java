@@ -8,7 +8,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.core.ZmqEnabledTest;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
+import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import java.util.*;
 import org.junit.Test;
@@ -50,8 +51,8 @@ public class InterceptsMsgTest extends ZmqEnabledTest {
   @Test
   public void sendOneIntercept() throws InvalidProtocolBufferException {
 
-    InterceptRequest interceptRequest =
-        messageBuilder.buildInterceptRequest(
+    InterceptMessage interceptMessage =
+        messageBuilder.buildInterceptMessage(
             UUID.randomUUID(),
             InterceptType.BEFORE,
             "java.io.PrintStream",
@@ -60,11 +61,11 @@ public class InterceptsMsgTest extends ZmqEnabledTest {
             this.getClass().getName(),
             "someCallbackMethod");
 
-    InterceptsMsg msgOut = new InterceptsMsg(Collections.singletonList(interceptRequest));
+    InterceptsMsg msgOut = new InterceptsMsg(Collections.singletonList(interceptMessage));
 
     // verify getters
     assertThat(msgOut.getIntercepts().size(), is(1));
-    assertThat(msgOut.getIntercepts().get(0), is(interceptRequest));
+    assertThat(msgOut.getIntercepts().get(0), is(interceptMessage));
 
     // send
     String socketAddr = "inproc://here";
@@ -90,11 +91,11 @@ public class InterceptsMsgTest extends ZmqEnabledTest {
   public void sendManyIntercepts() throws Exception {
 
     int interceptsToSend = 5;
-    List<InterceptRequest> interceptRequests = new ArrayList<>();
+    List<Intercepts.InterceptMessage> interceptMessages = new ArrayList<>();
 
     for (int i = 0; i < interceptsToSend; i++) {
-      interceptRequests.add(
-          messageBuilder.buildInterceptRequest(
+      interceptMessages.add(
+          messageBuilder.buildInterceptMessage(
               UUID.randomUUID(),
               InterceptType.BEFORE,
               "java.io.PrintStream",
@@ -104,10 +105,10 @@ public class InterceptsMsgTest extends ZmqEnabledTest {
               format("someCallbackMethod_%d", i)));
     }
 
-    InterceptsMsg msgOut = new InterceptsMsg(interceptRequests);
+    InterceptsMsg msgOut = new InterceptsMsg(interceptMessages);
 
     // verify getters
-    assertThat(msgOut.getIntercepts(), is(interceptRequests));
+    assertThat(msgOut.getIntercepts(), is(interceptMessages));
 
     // send
     String socketAddr = "inproc://here";

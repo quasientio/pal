@@ -2,7 +2,7 @@ package com.ittera.cometa.messages;
 
 public enum MessageType {
   ExecMessage,
-  InterceptRequest,
+  InterceptMessage,
   Unknown;
 
   public static final MessageType[] values = values();

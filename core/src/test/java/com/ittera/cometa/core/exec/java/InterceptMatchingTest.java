@@ -8,8 +8,8 @@ import com.ittera.cometa.common.ObjectService;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts;
-import com.ittera.cometa.messages.protobuf.Wrappers;
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
 import java.util.Arrays;
 import java.util.UUID;
@@ -52,9 +52,9 @@ public class InterceptMatchingTest {
   @Test
   public void matchesConstructorWithNoParameters() {
 
-    // create InterceptRequest message
-    Intercepts.InterceptRequest interceptRequest =
-        msgBuilder.buildInterceptRequest(
+    // create InterceptMessage message
+    Intercepts.InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
             UUID.randomUUID(),
             Intercepts.InterceptType.BEFORE,
             "java.util.ArrayList",
@@ -64,19 +64,19 @@ public class InterceptMatchingTest {
             "callMe");
 
     // create Exec message
-    Wrappers.ExecMessage execMessage =
+    ExecMessage execMessage =
         msgBuilder.buildEmptyConstructor(UUID.randomUUID(), "java.util.ArrayList");
 
-    InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptRequest);
+    InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
     assertThat(interceptRequestEntry.matches(execMessage), is(true));
   }
 
   @Test
   public void matchesVoidInstanceMethodWithNoParameters() {
 
-    // create InterceptRequest message
-    Intercepts.InterceptRequest interceptRequest =
-        msgBuilder.buildInterceptRequest(
+    // create InterceptMessage message
+    Intercepts.InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
             UUID.randomUUID(),
             Intercepts.InterceptType.BEFORE,
             "java.io.PrintStream",
@@ -88,7 +88,7 @@ public class InterceptMatchingTest {
     // create Exec message
     Object target = System.out;
     ObjectRef targetObjRef = objectService.storeObject(target);
-    Wrappers.ExecMessage execMessage =
+    ExecMessage execMessage =
         msgBuilder.buildInstanceMethod(
             UUID.randomUUID(),
             "java.io.PrintStream",
@@ -99,16 +99,16 @@ public class InterceptMatchingTest {
             new Object[0],
             new ObjectRef[0]);
 
-    InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptRequest);
+    InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
     assertThat(interceptRequestEntry.matches(execMessage), is(true));
   }
 
   @Test
   public void matchesVoidClassMethodWithNoParameters() {
 
-    // create InterceptRequest message
-    Intercepts.InterceptRequest interceptRequest =
-        msgBuilder.buildInterceptRequest(
+    // create InterceptMessage message
+    Intercepts.InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
             UUID.randomUUID(),
             Intercepts.InterceptType.BEFORE,
             "java.lang.System",
@@ -120,7 +120,7 @@ public class InterceptMatchingTest {
     // create Exec message
     Object target = System.out;
     ObjectRef targetObjRef = objectService.storeObject(target);
-    Wrappers.ExecMessage execMessage =
+    ExecMessage execMessage =
         msgBuilder.buildClassMethod(
             UUID.randomUUID(),
             "java.lang.System",
@@ -131,7 +131,7 @@ public class InterceptMatchingTest {
             new Object[0],
             new ObjectRef[0]);
 
-    InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptRequest);
+    InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
     assertThat(interceptRequestEntry.matches(execMessage), is(true));
   }
 }

@@ -1,8 +1,8 @@
 package com.ittera.cometa.messages;
 
 import com.google.common.primitives.Ints;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;

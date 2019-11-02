@@ -4,7 +4,6 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
 import com.ittera.cometa.core.ZmqEnabledTest;
-import com.ittera.cometa.messages.MessageType;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +19,7 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
     long offset = 199;
     byte[] body = "whatever".getBytes();
 
-    InboundLogMsg msgOut = new InboundLogMsg(MessageType.ExecMessage, offset, body);
+    InboundLogMsg msgOut = new InboundLogMsg(offset, body);
 
     // send
     String socketAddr = "inproc://here";
@@ -48,19 +47,15 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
     long offset = 199;
     byte[] body = "whatever".getBytes();
 
-    InboundLogMsg msg1 = new InboundLogMsg(MessageType.ExecMessage, offset, body);
+    InboundLogMsg msg1 = new InboundLogMsg(offset, body);
 
-    // assert content equality
-    assertThat(new InboundLogMsg(MessageType.ExecMessage, offset, body), is(msg1));
-
-    // different type
-    assertThat(new InboundLogMsg(MessageType.InterceptRequest, offset, body), is(not(msg1)));
+    // equal
+    assertThat(new InboundLogMsg(offset, body), is(msg1));
 
     // different offset
-    assertThat(new InboundLogMsg(MessageType.ExecMessage, offset + 1, body), is(not(msg1)));
+    assertThat(new InboundLogMsg(offset + 1, body), is(not(msg1)));
 
     // different body
-    body = "whatevah".getBytes();
-    assertThat(new InboundLogMsg(MessageType.ExecMessage, offset, body), is(not(msg1)));
+    assertThat(new InboundLogMsg(offset, "whatevah".getBytes()), is(not(msg1)));
   }
 }

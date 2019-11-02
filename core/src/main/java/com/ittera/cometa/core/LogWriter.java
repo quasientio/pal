@@ -1,12 +1,10 @@
 package com.ittera.cometa.core;
 
-import com.google.common.primitives.Ints;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.common.util.UUIDUtils;
 import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.LogMessageHeader;
-import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
 import java.util.*;
@@ -119,12 +117,6 @@ class LogWriter extends ConnectedService {
     this.HEADERS.put(
         "SELF_DISPATCHING_HEADER",
         new LogMessageHeader("dispatching-by", UUIDUtils.toBytes(peerUuid)));
-    this.HEADERS.put(
-        "EXEC_MSG_TYPE_HEADER",
-        new LogMessageHeader("type", Ints.toByteArray(MessageType.ExecMessage.ordinal())));
-    this.HEADERS.put(
-        "INTERCEPT_MSG_TYPE_HEADER",
-        new LogMessageHeader("type", Ints.toByteArray(MessageType.InterceptRequest.ordinal())));
   }
 
   public void writeToLog(LogInfo outLog, LogInfo inLog, boolean publishOffsets) {
@@ -179,11 +171,6 @@ class LogWriter extends ConnectedService {
       if (msg != null) {
         // set headers
         List<Header> logHeaders = fromInternalToLog(msg.getHeaders());
-        if (msg.getMessageType().equals(MessageType.ExecMessage)) {
-          logHeaders.add(HEADERS.get("EXEC_MSG_TYPE_HEADER"));
-        } else {
-          logHeaders.add(HEADERS.get("INTERCEPT_MSG_TYPE_HEADER"));
-        }
         // send to kafka immediately
         sendToKafka(
             msg.getBody(), msg.getMessageUuid(), msg.getFollowingUuid(), peerUuid, logHeaders);

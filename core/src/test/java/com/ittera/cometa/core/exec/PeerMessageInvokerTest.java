@@ -8,7 +8,7 @@ import com.ittera.cometa.core.ZmqEnabledTest;
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;

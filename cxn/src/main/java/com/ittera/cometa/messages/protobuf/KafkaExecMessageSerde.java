@@ -1,6 +1,6 @@
 package com.ittera.cometa.messages.protobuf;
 
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import java.util.Map;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;

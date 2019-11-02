@@ -14,10 +14,10 @@ import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Intercepts;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -103,8 +103,8 @@ public class LogWriterTest extends ZmqEnabledTest {
   private String getMessageUuid(Message msg) {
     if (msg instanceof ExecMessage) {
       return ((ExecMessage) msg).getMessageUuid();
-    } else if (msg instanceof InterceptRequest) {
-      return ((InterceptRequest) msg).getMessageUuid();
+    } else if (msg instanceof Intercepts.InterceptMessage) {
+      return ((InterceptMessage) msg).getMessageUuid();
     }
     return null;
   }
@@ -157,11 +157,11 @@ public class LogWriterTest extends ZmqEnabledTest {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       msgsCreated.add(msg);
     }
-    // create InterceptRequestMessage's
+    // create InterceptMessages
     int interceptMessagesToSend = 5;
     for (int i = 0; i < interceptMessagesToSend; i++) {
-      InterceptRequest msg =
-          msgBuilder.buildInterceptRequest(
+      InterceptMessage msg =
+          msgBuilder.buildInterceptMessage(
               peerUuid,
               Intercepts.InterceptType.BEFORE,
               "java.io.PrintStream",
@@ -176,8 +176,8 @@ public class LogWriterTest extends ZmqEnabledTest {
     msgsCreated.forEach(
         msg -> {
           MessageType msgType =
-              msg instanceof ExecMessage ? MessageType.ExecMessage : MessageType.InterceptRequest;
-          ExecPhase execPhase = msg instanceof ExecMessage ? ExecPhase.BEFORE : null;
+              msg instanceof ExecMessage ? MessageType.ExecMessage : MessageType.InterceptMessage;
+          ExecPhase execPhase = msg instanceof ExecMessage ? ExecPhase.BEFORE : ExecPhase.UNDEFINED;
           OutboundMsg outMsg =
               new OutboundMsg(
                   msgType,
@@ -206,7 +206,7 @@ public class LogWriterTest extends ZmqEnabledTest {
       }
       if (msg == null) {
         try {
-          msg = InterceptRequest.parseFrom(record.value());
+          msg = InterceptMessage.parseFrom(record.value());
         } catch (InvalidProtocolBufferException e) {
         }
       }

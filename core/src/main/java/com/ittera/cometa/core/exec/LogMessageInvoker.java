@@ -1,12 +1,10 @@
 package com.ittera.cometa.core.exec;
 
-import com.google.protobuf.AbstractMessage;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.core.messages.InboundLogMsg;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.MessageType;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
@@ -83,27 +81,20 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
         continue;
       }
 
-      AbstractMessage requestMsg = null;
+      Message requestMsg = null;
       long started = System.currentTimeMillis();
 
       // parse req
       try {
-        if (msg.getMessageType().equals(MessageType.ExecMessage)) {
-          requestMsg = ExecMessage.parseFrom(msg.getBody());
-        } else if (msg.getMessageType().equals(MessageType.InterceptRequest)) {
-          requestMsg = InterceptRequest.parseFrom(msg.getBody());
-        } else {
-          logger.error("Received unknown message type: {}", msg.getMessageType());
-        }
-      } catch (Exception e) {
+        requestMsg = Message.parseFrom(msg.getBody());
+      } catch (InvalidProtocolBufferException e) {
         logger.error("Caught exception parsing message", e);
       }
 
       if (logger.isDebugEnabled()) {
         logger.debug(
-            "Received message with offset: {}, type: {}, uuid: {}",
+            "Received message with offset: {}, uuid: {}",
             msg.getOffset(),
-            msg.getMessageType(),
             getMessageUuid(requestMsg));
       }
 

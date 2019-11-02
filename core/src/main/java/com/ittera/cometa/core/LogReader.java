@@ -1,12 +1,10 @@
 package com.ittera.cometa.core;
 
-import com.google.common.primitives.Ints;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.common.util.UUIDUtils;
 import com.ittera.cometa.core.messages.InboundLogMsg;
 import com.ittera.cometa.core.messages.PublishedOffsetMsg;
 import com.ittera.cometa.cxn.PALDirectory;
-import com.ittera.cometa.messages.MessageType;
 import java.nio.channels.ClosedSelectorException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -267,9 +265,7 @@ public class LogReader extends ConnectedService {
         lastOffsetRead = messageOffset;
         if (!recordProducedOrDispatchingBySelf(record.headers())) {
           // send request to DEALER socket
-          InboundLogMsg msg =
-              new InboundLogMsg(
-                  getMessageType(record.headers()), messageOffset, (byte[]) record.value());
+          InboundLogMsg msg = new InboundLogMsg(messageOffset, (byte[]) record.value());
           msg.send(logDealer);
           if (logger.isDebugEnabled()) {
             logger.debug("Dealt new log message with offset: {}", messageOffset);
@@ -336,13 +332,6 @@ public class LogReader extends ConnectedService {
               }
               return false;
             });
-  }
-
-  private MessageType getMessageType(Headers headers) {
-    for (Header header : headers.headers("type")) {
-      return MessageType.values[Ints.fromByteArray(header.value())];
-    }
-    return MessageType.Unknown;
   }
 
   private Long nextOffset() {

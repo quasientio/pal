@@ -8,7 +8,7 @@ import static org.mockito.Mockito.*;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,20 +35,20 @@ public class InterceptProcessorTest {
   private InterceptProcessor interceptProcessor;
   private final UUID peerUuid = UUID.randomUUID();
 
-  private List<InterceptRequest> requests;
+  private List<InterceptMessage> requests;
 
   @Before
   public void setUp() throws Exception {
     requests = new ArrayList<>();
     // set up mock dispatcher so it returns always 0 (0 == OK)
     dispatcherConnector = mock(DispatcherConnector.class);
-    when(dispatcherConnector.sendOutInterceptRequestMessage(any()))
+    when(dispatcherConnector.sendOutInterceptRequest(any()))
         .thenAnswer(
             // save produced request for verification
             (Answer)
                 invocation -> {
                   Object[] args = invocation.getArguments();
-                  InterceptRequest request = (InterceptRequest) args[0];
+                  InterceptMessage request = (InterceptMessage) args[0];
                   requests.add(request);
                   return 0;
                 });
@@ -63,17 +63,17 @@ public class InterceptProcessorTest {
     interceptProcessor.process(App.class);
 
     // ensure dispatcherConnector called
-    verify(dispatcherConnector, times(1)).sendOutInterceptRequestMessage(any());
+    verify(dispatcherConnector, times(1)).sendOutInterceptRequest(any());
 
     // verify request contents
     assertThat(requests.size(), is(1));
-    InterceptRequest interceptRequest = requests.get(0);
-    assertThat(interceptRequest.getType(), is(InterceptType.BEFORE));
-    assertThat(interceptRequest.getMethod().getName(), is("println"));
-    assertThat(interceptRequest.getMethod().getParameterTypeCount(), is(1));
-    assertThat(interceptRequest.getMethod().getParameterTypeList().get(0), is("java.lang.String"));
-    assertThat(interceptRequest.getClazz(), is("java.io.PrintStream"));
-    assertThat(interceptRequest.getCallbackClass(), is("com.ittera.cometa.core.App"));
-    assertThat(interceptRequest.getCallbackMethod(), is("printlnAndStop"));
+    InterceptMessage interceptMessage = requests.get(0);
+    assertThat(interceptMessage.getType(), is(InterceptType.BEFORE));
+    assertThat(interceptMessage.getMethod().getName(), is("println"));
+    assertThat(interceptMessage.getMethod().getParameterTypeCount(), is(1));
+    assertThat(interceptMessage.getMethod().getParameterTypeList().get(0), is("java.lang.String"));
+    assertThat(interceptMessage.getClazz(), is("java.io.PrintStream"));
+    assertThat(interceptMessage.getCallbackClass(), is("com.ittera.cometa.core.App"));
+    assertThat(interceptMessage.getCallbackMethod(), is("printlnAndStop"));
   }
 }

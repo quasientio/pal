@@ -1604,9 +1604,9 @@ public final class Intercepts {
     }
   }
 
-  public interface InterceptRequestOrBuilder
+  public interface InterceptMessageOrBuilder
       extends
-      // @@protoc_insertion_point(interface_extends:messages.protobuf.InterceptRequest)
+      // @@protoc_insertion_point(interface_extends:messages.protobuf.InterceptMessage)
       com.google.protobuf.MessageOrBuilder {
 
     /** <code>required string peerUuid = 1;</code> */
@@ -1664,21 +1664,21 @@ public final class Intercepts {
     /** <code>required string callbackMethod = 8;</code> */
     com.google.protobuf.ByteString getCallbackMethodBytes();
 
-    public com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.InterceptableCase
+    public com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage.InterceptableCase
         getInterceptableCase();
   }
-  /** Protobuf type {@code messages.protobuf.InterceptRequest} */
-  public static final class InterceptRequest extends com.google.protobuf.GeneratedMessageV3
+  /** Protobuf type {@code messages.protobuf.InterceptMessage} */
+  public static final class InterceptMessage extends com.google.protobuf.GeneratedMessageV3
       implements
-      // @@protoc_insertion_point(message_implements:messages.protobuf.InterceptRequest)
-      InterceptRequestOrBuilder {
+      // @@protoc_insertion_point(message_implements:messages.protobuf.InterceptMessage)
+      InterceptMessageOrBuilder {
     private static final long serialVersionUID = 0L;
-    // Use InterceptRequest.newBuilder() to construct.
-    private InterceptRequest(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+    // Use InterceptMessage.newBuilder() to construct.
+    private InterceptMessage(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
     }
 
-    private InterceptRequest() {
+    private InterceptMessage() {
       peerUuid_ = "";
       messageUuid_ = "";
       type_ = 1;
@@ -1690,7 +1690,7 @@ public final class Intercepts {
     @java.lang.Override
     @SuppressWarnings({"unused"})
     protected java.lang.Object newInstance(UnusedPrivateParameter unused) {
-      return new InterceptRequest();
+      return new InterceptMessage();
     }
 
     @java.lang.Override
@@ -1698,7 +1698,7 @@ public final class Intercepts {
       return this.unknownFields;
     }
 
-    private InterceptRequest(
+    private InterceptMessage(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1833,17 +1833,17 @@ public final class Intercepts {
 
     public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
       return com.ittera.cometa.messages.protobuf.Intercepts
-          .internal_static_messages_protobuf_InterceptRequest_descriptor;
+          .internal_static_messages_protobuf_InterceptMessage_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return com.ittera.cometa.messages.protobuf.Intercepts
-          .internal_static_messages_protobuf_InterceptRequest_fieldAccessorTable
+          .internal_static_messages_protobuf_InterceptMessage_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.class,
-              com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.Builder.class);
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage.class,
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage.Builder.class);
     }
 
     private int bitField0_;
@@ -2238,11 +2238,11 @@ public final class Intercepts {
       if (obj == this) {
         return true;
       }
-      if (!(obj instanceof com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest)) {
+      if (!(obj instanceof com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage)) {
         return super.equals(obj);
       }
-      com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest other =
-          (com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest) obj;
+      com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage other =
+          (com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage) obj;
 
       if (hasPeerUuid() != other.hasPeerUuid()) return false;
       if (hasPeerUuid()) {
@@ -2331,59 +2331,59 @@ public final class Intercepts {
       return hash;
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest parseFrom(
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage parseFrom(
         java.nio.ByteBuffer data) throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest parseFrom(
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage parseFrom(
         java.nio.ByteBuffer data, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest parseFrom(
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest parseFrom(
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest parseFrom(
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage parseFrom(
         byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest parseFrom(
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage parseFrom(
         byte[] data, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest parseFrom(
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage parseFrom(
         java.io.InputStream input) throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3.parseWithIOException(PARSER, input);
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest parseFrom(
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage parseFrom(
         java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3.parseWithIOException(
           PARSER, input, extensionRegistry);
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage
         parseDelimitedFrom(java.io.InputStream input) throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3.parseDelimitedWithIOException(PARSER, input);
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage
         parseDelimitedFrom(
             java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws java.io.IOException {
@@ -2391,12 +2391,12 @@ public final class Intercepts {
           PARSER, input, extensionRegistry);
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest parseFrom(
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage parseFrom(
         com.google.protobuf.CodedInputStream input) throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3.parseWithIOException(PARSER, input);
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest parseFrom(
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -2414,7 +2414,7 @@ public final class Intercepts {
     }
 
     public static Builder newBuilder(
-        com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest prototype) {
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
 
@@ -2429,29 +2429,29 @@ public final class Intercepts {
       Builder builder = new Builder(parent);
       return builder;
     }
-    /** Protobuf type {@code messages.protobuf.InterceptRequest} */
+    /** Protobuf type {@code messages.protobuf.InterceptMessage} */
     public static final class Builder
         extends com.google.protobuf.GeneratedMessageV3.Builder<Builder>
         implements
-        // @@protoc_insertion_point(builder_implements:messages.protobuf.InterceptRequest)
-        com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequestOrBuilder {
+        // @@protoc_insertion_point(builder_implements:messages.protobuf.InterceptMessage)
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessageOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_InterceptRequest_descriptor;
+            .internal_static_messages_protobuf_InterceptMessage_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_InterceptRequest_fieldAccessorTable
+            .internal_static_messages_protobuf_InterceptMessage_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.class,
-                com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.Builder.class);
+                com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage.class,
+                com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage.Builder.class);
       }
 
       // Construct using
-      // com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.newBuilder()
+      // com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -2488,18 +2488,18 @@ public final class Intercepts {
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor getDescriptorForType() {
         return com.ittera.cometa.messages.protobuf.Intercepts
-            .internal_static_messages_protobuf_InterceptRequest_descriptor;
+            .internal_static_messages_protobuf_InterceptMessage_descriptor;
       }
 
       @java.lang.Override
-      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage
           getDefaultInstanceForType() {
-        return com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.getDefaultInstance();
+        return com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage.getDefaultInstance();
       }
 
       @java.lang.Override
-      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest build() {
-        com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest result = buildPartial();
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage build() {
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
@@ -2507,9 +2507,9 @@ public final class Intercepts {
       }
 
       @java.lang.Override
-      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest buildPartial() {
-        com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest result =
-            new com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest(this);
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage buildPartial() {
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage result =
+            new com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) != 0)) {
@@ -2593,8 +2593,8 @@ public final class Intercepts {
 
       @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest) {
-          return mergeFrom((com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest) other);
+        if (other instanceof com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage) {
+          return mergeFrom((com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage) other);
         } else {
           super.mergeFrom(other);
           return this;
@@ -2602,9 +2602,9 @@ public final class Intercepts {
       }
 
       public Builder mergeFrom(
-          com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest other) {
+          com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage other) {
         if (other
-            == com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest.getDefaultInstance())
+            == com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage.getDefaultInstance())
           return this;
         if (other.hasPeerUuid()) {
           bitField0_ |= 0x00000001;
@@ -2693,12 +2693,12 @@ public final class Intercepts {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest parsedMessage = null;
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
           parsedMessage =
-              (com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest)
+              (com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage)
                   e.getUnfinishedMessage();
           throw e.unwrapIOException();
         } finally {
@@ -3356,45 +3356,45 @@ public final class Intercepts {
         return super.mergeUnknownFields(unknownFields);
       }
 
-      // @@protoc_insertion_point(builder_scope:messages.protobuf.InterceptRequest)
+      // @@protoc_insertion_point(builder_scope:messages.protobuf.InterceptMessage)
     }
 
-    // @@protoc_insertion_point(class_scope:messages.protobuf.InterceptRequest)
-    private static final com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest
+    // @@protoc_insertion_point(class_scope:messages.protobuf.InterceptMessage)
+    private static final com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage
         DEFAULT_INSTANCE;
 
     static {
-      DEFAULT_INSTANCE = new com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest();
+      DEFAULT_INSTANCE = new com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage();
     }
 
-    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage
         getDefaultInstance() {
       return DEFAULT_INSTANCE;
     }
 
     @java.lang.Deprecated
-    public static final com.google.protobuf.Parser<InterceptRequest> PARSER =
-        new com.google.protobuf.AbstractParser<InterceptRequest>() {
+    public static final com.google.protobuf.Parser<InterceptMessage> PARSER =
+        new com.google.protobuf.AbstractParser<InterceptMessage>() {
           @java.lang.Override
-          public InterceptRequest parsePartialFrom(
+          public InterceptMessage parsePartialFrom(
               com.google.protobuf.CodedInputStream input,
               com.google.protobuf.ExtensionRegistryLite extensionRegistry)
               throws com.google.protobuf.InvalidProtocolBufferException {
-            return new InterceptRequest(input, extensionRegistry);
+            return new InterceptMessage(input, extensionRegistry);
           }
         };
 
-    public static com.google.protobuf.Parser<InterceptRequest> parser() {
+    public static com.google.protobuf.Parser<InterceptMessage> parser() {
       return PARSER;
     }
 
     @java.lang.Override
-    public com.google.protobuf.Parser<InterceptRequest> getParserForType() {
+    public com.google.protobuf.Parser<InterceptMessage> getParserForType() {
       return PARSER;
     }
 
     @java.lang.Override
-    public com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest
+    public com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage
         getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
@@ -3409,9 +3409,9 @@ public final class Intercepts {
   private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_messages_protobuf_InterceptableField_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-      internal_static_messages_protobuf_InterceptRequest_descriptor;
+      internal_static_messages_protobuf_InterceptMessage_descriptor;
   private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_messages_protobuf_InterceptRequest_fieldAccessorTable;
+      internal_static_messages_protobuf_InterceptMessage_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor getDescriptor() {
     return descriptor;
@@ -3425,7 +3425,7 @@ public final class Intercepts {
           + "\023InterceptableMethod\022\014\n\004name\030\001 \002(\t\022\025\n\rpa"
           + "rameterType\030\002 \003(\t\"P\n\022InterceptableField\022"
           + "\014\n\004name\030\001 \002(\t\022,\n\004type\030\002 \002(\0162\036.messages.p"
-          + "rotobuf.FieldOpType\"\252\002\n\020InterceptRequest"
+          + "rotobuf.FieldOpType\"\252\002\n\020InterceptMessage"
           + "\022\020\n\010peerUuid\030\001 \002(\t\022\023\n\013messageUuid\030\002 \002(\t\022"
           + ".\n\004type\030\003 \002(\0162 .messages.protobuf.Interc"
           + "eptType\022\r\n\005clazz\030\004 \002(\t\0226\n\005field\030\005 \001(\0132%."
@@ -3458,11 +3458,11 @@ public final class Intercepts {
             new java.lang.String[] {
               "Name", "Type",
             });
-    internal_static_messages_protobuf_InterceptRequest_descriptor =
+    internal_static_messages_protobuf_InterceptMessage_descriptor =
         getDescriptor().getMessageTypes().get(2);
-    internal_static_messages_protobuf_InterceptRequest_fieldAccessorTable =
+    internal_static_messages_protobuf_InterceptMessage_fieldAccessorTable =
         new com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-            internal_static_messages_protobuf_InterceptRequest_descriptor,
+            internal_static_messages_protobuf_InterceptMessage_descriptor,
             new java.lang.String[] {
               "PeerUuid",
               "MessageUuid",

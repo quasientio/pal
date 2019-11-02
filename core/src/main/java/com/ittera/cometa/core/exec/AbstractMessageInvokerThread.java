@@ -1,10 +1,10 @@
 package com.ittera.cometa.core.exec;
 
-import com.google.protobuf.AbstractMessage;
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -71,11 +71,11 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     }
   }
 
-  protected final String getMessageUuid(Object msg) {
-    if (msg instanceof ExecMessage) {
-      return ((ExecMessage) msg).getMessageUuid();
-    } else if (msg instanceof InterceptRequest) {
-      return ((InterceptRequest) msg).getMessageUuid();
+  protected final String getMessageUuid(Message msg) {
+    if (msg.hasExecMessage()) {
+      return msg.getExecMessage().getMessageUuid();
+    } else if (msg.hasInterceptMessage()) {
+      return msg.getInterceptMessage().getMessageUuid();
     }
     return null;
   }
@@ -106,13 +106,13 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
   public abstract void run();
 
-  protected final void dispatch(AbstractMessage msg, Long recordOffset) {
-    if (msg instanceof ExecMessage) {
-      dispatch((ExecMessage) msg, recordOffset);
-    } else if (msg instanceof InterceptRequest) {
-      dispatch((InterceptRequest) msg, recordOffset);
+  protected final void dispatch(Message message, Long recordOffset) {
+    if (message.hasExecMessage()) {
+      dispatch(message.getExecMessage(), recordOffset);
+    } else if (message.hasInterceptMessage()) {
+      dispatch(message.getInterceptMessage(), recordOffset);
     } else {
-      logger.error("Ignoring dispatch of msg of unknown type: {}", msg.getClass().getName());
+      logger.error("Ignoring dispatch of msg of unknown type: {}", message);
     }
   }
 
@@ -142,7 +142,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     return replyMsg;
   }
 
-  private void dispatch(InterceptRequest interceptMsg, @Nullable Long recordOffset) {
+  private void dispatch(InterceptMessage interceptMsg, @Nullable Long recordOffset) {
     final boolean isDirectRequest = recordOffset == null;
     boolean result = incomingMessageDispatcher.incomingIntercept(interceptMsg, isDirectRequest);
     if (logger.isDebugEnabled()) {

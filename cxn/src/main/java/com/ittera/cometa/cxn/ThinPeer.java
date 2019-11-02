@@ -8,8 +8,8 @@ import com.ittera.cometa.PeerInfo;
 import com.ittera.cometa.common.util.Strings;
 import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.MessageType;
-import com.ittera.cometa.messages.protobuf.Wrappers;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessageType;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
@@ -206,7 +206,7 @@ public class ThinPeer {
           new LogMessageHeader("type", Ints.toByteArray(MessageType.ExecMessage.ordinal())));
       this.HEADERS.put(
           "INTERCEPT_MSG_TYPE_HEADER",
-          new LogMessageHeader("type", Ints.toByteArray(MessageType.InterceptRequest.ordinal())));
+          new LogMessageHeader("type", Ints.toByteArray(MessageType.InterceptMessage.ordinal())));
     }
 
     // configure ZMQ
@@ -289,7 +289,7 @@ public class ThinPeer {
     }
   }
 
-  public ExecMessage waitFor(Wrappers.ExecMessageType type, String fieldName)
+  public ExecMessage waitFor(ExecMessageType type, String fieldName)
       throws InvalidProtocolBufferException {
     if (logger.isDebugEnabled()) {
       logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
@@ -405,7 +405,7 @@ public class ThinPeer {
     final List<Header> logHeaders = new ArrayList<>();
     if (messageType.equals(MessageType.ExecMessage)) {
       logHeaders.add(HEADERS.get("EXEC_MSG_TYPE_HEADER"));
-    } else if (messageType.equals(MessageType.InterceptRequest)) {
+    } else if (messageType.equals(MessageType.InterceptMessage)) {
       logHeaders.add(HEADERS.get("INTERCEPT_MSG_TYPE_HEADER"));
     }
     return logHeaders;

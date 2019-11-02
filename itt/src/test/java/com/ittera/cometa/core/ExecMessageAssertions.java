@@ -3,9 +3,9 @@ package com.ittera.cometa.core;
 import static org.junit.Assert.*;
 
 import com.ittera.cometa.messages.Unwrapper;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Primitives;
 import com.ittera.cometa.messages.protobuf.Values.ReturnValue;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 
 public class ExecMessageAssertions {
 

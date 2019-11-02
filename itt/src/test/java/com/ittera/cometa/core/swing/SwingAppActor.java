@@ -4,9 +4,9 @@ import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.cxn.ThinPeer;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessageType;
 import com.ittera.cometa.messages.protobuf.Primitives;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
 import java.io.InputStream;
 import java.util.Properties;
 

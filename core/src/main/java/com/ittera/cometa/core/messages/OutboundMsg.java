@@ -19,7 +19,7 @@ public class OutboundMsg extends BaseMsg {
    * FRAMES:
    * -------
    * 1. type of message    : int (MessageType)
-   * 2. [execution phase]  : int (ExecPhase: Only if MessageType = ExecMessage)
+   * 2. [execution phase]  : int (ExecPhase: Undefined if MessageType != ExecMessage)
    * 3. headers to follow  : int
    * 4. [headers]          : byte[]* (InternalHeader)
    * 5. message uuid       : byte[]
@@ -31,7 +31,7 @@ public class OutboundMsg extends BaseMsg {
   // fields
   private final MessageType messageType;
 
-  @Nullable final ExecPhase execPhase;
+  private final ExecPhase execPhase;
   @Nullable private final List<Headers.InternalHeader> headers;
   private final UUID messageUuid;
   @Nullable private final UUID followingUuid;
@@ -39,15 +39,12 @@ public class OutboundMsg extends BaseMsg {
 
   public OutboundMsg(
       MessageType messageType,
-      @Nullable ExecPhase execPhase,
+      ExecPhase execPhase,
       @Nullable List<Headers.InternalHeader> headers,
       UUID messageUuid,
       @Nullable UUID followingUuid,
       byte[] body) {
-    Stream.of(messageType, messageUuid, body).forEach(Objects::requireNonNull);
-    if (messageType.equals(MessageType.ExecMessage) && execPhase == null) {
-      throw new NullPointerException("ExecPhase cannot be null when sending an ExecMessage");
-    }
+    Stream.of(messageType, execPhase, messageUuid, body).forEach(Objects::requireNonNull);
     this.messageType = messageType;
     this.execPhase = execPhase;
     this.headers = headers;
@@ -58,7 +55,7 @@ public class OutboundMsg extends BaseMsg {
 
   private OutboundMsg(
       MessageType messageType,
-      @Nullable ExecPhase execPhase,
+      ExecPhase execPhase,
       @Nullable List<Headers.InternalHeader> headers,
       UUID messageUuid,
       @Nullable UUID followingUuid,
@@ -84,12 +81,10 @@ public class OutboundMsg extends BaseMsg {
     }
 
     // execution phase
-    if (messageType.equals(MessageType.ExecMessage)) {
-      buff = String.valueOf(execPhase.ordinal()).getBytes(ZMQ.CHARSET);
-      size += buff.length;
-      if (!socket.send(buff, ZMQ.SNDMORE)) {
-        return false;
-      }
+    buff = String.valueOf(execPhase.ordinal()).getBytes(ZMQ.CHARSET);
+    size += buff.length;
+    if (!socket.send(buff, ZMQ.SNDMORE)) {
+      return false;
     }
 
     // # of headers to follow
@@ -156,13 +151,9 @@ public class OutboundMsg extends BaseMsg {
         MessageType.values[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
     // execution phase
     final ExecPhase execPhase;
-    if (messageType.equals(MessageType.ExecMessage)) {
-      buff = socket.recv();
-      msgSize += buff.length;
-      execPhase = ExecPhase.values[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
-    } else {
-      execPhase = null;
-    }
+    buff = socket.recv();
+    msgSize += buff.length;
+    execPhase = ExecPhase.values[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
 
     // # of headers to follow
     buff = socket.recv();
@@ -215,7 +206,7 @@ public class OutboundMsg extends BaseMsg {
     if (o == null || getClass() != o.getClass()) return false;
     OutboundMsg that = (OutboundMsg) o;
     return messageType == that.messageType
-        && Objects.equals(execPhase, that.execPhase)
+        && execPhase.equals(that.execPhase)
         && Objects.equals(headers, that.headers)
         && messageUuid.equals(that.messageUuid)
         && Objects.equals(followingUuid, that.followingUuid)

@@ -80,16 +80,16 @@ public class OutboundMsgTest extends ZmqEnabledTest {
     // with all values filled
     OutboundMsg msgOut =
         new OutboundMsg(
-            MessageType.InterceptRequest,
-            null,
+            MessageType.InterceptMessage,
+            ExecPhase.UNDEFINED,
             headers,
             interceptMessageUuid,
             followingMessageUuid,
             body);
 
     // verify getters
-    assertThat(msgOut.getMessageType(), is(MessageType.InterceptRequest));
-    assertThat(msgOut.getExecPhase(), is(nullValue()));
+    assertThat(msgOut.getMessageType(), is(MessageType.InterceptMessage));
+    assertThat(msgOut.getExecPhase(), is(ExecPhase.UNDEFINED));
     assertThat(msgOut.getHeaders().size(), is(1));
     assertThat(msgOut.getHeaders().get(0), is(writeAhead));
     assertThat(msgOut.getMessageUuid(), is(interceptMessageUuid));
@@ -117,15 +117,51 @@ public class OutboundMsgTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void testNPEWhenNoExecPhaseWithExecMessage() {
+  public void testNPE() {
     UUID messageUuid = UUID.randomUUID();
     byte[] body = "whatever".getBytes();
     List<InternalHeader> headers = Collections.emptyList();
 
-    new OutboundMsg(
-        MessageType.InterceptRequest, null, headers, messageUuid, UUID.randomUUID(), body);
+    // null messageType
     try {
-      new OutboundMsg(MessageType.ExecMessage, null, headers, messageUuid, UUID.randomUUID(), body);
+      new OutboundMsg(null, ExecPhase.UNDEFINED, headers, messageUuid, UUID.randomUUID(), body);
+      fail("Should have thrown NPE");
+    } catch (NullPointerException e) {
+      // ok then
+    }
+
+    // null execPhase
+    try {
+      new OutboundMsg(
+          MessageType.InterceptMessage, null, headers, messageUuid, UUID.randomUUID(), body);
+      fail("Should have thrown NPE");
+    } catch (NullPointerException e) {
+      // ok then
+    }
+
+    // null messageUuid
+    try {
+      new OutboundMsg(
+          MessageType.InterceptMessage,
+          ExecPhase.UNDEFINED,
+          headers,
+          null,
+          UUID.randomUUID(),
+          body);
+      fail("Should have thrown NPE");
+    } catch (NullPointerException e) {
+      // ok then
+    }
+
+    // null body
+    try {
+      new OutboundMsg(
+          MessageType.InterceptMessage,
+          ExecPhase.UNDEFINED,
+          headers,
+          messageUuid,
+          UUID.randomUUID(),
+          null);
       fail("Should have thrown NPE");
     } catch (NullPointerException e) {
       // ok then
@@ -142,22 +178,32 @@ public class OutboundMsgTest extends ZmqEnabledTest {
 
     OutboundMsg msg1 =
         new OutboundMsg(
-            MessageType.InterceptRequest, null, headers, messageUuid, followingMessageUuid, body);
+            MessageType.ExecMessage,
+            ExecPhase.BEFORE,
+            headers,
+            messageUuid,
+            followingMessageUuid,
+            body);
 
-    // assert content-only equality
+    // equal
     assertThat(
         new OutboundMsg(
-            MessageType.InterceptRequest, null, headers, messageUuid, followingMessageUuid, body),
+            MessageType.ExecMessage,
+            ExecPhase.BEFORE,
+            headers,
+            messageUuid,
+            followingMessageUuid,
+            body),
         is(msg1));
 
     // different type
     assertThat(
         new OutboundMsg(
-            MessageType.ExecMessage,
-            ExecPhase.AFTER,
+            MessageType.InterceptMessage,
+            ExecPhase.BEFORE,
             headers,
             messageUuid,
-            UUID.randomUUID(),
+            followingMessageUuid,
             body),
         is(not(msg1)));
 
@@ -166,14 +212,19 @@ public class OutboundMsgTest extends ZmqEnabledTest {
         Arrays.asList(writeAhead, writeAhead); // just duplicate the header
     assertThat(
         new OutboundMsg(
-            MessageType.InterceptRequest, null, otherHeaders, messageUuid, UUID.randomUUID(), body),
+            MessageType.ExecMessage,
+            ExecPhase.BEFORE,
+            otherHeaders,
+            messageUuid,
+            followingMessageUuid,
+            body),
         is(not(msg1)));
 
     // different message UUID
     assertThat(
         new OutboundMsg(
-            MessageType.InterceptRequest,
-            null,
+            MessageType.ExecMessage,
+            ExecPhase.BEFORE,
             headers,
             UUID.randomUUID(),
             followingMessageUuid,
@@ -183,14 +234,23 @@ public class OutboundMsgTest extends ZmqEnabledTest {
     // different followingUuid
     assertThat(
         new OutboundMsg(
-            MessageType.InterceptRequest, null, headers, messageUuid, UUID.randomUUID(), body),
+            MessageType.ExecMessage,
+            ExecPhase.BEFORE,
+            headers,
+            messageUuid,
+            UUID.randomUUID(),
+            body),
         is(not(msg1)));
 
     // different body
-    body = "whatevah".getBytes();
     assertThat(
         new OutboundMsg(
-            MessageType.InterceptRequest, null, headers, messageUuid, UUID.randomUUID(), body),
+            MessageType.ExecMessage,
+            ExecPhase.BEFORE,
+            headers,
+            messageUuid,
+            followingMessageUuid,
+            "whatevah".getBytes()),
         is(not(msg1)));
   }
 }

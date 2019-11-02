@@ -5,9 +5,8 @@ import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.Unwrapper;
-import com.ittera.cometa.messages.protobuf.Wrappers;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessageType;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -43,7 +42,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 
   @Override
   protected AccessibleObject loadAccessibleObject(
-      Wrappers.ExecMessage execMessage, List<Class> parameterTypes, List<Object> args)
+      ExecMessage execMessage, List<Class> parameterTypes, List<Object> args)
       throws ReflectiveOperationException {
 
     Class clazz =

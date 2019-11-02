@@ -1,7 +1,6 @@
 package com.ittera.cometa.core.messages;
 
 import com.google.common.primitives.Longs;
-import com.ittera.cometa.messages.MessageType;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -16,27 +15,24 @@ public class InboundLogMsg extends BaseMsg {
    * FRAMES:
    * -------
    * 0 [empty REQ envelope]: ""
-   * 1. type of message    : int (MessageType)
-   * 2. offset             : long
-   * 3. message body       : byte[]
+   * 1. offset             : long
+   * 2. message body       : byte[]
    * </pre>
    */
 
   // fields
-  private final MessageType messageType;
-
   private final long offset;
+
   private final byte[] body;
 
-  public InboundLogMsg(MessageType messageType, long offset, byte[] body) {
-    Stream.of(messageType, offset, body).forEach(Objects::requireNonNull);
-    this.messageType = messageType;
+  public InboundLogMsg(long offset, byte[] body) {
+    Stream.of(offset, body).forEach(Objects::requireNonNull);
     this.offset = offset;
     this.body = body;
   }
 
-  private InboundLogMsg(MessageType messageType, long offset, byte[] body, int size) {
-    this(messageType, offset, body);
+  private InboundLogMsg(long offset, byte[] body, int size) {
+    this(offset, body);
     this.size = size;
   }
 
@@ -45,24 +41,17 @@ public class InboundLogMsg extends BaseMsg {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
-    size = 0;
-    // 0. emulate empty REQ envelope since this message is sent directly by a DEALER
+    // emulate empty REQ envelope since this message is sent directly by a DEALER
     if (!socket.send("", ZMQ.SNDMORE)) {
       return false;
     }
-    // 1. type of message
-    byte[] buff = String.valueOf(messageType.ordinal()).getBytes(ZMQ.CHARSET);
-    size += buff.length;
+    // message offset
+    byte[] buff = Longs.toByteArray(offset);
+    size = buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
     }
-    // 2. message offset
-    buff = Longs.toByteArray(offset);
-    size += buff.length;
-    if (!socket.send(buff, ZMQ.SNDMORE)) {
-      return false;
-    }
-    // 3. message body
+    // message body
     size += body.length;
     if (!socket.send(body, 0)) {
       return false;
@@ -83,18 +72,13 @@ public class InboundLogMsg extends BaseMsg {
     if (!blocking && buff == null) {
       return null;
     }
-    // 1. type of message
     int msgSize = buff.length;
-    final MessageType messageType =
-        MessageType.values[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
-    // 2. message offset
-    buff = socket.recv();
-    msgSize += buff.length;
+    // message offset
     final long offset = Longs.fromByteArray(buff);
-    // 3. message body
+    // message body
     final byte[] body = socket.recv();
     msgSize += body.length;
-    return new InboundLogMsg(messageType, offset, body, msgSize);
+    return new InboundLogMsg(offset, body, msgSize);
   }
 
   // default is non-blocking
@@ -107,14 +91,12 @@ public class InboundLogMsg extends BaseMsg {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     InboundLogMsg that = (InboundLogMsg) o;
-    return offset == that.offset
-        && messageType == that.messageType
-        && Arrays.equals(body, that.body);
+    return offset == that.offset && Arrays.equals(body, that.body);
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(messageType, offset);
+    int result = Objects.hash(offset);
     result = 31 * result + Arrays.hashCode(body);
     return result;
   }
@@ -122,8 +104,6 @@ public class InboundLogMsg extends BaseMsg {
   @Override
   public String toString() {
     return "InboundLogMsg{"
-        + "messageType="
-        + messageType
         + ", offset="
         + offset
         + ", body="
@@ -131,10 +111,6 @@ public class InboundLogMsg extends BaseMsg {
         + ", size="
         + (getSize() == -1 ? "<unknown>" : getSize())
         + '}';
-  }
-
-  public MessageType getMessageType() {
-    return messageType;
   }
 
   public long getOffset() {

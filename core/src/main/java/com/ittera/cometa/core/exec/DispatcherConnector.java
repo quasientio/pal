@@ -6,10 +6,11 @@ import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
+import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -128,20 +129,20 @@ public class DispatcherConnector {
       returnValue = message;
     } else {
       // for now we only care about the first intercept request
-      InterceptRequest interceptRequest = interceptsMsg.getIntercepts().get(0);
+      Intercepts.InterceptMessage interceptMessage = interceptsMsg.getIntercepts().get(0);
       ExecMessage callbackMessage =
-          messageBuilder.buildCallbackForInterceptRequest(peerUuid, message, interceptRequest);
-      UUID interceptor = UUID.fromString(interceptRequest.getPeerUuid());
+          messageBuilder.buildCallbackForInterceptRequest(peerUuid, message, interceptMessage);
+      UUID interceptor = UUID.fromString(interceptMessage.getPeerUuid());
       final byte[] reply;
       try {
-        if (interceptRequest.getType().equals(InterceptType.BEFORE_ASYNC)
-            || interceptRequest.getType().equals(InterceptType.AFTER_ASYNC)) {
+        if (interceptMessage.getType().equals(InterceptType.BEFORE_ASYNC)
+            || interceptMessage.getType().equals(InterceptType.AFTER_ASYNC)) {
           sendAsyncCallbackToPeer(interceptor, callbackMessage);
-        } else if (interceptRequest.getType().equals(InterceptType.BEFORE)
-            || interceptRequest.getType().equals(InterceptType.AFTER)) {
+        } else if (interceptMessage.getType().equals(InterceptType.BEFORE)
+            || interceptMessage.getType().equals(InterceptType.AFTER)) {
           reply = sendCallbackToPeer(interceptor, callbackMessage);
         } else {
-          logger.error("Unsupported callback type: {}", interceptRequest.getType());
+          logger.error("Unsupported callback type: {}", interceptMessage.getType());
         }
       } catch (Exception ex) {
         logger.error(
@@ -150,7 +151,7 @@ public class DispatcherConnector {
             callbackMessage);
       }
 
-      //      if (interceptRequest.getType().equals(Intercepts.InterceptType.AROUND)) {
+      //      if (interceptMessage.getType().equals(Intercepts.InterceptType.AROUND)) {
       // TODO in case of AROUND we should return the message returned by callback only in
       // ExecPhase.After
       // reply = sendCallbackToPeer(interceptor, callbackMessage);
@@ -170,7 +171,7 @@ public class DispatcherConnector {
   }
 
   private int sendInterceptRequest(
-      InterceptRequest message, @Nullable List<InternalHeader> headers) {
+      InterceptMessage message, @Nullable List<InternalHeader> headers) {
     if (logger.isTraceEnabled()) {
       logger.trace("sendInterceptRequest:in w/ message with uuid: {}", message.getMessageUuid());
     }
@@ -179,8 +180,8 @@ public class DispatcherConnector {
     // send
     final OutboundMsg msg =
         new OutboundMsg(
-            MessageType.InterceptRequest,
-            null,
+            MessageType.InterceptMessage,
+            ExecPhase.UNDEFINED,
             headers,
             UUID.fromString(message.getMessageUuid()),
             null,
@@ -188,7 +189,7 @@ public class DispatcherConnector {
     msg.send(outSocket);
 
     // receive
-    String rcvdString = null;
+    String rcvdString;
     try {
       rcvdString = outSocket.recvStr();
     } catch (ZMQException ex) {
@@ -222,19 +223,19 @@ public class DispatcherConnector {
     sendExecMessage(message, ExecPhase.BEFORE, WRITE_AHEAD_HEADERS);
   }
 
-  public int sendOutInterceptRequestMessage(InterceptRequest message) {
+  public int sendOutInterceptRequest(Intercepts.InterceptMessage message) {
     return sendInterceptRequest(message, null);
   }
 
   /**
-   * Register intercept info of an incoming InterceptRequest message
+   * Register intercept info of an incoming InterceptMessage message
    *
    * @param message
    * @return {@code ERROR_READING_FROM_SOCKET} if an error occurs reading from the socket (note that
    *     registration may have taken place), {@code 0} if intercept registration is confirmed,
    *     {@code -1} if registration failed
    */
-  public int registerIntercept(InterceptRequest message) {
+  public int registerIntercept(InterceptMessage message) {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "registerIntercept:in w/ message with uuid: {},from {}",

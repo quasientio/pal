@@ -12,7 +12,7 @@ import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
 import com.ittera.cometa.common.lang.reflect.Signature;
 import com.ittera.cometa.messages.Unwrapper;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import java.util.Random;
 import java.util.stream.DoubleStream;
 import org.junit.*;

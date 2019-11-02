@@ -5,7 +5,7 @@ import static java.lang.String.format;
 import com.ittera.cometa.common.lang.annotation.Before;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
+import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -38,7 +38,7 @@ public class InterceptProcessor {
     if (logger.isDebugEnabled()) {
       logger.debug("inspecting class '{}' for annotations", clazz.getName());
     }
-    List<InterceptRequest> interceptRequests = new ArrayList<>();
+    List<Intercepts.InterceptMessage> interceptMessages = new ArrayList<>();
 
     // collect annotations and batch messages
     for (Method method : clazz.getDeclaredMethods()) {
@@ -77,8 +77,8 @@ public class InterceptProcessor {
         }
 
         // build and queue request message
-        interceptRequests.add(
-            messageBuilder.buildInterceptRequest(
+        interceptMessages.add(
+            messageBuilder.buildInterceptMessage(
                 peerUuid,
                 InterceptType.BEFORE,
                 className,
@@ -92,6 +92,6 @@ public class InterceptProcessor {
     // TODO process @After annotation
 
     // send all messages at once
-    interceptRequests.forEach(connector::sendOutInterceptRequestMessage);
+    interceptMessages.forEach(connector::sendOutInterceptRequest);
   }
 }

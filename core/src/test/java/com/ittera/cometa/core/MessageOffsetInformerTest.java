@@ -10,7 +10,7 @@ import com.ittera.cometa.common.util.UUIDUtils;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import java.lang.reflect.AccessibleObject;
 import java.util.*;
 import java.util.concurrent.*;

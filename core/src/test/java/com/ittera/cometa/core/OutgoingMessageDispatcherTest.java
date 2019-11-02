@@ -11,11 +11,11 @@ import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
 import com.ittera.cometa.messages.protobuf.Intercepts;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import java.util.*;
 import java.util.concurrent.*;
 import org.junit.After;
@@ -129,7 +129,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void registerInterceptRequestMessage() throws Exception {
+  public void registerInterceptRequest() throws Exception {
     assertThat(outgoingMessageDispatcher.isRunning(), is(false));
 
     // start service
@@ -142,8 +142,8 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     req.connect(OUTCELL_ADDR);
 
     // send 1 message request
-    InterceptRequest msg =
-        msgBuilder.buildInterceptRequest(
+    InterceptMessage msg =
+        msgBuilder.buildInterceptMessage(
             peerUuid,
             Intercepts.InterceptType.BEFORE,
             "java.io.PrintStream",
@@ -153,8 +153,8 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
             "someCallbackMethod");
     OutboundMsg outMsg =
         new OutboundMsg(
-            MessageType.InterceptRequest,
-            null,
+            MessageType.InterceptMessage,
+            ExecPhase.UNDEFINED,
             INCOMING_INTERCEPT_REQ_HEADERS,
             UUID.fromString(msg.getMessageUuid()),
             null,
@@ -173,7 +173,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendOutInterceptRequestMessage() throws Exception {
+  public void sendOutInterceptRequest() throws Exception {
     assertThat(outgoingMessageDispatcher.isRunning(), is(false));
 
     // start service
@@ -191,8 +191,8 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     sub.subscribe(ZMQ.SUBSCRIPTION_ALL);
 
     // send 1 message request
-    InterceptRequest msg =
-        msgBuilder.buildInterceptRequest(
+    Intercepts.InterceptMessage msg =
+        msgBuilder.buildInterceptMessage(
             peerUuid,
             Intercepts.InterceptType.BEFORE,
             "java.io.PrintStream",
@@ -202,8 +202,8 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
             "someCallbackMethod");
     OutboundMsg outMsg =
         new OutboundMsg(
-            MessageType.InterceptRequest,
-            null,
+            MessageType.InterceptMessage,
+            ExecPhase.UNDEFINED,
             null,
             UUID.fromString(msg.getMessageUuid()),
             null,
@@ -219,7 +219,8 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     assertThat(publishedOutMsg, is(outMsg));
 
     // verify message is what we sent
-    InterceptRequest publishedMsg = InterceptRequest.parseFrom(publishedOutMsg.getBody());
+    InterceptMessage publishedMsg =
+        Intercepts.InterceptMessage.parseFrom(publishedOutMsg.getBody());
     assertThat(publishedMsg, is(msg));
 
     // close local sockets
@@ -299,8 +300,8 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     req.connect(OUTCELL_ADDR);
 
     // send intercept request
-    InterceptRequest interceptRequest =
-        msgBuilder.buildInterceptRequest(
+    InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
             peerUuid,
             Intercepts.InterceptType.BEFORE,
             "java.util.ArrayList",
@@ -311,12 +312,12 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
 
     OutboundMsg outMsg =
         new OutboundMsg(
-            MessageType.InterceptRequest,
-            null,
+            MessageType.InterceptMessage,
+            ExecPhase.UNDEFINED,
             INCOMING_INTERCEPT_REQ_HEADERS,
-            UUID.fromString(interceptRequest.getMessageUuid()),
+            UUID.fromString(interceptMessage.getMessageUuid()),
             null,
-            interceptRequest.toByteArray());
+            interceptMessage.toByteArray());
     outMsg.send(req);
     logger.debug("Sent intercept req: {}", outMsg);
 
@@ -360,7 +361,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     logger.debug("Got intercepted request: {}", interceptsMsg);
     assertThat(interceptsMsg.getIntercepts(), notNullValue());
     assertThat(interceptsMsg.getIntercepts().size(), is(1));
-    assertThat(interceptsMsg.getIntercepts().get(0), is(interceptRequest));
+    assertThat(interceptsMsg.getIntercepts().get(0), is(interceptMessage));
 
     // close local sockets
     req.close();

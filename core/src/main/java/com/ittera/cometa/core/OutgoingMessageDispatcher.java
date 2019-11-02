@@ -5,10 +5,11 @@ import com.ittera.cometa.core.exec.ExecPhase;
 import com.ittera.cometa.core.messages.InterceptsMsg;
 import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
+import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.util.*;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -57,29 +58,30 @@ class OutgoingMessageDispatcher extends ConnectedService {
     pubSocket.bind(outPubAddress);
   }
 
-  private boolean registerInterceptRequest(OutboundMsg interceptRequestMsg) {
+  private boolean registerInterceptRequest(OutboundMsg interceptMsg) {
 
-    InterceptRequest incomingInterceptRequest;
+    Intercepts.InterceptMessage incomingInterceptMessage;
     // parse message
     try {
-      incomingInterceptRequest = InterceptRequest.parseFrom(interceptRequestMsg.getBody());
+      incomingInterceptMessage = Intercepts.InterceptMessage.parseFrom(interceptMsg.getBody());
     } catch (InvalidProtocolBufferException e) {
       logger.error("Error parsing intercept request message", e);
       return false;
     }
-    InterceptRequests registeredIntercepts = allIntercepts.get(incomingInterceptRequest.getType());
-    return registeredIntercepts.registerInterceptRequest(incomingInterceptRequest);
+    InterceptRequests registeredIntercepts = allIntercepts.get(incomingInterceptMessage.getType());
+    return registeredIntercepts.registerInterceptRequest(incomingInterceptMessage);
   }
 
-  private List<InterceptRequest> getMatchingIntercepts(ExecMessage execMessage, ExecPhase phase) {
+  private List<Intercepts.InterceptMessage> getMatchingIntercepts(
+      ExecMessage execMessage, ExecPhase phase) {
     if (phase.equals(ExecPhase.BEFORE)) {
-      final List<InterceptRequest> beforeIntercepts =
+      final List<Intercepts.InterceptMessage> beforeIntercepts =
           allIntercepts.get(InterceptType.BEFORE).getMatchingIntercepts(execMessage);
-      final List<InterceptRequest> beforeAsyncIntercepts =
+      final List<Intercepts.InterceptMessage> beforeAsyncIntercepts =
           allIntercepts.get(InterceptType.BEFORE_ASYNC).getMatchingIntercepts(execMessage);
-      final List<InterceptRequest> aroundIntercepts =
+      final List<Intercepts.InterceptMessage> aroundIntercepts =
           allIntercepts.get(InterceptType.AROUND).getMatchingIntercepts(execMessage);
-      final List<InterceptRequest> allIntercepts =
+      final List<InterceptMessage> allIntercepts =
           new ArrayList<>(
               beforeIntercepts.size() + beforeAsyncIntercepts.size() + aroundIntercepts.size());
       allIntercepts.addAll(beforeIntercepts);
@@ -87,11 +89,11 @@ class OutgoingMessageDispatcher extends ConnectedService {
       allIntercepts.addAll(aroundIntercepts);
       return allIntercepts;
     } else if (phase.equals(ExecPhase.AFTER)) {
-      final List<InterceptRequest> afterIntercepts =
+      final List<Intercepts.InterceptMessage> afterIntercepts =
           allIntercepts.get(InterceptType.AFTER).getMatchingIntercepts(execMessage);
-      final List<InterceptRequest> afterAsyncIntercepts =
+      final List<Intercepts.InterceptMessage> afterAsyncIntercepts =
           allIntercepts.get(InterceptType.AFTER_ASYNC).getMatchingIntercepts(execMessage);
-      final List<InterceptRequest> allIntercepts =
+      final List<Intercepts.InterceptMessage> allIntercepts =
           new ArrayList<>(afterIntercepts.size() + afterAsyncIntercepts.size());
       allIntercepts.addAll(afterIntercepts);
       allIntercepts.addAll(afterAsyncIntercepts);
@@ -149,7 +151,7 @@ class OutgoingMessageDispatcher extends ConnectedService {
       // deal with message, send reply and [publish]
       if (msg != null) {
         // Intercept Requests
-        if (msg.getMessageType().equals(MessageType.InterceptRequest)) {
+        if (msg.getMessageType().equals(MessageType.InterceptMessage)) {
           // Incoming (i.e. register for matching against ExecMessages)
           if (isIncomingInterceptRequest(msg)) {
             final boolean registered = registerInterceptRequest(msg);
@@ -175,7 +177,7 @@ class OutgoingMessageDispatcher extends ConnectedService {
             repSocket.send(ERROR_REPLY);
             continue; // no need to publish
           }
-          final List<InterceptRequest> matchingIntercepts =
+          final List<Intercepts.InterceptMessage> matchingIntercepts =
               getMatchingIntercepts(execMessage, msg.getExecPhase());
           // reply to REQ with matching intercept requests, if any
           new InterceptsMsg(matchingIntercepts).send(repSocket);

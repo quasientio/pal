@@ -10,10 +10,9 @@ import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Intercepts;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -62,8 +61,8 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
           }
           if (msg.getMessageType().equals(MessageType.ExecMessage)) {
             messagesReceived.add(ExecMessage.parseFrom(msg.getBody()));
-          } else if (msg.getMessageType().equals(MessageType.InterceptRequest)) {
-            messagesReceived.add(InterceptRequest.parseFrom(msg.getBody()));
+          } else if (msg.getMessageType().equals(MessageType.InterceptMessage)) {
+            messagesReceived.add(Intercepts.InterceptMessage.parseFrom(msg.getBody()));
           } else {
             throw new RuntimeException(format("unhandled message type: %s", msg.getMessageType()));
           }
@@ -148,8 +147,8 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   @Test
   public void sendInterceptRequestMessage() throws Exception {
     // sends msg and get reply
-    InterceptRequest msg =
-        msgBuilder.buildInterceptRequest(
+    Intercepts.InterceptMessage msg =
+        msgBuilder.buildInterceptMessage(
             peerUuid,
             Intercepts.InterceptType.BEFORE,
             "java.io.PrintStream",
@@ -157,7 +156,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
             Collections.EMPTY_LIST,
             this.getClass().getName(),
             "someCallbackMethod");
-    int resultCode = dispatcherConnector.sendOutInterceptRequestMessage(msg);
+    int resultCode = dispatcherConnector.sendOutInterceptRequest(msg);
 
     assertThat(resultCode, is(0));
     assertThat(outDispatcherStub.messagesReceived.size(), is(1));

@@ -27,7 +27,7 @@ message InterceptableField {
     required FieldOpType type = 2;
 }
 
-message InterceptRequest {
+message InterceptMessage {
     required string peerUuid = 1;
     required string messageUuid = 2;
     required InterceptType type = 3;

@@ -12,4 +12,5 @@ protoc -I=$SRC_DIR --java_out=$DST_DIR $SRC_DIR/exceptions.proto
 protoc -I=$SRC_DIR --java_out=$DST_DIR $SRC_DIR/values.proto
 protoc -I=$SRC_DIR --java_out=$DST_DIR $SRC_DIR/ctxt.proto
 protoc -I=$SRC_DIR --java_out=$DST_DIR $SRC_DIR/intercepts.proto
+protoc -I=$SRC_DIR --java_out=$DST_DIR $SRC_DIR/exec.proto
 protoc -I=$SRC_DIR --java_out=$DST_DIR $SRC_DIR/headers.proto

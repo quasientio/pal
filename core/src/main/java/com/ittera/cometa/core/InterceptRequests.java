@@ -1,8 +1,8 @@
 package com.ittera.cometa.core;
 
 import com.ittera.cometa.core.exec.java.InterceptRequestEntry;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts;
-import com.ittera.cometa.messages.protobuf.Wrappers;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -18,7 +18,7 @@ class InterceptRequests {
   private final List<InterceptRequestEntry> fieldGetIntercepts = new ArrayList<>();
   private final List<InterceptRequestEntry> fieldPutIntercepts = new ArrayList<>();
 
-  List<Intercepts.InterceptRequest> getMatchingIntercepts(Wrappers.ExecMessage execMessage) {
+  List<Intercepts.InterceptMessage> getMatchingIntercepts(ExecMessage execMessage) {
     final List<InterceptRequestEntry> interceptEntriesToSearch;
     switch (execMessage.getMsgType()) {
       case CONSTRUCTOR:
@@ -44,27 +44,27 @@ class InterceptRequests {
     }
     return interceptEntriesToSearch.stream()
         .filter(i -> i.matches(execMessage))
-        .map(InterceptRequestEntry::getInterceptRequestMessage)
+        .map(InterceptRequestEntry::getInterceptMessage)
         .collect(Collectors.toList());
   }
 
-  boolean registerInterceptRequest(Intercepts.InterceptRequest interceptRequest) {
-    InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptRequest);
+  boolean registerInterceptRequest(Intercepts.InterceptMessage interceptMessage) {
+    InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
 
-    if (interceptRequest.hasField()) {
-      if (interceptRequest.getField().getType().equals(Intercepts.FieldOpType.GET)) {
+    if (interceptMessage.hasField()) {
+      if (interceptMessage.getField().getType().equals(Intercepts.FieldOpType.GET)) {
         fieldGetIntercepts.add(interceptRequestEntry);
       } else {
         fieldPutIntercepts.add(interceptRequestEntry);
       }
-    } else if (interceptRequest.hasMethod()) {
-      if (interceptRequest.getMethod().getName().equalsIgnoreCase("new")) {
+    } else if (interceptMessage.hasMethod()) {
+      if (interceptMessage.getMethod().getName().equalsIgnoreCase("new")) {
         constructorIntercepts.add(interceptRequestEntry);
       } else {
         methodIntercepts.add(interceptRequestEntry);
       }
     } else {
-      logger.warn("Discarding unsupported intercept request: {}", interceptRequest);
+      logger.warn("Discarding unsupported intercept request: {}", interceptMessage);
       return false;
     }
     return true;

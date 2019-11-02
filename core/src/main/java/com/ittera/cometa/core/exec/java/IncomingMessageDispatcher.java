@@ -1,8 +1,8 @@
 package com.ittera.cometa.core.exec.java;
 
 import com.ittera.cometa.core.exec.UnsupportedMessageException;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.slf4j.Logger;
@@ -55,7 +55,7 @@ public class IncomingMessageDispatcher {
     }
   }
 
-  public boolean incomingIntercept(InterceptRequest interceptMessage, boolean isDirect) {
+  public boolean incomingIntercept(InterceptMessage interceptMessage, boolean isDirect) {
     if (logger.isDebugEnabled()) {
       logger.debug(String.format("incomingCall with intercept msg:%n%s", interceptMessage));
     }

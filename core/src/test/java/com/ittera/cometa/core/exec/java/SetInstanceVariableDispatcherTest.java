@@ -11,7 +11,7 @@ import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 import com.ittera.cometa.common.lang.reflect.Signature;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.*;

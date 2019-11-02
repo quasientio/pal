@@ -3,20 +3,17 @@ package com.ittera.cometa.core;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
-import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.core.kafka.internals.RecordHeaders;
 import com.ittera.cometa.core.messages.InboundLogMsg;
 import com.ittera.cometa.cxn.PALDirectory;
-import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,7 +23,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.record.TimestampType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -64,13 +60,14 @@ public class LogReaderTest extends ZmqEnabledTest {
         InboundLogMsg logMsg = null;
         try {
           logMsg = InboundLogMsg.recvMsg(socket, true);
-          if (logMsg.getMessageType().equals(MessageType.ExecMessage)) {
-            ExecMessage msg = ExecMessage.parseFrom(logMsg.getBody());
+          Message wrapper = Message.parseFrom(logMsg.getBody());
+          if (wrapper.hasExecMessage()) {
+            ExecMessage msg = wrapper.getExecMessage();
             logger.debug("ExecMessage received = {}", msg);
             rcvdMsgUuids.add(msg.getMessageUuid());
           } else {
-            InterceptRequest msg = InterceptRequest.parseFrom(logMsg.getBody());
-            logger.debug("InterceptRequest msg received = {}", msg);
+            InterceptMessage msg = wrapper.getInterceptMessage();
+            logger.debug("InterceptMessage msg received = {}", msg);
             rcvdMsgUuids.add(msg.getMessageUuid());
           }
         } catch (ZMQException ex) {
@@ -180,29 +177,13 @@ public class LogReaderTest extends ZmqEnabledTest {
     Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
     execService.submit(logMsgInvoker);
 
-    // prepare headers
-    RecordHeaders headers =
-        new RecordHeaders(
-            Collections.singleton(
-                new LogMessageHeader("type", Ints.toByteArray(MessageType.ExecMessage.ordinal()))));
-
     // send 1 message
     MessageBuilder msgBuilder = new ProtobufMessageBuilder();
     String key = peerUuid.toString();
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     ConsumerRecord<String, byte[]> record =
         new ConsumerRecord<>(
-            this.log.getName(),
-            partition,
-            0,
-            0,
-            TimestampType.CREATE_TIME,
-            0L,
-            key.getBytes().length,
-            msg.toByteArray().length,
-            key,
-            msg.toByteArray(),
-            headers);
+            this.log.getName(), partition, 0, key, msgBuilder.wrap(msg).toByteArray());
     this.consumer.addRecord(record);
 
     // assert received = 0
@@ -258,12 +239,6 @@ public class LogReaderTest extends ZmqEnabledTest {
     Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
     execService.submit(logMsgInvoker);
 
-    // prepare headers
-    RecordHeaders headers =
-        new RecordHeaders(
-            Collections.singleton(
-                new LogMessageHeader("type", Ints.toByteArray(MessageType.ExecMessage.ordinal()))));
-
     // send 1 message
     MessageBuilder msgBuilder = new ProtobufMessageBuilder();
     String key = peerUuid.toString();
@@ -271,17 +246,7 @@ public class LogReaderTest extends ZmqEnabledTest {
 
     ConsumerRecord<String, byte[]> record =
         new ConsumerRecord<>(
-            this.log.getName(),
-            partition,
-            0,
-            0,
-            TimestampType.CREATE_TIME,
-            0L,
-            key.getBytes().length,
-            msg.toByteArray().length,
-            key,
-            msg.toByteArray(),
-            headers);
+            this.log.getName(), partition, 0, key, msgBuilder.wrap(msg).toByteArray());
     this.consumer.addRecord(record);
 
     Thread.sleep(500);
@@ -299,7 +264,7 @@ public class LogReaderTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void consumeInterceptRequestMessage() throws Exception {
+  public void consumeInterceptMessage() throws Exception {
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -315,18 +280,11 @@ public class LogReaderTest extends ZmqEnabledTest {
     Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
     execService.submit(logMsgInvoker);
 
-    // prepare headers
-    RecordHeaders headers =
-        new RecordHeaders(
-            Collections.singleton(
-                new LogMessageHeader(
-                    "type", Ints.toByteArray(MessageType.InterceptRequest.ordinal()))));
-
     // send 1 message
     MessageBuilder msgBuilder = new ProtobufMessageBuilder();
     String key = peerUuid.toString();
-    InterceptRequest msg =
-        msgBuilder.buildInterceptRequest(
+    Intercepts.InterceptMessage msg =
+        msgBuilder.buildInterceptMessage(
             peerUuid,
             Intercepts.InterceptType.BEFORE,
             "java.io.PrintStream",
@@ -336,17 +294,7 @@ public class LogReaderTest extends ZmqEnabledTest {
             "someCallbackMethod");
     ConsumerRecord<String, byte[]> record =
         new ConsumerRecord<>(
-            this.log.getName(),
-            partition,
-            0,
-            0,
-            TimestampType.CREATE_TIME,
-            0L,
-            key.getBytes().length,
-            msg.toByteArray().length,
-            key,
-            msg.toByteArray(),
-            headers);
+            this.log.getName(), partition, 0, key, msgBuilder.wrap(msg).toByteArray());
     this.consumer.addRecord(record);
 
     Thread.sleep(500);
@@ -380,12 +328,6 @@ public class LogReaderTest extends ZmqEnabledTest {
     Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
     execService.submit(logMsgInvoker);
 
-    // prepare headers
-    RecordHeaders headers =
-        new RecordHeaders(
-            Collections.singleton(
-                new LogMessageHeader("type", Ints.toByteArray(MessageType.ExecMessage.ordinal()))));
-
     // send many messages
     MessageBuilder msgBuilder = new ProtobufMessageBuilder();
     String key = peerUuid.toString();
@@ -394,19 +336,10 @@ public class LogReaderTest extends ZmqEnabledTest {
     int msgsToSend = 30;
     for (int i = 0; i < msgsToSend; i++) {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+      long offset = i;
       ConsumerRecord<String, byte[]> record =
           new ConsumerRecord<>(
-              this.log.getName(),
-              partition,
-              i,
-              0,
-              TimestampType.CREATE_TIME,
-              0L,
-              key.getBytes().length,
-              msg.toByteArray().length,
-              key,
-              msg.toByteArray(),
-              headers);
+              this.log.getName(), partition, offset, key, msgBuilder.wrap(msg).toByteArray());
       this.consumer.addRecord(record);
       sentUuids.add(msg.getMessageUuid());
     }

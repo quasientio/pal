@@ -4,20 +4,17 @@ import com.google.protobuf.Message.Builder;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.*;
+import com.ittera.cometa.messages.protobuf.*;
 import com.ittera.cometa.messages.protobuf.Calls.*;
-import com.ittera.cometa.messages.protobuf.Ctxt;
-import com.ittera.cometa.messages.protobuf.Exceptions;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessageType;
 import com.ittera.cometa.messages.protobuf.Fields.*;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
-import com.ittera.cometa.messages.protobuf.Intercepts;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptRequest;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
-import com.ittera.cometa.messages.protobuf.Primitives;
-import com.ittera.cometa.messages.protobuf.Values;
 import com.ittera.cometa.messages.protobuf.Values.*;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessage;
-import com.ittera.cometa.messages.protobuf.Wrappers.ExecMessageType;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.lang.reflect.*;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -840,7 +837,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
 
   // <editor-fold desc="Intercept messages">
   @Override
-  public InterceptRequest buildInterceptRequest(
+  public InterceptMessage buildInterceptMessage(
       UUID peerUuid,
       InterceptType type,
       String className,
@@ -848,8 +845,8 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
       List<String> parameterTypes,
       String callbackClassName,
       String callbackMethodName) {
-    final InterceptRequest.Builder msgBuilder =
-        InterceptRequest.newBuilder()
+    final Intercepts.InterceptMessage.Builder msgBuilder =
+        InterceptMessage.newBuilder()
             .setPeerUuid(peerUuid.toString())
             .setType(type)
             .setMessageUuid(UUID.randomUUID().toString())
@@ -866,7 +863,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
   }
 
   @Override
-  public InterceptRequest buildInterceptRequest(
+  public Intercepts.InterceptMessage buildInterceptMessage(
       UUID peerUuid,
       InterceptType type,
       String className,
@@ -874,8 +871,8 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
       Intercepts.FieldOpType fieldOpType,
       String callbackClassName,
       String callbackMethodName) {
-    final InterceptRequest.Builder msgBuilder =
-        InterceptRequest.newBuilder()
+    final InterceptMessage.Builder msgBuilder =
+        Intercepts.InterceptMessage.newBuilder()
             .setPeerUuid(peerUuid.toString())
             .setType(type)
             .setMessageUuid(UUID.randomUUID().toString())
@@ -893,13 +890,25 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
 
   @Override
   public ExecMessage buildCallbackForInterceptRequest(
-      UUID peerUuid, ExecMessage interceptedMessage, InterceptRequest interceptRequest) {
+      UUID peerUuid, ExecMessage interceptedMessage, Intercepts.InterceptMessage interceptMessage) {
 
     return buildClassMethodWithMessageParameters(
         peerUuid,
-        interceptRequest.getCallbackClass(),
-        interceptRequest.getCallbackMethod(),
+        interceptMessage.getCallbackClass(),
+        interceptMessage.getCallbackMethod(),
         interceptedMessage);
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Message Wrapper">
+  @Override
+  public Message wrap(ExecMessage execMessage) {
+    return Message.newBuilder().setExecMessage(execMessage).build();
+  }
+
+  @Override
+  public Message wrap(InterceptMessage interceptMessage) {
+    return Message.newBuilder().setInterceptMessage(interceptMessage).build();
   }
   // </editor-fold>
 }
