@@ -7,9 +7,9 @@ import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
-import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,28 +64,19 @@ class OutgoingMessageDispatcher extends ConnectedService {
     pubSocket.bind(outPubAddress);
   }
 
-  private boolean registerInterceptRequest(OutboundMsg interceptMsg) {
+  private boolean registerInterceptRequest(InterceptMessage incomingInterceptMessage) {
 
-    Intercepts.InterceptMessage incomingInterceptMessage;
-    // parse message
-    try {
-      incomingInterceptMessage = Intercepts.InterceptMessage.parseFrom(interceptMsg.getBody());
-    } catch (InvalidProtocolBufferException e) {
-      logger.error("Error parsing intercept request message", e);
-      return false;
-    }
     InterceptRequests registeredIntercepts = allIntercepts.get(incomingInterceptMessage.getType());
     return registeredIntercepts.registerInterceptRequest(incomingInterceptMessage);
   }
 
-  private List<Intercepts.InterceptMessage> getMatchingIntercepts(
-      ExecMessage execMessage, ExecPhase phase) {
+  private List<InterceptMessage> getMatchingIntercepts(ExecMessage execMessage, ExecPhase phase) {
     if (phase.equals(ExecPhase.BEFORE)) {
-      final List<Intercepts.InterceptMessage> beforeIntercepts =
+      final List<InterceptMessage> beforeIntercepts =
           allIntercepts.get(InterceptType.BEFORE).getMatchingIntercepts(execMessage);
-      final List<Intercepts.InterceptMessage> beforeAsyncIntercepts =
+      final List<InterceptMessage> beforeAsyncIntercepts =
           allIntercepts.get(InterceptType.BEFORE_ASYNC).getMatchingIntercepts(execMessage);
-      final List<Intercepts.InterceptMessage> aroundIntercepts =
+      final List<InterceptMessage> aroundIntercepts =
           allIntercepts.get(InterceptType.AROUND).getMatchingIntercepts(execMessage);
       final List<InterceptMessage> allIntercepts =
           new ArrayList<>(
@@ -95,11 +86,11 @@ class OutgoingMessageDispatcher extends ConnectedService {
       allIntercepts.addAll(aroundIntercepts);
       return allIntercepts;
     } else if (phase.equals(ExecPhase.AFTER)) {
-      final List<Intercepts.InterceptMessage> afterIntercepts =
+      final List<InterceptMessage> afterIntercepts =
           allIntercepts.get(InterceptType.AFTER).getMatchingIntercepts(execMessage);
-      final List<Intercepts.InterceptMessage> afterAsyncIntercepts =
+      final List<InterceptMessage> afterAsyncIntercepts =
           allIntercepts.get(InterceptType.AFTER_ASYNC).getMatchingIntercepts(execMessage);
-      final List<Intercepts.InterceptMessage> allIntercepts =
+      final List<InterceptMessage> allIntercepts =
           new ArrayList<>(afterIntercepts.size() + afterAsyncIntercepts.size());
       allIntercepts.addAll(afterIntercepts);
       allIntercepts.addAll(afterAsyncIntercepts);
@@ -151,8 +142,10 @@ class OutgoingMessageDispatcher extends ConnectedService {
         } else {
           throw ex;
         }
-      } catch (Exception e) {
+      } catch (InvalidProtocolBufferException e) {
         logger.error("Error parsing received message", e);
+      } catch (Exception e) {
+        logger.error("Error receiving message", e);
       }
       // deal with message, send reply and [publish]
       if (msg != null) {
@@ -160,12 +153,24 @@ class OutgoingMessageDispatcher extends ConnectedService {
         if (msg.getMessageType().equals(MessageType.InterceptMessage)) {
           // Incoming (i.e. register for matching against ExecMessages)
           if (isIncomingInterceptRequest(msg)) {
-            final boolean registered = registerInterceptRequest(msg);
+            Message incomingInterceptMessage = null;
+            // parse message
+            boolean parsed = false;
+            try {
+              incomingInterceptMessage = Message.parseFrom(msg.getBody());
+              parsed = true;
+            } catch (InvalidProtocolBufferException e) {
+              logger.error("Error parsing intercept request message", e);
+            }
+            boolean registered = false;
+            if (parsed) {
+              registered = registerInterceptRequest(incomingInterceptMessage.getInterceptMessage());
+            }
             if (registered) {
               // reply 0 if registered (if it was already or we just did now)
               repSocket.send("0");
             } else {
-              // not registered (due to errors or any other reason)
+              // not parsed/registered
               repSocket.send(ERROR_REPLY);
             }
             // TODO if received via socket, then we SHOULD publish it
@@ -175,16 +180,16 @@ class OutgoingMessageDispatcher extends ConnectedService {
           }
         } // Exec Messages
         else if (msg.getMessageType().equals(MessageType.ExecMessage)) {
-          ExecMessage execMessage;
+          Message message = null;
           try {
-            execMessage = ExecMessage.parseFrom(msg.getBody());
+            message = Message.parseFrom(msg.getBody());
           } catch (InvalidProtocolBufferException e) {
-            logger.error("Parsing received ExecMessage", e);
+            logger.error("Parsing received exec message", e);
             repSocket.send(ERROR_REPLY);
             continue; // no need to publish
           }
-          final List<Intercepts.InterceptMessage> matchingIntercepts =
-              getMatchingIntercepts(execMessage, msg.getExecPhase());
+          final List<InterceptMessage> matchingIntercepts =
+              getMatchingIntercepts(message.getExecMessage(), msg.getExecPhase());
           // reply to REQ with matching intercept requests, if any
           new InterceptsMsg(matchingIntercepts).send(repSocket);
           // send ExecMessage to PUB

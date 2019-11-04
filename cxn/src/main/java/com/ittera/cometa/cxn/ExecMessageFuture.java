@@ -155,7 +155,7 @@ class ExecMessageFuture implements BackgroundCallback, CuratorWatcher, Future<Ex
           // set msg value to complete future
           ExecMessage messageReply = null;
           try {
-            messageReply = thinPeer.getMessageAtOffset(logReply.getOffset());
+            messageReply = thinPeer.getMessageAtOffset(logReply.getOffset()).getExecMessage();
           } catch (InvalidProtocolBufferException e) {
             logger.error(
                 "Error deserializing reply message for req w/uuid: {}", logRequest.getUuid(), e);

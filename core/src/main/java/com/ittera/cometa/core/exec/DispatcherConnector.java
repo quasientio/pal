@@ -11,6 +11,7 @@ import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -97,7 +98,7 @@ public class DispatcherConnector {
             headers,
             UUID.fromString(message.getMessageUuid()),
             followingUuid,
-            message.toByteArray());
+            messageBuilder.wrap(message).toByteArray());
     msg.send(outSocket);
 
     // receive intercepts, if any
@@ -187,7 +188,7 @@ public class DispatcherConnector {
             headers,
             UUID.fromString(message.getMessageUuid()),
             null,
-            message.toByteArray());
+            messageBuilder.wrap(message).toByteArray());
     msg.send(outSocket);
 
     // receive
@@ -256,7 +257,7 @@ public class DispatcherConnector {
     interceptorAddress = palDirectory.getPeerInfo(interceptor).getReqAddress();
     // connect to peer and send callback message
     req.connect(interceptorAddress);
-    req.send(message.toByteArray());
+    req.send(message.toByteArray(), 0);
 
     // block until we get a reply
     byte[] reply = null;
@@ -264,7 +265,7 @@ public class DispatcherConnector {
       reply = req.recv(0);
       if (logger.isDebugEnabled()) {
         try {
-          ExecMessage replyMessage = ExecMessage.parseFrom(reply);
+          Message replyMessage = Message.parseFrom(reply);
           logger.debug("Got reply from callback: {}", replyMessage);
         } catch (InvalidProtocolBufferException e) {
           logger.warn("Error parsing reply message", e);

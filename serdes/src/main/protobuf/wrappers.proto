@@ -11,5 +11,6 @@ message Message {
     oneof content {
         ExecMessage execMessage = 1;
         InterceptMessage interceptMessage = 2;
+        InterceptReply interceptReply = 3;
     }
 }

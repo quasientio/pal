@@ -92,7 +92,8 @@ public class ExecThreadFactory implements ThreadFactory {
                 messageBuilder,
                 zmqSocketAddress,
                 incomingMessageDispatcher,
-                dispatcherConnector);
+                dispatcherConnector,
+                peerUuid);
         break;
       case PEER:
         thread =
@@ -104,7 +105,8 @@ public class ExecThreadFactory implements ThreadFactory {
                 messageBuilder,
                 zmqSocketAddress,
                 incomingMessageDispatcher,
-                dispatcherConnector);
+                dispatcherConnector,
+                peerUuid);
         break;
       default:
         throw new IllegalArgumentException("Unknown ExecChannelType: " + execChannelType);

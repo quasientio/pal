@@ -3400,6 +3400,808 @@ public final class Intercepts {
     }
   }
 
+  public interface InterceptReplyOrBuilder
+      extends
+      // @@protoc_insertion_point(interface_extends:messages.protobuf.InterceptReply)
+      com.google.protobuf.MessageOrBuilder {
+
+    /** <code>required string peerUuid = 1;</code> */
+    boolean hasPeerUuid();
+    /** <code>required string peerUuid = 1;</code> */
+    java.lang.String getPeerUuid();
+    /** <code>required string peerUuid = 1;</code> */
+    com.google.protobuf.ByteString getPeerUuidBytes();
+
+    /** <code>required string followingUuid = 2;</code> */
+    boolean hasFollowingUuid();
+    /** <code>required string followingUuid = 2;</code> */
+    java.lang.String getFollowingUuid();
+    /** <code>required string followingUuid = 2;</code> */
+    com.google.protobuf.ByteString getFollowingUuidBytes();
+
+    /** <code>required bool result = 3;</code> */
+    boolean hasResult();
+    /** <code>required bool result = 3;</code> */
+    boolean getResult();
+  }
+  /** Protobuf type {@code messages.protobuf.InterceptReply} */
+  public static final class InterceptReply extends com.google.protobuf.GeneratedMessageV3
+      implements
+      // @@protoc_insertion_point(message_implements:messages.protobuf.InterceptReply)
+      InterceptReplyOrBuilder {
+    private static final long serialVersionUID = 0L;
+    // Use InterceptReply.newBuilder() to construct.
+    private InterceptReply(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+
+    private InterceptReply() {
+      peerUuid_ = "";
+      followingUuid_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(UnusedPrivateParameter unused) {
+      return new InterceptReply();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet getUnknownFields() {
+      return this.unknownFields;
+    }
+
+    private InterceptReply(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10:
+              {
+                com.google.protobuf.ByteString bs = input.readBytes();
+                bitField0_ |= 0x00000001;
+                peerUuid_ = bs;
+                break;
+              }
+            case 18:
+              {
+                com.google.protobuf.ByteString bs = input.readBytes();
+                bitField0_ |= 0x00000002;
+                followingUuid_ = bs;
+                break;
+              }
+            case 24:
+              {
+                bitField0_ |= 0x00000004;
+                result_ = input.readBool();
+                break;
+              }
+            default:
+              {
+                if (!parseUnknownField(input, unknownFields, extensionRegistry, tag)) {
+                  done = true;
+                }
+                break;
+              }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+
+    public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
+      return com.ittera.cometa.messages.protobuf.Intercepts
+          .internal_static_messages_protobuf_InterceptReply_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.ittera.cometa.messages.protobuf.Intercepts
+          .internal_static_messages_protobuf_InterceptReply_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.class,
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int PEERUUID_FIELD_NUMBER = 1;
+    private volatile java.lang.Object peerUuid_;
+    /** <code>required string peerUuid = 1;</code> */
+    public boolean hasPeerUuid() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /** <code>required string peerUuid = 1;</code> */
+    public java.lang.String getPeerUuid() {
+      java.lang.Object ref = peerUuid_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          peerUuid_ = s;
+        }
+        return s;
+      }
+    }
+    /** <code>required string peerUuid = 1;</code> */
+    public com.google.protobuf.ByteString getPeerUuidBytes() {
+      java.lang.Object ref = peerUuid_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+        peerUuid_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int FOLLOWINGUUID_FIELD_NUMBER = 2;
+    private volatile java.lang.Object followingUuid_;
+    /** <code>required string followingUuid = 2;</code> */
+    public boolean hasFollowingUuid() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /** <code>required string followingUuid = 2;</code> */
+    public java.lang.String getFollowingUuid() {
+      java.lang.Object ref = followingUuid_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          followingUuid_ = s;
+        }
+        return s;
+      }
+    }
+    /** <code>required string followingUuid = 2;</code> */
+    public com.google.protobuf.ByteString getFollowingUuidBytes() {
+      java.lang.Object ref = followingUuid_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+        followingUuid_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int RESULT_FIELD_NUMBER = 3;
+    private boolean result_;
+    /** <code>required bool result = 3;</code> */
+    public boolean hasResult() {
+      return ((bitField0_ & 0x00000004) != 0);
+    }
+    /** <code>required bool result = 3;</code> */
+    public boolean getResult() {
+      return result_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasPeerUuid()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasFollowingUuid()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasResult()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output) throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, peerUuid_);
+      }
+      if (((bitField0_ & 0x00000002) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, followingUuid_);
+      }
+      if (((bitField0_ & 0x00000004) != 0)) {
+        output.writeBool(3, result_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, peerUuid_);
+      }
+      if (((bitField0_ & 0x00000002) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, followingUuid_);
+      }
+      if (((bitField0_ & 0x00000004) != 0)) {
+        size += com.google.protobuf.CodedOutputStream.computeBoolSize(3, result_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+        return true;
+      }
+      if (!(obj instanceof com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply)) {
+        return super.equals(obj);
+      }
+      com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply other =
+          (com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) obj;
+
+      if (hasPeerUuid() != other.hasPeerUuid()) return false;
+      if (hasPeerUuid()) {
+        if (!getPeerUuid().equals(other.getPeerUuid())) return false;
+      }
+      if (hasFollowingUuid() != other.hasFollowingUuid()) return false;
+      if (hasFollowingUuid()) {
+        if (!getFollowingUuid().equals(other.getFollowingUuid())) return false;
+      }
+      if (hasResult() != other.hasResult()) return false;
+      if (hasResult()) {
+        if (getResult() != other.getResult()) return false;
+      }
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasPeerUuid()) {
+        hash = (37 * hash) + PEERUUID_FIELD_NUMBER;
+        hash = (53 * hash) + getPeerUuid().hashCode();
+      }
+      if (hasFollowingUuid()) {
+        hash = (37 * hash) + FOLLOWINGUUID_FIELD_NUMBER;
+        hash = (53 * hash) + getFollowingUuid().hashCode();
+      }
+      if (hasResult()) {
+        hash = (37 * hash) + RESULT_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(getResult());
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseFrom(
+        java.nio.ByteBuffer data) throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseFrom(
+        java.nio.ByteBuffer data, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseFrom(
+        byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseFrom(
+        byte[] data, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseFrom(
+        java.io.InputStream input) throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseWithIOException(PARSER, input);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseFrom(
+        java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseWithIOException(
+          PARSER, input, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseDelimitedFrom(
+        java.io.InputStream input) throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseDelimitedWithIOException(PARSER, input);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseDelimitedFrom(
+        java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseDelimitedWithIOException(
+          PARSER, input, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseFrom(
+        com.google.protobuf.CodedInputStream input) throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseWithIOException(PARSER, input);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseWithIOException(
+          PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() {
+      return newBuilder();
+    }
+
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+
+    public static Builder newBuilder(
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /** Protobuf type {@code messages.protobuf.InterceptReply} */
+    public static final class Builder
+        extends com.google.protobuf.GeneratedMessageV3.Builder<Builder>
+        implements
+        // @@protoc_insertion_point(builder_implements:messages.protobuf.InterceptReply)
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptReplyOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
+        return com.ittera.cometa.messages.protobuf.Intercepts
+            .internal_static_messages_protobuf_InterceptReply_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.ittera.cometa.messages.protobuf.Intercepts
+            .internal_static_messages_protobuf_InterceptReply_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.class,
+                com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.Builder.class);
+      }
+
+      // Construct using com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders) {}
+      }
+
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        peerUuid_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        followingUuid_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        result_ = false;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor getDescriptorForType() {
+        return com.ittera.cometa.messages.protobuf.Intercepts
+            .internal_static_messages_protobuf_InterceptReply_descriptor;
+      }
+
+      @java.lang.Override
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply
+          getDefaultInstanceForType() {
+        return com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply build() {
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply buildPartial() {
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply result =
+            new com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.peerUuid_ = peerUuid_;
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.followingUuid_ = followingUuid_;
+        if (((from_bitField0_ & 0x00000004) != 0)) {
+          result.result_ = result_;
+          to_bitField0_ |= 0x00000004;
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field, java.lang.Object value) {
+        return super.setField(field, value);
+      }
+
+      @java.lang.Override
+      public Builder clearField(com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+
+      @java.lang.Override
+      public Builder clearOneof(com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index,
+          java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field, java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) {
+          return mergeFrom((com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(
+          com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply other) {
+        if (other
+            == com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.getDefaultInstance())
+          return this;
+        if (other.hasPeerUuid()) {
+          bitField0_ |= 0x00000001;
+          peerUuid_ = other.peerUuid_;
+          onChanged();
+        }
+        if (other.hasFollowingUuid()) {
+          bitField0_ |= 0x00000002;
+          followingUuid_ = other.followingUuid_;
+          onChanged();
+        }
+        if (other.hasResult()) {
+          setResult(other.getResult());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        if (!hasPeerUuid()) {
+          return false;
+        }
+        if (!hasFollowingUuid()) {
+          return false;
+        }
+        if (!hasResult()) {
+          return false;
+        }
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage =
+              (com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply)
+                  e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private int bitField0_;
+
+      private java.lang.Object peerUuid_ = "";
+      /** <code>required string peerUuid = 1;</code> */
+      public boolean hasPeerUuid() {
+        return ((bitField0_ & 0x00000001) != 0);
+      }
+      /** <code>required string peerUuid = 1;</code> */
+      public java.lang.String getPeerUuid() {
+        java.lang.Object ref = peerUuid_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            peerUuid_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /** <code>required string peerUuid = 1;</code> */
+      public com.google.protobuf.ByteString getPeerUuidBytes() {
+        java.lang.Object ref = peerUuid_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+          peerUuid_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /** <code>required string peerUuid = 1;</code> */
+      public Builder setPeerUuid(java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        peerUuid_ = value;
+        onChanged();
+        return this;
+      }
+      /** <code>required string peerUuid = 1;</code> */
+      public Builder clearPeerUuid() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        peerUuid_ = getDefaultInstance().getPeerUuid();
+        onChanged();
+        return this;
+      }
+      /** <code>required string peerUuid = 1;</code> */
+      public Builder setPeerUuidBytes(com.google.protobuf.ByteString value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        peerUuid_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object followingUuid_ = "";
+      /** <code>required string followingUuid = 2;</code> */
+      public boolean hasFollowingUuid() {
+        return ((bitField0_ & 0x00000002) != 0);
+      }
+      /** <code>required string followingUuid = 2;</code> */
+      public java.lang.String getFollowingUuid() {
+        java.lang.Object ref = followingUuid_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            followingUuid_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /** <code>required string followingUuid = 2;</code> */
+      public com.google.protobuf.ByteString getFollowingUuidBytes() {
+        java.lang.Object ref = followingUuid_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+          followingUuid_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /** <code>required string followingUuid = 2;</code> */
+      public Builder setFollowingUuid(java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
+        followingUuid_ = value;
+        onChanged();
+        return this;
+      }
+      /** <code>required string followingUuid = 2;</code> */
+      public Builder clearFollowingUuid() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        followingUuid_ = getDefaultInstance().getFollowingUuid();
+        onChanged();
+        return this;
+      }
+      /** <code>required string followingUuid = 2;</code> */
+      public Builder setFollowingUuidBytes(com.google.protobuf.ByteString value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
+        followingUuid_ = value;
+        onChanged();
+        return this;
+      }
+
+      private boolean result_;
+      /** <code>required bool result = 3;</code> */
+      public boolean hasResult() {
+        return ((bitField0_ & 0x00000004) != 0);
+      }
+      /** <code>required bool result = 3;</code> */
+      public boolean getResult() {
+        return result_;
+      }
+      /** <code>required bool result = 3;</code> */
+      public Builder setResult(boolean value) {
+        bitField0_ |= 0x00000004;
+        result_ = value;
+        onChanged();
+        return this;
+      }
+      /** <code>required bool result = 3;</code> */
+      public Builder clearResult() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        result_ = false;
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+      // @@protoc_insertion_point(builder_scope:messages.protobuf.InterceptReply)
+    }
+
+    // @@protoc_insertion_point(class_scope:messages.protobuf.InterceptReply)
+    private static final com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply
+        DEFAULT_INSTANCE;
+
+    static {
+      DEFAULT_INSTANCE = new com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply();
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply
+        getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated
+    public static final com.google.protobuf.Parser<InterceptReply> PARSER =
+        new com.google.protobuf.AbstractParser<InterceptReply>() {
+          @java.lang.Override
+          public InterceptReply parsePartialFrom(
+              com.google.protobuf.CodedInputStream input,
+              com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+              throws com.google.protobuf.InvalidProtocolBufferException {
+            return new InterceptReply(input, extensionRegistry);
+          }
+        };
+
+    public static com.google.protobuf.Parser<InterceptReply> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<InterceptReply> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply
+        getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+  }
+
   private static final com.google.protobuf.Descriptors.Descriptor
       internal_static_messages_protobuf_InterceptableMethod_descriptor;
   private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -3412,6 +4214,10 @@ public final class Intercepts {
       internal_static_messages_protobuf_InterceptMessage_descriptor;
   private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_messages_protobuf_InterceptMessage_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+      internal_static_messages_protobuf_InterceptReply_descriptor;
+  private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_messages_protobuf_InterceptReply_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor getDescriptor() {
     return descriptor;
@@ -3433,11 +4239,12 @@ public final class Intercepts {
           + "\n\006method\030\006 \001(\0132&.messages.protobuf.Inter"
           + "ceptableMethodH\000\022\025\n\rcallbackClass\030\007 \002(\t\022"
           + "\026\n\016callbackMethod\030\010 \002(\tB\017\n\rinterceptable"
-          + "*U\n\rInterceptType\022\n\n\006BEFORE\020\001\022\t\n\005AFTER\020\002"
-          + "\022\n\n\006AROUND\020\003\022\020\n\014BEFORE_ASYNC\020\004\022\017\n\013AFTER_"
-          + "ASYNC\020\005*\037\n\013FieldOpType\022\007\n\003GET\020\001\022\007\n\003PUT\020\002"
-          + "B\'\n#com.ittera.cometa.messages.protobufH"
-          + "\001"
+          + "\"I\n\016InterceptReply\022\020\n\010peerUuid\030\001 \002(\t\022\025\n\r"
+          + "followingUuid\030\002 \002(\t\022\016\n\006result\030\003 \002(\010*U\n\rI"
+          + "nterceptType\022\n\n\006BEFORE\020\001\022\t\n\005AFTER\020\002\022\n\n\006A"
+          + "ROUND\020\003\022\020\n\014BEFORE_ASYNC\020\004\022\017\n\013AFTER_ASYNC"
+          + "\020\005*\037\n\013FieldOpType\022\007\n\003GET\020\001\022\007\n\003PUT\020\002B\'\n#c"
+          + "om.ittera.cometa.messages.protobufH\001"
     };
     descriptor =
         com.google.protobuf.Descriptors.FileDescriptor.internalBuildGeneratedFileFrom(
@@ -3473,6 +4280,14 @@ public final class Intercepts {
               "CallbackClass",
               "CallbackMethod",
               "Interceptable",
+            });
+    internal_static_messages_protobuf_InterceptReply_descriptor =
+        getDescriptor().getMessageTypes().get(3);
+    internal_static_messages_protobuf_InterceptReply_fieldAccessorTable =
+        new com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+            internal_static_messages_protobuf_InterceptReply_descriptor,
+            new java.lang.String[] {
+              "PeerUuid", "FollowingUuid", "Result",
             });
   }
 

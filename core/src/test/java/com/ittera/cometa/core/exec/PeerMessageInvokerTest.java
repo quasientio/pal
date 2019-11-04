@@ -14,6 +14,7 @@ import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
@@ -79,7 +80,8 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
                 });
 
     this.peerMessageInvoker =
-        new PeerMessageInvoker(context, msgBuilder, DEALER_ADDR, incomingMessageDispatcher);
+        new PeerMessageInvoker(
+            context, msgBuilder, DEALER_ADDR, incomingMessageDispatcher, peerUuid);
   }
 
   @After
@@ -105,12 +107,13 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
 
     // deal msg
     ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    Message wrapper = msgBuilder.wrap(invokable);
     dealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
-    dealerSocket.send(invokable.toByteArray(), 0);
+    dealerSocket.send(wrapper.toByteArray(), 0);
     // get reply
     dealerSocket.recv(); // 1st frame empty to emulate REP envelope
     byte[] buff = dealerSocket.recv();
-    ExecMessage reply = ExecMessage.parseFrom(buff);
+    ExecMessage reply = Message.parseFrom(buff).getExecMessage();
 
     assertThat(peerMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(1)));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
@@ -132,13 +135,14 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
     for (int i = 0; i < msgCount; i++) {
       // deal msg
       ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+      Message wrapper = msgBuilder.wrap(invokable);
       dealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
-      dealerSocket.send(invokable.toByteArray(), 0);
+      dealerSocket.send(wrapper.toByteArray(), 0);
       msgsToInvoke.add(invokable);
       // get reply
       dealerSocket.recv(); // 1st frame empty to emulate REP envelope
       byte[] buff = dealerSocket.recv();
-      ExecMessage reply = ExecMessage.parseFrom(buff);
+      ExecMessage reply = Message.parseFrom(buff).getExecMessage();
       replyMessages.add(reply);
     }
 

@@ -32,6 +32,14 @@ public final class Wrappers {
     com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessageOrBuilder
         getInterceptMessageOrBuilder();
 
+    /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+    boolean hasInterceptReply();
+    /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+    com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply getInterceptReply();
+    /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+    com.ittera.cometa.messages.protobuf.Intercepts.InterceptReplyOrBuilder
+        getInterceptReplyOrBuilder();
+
     public com.ittera.cometa.messages.protobuf.Wrappers.Message.ContentCase getContentCase();
   }
   /** Protobuf type {@code messages.protobuf.Message} */
@@ -117,6 +125,27 @@ public final class Wrappers {
                 contentCase_ = 2;
                 break;
               }
+            case 26:
+              {
+                com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.Builder subBuilder =
+                    null;
+                if (contentCase_ == 3) {
+                  subBuilder =
+                      ((com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) content_)
+                          .toBuilder();
+                }
+                content_ =
+                    input.readMessage(
+                        com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.PARSER,
+                        extensionRegistry);
+                if (subBuilder != null) {
+                  subBuilder.mergeFrom(
+                      (com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) content_);
+                  content_ = subBuilder.buildPartial();
+                }
+                contentCase_ = 3;
+                break;
+              }
             default:
               {
                 if (!parseUnknownField(input, unknownFields, extensionRegistry, tag)) {
@@ -158,6 +187,7 @@ public final class Wrappers {
     public enum ContentCase implements com.google.protobuf.Internal.EnumLite {
       EXECMESSAGE(1),
       INTERCEPTMESSAGE(2),
+      INTERCEPTREPLY(3),
       CONTENT_NOT_SET(0);
       private final int value;
 
@@ -176,6 +206,8 @@ public final class Wrappers {
             return EXECMESSAGE;
           case 2:
             return INTERCEPTMESSAGE;
+          case 3:
+            return INTERCEPTREPLY;
           case 0:
             return CONTENT_NOT_SET;
           default:
@@ -233,6 +265,27 @@ public final class Wrappers {
       return com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage.getDefaultInstance();
     }
 
+    public static final int INTERCEPTREPLY_FIELD_NUMBER = 3;
+    /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+    public boolean hasInterceptReply() {
+      return contentCase_ == 3;
+    }
+    /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+    public com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply getInterceptReply() {
+      if (contentCase_ == 3) {
+        return (com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) content_;
+      }
+      return com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.getDefaultInstance();
+    }
+    /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+    public com.ittera.cometa.messages.protobuf.Intercepts.InterceptReplyOrBuilder
+        getInterceptReplyOrBuilder() {
+      if (contentCase_ == 3) {
+        return (com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) content_;
+      }
+      return com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.getDefaultInstance();
+    }
+
     private byte memoizedIsInitialized = -1;
 
     @java.lang.Override
@@ -253,6 +306,12 @@ public final class Wrappers {
           return false;
         }
       }
+      if (hasInterceptReply()) {
+        if (!getInterceptReply().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -265,6 +324,10 @@ public final class Wrappers {
       if (contentCase_ == 2) {
         output.writeMessage(
             2, (com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage) content_);
+      }
+      if (contentCase_ == 3) {
+        output.writeMessage(
+            3, (com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) content_);
       }
       unknownFields.writeTo(output);
     }
@@ -284,6 +347,11 @@ public final class Wrappers {
         size +=
             com.google.protobuf.CodedOutputStream.computeMessageSize(
                 2, (com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage) content_);
+      }
+      if (contentCase_ == 3) {
+        size +=
+            com.google.protobuf.CodedOutputStream.computeMessageSize(
+                3, (com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) content_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -309,6 +377,9 @@ public final class Wrappers {
         case 2:
           if (!getInterceptMessage().equals(other.getInterceptMessage())) return false;
           break;
+        case 3:
+          if (!getInterceptReply().equals(other.getInterceptReply())) return false;
+          break;
         case 0:
         default:
       }
@@ -331,6 +402,10 @@ public final class Wrappers {
         case 2:
           hash = (37 * hash) + INTERCEPTMESSAGE_FIELD_NUMBER;
           hash = (53 * hash) + getInterceptMessage().hashCode();
+          break;
+        case 3:
+          hash = (37 * hash) + INTERCEPTREPLY_FIELD_NUMBER;
+          hash = (53 * hash) + getInterceptReply().hashCode();
           break;
         case 0:
         default:
@@ -520,6 +595,13 @@ public final class Wrappers {
             result.content_ = interceptMessageBuilder_.build();
           }
         }
+        if (contentCase_ == 3) {
+          if (interceptReplyBuilder_ == null) {
+            result.content_ = content_;
+          } else {
+            result.content_ = interceptReplyBuilder_.build();
+          }
+        }
         result.bitField0_ = to_bitField0_;
         result.contentCase_ = contentCase_;
         onBuilt();
@@ -585,6 +667,11 @@ public final class Wrappers {
               mergeInterceptMessage(other.getInterceptMessage());
               break;
             }
+          case INTERCEPTREPLY:
+            {
+              mergeInterceptReply(other.getInterceptReply());
+              break;
+            }
           case CONTENT_NOT_SET:
             {
               break;
@@ -604,6 +691,11 @@ public final class Wrappers {
         }
         if (hasInterceptMessage()) {
           if (!getInterceptMessage().isInitialized()) {
+            return false;
+          }
+        }
+        if (hasInterceptReply()) {
+          if (!getInterceptReply().isInitialized()) {
             return false;
           }
         }
@@ -919,6 +1011,143 @@ public final class Wrappers {
         return interceptMessageBuilder_;
       }
 
+      private com.google.protobuf.SingleFieldBuilderV3<
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply,
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.Builder,
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptReplyOrBuilder>
+          interceptReplyBuilder_;
+      /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+      public boolean hasInterceptReply() {
+        return contentCase_ == 3;
+      }
+      /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply getInterceptReply() {
+        if (interceptReplyBuilder_ == null) {
+          if (contentCase_ == 3) {
+            return (com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) content_;
+          }
+          return com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.getDefaultInstance();
+        } else {
+          if (contentCase_ == 3) {
+            return interceptReplyBuilder_.getMessage();
+          }
+          return com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.getDefaultInstance();
+        }
+      }
+      /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+      public Builder setInterceptReply(
+          com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply value) {
+        if (interceptReplyBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          content_ = value;
+          onChanged();
+        } else {
+          interceptReplyBuilder_.setMessage(value);
+        }
+        contentCase_ = 3;
+        return this;
+      }
+      /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+      public Builder setInterceptReply(
+          com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.Builder builderForValue) {
+        if (interceptReplyBuilder_ == null) {
+          content_ = builderForValue.build();
+          onChanged();
+        } else {
+          interceptReplyBuilder_.setMessage(builderForValue.build());
+        }
+        contentCase_ = 3;
+        return this;
+      }
+      /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+      public Builder mergeInterceptReply(
+          com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply value) {
+        if (interceptReplyBuilder_ == null) {
+          if (contentCase_ == 3
+              && content_
+                  != com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply
+                      .getDefaultInstance()) {
+            content_ =
+                com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.newBuilder(
+                        (com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) content_)
+                    .mergeFrom(value)
+                    .buildPartial();
+          } else {
+            content_ = value;
+          }
+          onChanged();
+        } else {
+          if (contentCase_ == 3) {
+            interceptReplyBuilder_.mergeFrom(value);
+          }
+          interceptReplyBuilder_.setMessage(value);
+        }
+        contentCase_ = 3;
+        return this;
+      }
+      /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+      public Builder clearInterceptReply() {
+        if (interceptReplyBuilder_ == null) {
+          if (contentCase_ == 3) {
+            contentCase_ = 0;
+            content_ = null;
+            onChanged();
+          }
+        } else {
+          if (contentCase_ == 3) {
+            contentCase_ = 0;
+            content_ = null;
+          }
+          interceptReplyBuilder_.clear();
+        }
+        return this;
+      }
+      /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.Builder
+          getInterceptReplyBuilder() {
+        return getInterceptReplyFieldBuilder().getBuilder();
+      }
+      /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptReplyOrBuilder
+          getInterceptReplyOrBuilder() {
+        if ((contentCase_ == 3) && (interceptReplyBuilder_ != null)) {
+          return interceptReplyBuilder_.getMessageOrBuilder();
+        } else {
+          if (contentCase_ == 3) {
+            return (com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) content_;
+          }
+          return com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.getDefaultInstance();
+        }
+      }
+      /** <code>optional .messages.protobuf.InterceptReply interceptReply = 3;</code> */
+      private com.google.protobuf.SingleFieldBuilderV3<
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply,
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.Builder,
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptReplyOrBuilder>
+          getInterceptReplyFieldBuilder() {
+        if (interceptReplyBuilder_ == null) {
+          if (!(contentCase_ == 3)) {
+            content_ =
+                com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.getDefaultInstance();
+          }
+          interceptReplyBuilder_ =
+              new com.google.protobuf.SingleFieldBuilderV3<
+                  com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply,
+                  com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply.Builder,
+                  com.ittera.cometa.messages.protobuf.Intercepts.InterceptReplyOrBuilder>(
+                  (com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply) content_,
+                  getParentForChildren(),
+                  isClean());
+          content_ = null;
+        }
+        contentCase_ = 3;
+        onChanged();
+        ;
+        return interceptReplyBuilder_;
+      }
+
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -986,12 +1215,13 @@ public final class Wrappers {
   static {
     java.lang.String[] descriptorData = {
       "\n\016wrappers.proto\022\021messages.protobuf\032\nexe"
-          + "c.proto\032\020intercepts.proto\"\214\001\n\007Message\0225\n"
+          + "c.proto\032\020intercepts.proto\"\311\001\n\007Message\0225\n"
           + "\013execMessage\030\001 \001(\0132\036.messages.protobuf.E"
           + "xecMessageH\000\022?\n\020interceptMessage\030\002 \001(\0132#"
-          + ".messages.protobuf.InterceptMessageH\000B\t\n"
-          + "\007contentB\'\n#com.ittera.cometa.messages.p"
-          + "rotobufH\001"
+          + ".messages.protobuf.InterceptMessageH\000\022;\n"
+          + "\016interceptReply\030\003 \001(\0132!.messages.protobu"
+          + "f.InterceptReplyH\000B\t\n\007contentB\'\n#com.itt"
+          + "era.cometa.messages.protobufH\001"
     };
     descriptor =
         com.google.protobuf.Descriptors.FileDescriptor.internalBuildGeneratedFileFrom(
@@ -1005,7 +1235,7 @@ public final class Wrappers {
         new com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
             internal_static_messages_protobuf_Message_descriptor,
             new java.lang.String[] {
-              "ExecMessage", "InterceptMessage", "Content",
+              "ExecMessage", "InterceptMessage", "InterceptReply", "Content",
             });
     com.ittera.cometa.messages.protobuf.Exec.getDescriptor();
     com.ittera.cometa.messages.protobuf.Intercepts.getDescriptor();

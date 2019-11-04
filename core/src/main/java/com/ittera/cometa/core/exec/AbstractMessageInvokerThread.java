@@ -1,10 +1,14 @@
 package com.ittera.cometa.core.exec;
 
+import static java.lang.String.format;
+
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -25,6 +29,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   protected final String dealerAddress;
   protected ZMQ.Socket socket;
 
+  private final UUID peerUuid;
   private final IncomingMessageDispatcher incomingMessageDispatcher;
   protected final DispatcherConnector dispatcherConnector;
   protected final MessageBuilder messageBuilder;
@@ -37,13 +42,15 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       MessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
-      DispatcherConnector dispatcherConnector) {
+      DispatcherConnector dispatcherConnector,
+      UUID peerUuid) {
     super(group, target, name);
     this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
     this.dealerAddress = dealerAddress;
     this.incomingMessageDispatcher = incomingMessageDispatcher;
     this.dispatcherConnector = dispatcherConnector;
+    this.peerUuid = peerUuid;
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Initialized message invoker thread named: {} with dealerAddress: {}",
@@ -60,12 +67,14 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       ZContext zmqContext,
       MessageBuilder messageBuilder,
       String dealerAddress,
-      IncomingMessageDispatcher incomingMessageDispatcher) {
+      IncomingMessageDispatcher incomingMessageDispatcher,
+      UUID peerUuid) {
     this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
     this.dealerAddress = dealerAddress;
     this.incomingMessageDispatcher = incomingMessageDispatcher;
     this.dispatcherConnector = null;
+    this.peerUuid = peerUuid;
     if (logger.isDebugEnabled()) {
       logger.debug("Initialized message invoker thread with dealerAddress: {}", dealerAddress);
     }
@@ -116,8 +125,15 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     }
   }
 
-  protected final ExecMessage dispatch(ExecMessage requestMsg) {
-    return dispatch(requestMsg, null);
+  protected final Message dispatch(Message message) {
+    if (message.hasExecMessage()) {
+      return messageBuilder.wrap(dispatch(message.getExecMessage(), null));
+    } else if (message.hasInterceptMessage()) {
+      return messageBuilder.wrap(dispatch(message.getInterceptMessage(), null));
+    } else {
+      throw new IllegalArgumentException(
+          format("No dispatch handler for this message type: %s", message));
+    }
   }
 
   private ExecMessage dispatch(ExecMessage requestMsg, @Nullable Long recordOffset) {
@@ -142,9 +158,10 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     return replyMsg;
   }
 
-  private void dispatch(InterceptMessage interceptMsg, @Nullable Long recordOffset) {
+  private InterceptReply dispatch(InterceptMessage interceptMsg, @Nullable Long recordOffset) {
     final boolean isDirectRequest = recordOffset == null;
-    boolean result = incomingMessageDispatcher.incomingIntercept(interceptMsg, isDirectRequest);
+    final boolean result =
+        incomingMessageDispatcher.incomingIntercept(interceptMsg, isDirectRequest);
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Invoker dispatched Intercept Request w/uuid: {} and recordOffset: {}, reply: {}",
@@ -153,7 +170,11 @@ public abstract class AbstractMessageInvokerThread extends Thread {
           result);
     }
 
+    final InterceptReply interceptReply =
+        messageBuilder.buildInterceptReply(
+            peerUuid, UUID.fromString(interceptMsg.getMessageUuid()), result);
     updateCounters();
+    return interceptReply;
   }
 
   private void updateCounters() {

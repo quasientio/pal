@@ -1,12 +1,11 @@
 package com.ittera.cometa.core;
 
+import static java.lang.String.format;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.core.exec.ExecPhase;
 import com.ittera.cometa.core.messages.OutboundMsg;
@@ -18,6 +17,7 @@ import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -106,21 +106,19 @@ public class LogWriterTest extends ZmqEnabledTest {
     logWriter.writeToLog(log, log, false);
   }
 
-  private String getMessageUuid(Message msg) {
-    if (msg instanceof ExecMessage) {
-      return ((ExecMessage) msg).getMessageUuid();
-    } else if (msg instanceof Intercepts.InterceptMessage) {
-      return ((InterceptMessage) msg).getMessageUuid();
+  private String getMessageUuid(Message msg) throws IllegalArgumentException {
+    if (msg.hasExecMessage()) {
+      return msg.getExecMessage().getMessageUuid();
+    } else if (msg.hasInterceptMessage()) {
+      return msg.getInterceptMessage().getMessageUuid();
+    } else {
+      throw new IllegalArgumentException(format("Unsupported message type: %s", msg));
     }
-    return null;
   }
 
-  private String getFollowingUuid(Message msg) {
-    if (msg instanceof ExecMessage) {
-      ExecMessage execMessage = (ExecMessage) msg;
-      if (execMessage.hasFollowingUuid()) {
-        return execMessage.getFollowingUuid();
-      }
+  private UUID getFollowingUuid(Message msg) {
+    if (msg.hasExecMessage() && msg.getExecMessage().hasFollowingUuid()) {
+      return UUID.fromString(msg.getExecMessage().getFollowingUuid());
     }
     return null;
   }
@@ -161,7 +159,7 @@ public class LogWriterTest extends ZmqEnabledTest {
     int execMessagesToSend = 15;
     for (int i = 0; i < execMessagesToSend; i++) {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-      msgsCreated.add(msg);
+      msgsCreated.add(msgBuilder.wrap(msg));
     }
     // create InterceptMessages
     int interceptMessagesToSend = 5;
@@ -175,22 +173,22 @@ public class LogWriterTest extends ZmqEnabledTest {
               Collections.EMPTY_LIST,
               this.getClass().getName(),
               "someCallbackMethod");
-      msgsCreated.add(msg);
+      msgsCreated.add(msgBuilder.wrap(msg));
     }
 
     // PUB them
     msgsCreated.forEach(
         msg -> {
           MessageType msgType =
-              msg instanceof ExecMessage ? MessageType.ExecMessage : MessageType.InterceptMessage;
-          ExecPhase execPhase = msg instanceof ExecMessage ? ExecPhase.BEFORE : ExecPhase.UNDEFINED;
+              msg.hasExecMessage() ? MessageType.ExecMessage : MessageType.InterceptMessage;
+          ExecPhase execPhase = msg.hasExecMessage() ? ExecPhase.BEFORE : ExecPhase.UNDEFINED;
           OutboundMsg outMsg =
               new OutboundMsg(
                   msgType,
                   execPhase,
                   null,
                   UUID.fromString(getMessageUuid(msg)),
-                  getFollowingUuid(msg) == null ? null : UUID.fromString(getFollowingUuid(msg)),
+                  getFollowingUuid(msg),
                   msg.toByteArray());
           outMsg.send(pubSocket);
         });
@@ -204,22 +202,11 @@ public class LogWriterTest extends ZmqEnabledTest {
     // assert published messages are produced to the log
     List<String> producedMsgUuids = new ArrayList<>();
     for (ProducerRecord<String, byte[]> record : producer.history()) {
-      // since we have no headers, we have to try parsing different message types
-      Message msg = null;
-      try {
-        msg = ExecMessage.parseFrom(record.value());
-      } catch (InvalidProtocolBufferException e) {
-      }
-      if (msg == null) {
-        try {
-          msg = InterceptMessage.parseFrom(record.value());
-        } catch (InvalidProtocolBufferException e) {
-        }
-      }
+      Message msg = Message.parseFrom(record.value());
       producedMsgUuids.add(getMessageUuid(msg));
     }
     List<String> sentMsgUuids =
-        msgsCreated.stream().map(m -> getMessageUuid(m)).collect(Collectors.toList());
+        msgsCreated.stream().map(this::getMessageUuid).collect(Collectors.toList());
     assertThat(producer.history().size(), is(execMessagesToSend + interceptMessagesToSend));
     assertThat(producedMsgUuids, is(sentMsgUuids));
   }
@@ -238,10 +225,10 @@ public class LogWriterTest extends ZmqEnabledTest {
     pubSocket.bind(OUT_PUB_ADDR);
 
     int messagesToSend = 5;
-    List<ExecMessage> msgsCreated = new ArrayList<>();
+    List<Message> msgsCreated = new ArrayList<>();
     for (int i = 0; i < messagesToSend; i++) {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-      msgsCreated.add(msg);
+      msgsCreated.add(msgBuilder.wrap(msg));
     }
 
     // PUB them
@@ -255,7 +242,7 @@ public class LogWriterTest extends ZmqEnabledTest {
                       ExecPhase.BEFORE,
                       headers,
                       UUID.fromString(getMessageUuid(msg)),
-                      getFollowingUuid(msg) == null ? null : UUID.fromString(getFollowingUuid(msg)),
+                      getFollowingUuid(msg),
                       msg.toByteArray());
               outMsg.send(pubSocket);
             });
@@ -269,10 +256,10 @@ public class LogWriterTest extends ZmqEnabledTest {
     // assert published messages are produced to the log
     List<String> producedMsgUuids = new ArrayList<>();
     for (ProducerRecord<String, byte[]> record : producer.history()) {
-      producedMsgUuids.add(ExecMessage.parseFrom(record.value()).getMessageUuid());
+      producedMsgUuids.add(getMessageUuid(Message.parseFrom(record.value())));
     }
     List<String> sentMsgUuids =
-        msgsCreated.stream().map(m -> m.getMessageUuid()).collect(Collectors.toList());
+        msgsCreated.stream().map(this::getMessageUuid).collect(Collectors.toList());
     assertThat(producer.history().size(), is(messagesToSend));
     assertThat(producedMsgUuids, is(sentMsgUuids));
   }

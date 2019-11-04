@@ -25,6 +25,7 @@ import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
 import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import com.ittera.cometa.messages.protobuf.Primitives;
 import com.ittera.cometa.messages.protobuf.Values;
@@ -910,6 +911,15 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
   }
 
   @Override
+  public InterceptReply buildInterceptReply(UUID peerUuid, UUID followingUuid, boolean result) {
+    return Intercepts.InterceptReply.newBuilder()
+        .setPeerUuid(peerUuid.toString())
+        .setFollowingUuid(followingUuid.toString())
+        .setResult(result)
+        .build();
+  }
+
+  @Override
   public ExecMessage buildCallbackForInterceptRequest(
       UUID peerUuid, ExecMessage interceptedMessage, Intercepts.InterceptMessage interceptMessage) {
 
@@ -930,6 +940,11 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
   @Override
   public Message wrap(InterceptMessage interceptMessage) {
     return Message.newBuilder().setInterceptMessage(interceptMessage).build();
+  }
+
+  @Override
+  public Message wrap(InterceptReply interceptReply) {
+    return Message.newBuilder().setInterceptReply(interceptReply).build();
   }
   // </editor-fold>
 }

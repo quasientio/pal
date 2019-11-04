@@ -2,7 +2,7 @@ package com.ittera.cometa.messages;
 
 import com.google.common.primitives.Ints;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import com.ittera.cometa.messages.protobuf.Headers;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,12 +47,12 @@ public class MessageStreamer {
     return this;
   }
 
-  private ExecMessage getNext() {
+  private Message getNext() {
     byte[] buff;
     int headerCount;
     List<Headers.InternalHeader> headers = new ArrayList<>();
 
-    ExecMessage message = null;
+    Message message = null;
     try {
       // message is multi-part
       // part 1. how many headers?
@@ -78,7 +78,7 @@ public class MessageStreamer {
       buff = subscriber.recv();
 
       // parse and return message
-      message = ExecMessage.parseFrom(buff);
+      message = Message.parseFrom(buff);
       receivedMessagesCount++;
     } catch (ZMQException ex) {
       int errorCode = ex.getErrorCode();
@@ -91,9 +91,8 @@ public class MessageStreamer {
       }
     } catch (InvalidProtocolBufferException e) {
       logger.error("Caught exception parsing message. Will return null", e);
-    } finally {
-      return message;
     }
+    return message;
   }
 
   public void close() {
@@ -101,7 +100,7 @@ public class MessageStreamer {
     zContext.close();
   }
 
-  public Stream<ExecMessage> getStream() {
+  public Stream<Message> getStream() {
     return Stream.generate(this::getNext);
   }
 

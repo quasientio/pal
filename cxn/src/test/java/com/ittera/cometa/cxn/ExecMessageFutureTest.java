@@ -14,6 +14,7 @@ import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -93,6 +94,7 @@ public class ExecMessageFutureTest {
     // create reply message (ofc a constructor call is not a reply but who cares)
     ExecMessage fakeReplyMessage =
         messageBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
+    Message fakeReplyWrapper = messageBuilder.wrap(fakeReplyMessage);
 
     // create reply node, but don't add to directory just yet
     UUID replyUuid = UUID.fromString(fakeReplyMessage.getMessageUuid());
@@ -101,7 +103,7 @@ public class ExecMessageFutureTest {
 
     // set up mock ThinPeer
     thinPeer = mock(ThinPeer.class);
-    when(thinPeer.getMessageAtOffset(someOffset)).thenReturn(fakeReplyMessage);
+    when(thinPeer.getMessageAtOffset(someOffset)).thenReturn(fakeReplyWrapper);
 
     // create message future
     final ExecMessageFuture messageFuture =

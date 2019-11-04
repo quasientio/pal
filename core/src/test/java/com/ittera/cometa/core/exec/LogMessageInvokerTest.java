@@ -94,7 +94,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
                 });
 
     this.logMessageInvoker =
-        new LogMessageInvoker(context, msgBuilder, INLOG_ADDR, incomingMessageDispatcher);
+        new LogMessageInvoker(context, msgBuilder, INLOG_ADDR, incomingMessageDispatcher, peerUuid);
   }
 
   @After

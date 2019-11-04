@@ -2,7 +2,8 @@ package com.ittera.cometa.core.exec;
 
 import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.messages.MessageBuilder;
-import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
+import java.util.UUID;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
@@ -18,7 +19,8 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
       MessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
-      DispatcherConnector dispatcherConnector) {
+      DispatcherConnector dispatcherConnector,
+      UUID peerUuid) {
     super(
         group,
         target,
@@ -27,15 +29,18 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
         messageBuilder,
         dealerAddress,
         incomingMessageDispatcher,
-        dispatcherConnector);
+        dispatcherConnector,
+        peerUuid);
   }
 
+  // Constructor for unit-testing
   PeerMessageInvoker(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
       String dealerAddress,
-      IncomingMessageDispatcher incomingMessageDispatcher) {
-    super(zmqContext, messageBuilder, dealerAddress, incomingMessageDispatcher);
+      IncomingMessageDispatcher incomingMessageDispatcher,
+      UUID peerUuid) {
+    super(zmqContext, messageBuilder, dealerAddress, incomingMessageDispatcher, peerUuid);
   }
 
   @Override
@@ -45,7 +50,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
     socket = zmqContext.createSocket(SocketType.REP);
     socket.connect(dealerAddress);
 
-    ExecMessage requestMsg, replyMsg;
+    Message requestMsg, replyMsg;
 
     if (logger.isDebugEnabled()) {
       logger.debug("Start getting requests from socket");
@@ -84,7 +89,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
 
       // parse req
       try {
-        requestMsg = ExecMessage.parseFrom(req);
+        requestMsg = Message.parseFrom(req);
       } catch (Exception e) {
         logger.error("Caught exception parsing message", e);
       }
@@ -92,26 +97,30 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
       if (logger.isDebugEnabled()) {
         logger.debug(
             "Received req message with uuid: {}",
-            requestMsg != null ? requestMsg.getMessageUuid() : null);
+            requestMsg != null ? getMessageUuid(requestMsg) : null);
       }
 
       if (requestMsg != null) {
 
         // dispatch
-        replyMsg = dispatch(requestMsg);
+        try {
+          replyMsg = dispatch(requestMsg);
 
-        // send reply
-        socket.send(replyMsg.toByteArray());
+          // send reply
+          socket.send(replyMsg.toByteArray());
 
-        if (logger.isDebugEnabled()) {
-          final long took = System.currentTimeMillis() - started;
           if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Dispatched and sent direct message w/uuid: {} in reply to request w/uuid: {} in {} millisecs",
-                replyMsg.getMessageUuid(),
-                requestMsg.getMessageUuid(),
-                took);
+            final long took = System.currentTimeMillis() - started;
+            if (logger.isDebugEnabled()) {
+              logger.debug(
+                  "Dispatched and sent direct message w/uuid: {} in reply to request w/uuid: {} in {} millisecs",
+                  getMessageUuid(replyMsg),
+                  getMessageUuid(requestMsg),
+                  took);
+            }
           }
+        } catch (Exception e) {
+          logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
         }
       }
     }

@@ -39,3 +39,9 @@ message InterceptMessage {
     required string callbackClass = 7;
     required string callbackMethod = 8;
 }
+
+message InterceptReply {
+    required string peerUuid = 1;
+    required string followingUuid = 2;
+    required bool result = 3;
+}

@@ -5,6 +5,7 @@ import com.ittera.cometa.core.exec.java.IncomingMessageDispatcher;
 import com.ittera.cometa.core.messages.InboundLogMsg;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
+import java.util.UUID;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
@@ -20,7 +21,8 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
       MessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
-      DispatcherConnector dispatcherConnector) {
+      DispatcherConnector dispatcherConnector,
+      UUID peerUuid) {
     super(
         group,
         target,
@@ -29,15 +31,17 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
         messageBuilder,
         dealerAddress,
         incomingMessageDispatcher,
-        dispatcherConnector);
+        dispatcherConnector,
+        peerUuid);
   }
 
   LogMessageInvoker(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
       String dealerAddress,
-      IncomingMessageDispatcher incomingMessageDispatcher) {
-    super(zmqContext, messageBuilder, dealerAddress, incomingMessageDispatcher);
+      IncomingMessageDispatcher incomingMessageDispatcher,
+      UUID peerUuid) {
+    super(zmqContext, messageBuilder, dealerAddress, incomingMessageDispatcher, peerUuid);
   }
 
   @Override
