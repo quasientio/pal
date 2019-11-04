@@ -30,7 +30,8 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
 
-  protected static final String TEST_PROPERTIES_PATH = "/tests.properties";
+  private static final String CONSUMER_PROPERTIES_PATH = "/consumer.properties";
+  private static final String PRODUCER_PROPERTIES_PATH = "/producer.properties";
 
   protected static final UUID clientId = UUID.randomUUID();
 
@@ -53,16 +54,40 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     final Injector injector = Guice.createInjector(module);
     messageBuilder = injector.getInstance(MessageBuilder.class);
 
-    final Properties properties = new Properties();
+    final Properties consumerProperties = new Properties();
     try (final InputStream stream =
-        AbstractPeerMessageIT.class.getResourceAsStream(TEST_PROPERTIES_PATH)) {
-      properties.load(stream);
+        AbstractPeerMessageIT.class.getResourceAsStream(CONSUMER_PROPERTIES_PATH)) {
+      consumerProperties.load(stream);
     }
-    thinPeer = new ThinPeer(properties);
+    final Properties producerProperties = new Properties();
+    try (final InputStream stream =
+        AbstractPeerMessageIT.class.getResourceAsStream(PRODUCER_PROPERTIES_PATH)) {
+      producerProperties.load(stream);
+    }
+    final String palDirectoryURL = System.getenv("PAL_DIRECTORY");
+    if (palDirectoryURL == null) {
+      throw new RuntimeException(
+          "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2181)");
+    }
+    thinPeer =
+        new ThinPeer()
+            .withUUID(clientId)
+            .withDirectoryURL(palDirectoryURL)
+            .withConsumerProperties(consumerProperties)
+            .withProducerProperties(producerProperties)
+            .init();
   }
 
-  protected ExecMessage sendAndReceive(ExecMessage message) throws Exception {
-    return thinPeer.sendAndReceive(message, true);
+  private ExecMessage sendAndReceive(ExecMessage message) throws Exception {
+    ExecMessage reply;
+    try {
+      reply = thinPeer.sendAndReceive(message, true);
+    } catch (Exception e) {
+      logger.error(
+          "Exception sending/receiving message with uuid: {}", message.getMessageUuid(), e);
+      throw e;
+    }
+    return reply;
   }
 
   @AfterClass
@@ -74,13 +99,13 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
   }
 
   /** Helper Methods */
-  protected ReturnValue callConstructor(
+  ReturnValue callConstructor(
       String className, Class[] parameterTypes, Object[] args, ObjectRef[] argObjRefs)
       throws Exception {
     return callConstructor(className, parameterTypes, args, argObjRefs, null);
   }
 
-  protected ReturnValue callConstructor(
+  ReturnValue callConstructor(
       String className,
       Class[] parameterTypes,
       Object[] args,
@@ -108,11 +133,11 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  protected ReturnValue callEmptyConstructor(String className) throws Exception {
+  ReturnValue callEmptyConstructor(String className) throws Exception {
     return callEmptyConstructor(className, null);
   }
 
-  protected ReturnValue callEmptyConstructor(String className, String expectedThrowableType)
+  private ReturnValue callEmptyConstructor(String className, String expectedThrowableType)
       throws Exception {
     ExecMessage replyMsg =
         sendAndReceive(messageBuilder.buildEmptyConstructor(clientId, className));
@@ -128,12 +153,12 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  protected ReturnValue callGetStatic(String className, String fieldName) throws Exception {
+  ReturnValue callGetStatic(String className, String fieldName) throws Exception {
     return callGetStatic(className, fieldName, null);
   }
 
-  protected ReturnValue callGetStatic(
-      String className, String fieldName, String expectedThrowableType) throws Exception {
+  ReturnValue callGetStatic(String className, String fieldName, String expectedThrowableType)
+      throws Exception {
     ExecMessage requestMsg = messageBuilder.buildGetStatic(clientId, className, fieldName);
     ExecMessage replyMsg = sendAndReceive(requestMsg);
 
@@ -147,12 +172,12 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  protected void callPutStatic(
-      String className, String fieldName, String fieldClassName, Object value) throws Exception {
+  void callPutStatic(String className, String fieldName, String fieldClassName, Object value)
+      throws Exception {
     callPutStatic(className, fieldName, fieldClassName, value, null);
   }
 
-  protected void callPutStatic(
+  void callPutStatic(
       String className,
       String fieldName,
       String fieldClassName,
@@ -174,12 +199,12 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     }
   }
 
-  protected ReturnValue callGetInstanceVar(String className, String fieldName, ObjectRef objRef)
+  ReturnValue callGetInstanceVar(String className, String fieldName, ObjectRef objRef)
       throws Exception {
     return callGetInstanceVar(className, fieldName, objRef, null);
   }
 
-  protected ReturnValue callGetInstanceVar(
+  ReturnValue callGetInstanceVar(
       String className, String fieldName, ObjectRef objRef, String expectedThrowableType)
       throws Exception {
     ExecMessage requestMsg = messageBuilder.buildGetObject(clientId, className, fieldName, objRef);
@@ -195,7 +220,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  protected void callPutField(
+  void callPutField(
       String className,
       String fieldName,
       ObjectRef targetObjRef,
@@ -205,7 +230,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     callPutField(className, fieldName, targetObjRef, valueClassName, value, null);
   }
 
-  protected void callPutField(
+  void callPutField(
       String className,
       String fieldName,
       ObjectRef targetObjRef,
@@ -230,7 +255,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     }
   }
 
-  protected ReturnValue callClassMethod(
+  ReturnValue callClassMethod(
       String className,
       String methodName,
       String[] parameterTypeNames,
@@ -241,7 +266,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
         className, methodName, parameterTypeNames, parameters, paramObjRefs, null);
   }
 
-  protected ReturnValue callClassMethod(
+  ReturnValue callClassMethod(
       String className,
       String methodName,
       String[] parameterTypeNames,
@@ -271,7 +296,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  protected void callVoidClassMethod(
+  void callVoidClassMethod(
       String className,
       String methodName,
       String[] parameterTypeNames,
@@ -281,7 +306,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     callVoidClassMethod(className, methodName, parameterTypeNames, parameters, paramObjRefs, null);
   }
 
-  protected void callVoidClassMethod(
+  void callVoidClassMethod(
       String className,
       String methodName,
       String[] parameterTypeNames,
@@ -311,7 +336,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     }
   }
 
-  protected ReturnValue callInstanceMethod(
+  ReturnValue callInstanceMethod(
       String className,
       String methodName,
       ObjectRef targetObjRef,
@@ -323,7 +348,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
         className, methodName, targetObjRef, parameterTypeNames, parameters, paramObjRefs, null);
   }
 
-  protected ReturnValue callInstanceMethod(
+  ReturnValue callInstanceMethod(
       String className,
       String methodName,
       ObjectRef targetObjRef,
@@ -354,7 +379,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  protected void callVoidInstanceMethod(
+  void callVoidInstanceMethod(
       String className,
       String methodName,
       ObjectRef targetObjRef,
@@ -366,7 +391,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
         className, methodName, targetObjRef, parameterTypeNames, parameters, paramObjRefs, null);
   }
 
-  protected void callVoidInstanceMethod(
+  void callVoidInstanceMethod(
       String className,
       String methodName,
       ObjectRef targetObjRef,

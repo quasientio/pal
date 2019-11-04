@@ -51,7 +51,7 @@ public class PALDirectory implements AutoCloseable {
   private static final String KEYVALUE_SEP = "|";
   private static Charset loadedCharset;
 
-  private final String zkAddress;
+  private final String directoryUrl;
   private final CuratorFramework curator;
   private final String namespace;
   private Set<KafkaBrokerInfo> brokerInfoSet;
@@ -69,7 +69,7 @@ public class PALDirectory implements AutoCloseable {
       kafka's namespace (for /brokers), so we will handle it manually
     */
     this.namespace = namespace != null ? namespace : DEFAULT_PAL_NAMESPACE;
-    this.zkAddress = connectionString;
+    this.directoryUrl = connectionString;
     curator.start();
     try {
       createSubPaths();
@@ -392,7 +392,7 @@ public class PALDirectory implements AutoCloseable {
   // <editor-fold desc="Misc methods">
 
   public void close() {
-    logger.info("Closing zookeeper connection to {}", zkAddress);
+    logger.info("Closing zookeeper connection to {}", directoryUrl);
     curator.close();
   }
   // </editor-fold>
@@ -521,4 +521,8 @@ public class PALDirectory implements AutoCloseable {
         .build();
   }
   // </editor-fold>
+
+  public String getDirectoryUrl() {
+    return directoryUrl;
+  }
 }

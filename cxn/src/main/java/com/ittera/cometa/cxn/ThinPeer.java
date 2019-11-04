@@ -1,15 +1,16 @@
 package com.ittera.cometa.cxn;
 
-import com.google.common.primitives.Ints;
+import static java.lang.String.format;
+
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.PeerInfo;
-import com.ittera.cometa.common.util.Strings;
-import com.ittera.cometa.messages.LogMessageHeader;
-import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessageType;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
@@ -25,15 +26,15 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import javax.annotation.Nullable;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.header.Header;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -44,10 +45,12 @@ import org.zeromq.ZMQ.Socket;
 /** This class is not thread-safe. For multi-threaded scenarios, use different instances. */
 public class ThinPeer {
 
-  private final UUID defaultPeerUuid = UUID.randomUUID();
   private UUID peerUuid;
-
-  private final boolean allowP2P;
+  private String peerName;
+  private boolean allowP2P = true;
+  private boolean closed;
+  private boolean initialized;
+  private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
 
   // static
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);
@@ -58,99 +61,150 @@ public class ThinPeer {
   private Duration pollingDuration;
   private static final int PRECEDING_RECS = 50;
   private static final int PRODUCER_PARTITION = 0;
+  private static final int DEFAULT_POLLING_DURATION_MILLIS = 10;
+  private String logPrefix;
+  public final String DEFAULT_TOPIC_PREFIX = "app";
 
-  private KafkaProducer<String, byte[]> producer;
-  private KafkaConsumer<String, byte[]> consumer;
+  private Producer<String, byte[]> producer;
+  private Consumer<String, byte[]> consumer;
+  private boolean producerGiven, consumerGiven;
+  private Properties producerProperties, consumerProperties;
 
   private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap<>();
-  private ExecutorService singleThreadConsumerExecutor;
-  private final Map<String, Header> HEADERS = new HashMap<>();
+  private ExecutorService asyncConsumerExecutor;
 
   // zmq stuff
-  private final ZContext zmqContext;
-  private final Socket peerSocket;
+  private ZContext zmqContext;
+  private Socket peerSocket;
   private PeerInfo currentPeer;
   private boolean talkingToPeer;
+  private boolean zmqContextGiven;
 
   // PAL directory
   private PALDirectory palDirectory;
+  private boolean directoryGiven;
+  private String palDirectoryUrl;
 
-  // convenience constructors
-  public ThinPeer(Properties properties) throws Exception {
-    this(properties, null, null, null);
+  public ThinPeer() {}
+
+  public ThinPeer withUUID(UUID uuid) {
+    this.peerUuid = uuid;
+    return this;
   }
 
-  public ThinPeer(Properties properties, LogInfo logInfo) throws Exception {
-    this(properties, null, logInfo, logInfo);
+  public ThinPeer withName(String name) {
+    this.peerName = name;
+    return this;
   }
 
-  public ThinPeer(Properties properties, PeerInfo initialPeer, LogInfo logInfo) throws Exception {
-    this(properties, initialPeer, logInfo, logInfo);
+  public ThinPeer withLog(LogInfo log) {
+    this.inLog = log;
+    this.outLog = log;
+    return this;
   }
 
-  public ThinPeer(Properties properties, PeerInfo initialPeer) throws Exception {
-    this(properties, initialPeer, null);
-  }
-
-  public ThinPeer(Properties properties, LogInfo inLog, LogInfo outLog) throws Exception {
-    this(properties, null, inLog, outLog);
-  }
-
-  // THE constructor
-  public ThinPeer(
-      @Nullable Properties properties,
-      @Nullable PeerInfo initialPeer,
-      @Nullable LogInfo inLog,
-      @Nullable LogInfo outLog)
-      throws Exception {
-    logger.info(
-        "Initializing ThinPeer with props from: {}, initialPeer: {}, inLog: {}, outLog: {}",
-        properties,
-        initialPeer,
-        inLog,
-        outLog);
-
-    final boolean logless = initialPeer != null;
+  public ThinPeer withInLog(LogInfo inLog) {
     this.inLog = inLog;
+    return this;
+  }
+
+  public ThinPeer withOutLog(LogInfo outLog) {
     this.outLog = outLog;
+    return this;
+  }
+
+  public ThinPeer withLogPrefix(String logPrefix) {
+    this.logPrefix = logPrefix;
+    return this;
+  }
+
+  public ThinPeer withConsumer(Consumer<String, byte[]> consumer) {
+    this.consumer = consumer;
+    this.consumerGiven = true;
+    return this;
+  }
+
+  public ThinPeer withConsumerProperties(Properties properties) {
+    this.consumerProperties = properties;
+    return this;
+  }
+
+  public ThinPeer withPollingDuration(long millis) {
+    this.pollingDuration = Duration.of(millis, ChronoUnit.MILLIS);
+    return this;
+  }
+
+  public ThinPeer withProducer(Producer<String, byte[]> producer) {
+    this.producer = producer;
+    this.producerGiven = true;
+    return this;
+  }
+
+  public ThinPeer withProducerProperties(Properties properties) {
+    this.producerProperties = properties;
+    return this;
+  }
+
+  public ThinPeer withZContext(ZContext zContext) {
+    this.zmqContext = zContext;
+    this.zmqContextGiven = true;
+    return this;
+  }
+
+  public ThinPeer withInitialPeer(PeerInfo initialPeer) {
     this.currentPeer = initialPeer;
+    return this;
+  }
 
-    // set this peer's UUID
-    if (properties != null && properties.getProperty("uuid") != null) {
-      this.peerUuid = UUID.fromString(properties.getProperty("uuid"));
-    } else {
-      this.peerUuid = defaultPeerUuid;
+  public ThinPeer withNoP2P() {
+    this.allowP2P = false;
+    return this;
+  }
+
+  public ThinPeer withDirectory(PALDirectory directory) {
+    this.palDirectory = directory;
+    this.directoryGiven = true;
+    return this;
+  }
+
+  public ThinPeer withDirectoryURL(String palDirectoryUrl) {
+    this.palDirectoryUrl = palDirectoryUrl;
+    return this;
+  }
+
+  public ThinPeer init() throws Exception {
+    // if not given, create random UUID for this peer
+    if (this.peerUuid == null) {
+      this.peerUuid = UUID.randomUUID();
     }
-
-    // configure p2p
-    this.allowP2P = Boolean.parseBoolean(loadProperty("peer.allowP2P", properties, "true"));
-    logger.info("This peer will {}communicate P2P", allowP2P ? "" : "NOT ");
 
     // configure PAL directory
-    String palDirectoryUrl = loadProperty("pal_directory", properties);
-    if (palDirectoryUrl == null) {
-      throw new RuntimeException(
-          "Couldn't connect to PAL Directory. Please set the environment variable 'PAL_DIRECTORY'");
+    if (palDirectory == null) {
+      if (palDirectoryUrl == null) {
+        throw new RuntimeException("You must supply either Directory or DirectoryURL");
+      } else {
+        logger.info("Using PAL_DIRECTORY = {}", palDirectoryUrl);
+        this.palDirectory = new PALDirectory(palDirectoryUrl);
+      }
     }
-    logger.info("Using PAL_DIRECTORY = {}", palDirectoryUrl);
-    this.palDirectory = new PALDirectory(palDirectoryUrl);
+
+    // register self as peer
     try {
-      // register self as new peer TODO fill properties
       final Properties peerProperties = new Properties();
-      if (properties != null && properties.getProperty("name") != null) {
-        peerProperties.put("name", properties.getProperty("name"));
+      if (this.peerName != null) {
+        peerProperties.put("name", peerName);
       }
       palDirectory.registerPeer(peerUuid, peerProperties);
     } catch (Exception ex) {
       logger.error("Error registering peer", ex);
     }
 
+    final boolean logless = currentPeer != null;
     if (!logless) {
       // configure log(s) to connect to; fill bootstrap servers if only log names given
-      String kafkaTopicPrefix = loadProperty("kafkaTopicPrefix", properties);
+      String kafkaTopicPrefix = logPrefix != null ? logPrefix : DEFAULT_TOPIC_PREFIX;
       LogInfo lastLog = null;
       if (this.inLog == null) {
-        // get last log with prefix = kafkaTopicPrefix
         lastLog = palDirectory.getLastLog(kafkaTopicPrefix);
         this.inLog = lastLog;
       } else {
@@ -169,110 +223,76 @@ public class ThinPeer {
           this.outLog.setBrokerInfoSet(palDirectory.getKafkaBrokers());
         }
       }
-      logger.info("Will read from log: {} and write to log: {}", this.inLog, this.outLog);
+
+      logger.info("Will read from log: {}, and write to log: {}", this.inLog, this.outLog);
 
       // configure kafka producer
-      Properties kafkaProducerProps = loadKafkaProducerProps(properties);
-      kafkaProducerProps.put("client.id", peerUuid.toString());
-      kafkaProducerProps.put("bootstrap.servers", this.outLog.getBootstrapServers());
-      this.producer = new KafkaProducer<>(kafkaProducerProps);
-      logger.info(
-          "Kafka producer initialized. Will connect to bootstrap servers: {}",
-          this.outLog.getBootstrapServers());
+      if (producer == null) {
+        if (producerProperties == null) {
+          throw new RuntimeException("You must supply either Producer or ProducerProperties");
+        }
+        producerProperties.put("client.id", peerUuid.toString());
+        final String bootstrapServers = this.outLog.getBootstrapServers();
+        producerProperties.put("bootstrap.servers", bootstrapServers);
+        this.producer = new KafkaProducer<>(producerProperties);
+        logger.info(
+            "Kafka producer initialized. Will connect to bootstrap servers: {}", bootstrapServers);
+      }
 
       // configure kafka consumer
-      Properties kafkaConsumerProps = loadKafkaConsumerProps(properties);
-      kafkaConsumerProps.put("group.id", peerUuid.toString());
-      kafkaConsumerProps.put("bootstrap.servers", this.inLog.getBootstrapServers());
-      this.consumer = new KafkaConsumer<>(kafkaConsumerProps);
-      logger.info(
-          "Kafka consumer initialized. Will connect to bootstrap servers: {}",
-          this.inLog.getBootstrapServers());
+      if (consumer == null) {
+        if (consumerProperties == null) {
+          throw new RuntimeException("You must supply either Consumer or ConsumerProperties");
+        }
+        consumerProperties.put("group.id", peerUuid.toString());
+        final String bootstrapServers = this.inLog.getBootstrapServers();
+        consumerProperties.put("bootstrap.servers", bootstrapServers);
+        this.consumer = new KafkaConsumer<>(consumerProperties);
+        logger.info(
+            "Kafka consumer initialized. Will connect to bootstrap servers: {}", bootstrapServers);
+      }
 
-      // configure kafka misc
-      pollingDuration =
-          Duration.of(Long.parseLong(loadProperty("pollDuration", properties)), ChronoUnit.MILLIS);
+      // set polling duration
+      if (pollingDuration == null) {
+        pollingDuration = Duration.of(DEFAULT_POLLING_DURATION_MILLIS, ChronoUnit.MILLIS);
+      }
 
       // manual assignment of partition so we can control offset seek
       inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
       consumer.assign(Collections.singletonList(inTopicPartition));
 
       // init executor
-      singleThreadConsumerExecutor = Executors.newSingleThreadExecutor();
-
-      // create and store immutable headers (instead of creating with every send)
-      this.HEADERS.put(
-          "EXEC_MSG_TYPE_HEADER",
-          new LogMessageHeader("type", Ints.toByteArray(MessageType.ExecMessage.ordinal())));
-      this.HEADERS.put(
-          "INTERCEPT_MSG_TYPE_HEADER",
-          new LogMessageHeader("type", Ints.toByteArray(MessageType.InterceptMessage.ordinal())));
+      asyncConsumerExecutor = Executors.newSingleThreadExecutor();
     }
 
     // configure ZMQ
-    logger.info("Initializing zmq context");
-    this.zmqContext = new ZContext();
-    this.peerSocket = zmqContext.createSocket(SocketType.REQ);
-    if (currentPeer != null) {
-      if (currentPeer.getReqAddress() != null) {
-        connectToPeer(currentPeer);
-      } else if (currentPeer.getUuid() != null) {
-        connectToPeer(currentPeer.getUuid());
-      } else {
-        throw new RuntimeException("Cannot connect to peer without UUID or listen address");
+    if (allowP2P) {
+      if (zmqContext == null) {
+        logger.info("Initializing zmq context");
+        this.zmqContext = new ZContext();
+      }
+      this.peerSocket = zmqContext.createSocket(SocketType.REQ);
+      if (currentPeer != null) {
+        if (currentPeer.getReqAddress() != null) {
+          connectToPeer(currentPeer);
+        } else if (currentPeer.getUuid() != null) {
+          connectToPeer(currentPeer.getUuid());
+        } else {
+          throw new RuntimeException(
+              format(
+                  "Cannot connect to peer without its UUID or listening (i.e. REQ) address. Peer -> %s",
+                  currentPeer));
+        }
       }
     }
-  }
 
-  private Properties loadKafkaProducerProps(Properties properties) {
-    Properties kafkaProducerProps = new Properties();
-    for (String propKey : properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.producer.")) {
-        kafkaProducerProps.put(
-            Strings.stringAfter(propKey, "kafka.producer."), properties.getProperty(propKey));
-      } else if (propKey.startsWith("kafka.") && !propKey.startsWith("kafka.consumer")) {
-        kafkaProducerProps.put(
-            Strings.stringAfter(propKey, "kafka."), properties.getProperty(propKey));
-      }
-    }
-    return kafkaProducerProps;
-  }
+    initialized = true;
+    logger.info(
+        format(
+            "Initialized ThinPeer with:%n uuid: %s,%n name: %s,%n directory: %s,%n initialPeer: %s,%n inLog: %s,%n outLog: %s",
+            peerUuid, peerName, palDirectory.getDirectoryUrl(), currentPeer, inLog, outLog));
 
-  private Properties loadKafkaConsumerProps(Properties properties) {
-    Properties kafkaConsumerProps = new Properties();
-    for (String propKey : properties.stringPropertyNames()) {
-      if (propKey.startsWith("kafka.consumer.")) {
-        kafkaConsumerProps.put(
-            Strings.stringAfter(propKey, "kafka.consumer."), properties.getProperty(propKey));
-      } else if (propKey.startsWith("kafka.") && !propKey.startsWith("kafka.producer")) {
-        kafkaConsumerProps.put(
-            Strings.stringAfter(propKey, "kafka."), properties.getProperty(propKey));
-      }
-    }
-    return kafkaConsumerProps;
-  }
-
-  /**
-   * Get a property's value, by performing a search in the following order: 1) given properties
-   * object, 2) ENV (uppercase variable) If not found, return defaultValue if given
-   */
-  private static String loadProperty(
-      String propertyName, @Nullable Properties properties, @Nullable String defaultValue) {
-    if (properties != null && properties.containsKey(propertyName)) {
-      logger.debug("loading value of '{}' from properties object", propertyName);
-      return properties.getProperty(propertyName);
-    } else if (System.getenv(propertyName.toUpperCase()) != null) {
-      logger.debug("loading value of '{}' from ENV", propertyName.toUpperCase());
-      return System.getenv(propertyName.toUpperCase());
-    } else if (defaultValue != null) {
-      logger.debug("loading value of '{}' from default", propertyName);
-      return defaultValue;
-    }
-    return null;
-  }
-
-  private static String loadProperty(String propertyName, Properties properties) {
-    return loadProperty(propertyName, properties, null);
+    return this;
   }
 
   private void connectSocket() {
@@ -280,17 +300,29 @@ public class ThinPeer {
     peerSocket.connect(currentPeer.getReqAddress());
   }
 
+  private void assertInitialized() {
+    if (!initialized) {
+      throw new IllegalStateException("ThinPeer is not initialized. Did you call init()?");
+    }
+  }
+
   public ExecMessage sendAndReceive(ExecMessage message, boolean consumeLogUntilReply)
       throws ExecutionException, InterruptedException, InvalidProtocolBufferException {
-    if (allowP2P && talkingToPeer) {
+    assertInitialized();
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendAndReceive: in with message: {}", message);
+    }
+    if (talkingToPeer) {
       return sendToPeer(message);
     } else {
       return sendToLogAndReceive(message, consumeLogUntilReply);
     }
   }
 
+  /** <b>INCOMPLETE</b>: only checks for matches of staticFieldPutDone's ONLY USED BY SWING TESTS */
   public ExecMessage waitFor(ExecMessageType type, String fieldName)
       throws InvalidProtocolBufferException {
+    assertInitialized();
     if (logger.isDebugEnabled()) {
       logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
     }
@@ -324,6 +356,7 @@ public class ThinPeer {
 
   private ExecMessage getMessageAtOffset(Long seek, boolean lookupCached)
       throws InvalidProtocolBufferException {
+    assertInitialized();
     if (logger.isDebugEnabled()) {
       logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
     }
@@ -372,7 +405,7 @@ public class ThinPeer {
   }
 
   public List<ConsumerRecord> getMessages(long startOffset, long numMessages) {
-
+    assertInitialized();
     if (logger.isDebugEnabled()) {
       logger.debug("Getting {} messages starting @ offset #{}", numMessages, startOffset);
     }
@@ -400,18 +433,11 @@ public class ThinPeer {
     return peerUuid;
   }
 
-  private Iterable<Header> getHeadersForMessage(MessageType messageType) {
-    // set headers
-    final List<Header> logHeaders = new ArrayList<>();
-    if (messageType.equals(MessageType.ExecMessage)) {
-      logHeaders.add(HEADERS.get("EXEC_MSG_TYPE_HEADER"));
-    } else if (messageType.equals(MessageType.InterceptMessage)) {
-      logHeaders.add(HEADERS.get("INTERCEPT_MSG_TYPE_HEADER"));
-    }
-    return logHeaders;
-  }
-
   public void sendToLogAndForget(ExecMessage message) {
+    assertInitialized();
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendToLogAndForget: in with message: {}", message);
+    }
     // send to kafka
     producer.send(
         new ProducerRecord<>(
@@ -426,7 +452,10 @@ public class ThinPeer {
   }
 
   public Future<ExecMessage> sendToLogAndAsyncProcessReqAndRepNodes(ExecMessage message) {
-
+    assertInitialized();
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendToLogAndAsyncProcessReqAndRepNodes: in with message: {}", message);
+    }
     final UUID requestMsgUuid = UUID.fromString(message.getMessageUuid());
     // send to kafka
     producer.send(
@@ -444,7 +473,7 @@ public class ThinPeer {
         new ExecMessageFuture(
             this,
             palDirectory,
-            singleThreadConsumerExecutor,
+            asyncConsumerExecutor,
             outLog.getName(),
             new LogRequest(requestMsgUuid));
 
@@ -470,6 +499,9 @@ public class ThinPeer {
   private ExecMessage sendToLogAndReceive(ExecMessage message, boolean consumeLogUntilReply)
       throws ExecutionException, InterruptedException, InvalidProtocolBufferException {
 
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendToLogAndReceive: in with message: {}", message);
+    }
     if (!allowP2P) {
       return sendAndReceiveConsumingLog(message);
     }
@@ -484,6 +516,9 @@ public class ThinPeer {
 
   private ExecMessage sendToLogConsumeAndSwitchToPeer(ExecMessage message)
       throws InvalidProtocolBufferException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendToLogConsumeAndSwitchToPeer: in with message: {}", message);
+    }
     ExecMessage replyMsg = sendAndReceiveConsumingLog(message);
 
     // switch to direct p2p talk
@@ -495,6 +530,9 @@ public class ThinPeer {
 
   private ExecMessage sendAsyncAndSwitchToPeer(ExecMessage message)
       throws ExecutionException, InterruptedException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendAsyncAndSwitchToPeer: in with message: {}", message);
+    }
     Future<ExecMessage> replyFuture = sendToLogAndAsyncProcessReqAndRepNodes(message);
 
     // wait for reply (blocking)
@@ -509,6 +547,9 @@ public class ThinPeer {
 
   private ExecMessage sendAndReceiveConsumingLog(ExecMessage message)
       throws InvalidProtocolBufferException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendAndReceiveConsumingLog: in with message: {}", message);
+    }
     // send to kafka
     long sentRecordOffset;
     Future<RecordMetadata> recordMetadataFuture =
@@ -595,6 +636,12 @@ public class ThinPeer {
   }
 
   private void connectToPeer(PeerInfo peerInfo) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("connectToPeer: in with peerUuid: {}", peerUuid);
+    }
+    if (!allowP2P) {
+      throw new RuntimeException("Cannot connect to peer: p2p is disallowed");
+    }
     logger.info("Now in direct talk with {}", peerInfo);
     currentPeer = peerInfo;
     connectSocket();
@@ -602,7 +649,10 @@ public class ThinPeer {
   }
 
   public ExecMessage sendToPeer(ExecMessage message) {
-
+    assertInitialized();
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendToPeer: in with message: {}", message);
+    }
     // send message request to peer
     peerSocket.send(message.toByteArray());
 
@@ -627,7 +677,6 @@ public class ThinPeer {
   }
 
   private static String getRecordInfo(RecordMetadata recordMetadata) {
-
     return String.format(
         "{%n timestamp: %d,%n offset: %d,%n #bytes in value: %d%n}",
         recordMetadata.timestamp(), recordMetadata.offset(), recordMetadata.serializedValueSize());
@@ -645,23 +694,43 @@ public class ThinPeer {
   }
 
   public void close() {
+    assertInitialized();
+
+    // NOTE: we only resources that were not passed to us
+
     // close socket-related resources
     close(peerSocket, "Peer socket closed.");
-    try {
-      if (zmqContext != null) {
-        zmqContext.destroy();
-        logger.info("Zmq context closed.");
+    if (!zmqContextGiven) {
+      try {
+        if (zmqContext != null) {
+          zmqContext.destroy();
+          logger.info("Zmq context closed.");
+        }
+      } catch (Exception ex) {
+        logger.error("Error freeing zmq resources", ex);
       }
-    } catch (Exception ex) {
-      logger.error("Error freeing zmq resources", ex);
     }
 
     // close log-related resources
-    close(producer, "Log producer closed.");
-    close(consumer, "Log consumer closed.");
-    if (singleThreadConsumerExecutor != null) {
-      singleThreadConsumerExecutor.shutdown();
+    if (!producerGiven) {
+      close(producer, "Log producer closed.");
+    }
+    if (!consumerGiven) {
+      close(consumer, "Log consumer closed.");
+    }
+    if (asyncConsumerExecutor != null) {
+      asyncConsumerExecutor.shutdown();
       logger.info("Consumer executor service shut down");
     }
+
+    // close directory
+    if (!directoryGiven) {
+      palDirectory.close();
+    }
+    closed = true;
+  }
+
+  public boolean isClosed() {
+    return closed;
   }
 }

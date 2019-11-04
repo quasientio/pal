@@ -5,24 +5,16 @@ import com.ittera.cometa.cxn.ThinPeer;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
-import java.io.InputStream;
-import java.util.Properties;
 
-public class SwingAppTest {
+public class SwingAppTest extends AbstractSwingTest {
 
   protected static final MessageBuilder MESSAGE_BUILDER = new ProtobufMessageBuilder();
 
   protected static final String className = "com.ittera.cometa.apps.SwingApp";
-  protected static final String TEST_PROPERTIES_PATH = "/tests.properties";
 
-  public static void main(String[] args) throws Exception {
+  SwingAppTest() throws Exception {
 
-    final Properties properties = new Properties();
-    try (final InputStream stream =
-        SwingAppConcurrentActor.class.getResourceAsStream(TEST_PROPERTIES_PATH)) {
-      properties.load(stream);
-    }
-    final ThinPeer thinPeer = new ThinPeer(properties);
+    final ThinPeer thinPeer = getThinPeer();
     final String methodName = "main";
 
     Class[] parameterTypes = new Class[] {String[].class};
@@ -43,5 +35,9 @@ public class SwingAppTest {
             parameters,
             new ObjectRef[parameterTypes.length]);
     ExecMessage replyMsg = thinPeer.sendAndReceive(requestMsg, true);
+  }
+
+  public static void main(String[] args) throws Exception {
+    new SwingAppTest();
   }
 }

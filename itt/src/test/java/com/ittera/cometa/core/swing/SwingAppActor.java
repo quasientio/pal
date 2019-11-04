@@ -7,23 +7,15 @@ import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessageType;
 import com.ittera.cometa.messages.protobuf.Primitives;
-import java.io.InputStream;
-import java.util.Properties;
 
-public class SwingAppActor {
+public class SwingAppActor extends AbstractSwingTest {
 
   protected static final MessageBuilder MESSAGE_BUILDER = new ProtobufMessageBuilder();
 
   protected static final String swingAppClassName = "com.ittera.cometa.apps.SwingApp";
-  protected static final String TEST_PROPERTIES_PATH = "/tests.properties";
 
-  public static void main(String[] args) throws Exception {
-    final Properties properties = new Properties();
-    try (final InputStream stream = SwingAppActor.class.getResourceAsStream(TEST_PROPERTIES_PATH)) {
-      properties.load(stream);
-    }
-
-    final ThinPeer thinPeer = new ThinPeer(properties);
+  SwingAppActor() throws Exception {
+    final ThinPeer thinPeer = getThinPeer();
     String methodName;
 
     methodName = "main";
@@ -105,5 +97,9 @@ public class SwingAppActor {
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
+  }
+
+  public static void main(String[] args) throws Exception {
+    new SwingAppActor();
   }
 }
