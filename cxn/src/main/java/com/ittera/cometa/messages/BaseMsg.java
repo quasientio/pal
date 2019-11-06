@@ -1,4 +1,4 @@
-package com.ittera.cometa.core.messages;
+package com.ittera.cometa.messages;
 
 import org.zeromq.ZMQ;
 

@@ -3,10 +3,11 @@ package com.ittera.cometa.core.exec;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
+import com.ittera.cometa.common.ExecPhase;
 import com.ittera.cometa.core.ZmqEnabledTest;
-import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
+import com.ittera.cometa.messages.OutboundMsg;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;

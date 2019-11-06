@@ -2,6 +2,7 @@ package com.ittera.cometa.core.messages;
 
 import com.google.common.primitives.Longs;
 import com.ittera.cometa.common.util.UUIDUtils;
+import com.ittera.cometa.messages.BaseMsg;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;

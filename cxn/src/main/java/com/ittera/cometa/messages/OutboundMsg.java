@@ -1,9 +1,8 @@
-package com.ittera.cometa.core.messages;
+package com.ittera.cometa.messages;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.ittera.cometa.common.ExecPhase;
 import com.ittera.cometa.common.util.UUIDUtils;
-import com.ittera.cometa.core.exec.ExecPhase;
-import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.protobuf.Headers;
 import java.util.ArrayList;
 import java.util.Arrays;

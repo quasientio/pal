@@ -1,4 +1,4 @@
-package com.ittera.cometa.core.exec;
+package com.ittera.cometa.common;
 
 public enum ExecPhase {
   BEFORE,

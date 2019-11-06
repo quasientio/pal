@@ -2,9 +2,9 @@ package com.ittera.cometa.core;
 
 import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.common.util.UUIDUtils;
-import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.LogMessageHeader;
+import com.ittera.cometa.messages.OutboundMsg;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
 import java.util.ArrayList;

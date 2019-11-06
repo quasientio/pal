@@ -7,11 +7,11 @@ import static org.junit.Assert.assertThat;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
-import com.ittera.cometa.core.exec.ExecPhase;
+import com.ittera.cometa.common.ExecPhase;
 import com.ittera.cometa.core.messages.InterceptsMsg;
-import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.OutboundMsg;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;

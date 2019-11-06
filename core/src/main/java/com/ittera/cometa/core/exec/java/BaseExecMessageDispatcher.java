@@ -1,12 +1,12 @@
 package com.ittera.cometa.core.exec.java;
 
+import com.ittera.cometa.common.ExecPhase;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.Dispatcher;
 import com.ittera.cometa.common.lang.ObjectNotFoundException;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.util.Classes;
-import com.ittera.cometa.core.exec.ExecPhase;
 import com.ittera.cometa.messages.Unwrapper;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessageType;

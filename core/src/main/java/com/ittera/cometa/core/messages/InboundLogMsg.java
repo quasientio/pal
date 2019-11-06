@@ -1,6 +1,7 @@
 package com.ittera.cometa.core.messages;
 
 import com.google.common.primitives.Longs;
+import com.ittera.cometa.messages.BaseMsg;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;

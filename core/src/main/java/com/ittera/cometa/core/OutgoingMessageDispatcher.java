@@ -1,10 +1,10 @@
 package com.ittera.cometa.core;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.ittera.cometa.core.exec.ExecPhase;
+import com.ittera.cometa.common.ExecPhase;
 import com.ittera.cometa.core.messages.InterceptsMsg;
-import com.ittera.cometa.core.messages.OutboundMsg;
 import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.OutboundMsg;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;

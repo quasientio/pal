@@ -1,6 +1,7 @@
 package com.ittera.cometa.core.messages;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.ittera.cometa.messages.BaseMsg;
 import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import java.util.ArrayList;

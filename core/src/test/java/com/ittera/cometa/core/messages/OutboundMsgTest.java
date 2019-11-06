@@ -7,10 +7,11 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.ittera.cometa.common.ExecPhase;
 import com.ittera.cometa.core.ZmqEnabledTest;
-import com.ittera.cometa.core.exec.ExecPhase;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
+import com.ittera.cometa.messages.OutboundMsg;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import java.util.Arrays;
