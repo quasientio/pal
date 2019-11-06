@@ -1,6 +1,6 @@
 package com.ittera.cometa.messages;
 
-import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.streams.KeyValue;
@@ -8,7 +8,7 @@ import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;
 
 public class ContextFillingTransformSupplier
-    implements Transformer<String, ExecMessage, KeyValue<String, Map>> {
+    implements Transformer<String, Message, KeyValue<String, Map>> {
   private ProcessorContext processorContext;
 
   @Override
@@ -17,7 +17,7 @@ public class ContextFillingTransformSupplier
   }
 
   @Override
-  public KeyValue<String, Map> transform(String key, ExecMessage execMessage) {
+  public KeyValue<String, Map> transform(String key, Message message) {
     Map<String, Object> map = new HashMap<>();
     MessageContext messageContext =
         new MessageContext(
@@ -26,7 +26,7 @@ public class ContextFillingTransformSupplier
             processorContext.timestamp(),
             processorContext.topic(),
             processorContext.headers());
-    map.put("message", execMessage);
+    map.put("message", message);
     map.put("context", messageContext);
     return new KeyValue<>(key, map);
   }
