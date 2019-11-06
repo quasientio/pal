@@ -129,11 +129,17 @@ public class PALDirectory implements AutoCloseable {
   }
 
   public Set<PeerInfo> getAllPeers() throws Exception {
-    Set<PeerInfo> allPeers = new TreeSet<>();
+    final Set<PeerInfo> allPeers = new TreeSet<>();
     for (String uuid : curator.getChildren().forPath(getPeersPath())) {
       allPeers.add(getPeerInfo(UUID.fromString(uuid)));
     }
     return allPeers;
+  }
+
+  public void unregisterAllPeers() throws Exception {
+    for (String uuid : curator.getChildren().forPath(getPeersPath())) {
+      unregisterPeer(UUID.fromString(uuid));
+    }
   }
 
   public void unregisterPeer(UUID peerUuid) throws Exception {
@@ -250,6 +256,12 @@ public class PALDirectory implements AutoCloseable {
       deleted++;
     }
     logger.info("Unregistered {} logs with prefix: {}", deleted, logNamePrefix);
+  }
+
+  public void unregisterAllLogs() throws Exception {
+    for (String logName : curator.getChildren().forPath(getLogsPath())) {
+      unregisterLog(logName);
+    }
   }
   // </editor-fold>
 

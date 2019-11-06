@@ -1,5 +1,6 @@
 package com.ittera.cometa.cxn;
 
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -158,6 +159,30 @@ public class PALDirectoryTest {
 
     // verify
     assertThat(palDirectory.peerExists(peerUuid), is(false));
+  }
+
+  @Test
+  public void unregisterAllPeers_existingPeers_allPeersDeleted() throws Exception {
+
+    // create
+    int peersToCreate = 5;
+    for (int i = 0; i < peersToCreate; i++) {
+      // create a peer
+      UUID peerUuid = UUID.randomUUID();
+      Properties peerProps = new Properties();
+      peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
+      palDirectory.registerPeer(peerUuid, peerProps);
+      createdPeers.add(peerUuid);
+    }
+
+    // verify
+    assertThat(palDirectory.getAllPeers().size(), is(peersToCreate));
+
+    // unregister all
+    palDirectory.unregisterAllPeers();
+
+    // verify
+    assertThat(palDirectory.getAllPeers(), is(empty()));
   }
 
   @Test
@@ -344,6 +369,27 @@ public class PALDirectoryTest {
 
     // verify
     assertThat(palDirectory.getLogCount(logNamePrefix), is(0));
+  }
+
+  @Test
+  public void deleteAllLogs_existingLogs_allLogsDeleted() throws Exception {
+    String logNamePrefix = "test.topic";
+
+    // create a few with the prefix
+    int logsToCreate = 10;
+    for (int i = 0; i < logsToCreate; i++) {
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
+      createdLogs.add(newLogInfo.getName());
+    }
+
+    // pre-assertions
+    assertThat(palDirectory.getAllLogs().size(), is(logsToCreate));
+
+    // delete all
+    palDirectory.unregisterAllLogs();
+
+    // verify
+    assertThat(palDirectory.getAllLogs(), is(empty()));
   }
 
   @Test
