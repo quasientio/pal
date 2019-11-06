@@ -110,7 +110,7 @@ public class LogInfoTest {
   }
 
   @Test
-  public void equals_sameNameDifferentBrokers_false() {
+  public void equals_sameNameDifferentBrokers_true() {
 
     String logName = "MyApp";
     Set<KafkaBrokerInfo> brokerInfoSet1 = new HashSet<>();
@@ -129,37 +129,6 @@ public class LogInfoTest {
     KafkaBrokerEndpoint[] brokerEndpoints2 = {
       new KafkaBrokerEndpoint("PLAINTEXT", "somedomain.com:4091"),
       new KafkaBrokerEndpoint("PLAINTEXT", "localhost:4092")
-    };
-
-    brokerInfoSet2.add(
-        new KafkaBrokerInfo(1, "localhost", 4090, 2001, brokerEndpoints2, "328972349"));
-
-    LogInfo logInfo1 = new LogInfo(logName, brokerInfoSet1);
-    LogInfo logInfo2 = new LogInfo(logName, brokerInfoSet2);
-
-    assertFalse(logInfo1.equals(logInfo2));
-  }
-
-  @Test
-  public void equals_sameNameSameBrokers_true() {
-
-    String logName = "MyApp";
-    Set<KafkaBrokerInfo> brokerInfoSet1 = new HashSet<>();
-    Set<KafkaBrokerInfo> brokerInfoSet2 = new HashSet<>();
-
-    // broker 1
-    KafkaBrokerEndpoint[] brokerEndpoints1 = {
-      new KafkaBrokerEndpoint("SSL", "localdomain.localhost:4091"),
-      new KafkaBrokerEndpoint("PLAINTEXT", "127.0.0.1:4092")
-    };
-
-    brokerInfoSet1.add(
-        new KafkaBrokerInfo(1, "localhost", 4090, 2001, brokerEndpoints1, "328972349"));
-
-    // broker 2
-    KafkaBrokerEndpoint[] brokerEndpoints2 = {
-      new KafkaBrokerEndpoint("SSL", "localdomain.localhost:4091"),
-      new KafkaBrokerEndpoint("PLAINTEXT", "127.0.0.1:4092")
     };
 
     brokerInfoSet2.add(

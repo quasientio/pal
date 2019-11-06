@@ -17,8 +17,8 @@ public class LogInfo extends UTCTimestampedInfo implements Comparable {
   private UUID uuid;
 
   // to be filled from (kafka) mbeans via jmx
-  private long startOffset;
-  private long endOffset;
+  private Long startOffset;
+  private Long endOffset;
   private long bytes;
   private boolean exists;
 
@@ -76,7 +76,7 @@ public class LogInfo extends UTCTimestampedInfo implements Comparable {
     return humanReadableByteSize;
   }
 
-  public long getStartOffset() {
+  public Long getStartOffset() {
     return startOffset;
   }
 
@@ -84,7 +84,7 @@ public class LogInfo extends UTCTimestampedInfo implements Comparable {
     this.startOffset = startOffset;
   }
 
-  public long getEndOffset() {
+  public Long getEndOffset() {
     return endOffset;
   }
 
@@ -120,14 +120,12 @@ public class LogInfo extends UTCTimestampedInfo implements Comparable {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     LogInfo logInfo = (LogInfo) o;
-    return name.equals(logInfo.name)
-        && Objects.equals(uuid, logInfo.uuid)
-        && Objects.equals(bootstrapServers, logInfo.bootstrapServers);
+    return name.equals(logInfo.name);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, uuid, bootstrapServers);
+    return Objects.hash(name);
   }
 
   @Override
