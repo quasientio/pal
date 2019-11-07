@@ -8,6 +8,7 @@ import com.ittera.cometa.cxn.PALDirectory;
 import java.nio.channels.ClosedSelectorException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.AbstractQueue;
 import java.util.Collections;
 import java.util.List;
@@ -316,9 +317,20 @@ public class LogReader extends ConnectedService {
     }
   }
 
+  private void close(
+      Consumer consumer, long timeout, TemporalUnit timeUnit, String msgForException) {
+    if (consumer != null) {
+      try {
+        consumer.close(Duration.of(timeout, timeUnit));
+      } catch (Exception e) {
+        logger.warn(msgForException, e);
+      }
+    }
+  }
+
   @Override
   protected void closeConnections() {
-    closeConnection(consumer, "Error closing consumer");
+    close(consumer, 300, ChronoUnit.MILLIS, "Error closing consumer");
     closeConnection(logDealer, "Error closing dealer");
     closeConnection(offsetSubscriber, "Error closing offset subscriber");
     // TODO: send uncommitted offset, etc.

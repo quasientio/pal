@@ -15,6 +15,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -671,6 +672,28 @@ public class ThinPeer {
         recordMetadata.timestamp(), recordMetadata.offset(), recordMetadata.serializedValueSize());
   }
 
+  private void close(Consumer consumer, long timeout, TemporalUnit timeUnit, String msg) {
+    if (consumer != null) {
+      try {
+        consumer.close(Duration.of(timeout, timeUnit));
+        logger.info(msg);
+      } catch (Exception e) {
+        logger.warn("Error closing consumer", e);
+      }
+    }
+	}
+
+  private void close(Producer producer, long timeout, TemporalUnit timeUnit, String msg) {
+    if (producer != null) {
+      try {
+        producer.close(Duration.of(timeout, timeUnit));
+        logger.info(msg);
+      } catch (Exception e) {
+        logger.warn("Error closing producer", e);
+      }
+    }
+  }
+
   private void close(Closeable resource, String msg) {
     if (resource != null) {
       try {
@@ -702,10 +725,10 @@ public class ThinPeer {
 
     // close log-related resources
     if (!producerGiven) {
-      close(producer, "Log producer closed.");
+      close(producer,500, ChronoUnit.MILLIS, "Log producer closed.");
     }
     if (!consumerGiven) {
-      close(consumer, "Log consumer closed.");
+      close(consumer, 500, ChronoUnit.MILLIS, "Log consumer closed.");
     }
     if (asyncConsumerExecutor != null) {
       asyncConsumerExecutor.shutdown();

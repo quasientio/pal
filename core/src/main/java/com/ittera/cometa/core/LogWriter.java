@@ -7,6 +7,9 @@ import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.OutboundMsg;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -241,9 +244,20 @@ class LogWriter extends ConnectedService {
     }
   }
 
+  private void close(
+      Producer producer, long timeout, TemporalUnit timeUnit, String msgForException) {
+    if (producer != null) {
+      try {
+        producer.close(Duration.of(timeout, timeUnit));
+      } catch (Exception e) {
+        logger.warn(msgForException, e);
+      }
+    }
+  }
+
   @Override
   protected void closeConnections() {
-    closeConnection(producer, "Error closing producer");
+    close(producer, 300, ChronoUnit.MILLIS, "Error closing producer");
     closeConnection(subscriber, "Error closing subscriber");
     closeConnection(offsetPublisher, "Error offset publisher");
   }
