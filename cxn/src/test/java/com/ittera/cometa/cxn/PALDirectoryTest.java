@@ -83,6 +83,7 @@ public class PALDirectoryTest {
 
     // register
     palDirectory.registerPeer(peerUuid, peerProps);
+    Thread.sleep(100); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // verify
@@ -115,6 +116,7 @@ public class PALDirectoryTest {
     peerProps.put("jmxAddress", "localhost:9012");
     peerProps.put("name", peerName);
     palDirectory.registerPeer(peerUuid, peerProps);
+    Thread.sleep(100); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // pre-assertions
@@ -149,6 +151,7 @@ public class PALDirectoryTest {
     // create
     UUID peerUuid = UUID.randomUUID();
     palDirectory.registerPeer(peerUuid, peerProps);
+    Thread.sleep(100); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // pre-assertions
@@ -156,6 +159,7 @@ public class PALDirectoryTest {
 
     // unregister
     palDirectory.unregisterPeer(peerUuid);
+    Thread.sleep(100); // allow some time for cache to get updated
 
     // verify
     assertThat(palDirectory.peerExists(peerUuid), is(false));
@@ -172,6 +176,7 @@ public class PALDirectoryTest {
       Properties peerProps = new Properties();
       peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
       palDirectory.registerPeer(peerUuid, peerProps);
+      Thread.sleep(100); // allow some time for cache to get updated
       createdPeers.add(peerUuid);
     }
 
@@ -201,6 +206,7 @@ public class PALDirectoryTest {
       Properties peerProps = new Properties();
       peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
       palDirectory.registerPeer(peerUuid, peerProps);
+      Thread.sleep(100); // allow some time for cache to get updated
       createdPeers.add(peerUuid);
     }
 

@@ -6,6 +6,7 @@ import com.ittera.cometa.LogReply;
 import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.PeerInfo;
 import com.ittera.cometa.common.util.Strings;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,8 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.BackgroundCallback;
 import org.apache.curator.framework.api.CuratorWatcher;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
@@ -56,13 +59,15 @@ public class PALDirectory implements AutoCloseable {
   private final String namespace;
   private Set<KafkaBrokerInfo> brokerInfoSet;
   private boolean brokersInfoLoaded;
+  private PathChildrenCache peersCache;
+  private final boolean cachePeers;
 
   @Inject
   public PALDirectory(@Named("paldir_url") String connectionString) {
-    this(connectionString, null);
+    this(connectionString, null, true);
   }
 
-  public PALDirectory(String connectionString, String namespace) {
+  public PALDirectory(String connectionString, String namespace, boolean cachePeers) {
     this.curator = newCuratorInstance(connectionString);
     logger.info("Will connect to zookeeper@{}", connectionString);
     /* we can't set the namespace on the Curator instance, as we need access to
@@ -70,23 +75,51 @@ public class PALDirectory implements AutoCloseable {
     */
     this.namespace = namespace != null ? namespace : DEFAULT_PAL_NAMESPACE;
     this.directoryUrl = connectionString;
+    this.cachePeers = cachePeers;
     curator.start();
     try {
       createSubPaths();
     } catch (Exception e) {
       logger.error("Error trying to create subpaths", e);
     }
+    // start and build peer cache
+    if (cachePeers) {
+      startPeersCache();
+    }
+  }
+
+  private void startPeersCache() {
+    peersCache = new PathChildrenCache(curator, getPeersPath(), true);
+    try {
+      peersCache.start(StartMode.BUILD_INITIAL_CACHE);
+      logger.info(
+          "Initialized peers cache with {} known peers.", peersCache.getCurrentData().size());
+      if (logger.isDebugEnabled()) {
+        peersCache
+            .getCurrentData()
+            .forEach(p -> logger.debug("Cached existing peer with path: {}", p.getPath()));
+      }
+    } catch (Exception e) {
+      logger.error("Error building peers cache", e);
+    }
+  }
+
+  public String getDirectoryUrl() {
+    return directoryUrl;
   }
 
   // <editor-fold desc="Peer methods">
   public boolean peerExists(UUID peerUuid) throws Exception {
-    return curator.checkExists().forPath(getPeerPath(peerUuid)) != null;
+    if (peersCache == null) {
+      return curator.checkExists().forPath(getPeerPath(peerUuid)) != null;
+    } else {
+      return peersCache.getCurrentData(getPeerPath(peerUuid)) != null;
+    }
   }
 
   public void registerPeer(UUID peerUuid, Properties peerProperties) throws Exception {
     byte[] peerData = peerPropsToData(peerProperties);
-
-    if (curator.checkExists().forPath(getPeerPath(peerUuid)) == null) {
+    if (!peerExists(peerUuid)) {
       curator.create().creatingParentsIfNeeded().forPath(getPeerPath(peerUuid), peerData);
       logger.info("Registered peer with uuid: {} and properties: {}", peerUuid, peerProperties);
     } else {
@@ -114,9 +147,14 @@ public class PALDirectory implements AutoCloseable {
       throw new NoPeerInfoNodeException(
           String.format("Node for peer: %s does not exist", peerUuid));
     }
-    final Properties props = getProperties(getPeerPath(peerUuid));
+    final Properties props = getProperties(getPeerPath(peerUuid), peersCache);
     final PeerInfo peerInfo = new PeerInfo(peerUuid);
-    final Stat stat = curator.checkExists().forPath(getPeerPath(peerUuid));
+    final Stat stat;
+    if (peersCache == null) {
+      stat = curator.checkExists().forPath(getPeerPath(peerUuid));
+    } else {
+      stat = peersCache.getCurrentData(getPeerPath(peerUuid)).getStat();
+    }
     // set bean fields reflectively
     Stream.of("name", "reqAddress", "pubAddress", "jmxAddress")
         .forEach(
@@ -128,16 +166,26 @@ public class PALDirectory implements AutoCloseable {
     return peerInfo;
   }
 
+  private List<String> getAllPeerUUIDs() throws Exception {
+    if (peersCache == null) {
+      return curator.getChildren().forPath(getPeersPath());
+    } else {
+      return peersCache.getCurrentData().stream()
+          .map(childData -> getPathLeaf(childData.getPath()))
+          .collect(Collectors.toList());
+    }
+  }
+
   public Set<PeerInfo> getAllPeers() throws Exception {
     final Set<PeerInfo> allPeers = new TreeSet<>();
-    for (String uuid : curator.getChildren().forPath(getPeersPath())) {
+    for (String uuid : getAllPeerUUIDs()) {
       allPeers.add(getPeerInfo(UUID.fromString(uuid)));
     }
     return allPeers;
   }
 
   public void unregisterAllPeers() throws Exception {
-    for (String uuid : curator.getChildren().forPath(getPeersPath())) {
+    for (String uuid : getAllPeerUUIDs()) {
       unregisterPeer(UUID.fromString(uuid));
     }
   }
@@ -186,7 +234,7 @@ public class PALDirectory implements AutoCloseable {
     if (!logExists(logName)) {
       throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
     }
-    final Properties props = getProperties(getLogPath(logName));
+    final Properties props = getProperties(getLogPath(logName), null);
     final UUID uuid = UUID.fromString(props.getProperty("uuid"));
     final Stat stat = curator.checkExists().forPath(getLogPath(logName));
     final LogInfo logInfo = new LogInfo(logName, getKafkaBrokers(), uuid);
@@ -389,7 +437,7 @@ public class PALDirectory implements AutoCloseable {
     Set<LogReply> replies = new TreeSet<>();
     // get all reply nodes
     for (String replyNode : curator.getChildren().forPath(requestNode)) {
-      Properties props = getProperties(requestNode + "/" + replyNode);
+      Properties props = getProperties(requestNode + "/" + replyNode, null);
       replies.add(
           new LogReply(
               UUID.fromString(replyNode),
@@ -405,13 +453,25 @@ public class PALDirectory implements AutoCloseable {
 
   public void close() {
     logger.info("Closing zookeeper connection to {}", directoryUrl);
+    if (peersCache != null) {
+      try {
+        peersCache.close();
+      } catch (IOException e) {
+        logger.warn("Error stopping peers cache");
+      }
+    }
     curator.close();
   }
   // </editor-fold>
 
   // <editor-fold desc="private helpers">
-  private Properties getProperties(String node) throws Exception {
-    byte[] data = curator.getData().forPath(node);
+  private Properties getProperties(String node, PathChildrenCache cache) throws Exception {
+    final byte[] data;
+    if (cache != null) {
+      data = cache.getCurrentData(node).getData();
+    } else {
+      data = curator.getData().forPath(node);
+    }
     Properties properties = new Properties();
     if (data != null) {
       String nodeData = new String(data, getEncodingCharset());
@@ -513,6 +573,10 @@ public class PALDirectory implements AutoCloseable {
     return String.format("/%s/%s", namespace, LOGS_DIR);
   }
 
+  private static String getPathLeaf(String path) {
+    return Strings.stringAfterLast(path, "/");
+  }
+
   private void createSubPaths() throws Exception {
     if (curator.checkExists().forPath(getLogsPath()) == null) {
       curator.create().creatingParentsIfNeeded().forPath(getLogsPath());
@@ -533,8 +597,4 @@ public class PALDirectory implements AutoCloseable {
         .build();
   }
   // </editor-fold>
-
-  public String getDirectoryUrl() {
-    return directoryUrl;
-  }
 }
