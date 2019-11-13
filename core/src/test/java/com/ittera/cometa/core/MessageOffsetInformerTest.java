@@ -6,9 +6,9 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import com.google.common.primitives.Longs;
-import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.LogRequest;
 import com.ittera.cometa.common.util.UUIDUtils;
+import com.ittera.cometa.common.znodes.LogInfo;
+import com.ittera.cometa.common.znodes.LogRequest;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;

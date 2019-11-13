@@ -6,6 +6,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.ittera.cometa.common.KafkaBrokerEndpoint;
+import com.ittera.cometa.common.KafkaBrokerInfo;
+import com.ittera.cometa.common.znodes.LogInfo;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;

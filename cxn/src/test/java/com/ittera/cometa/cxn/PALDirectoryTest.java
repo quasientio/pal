@@ -8,12 +8,17 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.LogReply;
-import com.ittera.cometa.LogRequest;
-import com.ittera.cometa.PeerInfo;
+import com.ittera.cometa.common.lang.intercept.InterceptType;
+import com.ittera.cometa.common.lang.intercept.InterceptableMethodCall;
+import com.ittera.cometa.common.znodes.InterceptEvent.Type;
+import com.ittera.cometa.common.znodes.InterceptRequest;
+import com.ittera.cometa.common.znodes.LogInfo;
+import com.ittera.cometa.common.znodes.LogReply;
+import com.ittera.cometa.common.znodes.LogRequest;
+import com.ittera.cometa.common.znodes.PeerInfo;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
@@ -750,5 +755,138 @@ public class PALDirectoryTest {
       assertThat(reply.getOffset(), greaterThan(lastOffset));
       lastOffset = reply.getOffset();
     }
+  }
+
+  @Test
+  public void registerInterceptAsync_noSuchPeer_exception() throws Exception {
+    InterceptRequest req =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "org.package.Callback",
+            "callMe",
+            new InterceptableMethodCall(
+                "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
+
+    try {
+      palDirectory.registerInterceptAsync(
+          req,
+          (curatorFramework, curatorEvent) ->
+              System.out.println("processResult event: " + curatorEvent));
+      fail("Should have raised NoPeerInfoNodeException");
+    } catch (NoPeerInfoNodeException e) {
+      // ok
+    }
+  }
+
+  @Test
+  public void registerInterceptAsync_peerExists_registered() throws Exception {
+    // create peer
+    UUID peerUuid = UUID.randomUUID();
+    String peerName = "testing peer";
+    Properties peerProps = new Properties();
+    peerProps.put("name", peerName);
+    palDirectory.registerPeer(peerUuid, peerProps);
+    Thread.sleep(100); // allow some time for cache to get updated
+    createdPeers.add(peerUuid);
+
+    // pre-assertions
+    assertThat(palDirectory.peerExists(peerUuid), is(true));
+
+    // create intercept request
+    InterceptRequest req =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerUuid,
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "org.package.Callback",
+            "callMe",
+            new InterceptableMethodCall(
+                "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
+
+    // register it
+    final CountDownLatch latch = new CountDownLatch(1);
+    palDirectory.registerInterceptAsync(
+        req,
+        (curatorFramework, evt) -> {
+          if (evt.getType().equals(CuratorEventType.CREATE) && evt.getResultCode() == 0) {
+            latch.countDown();
+          }
+        });
+    latch.await();
+  }
+
+  @Test
+  public void getPeerInterceptRequests_noRequests_emptyList() throws Exception {
+    // create peer
+    UUID peerUuid = UUID.randomUUID();
+    String peerName = "testing peer";
+    Properties peerProps = new Properties();
+    peerProps.put("name", peerName);
+    palDirectory.registerPeer(peerUuid, peerProps);
+    Thread.sleep(100); // allow some time for cache to get updated
+    createdPeers.add(peerUuid);
+
+    // pre-assertions
+    assertThat(palDirectory.peerExists(peerUuid), is(true));
+
+    assertThat(palDirectory.getPeerInterceptRequests(peerUuid), is(empty()));
+  }
+
+  @Test
+  public void getPeerInterceptRequests_requestsExist_requestList() throws Exception {
+    // create peer
+    UUID peerUuid = UUID.randomUUID();
+    String peerName = "testing peer";
+    Properties peerProps = new Properties();
+    peerProps.put("name", peerName);
+    palDirectory.registerPeer(peerUuid, peerProps);
+    Thread.sleep(100); // allow some time for cache to get updated
+    createdPeers.add(peerUuid);
+
+    // pre-assertions
+    assertThat(palDirectory.peerExists(peerUuid), is(true));
+    assertThat(palDirectory.getPeerInterceptRequests(peerUuid), is(empty()));
+
+    // create 2 intercept requests
+    Set<InterceptRequest> requests = new HashSet<>();
+    final int totalPeerIntercepts = 2;
+    for (int i = 0; i < totalPeerIntercepts; i++) {
+      requests.add(
+          new InterceptRequest<>(
+              UUID.randomUUID(),
+              peerUuid,
+              InterceptType.BEFORE,
+              "java.io.PrintStream",
+              "org.package.Callback",
+              "callMe",
+              new InterceptableMethodCall(
+                  "println", Arrays.asList("java.lang.String", "java.lang.Integer"))));
+    }
+    final CountDownLatch latch = new CountDownLatch(totalPeerIntercepts);
+
+    // set listener
+    // TODO : make this conditional, since we may be testing WITHOUT CACHING
+    // if no caching, then call 'registerInterceptAsync' with a callback object
+    palDirectory.addInterceptNodeListener(
+        event -> {
+          if (event.getType().equals(Type.INTERCEPT_ADDED)) {
+            latch.countDown();
+          }
+        });
+
+    // register them
+    for (InterceptRequest interceptRequest : requests) {
+      palDirectory.registerInterceptAsync(interceptRequest);
+    }
+
+    // wait for all listener events
+    latch.await();
+
+    // now retrieve and compare
+    assertThat(palDirectory.getPeerInterceptRequests(peerUuid), is(requests));
   }
 }

@@ -1,8 +1,8 @@
 package com.ittera.cometa.cxn;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.ittera.cometa.LogReply;
-import com.ittera.cometa.LogRequest;
+import com.ittera.cometa.common.znodes.LogReply;
+import com.ittera.cometa.common.znodes.LogRequest;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import java.util.List;
 import java.util.Set;

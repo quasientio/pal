@@ -5,13 +5,14 @@ import static org.junit.Assert.assertThat;
 
 import com.ittera.cometa.common.ExecPhase;
 import com.ittera.cometa.core.ZmqEnabledTest;
+import com.ittera.cometa.core.messages.InterceptsMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.OutboundMsg;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
-import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,51 +35,50 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 public class DispatcherConnectorTest extends ZmqEnabledTest {
-  private static final Logger logger = LoggerFactory.getLogger("tests");
 
-  private final class OutgoingMessageDispatcherStub implements Runnable {
+  private static final Logger logger = LoggerFactory.getLogger("tests");
+  private static final String MSG_PUBLISHER_ADDR = "inproc://cell";
+  private static final String INTERCEPTS_ADDR = "inproc://intercepts";
+  private static final int TEST_PORT = 2182;
+  private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
+
+  /*
+  MessagePublisher service stub
+   */
+  private final class MessagePublisherStub implements Runnable {
     List<Message> messagesReceived = new ArrayList<>();
     List<InternalHeader> headersReceived = new ArrayList<>();
+    private volatile boolean stopRequested;
 
-    void clear() {
-      outDispatcherStub.messagesReceived.clear();
-      outDispatcherStub.headersReceived.clear();
+    public void requestStop() {
+      stopRequested = true;
     }
 
     @Override
     public void run() {
       Socket repSocket = context.createSocket(SocketType.REP);
-      repSocket.bind(OUTCELL_ADDR);
+      repSocket.bind(MSG_PUBLISHER_ADDR);
 
-      while (!Thread.interrupted()) {
+      while (!stopRequested && !Thread.interrupted()) {
         OutboundMsg msg;
         try {
           msg = OutboundMsg.recvMsg(repSocket);
           if (msg == null) {
             continue;
           }
-          if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Received new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
-          }
           // add headers & message to lists for verification
           if (msg.getHeaders() != null) {
             headersReceived.addAll(msg.getHeaders());
           }
           messagesReceived.add(Message.parseFrom(msg.getBody()));
-          // reply: pretend message has no actors and send 0 back
-          repSocket.send("0");
+          repSocket.send("0"); // OK_REPLY
+          logger.debug(
+              "Publisher stub replied to received message w/uuid: {}", msg.getMessageUuid());
         } catch (ZMQException ex) {
           int errorCode = ex.getErrorCode();
           if (errorCode == ZError.ETERM) {
-            if (logger.isDebugEnabled()) {
-              logger.debug("Caught ETERM during blocking read. Breaking out.");
-            }
             break;
           } else if (errorCode == ZError.EINTR) {
-            if (logger.isDebugEnabled()) {
-              logger.debug("Caught EINTR during blocking read. Breaking out.");
-            }
             break;
           } else {
             throw ex;
@@ -87,20 +87,65 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
           logger.error("Error parsing received message", e);
         }
       }
+      logger.debug("MessagePublisherStub: exiting");
+    }
+  }
+
+  /*
+  Intercepts service stub
+   */
+  private final class InterceptsStub implements Runnable {
+    List<Message> messagesReceived = new ArrayList<>();
+
+    private volatile boolean stopRequested;
+
+    public void requestStop() {
+      stopRequested = true;
+    }
+
+    @Override
+    public void run() {
+      Socket repSocket = context.createSocket(SocketType.REP);
+      repSocket.bind(INTERCEPTS_ADDR);
+
+      while (!stopRequested && !Thread.interrupted()) {
+        OutboundMsg msg;
+        try {
+          msg = OutboundMsg.recvMsg(repSocket);
+          if (msg == null) {
+            continue;
+          }
+          messagesReceived.add(Message.parseFrom(msg.getBody()));
+          // pretend message has no intercepts -> send empty list
+          List<InterceptMessage> intercepts = Collections.emptyList();
+          new InterceptsMsg(intercepts).send(repSocket);
+          logger.debug(
+              "Intercepts stub replied to received message w/uuid: {}", msg.getMessageUuid());
+        } catch (ZMQException ex) {
+          int errorCode = ex.getErrorCode();
+          if (errorCode == ZError.ETERM) {
+            break;
+          } else if (errorCode == ZError.EINTR) {
+            break;
+          } else {
+            throw ex;
+          }
+        } catch (Exception e) {
+          logger.error("Error parsing received message", e);
+        }
+      }
+      logger.debug("InterceptsStub: exiting");
     }
   }
 
   private final UUID peerUuid = UUID.randomUUID();
-  private final String OUTCELL_ADDR = "inproc://cell";
   private ZContext context;
   private ExecutorService execService;
   private DispatcherConnector dispatcherConnector;
   private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
-  private final OutgoingMessageDispatcherStub outDispatcherStub =
-      new OutgoingMessageDispatcherStub();
+  private MessagePublisherStub messagePublisherStub;
+  private InterceptsStub interceptsStub;
   private InternalHeader WRITE_AHEAD_HEADER;
-  private static final int TEST_PORT = 2182;
-  private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
   private TestingServer testingServer;
   private PALDirectory palDirectory;
 
@@ -112,14 +157,24 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     testingServer = new TestingServer(TEST_PORT, true);
     palDirectory = new PALDirectory(CONNECTION_STR);
     this.dispatcherConnector =
-        new DispatcherConnector(context, peerUuid, msgBuilder, palDirectory, OUTCELL_ADDR);
+        new DispatcherConnector(
+            context, peerUuid, msgBuilder, palDirectory, MSG_PUBLISHER_ADDR, INTERCEPTS_ADDR);
 
-    // simulate OutgoingMessageDispatcher
-    execService.submit(outDispatcherStub);
+    // start stub services
+    messagePublisherStub = new MessagePublisherStub();
+    interceptsStub = new InterceptsStub();
+    execService.submit(messagePublisherStub);
+    execService.submit(interceptsStub);
   }
 
   @After
   public void cleanup() throws Exception {
+    logger.debug("in cleanup()");
+
+    // stop stubs
+    messagePublisherStub.requestStop();
+    interceptsStub.requestStop();
+
     // close local context
     context.close();
 
@@ -127,52 +182,44 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     execService.shutdownNow();
     execService.awaitTermination(2, TimeUnit.SECONDS);
 
-    outDispatcherStub.clear();
     palDirectory.close();
     testingServer.close();
+    logger.debug("out cleanup()");
   }
 
   @Test
   public void sendExecMessage() throws Exception {
+    logger.debug("test sendExecMessage");
     // sends msg and get reply
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg, ExecPhase.BEFORE);
+    logger.debug("Dispatcher sent msg w/uuid: {}", msg.getMessageUuid());
 
-    // should return same message as sent (if reply == 0), null otherwise
+    // should return same message
     assertThat(returnedMsg, is(msg));
-    assertThat(outDispatcherStub.messagesReceived.size(), is(1));
+
+    // verify message was received by Intercepts service
+    assertThat(interceptsStub.messagesReceived.size(), is(1));
     assertThat(
-        outDispatcherStub.messagesReceived.stream()
+        interceptsStub.messagesReceived.stream()
             .map(Message::getExecMessage)
             .collect(Collectors.toList()),
         is(Collections.singletonList(msg)));
-  }
 
-  @Test
-  public void sendInterceptRequestMessage() throws Exception {
-    // sends msg and get reply
-    Intercepts.InterceptMessage msg =
-        msgBuilder.buildInterceptMessage(
-            peerUuid,
-            Intercepts.InterceptType.BEFORE,
-            "java.io.PrintStream",
-            "println",
-            Collections.EMPTY_LIST,
-            this.getClass().getName(),
-            "someCallbackMethod");
-    int resultCode = dispatcherConnector.sendOutInterceptRequest(msg);
-
-    assertThat(resultCode, is(0));
-    assertThat(outDispatcherStub.messagesReceived.size(), is(1));
+    // verify message was received by Message Publisher
+    assertThat(messagePublisherStub.messagesReceived.size(), is(1));
     assertThat(
-        outDispatcherStub.messagesReceived.stream()
-            .map(Message::getInterceptMessage)
+        messagePublisherStub.messagesReceived.stream()
+            .map(Message::getExecMessage)
             .collect(Collectors.toList()),
         is(Collections.singletonList(msg)));
+
+    logger.debug("test sendExecMessage done");
   }
 
   @Test
   public void sendExecMessageMany() throws Exception {
+    logger.debug("test sendExecMessageMany");
     int msgsToSend = 10;
     List<ExecMessage> sentMessages = new ArrayList<>();
     List<ExecMessage> returnedMessages = new ArrayList<>();
@@ -182,33 +229,50 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       sentMessages.add(msg);
       ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg, ExecPhase.BEFORE);
+      logger.debug("Dispatcher sent msg w/uuid: {}", msg.getMessageUuid());
       returnedMessages.add(returnedMsg);
     }
 
+    // should return same messages
     assertThat(returnedMessages, is(sentMessages));
-    assertThat(outDispatcherStub.messagesReceived.size(), is(msgsToSend));
+
+    // verify messages received by Intercepts service
+    assertThat(interceptsStub.messagesReceived.size(), is(msgsToSend));
     assertThat(
-        outDispatcherStub.messagesReceived.stream()
+        interceptsStub.messagesReceived.stream()
             .map(Message::getExecMessage)
             .collect(Collectors.toList()),
         is(sentMessages));
+
+    // verify messages received by Message Publisher
+    assertThat(messagePublisherStub.messagesReceived.size(), is(msgsToSend));
+    assertThat(
+        messagePublisherStub.messagesReceived.stream()
+            .map(Message::getExecMessage)
+            .collect(Collectors.toList()),
+        is(sentMessages));
+    logger.debug("test sendExecMessageMany done");
   }
 
   @Test
   public void writeAhead() throws Exception {
+    logger.debug("test writeAhead");
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     dispatcherConnector.writeAhead(msg);
 
-    // verify messages received by stub
-    assertThat(outDispatcherStub.messagesReceived.size(), is(1));
+    // verify NO messages received by Intercepts service
+    assertThat(interceptsStub.messagesReceived.size(), is(0));
+
+    // verify message and header received by Message Publisher
+    assertThat(messagePublisherStub.messagesReceived.size(), is(1));
     assertThat(
-        outDispatcherStub.messagesReceived.stream()
+        messagePublisherStub.messagesReceived.stream()
             .map(Message::getExecMessage)
             .collect(Collectors.toList()),
         is(Collections.singletonList(msg)));
 
-    // stub should have received a WRITE_AHEAD_HEADER
-    assertThat(outDispatcherStub.headersReceived.size(), is(1));
-    assertThat(outDispatcherStub.headersReceived.get(0), is(WRITE_AHEAD_HEADER));
+    assertThat(messagePublisherStub.headersReceived.size(), is(1));
+    assertThat(messagePublisherStub.headersReceived.get(0), is(WRITE_AHEAD_HEADER));
+    logger.debug("test writeAhead done");
   }
 }

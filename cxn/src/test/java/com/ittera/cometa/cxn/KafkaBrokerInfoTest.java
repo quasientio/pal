@@ -2,7 +2,7 @@ package com.ittera.cometa.cxn;
 
 import static org.junit.Assert.assertEquals;
 
-import com.ittera.cometa.KafkaBrokerInfo;
+import com.ittera.cometa.common.KafkaBrokerInfo;
 import org.junit.Test;
 
 public class KafkaBrokerInfoTest {

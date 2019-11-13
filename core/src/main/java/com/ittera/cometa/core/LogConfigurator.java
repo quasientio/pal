@@ -1,7 +1,7 @@
 package com.ittera.cometa.core;
 
 import com.google.inject.Injector;
-import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.common.znodes.LogInfo;
 import com.ittera.cometa.cxn.PALDirectory;
 import java.util.EnumSet;
 import java.util.Properties;

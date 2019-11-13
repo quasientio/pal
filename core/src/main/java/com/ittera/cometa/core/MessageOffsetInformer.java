@@ -1,8 +1,8 @@
 package com.ittera.cometa.core;
 
-import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.LogReply;
 import com.ittera.cometa.common.util.Strings;
+import com.ittera.cometa.common.znodes.LogInfo;
+import com.ittera.cometa.common.znodes.LogReply;
 import com.ittera.cometa.core.messages.PublishedOffsetMsg;
 import com.ittera.cometa.cxn.NoLogRequestNodeException;
 import com.ittera.cometa.cxn.PALDirectory;

@@ -12,6 +12,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.ittera.cometa.common.util.Strings;
 import com.ittera.cometa.core.exec.ExtendedThreadPoolExecutor;
+import com.ittera.cometa.core.exec.InterceptInformer;
 import com.ittera.cometa.core.exec.LogMessageExecutor;
 import com.ittera.cometa.core.exec.PeerMessageExecutor;
 import com.ittera.cometa.core.exec.java.CustomClassloader;
@@ -167,6 +168,8 @@ public class Main implements Callable<Integer> {
       inprocChannels.put("out.pub.inproc", "inproc://pub");
       inprocChannels.put("offset.pub", "inproc://offsets");
       inprocChannels.put("sync.ready", "inproc://sync_ready");
+      inprocChannels.put("intercepts.reg", "inproc://intcept_reg");
+      inprocChannels.put("intercepts.mtx", "inproc://intcept_match");
     }
   }
 
@@ -486,6 +489,7 @@ public class Main implements Callable<Integer> {
     if (!runOptions.contains(RunOptions.REQLESS)) {
       services.add(injector.getInstance(DirectRequestDispatcher.class));
     }
+    services.add(injector.getInstance(Intercepts.class));
     return services;
   }
 
@@ -636,6 +640,10 @@ public class Main implements Callable<Integer> {
 
     // double-check by collecting all READY signals from services before proceeding
     collectGoSignals(services.size());
+
+    // start listening to intercept reqs
+    final PALDirectory palDir = injector.getInstance(PALDirectory.class);
+    palDir.addInterceptNodeListener(injector.getInstance(InterceptInformer.class));
 
     // start accepting Log requests
     if (!runOptions.contains(RunOptions.LOGLESS)) {

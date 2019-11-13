@@ -2,7 +2,7 @@ package com.ittera.cometa.cxn;
 
 import static org.junit.Assert.fail;
 
-import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.common.znodes.LogInfo;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;

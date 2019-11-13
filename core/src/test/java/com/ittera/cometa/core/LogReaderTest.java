@@ -5,7 +5,7 @@ import static org.junit.Assert.assertThat;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
-import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.common.znodes.LogInfo;
 import com.ittera.cometa.core.messages.InboundLogMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;

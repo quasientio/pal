@@ -56,6 +56,27 @@ public class InterceptRequestEntry {
     this.interceptMessage = interceptMessage;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    InterceptRequestEntry that = (InterceptRequestEntry) o;
+    return numberOfParams == that.numberOfParams
+        && isMethod == that.isMethod
+        && pattern.equals(that.pattern)
+        && paramTypes.equals(that.paramTypes)
+        && interceptMessage.equals(that.interceptMessage);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(pattern, paramTypes, numberOfParams, isMethod, interceptMessage);
+  }
+
   private static String[] toNames(Class[] types) {
     return Arrays.stream(types)
         .map(p -> p.getName())

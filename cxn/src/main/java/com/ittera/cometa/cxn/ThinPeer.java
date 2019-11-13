@@ -3,9 +3,9 @@ package com.ittera.cometa.cxn;
 import static java.lang.String.format;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.LogRequest;
-import com.ittera.cometa.PeerInfo;
+import com.ittera.cometa.common.znodes.LogInfo;
+import com.ittera.cometa.common.znodes.LogRequest;
+import com.ittera.cometa.common.znodes.PeerInfo;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
@@ -681,7 +681,7 @@ public class ThinPeer {
         logger.warn("Error closing consumer", e);
       }
     }
-	}
+  }
 
   private void close(Producer producer, long timeout, TemporalUnit timeUnit, String msg) {
     if (producer != null) {
@@ -725,7 +725,7 @@ public class ThinPeer {
 
     // close log-related resources
     if (!producerGiven) {
-      close(producer,500, ChronoUnit.MILLIS, "Log producer closed.");
+      close(producer, 500, ChronoUnit.MILLIS, "Log producer closed.");
     }
     if (!consumerGiven) {
       close(consumer, 500, ChronoUnit.MILLIS, "Log consumer closed.");

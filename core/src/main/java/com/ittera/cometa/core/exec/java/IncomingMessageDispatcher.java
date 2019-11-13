@@ -24,9 +24,6 @@ public class IncomingMessageDispatcher {
   @Inject private GetInstanceVariableDispatcher getInstanceVariableDispatcher;
   @Inject private SetInstanceVariableDispatcher setInstanceVariableDispatcher;
 
-  // intercept dispatcher
-  @Inject private InterceptMessageDispatcher interceptMessageDispatcher;
-
   /**
    * @param execMessage Message to invoke
    * @param isDirect true if message comes from this or another peer, false if it comes from a log
@@ -56,9 +53,7 @@ public class IncomingMessageDispatcher {
   }
 
   public boolean incomingIntercept(InterceptMessage interceptMessage, boolean isDirect) {
-    if (logger.isDebugEnabled()) {
-      logger.debug(String.format("incomingCall with intercept msg:%n%s", interceptMessage));
-    }
-    return interceptMessageDispatcher.dispatchIncoming(interceptMessage, isDirect);
+    logger.warn("DEPRECATED incomingCall with intercept msg:%n%s", interceptMessage);
+    return false;
   }
 }

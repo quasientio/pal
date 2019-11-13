@@ -1,4 +1,4 @@
-package com.ittera.cometa;
+package com.ittera.cometa.common.znodes;
 
 import java.util.Objects;
 import java.util.UUID;

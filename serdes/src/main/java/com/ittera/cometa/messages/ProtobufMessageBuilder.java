@@ -3,11 +3,15 @@ package com.ittera.cometa.messages;
 import com.google.protobuf.Message.Builder;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
+import com.ittera.cometa.common.lang.intercept.Interceptable.InterceptableType;
+import com.ittera.cometa.common.lang.intercept.InterceptableFieldOp;
+import com.ittera.cometa.common.lang.intercept.InterceptableMethodCall;
 import com.ittera.cometa.common.lang.reflect.CodeSignature;
 import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
 import com.ittera.cometa.common.lang.reflect.FieldSignature;
 import com.ittera.cometa.common.lang.reflect.MethodSignature;
+import com.ittera.cometa.common.znodes.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.Calls.ClassMethodCall;
 import com.ittera.cometa.messages.protobuf.Calls.ConstructorCall;
 import com.ittera.cometa.messages.protobuf.Calls.InstanceMethodCall;
@@ -24,6 +28,7 @@ import com.ittera.cometa.messages.protobuf.Fields.StaticFieldPutDone;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
 import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
@@ -908,6 +913,77 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
             .setCallbackMethod(callbackMethodName);
 
     return msgBuilder.build();
+  }
+
+  private static InterceptType getMessageTypeFromRequestType(
+      com.ittera.cometa.common.lang.intercept.InterceptType interceptType) {
+    switch (interceptType) {
+      case BEFORE:
+        return InterceptType.BEFORE;
+      case AFTER:
+        return InterceptType.AFTER;
+      case AROUND:
+        return InterceptType.AROUND;
+      case BEFORE_ASYNC:
+        return InterceptType.BEFORE_ASYNC;
+      case AFTER_ASYNC:
+        return InterceptType.AFTER_ASYNC;
+      default:
+        throw new IllegalArgumentException("Unknown type: " + interceptType);
+    }
+  }
+
+  private static FieldOpType getMessageTypeFromRequestType(
+      com.ittera.cometa.common.lang.FieldOpType fieldOpType) {
+    switch (fieldOpType) {
+      case GET:
+        return FieldOpType.GET;
+      case PUT:
+        return FieldOpType.PUT;
+      default:
+        throw new IllegalArgumentException("Unknown type: " + fieldOpType);
+    }
+  }
+
+  @Override
+  public Intercepts.InterceptMessage buildInterceptMessage(InterceptRequest intercept) {
+    boolean isMethodInterceptable =
+        intercept.getInterceptable().getType().equals(InterceptableType.METHOD_CALL);
+    if (isMethodInterceptable) {
+      InterceptRequest<InterceptableMethodCall> methodIntercept = intercept;
+      final Intercepts.InterceptMessage.Builder msgBuilder =
+          InterceptMessage.newBuilder()
+              .setPeerUuid(intercept.getPeer().toString())
+              .setType(getMessageTypeFromRequestType(intercept.getType()))
+              .setMessageUuid(intercept.getUuid().toString())
+              .setClazz(intercept.getClazz())
+              .setMethod(
+                  Intercepts.InterceptableMethod.newBuilder()
+                      .setName(intercept.getInterceptable().getName())
+                      .addAllParameterType(methodIntercept.getInterceptable().getParameterTypes())
+                      .build())
+              .setCallbackClass(intercept.getCallbackClass())
+              .setCallbackMethod(intercept.getCallbackMethod());
+      return msgBuilder.build();
+    } else {
+      InterceptRequest<InterceptableFieldOp> fieldIntercept = intercept;
+      final InterceptMessage.Builder msgBuilder =
+          Intercepts.InterceptMessage.newBuilder()
+              .setPeerUuid(intercept.getPeer().toString())
+              .setType(getMessageTypeFromRequestType(intercept.getType()))
+              .setMessageUuid(intercept.getUuid().toString())
+              .setClazz(intercept.getClazz())
+              .setField(
+                  Intercepts.InterceptableField.newBuilder()
+                      .setName(intercept.getInterceptable().getName())
+                      .setType(
+                          getMessageTypeFromRequestType(
+                              fieldIntercept.getInterceptable().getFieldOpType()))
+                      .build())
+              .setCallbackClass(intercept.getCallbackClass())
+              .setCallbackMethod(intercept.getCallbackMethod());
+      return msgBuilder.build();
+    }
   }
 
   @Override

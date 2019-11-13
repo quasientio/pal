@@ -10,7 +10,6 @@ import com.ittera.cometa.messages.OutboundMsg;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Intercepts;
-import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.Collections;
@@ -37,29 +36,50 @@ public class DispatcherConnector {
   private final UUID peerUuid;
   private final MessageBuilder messageBuilder;
   private final PALDirectory palDirectory;
-  private final String outCellAddress;
+  private final String msgPublisherAddress, interceptMatchAddress;
   private final List<InternalHeader> WRITE_AHEAD_HEADERS;
-  private final List<InternalHeader> INCOMING_INTERCEPT_REQ_HEADERS;
-  static final int ERROR_READING_FROM_SOCKET = -2;
 
-  // flag to avoid creating the threadLocal socket when we're trying to close it before having been
-  // created
-  private final ThreadLocal<Boolean> threadSocketCreated = ThreadLocal.withInitial(() -> false);
+  /*
+  2 sockets per thread: 1 to send REQs to Intercepts; 1 to send REQs to MessagePublisher
+  */
 
-  // per-thread REQ socket to send out messages
-  private final ThreadLocal<Socket> threadSocket =
+  // per-thread REQ socket to publish exec messages
+  private final ThreadLocal<Socket> threadPubSocket =
       new ThreadLocal<Socket>() {
         protected Socket initialValue() {
           Socket worker = zmqContext.createSocket(SocketType.REQ);
-          worker.connect(outCellAddress);
+          worker.connect(msgPublisherAddress);
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Created and connected REQ new socket to outCellAddress: {}", outCellAddress);
+                "Created and connected REQ new socket to outCellAddress: {}", msgPublisherAddress);
           }
-          threadSocketCreated.set(true);
+          threadPubSocketCreated.set(true);
           return worker;
         }
       };
+  // flag to avoid creating the threadLocal socket when we're trying to close it before having been
+  // created
+  private final ThreadLocal<Boolean> threadPubSocketCreated = ThreadLocal.withInitial(() -> false);
+
+  // per-thread REQ socket to get matching intercepts for exec messages
+  private final ThreadLocal<Socket> threadInterceptsSocket =
+      new ThreadLocal<Socket>() {
+        protected Socket initialValue() {
+          Socket worker = zmqContext.createSocket(SocketType.REQ);
+          worker.connect(interceptMatchAddress);
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Created and connected REQ new socket to interceptMatchAddress: {}",
+                interceptMatchAddress);
+          }
+          threadInterceptsSocketCreated.set(true);
+          return worker;
+        }
+      };
+  // flag to avoid creating the threadLocal socket when we're trying to close it before having been
+  // created
+  private final ThreadLocal<Boolean> threadInterceptsSocketCreated =
+      ThreadLocal.withInitial(() -> false);
 
   @Inject
   public DispatcherConnector(
@@ -67,16 +87,16 @@ public class DispatcherConnector {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       PALDirectory palDirectory,
-      @Named("out.cell") String outCellAddress) {
+      @Named("out.cell") String msgPublisherAddress,
+      @Named("intercepts.mtx") String interceptMatchAddress) {
     this.zmqContext = zmqContext;
     this.peerUuid = peerUuid;
     this.messageBuilder = messageBuilder;
     this.palDirectory = palDirectory;
-    this.outCellAddress = outCellAddress;
+    this.msgPublisherAddress = msgPublisherAddress;
+    this.interceptMatchAddress = interceptMatchAddress;
     this.WRITE_AHEAD_HEADERS =
         Collections.singletonList(messageBuilder.buildWriteAheadHeader(peerUuid));
-    this.INCOMING_INTERCEPT_REQ_HEADERS =
-        Collections.singletonList(messageBuilder.buildIncomingInterceptRequestHeader());
   }
 
   public ExecMessage sendExecMessage(ExecMessage message, ExecPhase execPhase) {
@@ -88,8 +108,8 @@ public class DispatcherConnector {
     if (logger.isTraceEnabled()) {
       logger.trace("sendExecMessage:in w/ message with uuid: {}", message.getMessageUuid());
     }
-    Socket outSocket = threadSocket.get();
-    // send
+    Socket interceptsReqSocket = threadInterceptsSocket.get();
+    // find matching intercepts for message
     UUID followingUuid =
         message.hasFollowingUuid() ? UUID.fromString(message.getFollowingUuid()) : null;
     final OutboundMsg msg =
@@ -100,24 +120,27 @@ public class DispatcherConnector {
             UUID.fromString(message.getMessageUuid()),
             followingUuid,
             messageBuilder.wrap(message).toByteArray());
-    msg.send(outSocket);
+    msg.send(interceptsReqSocket);
 
     // receive intercepts, if any
     InterceptsMsg interceptsMsg = null;
     try {
-      interceptsMsg = InterceptsMsg.recvMsg(outSocket, true);
+      interceptsMsg = InterceptsMsg.recvMsg(interceptsReqSocket, true);
     } catch (ZMQException ex) {
       int errorCode = ex.getErrorCode();
       if (errorCode == ZError.ETERM) {
         logger.warn("Caught ETERM during blocking read. Will close socket");
-        outSocket.close();
+        interceptsReqSocket.close();
       } else if (errorCode == ZError.EINTR) {
         logger.warn("Caught EINTR during blocking read. Will close socket.");
-        outSocket.close();
+        interceptsReqSocket.close();
       }
     } catch (InvalidProtocolBufferException e) {
       logger.error("Error parsing received message", e);
     }
+
+    // publish message -- TODO should we in case of intercepts publish it after
+    publishMessage(msg);
 
     // in case of error simply return received ExecMessage
     if (interceptsMsg == null) {
@@ -152,7 +175,8 @@ public class DispatcherConnector {
         logger.error(
             "Error sending callback to peer w/uuid: {}, callback message: {}",
             interceptor,
-            callbackMessage);
+            callbackMessage,
+            ex);
       }
 
       //      if (interceptMessage.getType().equals(Intercepts.InterceptType.AROUND)) {
@@ -174,44 +198,13 @@ public class DispatcherConnector {
     return returnValue;
   }
 
-  private int sendInterceptRequest(
-      InterceptMessage message, @Nullable List<InternalHeader> headers) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("sendInterceptRequest:in w/ message with uuid: {}", message.getMessageUuid());
+  private void publishMessage(OutboundMsg message) {
+    Socket publisherReqSocket = threadPubSocket.get();
+    message.send(publisherReqSocket);
+    String reply = publisherReqSocket.recvStr();
+    if (!reply.equalsIgnoreCase("0")) {
+      logger.warn("Non-zero reply from message publisher for message: {}", message);
     }
-
-    Socket outSocket = threadSocket.get();
-    // send
-    final OutboundMsg msg =
-        new OutboundMsg(
-            MessageType.InterceptMessage,
-            ExecPhase.UNDEFINED,
-            headers,
-            UUID.fromString(message.getMessageUuid()),
-            null,
-            messageBuilder.wrap(message).toByteArray());
-    msg.send(outSocket);
-
-    // receive
-    String rcvdString;
-    try {
-      rcvdString = outSocket.recvStr();
-    } catch (ZMQException ex) {
-      int errorCode = ex.getErrorCode();
-      if (errorCode == ZError.ETERM) {
-        logger.warn("Caught ETERM during blocking read. Will close socket");
-        outSocket.close();
-      } else if (errorCode == ZError.EINTR) {
-        logger.warn("Caught EINTR during blocking read. Will close socket.");
-        outSocket.close();
-      }
-      return ERROR_READING_FROM_SOCKET;
-    }
-
-    if (logger.isTraceEnabled()) {
-      logger.trace("out w/ {}", rcvdString);
-    }
-    return Integer.parseInt(rcvdString);
   }
 
   public void writeAhead(ExecMessage message) {
@@ -221,44 +214,33 @@ public class DispatcherConnector {
           message.getMessageUuid(),
           message.getPeerUuid());
     }
+    final UUID followingUuid =
+        message.hasFollowingUuid() ? UUID.fromString(message.getFollowingUuid()) : null;
+    final OutboundMsg msg =
+        new OutboundMsg(
+            MessageType.ExecMessage,
+            ExecPhase.BEFORE,
+            WRITE_AHEAD_HEADERS,
+            UUID.fromString(message.getMessageUuid()),
+            followingUuid,
+            messageBuilder.wrap(message).toByteArray());
 
-    // by sending out <write_ahead> header the Log Writer will serialize it with a <dispatching-by>
-    // header
-    sendExecMessage(message, ExecPhase.BEFORE, WRITE_AHEAD_HEADERS);
-  }
-
-  public int sendOutInterceptRequest(Intercepts.InterceptMessage message) {
-    return sendInterceptRequest(message, null);
-  }
-
-  /**
-   * Register intercept info of an incoming InterceptMessage message
-   *
-   * @param message
-   * @return {@code ERROR_READING_FROM_SOCKET} if an error occurs reading from the socket (note that
-   *     registration may have taken place), {@code 0} if intercept registration is confirmed,
-   *     {@code -1} if registration failed
-   */
-  public int registerIntercept(InterceptMessage message) {
-    if (logger.isTraceEnabled()) {
-      logger.trace(
-          "registerIntercept:in w/ message with uuid: {},from {}",
-          message.getMessageUuid(),
-          message.getPeerUuid());
-    }
-
-    return sendInterceptRequest(message, INCOMING_INTERCEPT_REQ_HEADERS);
+    // no intercept matching, just publish it
+    publishMessage(msg);
   }
 
   private @Nullable byte[] sendCallbackMessageToPeer(
       UUID interceptor, ExecMessage message, boolean getReply) throws Exception {
+    if (logger.isDebugEnabled()) {
+      logger.debug("Sending callback message: {} to peer w/uuid: {}", message, interceptor);
+    }
     Socket req = zmqContext.createSocket(SocketType.REQ);
     // get peer's address
     String interceptorAddress;
     interceptorAddress = palDirectory.getPeerInfo(interceptor).getReqAddress();
     // connect to peer and send callback message
     req.connect(interceptorAddress);
-    req.send(message.toByteArray(), 0);
+    req.send(messageBuilder.wrap(message).toByteArray(), 0);
 
     // block until we get a reply
     byte[] reply = null;
@@ -286,12 +268,21 @@ public class DispatcherConnector {
   }
 
   void closeThreadLocalSocket() {
-    if (threadSocketCreated.get()) {
-      Socket outSocket = threadSocket.get();
-      if (outSocket != null) {
-        outSocket.close();
+    if (threadInterceptsSocketCreated.get()) {
+      Socket socket = threadInterceptsSocket.get();
+      if (socket != null) {
+        socket.close();
         if (logger.isDebugEnabled()) {
-          logger.debug("Thread local socket closed");
+          logger.debug("Thread local REQ socket for intercept matching closed");
+        }
+      }
+    }
+    if (threadPubSocketCreated.get()) {
+      Socket socket = threadPubSocket.get();
+      if (socket != null) {
+        socket.close();
+        if (logger.isDebugEnabled()) {
+          logger.debug("Thread local REQ socket for publishing closed");
         }
       }
     }

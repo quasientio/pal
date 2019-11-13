@@ -1,6 +1,6 @@
 package com.ittera.cometa.cxn;
 
-import com.ittera.cometa.LogInfo;
+import com.ittera.cometa.common.znodes.LogInfo;
 
 public class NoLogInfoNodeException extends Exception {
 

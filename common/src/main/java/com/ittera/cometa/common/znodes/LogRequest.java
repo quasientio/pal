@@ -1,9 +1,9 @@
-package com.ittera.cometa;
+package com.ittera.cometa.common.znodes;
 
 import java.util.Objects;
 import java.util.UUID;
 
-public class LogRequest implements Comparable {
+public class LogRequest extends UTCTimestampedInfo implements Comparable {
 
   private final UUID uuid;
   private LogInfo outputLog;

@@ -3,6 +3,7 @@ package com.ittera.cometa.messages;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ExecutableObjectType;
+import com.ittera.cometa.common.znodes.InterceptRequest;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessageType;
 import com.ittera.cometa.messages.protobuf.Headers;
@@ -169,6 +170,8 @@ public interface MessageBuilder {
       FieldOpType fieldOpType,
       String callbackClassName,
       String callbackMethodName);
+
+  InterceptMessage buildInterceptMessage(InterceptRequest interceptRequest);
 
   InterceptReply buildInterceptReply(UUID peerUuid, UUID followingUuid, boolean result);
 

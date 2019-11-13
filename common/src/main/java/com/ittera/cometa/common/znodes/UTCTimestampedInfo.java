@@ -1,4 +1,4 @@
-package com.ittera.cometa;
+package com.ittera.cometa.common.znodes;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;

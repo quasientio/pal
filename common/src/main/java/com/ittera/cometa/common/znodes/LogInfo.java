@@ -1,6 +1,8 @@
-package com.ittera.cometa;
+package com.ittera.cometa.common.znodes;
 
-import com.ittera.cometa.util.ByteSizeConverter;
+import com.ittera.cometa.common.KafkaBrokerEndpoint;
+import com.ittera.cometa.common.KafkaBrokerInfo;
+import com.ittera.cometa.common.util.ByteSizeConverter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

@@ -1,6 +1,6 @@
 package com.ittera.cometa.cxn;
 
-import com.ittera.cometa.PeerInfo;
+import com.ittera.cometa.common.znodes.PeerInfo;
 
 public class NoPeerInfoNodeException extends Exception {
 

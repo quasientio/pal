@@ -1,7 +1,7 @@
 package com.ittera.cometa.core;
 
-import com.ittera.cometa.LogInfo;
 import com.ittera.cometa.common.util.UUIDUtils;
+import com.ittera.cometa.common.znodes.LogInfo;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.LogMessageHeader;
 import com.ittera.cometa.messages.OutboundMsg;

@@ -1,5 +1,8 @@
 package com.ittera.cometa.core;
 
+import static java.lang.String.format;
+
+import com.ittera.cometa.core.exec.DuplicateInterceptException;
 import com.ittera.cometa.core.exec.java.InterceptRequestEntry;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts;
@@ -48,25 +51,36 @@ class InterceptRequests {
         .collect(Collectors.toList());
   }
 
-  boolean registerInterceptRequest(Intercepts.InterceptMessage interceptMessage) {
+  void registerInterceptRequest(Intercepts.InterceptMessage interceptMessage)
+      throws DuplicateInterceptException, IllegalArgumentException {
     InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
+
+    if (!interceptMessage.hasField() && !interceptMessage.hasMethod()) {
+      throw new IllegalArgumentException(
+          format("Unsupported intercept request message:%n%s", interceptMessage));
+    }
+
+    final List<InterceptRequestEntry> targetList;
 
     if (interceptMessage.hasField()) {
       if (interceptMessage.getField().getType().equals(Intercepts.FieldOpType.GET)) {
-        fieldGetIntercepts.add(interceptRequestEntry);
+        targetList = fieldGetIntercepts;
       } else {
-        fieldPutIntercepts.add(interceptRequestEntry);
-      }
-    } else if (interceptMessage.hasMethod()) {
-      if (interceptMessage.getMethod().getName().equalsIgnoreCase("new")) {
-        constructorIntercepts.add(interceptRequestEntry);
-      } else {
-        methodIntercepts.add(interceptRequestEntry);
+        targetList = fieldPutIntercepts;
       }
     } else {
-      logger.warn("Discarding unsupported intercept request: {}", interceptMessage);
-      return false;
+      if (interceptMessage.getMethod().getName().equalsIgnoreCase("new")) {
+        targetList = constructorIntercepts;
+      } else {
+        targetList = methodIntercepts;
+      }
     }
-    return true;
+
+    if (targetList.contains(interceptRequestEntry)) {
+      throw new DuplicateInterceptException(
+          format("InterceptMessage is already registered: %s", interceptMessage));
+    } else {
+      targetList.add(interceptRequestEntry);
+    }
   }
 }

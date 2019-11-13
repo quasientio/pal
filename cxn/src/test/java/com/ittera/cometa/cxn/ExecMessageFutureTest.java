@@ -8,9 +8,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.LogReply;
-import com.ittera.cometa.LogRequest;
+import com.ittera.cometa.common.znodes.LogInfo;
+import com.ittera.cometa.common.znodes.LogReply;
+import com.ittera.cometa.common.znodes.LogRequest;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;

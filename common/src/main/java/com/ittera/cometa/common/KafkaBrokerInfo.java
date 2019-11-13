@@ -1,4 +1,4 @@
-package com.ittera.cometa;
+package com.ittera.cometa.common;
 
 import com.ittera.cometa.common.util.Strings;
 import java.util.Arrays;

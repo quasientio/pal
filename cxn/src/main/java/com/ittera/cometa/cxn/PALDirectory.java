@@ -1,22 +1,34 @@
 package com.ittera.cometa.cxn;
 
-import com.ittera.cometa.KafkaBrokerInfo;
-import com.ittera.cometa.LogInfo;
-import com.ittera.cometa.LogReply;
-import com.ittera.cometa.LogRequest;
-import com.ittera.cometa.PeerInfo;
+import static java.lang.String.format;
+
+import com.ittera.cometa.common.KafkaBrokerInfo;
 import com.ittera.cometa.common.util.Strings;
+import com.ittera.cometa.common.znodes.InterceptEvent;
+import com.ittera.cometa.common.znodes.InterceptEvent.Type;
+import com.ittera.cometa.common.znodes.InterceptNodeListener;
+import com.ittera.cometa.common.znodes.InterceptRequest;
+import com.ittera.cometa.common.znodes.LogInfo;
+import com.ittera.cometa.common.znodes.LogReply;
+import com.ittera.cometa.common.znodes.LogRequest;
+import com.ittera.cometa.common.znodes.PeerInfo;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
@@ -25,10 +37,15 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.BackgroundCallback;
 import org.apache.curator.framework.api.CuratorWatcher;
+import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode;
+import org.apache.curator.framework.recipes.cache.TreeCache;
+import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
+import org.apache.curator.framework.recipes.cache.TreeCacheListener;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +58,7 @@ public class PALDirectory implements AutoCloseable {
   private static final String DEFAULT_PAL_NAMESPACE = "cometa";
   private static final String PEERS_DIR = "peers";
   private static final String LOGS_DIR = "logs";
+  private static final String INTERCEPTS_DIR = "intercepts";
 
   // absolute path of kafka broker nodes
   private static final String BROKERS_PATH = "/brokers/ids";
@@ -60,14 +78,65 @@ public class PALDirectory implements AutoCloseable {
   private Set<KafkaBrokerInfo> brokerInfoSet;
   private boolean brokersInfoLoaded;
   private PathChildrenCache peersCache;
-  private final boolean cachePeers;
+  private TreeCache interceptsCache;
+  private ExecutorService cachingExecutor;
+  private final List<InterceptNodeListener> interceptListeners = new ArrayList<>();
+
+  private class TreeToInterceptsCacheListener implements TreeCacheListener {
+
+    /**
+     * @param type
+     * @param path
+     * @return new intercept event </br> null if length of split path != 4 or unparseable UUIDs
+     */
+    private InterceptEvent createInterceptEvent(InterceptEvent.Type type, String path) {
+      String[] parts =
+          Arrays.stream(path.split("\\/")).filter(s -> s.length() > 0).toArray(String[]::new);
+      if (parts.length == 4) {
+        try {
+          final UUID peerUuid = UUID.fromString(parts[2]);
+          final UUID interceptUuid = UUID.fromString(parts[3]);
+          return new InterceptEvent(type, path, peerUuid, interceptUuid);
+        } catch (IllegalArgumentException e) {
+          logger.warn("Invalid UUID or unexpected path of len=4: {}", path);
+        }
+      }
+      return null;
+    }
+
+    @Override
+    public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent treeCacheEvent) {
+      switch (treeCacheEvent.getType()) {
+        case NODE_ADDED:
+          String path = treeCacheEvent.getData().getPath();
+          InterceptEvent interceptEvent = createInterceptEvent(Type.INTERCEPT_ADDED, path);
+          if (interceptEvent != null) {
+            interceptListeners.forEach(l -> l.interceptEvent(interceptEvent));
+          }
+          break;
+        case NODE_REMOVED:
+          path = treeCacheEvent.getData().getPath();
+          interceptEvent = createInterceptEvent(Type.INTERCEPT_REMOVED, path);
+          if (interceptEvent != null) {
+            interceptListeners.forEach(l -> l.interceptEvent(interceptEvent));
+          }
+          break;
+        case NODE_UPDATED:
+        case CONNECTION_SUSPENDED:
+        case CONNECTION_RECONNECTED:
+        case CONNECTION_LOST:
+        case INITIALIZED:
+        default: // noop
+      }
+    }
+  };
 
   @Inject
   public PALDirectory(@Named("paldir_url") String connectionString) {
     this(connectionString, null, true);
   }
 
-  public PALDirectory(String connectionString, String namespace, boolean cachePeers) {
+  public PALDirectory(String connectionString, String namespace, boolean withCaching) {
     this.curator = newCuratorInstance(connectionString);
     logger.info("Will connect to zookeeper@{}", connectionString);
     /* we can't set the namespace on the Curator instance, as we need access to
@@ -75,23 +144,24 @@ public class PALDirectory implements AutoCloseable {
     */
     this.namespace = namespace != null ? namespace : DEFAULT_PAL_NAMESPACE;
     this.directoryUrl = connectionString;
-    this.cachePeers = cachePeers;
     curator.start();
     try {
       createSubPaths();
     } catch (Exception e) {
       logger.error("Error trying to create subpaths", e);
     }
-    // start and build peer cache
-    if (cachePeers) {
+    // start and build caches
+    if (withCaching) {
+      cachingExecutor = Executors.newSingleThreadExecutor();
       startPeersCache();
+      startInterceptsCache();
     }
   }
 
   private void startPeersCache() {
-    peersCache = new PathChildrenCache(curator, getPeersPath(), true);
+    peersCache = new PathChildrenCache(curator, getPeersPath(), true, false, cachingExecutor);
     try {
-      peersCache.start(StartMode.BUILD_INITIAL_CACHE);
+      peersCache.start(StartMode.NORMAL);
       logger.info(
           "Initialized peers cache with {} known peers.", peersCache.getCurrentData().size());
       if (logger.isDebugEnabled()) {
@@ -101,6 +171,17 @@ public class PALDirectory implements AutoCloseable {
       }
     } catch (Exception e) {
       logger.error("Error building peers cache", e);
+    }
+  }
+
+  private void startInterceptsCache() {
+    interceptsCache = new TreeCache(curator, getInterceptsPath());
+    interceptsCache.getListenable().addListener(new TreeToInterceptsCacheListener());
+    try {
+      interceptsCache.start();
+      logger.info("Initialized intercepts cache");
+    } catch (Exception e) {
+      logger.error("Error building intercepts cache", e);
     }
   }
 
@@ -144,8 +225,7 @@ public class PALDirectory implements AutoCloseable {
 
   public PeerInfo getPeerInfo(UUID peerUuid) throws Exception {
     if (!peerExists(peerUuid)) {
-      throw new NoPeerInfoNodeException(
-          String.format("Node for peer: %s does not exist", peerUuid));
+      throw new NoPeerInfoNodeException(format("Node for peer: %s does not exist", peerUuid));
     }
     final Properties props = getProperties(getPeerPath(peerUuid), peersCache);
     final PeerInfo peerInfo = new PeerInfo(peerUuid);
@@ -198,6 +278,78 @@ public class PALDirectory implements AutoCloseable {
   }
   // </editor-fold>
 
+  // <editor-fold desc="Intercept request methods">
+  public void registerInterceptAsync(InterceptRequest interceptRequest, BackgroundCallback callback)
+      throws Exception {
+    if (!peerExists(interceptRequest.getPeer())) {
+      throw new NoPeerInfoNodeException(
+          format("Peer w/uuid %s does not exist", interceptRequest.getPeer()));
+    }
+    final byte[] interceptData = interceptRequest.toBytes(getEncodingCharset());
+    final String interceptPath =
+        format(
+            "%s/%s",
+            getInterceptsPathForPeer(interceptRequest.getPeer()), interceptRequest.getUuid());
+    curator
+        .create()
+        .creatingParentsIfNeeded()
+        .inBackground(callback)
+        .forPath(interceptPath, interceptData);
+    if (logger.isDebugEnabled()) {
+      logger.debug("Async-created new node for intercept request: {}", interceptRequest);
+    }
+  }
+
+  public void registerInterceptAsync(InterceptRequest interceptRequest) throws Exception {
+    registerInterceptAsync(interceptRequest, null);
+  }
+
+  public Set<InterceptRequest> getPeerInterceptRequests(UUID peerUuid) throws Exception {
+    Set<InterceptRequest> interceptRequests = new HashSet<>();
+    final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
+    if (interceptsCache == null) {
+      try {
+        for (String interceptNode : curator.getChildren().forPath(peerInterceptsPath)) {
+          final String interceptPath = format("%s/%s", peerInterceptsPath, interceptNode);
+          interceptRequests.add(getInterceptRequest(interceptPath));
+        }
+      } catch (NoNodeException e) {
+        // so no intercepts
+      }
+    } else {
+      Map<String, ChildData> children = interceptsCache.getCurrentChildren(peerInterceptsPath);
+      if (children != null) {
+        for (ChildData child : children.values()) {
+          if (logger.isDebugEnabled()) {
+            logger.debug("getting cached intercept from path: {}", child.getPath());
+          }
+          interceptRequests.add(getInterceptRequest(child.getPath()));
+        }
+      }
+    }
+    return interceptRequests;
+  }
+
+  public InterceptRequest getInterceptRequest(String interceptPath) throws Exception {
+    final byte[] data;
+    if (interceptsCache == null) {
+      data = curator.getData().forPath(interceptPath);
+    } else {
+      data = interceptsCache.getCurrentData(interceptPath).getData();
+    }
+    if (data != null) {
+      return InterceptRequest.fromBytes(data, getEncodingCharset());
+    } else {
+      return null;
+    }
+  }
+
+  public void addInterceptNodeListener(InterceptNodeListener listener) {
+    interceptListeners.add(listener);
+  }
+
+  // </editor-fold>
+
   // <editor-fold desc="Log methods">
   public LogInfo registerLog(String logName) throws Exception {
     UUID newLogUuid = UUID.randomUUID();
@@ -232,7 +384,7 @@ public class PALDirectory implements AutoCloseable {
 
   public LogInfo getLogInfo(String logName) throws Exception {
     if (!logExists(logName)) {
-      throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
+      throw new NoLogInfoNodeException(format("Node for log: %s does not exist", logName));
     }
     final Properties props = getProperties(getLogPath(logName), null);
     final UUID uuid = UUID.fromString(props.getProperty("uuid"));
@@ -317,16 +469,16 @@ public class PALDirectory implements AutoCloseable {
   public boolean logRequestExistsAsync(
       String logName, UUID requestUuid, BackgroundCallback callback, CuratorWatcher watcher)
       throws Exception {
-    String requestNode = String.format("%s/%s", getLogPath(logName), requestUuid);
+    String requestNode = format("%s/%s", getLogPath(logName), requestUuid);
     return curator.checkExists().usingWatcher(watcher).inBackground(callback).forPath(requestNode)
         != null;
   }
 
   public void addLogRequestAsync(String logName, LogRequest logRequest, BackgroundCallback callback)
       throws Exception {
-    String newRequestNode = String.format("%s/%s", getLogPath(logName), logRequest.getUuid());
+    String newRequestNode = format("%s/%s", getLogPath(logName), logRequest.getUuid());
     if (!logExists(logName)) {
-      throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
+      throw new NoLogInfoNodeException(format("Node for log: %s does not exist", logName));
     }
 
     curator.create().inBackground(callback).forPath(newRequestNode);
@@ -344,7 +496,7 @@ public class PALDirectory implements AutoCloseable {
    * @throws Exception
    */
   public void deleteLogRequestAsync(String logName, LogRequest logRequest) throws Exception {
-    String requestNode = String.format("%s/%s", getLogPath(logName), logRequest.getUuid());
+    String requestNode = format("%s/%s", getLogPath(logName), logRequest.getUuid());
     int replyNodes = 0;
     // delete all reply nodes
     for (String replyNode : curator.getChildren().forPath(requestNode)) {
@@ -362,7 +514,7 @@ public class PALDirectory implements AutoCloseable {
 
   public int getLogRequestsCount(String logName) throws Exception {
     if (!logExists(logName)) {
-      throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
+      throw new NoLogInfoNodeException(format("Node for log: %s does not exist", logName));
     }
     return curator.getChildren().forPath(getLogPath(logName)).size();
   }
@@ -373,7 +525,7 @@ public class PALDirectory implements AutoCloseable {
       BackgroundCallback backgroundCallback,
       CuratorWatcher curatorWatcher)
       throws Exception {
-    String requestNode = String.format("%s/%s", getLogPath(logName), requestUuid);
+    String requestNode = format("%s/%s", getLogPath(logName), requestUuid);
     if (logger.isDebugEnabled()) {
       logger.debug("Setting watch on children of request node: {}", requestNode);
     }
@@ -390,8 +542,8 @@ public class PALDirectory implements AutoCloseable {
   public void addLogReplyAsync(String logName, LogReply logReply, BackgroundCallback callback)
       throws Exception {
     UUID requestUuid = logReply.getIsReplyTo();
-    String requestNode = String.format("%s/%s", getLogPath(logName), requestUuid);
-    String newReplyNode = String.format("%s/%s", requestNode, logReply.getUuid());
+    String requestNode = format("%s/%s", getLogPath(logName), requestUuid);
+    String newReplyNode = format("%s/%s", requestNode, logReply.getUuid());
     if (curator.checkExists().forPath(requestNode) != null) {
       String sb =
           "from"
@@ -415,23 +567,23 @@ public class PALDirectory implements AutoCloseable {
       }
     } else {
       if (!logExists(logName)) {
-        throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
+        throw new NoLogInfoNodeException(format("Node for log: %s does not exist", logName));
       } else {
         throw new NoLogRequestNodeException(
-            String.format("Request node %s for log: %s does not exist", requestUuid, logName));
+            format("Request node %s for log: %s does not exist", requestUuid, logName));
       }
     }
   }
 
   public Set<LogReply> getRepliesTo(String logName, LogRequest logRequest) throws Exception {
     if (!logExists(logName)) {
-      throw new NoLogInfoNodeException(String.format("Node for log: %s does not exist", logName));
+      throw new NoLogInfoNodeException(format("Node for log: %s does not exist", logName));
     }
 
-    String requestNode = String.format("%s/%s", getLogPath(logName), logRequest.getUuid());
+    String requestNode = format("%s/%s", getLogPath(logName), logRequest.getUuid());
     if (curator.checkExists().forPath(requestNode) == null) {
       throw new NoLogRequestNodeException(
-          String.format("Request node %s for log: %s does not exist", logRequest, logName));
+          format("Request node %s for log: %s does not exist", logRequest, logName));
     }
 
     Set<LogReply> replies = new TreeSet<>();
@@ -453,11 +605,26 @@ public class PALDirectory implements AutoCloseable {
 
   public void close() {
     logger.info("Closing zookeeper connection to {}", directoryUrl);
+    if (cachingExecutor != null) {
+      cachingExecutor.shutdown();
+      try {
+        cachingExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+      } catch (InterruptedException e) {
+        logger.warn("Error waiting for caching executor service to terminate", e);
+      }
+    }
     if (peersCache != null) {
       try {
         peersCache.close();
       } catch (IOException e) {
         logger.warn("Error stopping peers cache");
+      }
+    }
+    if (interceptsCache != null) {
+      try {
+        interceptsCache.close();
+      } catch (Exception e) {
+        logger.warn("Error stopping intercepts cache");
       }
     }
     curator.close();
@@ -558,19 +725,27 @@ public class PALDirectory implements AutoCloseable {
   }
 
   private String getPeerPath(UUID peerUuid) {
-    return String.format("%s/%s", getPeersPath(), peerUuid);
+    return format("%s/%s", getPeersPath(), peerUuid);
   }
 
   private String getLogPath(String logName) {
-    return String.format("%s/%s", getLogsPath(), logName);
+    return format("%s/%s", getLogsPath(), logName);
   }
 
   private String getPeersPath() {
-    return String.format("/%s/%s", namespace, PEERS_DIR);
+    return format("/%s/%s", namespace, PEERS_DIR);
   }
 
   private String getLogsPath() {
-    return String.format("/%s/%s", namespace, LOGS_DIR);
+    return format("/%s/%s", namespace, LOGS_DIR);
+  }
+
+  private String getInterceptsPath() {
+    return format("/%s/%s", namespace, INTERCEPTS_DIR);
+  }
+
+  private String getInterceptsPathForPeer(UUID peerUuid) {
+    return format("%s/%s", getInterceptsPath(), peerUuid);
   }
 
   private static String getPathLeaf(String path) {

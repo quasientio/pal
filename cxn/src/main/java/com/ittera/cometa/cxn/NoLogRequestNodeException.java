@@ -1,6 +1,6 @@
 package com.ittera.cometa.cxn;
 
-import com.ittera.cometa.LogRequest;
+import com.ittera.cometa.common.znodes.LogRequest;
 
 public class NoLogRequestNodeException extends Exception {
 
