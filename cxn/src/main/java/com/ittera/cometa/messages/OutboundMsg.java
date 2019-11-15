@@ -11,10 +11,14 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.ZMQ;
+import org.zeromq.ZMQException;
 
 public class OutboundMsg extends BaseMsg {
 
+  private static final Logger logger = LoggerFactory.getLogger(OutboundMsg.class);
   /**
    *
    *
@@ -79,7 +83,12 @@ public class OutboundMsg extends BaseMsg {
     // type of message
     buff = String.valueOf(messageType.ordinal()).getBytes(ZMQ.CHARSET);
     size += buff.length;
-    if (!socket.send(buff, ZMQ.SNDMORE)) {
+    try {
+      if (!socket.send(buff, ZMQ.SNDMORE)) {
+        return false;
+      }
+    } catch (ZMQException e) {
+      logger.error("Error sending message", e);
       return false;
     }
 
