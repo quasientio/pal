@@ -318,7 +318,7 @@ public class Main implements Callable<Integer> {
       runOptions.add(RunOptions.NO_PUBLISHING);
     }
 
-    // set TCP options
+    // set TCP-related options
     final boolean reqless = tcpReq != null && tcpReq.equalsIgnoreCase("no");
     if (reqless) {
       runOptions.add(RunOptions.REQLESS);
@@ -596,6 +596,9 @@ public class Main implements Callable<Integer> {
   @Override
   public Integer call() {
 
+    // for async calls
+    final ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
+
     setEmptyParamsFromEnv();
     validateInput();
     loadProps();
@@ -618,8 +621,13 @@ public class Main implements Callable<Integer> {
     // circular dependency must be resolved explicitly
     customClassloader.setInterceptProcessor(injector.getInstance(InterceptProcessor.class));
 
-    // register peer
-    registerSelfAsPeer(injector);
+    // register peer async
+    final CountDownLatch selfRegistrationLatch = new CountDownLatch(1);
+    singleExecutor.submit(
+        () -> {
+          registerSelfAsPeer(injector);
+          selfRegistrationLatch.countDown();
+        });
 
     // init logs IO
     if (!runOptions.contains(RunOptions.LOGLESS)) {
@@ -642,6 +650,15 @@ public class Main implements Callable<Integer> {
 
     // wait for all services up
     manager.awaitHealthy();
+
+    // block until we're registered in Directory
+    try {
+      selfRegistrationLatch.await();
+    } catch (InterruptedException e) {
+      throw new RuntimeException("Interrupted wait for self-registration in directory");
+    } finally {
+      singleExecutor.shutdownNow();
+    }
 
     // double-check by collecting all READY signals from services before proceeding
     collectGoSignals(services.size());
