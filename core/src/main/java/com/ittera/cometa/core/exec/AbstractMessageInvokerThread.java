@@ -98,7 +98,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
     if (dispatcherConnector != null) {
       try {
-        dispatcherConnector.closeThreadLocalSocket();
+        dispatcherConnector.closeThreadLocalSockets();
       } catch (Exception e) {
         logger.debug("Error closing dispatcher local socket", e);
       }

@@ -14,6 +14,7 @@ import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.OutboundMsg;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import java.util.Arrays;
@@ -222,7 +223,7 @@ public class InterceptsTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void registerNewInterceptThenMatchingExecMessageAndPhase() throws Exception {
+  public void registerNewInterceptThenMatchingKeyMessageAndPhase() throws Exception {
     // create and send intercept request
     InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(
@@ -240,15 +241,17 @@ public class InterceptsTest extends ZmqEnabledTest {
     assertThat(reply, is(Intercepts.REG_OK_REPLY));
 
     // now send a matching ExecMessage
-    ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
+    ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
+    InterceptKeyMessage execKeyMessage = msgBuilder.buildInterceptKey(execMessage);
+
     OutboundMsg outMsg =
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.InterceptKey,
             ExecPhase.BEFORE,
             null,
-            UUID.fromString(msg.getMessageUuid()),
+            UUID.fromString(execMessage.getMessageUuid()),
             null,
-            msgBuilder.wrap(msg).toByteArray());
+            msgBuilder.wrap(execKeyMessage).toByteArray());
     outMsg.send(matchSocket);
     logger.debug("Sent exec message: {}", outMsg);
 

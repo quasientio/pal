@@ -68,7 +68,7 @@ public class InterceptMatchingTest {
         msgBuilder.buildEmptyConstructor(UUID.randomUUID(), "java.util.ArrayList");
 
     InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
-    assertThat(interceptRequestEntry.matches(execMessage), is(true));
+    assertThat(interceptRequestEntry.matches(msgBuilder.buildInterceptKey(execMessage)), is(true));
   }
 
   @Test
@@ -100,7 +100,7 @@ public class InterceptMatchingTest {
             new ObjectRef[0]);
 
     InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
-    assertThat(interceptRequestEntry.matches(execMessage), is(true));
+    assertThat(interceptRequestEntry.matches(msgBuilder.buildInterceptKey(execMessage)), is(true));
   }
 
   @Test
@@ -118,8 +118,6 @@ public class InterceptMatchingTest {
             "callMe");
 
     // create Exec message
-    Object target = System.out;
-    ObjectRef targetObjRef = objectService.storeObject(target);
     ExecMessage execMessage =
         msgBuilder.buildClassMethod(
             UUID.randomUUID(),
@@ -132,6 +130,6 @@ public class InterceptMatchingTest {
             new ObjectRef[0]);
 
     InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
-    assertThat(interceptRequestEntry.matches(execMessage), is(true));
+    assertThat(interceptRequestEntry.matches(msgBuilder.buildInterceptKey(execMessage)), is(true));
   }
 }

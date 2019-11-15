@@ -4,8 +4,8 @@ import static java.lang.String.format;
 
 import com.ittera.cometa.core.exec.DuplicateInterceptException;
 import com.ittera.cometa.core.exec.java.InterceptRequestEntry;
-import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,9 +21,9 @@ class InterceptRequests {
   private final List<InterceptRequestEntry> fieldGetIntercepts = new ArrayList<>();
   private final List<InterceptRequestEntry> fieldPutIntercepts = new ArrayList<>();
 
-  List<Intercepts.InterceptMessage> getMatchingIntercepts(ExecMessage execMessage) {
+  List<Intercepts.InterceptMessage> getMatchingIntercepts(InterceptKeyMessage execKeyMessage) {
     final List<InterceptRequestEntry> interceptEntriesToSearch;
-    switch (execMessage.getMsgType()) {
+    switch (execKeyMessage.getMsgType()) {
       case CONSTRUCTOR:
         interceptEntriesToSearch = constructorIntercepts;
         break;
@@ -46,7 +46,7 @@ class InterceptRequests {
       return Collections.emptyList();
     }
     return interceptEntriesToSearch.stream()
-        .filter(i -> i.matches(execMessage))
+        .filter(i -> i.matches(execKeyMessage))
         .map(InterceptRequestEntry::getInterceptMessage)
         .collect(Collectors.toList());
   }

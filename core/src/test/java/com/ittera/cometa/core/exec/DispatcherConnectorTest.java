@@ -38,12 +38,6 @@ import zmq.ZError;
 
 public class DispatcherConnectorTest extends ZmqEnabledTest {
 
-  private static final Logger logger = LoggerFactory.getLogger("tests");
-  private static final String MSG_PUBLISHER_ADDR = "inproc://cell";
-  private static final String INTERCEPTS_ADDR = "inproc://intercepts";
-  private static final int TEST_PORT = 2182;
-  private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
-
   /*
   MessagePublisher service stub
    */
@@ -52,7 +46,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     List<InternalHeader> headersReceived = new ArrayList<>();
     private volatile boolean stopRequested;
 
-    public void requestStop() {
+    void requestStop() {
       stopRequested = true;
     }
 
@@ -101,7 +95,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 
     private volatile boolean stopRequested;
 
-    public void requestStop() {
+    void requestStop() {
       stopRequested = true;
     }
 
@@ -122,7 +116,9 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
           List<InterceptMessage> intercepts = Collections.emptyList();
           new InterceptsMsg(intercepts).send(repSocket);
           logger.debug(
-              "Intercepts stub replied to received message w/uuid: {}", msg.getMessageUuid());
+              "Intercepts stub replied to received message w/uuid: {}, received so far: {}",
+              msg.getMessageUuid(),
+              messagesReceived.size());
         } catch (ZMQException ex) {
           int errorCode = ex.getErrorCode();
           if (errorCode == ZError.ETERM) {
@@ -180,8 +176,16 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     messagePublisherStub.requestStop();
     interceptsStub.requestStop();
 
+    dispatcherConnector.closeThreadLocalSockets();
+
+    palDirectory.close();
+
     // close local context
-    context.close();
+    execService.submit(
+        () -> {
+          context.close();
+          logger.debug("context terminated");
+        });
 
     // stop executor
     execService.shutdownNow();
@@ -223,9 +227,9 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     assertThat(interceptsStub.messagesReceived.size(), is(1));
     assertThat(
         interceptsStub.messagesReceived.stream()
-            .map(Message::getExecMessage)
+            .map(Message::getInterceptKeyMessage)
             .collect(Collectors.toList()),
-        is(Collections.singletonList(msg)));
+        is(Collections.singletonList(msgBuilder.buildInterceptKey(msg))));
 
     // verify message was received by Message Publisher
     if (publishing) {
@@ -275,9 +279,9 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     assertThat(interceptsStub.messagesReceived.size(), is(msgsToSend));
     assertThat(
         interceptsStub.messagesReceived.stream()
-            .map(Message::getExecMessage)
+            .map(Message::getInterceptKeyMessage)
             .collect(Collectors.toList()),
-        is(sentMessages));
+        is(sentMessages.stream().map(msgBuilder::buildInterceptKey).collect(Collectors.toList())));
 
     // verify messages received by Message Publisher
     if (publishing) {

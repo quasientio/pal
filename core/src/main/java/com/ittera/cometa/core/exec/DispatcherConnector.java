@@ -9,8 +9,10 @@ import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
 import com.ittera.cometa.messages.OutboundMsg;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Exec.ExecMessageType;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Intercepts;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.Collections;
@@ -109,39 +111,43 @@ public class DispatcherConnector {
   }
 
   private ExecMessage sendExecMessage(
-      ExecMessage message, ExecPhase execPhase, @Nullable List<InternalHeader> headers) {
+      ExecMessage execMessage, ExecPhase execPhase, @Nullable List<InternalHeader> headers) {
     if (logger.isTraceEnabled()) {
-      logger.trace("sendExecMessage:in w/ message with uuid: {}", message.getMessageUuid());
+      logger.trace("sendExecMessage:in w/ execMessage with uuid: {}", execMessage.getMessageUuid());
     }
-    Socket interceptsReqSocket = threadInterceptsSocket.get();
-    // find matching intercepts for message
-    UUID followingUuid =
-        message.hasFollowingUuid() ? UUID.fromString(message.getFollowingUuid()) : null;
-    final OutboundMsg msg =
-        new OutboundMsg(
-            MessageType.ExecMessage,
-            execPhase,
-            headers,
-            UUID.fromString(message.getMessageUuid()),
-            followingUuid,
-            messageBuilder.wrap(message).toByteArray());
-    msg.send(interceptsReqSocket);
 
-    // receive intercepts, if any
+    UUID followingUuid =
+        execMessage.hasFollowingUuid() ? UUID.fromString(execMessage.getFollowingUuid()) : null;
     InterceptsMsg interceptsMsg = null;
-    try {
-      interceptsMsg = InterceptsMsg.recvMsg(interceptsReqSocket, true);
-    } catch (ZMQException ex) {
-      int errorCode = ex.getErrorCode();
-      if (errorCode == ZError.ETERM) {
-        logger.warn("Caught ETERM during blocking read. Will close socket");
-        interceptsReqSocket.close();
-      } else if (errorCode == ZError.EINTR) {
-        logger.warn("Caught EINTR during blocking read. Will close socket.");
-        interceptsReqSocket.close();
+
+    if (isInterceptableType(execMessage.getMsgType())) {
+      Socket interceptsReqSocket = threadInterceptsSocket.get();
+      // find matching intercepts for execMessage
+      InterceptKeyMessage interceptKeyMessage = messageBuilder.buildInterceptKey(execMessage);
+      new OutboundMsg(
+              MessageType.InterceptKey,
+              execPhase,
+              headers,
+              UUID.fromString(execMessage.getMessageUuid()),
+              followingUuid,
+              messageBuilder.wrap(interceptKeyMessage).toByteArray())
+          .send(interceptsReqSocket);
+
+      // receive intercepts, if any
+      try {
+        interceptsMsg = InterceptsMsg.recvMsg(interceptsReqSocket, true);
+      } catch (ZMQException ex) {
+        int errorCode = ex.getErrorCode();
+        if (errorCode == ZError.ETERM) {
+          logger.warn("Caught ETERM during blocking read. Will close socket");
+          interceptsReqSocket.close();
+        } else if (errorCode == ZError.EINTR) {
+          logger.warn("Caught EINTR during blocking read. Will close socket.");
+          interceptsReqSocket.close();
+        }
+      } catch (InvalidProtocolBufferException e) {
+        logger.error("Error parsing received execMessage", e);
       }
-    } catch (InvalidProtocolBufferException e) {
-      logger.error("Error parsing received message", e);
     }
 
     // publish execMessage -- TODO should we in case of intercepts publish it after
@@ -158,21 +164,21 @@ public class DispatcherConnector {
 
     // in case of error simply return received ExecMessage
     if (interceptsMsg == null) {
-      return message;
+      return execMessage;
     }
 
     // deal with intercepts
     final ExecMessage returnValue;
     if (interceptsMsg.getIntercepts() == null) {
       if (logger.isDebugEnabled()) {
-        logger.debug("No intercepts for message");
+        logger.debug("No intercepts for execMessage");
       }
-      returnValue = message;
+      returnValue = execMessage;
     } else {
       // for now we only care about the first intercept request
       Intercepts.InterceptMessage interceptMessage = interceptsMsg.getIntercepts().get(0);
       ExecMessage callbackMessage =
-          messageBuilder.buildCallbackForInterceptRequest(peerUuid, message, interceptMessage);
+          messageBuilder.buildCallbackForInterceptRequest(peerUuid, execMessage, interceptMessage);
       UUID interceptor = UUID.fromString(interceptMessage.getPeerUuid());
       final byte[] reply;
       try {
@@ -187,21 +193,21 @@ public class DispatcherConnector {
         }
       } catch (Exception ex) {
         logger.error(
-            "Error sending callback to peer w/uuid: {}, callback message: {}",
+            "Error sending callback to peer w/uuid: {}, callback execMessage: {}",
             interceptor,
             callbackMessage,
             ex);
       }
 
       //      if (interceptMessage.getType().equals(Intercepts.InterceptType.AROUND)) {
-      // TODO in case of AROUND we should return the message returned by callback only in
+      // TODO in case of AROUND we should return the execMessage returned by callback only in
       // ExecPhase.After
       // reply = sendCallbackToPeer(interceptor, callbackMessage);
-      // only parse message when needed
+      // only parse execMessage when needed
       // final ExecMessage replyMsg = ExecMessage.parseFrom(reply);
       // returnValue = replyMsg;
       //      } else {
-      returnValue = message;
+      returnValue = execMessage;
       //    }
 
     }
@@ -215,9 +221,13 @@ public class DispatcherConnector {
   private void publishMessage(OutboundMsg message) {
     Socket publisherReqSocket = threadPubSocket.get();
     message.send(publisherReqSocket);
-    String reply = publisherReqSocket.recvStr();
-    if (!reply.equalsIgnoreCase("0")) {
-      logger.warn("Non-zero reply from message publisher for message: {}", message);
+    try {
+      String reply = publisherReqSocket.recvStr();
+      if (!"0".equalsIgnoreCase(reply)) {
+        logger.warn("Non-zero reply from message publisher for message: {}", message);
+      }
+    } catch (ZMQException e) {
+      logger.error("Error receiving reply from publisher socket", e);
     }
   }
 
@@ -286,7 +296,22 @@ public class DispatcherConnector {
     return sendCallbackMessageToPeer(interceptor, message, true);
   }
 
-  void closeThreadLocalSocket() {
+  private boolean isInterceptableType(ExecMessageType type) {
+    switch (type) {
+      case CONSTRUCTOR:
+      case INSTANCE_METHOD:
+      case CLASS_METHOD:
+      case GET_STATIC:
+      case GET_FIELD:
+      case PUT_STATIC:
+      case PUT_FIELD:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  void closeThreadLocalSockets() {
     if (threadInterceptsSocketCreated.get()) {
       Socket socket = threadInterceptsSocket.get();
       if (socket != null) {

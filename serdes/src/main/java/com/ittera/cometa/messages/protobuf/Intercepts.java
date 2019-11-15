@@ -3400,6 +3400,979 @@ public final class Intercepts {
     }
   }
 
+  public interface InterceptKeyMessageOrBuilder
+      extends
+      // @@protoc_insertion_point(interface_extends:messages.protobuf.InterceptKeyMessage)
+      com.google.protobuf.MessageOrBuilder {
+
+    /** <code>required string clazz = 1;</code> */
+    boolean hasClazz();
+    /** <code>required string clazz = 1;</code> */
+    java.lang.String getClazz();
+    /** <code>required string clazz = 1;</code> */
+    com.google.protobuf.ByteString getClazzBytes();
+
+    /** <code>required .messages.protobuf.ExecMessageType msgType = 2;</code> */
+    boolean hasMsgType();
+    /** <code>required .messages.protobuf.ExecMessageType msgType = 2;</code> */
+    com.ittera.cometa.messages.protobuf.Exec.ExecMessageType getMsgType();
+
+    /** <code>required string executableName = 3;</code> */
+    boolean hasExecutableName();
+    /** <code>required string executableName = 3;</code> */
+    java.lang.String getExecutableName();
+    /** <code>required string executableName = 3;</code> */
+    com.google.protobuf.ByteString getExecutableNameBytes();
+
+    /** <code>repeated string parameterType = 4;</code> */
+    java.util.List<java.lang.String> getParameterTypeList();
+    /** <code>repeated string parameterType = 4;</code> */
+    int getParameterTypeCount();
+    /** <code>repeated string parameterType = 4;</code> */
+    java.lang.String getParameterType(int index);
+    /** <code>repeated string parameterType = 4;</code> */
+    com.google.protobuf.ByteString getParameterTypeBytes(int index);
+  }
+  /** Protobuf type {@code messages.protobuf.InterceptKeyMessage} */
+  public static final class InterceptKeyMessage extends com.google.protobuf.GeneratedMessageV3
+      implements
+      // @@protoc_insertion_point(message_implements:messages.protobuf.InterceptKeyMessage)
+      InterceptKeyMessageOrBuilder {
+    private static final long serialVersionUID = 0L;
+    // Use InterceptKeyMessage.newBuilder() to construct.
+    private InterceptKeyMessage(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+
+    private InterceptKeyMessage() {
+      clazz_ = "";
+      msgType_ = 1;
+      executableName_ = "";
+      parameterType_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(UnusedPrivateParameter unused) {
+      return new InterceptKeyMessage();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet getUnknownFields() {
+      return this.unknownFields;
+    }
+
+    private InterceptKeyMessage(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10:
+              {
+                com.google.protobuf.ByteString bs = input.readBytes();
+                bitField0_ |= 0x00000001;
+                clazz_ = bs;
+                break;
+              }
+            case 16:
+              {
+                int rawValue = input.readEnum();
+                @SuppressWarnings("deprecation")
+                com.ittera.cometa.messages.protobuf.Exec.ExecMessageType value =
+                    com.ittera.cometa.messages.protobuf.Exec.ExecMessageType.valueOf(rawValue);
+                if (value == null) {
+                  unknownFields.mergeVarintField(2, rawValue);
+                } else {
+                  bitField0_ |= 0x00000002;
+                  msgType_ = rawValue;
+                }
+                break;
+              }
+            case 26:
+              {
+                com.google.protobuf.ByteString bs = input.readBytes();
+                bitField0_ |= 0x00000004;
+                executableName_ = bs;
+                break;
+              }
+            case 34:
+              {
+                com.google.protobuf.ByteString bs = input.readBytes();
+                if (!((mutable_bitField0_ & 0x00000008) != 0)) {
+                  parameterType_ = new com.google.protobuf.LazyStringArrayList();
+                  mutable_bitField0_ |= 0x00000008;
+                }
+                parameterType_.add(bs);
+                break;
+              }
+            default:
+              {
+                if (!parseUnknownField(input, unknownFields, extensionRegistry, tag)) {
+                  done = true;
+                }
+                break;
+              }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000008) != 0)) {
+          parameterType_ = parameterType_.getUnmodifiableView();
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+
+    public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
+      return com.ittera.cometa.messages.protobuf.Intercepts
+          .internal_static_messages_protobuf_InterceptKeyMessage_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.ittera.cometa.messages.protobuf.Intercepts
+          .internal_static_messages_protobuf_InterceptKeyMessage_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage.class,
+              com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int CLAZZ_FIELD_NUMBER = 1;
+    private volatile java.lang.Object clazz_;
+    /** <code>required string clazz = 1;</code> */
+    public boolean hasClazz() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /** <code>required string clazz = 1;</code> */
+    public java.lang.String getClazz() {
+      java.lang.Object ref = clazz_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          clazz_ = s;
+        }
+        return s;
+      }
+    }
+    /** <code>required string clazz = 1;</code> */
+    public com.google.protobuf.ByteString getClazzBytes() {
+      java.lang.Object ref = clazz_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+        clazz_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int MSGTYPE_FIELD_NUMBER = 2;
+    private int msgType_;
+    /** <code>required .messages.protobuf.ExecMessageType msgType = 2;</code> */
+    public boolean hasMsgType() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /** <code>required .messages.protobuf.ExecMessageType msgType = 2;</code> */
+    public com.ittera.cometa.messages.protobuf.Exec.ExecMessageType getMsgType() {
+      @SuppressWarnings("deprecation")
+      com.ittera.cometa.messages.protobuf.Exec.ExecMessageType result =
+          com.ittera.cometa.messages.protobuf.Exec.ExecMessageType.valueOf(msgType_);
+      return result == null
+          ? com.ittera.cometa.messages.protobuf.Exec.ExecMessageType.STATIC_CONSTRUCTOR
+          : result;
+    }
+
+    public static final int EXECUTABLENAME_FIELD_NUMBER = 3;
+    private volatile java.lang.Object executableName_;
+    /** <code>required string executableName = 3;</code> */
+    public boolean hasExecutableName() {
+      return ((bitField0_ & 0x00000004) != 0);
+    }
+    /** <code>required string executableName = 3;</code> */
+    public java.lang.String getExecutableName() {
+      java.lang.Object ref = executableName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          executableName_ = s;
+        }
+        return s;
+      }
+    }
+    /** <code>required string executableName = 3;</code> */
+    public com.google.protobuf.ByteString getExecutableNameBytes() {
+      java.lang.Object ref = executableName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+        executableName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int PARAMETERTYPE_FIELD_NUMBER = 4;
+    private com.google.protobuf.LazyStringList parameterType_;
+    /** <code>repeated string parameterType = 4;</code> */
+    public com.google.protobuf.ProtocolStringList getParameterTypeList() {
+      return parameterType_;
+    }
+    /** <code>repeated string parameterType = 4;</code> */
+    public int getParameterTypeCount() {
+      return parameterType_.size();
+    }
+    /** <code>repeated string parameterType = 4;</code> */
+    public java.lang.String getParameterType(int index) {
+      return parameterType_.get(index);
+    }
+    /** <code>repeated string parameterType = 4;</code> */
+    public com.google.protobuf.ByteString getParameterTypeBytes(int index) {
+      return parameterType_.getByteString(index);
+    }
+
+    private byte memoizedIsInitialized = -1;
+
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasClazz()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasMsgType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasExecutableName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output) throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, clazz_);
+      }
+      if (((bitField0_ & 0x00000002) != 0)) {
+        output.writeEnum(2, msgType_);
+      }
+      if (((bitField0_ & 0x00000004) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, executableName_);
+      }
+      for (int i = 0; i < parameterType_.size(); i++) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 4, parameterType_.getRaw(i));
+      }
+      unknownFields.writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, clazz_);
+      }
+      if (((bitField0_ & 0x00000002) != 0)) {
+        size += com.google.protobuf.CodedOutputStream.computeEnumSize(2, msgType_);
+      }
+      if (((bitField0_ & 0x00000004) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, executableName_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < parameterType_.size(); i++) {
+          dataSize += computeStringSizeNoTag(parameterType_.getRaw(i));
+        }
+        size += dataSize;
+        size += 1 * getParameterTypeList().size();
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+        return true;
+      }
+      if (!(obj instanceof com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage)) {
+        return super.equals(obj);
+      }
+      com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage other =
+          (com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage) obj;
+
+      if (hasClazz() != other.hasClazz()) return false;
+      if (hasClazz()) {
+        if (!getClazz().equals(other.getClazz())) return false;
+      }
+      if (hasMsgType() != other.hasMsgType()) return false;
+      if (hasMsgType()) {
+        if (msgType_ != other.msgType_) return false;
+      }
+      if (hasExecutableName() != other.hasExecutableName()) return false;
+      if (hasExecutableName()) {
+        if (!getExecutableName().equals(other.getExecutableName())) return false;
+      }
+      if (!getParameterTypeList().equals(other.getParameterTypeList())) return false;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasClazz()) {
+        hash = (37 * hash) + CLAZZ_FIELD_NUMBER;
+        hash = (53 * hash) + getClazz().hashCode();
+      }
+      if (hasMsgType()) {
+        hash = (37 * hash) + MSGTYPE_FIELD_NUMBER;
+        hash = (53 * hash) + msgType_;
+      }
+      if (hasExecutableName()) {
+        hash = (37 * hash) + EXECUTABLENAME_FIELD_NUMBER;
+        hash = (53 * hash) + getExecutableName().hashCode();
+      }
+      if (getParameterTypeCount() > 0) {
+        hash = (37 * hash) + PARAMETERTYPE_FIELD_NUMBER;
+        hash = (53 * hash) + getParameterTypeList().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage parseFrom(
+        java.nio.ByteBuffer data) throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage parseFrom(
+        java.nio.ByteBuffer data, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage parseFrom(
+        byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage parseFrom(
+        byte[] data, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage parseFrom(
+        java.io.InputStream input) throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseWithIOException(PARSER, input);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage parseFrom(
+        java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseWithIOException(
+          PARSER, input, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage
+        parseDelimitedFrom(java.io.InputStream input) throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseDelimitedWithIOException(PARSER, input);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage
+        parseDelimitedFrom(
+            java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseDelimitedWithIOException(
+          PARSER, input, extensionRegistry);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage parseFrom(
+        com.google.protobuf.CodedInputStream input) throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseWithIOException(PARSER, input);
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3.parseWithIOException(
+          PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() {
+      return newBuilder();
+    }
+
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+
+    public static Builder newBuilder(
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /** Protobuf type {@code messages.protobuf.InterceptKeyMessage} */
+    public static final class Builder
+        extends com.google.protobuf.GeneratedMessageV3.Builder<Builder>
+        implements
+        // @@protoc_insertion_point(builder_implements:messages.protobuf.InterceptKeyMessage)
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessageOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
+        return com.ittera.cometa.messages.protobuf.Intercepts
+            .internal_static_messages_protobuf_InterceptKeyMessage_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.ittera.cometa.messages.protobuf.Intercepts
+            .internal_static_messages_protobuf_InterceptKeyMessage_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage.class,
+                com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage.Builder.class);
+      }
+
+      // Construct using
+      // com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders) {}
+      }
+
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        clazz_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        msgType_ = 1;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        executableName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
+        parameterType_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor getDescriptorForType() {
+        return com.ittera.cometa.messages.protobuf.Intercepts
+            .internal_static_messages_protobuf_InterceptKeyMessage_descriptor;
+      }
+
+      @java.lang.Override
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage
+          getDefaultInstanceForType() {
+        return com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage
+            .getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage build() {
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage buildPartial() {
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage result =
+            new com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.clazz_ = clazz_;
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.msgType_ = msgType_;
+        if (((from_bitField0_ & 0x00000004) != 0)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.executableName_ = executableName_;
+        if (((bitField0_ & 0x00000008) != 0)) {
+          parameterType_ = parameterType_.getUnmodifiableView();
+          bitField0_ = (bitField0_ & ~0x00000008);
+        }
+        result.parameterType_ = parameterType_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field, java.lang.Object value) {
+        return super.setField(field, value);
+      }
+
+      @java.lang.Override
+      public Builder clearField(com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+
+      @java.lang.Override
+      public Builder clearOneof(com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index,
+          java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field, java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage) {
+          return mergeFrom(
+              (com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage) other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(
+          com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage other) {
+        if (other
+            == com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage
+                .getDefaultInstance()) return this;
+        if (other.hasClazz()) {
+          bitField0_ |= 0x00000001;
+          clazz_ = other.clazz_;
+          onChanged();
+        }
+        if (other.hasMsgType()) {
+          setMsgType(other.getMsgType());
+        }
+        if (other.hasExecutableName()) {
+          bitField0_ |= 0x00000004;
+          executableName_ = other.executableName_;
+          onChanged();
+        }
+        if (!other.parameterType_.isEmpty()) {
+          if (parameterType_.isEmpty()) {
+            parameterType_ = other.parameterType_;
+            bitField0_ = (bitField0_ & ~0x00000008);
+          } else {
+            ensureParameterTypeIsMutable();
+            parameterType_.addAll(other.parameterType_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        if (!hasClazz()) {
+          return false;
+        }
+        if (!hasMsgType()) {
+          return false;
+        }
+        if (!hasExecutableName()) {
+          return false;
+        }
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage =
+              (com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage)
+                  e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private int bitField0_;
+
+      private java.lang.Object clazz_ = "";
+      /** <code>required string clazz = 1;</code> */
+      public boolean hasClazz() {
+        return ((bitField0_ & 0x00000001) != 0);
+      }
+      /** <code>required string clazz = 1;</code> */
+      public java.lang.String getClazz() {
+        java.lang.Object ref = clazz_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            clazz_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /** <code>required string clazz = 1;</code> */
+      public com.google.protobuf.ByteString getClazzBytes() {
+        java.lang.Object ref = clazz_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+          clazz_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /** <code>required string clazz = 1;</code> */
+      public Builder setClazz(java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        clazz_ = value;
+        onChanged();
+        return this;
+      }
+      /** <code>required string clazz = 1;</code> */
+      public Builder clearClazz() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        clazz_ = getDefaultInstance().getClazz();
+        onChanged();
+        return this;
+      }
+      /** <code>required string clazz = 1;</code> */
+      public Builder setClazzBytes(com.google.protobuf.ByteString value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        clazz_ = value;
+        onChanged();
+        return this;
+      }
+
+      private int msgType_ = 1;
+      /** <code>required .messages.protobuf.ExecMessageType msgType = 2;</code> */
+      public boolean hasMsgType() {
+        return ((bitField0_ & 0x00000002) != 0);
+      }
+      /** <code>required .messages.protobuf.ExecMessageType msgType = 2;</code> */
+      public com.ittera.cometa.messages.protobuf.Exec.ExecMessageType getMsgType() {
+        @SuppressWarnings("deprecation")
+        com.ittera.cometa.messages.protobuf.Exec.ExecMessageType result =
+            com.ittera.cometa.messages.protobuf.Exec.ExecMessageType.valueOf(msgType_);
+        return result == null
+            ? com.ittera.cometa.messages.protobuf.Exec.ExecMessageType.STATIC_CONSTRUCTOR
+            : result;
+      }
+      /** <code>required .messages.protobuf.ExecMessageType msgType = 2;</code> */
+      public Builder setMsgType(com.ittera.cometa.messages.protobuf.Exec.ExecMessageType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
+        msgType_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /** <code>required .messages.protobuf.ExecMessageType msgType = 2;</code> */
+      public Builder clearMsgType() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        msgType_ = 1;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object executableName_ = "";
+      /** <code>required string executableName = 3;</code> */
+      public boolean hasExecutableName() {
+        return ((bitField0_ & 0x00000004) != 0);
+      }
+      /** <code>required string executableName = 3;</code> */
+      public java.lang.String getExecutableName() {
+        java.lang.Object ref = executableName_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs = (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            executableName_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /** <code>required string executableName = 3;</code> */
+      public com.google.protobuf.ByteString getExecutableNameBytes() {
+        java.lang.Object ref = executableName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8((java.lang.String) ref);
+          executableName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /** <code>required string executableName = 3;</code> */
+      public Builder setExecutableName(java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
+        executableName_ = value;
+        onChanged();
+        return this;
+      }
+      /** <code>required string executableName = 3;</code> */
+      public Builder clearExecutableName() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        executableName_ = getDefaultInstance().getExecutableName();
+        onChanged();
+        return this;
+      }
+      /** <code>required string executableName = 3;</code> */
+      public Builder setExecutableNameBytes(com.google.protobuf.ByteString value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
+        executableName_ = value;
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.LazyStringList parameterType_ =
+          com.google.protobuf.LazyStringArrayList.EMPTY;
+
+      private void ensureParameterTypeIsMutable() {
+        if (!((bitField0_ & 0x00000008) != 0)) {
+          parameterType_ = new com.google.protobuf.LazyStringArrayList(parameterType_);
+          bitField0_ |= 0x00000008;
+        }
+      }
+      /** <code>repeated string parameterType = 4;</code> */
+      public com.google.protobuf.ProtocolStringList getParameterTypeList() {
+        return parameterType_.getUnmodifiableView();
+      }
+      /** <code>repeated string parameterType = 4;</code> */
+      public int getParameterTypeCount() {
+        return parameterType_.size();
+      }
+      /** <code>repeated string parameterType = 4;</code> */
+      public java.lang.String getParameterType(int index) {
+        return parameterType_.get(index);
+      }
+      /** <code>repeated string parameterType = 4;</code> */
+      public com.google.protobuf.ByteString getParameterTypeBytes(int index) {
+        return parameterType_.getByteString(index);
+      }
+      /** <code>repeated string parameterType = 4;</code> */
+      public Builder setParameterType(int index, java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureParameterTypeIsMutable();
+        parameterType_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /** <code>repeated string parameterType = 4;</code> */
+      public Builder addParameterType(java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureParameterTypeIsMutable();
+        parameterType_.add(value);
+        onChanged();
+        return this;
+      }
+      /** <code>repeated string parameterType = 4;</code> */
+      public Builder addAllParameterType(java.lang.Iterable<java.lang.String> values) {
+        ensureParameterTypeIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(values, parameterType_);
+        onChanged();
+        return this;
+      }
+      /** <code>repeated string parameterType = 4;</code> */
+      public Builder clearParameterType() {
+        parameterType_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        onChanged();
+        return this;
+      }
+      /** <code>repeated string parameterType = 4;</code> */
+      public Builder addParameterTypeBytes(com.google.protobuf.ByteString value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureParameterTypeIsMutable();
+        parameterType_.add(value);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+      // @@protoc_insertion_point(builder_scope:messages.protobuf.InterceptKeyMessage)
+    }
+
+    // @@protoc_insertion_point(class_scope:messages.protobuf.InterceptKeyMessage)
+    private static final com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage
+        DEFAULT_INSTANCE;
+
+    static {
+      DEFAULT_INSTANCE = new com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage();
+    }
+
+    public static com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage
+        getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated
+    public static final com.google.protobuf.Parser<InterceptKeyMessage> PARSER =
+        new com.google.protobuf.AbstractParser<InterceptKeyMessage>() {
+          @java.lang.Override
+          public InterceptKeyMessage parsePartialFrom(
+              com.google.protobuf.CodedInputStream input,
+              com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+              throws com.google.protobuf.InvalidProtocolBufferException {
+            return new InterceptKeyMessage(input, extensionRegistry);
+          }
+        };
+
+    public static com.google.protobuf.Parser<InterceptKeyMessage> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<InterceptKeyMessage> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage
+        getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+  }
+
   public interface InterceptReplyOrBuilder
       extends
       // @@protoc_insertion_point(interface_extends:messages.protobuf.InterceptReply)
@@ -4215,6 +5188,10 @@ public final class Intercepts {
   private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_messages_protobuf_InterceptMessage_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+      internal_static_messages_protobuf_InterceptKeyMessage_descriptor;
+  private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_messages_protobuf_InterceptKeyMessage_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
       internal_static_messages_protobuf_InterceptReply_descriptor;
   private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_messages_protobuf_InterceptReply_fieldAccessorTable;
@@ -4227,28 +5204,35 @@ public final class Intercepts {
 
   static {
     java.lang.String[] descriptorData = {
-      "\n\020intercepts.proto\022\021messages.protobuf\":\n"
-          + "\023InterceptableMethod\022\014\n\004name\030\001 \002(\t\022\025\n\rpa"
-          + "rameterType\030\002 \003(\t\"P\n\022InterceptableField\022"
-          + "\014\n\004name\030\001 \002(\t\022,\n\004type\030\002 \002(\0162\036.messages.p"
-          + "rotobuf.FieldOpType\"\252\002\n\020InterceptMessage"
-          + "\022\020\n\010peerUuid\030\001 \002(\t\022\023\n\013messageUuid\030\002 \002(\t\022"
-          + ".\n\004type\030\003 \002(\0162 .messages.protobuf.Interc"
-          + "eptType\022\r\n\005clazz\030\004 \002(\t\0226\n\005field\030\005 \001(\0132%."
-          + "messages.protobuf.InterceptableFieldH\000\0228"
-          + "\n\006method\030\006 \001(\0132&.messages.protobuf.Inter"
-          + "ceptableMethodH\000\022\025\n\rcallbackClass\030\007 \002(\t\022"
-          + "\026\n\016callbackMethod\030\010 \002(\tB\017\n\rinterceptable"
-          + "\"I\n\016InterceptReply\022\020\n\010peerUuid\030\001 \002(\t\022\025\n\r"
-          + "followingUuid\030\002 \002(\t\022\016\n\006result\030\003 \002(\010*U\n\rI"
-          + "nterceptType\022\n\n\006BEFORE\020\001\022\t\n\005AFTER\020\002\022\n\n\006A"
-          + "ROUND\020\003\022\020\n\014BEFORE_ASYNC\020\004\022\017\n\013AFTER_ASYNC"
-          + "\020\005*\037\n\013FieldOpType\022\007\n\003GET\020\001\022\007\n\003PUT\020\002B\'\n#c"
-          + "om.ittera.cometa.messages.protobufH\001"
+      "\n\020intercepts.proto\022\021messages.protobuf\032\ne"
+          + "xec.proto\":\n\023InterceptableMethod\022\014\n\004name"
+          + "\030\001 \002(\t\022\025\n\rparameterType\030\002 \003(\t\"P\n\022Interce"
+          + "ptableField\022\014\n\004name\030\001 \002(\t\022,\n\004type\030\002 \002(\0162"
+          + "\036.messages.protobuf.FieldOpType\"\252\002\n\020Inte"
+          + "rceptMessage\022\020\n\010peerUuid\030\001 \002(\t\022\023\n\013messag"
+          + "eUuid\030\002 \002(\t\022.\n\004type\030\003 \002(\0162 .messages.pro"
+          + "tobuf.InterceptType\022\r\n\005clazz\030\004 \002(\t\0226\n\005fi"
+          + "eld\030\005 \001(\0132%.messages.protobuf.Intercepta"
+          + "bleFieldH\000\0228\n\006method\030\006 \001(\0132&.messages.pr"
+          + "otobuf.InterceptableMethodH\000\022\025\n\rcallback"
+          + "Class\030\007 \002(\t\022\026\n\016callbackMethod\030\010 \002(\tB\017\n\ri"
+          + "nterceptable\"\210\001\n\023InterceptKeyMessage\022\r\n\005"
+          + "clazz\030\001 \002(\t\0223\n\007msgType\030\002 \002(\0162\".messages."
+          + "protobuf.ExecMessageType\022\026\n\016executableNa"
+          + "me\030\003 \002(\t\022\025\n\rparameterType\030\004 \003(\t\"I\n\016Inter"
+          + "ceptReply\022\020\n\010peerUuid\030\001 \002(\t\022\025\n\rfollowing"
+          + "Uuid\030\002 \002(\t\022\016\n\006result\030\003 \002(\010*U\n\rInterceptT"
+          + "ype\022\n\n\006BEFORE\020\001\022\t\n\005AFTER\020\002\022\n\n\006AROUND\020\003\022\020"
+          + "\n\014BEFORE_ASYNC\020\004\022\017\n\013AFTER_ASYNC\020\005*\037\n\013Fie"
+          + "ldOpType\022\007\n\003GET\020\001\022\007\n\003PUT\020\002B\'\n#com.ittera"
+          + ".cometa.messages.protobufH\001"
     };
     descriptor =
         com.google.protobuf.Descriptors.FileDescriptor.internalBuildGeneratedFileFrom(
-            descriptorData, new com.google.protobuf.Descriptors.FileDescriptor[] {});
+            descriptorData,
+            new com.google.protobuf.Descriptors.FileDescriptor[] {
+              com.ittera.cometa.messages.protobuf.Exec.getDescriptor(),
+            });
     internal_static_messages_protobuf_InterceptableMethod_descriptor =
         getDescriptor().getMessageTypes().get(0);
     internal_static_messages_protobuf_InterceptableMethod_fieldAccessorTable =
@@ -4281,14 +5265,23 @@ public final class Intercepts {
               "CallbackMethod",
               "Interceptable",
             });
-    internal_static_messages_protobuf_InterceptReply_descriptor =
+    internal_static_messages_protobuf_InterceptKeyMessage_descriptor =
         getDescriptor().getMessageTypes().get(3);
+    internal_static_messages_protobuf_InterceptKeyMessage_fieldAccessorTable =
+        new com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+            internal_static_messages_protobuf_InterceptKeyMessage_descriptor,
+            new java.lang.String[] {
+              "Clazz", "MsgType", "ExecutableName", "ParameterType",
+            });
+    internal_static_messages_protobuf_InterceptReply_descriptor =
+        getDescriptor().getMessageTypes().get(4);
     internal_static_messages_protobuf_InterceptReply_fieldAccessorTable =
         new com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
             internal_static_messages_protobuf_InterceptReply_descriptor,
             new java.lang.String[] {
               "PeerUuid", "FollowingUuid", "Result",
             });
+    com.ittera.cometa.messages.protobuf.Exec.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

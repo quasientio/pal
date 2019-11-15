@@ -8,6 +8,7 @@ import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessageType;
 import com.ittera.cometa.messages.protobuf.Headers;
 import com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
@@ -175,6 +176,8 @@ public interface MessageBuilder {
 
   InterceptReply buildInterceptReply(UUID peerUuid, UUID followingUuid, boolean result);
 
+  InterceptKeyMessage buildInterceptKey(ExecMessage execMessage);
+
   /** callbacks from intercept requests */
   ExecMessage buildCallbackForInterceptRequest(
       UUID peerUuid, ExecMessage interceptedMessage, InterceptMessage interceptMessage);
@@ -183,6 +186,8 @@ public interface MessageBuilder {
   Message wrap(ExecMessage execMessage);
 
   Message wrap(InterceptMessage interceptMessage);
+
+  Message wrap(InterceptKeyMessage interceptKeyMessage);
 
   Message wrap(InterceptReply interceptReply);
 

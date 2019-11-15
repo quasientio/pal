@@ -1,5 +1,7 @@
 package com.ittera.cometa.messages;
 
+import static java.lang.String.format;
+
 import com.google.protobuf.Message.Builder;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
@@ -29,6 +31,7 @@ import com.ittera.cometa.messages.protobuf.Headers.InternalHeader;
 import com.ittera.cometa.messages.protobuf.Headers.InternalHeaderType;
 import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.FieldOpType;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptReply;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
@@ -45,10 +48,12 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -205,6 +210,85 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
 
   private Primitives.Class getWrappedClass(String className) {
     return Wrapper.getWrappedClass(className);
+  }
+
+  public static String getClassname(ExecMessage execMessage) {
+    switch (execMessage.getMsgType()) {
+      case CONSTRUCTOR:
+        return execMessage.getConstructorCall().getClass_().getName();
+      case INSTANCE_METHOD:
+        return execMessage.getInstanceMethodCall().getClass_().getName();
+      case CLASS_METHOD:
+        return execMessage.getClassMethodCall().getClass_().getName();
+      case GET_STATIC:
+        return execMessage.getStaticFieldGet().getClass_().getName();
+      case GET_FIELD:
+        return execMessage.getInstanceFieldGet().getClass_().getName();
+      case PUT_STATIC:
+        return execMessage.getStaticFieldPut().getClass_().getName();
+      case PUT_FIELD:
+        return execMessage.getInstanceFieldPut().getClass_().getName();
+      default:
+        throw new IllegalArgumentException(
+            format("Unsupported ExecMessage type: %s", execMessage.getMsgType()));
+    }
+  }
+
+  public static String getExecutableName(ExecMessage execMessage) {
+    switch (execMessage.getMsgType()) {
+      case CONSTRUCTOR:
+        return "new";
+      case INSTANCE_METHOD:
+        return execMessage.getInstanceMethodCall().getName();
+      case CLASS_METHOD:
+        return execMessage.getClassMethodCall().getName();
+      case GET_STATIC:
+        return execMessage.getStaticFieldGet().getField().getName();
+      case GET_FIELD:
+        return execMessage.getInstanceFieldGet().getField().getName();
+      case PUT_STATIC:
+        return execMessage.getStaticFieldPut().getField().getName();
+      case PUT_FIELD:
+        return execMessage.getInstanceFieldPut().getField().getName();
+      default:
+        throw new IllegalArgumentException(
+            format("Unsupported ExecMessage type: %s", execMessage.getMsgType()));
+    }
+  }
+
+  /**
+   * @return null if not a constructor/method call, possibly empty list of parameter class names
+   *     otherwise
+   */
+  public static List<String> getParameterTypes(ExecMessage execMessage) {
+    switch (execMessage.getMsgType()) {
+      case CONSTRUCTOR:
+        if (execMessage.getConstructorCall().getParameterCount() > 0) {
+          return execMessage.getConstructorCall().getParameterList().stream()
+              .map(p -> p.getType().getName())
+              .collect(Collectors.toList());
+        } else {
+          return Collections.emptyList();
+        }
+      case INSTANCE_METHOD:
+        if (execMessage.getInstanceMethodCall().getParameterCount() > 0) {
+          return execMessage.getInstanceMethodCall().getParameterList().stream()
+              .map(p -> p.getType().getName())
+              .collect(Collectors.toList());
+        } else {
+          return Collections.emptyList();
+        }
+      case CLASS_METHOD:
+        if (execMessage.getClassMethodCall().getParameterCount() > 0) {
+          return execMessage.getClassMethodCall().getParameterList().stream()
+              .map(p -> p.getType().getName())
+              .collect(Collectors.toList());
+        } else {
+          return Collections.emptyList();
+        }
+      default:
+        return null;
+    }
   }
 
   // </editor-fold>
@@ -996,6 +1080,19 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
   }
 
   @Override
+  public InterceptKeyMessage buildInterceptKey(ExecMessage execMessage) {
+    final InterceptKeyMessage.Builder keyMessage = InterceptKeyMessage.newBuilder();
+    keyMessage.setClazz(getClassname(execMessage));
+    keyMessage.setExecutableName(getExecutableName(execMessage));
+    keyMessage.setMsgType(execMessage.getMsgType());
+    final List<String> paramTypes = getParameterTypes(execMessage);
+    if (paramTypes != null) {
+      keyMessage.addAllParameterType(paramTypes);
+    }
+    return keyMessage.build();
+  }
+
+  @Override
   public ExecMessage buildCallbackForInterceptRequest(
       UUID peerUuid, ExecMessage interceptedMessage, Intercepts.InterceptMessage interceptMessage) {
 
@@ -1016,6 +1113,11 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
   @Override
   public Message wrap(InterceptMessage interceptMessage) {
     return Message.newBuilder().setInterceptMessage(interceptMessage).build();
+  }
+
+  @Override
+  public Message wrap(InterceptKeyMessage interceptKeyMessage) {
+    return Message.newBuilder().setInterceptKeyMessage(interceptKeyMessage).build();
   }
 
   @Override

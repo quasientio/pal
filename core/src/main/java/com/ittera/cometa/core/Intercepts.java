@@ -5,7 +5,7 @@ import com.ittera.cometa.common.ExecPhase;
 import com.ittera.cometa.core.exec.DuplicateInterceptException;
 import com.ittera.cometa.core.messages.InterceptsMsg;
 import com.ittera.cometa.messages.OutboundMsg;
-import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
+import com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
@@ -45,7 +45,12 @@ public class Intercepts extends ConnectedService {
   // intercept matching reply codes
   static final String MATCH_ERROR_REPLY = "1";
 
+  // map holding all intercepts
   private final Map<InterceptType, InterceptRequests> allIntercepts = new HashMap<>();
+
+  // cache
+  private final Map<InterceptKeyMessage, List<InterceptMessage>> cache = new HashMap<>();
+
   private boolean regPollingError, matchPollingError;
 
   @Inject
@@ -80,16 +85,20 @@ public class Intercepts extends ConnectedService {
       throws DuplicateInterceptException {
     InterceptRequests registeredIntercepts = allIntercepts.get(incomingInterceptMessage.getType());
     registeredIntercepts.registerInterceptRequest(incomingInterceptMessage);
+    if (logger.isDebugEnabled()) {
+      logger.debug("Registered incoming intercept message: {}", incomingInterceptMessage);
+    }
   }
 
-  private List<InterceptMessage> getMatchingIntercepts(ExecMessage execMessage, ExecPhase phase) {
+  private List<InterceptMessage> getMatchingIntercepts(
+      InterceptKeyMessage keyExecMessage, ExecPhase phase) {
     if (ExecPhase.BEFORE.equals(phase)) {
       final List<InterceptMessage> beforeIntercepts =
-          allIntercepts.get(InterceptType.BEFORE).getMatchingIntercepts(execMessage);
+          allIntercepts.get(InterceptType.BEFORE).getMatchingIntercepts(keyExecMessage);
       final List<InterceptMessage> beforeAsyncIntercepts =
-          allIntercepts.get(InterceptType.BEFORE_ASYNC).getMatchingIntercepts(execMessage);
+          allIntercepts.get(InterceptType.BEFORE_ASYNC).getMatchingIntercepts(keyExecMessage);
       final List<InterceptMessage> aroundIntercepts =
-          allIntercepts.get(InterceptType.AROUND).getMatchingIntercepts(execMessage);
+          allIntercepts.get(InterceptType.AROUND).getMatchingIntercepts(keyExecMessage);
       final List<InterceptMessage> allIntercepts =
           new ArrayList<>(
               beforeIntercepts.size() + beforeAsyncIntercepts.size() + aroundIntercepts.size());
@@ -99,9 +108,9 @@ public class Intercepts extends ConnectedService {
       return allIntercepts;
     } else if (ExecPhase.AFTER.equals(phase)) {
       final List<InterceptMessage> afterIntercepts =
-          allIntercepts.get(InterceptType.AFTER).getMatchingIntercepts(execMessage);
+          allIntercepts.get(InterceptType.AFTER).getMatchingIntercepts(keyExecMessage);
       final List<InterceptMessage> afterAsyncIntercepts =
-          allIntercepts.get(InterceptType.AFTER_ASYNC).getMatchingIntercepts(execMessage);
+          allIntercepts.get(InterceptType.AFTER_ASYNC).getMatchingIntercepts(keyExecMessage);
       final List<InterceptMessage> allIntercepts =
           new ArrayList<>(afterIntercepts.size() + afterAsyncIntercepts.size());
       allIntercepts.addAll(afterIntercepts);
@@ -183,6 +192,9 @@ public class Intercepts extends ConnectedService {
       return;
     }
 
+    if (logger.isDebugEnabled()) {
+      logger.debug("Received new intercept register message ({} bytes)", msg.length);
+    }
     InterceptMessage incomingInterceptMessage = null;
     // parse message
     try {
@@ -195,6 +207,8 @@ public class Intercepts extends ConnectedService {
       try {
         registerInterceptRequest(incomingInterceptMessage);
         registerSocket.send(REG_OK_REPLY);
+        // invalidate cache TODO: use sub-caches or another way to not invalidate entire cache
+        cache.clear();
       } catch (DuplicateInterceptException e) {
         logger.warn("Cannot register duplicate intercept request", e);
         registerSocket.send(REG_DUP_REPLY);
@@ -233,9 +247,25 @@ public class Intercepts extends ConnectedService {
       matchSocket.send(MATCH_ERROR_REPLY);
       return;
     }
-    final List<InterceptMessage> matchingIntercepts =
-        getMatchingIntercepts(message.getExecMessage(), msg.getExecPhase());
-    // reply to REQ with matching intercept requests, if any
+
+    final List<InterceptMessage> matchingIntercepts;
+    // lookup in cache first
+    final List<InterceptMessage> cached = cache.get(message.getInterceptKeyMessage());
+    if (cached != null) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Cache hit with matching intercepts, for key: {}, returning {} intercepts",
+            message.getInterceptKeyMessage(),
+            cached.size());
+      }
+      matchingIntercepts = cached;
+    } else {
+      // no luck; try matching
+      matchingIntercepts =
+          getMatchingIntercepts(message.getInterceptKeyMessage(), msg.getExecPhase());
+      cache.put(message.getInterceptKeyMessage(), matchingIntercepts);
+    }
+    // return all matching
     new InterceptsMsg(matchingIntercepts).send(matchSocket);
   }
 

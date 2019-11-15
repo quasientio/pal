@@ -117,9 +117,6 @@ public class InterceptInformer implements InterceptNodeListener {
       return false;
     }
     if (rcvdString.equals("0")) {
-      if (logger.isDebugEnabled()) {
-        logger.debug("Sent new intercept message: {}", message);
-      }
       return true;
     } else {
       logger.warn("Received non-0 reply when informing of intercept: {}", message);
