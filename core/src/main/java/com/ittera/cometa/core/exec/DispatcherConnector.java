@@ -2,6 +2,7 @@ package com.ittera.cometa.core.exec;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.common.ExecPhase;
+import com.ittera.cometa.core.RunOptions;
 import com.ittera.cometa.core.messages.InterceptsMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
@@ -13,6 +14,7 @@ import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -38,6 +40,7 @@ public class DispatcherConnector {
   private final PALDirectory palDirectory;
   private final String msgPublisherAddress, interceptMatchAddress;
   private final List<InternalHeader> WRITE_AHEAD_HEADERS;
+  private final EnumSet<RunOptions> runOptions;
 
   /*
   2 sockets per thread: 1 to send REQs to Intercepts; 1 to send REQs to MessagePublisher
@@ -87,12 +90,14 @@ public class DispatcherConnector {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       PALDirectory palDirectory,
+      EnumSet<RunOptions> runOptions,
       @Named("out.cell") String msgPublisherAddress,
       @Named("intercepts.mtx") String interceptMatchAddress) {
     this.zmqContext = zmqContext;
     this.peerUuid = peerUuid;
     this.messageBuilder = messageBuilder;
     this.palDirectory = palDirectory;
+    this.runOptions = runOptions;
     this.msgPublisherAddress = msgPublisherAddress;
     this.interceptMatchAddress = interceptMatchAddress;
     this.WRITE_AHEAD_HEADERS =
@@ -139,8 +144,17 @@ public class DispatcherConnector {
       logger.error("Error parsing received message", e);
     }
 
-    // publish message -- TODO should we in case of intercepts publish it after
-    publishMessage(msg);
+    // publish execMessage -- TODO should we in case of intercepts publish it after
+    if (!runOptions.contains(RunOptions.NO_PUBLISHING)) {
+      publishMessage(
+          new OutboundMsg(
+              MessageType.ExecMessage,
+              execPhase,
+              headers,
+              UUID.fromString(execMessage.getMessageUuid()),
+              followingUuid,
+              messageBuilder.wrap(execMessage).toByteArray()));
+    }
 
     // in case of error simply return received ExecMessage
     if (interceptsMsg == null) {
@@ -214,6 +228,11 @@ public class DispatcherConnector {
           message.getMessageUuid(),
           message.getPeerUuid());
     }
+
+    if (runOptions.contains(RunOptions.NO_PUBLISHING)) {
+      return;
+    }
+
     final UUID followingUuid =
         message.hasFollowingUuid() ? UUID.fromString(message.getFollowingUuid()) : null;
     final OutboundMsg msg =

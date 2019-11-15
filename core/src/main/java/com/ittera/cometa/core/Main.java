@@ -314,6 +314,9 @@ public class Main implements Callable<Integer> {
         fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
       }
     }
+    if (logless && tcpPub == null) {
+      runOptions.add(RunOptions.NO_PUBLISHING);
+    }
 
     // set TCP options
     final boolean reqless = tcpReq != null && tcpReq.equalsIgnoreCase("no");
@@ -485,7 +488,9 @@ public class Main implements Callable<Integer> {
       services.add(injector.getInstance(LogReader.class));
       services.add(injector.getInstance(LogWriter.class));
     }
-    services.add(injector.getInstance(OutgoingMessageDispatcher.class));
+    if (!runOptions.contains(RunOptions.NO_PUBLISHING)) {
+      services.add(injector.getInstance(OutgoingMessageDispatcher.class));
+    }
     if (!runOptions.contains(RunOptions.REQLESS)) {
       services.add(injector.getInstance(DirectRequestDispatcher.class));
     }

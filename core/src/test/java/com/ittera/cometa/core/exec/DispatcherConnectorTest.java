@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import com.ittera.cometa.common.ExecPhase;
+import com.ittera.cometa.core.RunOptions;
 import com.ittera.cometa.core.ZmqEnabledTest;
 import com.ittera.cometa.core.messages.InterceptsMsg;
 import com.ittera.cometa.cxn.PALDirectory;
@@ -16,6 +17,7 @@ import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -138,6 +140,12 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     }
   }
 
+  private static final Logger logger = LoggerFactory.getLogger("tests");
+  private static final String MSG_PUBLISHER_ADDR = "inproc://cell";
+  private static final String INTERCEPTS_ADDR = "inproc://intercepts";
+  private static final int TEST_PORT = 2182;
+  private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
+
   private final UUID peerUuid = UUID.randomUUID();
   private ZContext context;
   private ExecutorService execService;
@@ -156,9 +164,6 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     this.execService = Executors.newCachedThreadPool();
     testingServer = new TestingServer(TEST_PORT, true);
     palDirectory = new PALDirectory(CONNECTION_STR);
-    this.dispatcherConnector =
-        new DispatcherConnector(
-            context, peerUuid, msgBuilder, palDirectory, MSG_PUBLISHER_ADDR, INTERCEPTS_ADDR);
 
     // start stub services
     messagePublisherStub = new MessagePublisherStub();
@@ -182,14 +187,30 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     execService.shutdownNow();
     execService.awaitTermination(2, TimeUnit.SECONDS);
 
-    palDirectory.close();
     testingServer.close();
     logger.debug("out cleanup()");
   }
 
-  @Test
-  public void sendExecMessage() throws Exception {
+  private DispatcherConnector initDispatcherConnector(boolean publishing) {
+    EnumSet<RunOptions> runOptions;
+    if (!publishing) {
+      runOptions = EnumSet.of(RunOptions.NO_PUBLISHING);
+    } else {
+      runOptions = EnumSet.noneOf(RunOptions.class);
+    }
+    return new DispatcherConnector(
+        context,
+        peerUuid,
+        msgBuilder,
+        palDirectory,
+        runOptions,
+        MSG_PUBLISHER_ADDR,
+        INTERCEPTS_ADDR);
+  }
+
+  private void sendExecMessage(boolean publishing) throws Exception {
     logger.debug("test sendExecMessage");
+    this.dispatcherConnector = initDispatcherConnector(publishing);
     // sends msg and get reply
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg, ExecPhase.BEFORE);
@@ -207,19 +228,33 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
         is(Collections.singletonList(msg)));
 
     // verify message was received by Message Publisher
-    assertThat(messagePublisherStub.messagesReceived.size(), is(1));
-    assertThat(
-        messagePublisherStub.messagesReceived.stream()
-            .map(Message::getExecMessage)
-            .collect(Collectors.toList()),
-        is(Collections.singletonList(msg)));
+    if (publishing) {
+      assertThat(messagePublisherStub.messagesReceived.size(), is(1));
+      assertThat(
+          messagePublisherStub.messagesReceived.stream()
+              .map(Message::getExecMessage)
+              .collect(Collectors.toList()),
+          is(Collections.singletonList(msg)));
+    } else {
+      assertThat(messagePublisherStub.messagesReceived.size(), is(0));
+    }
 
     logger.debug("test sendExecMessage done");
   }
 
   @Test
-  public void sendExecMessageMany() throws Exception {
+  public void sendExecMessage() throws Exception {
+    sendExecMessage(true);
+  }
+
+  @Test
+  public void sendExecMessageNoPublishing() throws Exception {
+    sendExecMessage(false);
+  }
+
+  private void sendExecMessageMany(boolean publishing) throws Exception {
     logger.debug("test sendExecMessageMany");
+    this.dispatcherConnector = initDispatcherConnector(publishing);
     int msgsToSend = 10;
     List<ExecMessage> sentMessages = new ArrayList<>();
     List<ExecMessage> returnedMessages = new ArrayList<>();
@@ -245,18 +280,32 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
         is(sentMessages));
 
     // verify messages received by Message Publisher
-    assertThat(messagePublisherStub.messagesReceived.size(), is(msgsToSend));
-    assertThat(
-        messagePublisherStub.messagesReceived.stream()
-            .map(Message::getExecMessage)
-            .collect(Collectors.toList()),
-        is(sentMessages));
+    if (publishing) {
+      assertThat(messagePublisherStub.messagesReceived.size(), is(msgsToSend));
+      assertThat(
+          messagePublisherStub.messagesReceived.stream()
+              .map(Message::getExecMessage)
+              .collect(Collectors.toList()),
+          is(sentMessages));
+    } else {
+      assertThat(messagePublisherStub.messagesReceived.size(), is(0));
+    }
     logger.debug("test sendExecMessageMany done");
   }
 
   @Test
-  public void writeAhead() throws Exception {
-    logger.debug("test writeAhead");
+  public void sendExecMessageMany() throws Exception {
+    sendExecMessageMany(true);
+  }
+
+  @Test
+  public void sendExecMessageManyNoPublishing() throws Exception {
+    sendExecMessageMany(false);
+  }
+
+  private void writeAhead(boolean publishing) throws Exception {
+    logger.debug("test writeAhead (publishing={})", publishing);
+    this.dispatcherConnector = initDispatcherConnector(publishing);
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     dispatcherConnector.writeAhead(msg);
 
@@ -264,15 +313,30 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     assertThat(interceptsStub.messagesReceived.size(), is(0));
 
     // verify message and header received by Message Publisher
-    assertThat(messagePublisherStub.messagesReceived.size(), is(1));
-    assertThat(
-        messagePublisherStub.messagesReceived.stream()
-            .map(Message::getExecMessage)
-            .collect(Collectors.toList()),
-        is(Collections.singletonList(msg)));
+    if (publishing) {
+      assertThat(messagePublisherStub.messagesReceived.size(), is(1));
+      assertThat(
+          messagePublisherStub.messagesReceived.stream()
+              .map(Message::getExecMessage)
+              .collect(Collectors.toList()),
+          is(Collections.singletonList(msg)));
 
-    assertThat(messagePublisherStub.headersReceived.size(), is(1));
-    assertThat(messagePublisherStub.headersReceived.get(0), is(WRITE_AHEAD_HEADER));
-    logger.debug("test writeAhead done");
+      assertThat(messagePublisherStub.headersReceived.size(), is(1));
+      assertThat(messagePublisherStub.headersReceived.get(0), is(WRITE_AHEAD_HEADER));
+    } else {
+      assertThat(messagePublisherStub.messagesReceived.size(), is(0));
+      assertThat(messagePublisherStub.headersReceived.size(), is(0));
+    }
+    logger.debug("test writeAhead done (publishing={})", publishing);
+  }
+
+  @Test
+  public void writeAhead() throws Exception {
+    writeAhead(true);
+  }
+
+  @Test
+  public void writeAheadNoPublishing() throws Exception {
+    writeAhead(false);
   }
 }
