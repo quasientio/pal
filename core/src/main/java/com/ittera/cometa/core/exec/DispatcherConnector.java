@@ -120,7 +120,8 @@ public class DispatcherConnector {
         execMessage.hasFollowingUuid() ? UUID.fromString(execMessage.getFollowingUuid()) : null;
     InterceptsMsg interceptsMsg = null;
 
-    if (isInterceptableType(execMessage.getMsgType())) {
+    if (!runOptions.contains(RunOptions.NO_INTERCEPTS)
+        && isInterceptableType(execMessage.getMsgType())) {
       Socket interceptsReqSocket = threadInterceptsSocket.get();
       // find matching intercepts for execMessage
       InterceptKeyMessage interceptKeyMessage = messageBuilder.buildInterceptKey(execMessage);

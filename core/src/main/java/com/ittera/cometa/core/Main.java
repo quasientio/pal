@@ -119,6 +119,11 @@ public class Main implements Callable<Integer> {
   private String tcpReq; // corresponding ENV var: TCP_REQ
 
   @Option(
+      names = {"--no-intercepts"},
+      description = "don't allow message interception")
+  private boolean noIntercepts = false;
+
+  @Option(
       names = {"-h", "--help"},
       usageHelp = true,
       description = "display this help message")
@@ -317,6 +322,9 @@ public class Main implements Callable<Integer> {
     if (logless && tcpPub == null) {
       runOptions.add(RunOptions.NO_PUBLISHING);
     }
+    if (noIntercepts) {
+      runOptions.add(RunOptions.NO_INTERCEPTS);
+    }
 
     // set TCP-related options
     final boolean reqless = tcpReq != null && tcpReq.equalsIgnoreCase("no");
@@ -494,7 +502,9 @@ public class Main implements Callable<Integer> {
     if (!runOptions.contains(RunOptions.REQLESS)) {
       services.add(injector.getInstance(DirectRequestDispatcher.class));
     }
-    services.add(injector.getInstance(Intercepts.class));
+    if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {
+      services.add(injector.getInstance(Intercepts.class));
+    }
     return services;
   }
 
@@ -664,8 +674,10 @@ public class Main implements Callable<Integer> {
     collectGoSignals(services.size());
 
     // start listening to intercept reqs
-    final PALDirectory palDir = injector.getInstance(PALDirectory.class);
-    palDir.addInterceptNodeListener(injector.getInstance(InterceptInformer.class));
+    if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {
+      final PALDirectory palDir = injector.getInstance(PALDirectory.class);
+      palDir.addInterceptNodeListener(injector.getInstance(InterceptInformer.class));
+    }
 
     // start accepting Log requests
     if (!runOptions.contains(RunOptions.LOGLESS)) {
