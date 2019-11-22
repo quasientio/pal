@@ -812,6 +812,7 @@ public class PALDirectoryTest {
     palDirectory.registerInterceptAsync(
         req,
         (curatorFramework, evt) -> {
+          logger.debug("received event: {}", evt);
           if (evt.getType().equals(CuratorEventType.CREATE) && evt.getResultCode() == 0) {
             latch.countDown();
           }

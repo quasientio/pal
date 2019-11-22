@@ -106,6 +106,7 @@ public class PALDirectory implements AutoCloseable {
 
     @Override
     public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent treeCacheEvent) {
+      logger.debug("tree event: {}", treeCacheEvent);
       switch (treeCacheEvent.getType()) {
         case NODE_ADDED:
           String path = treeCacheEvent.getData().getPath();
@@ -126,7 +127,7 @@ public class PALDirectory implements AutoCloseable {
         case CONNECTION_RECONNECTED:
         case CONNECTION_LOST:
         case INITIALIZED:
-        default: // noop
+        default: // NOP
       }
     }
   };
@@ -148,7 +149,7 @@ public class PALDirectory implements AutoCloseable {
     try {
       createSubPaths();
     } catch (Exception e) {
-      logger.error("Error trying to create subpaths", e);
+      logger.error("Error creating subpaths", e);
     }
     // start and build caches
     if (withCaching) {
@@ -162,13 +163,7 @@ public class PALDirectory implements AutoCloseable {
     peersCache = new PathChildrenCache(curator, getPeersPath(), true, false, cachingExecutor);
     try {
       peersCache.start(StartMode.NORMAL);
-      logger.info(
-          "Initialized peers cache with {} known peers.", peersCache.getCurrentData().size());
-      if (logger.isDebugEnabled()) {
-        peersCache
-            .getCurrentData()
-            .forEach(p -> logger.debug("Cached existing peer with path: {}", p.getPath()));
-      }
+      logger.info("Initialized peers cache");
     } catch (Exception e) {
       logger.error("Error building peers cache", e);
     }
@@ -201,7 +196,7 @@ public class PALDirectory implements AutoCloseable {
   public void registerPeer(UUID peerUuid, Properties peerProperties) throws Exception {
     byte[] peerData = peerPropsToData(peerProperties);
     if (!peerExists(peerUuid)) {
-      curator.create().creatingParentsIfNeeded().forPath(getPeerPath(peerUuid), peerData);
+      curator.create().withMode(CreateMode.EPHEMERAL).forPath(getPeerPath(peerUuid), peerData);
       logger.info("Registered peer with uuid: {} and properties: {}", peerUuid, peerProperties);
     } else {
       logger.info(
@@ -237,10 +232,7 @@ public class PALDirectory implements AutoCloseable {
     }
     // set bean fields reflectively
     Stream.of("name", "reqAddress", "pubAddress", "jmxAddress")
-        .forEach(
-            fldName -> {
-              setFieldValueUnlessNull(peerInfo, fldName, props.getProperty(fldName));
-            });
+        .forEach(fldName -> setFieldValueUnlessNull(peerInfo, fldName, props.getProperty(fldName)));
     peerInfo.setCtime(stat.getCtime());
     peerInfo.setMtime(stat.getMtime());
     return peerInfo;
@@ -293,10 +285,14 @@ public class PALDirectory implements AutoCloseable {
     curator
         .create()
         .creatingParentsIfNeeded()
+        .withMode(CreateMode.EPHEMERAL)
         .inBackground(callback)
         .forPath(interceptPath, interceptData);
     if (logger.isDebugEnabled()) {
-      logger.debug("Async-created new node for intercept request: {}", interceptRequest);
+      logger.debug(
+          "Async-created new node for intercept request: {} at path: {}",
+          interceptRequest,
+          interceptPath);
     }
   }
 
@@ -676,7 +672,7 @@ public class PALDirectory implements AutoCloseable {
     return data;
   }
 
-  private Charset getEncodingCharset() {
+  private static Charset getEncodingCharset() {
     if (loadedCharset == null) {
       try {
         loadedCharset = StandardCharsets.UTF_8;
@@ -755,9 +751,15 @@ public class PALDirectory implements AutoCloseable {
   private void createSubPaths() throws Exception {
     if (curator.checkExists().forPath(getLogsPath()) == null) {
       curator.create().creatingParentsIfNeeded().forPath(getLogsPath());
+      logger.debug("Created subpath: {}", getLogsPath());
     }
     if (curator.checkExists().forPath(getPeersPath()) == null) {
       curator.create().creatingParentsIfNeeded().forPath(getPeersPath());
+      logger.debug("Created subpath: {}", getPeersPath());
+    }
+    if (curator.checkExists().forPath(getInterceptsPath()) == null) {
+      curator.create().creatingParentsIfNeeded().forPath(getInterceptsPath());
+      logger.debug("Created subpath: {}", getInterceptsPath());
     }
   }
 
