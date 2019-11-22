@@ -3,10 +3,14 @@ package com.ittera.cometa.core.exec;
 import com.ittera.cometa.common.znodes.InterceptEvent;
 import com.ittera.cometa.common.znodes.InterceptNodeListener;
 import com.ittera.cometa.common.znodes.InterceptRequest;
+import com.ittera.cometa.common.znodes.PeerInfo;
 import com.ittera.cometa.core.messages.InterceptEvtMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -62,6 +66,32 @@ public class InterceptInformer implements InterceptNodeListener {
     this.palDirectory = palDirectory;
     this.peerUuid = peerUuid;
     this.interceptsAddr = interceptsAddr;
+  }
+
+  public void registerAllInterceptsInDirectory() {
+    final Set<PeerInfo> peers;
+    try {
+      peers = palDirectory.getAllPeers();
+    } catch (Exception e) {
+      logger.error("Error retrieving peers from directory", e);
+      return;
+    }
+
+    final List<InterceptRequest> allInterceptRequests = new ArrayList<>();
+    for (PeerInfo peer : peers) {
+      try {
+        allInterceptRequests.addAll(palDirectory.getPeerInterceptRequests(peer.getUuid()));
+      } catch (Exception e) {
+        logger.error("Error retrieving intercepts for peer w/uuid:{}", peer.getUuid(), e);
+      }
+    }
+
+    allInterceptRequests.forEach(
+        interceptRequest -> {
+          InterceptMessage interceptMessage =
+              messageBuilder.buildInterceptMessage(interceptRequest);
+          sendInterceptEventMsg(new InterceptEvtMsg(interceptMessage.toByteArray()));
+        });
   }
 
   @Override

@@ -21,6 +21,21 @@ public class InterceptEvent {
     this.interceptUUID = interceptUUID;
   }
 
+  @Override
+  public String toString() {
+    return "InterceptEvent{"
+        + "type="
+        + type
+        + ", interceptPath='"
+        + interceptPath
+        + '\''
+        + ", peerUUID="
+        + peerUUID
+        + ", interceptUUID="
+        + interceptUUID
+        + '}';
+  }
+
   public Type getType() {
     return type;
   }

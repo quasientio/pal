@@ -680,7 +680,11 @@ public class Main implements Callable<Integer> {
     // start listening to intercept reqs
     if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {
       final PALDirectory palDir = injector.getInstance(PALDirectory.class);
-      palDir.addInterceptNodeListener(injector.getInstance(InterceptInformer.class));
+      final InterceptInformer interceptInformer = injector.getInstance(InterceptInformer.class);
+      // add as listener for future requests
+      palDir.addInterceptNodeListener(interceptInformer);
+      // register all current intercepts in directory
+      interceptInformer.registerAllInterceptsInDirectory();
     }
 
     // start accepting Log requests
