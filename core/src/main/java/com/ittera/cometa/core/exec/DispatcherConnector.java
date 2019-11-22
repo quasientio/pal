@@ -15,10 +15,12 @@ import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -35,6 +37,7 @@ import zmq.ZError;
 public class DispatcherConnector {
 
   private static final Logger logger = LoggerFactory.getLogger(DispatcherConnector.class);
+  private static final int CALLBACK_RECV_TIMEOUT_MS = 3000;
 
   private final ZContext zmqContext;
   private final UUID peerUuid;
@@ -44,6 +47,10 @@ public class DispatcherConnector {
   private final List<InternalHeader> WRITE_AHEAD_HEADERS;
   private final EnumSet<RunOptions> runOptions;
 
+  private final AtomicLong totalPubSocketTime = new AtomicLong();
+  private final AtomicLong totalIntrcptSocketTime = new AtomicLong();
+  private final AtomicLong totalPubReqs = new AtomicLong();
+  private final AtomicLong totalMatchReqs = new AtomicLong();
   /*
   2 sockets per thread: 1 to send REQs to Intercepts; 1 to send REQs to MessagePublisher
   */
@@ -125,14 +132,17 @@ public class DispatcherConnector {
       Socket interceptsReqSocket = threadInterceptsSocket.get();
       // find matching intercepts for execMessage
       InterceptKeyMessage interceptKeyMessage = messageBuilder.buildInterceptKey(execMessage);
-      new OutboundMsg(
+      final OutboundMsg msg =
+          new OutboundMsg(
               MessageType.InterceptKey,
               execPhase,
               headers,
               UUID.fromString(execMessage.getMessageUuid()),
               followingUuid,
-              messageBuilder.wrap(interceptKeyMessage).toByteArray())
-          .send(interceptsReqSocket);
+              messageBuilder.wrap(interceptKeyMessage).toByteArray());
+
+      long start = Instant.now().toEpochMilli();
+      msg.send(interceptsReqSocket);
 
       // receive intercepts, if any
       try {
@@ -148,22 +158,26 @@ public class DispatcherConnector {
         }
       } catch (InvalidProtocolBufferException e) {
         logger.error("Error parsing received execMessage", e);
+      } finally {
+        totalIntrcptSocketTime.getAndAdd((Instant.now().toEpochMilli() - start));
+        totalMatchReqs.getAndIncrement();
       }
     }
 
     // publish execMessage -- TODO should we in case of intercepts publish it after
     if (!runOptions.contains(RunOptions.NO_PUBLISHING)) {
-      publishMessage(
+      final OutboundMsg msg =
           new OutboundMsg(
               MessageType.ExecMessage,
               execPhase,
               headers,
               UUID.fromString(execMessage.getMessageUuid()),
               followingUuid,
-              messageBuilder.wrap(execMessage).toByteArray()));
+              messageBuilder.wrap(execMessage).toByteArray());
+      publishMessage(msg);
     }
 
-    // in case of error simply return received ExecMessage
+    // in case of error, simply return received ExecMessage
     if (interceptsMsg == null) {
       return execMessage;
     }
@@ -221,6 +235,7 @@ public class DispatcherConnector {
 
   private void publishMessage(OutboundMsg message) {
     Socket publisherReqSocket = threadPubSocket.get();
+    long start = Instant.now().toEpochMilli();
     message.send(publisherReqSocket);
     try {
       String reply = publisherReqSocket.recvStr();
@@ -229,6 +244,9 @@ public class DispatcherConnector {
       }
     } catch (ZMQException e) {
       logger.error("Error receiving reply from publisher socket", e);
+    } finally {
+      totalPubSocketTime.getAndAdd((Instant.now().toEpochMilli() - start));
+      totalPubReqs.getAndIncrement();
     }
   }
 
@@ -264,28 +282,43 @@ public class DispatcherConnector {
     if (logger.isDebugEnabled()) {
       logger.debug("Sending callback message: {} to peer w/uuid: {}", message, interceptor);
     }
-    Socket req = zmqContext.createSocket(SocketType.REQ);
-    // get peer's address
-    String interceptorAddress;
-    interceptorAddress = palDirectory.getPeerInfo(interceptor).getReqAddress();
-    // connect to peer and send callback message
-    req.connect(interceptorAddress);
-    req.send(messageBuilder.wrap(message).toByteArray(), 0);
+    byte[] reply;
+    try (Socket req = zmqContext.createSocket(SocketType.REQ)) {
+      // set receive timeout
+      req.setReceiveTimeOut(CALLBACK_RECV_TIMEOUT_MS);
+      // get peer's address
+      String interceptorAddress;
+      interceptorAddress = palDirectory.getPeerInfo(interceptor).getReqAddress();
+      // connect to peer and send callback message
+      req.connect(interceptorAddress);
+      req.send(messageBuilder.wrap(message).toByteArray(), 0);
 
-    // block until we get a reply
-    byte[] reply = null;
-    if (getReply) {
-      reply = req.recv(0);
-      if (logger.isDebugEnabled()) {
-        try {
-          Message replyMessage = Message.parseFrom(reply);
-          logger.debug("Got reply from callback: {}", replyMessage);
-        } catch (InvalidProtocolBufferException e) {
-          logger.warn("Error parsing reply message", e);
+      // block until we get a reply or peer is disconnected
+      reply = null;
+      if (getReply) {
+        boolean peerIsUp = true;
+        while (peerIsUp) {
+          reply = req.recv(0);
+          if (reply == null) { // we hit the timeout, check if peer is alive
+            peerIsUp = palDirectory.peerExists(interceptor);
+            if (peerIsUp) {
+              logger.warn(
+                  "Peer w/uuid: {} is taking long to reply, but is alive, so we wait", interceptor);
+            } else {
+              logger.warn(
+                  "Peer w/uuid: {} is disconnected. Giving up, returning null", interceptor);
+            }
+          } else if (logger.isDebugEnabled()) {
+            try {
+              Message replyMessage = Message.parseFrom(reply);
+              logger.debug("Got reply from callback: {}", replyMessage);
+            } catch (InvalidProtocolBufferException e) {
+              logger.warn("Error parsing reply message", e);
+            }
+          }
         }
       }
     }
-    req.close();
     return reply;
   }
 
@@ -312,7 +345,26 @@ public class DispatcherConnector {
     }
   }
 
+  // TODO call from single-thread
+  void printStats() {
+    logger.info("totalPubSocketTime = {} ms", totalPubSocketTime);
+    logger.info("totalIntrcptSocketTime = {} ms", totalIntrcptSocketTime);
+    logger.info("totalPubReqs = {}", totalPubReqs);
+    logger.info("totalMatchReqs = {}", totalMatchReqs);
+  }
+
   void closeThreadLocalSockets() {
+    printStats();
+    if (totalPubReqs.longValue() != 0) {
+      logger.info(
+          "avg ms per pub = {} ms", totalPubSocketTime.longValue() / totalPubReqs.longValue());
+    }
+    if (totalMatchReqs.longValue() != 0) {
+      logger.info(
+          "avg ms per match = {} ms",
+          totalIntrcptSocketTime.longValue() / totalMatchReqs.longValue());
+    }
+
     if (threadInterceptsSocketCreated.get()) {
       Socket socket = threadInterceptsSocket.get();
       if (socket != null) {

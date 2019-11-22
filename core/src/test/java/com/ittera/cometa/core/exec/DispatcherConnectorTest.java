@@ -179,6 +179,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     dispatcherConnector.closeThreadLocalSockets();
 
     palDirectory.close();
+    testingServer.close();
 
     // close local context
     execService.submit(
@@ -191,7 +192,6 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     execService.shutdownNow();
     execService.awaitTermination(2, TimeUnit.SECONDS);
 
-    testingServer.close();
     logger.debug("out cleanup()");
   }
 

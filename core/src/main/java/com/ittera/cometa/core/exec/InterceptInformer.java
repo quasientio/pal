@@ -3,6 +3,7 @@ package com.ittera.cometa.core.exec;
 import com.ittera.cometa.common.znodes.InterceptEvent;
 import com.ittera.cometa.common.znodes.InterceptNodeListener;
 import com.ittera.cometa.common.znodes.InterceptRequest;
+import com.ittera.cometa.core.messages.InterceptEvtMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
@@ -36,6 +37,7 @@ public class InterceptInformer implements InterceptNodeListener {
   // per-thread REQ socket to send out messages
   private final ThreadLocal<Socket> threadSocket =
       new ThreadLocal<Socket>() {
+        @Override
         protected Socket initialValue() {
           Socket worker = zmqContext.createSocket(SocketType.REQ);
           worker.connect(interceptsAddr);
@@ -84,24 +86,31 @@ public class InterceptInformer implements InterceptNodeListener {
           return;
         }
         InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
-        sendInterceptRequest(interceptMessage);
+        sendInterceptEventMsg(new InterceptEvtMsg(interceptMessage.toByteArray()));
         break;
       case INTERCEPT_REMOVED:
-        logger.warn("Unsupported operation");
+        if (event.getPeerUUID().equals(peerUuid)) {
+          if (logger.isDebugEnabled()) {
+            logger.debug("Ignoring unregistration of self-produced intercept");
+          }
+          return;
+        }
+        UUID interceptMsg = event.getInterceptUUID();
+        sendInterceptEventMsg(new InterceptEvtMsg(interceptMsg));
         break;
     }
   }
 
-  private boolean sendInterceptRequest(InterceptMessage message) {
+  private void sendInterceptEventMsg(InterceptEvtMsg message) {
     if (logger.isDebugEnabled()) {
-      logger.debug("Sending new intercept message: {}", message);
+      logger.debug("Sending new intercept evt message: {}", message);
     }
     // send
     Socket outSocket = threadSocket.get();
-    outSocket.send(message.toByteArray(), 0);
+    message.send(outSocket);
 
     // receive
-    String rcvdString;
+    String rcvdString = null;
     try {
       rcvdString = outSocket.recvStr();
     } catch (ZMQException ex) {
@@ -114,18 +123,17 @@ public class InterceptInformer implements InterceptNodeListener {
         logger.warn("Caught unknown error during blocking read. Will close socket.");
       }
       outSocket.close();
-      return false;
     }
-    if (rcvdString.equals("0")) {
-      return true;
-    } else {
-      logger.warn("Received non-0 reply when informing of intercept: {}", message);
-      return false;
+    if (!"0".equals(rcvdString)) {
+      logger.warn(
+          "Received non-0 reply (code={}) when informing of intercept event: {}",
+          rcvdString,
+          message);
     }
   }
 
-  void closeThreadLocalSocket() {
-    if (threadSocketCreated.get()) {
+  public void closeThreadLocalSocket() {
+    if (Boolean.TRUE.equals(threadSocketCreated.get())) {
       Socket outSocket = threadSocket.get();
       if (outSocket != null) {
         outSocket.close();

@@ -8,8 +8,11 @@ import com.ittera.cometa.messages.protobuf.Intercepts;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +55,7 @@ class InterceptRequests {
   }
 
   void registerInterceptRequest(Intercepts.InterceptMessage interceptMessage)
-      throws DuplicateInterceptException, IllegalArgumentException {
+      throws DuplicateInterceptException {
     InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
 
     if (!interceptMessage.hasField() && !interceptMessage.hasMethod()) {
@@ -82,5 +85,30 @@ class InterceptRequests {
     } else {
       targetList.add(interceptRequestEntry);
     }
+  }
+
+  // TODO optimize: removing shouldn't take O(n)
+  void unregisterInterceptRequest(String interceptMessageUUID) {
+    final Map<List, Integer> occurrences = new HashMap<>();
+    Stream.of(constructorIntercepts, methodIntercepts, fieldGetIntercepts, fieldPutIntercepts)
+        .forEach(
+            list -> {
+              for (int i = 0; i < list.size(); i++) {
+                InterceptRequestEntry requestEntry = list.get(i);
+                if (interceptMessageUUID.equalsIgnoreCase(
+                    requestEntry.getInterceptMessage().getMessageUuid())) {
+                  occurrences.put(list, i);
+                }
+              }
+            });
+    // delete all list entries of given msg uuid
+    occurrences.forEach((list, integer) -> list.remove(integer.intValue()));
+  }
+
+  int getRegisteredRequestsSize() {
+    return constructorIntercepts.size()
+        + methodIntercepts.size()
+        + fieldGetIntercepts.size()
+        + fieldPutIntercepts.size();
   }
 }

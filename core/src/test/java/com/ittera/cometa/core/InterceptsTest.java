@@ -8,6 +8,7 @@ import static org.junit.Assert.assertThat;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.ittera.cometa.common.ExecPhase;
+import com.ittera.cometa.core.messages.InterceptEvtMsg;
 import com.ittera.cometa.core.messages.InterceptsMsg;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.MessageType;
@@ -115,7 +116,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    registerSocket.send(interceptMessage.toByteArray(), 0);
+    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
 
     // verify reply
     String reply = registerSocket.recvStr();
@@ -134,14 +135,14 @@ public class InterceptsTest extends ZmqEnabledTest {
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    registerSocket.send(interceptMessage.toByteArray(), 0);
+    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
 
     // verify reply
     String reply = registerSocket.recvStr();
     assertThat(reply, is(Intercepts.REG_OK_REPLY));
 
     // now send again
-    registerSocket.send(interceptMessage.toByteArray(), 0);
+    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
 
     // verify reply
     reply = registerSocket.recvStr();
@@ -160,7 +161,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    registerSocket.send(interceptMessage.toByteArray(), 0);
+    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
 
     // verify reply
     String reply = registerSocket.recvStr();
@@ -186,7 +187,7 @@ public class InterceptsTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void registerNewInterceptThenMatchingExecMessageWithWrongPhase() throws Exception {
+  public void registerNewInterceptThenMatchingKeyMessageWithWrongPhase() throws Exception {
     // create and send intercept request
     InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(
@@ -197,22 +198,23 @@ public class InterceptsTest extends ZmqEnabledTest {
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    registerSocket.send(interceptMessage.toByteArray(), 0);
+    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
 
     // verify reply
     String reply = registerSocket.recvStr();
     assertThat(reply, is(Intercepts.REG_OK_REPLY));
 
     // send a matching ExecMessage with non-matching phase (ExecPhase = AFTER)
-    ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
+    ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
+    InterceptKeyMessage execKeyMessage = msgBuilder.buildInterceptKey(execMessage);
     OutboundMsg outMsg =
         new OutboundMsg(
             MessageType.ExecMessage,
             ExecPhase.AFTER,
             null,
-            UUID.fromString(msg.getMessageUuid()),
+            UUID.fromString(execMessage.getMessageUuid()),
             null,
-            msgBuilder.wrap(msg).toByteArray());
+            msgBuilder.wrap(execKeyMessage).toByteArray());
     outMsg.send(matchSocket);
     logger.debug("Sent exec message: {}", outMsg);
 
@@ -234,7 +236,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    registerSocket.send(interceptMessage.toByteArray(), 0);
+    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
 
     // verify reply
     String reply = registerSocket.recvStr();
@@ -261,5 +263,32 @@ public class InterceptsTest extends ZmqEnabledTest {
     assertThat(interceptsMsg.getIntercepts(), notNullValue());
     assertThat(interceptsMsg.getIntercepts().size(), is(1));
     assertThat(interceptsMsg.getIntercepts().get(0), is(interceptMessage));
+  }
+
+  @Test
+  public void registerNewInterceptThenUnregister() throws Exception {
+    // create and send intercept request
+    InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            "java.util.ArrayList",
+            "new",
+            Collections.emptyList(),
+            this.getClass().getName(),
+            "someCallbackMethod");
+    final UUID interceptUuid = UUID.fromString(interceptMessage.getMessageUuid());
+    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
+
+    // verify reply
+    String reply = registerSocket.recvStr();
+    assertThat(reply, is(Intercepts.REG_OK_REPLY));
+
+    // now unregister
+    new InterceptEvtMsg(interceptUuid).send(registerSocket);
+
+    // verify reply
+    reply = registerSocket.recvStr();
+    assertThat(reply, is(Intercepts.UNREG_OK_REPLY));
   }
 }

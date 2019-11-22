@@ -15,6 +15,7 @@ import com.ittera.cometa.common.znodes.InterceptEvent;
 import com.ittera.cometa.common.znodes.InterceptEvent.Type;
 import com.ittera.cometa.common.znodes.InterceptRequest;
 import com.ittera.cometa.core.ZmqEnabledTest;
+import com.ittera.cometa.core.messages.InterceptEvtMsg;
 import com.ittera.cometa.cxn.PALDirectory;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
@@ -46,7 +47,8 @@ public class InterceptInformerTest extends ZmqEnabledTest {
   private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
   private PALDirectory palDirectory;
   private Socket repSocket;
-  private List<InterceptMessage> messagesReceived;
+  private List<InterceptMessage> interceptRequestMessages;
+  private List<UUID> requestsToUnregister;
   private static final String INTERCEPT_REG_ADDR = "inproc://intercepts.reg";
 
   private class InterceptsStub implements Runnable {
@@ -55,11 +57,13 @@ public class InterceptInformerTest extends ZmqEnabledTest {
       repSocket = context.createSocket(SocketType.REP);
       repSocket.bind(INTERCEPT_REG_ADDR);
       while (!Thread.interrupted()) {
-        final byte[] msg;
-        msg = repSocket.recv();
         try {
-          InterceptMessage incomingInterceptMessage = InterceptMessage.parseFrom(msg);
-          messagesReceived.add(incomingInterceptMessage);
+          InterceptEvtMsg interceptEvtMsg = InterceptEvtMsg.recvMsg(repSocket, true);
+          if (interceptEvtMsg.getType().equals(InterceptEvtMsg.Type.REGISTER)) {
+            interceptRequestMessages.add(InterceptMessage.parseFrom(interceptEvtMsg.getBody()));
+          } else { // Type.UNREGISTER
+            requestsToUnregister.add(interceptEvtMsg.getInterceptMsgUUID());
+          }
           repSocket.send("0");
         } catch (InvalidProtocolBufferException e) {
           e.printStackTrace();
@@ -73,12 +77,14 @@ public class InterceptInformerTest extends ZmqEnabledTest {
   public void setup() {
     context = createContext();
     execService = Executors.newCachedThreadPool();
-    messagesReceived = new ArrayList<>();
+    interceptRequestMessages = new ArrayList<>();
+    requestsToUnregister = new ArrayList<>();
   }
 
   @After
   public void cleanup() throws Exception {
-    messagesReceived.clear();
+    interceptRequestMessages.clear();
+    requestsToUnregister.clear();
 
     // close local context
     execService.submit(
@@ -95,7 +101,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void interceptEventFromRemotePeer() throws Exception {
+  public void interceptRequestFromRemotePeer() throws Exception {
     palDirectory = mock(PALDirectory.class);
 
     // stub getInterceptRequest call
@@ -132,11 +138,64 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     verify(palDirectory, times(1)).getInterceptRequest(any());
 
     // verify that intercept messages were sent
-    assertThat(messagesReceived.size(), is(1));
+    assertThat(interceptRequestMessages.size(), is(1));
   }
 
   @Test
-  public void interceptEventFromThisPeer() throws Exception {
+  public void unregisterRequestFromRemotePeer() throws Exception {
+    palDirectory = mock(PALDirectory.class);
+
+    // stub getInterceptRequest call
+    when(palDirectory.getInterceptRequest(any()))
+        .thenAnswer(
+            (Answer)
+                invocation ->
+                    new InterceptRequest<>(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(), // remote peer
+                        InterceptType.BEFORE,
+                        "java.io.PrintStream",
+                        "org.package.Callback",
+                        "callMe",
+                        new InterceptableMethodCall("println", null)));
+
+    // simulate Intercepts registration endpoint
+    execService.submit(new InterceptsStub());
+
+    // create and send new intercept event to informer
+    final UUID remotePeerUuid = UUID.randomUUID();
+    final UUID interceptUuid = UUID.randomUUID();
+    interceptInformer =
+        new InterceptInformer(context, msgBuilder, palDirectory, peerUuid, INTERCEPT_REG_ADDR);
+    InterceptEvent interceptEvent =
+        new InterceptEvent(
+            Type.INTERCEPT_ADDED,
+            "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-uuid",
+            remotePeerUuid,
+            interceptUuid);
+    interceptInformer.interceptEvent(interceptEvent);
+
+    // verify that palDirectory.getInterceptRequest is invoked
+    verify(palDirectory, times(1)).getInterceptRequest(any());
+
+    // verify that intercept messages were sent
+    assertThat(interceptRequestMessages.size(), is(1));
+
+    // now unregister the request
+    interceptEvent =
+        new InterceptEvent(
+            Type.INTERCEPT_REMOVED,
+            "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-uuid",
+            remotePeerUuid,
+            interceptUuid);
+    interceptInformer.interceptEvent(interceptEvent);
+
+    // verify that unregister messages were sent
+    assertThat(requestsToUnregister.size(), is(1));
+  }
+
+  @Test
+  public void interceptRequestFromThisPeer() throws Exception {
     palDirectory = mock(PALDirectory.class);
 
     // stub getInterceptRequest call
@@ -172,6 +231,6 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     verify(palDirectory, times(0)).getInterceptRequest(any());
 
     // verify that NO intercept messages were sent
-    assertThat(messagesReceived.size(), is(0));
+    assertThat(interceptRequestMessages.size(), is(0));
   }
 }

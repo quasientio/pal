@@ -17,7 +17,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class InterceptMatchingTest {
+public class InterceptRequestEntryTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
   private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();

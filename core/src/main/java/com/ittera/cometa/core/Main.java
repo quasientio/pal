@@ -556,6 +556,10 @@ public class Main implements Callable<Integer> {
       final PALDirectory palDirectory = injector.getInstance(PALDirectory.class);
       palDirectory.close();
 
+      // close sockets that aren't automatically closed
+      final InterceptInformer interceptInformer = injector.getInstance(InterceptInformer.class);
+      interceptInformer.closeThreadLocalSocket();
+
       // close zmq context asynchronously
       singleExecutor.submit(this::closeZmqContext);
       singleExecutor.shutdown();

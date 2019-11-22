@@ -3,6 +3,8 @@ package com.ittera.cometa.core;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.ittera.cometa.common.ExecPhase;
 import com.ittera.cometa.core.exec.DuplicateInterceptException;
+import com.ittera.cometa.core.messages.InterceptEvtMsg;
+import com.ittera.cometa.core.messages.InterceptEvtMsg.Type;
 import com.ittera.cometa.core.messages.InterceptsMsg;
 import com.ittera.cometa.messages.OutboundMsg;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptKeyMessage;
@@ -21,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
@@ -37,13 +38,14 @@ public class Intercepts extends ConnectedService {
   private final String interceptRegAddress, interceptMatchAddress;
 
   // intercept registration reply codes
-  static final String REG_OK_REPLY = "0";
-  static final String REG_DUP_REPLY = "1";
-  static final String REG_PARSING_ERROR_REPLY = "2";
-  static final String REG_UNKNOWN_ERROR_REPLY = "3";
+  public static final String REG_OK_REPLY = "0";
+  public static final String UNREG_OK_REPLY = "0";
+  public static final String REG_DUP_REPLY = "1";
+  public static final String REG_PARSING_ERROR_REPLY = "2";
+  public static final String REG_UNKNOWN_ERROR_REPLY = "3";
 
   // intercept matching reply codes
-  static final String MATCH_ERROR_REPLY = "1";
+  public static final String MATCH_ERROR_REPLY = "1";
 
   // map holding all intercepts
   private final Map<InterceptType, InterceptRequests> allIntercepts = new HashMap<>();
@@ -130,7 +132,7 @@ public class Intercepts extends ConnectedService {
       // poll registerSocket and dispatch
       if (!regPollingError) {
         try {
-          pollAndRegisterNewIntercept();
+          registerNewAndGoneIntercepts();
         } catch (ZMQException ex) {
           int errorCode = ex.getErrorCode();
           if (errorCode == ZError.ETERM) {
@@ -185,88 +187,102 @@ public class Intercepts extends ConnectedService {
     }
   }
 
-  private void pollAndRegisterNewIntercept() {
-    final byte[] msg;
-    msg = registerSocket.recv(ZMQ.DONTWAIT);
-    if (msg == null) {
+  private void registerNewAndGoneIntercepts() {
+    InterceptEvtMsg interceptEvtMsg = InterceptEvtMsg.recvMsg(registerSocket);
+    if (interceptEvtMsg == null) {
       return;
     }
 
     if (logger.isDebugEnabled()) {
-      logger.debug("Received new intercept register message ({} bytes)", msg.length);
+      logger.debug("Received new intercept evt message ({} bytes)", interceptEvtMsg.getSize());
     }
-    InterceptMessage incomingInterceptMessage = null;
     // parse message
-    try {
-      incomingInterceptMessage = InterceptMessage.parseFrom(msg);
-    } catch (InvalidProtocolBufferException e) {
-      logger.error("Error parsing intercept request message", e);
-      registerSocket.send(REG_PARSING_ERROR_REPLY);
-    }
-    if (incomingInterceptMessage != null) {
+    if (interceptEvtMsg.getType().equals(Type.REGISTER)) {
+      InterceptMessage interceptMessage = null;
       try {
-        registerInterceptRequest(incomingInterceptMessage);
-        registerSocket.send(REG_OK_REPLY);
-        // invalidate cache TODO: use sub-caches or another way to not invalidate entire cache
-        cache.clear();
-      } catch (DuplicateInterceptException e) {
-        logger.warn("Cannot register duplicate intercept request", e);
-        registerSocket.send(REG_DUP_REPLY);
-      } catch (Exception e) {
-        registerSocket.send(REG_UNKNOWN_ERROR_REPLY);
+        interceptMessage = InterceptMessage.parseFrom(interceptEvtMsg.getBody());
+      } catch (InvalidProtocolBufferException e) {
+        logger.error("Error parsing intercept request message", e);
+        registerSocket.send(REG_PARSING_ERROR_REPLY);
       }
+      if (interceptMessage != null) {
+        try {
+          registerInterceptRequest(interceptMessage);
+          registerSocket.send(REG_OK_REPLY);
+          invalidateCache();
+        } catch (DuplicateInterceptException e) {
+          logger.warn("Cannot register duplicate intercept request", e);
+          registerSocket.send(REG_DUP_REPLY);
+        } catch (Exception e) {
+          registerSocket.send(REG_UNKNOWN_ERROR_REPLY);
+        }
+      }
+    } else { // Type.UNREGISTER
+      UUID interceptUuid = interceptEvtMsg.getInterceptMsgUUID();
+      allIntercepts
+          .values()
+          .forEach(
+              interceptRequests ->
+                  interceptRequests.unregisterInterceptRequest(interceptUuid.toString()));
+      registerSocket.send(UNREG_OK_REPLY);
+      invalidateCache();
     }
   }
 
+  /** TODO: use sub-caches or another way to not invalidate entire cache */
+  private void invalidateCache() {
+    cache.clear();
+  }
+
   private void pollAndMatchIntercepts() {
-    OutboundMsg msg = null;
-    try {
-      msg = OutboundMsg.recvMsg(matchSocket);
-      if (msg == null) {
+    // matching is given priority over reg, so we read messages til sink is empty or we hit an error
+    while (true) {
+      OutboundMsg msg = null;
+      try {
+        msg = OutboundMsg.recvMsg(matchSocket);
+        if (msg == null) {
+          break;
+        }
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Received new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
+        }
+      } catch (InvalidProtocolBufferException e) {
+        logger.error("Error parsing received message", e);
+        matchSocket.send(MATCH_ERROR_REPLY);
         return;
       }
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            "Received new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
+
+      // try to match message and send reply
+      final Message message;
+      try {
+        message = Message.parseFrom(msg.getBody());
+      } catch (InvalidProtocolBufferException e) {
+        logger.error("Parsing received exec message", e);
+        matchSocket.send(MATCH_ERROR_REPLY);
+        return;
       }
-    } catch (InvalidProtocolBufferException e) {
-      logger.error("Error parsing received message", e);
-      matchSocket.send(MATCH_ERROR_REPLY);
-    }
 
-    if (msg == null) {
-      return;
-    }
-
-    // try to match message and send reply
-    final Message message;
-    try {
-      message = Message.parseFrom(msg.getBody());
-    } catch (InvalidProtocolBufferException e) {
-      logger.error("Parsing received exec message", e);
-      matchSocket.send(MATCH_ERROR_REPLY);
-      return;
-    }
-
-    final List<InterceptMessage> matchingIntercepts;
-    // lookup in cache first
-    final List<InterceptMessage> cached = cache.get(message.getInterceptKeyMessage());
-    if (cached != null) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            "Cache hit with matching intercepts, for key: {}, returning {} intercepts",
-            message.getInterceptKeyMessage(),
-            cached.size());
+      final List<InterceptMessage> matchingIntercepts;
+      // lookup in cache first
+      final List<InterceptMessage> cached = cache.get(message.getInterceptKeyMessage());
+      if (cached != null) {
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Cache hit with matching intercepts, for key: {}, returning {} intercepts",
+              message.getInterceptKeyMessage(),
+              cached.size());
+        }
+        matchingIntercepts = cached;
+      } else {
+        // no luck; try matching
+        matchingIntercepts =
+            getMatchingIntercepts(message.getInterceptKeyMessage(), msg.getExecPhase());
+        cache.put(message.getInterceptKeyMessage(), matchingIntercepts);
       }
-      matchingIntercepts = cached;
-    } else {
-      // no luck; try matching
-      matchingIntercepts =
-          getMatchingIntercepts(message.getInterceptKeyMessage(), msg.getExecPhase());
-      cache.put(message.getInterceptKeyMessage(), matchingIntercepts);
+      // return all matching
+      new InterceptsMsg(matchingIntercepts).send(matchSocket);
     }
-    // return all matching
-    new InterceptsMsg(matchingIntercepts).send(matchSocket);
   }
 
   @Override
