@@ -137,11 +137,7 @@ public class OutboundMsg extends BaseMsg {
 
     // message body
     size += body.length;
-    if (!socket.send(body, 0)) {
-      return false;
-    }
-
-    return true;
+    return socket.send(body, 0);
   }
 
   // blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is

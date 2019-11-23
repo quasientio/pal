@@ -5,6 +5,8 @@ import java.util.UUID;
 
 public class UUIDUtils {
 
+  private UUIDUtils() {}
+
   public static byte[] toBytes(String uuid) {
     return toBytes(UUID.fromString(uuid));
   }

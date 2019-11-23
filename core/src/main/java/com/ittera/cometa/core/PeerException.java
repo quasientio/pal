@@ -32,7 +32,7 @@ public class PeerException extends Exception {
     }
   }
 
-  private FatalCode fatalCode;
+  private final FatalCode fatalCode;
 
   public PeerException(FatalCode fatalCode) {
     super(fatalCode.getMessage());

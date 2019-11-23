@@ -118,10 +118,10 @@ public class LogReaderTest extends ZmqEnabledTest {
   private static Set<String> createdLogs = new HashSet<>();
   private final String DEALER_ADDR = "inproc://inlog_tests";
   private final String OFFSET_PUB_ADDR = "inproc://offsets_tests";
-  private final String SYNC_SOCKET_ADDRESS = "inproc://sync_socket";
   private static final int TEST_PORT = 2182;
   private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
+  private Set<Service> services;
 
   private void deleteCreatedLogs() throws Exception {
     for (String log : createdLogs) {
@@ -165,7 +165,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     final List<TopicPartition> topicPartitionList = Collections.singletonList(topicPartition);
     consumer.assign(topicPartitionList);
     consumer.seek(topicPartition, 0);
-    final Set<Service> services = new HashSet<>(Arrays.asList(this.logReader));
+    services = new HashSet<>(Arrays.asList(this.logReader));
     this.manager = new ServiceManager(services);
   }
 
@@ -175,8 +175,8 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logReader.isAcceptingRequests(), is(false));
 
     // start services
-    manager.startAsync();
-    Thread.sleep(500);
+    manager.startAsync().awaitHealthy();
+    collectGoSignals(services.size(), zmqContext);
     assertThat(logReader.isRunning(), is(true));
 
     // DON'T START ACCEPTING REQUESTS
@@ -208,8 +208,8 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logReader.isAcceptingRequests(), is(false));
 
     // start services
-    manager.startAsync();
-    Thread.sleep(500);
+    manager.startAsync().awaitHealthy();
+    collectGoSignals(services.size(), zmqContext);
     assertThat(logReader.isRunning(), is(true));
     logReader.acceptRequests(true);
     assertThat(logReader.isAcceptingRequests(), is(true));
@@ -220,7 +220,7 @@ public class LogReaderTest extends ZmqEnabledTest {
 
     // send no messages
 
-    Thread.sleep(500);
+    Thread.sleep(300);
 
     // assert received = 0
     assertThat(logMsgInvoker.getReceivedMessages().size(), is(0));
@@ -237,8 +237,8 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logReader.isAcceptingRequests(), is(false));
 
     // start services
-    manager.startAsync();
-    Thread.sleep(500);
+    manager.startAsync().awaitHealthy();
+    collectGoSignals(services.size(), zmqContext);
     assertThat(logReader.isRunning(), is(true));
 
     logReader.acceptRequests(true);
@@ -258,7 +258,7 @@ public class LogReaderTest extends ZmqEnabledTest {
             this.log.getName(), partition, 0, key, msgBuilder.wrap(msg).toByteArray());
     this.consumer.addRecord(record);
 
-    Thread.sleep(500);
+    Thread.sleep(300);
     // assert received
     logger.debug("received: {}", String.join(",", logMsgInvoker.getReceivedMessages()));
     assertThat(logMsgInvoker.getReceivedMessages().size(), is(1));
@@ -278,8 +278,8 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logReader.isAcceptingRequests(), is(false));
 
     // start services
-    manager.startAsync();
-    Thread.sleep(500);
+    manager.startAsync().awaitHealthy();
+    collectGoSignals(services.size(), zmqContext);
     assertThat(logReader.isRunning(), is(true));
 
     logReader.acceptRequests(true);
@@ -306,7 +306,7 @@ public class LogReaderTest extends ZmqEnabledTest {
             this.log.getName(), partition, 0, key, msgBuilder.wrap(msg).toByteArray());
     this.consumer.addRecord(record);
 
-    Thread.sleep(500);
+    Thread.sleep(300);
     // assert received
     logger.debug("received: {}", String.join(",", logMsgInvoker.getReceivedMessages()));
     assertThat(logMsgInvoker.getReceivedMessages().size(), is(1));
@@ -326,8 +326,8 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logReader.isAcceptingRequests(), is(false));
 
     // start services
-    manager.startAsync();
-    Thread.sleep(500);
+    manager.startAsync().awaitHealthy();
+    collectGoSignals(services.size(), zmqContext);
     assertThat(logReader.isRunning(), is(true));
 
     logReader.acceptRequests(true);
@@ -353,7 +353,7 @@ public class LogReaderTest extends ZmqEnabledTest {
       sentUuids.add(msg.getMessageUuid());
     }
 
-    Thread.sleep(500);
+    Thread.sleep(300);
     // assert received
     logger.debug("received: {}", String.join(",", logMsgInvoker.getReceivedMessages()));
     assertThat(logMsgInvoker.getReceivedMessages(), is(sentUuids));

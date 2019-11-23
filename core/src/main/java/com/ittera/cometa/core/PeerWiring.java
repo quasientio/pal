@@ -13,9 +13,9 @@ import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,12 +28,12 @@ class PeerWiring extends AbstractModule {
   private final ZContext zContext;
   private final UUID peerUuid;
   private final CustomClassloader customClassloader;
-  private final EnumSet<RunOptions> runOptions;
+  private final Set<RunOptions> runOptions;
   private final ThreadGroup serviceThreadGroup = new ThreadGroup("service-threads");
 
   PeerWiring(
       Properties properties,
-      EnumSet<RunOptions> runOptions,
+      Set<RunOptions> runOptions,
       ZContext zContext,
       CustomClassloader customClassloader) {
     if (logger.isInfoEnabled()) {
@@ -107,7 +107,7 @@ class PeerWiring extends AbstractModule {
   }
 
   @Provides
-  EnumSet<RunOptions> getRunOptions() {
+  Set<RunOptions> getRunOptions() {
     return runOptions;
   }
 }

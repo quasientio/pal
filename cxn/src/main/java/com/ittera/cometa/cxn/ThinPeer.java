@@ -57,19 +57,22 @@ public class ThinPeer {
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);
 
   // kafka stuff
-  private LogInfo inLog, outLog;
+  private LogInfo inLog;
+  private LogInfo outLog;
   private TopicPartition inTopicPartition;
   private Duration pollingDuration;
   private static final int PRECEDING_RECS = 50;
   private static final int PRODUCER_PARTITION = 0;
   private static final int DEFAULT_POLLING_DURATION_MILLIS = 10;
   private String logPrefix;
-  public final String DEFAULT_TOPIC_PREFIX = "app";
+  public static final String DEFAULT_TOPIC_PREFIX = "app";
 
   private Producer<String, byte[]> producer;
   private Consumer<String, byte[]> consumer;
-  private boolean producerGiven, consumerGiven;
-  private Properties producerProperties, consumerProperties;
+  private boolean producerGiven;
+  private boolean consumerGiven;
+  private Properties producerProperties;
+  private Properties consumerProperties;
 
   private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap<>();
   private ExecutorService asyncConsumerExecutor;
@@ -86,7 +89,9 @@ public class ThinPeer {
   private boolean directoryGiven;
   private String palDirectoryUrl;
 
-  public ThinPeer() {}
+  public ThinPeer() {
+    // TODO use factory method instead of empty constructor
+  }
 
   public ThinPeer withUUID(UUID uuid) {
     this.peerUuid = uuid;
@@ -327,8 +332,7 @@ public class ThinPeer {
     if (logger.isDebugEnabled()) {
       logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
     }
-    // TODO extra param to seek before
-    // consumer.seek(inTopicPartition, sentRecordOffset);
+    // TODO extra param to seek before -> consumer.seek(inTopicPartition, sentRecordOffset);
 
     while (true) {
       ConsumerRecords<String, byte[]> records = consumer.poll(pollingDuration);
@@ -518,8 +522,8 @@ public class ThinPeer {
     ExecMessage replyMsg = sendAndReceiveConsumingLog(message);
 
     // switch to direct p2p talk
-    String peerUuid = replyMsg.getPeerUuid();
-    connectToPeer(UUID.fromString(peerUuid));
+    String msgPeerUuid = replyMsg.getPeerUuid();
+    connectToPeer(UUID.fromString(msgPeerUuid));
 
     return replyMsg;
   }
@@ -535,8 +539,8 @@ public class ThinPeer {
     ExecMessage replyMsg = replyFuture.get();
 
     // switch to direct p2p talk
-    String peerUuid = replyMsg.getPeerUuid();
-    connectToPeer(UUID.fromString(peerUuid));
+    String msgPeerUuid = replyMsg.getPeerUuid();
+    connectToPeer(UUID.fromString(msgPeerUuid));
 
     return replyMsg;
   }
@@ -591,11 +595,11 @@ public class ThinPeer {
           }
           // try switching to direct peer talk (i.e. p2p)
           if (allowP2P) {
-            UUID peerUuid = UUID.fromString(execMessage.getPeerUuid());
+            UUID msgPeerUuid = UUID.fromString(execMessage.getPeerUuid());
             PeerInfo newPeer = null;
             try {
               // we getPeerProperties and close after since we assume we'll get here only once
-              newPeer = palDirectory.getPeerInfo(peerUuid);
+              newPeer = palDirectory.getPeerInfo(msgPeerUuid);
             } catch (Exception ex) {
               logger.error("Couldn't get peer properties", ex);
             }
@@ -664,12 +668,6 @@ public class ThinPeer {
     }
 
     return replyMsg;
-  }
-
-  private static String getRecordInfo(RecordMetadata recordMetadata) {
-    return String.format(
-        "{%n timestamp: %d,%n offset: %d,%n #bytes in value: %d%n}",
-        recordMetadata.timestamp(), recordMetadata.offset(), recordMetadata.serializedValueSize());
   }
 
   private void close(Consumer consumer, long timeout, TemporalUnit timeUnit, String msg) {

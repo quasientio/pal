@@ -17,6 +17,7 @@ public class CustomClassloader extends URLClassLoader {
     logger.info("Initialized custom classloader with paths: {}", Arrays.toString(urls));
   }
 
+  @Override
   protected Class<?> findClass(String name) throws ClassNotFoundException {
     Class clazz = super.findClass(name);
     interceptProcessor.process(clazz);

@@ -13,6 +13,8 @@ public class DispatchForwarder {
 
   @Inject private static ProxyDispatcher dispatcher;
 
+  private DispatchForwarder() {}
+
   public static Object constructor(Context ctxt, Object sender, Object target, Object[] args)
       throws Throwable {
     return dispatcher.constructor(ctxt, sender, target, args);

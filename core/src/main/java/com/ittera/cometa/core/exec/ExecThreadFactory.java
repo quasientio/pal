@@ -140,10 +140,6 @@ public class ExecThreadFactory implements ThreadFactory {
     createdThreads.add(t);
   }
 
-  public ThreadGroup getThreadGroup() {
-    return threadGroup;
-  }
-
   private String getThreadBaseName() {
     return String.format("%s Executor", Strings.capitalize(execChannelType.name));
   }

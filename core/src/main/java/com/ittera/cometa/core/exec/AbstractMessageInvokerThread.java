@@ -113,6 +113,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     }
   }
 
+  @Override
   public abstract void run();
 
   protected final void dispatch(Message message, Long recordOffset) {

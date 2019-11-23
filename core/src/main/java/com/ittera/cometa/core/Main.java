@@ -67,7 +67,7 @@ public class Main implements Callable<Integer> {
       names = {"-d", "--dir"},
       defaultValue = "localhost:2181",
       description = "PAL directory URL (default: ${DEFAULT-VALUE})")
-  private String palDirectory; // corresponding ENV var: PAL_DIRECTORY
+  private String palDirectoryURL; // corresponding ENV var: PAL_DIRECTORY
 
   @Option(
       names = {"-u", "--uuid"},
@@ -162,6 +162,8 @@ public class Main implements Callable<Integer> {
     private static final String ZMQ_LINGER_DEFAULT = "1000";
     private static final String ZMQ_RCVHWM_DEFAULT = "10000";
     private static final String ZMQ_SNDHWM_DEFAULT = "10000";
+
+    private static final String OUT_PUB_CHANNEL = "out.pub";
 
     // internal ZMQ channel names
     private static final Properties inprocChannels = new Properties();
@@ -270,7 +272,7 @@ public class Main implements Callable<Integer> {
   }
 
   private void setEmptyParamsFromEnv() {
-    palDirectory = getParameter("PAL_DIRECTORY", palDirectory);
+    palDirectoryURL = getParameter("PAL_DIRECTORY", palDirectoryURL);
     name = getParameter("PEER_NAME", name);
     uuid = getParameter("PEER_UUID", uuid);
     log = getParameter("LOG", log);
@@ -363,7 +365,7 @@ public class Main implements Callable<Integer> {
     properties.put("id", uuid.toString());
 
     // add Directory url to app properties
-    properties.setProperty("paldir_url", palDirectory);
+    properties.setProperty("paldir_url", palDirectoryURL);
 
     // are we publishing via TCP, or just internally
     if (tcpPub != null) {
@@ -375,9 +377,10 @@ public class Main implements Callable<Integer> {
       } else {
         port = Integer.parseInt(tcpPub);
       }
-      properties.setProperty("out.pub", format("tcp://%s:%d", hostname, port));
+      properties.setProperty(ZMQProps.OUT_PUB_CHANNEL, format("tcp://%s:%d", hostname, port));
     } else {
-      properties.setProperty("out.pub", ZMQProps.inprocChannels.getProperty("out.pub.inproc"));
+      properties.setProperty(
+          ZMQProps.OUT_PUB_CHANNEL, ZMQProps.inprocChannels.getProperty("out.pub.inproc"));
     }
 
     // are we listening for requests over TCP
@@ -471,9 +474,9 @@ public class Main implements Callable<Integer> {
         peerProperties.put("reqAddress", properties.getProperty("in.req.tcp"));
       }
       if (properties
-          .getProperty("out.pub")
+          .getProperty(ZMQProps.OUT_PUB_CHANNEL)
           .startsWith("tcp://")) { // only register PUB addr if over TCP
-        peerProperties.put("pubAddress", properties.getProperty("out.pub"));
+        peerProperties.put("pubAddress", properties.getProperty(ZMQProps.OUT_PUB_CHANNEL));
       }
       String jmxAddress = getJMXAddress();
       if (jmxAddress != null) {
@@ -512,10 +515,12 @@ public class Main implements Callable<Integer> {
     final ServiceManager manager = new ServiceManager(services);
     manager.addListener(
         new ServiceManager.Listener() {
+          @Override
           public void stopped() {
             logger.info("Service manager stopped.");
           }
 
+          @Override
           public void healthy() {
             logger.info("Managed services ready");
             manager
@@ -523,6 +528,7 @@ public class Main implements Callable<Integer> {
                 .forEach((key, value) -> logger.info("Service '{}' started in {} ms", key, value));
           }
 
+          @Override
           public void failure(Service service) {
             fatalExit(service.failureCause(), PeerException.FatalCode.ERROR_SERVICE_MANAGER_FAILED);
           }
@@ -572,17 +578,15 @@ public class Main implements Callable<Integer> {
       }
 
       // wait a bit for exec service to finish closing zmq context
-      try {
-        if (fast) {
-          singleExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
-        } else {
-          singleExecutor.awaitTermination(2, TimeUnit.SECONDS);
-        }
-      } catch (InterruptedException e) {
-        logger.error("Unexpected interrupt while closing zmq ctxt", e);
+      if (fast) {
+        singleExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+      } else {
+        singleExecutor.awaitTermination(2, TimeUnit.SECONDS);
       }
     } catch (TimeoutException ie) {
       logger.error("Timeout exception in shutdown hook", ie);
+    } catch (InterruptedException e) {
+      logger.error("Interrupted while shutting down", e);
     } finally {
       logger.info("This peer is done! bye");
     }
@@ -608,7 +612,7 @@ public class Main implements Callable<Integer> {
   }
 
   @Override
-  public Integer call() {
+  public Integer call() throws InterruptedException {
 
     // for async calls
     final ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
@@ -668,8 +672,6 @@ public class Main implements Callable<Integer> {
     // block until we're registered in Directory
     try {
       selfRegistrationLatch.await();
-    } catch (InterruptedException e) {
-      throw new RuntimeException("Interrupted wait for self-registration in directory");
     } finally {
       singleExecutor.shutdownNow();
     }

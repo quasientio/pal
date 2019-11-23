@@ -70,7 +70,9 @@ class LogConfigurator {
   void init() throws Exception {
 
     // register log(s)
-    LogInfo inLog, outLog, newLog = null;
+    LogInfo inLog;
+    LogInfo outLog;
+    LogInfo newLog = null;
 
     if (inLogName != null) {
       inLog = getOrRegisterGivenLog(inLogName);

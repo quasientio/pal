@@ -32,5 +32,7 @@ public class ContextFillingTransformSupplier
   }
 
   @Override
-  public void close() {}
+  public void close() {
+    // no resources to close
+  }
 }

@@ -50,16 +50,18 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
     socket = zmqContext.createSocket(SocketType.REP);
     socket.connect(dealerAddress);
 
-    Message requestMsg, replyMsg;
+    Message requestMsg;
+    Message replyMsg;
 
     if (logger.isDebugEnabled()) {
       logger.debug("Start getting requests from socket");
     }
 
-    while (!Thread.interrupted()) {
+    boolean socketError = false;
+    while (!Thread.interrupted() && !socketError) {
 
       // recv req
-      byte[] req;
+      byte[] req = null;
 
       try {
         req = socket.recv();
@@ -69,12 +71,12 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
           if (logger.isDebugEnabled()) {
             logger.debug("Caught ETERM during blocking read. Breaking out.");
           }
-          break;
+          socketError = true;
         } else if (errorCode == ZError.EINTR) {
           if (logger.isDebugEnabled()) {
             logger.debug("Caught EINTR during blocking read. Breaking out.");
           }
-          break;
+          socketError = true;
         } else {
           if (logger.isDebugEnabled()) {
             logger.debug("Re-throwing unexpected exception", ex);
@@ -83,44 +85,46 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
         }
       }
 
-      final long started = System.currentTimeMillis();
+      if (req != null) {
+        final long started = System.currentTimeMillis();
 
-      requestMsg = null;
+        requestMsg = null;
 
-      // parse req
-      try {
-        requestMsg = Message.parseFrom(req);
-      } catch (Exception e) {
-        logger.error("Caught exception parsing message", e);
-      }
-
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            "Received req message with uuid: {}",
-            requestMsg != null ? getMessageUuid(requestMsg) : null);
-      }
-
-      if (requestMsg != null) {
-
-        // dispatch
+        // parse req
         try {
-          replyMsg = dispatch(requestMsg);
-
-          // send reply
-          socket.send(replyMsg.toByteArray());
-
-          if (logger.isDebugEnabled()) {
-            final long took = System.currentTimeMillis() - started;
-            if (logger.isDebugEnabled()) {
-              logger.debug(
-                  "Dispatched and sent direct message w/uuid: {} in reply to request w/uuid: {} in {} millisecs",
-                  getMessageUuid(replyMsg),
-                  getMessageUuid(requestMsg),
-                  took);
-            }
-          }
+          requestMsg = Message.parseFrom(req);
         } catch (Exception e) {
-          logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
+          logger.error("Caught exception parsing message", e);
+        }
+
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Received req message with uuid: {}",
+              requestMsg != null ? getMessageUuid(requestMsg) : null);
+        }
+
+        if (requestMsg != null) {
+
+          // dispatch
+          try {
+            replyMsg = dispatch(requestMsg);
+
+            // send reply
+            socket.send(replyMsg.toByteArray());
+
+            if (logger.isDebugEnabled()) {
+              final long took = System.currentTimeMillis() - started;
+              if (logger.isDebugEnabled()) {
+                logger.debug(
+                    "Dispatched and sent direct message w/uuid: {} in reply to request w/uuid: {} in {} millisecs",
+                    getMessageUuid(replyMsg),
+                    getMessageUuid(requestMsg),
+                    took);
+              }
+            }
+          } catch (Exception e) {
+            logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
+          }
         }
       }
     }

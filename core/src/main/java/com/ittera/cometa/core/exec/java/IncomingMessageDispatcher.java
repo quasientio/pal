@@ -53,7 +53,7 @@ public class IncomingMessageDispatcher {
   }
 
   public boolean incomingIntercept(InterceptMessage interceptMessage, boolean isDirect) {
-    logger.warn("DEPRECATED incomingCall with intercept msg:%n%s", interceptMessage);
+    logger.warn("DEPRECATED incomingCall with intercept msg: {}", interceptMessage);
     return false;
   }
 }

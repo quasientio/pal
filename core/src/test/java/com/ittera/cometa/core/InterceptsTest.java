@@ -41,7 +41,6 @@ public class InterceptsTest extends ZmqEnabledTest {
   private UUID peerUuid;
   private static final String INTERCEPT_REG_ADDR = "inproc://intercepts.reg";
   private static final String INTERCEPT_MATCH_ADDR = "inproc://intercepts.mtx";
-  private static final String SYNC_SOCKET_ADDRESS = "inproc://sync_socket";
   private ZContext context;
   private ServiceManager manager;
   private Intercepts interceptsService;
@@ -65,8 +64,8 @@ public class InterceptsTest extends ZmqEnabledTest {
     final Set<Service> services = new HashSet<>(Arrays.asList(this.interceptsService));
     this.manager = new ServiceManager(services);
     // start service
-    manager.startAsync();
-    manager.awaitHealthy();
+    manager.startAsync().awaitHealthy();
+    collectGoSignals(services.size(), context);
 
     // create REQ socket to simulate requests (IRL: InterceptNodeListener)
     registerSocket = context.createSocket(SocketType.REQ);

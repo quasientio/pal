@@ -56,7 +56,6 @@ public class LogWriterTest extends ZmqEnabledTest {
   private ZMQ.Socket pubSocket;
   private final String OUT_PUB_ADDR = "inproc://pub";
   private final String OFFSET_PUB_ADDR = "inproc://offsets";
-  private final String SYNC_SOCKET_ADDRESS = "inproc://sync_socket";
   private static final Set<String> createdLogs = new HashSet<>();
   private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
@@ -73,6 +72,7 @@ public class LogWriterTest extends ZmqEnabledTest {
 
   @After
   public void cleanup() throws Exception {
+    manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
     execService.shutdown();
     execService.awaitTermination(2, TimeUnit.SECONDS);
     this.zmqContext.close();
@@ -99,11 +99,15 @@ public class LogWriterTest extends ZmqEnabledTest {
             true,
             producer,
             palDirectory);
-    final Set<Service> services = new HashSet<>(Arrays.asList(this.logWriter));
-    manager = new ServiceManager(services);
+    // configure log
     log = this.palDirectory.newLog("testapp");
     createdLogs.add(log.getName());
     logWriter.writeToLog(log, log, false);
+    // start services
+    final Set<Service> services = new HashSet<>(Arrays.asList(this.logWriter));
+    manager = new ServiceManager(services);
+    manager.startAsync().awaitHealthy();
+    collectGoSignals(services.size(), zmqContext);
   }
 
   private String getMessageUuid(Message msg) throws IllegalArgumentException {
@@ -125,17 +129,9 @@ public class LogWriterTest extends ZmqEnabledTest {
 
   @Test
   public void noPublishedMsgs() throws Exception {
-    assertThat(logWriter.isRunning(), is(false));
-
-    // start services
-    manager.startAsync();
-    Thread.sleep(500);
     assertThat(logWriter.isRunning(), is(true));
 
     // we PUBlish no messages
-
-    // shut down
-    manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
 
     // assert NO published message is produced to the log
     assertThat(producer.history().isEmpty(), is(true));
@@ -143,13 +139,6 @@ public class LogWriterTest extends ZmqEnabledTest {
 
   @Test
   public void publishedMixedMessages() throws Exception {
-    assertThat(logWriter.isRunning(), is(false));
-
-    // start services
-    manager.startAsync();
-    Thread.sleep(500);
-    assertThat(logWriter.isRunning(), is(true));
-
     // we create outPub socket and PUBlish some messages
     pubSocket = zmqContext.createSocket(SocketType.PUB);
     pubSocket.bind(OUT_PUB_ADDR);
@@ -194,10 +183,7 @@ public class LogWriterTest extends ZmqEnabledTest {
         });
 
     // give it some time
-    Thread.sleep(500);
-
-    // shut down
-    manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+    Thread.sleep(300);
 
     // assert published messages are produced to the log
     List<String> producedMsgUuids = new ArrayList<>();
@@ -213,11 +199,6 @@ public class LogWriterTest extends ZmqEnabledTest {
 
   @Test
   public void publishedMessagesWithHeader() throws Exception {
-    assertThat(logWriter.isRunning(), is(false));
-
-    // start services
-    manager.startAsync();
-    Thread.sleep(500);
     assertThat(logWriter.isRunning(), is(true));
 
     // we create outPub socket and PUBlish some messages with header
@@ -248,10 +229,7 @@ public class LogWriterTest extends ZmqEnabledTest {
             });
 
     // give it some time
-    Thread.sleep(500);
-
-    // shut down
-    manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+    Thread.sleep(300);
 
     // assert published messages are produced to the log
     List<String> producedMsgUuids = new ArrayList<>();

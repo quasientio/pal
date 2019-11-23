@@ -2,7 +2,6 @@ package com.ittera.cometa.messages;
 
 import com.ittera.cometa.common.util.Classes;
 import com.ittera.cometa.messages.protobuf.Primitives;
-import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -16,9 +15,7 @@ public class Unwrapper {
 
   private static final Logger logger = LoggerFactory.getLogger(Unwrapper.class);
 
-  private static <T> T[] getArrayOf(Class<T> clazz, int length) {
-    return (T[]) Array.newInstance(clazz, length);
-  }
+  private Unwrapper() {}
 
   private static <T> T reconstructCharSequence(T t, Primitives.Object object) {
     Optional<Class> charSeqClass =

@@ -171,6 +171,8 @@ public class InterceptInformer implements InterceptNodeListener {
           logger.debug("Thread local socket closed");
         }
       }
+      threadSocket.remove();
     }
+    threadSocketCreated.remove();
   }
 }

@@ -49,10 +49,10 @@ public class InterceptProcessor {
         InterceptType interceptType = getTypeForAnnotationClass(annotationClass);
         if (annotation != null) {
           Class<? extends Annotation> type = annotation.annotationType();
-          String interceptableClassName,
-              interceptableMethodName,
-              interceptableFieldName,
-              interceptableFieldOpType;
+          String interceptableClassName;
+          String interceptableMethodName;
+          String interceptableFieldName;
+          String interceptableFieldOpType;
           List<String> parameterTypes;
           try {
             // extract annotation info
@@ -135,7 +135,7 @@ public class InterceptProcessor {
             }
           });
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error("Error registering intercept request", e);
     }
   }
 }

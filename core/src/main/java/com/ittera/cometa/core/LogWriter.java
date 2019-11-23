@@ -46,12 +46,14 @@ class LogWriter extends ConnectedService {
   // zmq stuff
   private Socket subscriber;
   private Socket offsetPublisher;
-  private final String outPubAddress, offsetPubAddress;
+  private final String outPubAddress;
+  private final String offsetPubAddress;
 
   private PALDirectory palDirectory;
   private boolean publishOffsets;
   private boolean writeReplyNodes;
-  private LogInfo outLog, inLog;
+  private LogInfo outLog;
+  private LogInfo inLog;
   private final AtomicInteger messagesSent = new AtomicInteger(0);
   private final Map<String, Header> HEADERS = new HashMap<>();
 
@@ -86,7 +88,7 @@ class LogWriter extends ConnectedService {
     logger.info(
         "Created log message writer for peer with id '{}' and properties: [{}]",
         peerUuid,
-        propsStr.toString());
+        propsStr);
   }
 
   /** Used from unit tests with MockProducer */
@@ -150,7 +152,8 @@ class LogWriter extends ConnectedService {
     if (logger.isDebugEnabled()) {
       logger.debug("Starting to dispatch messages to log");
     }
-    while (!Thread.interrupted()) {
+    boolean socketError = false;
+    while (!Thread.interrupted() && !socketError) {
       OutboundMsg msg = null;
       try {
         msg = OutboundMsg.recvMsg(subscriber);
@@ -167,12 +170,12 @@ class LogWriter extends ConnectedService {
           if (logger.isDebugEnabled()) {
             logger.debug("Caught ETERM during blocking read. Breaking out.");
           }
-          break;
+          socketError = true;
         } else if (errorCode == ZError.EINTR) {
           if (logger.isDebugEnabled()) {
             logger.debug("Caught EINTR during blocking read. Breaking out.");
           }
-          break;
+          socketError = true;
         } else {
           throw ex;
         }

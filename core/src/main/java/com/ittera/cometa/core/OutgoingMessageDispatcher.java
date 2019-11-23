@@ -23,8 +23,10 @@ class OutgoingMessageDispatcher extends ConnectedService {
   private static final String ERROR_REPLY = "1";
 
   // zmq stuff
-  private Socket repSocket, pubSocket;
-  private final String outCellAddress, outPubAddress;
+  private Socket repSocket;
+  private Socket pubSocket;
+  private final String outCellAddress;
+  private final String outPubAddress;
 
   @Inject
   public OutgoingMessageDispatcher(
@@ -51,7 +53,8 @@ class OutgoingMessageDispatcher extends ConnectedService {
 
   @Override
   public final void run() {
-    while (!Thread.interrupted()) {
+    boolean socketError = false;
+    while (!Thread.interrupted() && !socketError) {
       OutboundMsg msg = null;
       try {
         msg = OutboundMsg.recvMsg(repSocket);
@@ -64,12 +67,12 @@ class OutgoingMessageDispatcher extends ConnectedService {
           if (logger.isDebugEnabled()) {
             logger.debug("Caught ETERM during blocking read. Breaking out.");
           }
-          break;
+          socketError = true;
         } else if (errorCode == ZError.EINTR) {
           if (logger.isDebugEnabled()) {
             logger.debug("Caught EINTR during blocking read. Breaking out.");
           }
-          break;
+          socketError = true;
         } else {
           throw ex;
         }

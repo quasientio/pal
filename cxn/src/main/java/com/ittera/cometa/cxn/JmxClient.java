@@ -31,13 +31,12 @@ public class JmxClient {
     conn = JMXConnectorFactory.connect(new JMXServiceURL(serverUrl));
     conn.addConnectionNotificationListener(
         (notification, handback) -> {
-          if (notification instanceof JMXConnectionNotification) {
-            if (notification.getType().equals(JMXConnectionNotification.CLOSED)) {
-              try {
-                connect();
-              } catch (IOException e) {
-                logger.error("Error attempting to re-connect to: " + serverUrl, e);
-              }
+          if (notification instanceof JMXConnectionNotification
+              && notification.getType().equals(JMXConnectionNotification.CLOSED)) {
+            try {
+              connect();
+            } catch (IOException e) {
+              logger.error("Error attempting to re-connect to: " + serverUrl, e);
             }
           }
         },

@@ -12,6 +12,7 @@ import com.ittera.cometa.messages.protobuf.Intercepts.InterceptMessage;
 import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,12 +49,14 @@ public class Intercepts extends ConnectedService {
   public static final String MATCH_ERROR_REPLY = "1";
 
   // map holding all intercepts
-  private final Map<InterceptType, InterceptRequests> allIntercepts = new HashMap<>();
+  private final Map<InterceptType, InterceptRequests> allIntercepts =
+      new EnumMap<>(InterceptType.class);
 
   // cache
   private final Map<InterceptKeyMessage, List<InterceptMessage>> cache = new HashMap<>();
 
-  private boolean regPollingError, matchPollingError;
+  private boolean regPollingError;
+  private boolean matchPollingError;
 
   @Inject
   public Intercepts(
@@ -101,13 +104,13 @@ public class Intercepts extends ConnectedService {
           allIntercepts.get(InterceptType.BEFORE_ASYNC).getMatchingIntercepts(keyExecMessage);
       final List<InterceptMessage> aroundIntercepts =
           allIntercepts.get(InterceptType.AROUND).getMatchingIntercepts(keyExecMessage);
-      final List<InterceptMessage> allIntercepts =
+      final List<InterceptMessage> interceptMessages =
           new ArrayList<>(
               beforeIntercepts.size() + beforeAsyncIntercepts.size() + aroundIntercepts.size());
-      allIntercepts.addAll(beforeIntercepts);
-      allIntercepts.addAll(beforeAsyncIntercepts);
-      allIntercepts.addAll(aroundIntercepts);
-      return allIntercepts;
+      interceptMessages.addAll(beforeIntercepts);
+      interceptMessages.addAll(beforeAsyncIntercepts);
+      interceptMessages.addAll(aroundIntercepts);
+      return interceptMessages;
     } else if (ExecPhase.AFTER.equals(phase)) {
       final List<InterceptMessage> afterIntercepts =
           allIntercepts.get(InterceptType.AFTER).getMatchingIntercepts(keyExecMessage);
@@ -169,13 +172,11 @@ public class Intercepts extends ConnectedService {
               logger.debug("Caught ETERM during blocking read. No more matching.");
             }
             matchPollingError = true;
-            continue;
           } else if (errorCode == ZError.EINTR) {
             if (logger.isDebugEnabled()) {
               logger.debug("Caught EINTR during blocking read. No more matching.");
             }
             matchPollingError = true;
-            continue;
           } else {
             throw ex;
           }

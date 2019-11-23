@@ -137,7 +137,6 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
 
   private final String ROUTER_ADDR = "tcp://0.0.0.0:5671";
   private final String DEALER_ADDR = "inproc://deal";
-  private final String SYNC_SOCKET_ADDRESS = "inproc://sync_socket";
   private ZContext context;
   private List<Worker> workers;
   private List<Client> clients;
@@ -163,10 +162,14 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
 
     final Set<Service> services = new HashSet<>(Arrays.asList(this.directRequestDispatcher));
     this.manager = new ServiceManager(services);
+    manager.startAsync().awaitHealthy();
+    collectGoSignals(services.size(), context);
   }
 
   @After
   public void cleanup() throws Exception {
+    manager.stopAsync().awaitStopped();
+
     // close local context
     execService.submit(
         () -> {
@@ -191,11 +194,6 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
 
   @Test
   public void clientsSendReqsGetWorkersRep() throws Exception {
-    assertThat(directRequestDispatcher.isRunning(), is(false));
-
-    // start service
-    manager.startAsync();
-    Thread.sleep(500);
     assertThat(directRequestDispatcher.isRunning(), is(true));
 
     // init clients
@@ -236,9 +234,6 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
                   .forEach(
                       r -> assertThat(r, containsString("from peer: " + cli.peerUuid.toString())));
             });
-
-    // shut down
-    manager.stopAsync();
 
     // close remote context
     remoteCtxt.close();

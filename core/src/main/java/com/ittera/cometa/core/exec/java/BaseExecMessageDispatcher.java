@@ -120,7 +120,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       connector.writeAhead(incomingCall);
     }
 
-    Throwable exceptionWhileLoading = null, exceptionWhileInvoking = null;
+    Throwable exceptionWhileLoading = null;
+    Throwable exceptionWhileInvoking = null;
     Optional<AccessibleObject> accessibleObject = Optional.empty();
     Object target = null;
     Optional<Object> value = Optional.empty();

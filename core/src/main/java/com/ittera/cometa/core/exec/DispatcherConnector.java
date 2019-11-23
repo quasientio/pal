@@ -17,8 +17,8 @@ import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
@@ -43,9 +43,10 @@ public class DispatcherConnector {
   private final UUID peerUuid;
   private final MessageBuilder messageBuilder;
   private final PALDirectory palDirectory;
-  private final String msgPublisherAddress, interceptMatchAddress;
+  private final String msgPublisherAddress;
+  private final String interceptMatchAddress;
   private final List<InternalHeader> WRITE_AHEAD_HEADERS;
-  private final EnumSet<RunOptions> runOptions;
+  private final Set<RunOptions> runOptions;
 
   private final AtomicLong totalPubSocketTime = new AtomicLong();
   private final AtomicLong totalIntrcptSocketTime = new AtomicLong();
@@ -58,6 +59,7 @@ public class DispatcherConnector {
   // per-thread REQ socket to publish exec messages
   private final ThreadLocal<Socket> threadPubSocket =
       new ThreadLocal<Socket>() {
+        @Override
         protected Socket initialValue() {
           Socket worker = zmqContext.createSocket(SocketType.REQ);
           worker.connect(msgPublisherAddress);
@@ -76,6 +78,7 @@ public class DispatcherConnector {
   // per-thread REQ socket to get matching intercepts for exec messages
   private final ThreadLocal<Socket> threadInterceptsSocket =
       new ThreadLocal<Socket>() {
+        @Override
         protected Socket initialValue() {
           Socket worker = zmqContext.createSocket(SocketType.REQ);
           worker.connect(interceptMatchAddress);
@@ -99,7 +102,7 @@ public class DispatcherConnector {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       PALDirectory palDirectory,
-      EnumSet<RunOptions> runOptions,
+      Set<RunOptions> runOptions,
       @Named("out.cell") String msgPublisherAddress,
       @Named("intercepts.mtx") String interceptMatchAddress) {
     this.zmqContext = zmqContext;
@@ -365,7 +368,7 @@ public class DispatcherConnector {
           totalIntrcptSocketTime.longValue() / totalMatchReqs.longValue());
     }
 
-    if (threadInterceptsSocketCreated.get()) {
+    if (Boolean.TRUE.equals(threadInterceptsSocketCreated.get())) {
       Socket socket = threadInterceptsSocket.get();
       if (socket != null) {
         socket.close();
@@ -373,8 +376,11 @@ public class DispatcherConnector {
           logger.debug("Thread local REQ socket for intercept matching closed");
         }
       }
+      threadInterceptsSocket.remove();
     }
-    if (threadPubSocketCreated.get()) {
+    threadInterceptsSocketCreated.remove();
+
+    if (Boolean.TRUE.equals(threadPubSocketCreated.get())) {
       Socket socket = threadPubSocket.get();
       if (socket != null) {
         socket.close();
@@ -382,6 +388,8 @@ public class DispatcherConnector {
           logger.debug("Thread local REQ socket for publishing closed");
         }
       }
+      threadPubSocket.remove();
     }
+    threadPubSocketCreated.remove();
   }
 }

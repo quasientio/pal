@@ -150,7 +150,8 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
       Builder callBuilder, Context context, Object[] args, ObjectRef[] argObjRefs) {
     final CodeSignature codeSignature = (CodeSignature) context.getSignature();
     Parameter[] parameters = codeSignature.getParameters();
-    String paramName, paramTypeName;
+    String paramName;
+    String paramTypeName;
     for (int i = 0; codeSignature.getParameterTypes() != null && i < args.length; i++) {
       paramName = codeSignature.getParameterNames()[i];
       paramTypeName = codeSignature.getParameterTypes()[i].getName();

@@ -104,8 +104,8 @@ class MessageOffsetInformer implements BackgroundCallback, CuratorWatcher, Callb
       } catch (NoLogRequestNodeException nrne) {
         if (logger.isDebugEnabled()) {
           logger.debug(
-              "Log request node {} does not exist, will add ourselves as watcher and wait",
-              nrne.getLogRequest());
+              "Log request node does not exist, will add ourselves as watcher and wait. Error: {}",
+              nrne.getMessage());
         }
         // request node doesn't exist yet, add ourselves as watcher to get notified when created
         try {

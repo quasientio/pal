@@ -54,10 +54,7 @@ public class InboundLogMsg extends BaseMsg {
     }
     // message body
     size += body.length;
-    if (!socket.send(body, 0)) {
-      return false;
-    }
-    return true;
+    return socket.send(body, 0);
   }
 
   /**

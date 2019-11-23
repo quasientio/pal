@@ -5,6 +5,8 @@ package com.ittera.cometa.common.util;
  * https://stackoverflow.com/questions/3758606/how-to-convert-byte-size-into-human-readable-format-in-java
  */
 public class ByteSizeConverter {
+  private ByteSizeConverter() {}
+
   public static String humanReadableByteCount(long bytes, boolean si) {
     int unit = si ? 1000 : 1024;
     if (bytes < unit) return bytes + " B";

@@ -52,7 +52,8 @@ public class LogReader extends ConnectedService {
   // zmq stuff
   private Socket logDealer;
   private Socket offsetSubscriber;
-  private final String inLogAddress, offsetPubAddress;
+  private final String inLogAddress;
+  private final String offsetPubAddress;
 
   // counters
   private final AtomicLong totalPollingNanos = new AtomicLong(0);
@@ -88,7 +89,8 @@ public class LogReader extends ConnectedService {
       if (logger.isDebugEnabled()) {
         logger.debug("OffsetUpdater running");
       }
-      while (!shutdownRequested && !Thread.interrupted()) {
+      boolean socketError = false;
+      while (!shutdownRequested && !Thread.interrupted() && !socketError) {
         try {
           PublishedOffsetMsg msg = PublishedOffsetMsg.recvMsg(offsetSubscriber);
           if (msg == null) {
@@ -99,19 +101,19 @@ public class LogReader extends ConnectedService {
           if (logger.isDebugEnabled()) {
             logger.debug("Caught ClosedSelectorException. Breaking out.");
           }
-          break;
+          socketError = true;
         } catch (ZMQException ex) {
           int errorCode = ex.getErrorCode();
           if (errorCode == ZError.ETERM) {
             if (logger.isDebugEnabled()) {
               logger.debug("Caught ETERM during blocking read. Breaking out.");
             }
-            break;
+            socketError = true;
           } else if (errorCode == ZError.EINTR) {
             if (logger.isDebugEnabled()) {
               logger.debug("Caught EINTR during blocking read. Breaking out.");
             }
-            break;
+            socketError = true;
           } else {
             throw ex;
           }
@@ -161,9 +163,7 @@ public class LogReader extends ConnectedService {
           .append(", ");
     }
     logger.info(
-        "Created log reader for peer with id '{}' and properties: [{}]",
-        peerUuid,
-        propsStr.toString());
+        "Created log reader for peer with id '{}' and properties: [{}]", peerUuid, propsStr);
   }
 
   /** Used from unit tests with MockConsumer */

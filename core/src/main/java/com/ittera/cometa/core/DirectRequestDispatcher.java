@@ -17,10 +17,13 @@ class DirectRequestDispatcher extends ConnectedService {
   private static final Logger logger = LoggerFactory.getLogger(DirectRequestDispatcher.class);
 
   // zmq stuff
-  private final String routerAddress, dealerAddress;
-  private final String PROXY_CTRL_ADDR = "inproc://rdprxyctrl";
+  private final String routerAddress;
+  private final String dealerAddress;
+  private static final String PROXY_CTRL_ADDR = "inproc://rdprxyctrl";
 
-  private Socket router, dealer, ctrl;
+  private Socket router;
+  private Socket dealer;
+  private Socket ctrl;
 
   @Inject
   public DirectRequestDispatcher(

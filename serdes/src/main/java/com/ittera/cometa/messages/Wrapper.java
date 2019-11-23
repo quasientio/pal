@@ -74,7 +74,7 @@ public final class Wrapper {
     if (clazz != null) {
       builder.setClass_(getWrappedClass(clazz));
       builder.setIsArray(clazz.isArray());
-    } else if (className != null) {
+    } else {
       builder.setClass_(getWrappedClass(className));
     }
     if (objectRef != null) {

@@ -130,7 +130,7 @@ public class PALDirectory implements AutoCloseable {
         default: // NOP
       }
     }
-  };
+  }
 
   @Inject
   public PALDirectory(@Named("paldir_url") String connectionString) {

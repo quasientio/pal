@@ -39,14 +39,12 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
   private final UUID peerUuid = UUID.randomUUID();
   private final String OUTCELL_ADDR = "inproc://cell";
   private final String OUTPUB_ADDR = "inproc://pub";
-  private final String SYNC_SOCKET_ADDRESS = "inproc://sync_socket";
   private ZContext context;
   private ServiceManager manager;
   private OutgoingMessageDispatcher outgoingMessageDispatcher;
   private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
   private InternalHeader WRITE_AHEAD_HEADER;
-  private List<InternalHeader> INCOMING_INTERCEPT_REQ_HEADERS;
   private Socket reqSocket, subSocket;
 
   @Before
@@ -63,13 +61,11 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
             OUTCELL_ADDR,
             OUTPUB_ADDR);
     final Set<Service> services = new HashSet<>(Arrays.asList(this.outgoingMessageDispatcher));
-    this.INCOMING_INTERCEPT_REQ_HEADERS =
-        Collections.singletonList(msgBuilder.buildIncomingInterceptRequestHeader());
     this.manager = new ServiceManager(services);
 
     // start service
-    manager.startAsync();
-    manager.awaitHealthy();
+    manager.startAsync().awaitHealthy();
+    collectGoSignals(services.size(), context);
     assertThat(outgoingMessageDispatcher.isRunning(), is(true));
 
     // create REQ socket to simulate requests (IRL: DispatcherConnector)

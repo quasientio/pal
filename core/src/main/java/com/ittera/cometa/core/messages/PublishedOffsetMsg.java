@@ -52,11 +52,7 @@ public class PublishedOffsetMsg extends BaseMsg {
     // 2. message uuid
     buff = UUIDUtils.toBytes(messageUuid);
     size += buff.length;
-    if (!socket.send(buff, 0)) {
-      return false;
-    }
-
-    return true;
+    return socket.send(buff, 0);
   }
 
   // blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
