@@ -54,7 +54,7 @@ class ClassForPutStaticTest {
 public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
 
   private Dispatcher dispatcher =
-      new SetClassVariableDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectService);
+      new SetClassVariableDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
 
   private Class targetClass = ClassForPutStaticTest.class;
 
@@ -103,7 +103,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(0));
+    assertThat(objectStore.size(), is(0L));
     assertFalse(replyMsg.hasReturnValue());
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.someShort, is(newFieldValue));
@@ -153,7 +153,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(0));
+    assertThat(objectStore.size(), is(0L));
     assertFalse(replyMsg.hasReturnValue());
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.bytes, is(newFieldValue));
@@ -205,7 +205,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(0));
+    assertThat(objectStore.size(), is(0L));
     assertFalse(replyMsg.hasReturnValue());
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.someBoolean, is(newFieldValue));
@@ -255,7 +255,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(0));
+    assertThat(objectStore.size(), is(0L));
     assertFalse(replyMsg.hasReturnValue());
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.aString, is(newFieldValue));
@@ -294,7 +294,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     String fieldName = "aList";
     LinkedList newFieldValue = new LinkedList();
-    ObjectRef valueObjRef = objectService.storeObject(newFieldValue);
+    ObjectRef valueObjRef = objectStore.storeObject(newFieldValue);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
@@ -305,7 +305,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertFalse(replyMsg.hasReturnValue());
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.aList, sameInstance(newFieldValue));
@@ -356,7 +356,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(0));
+    assertThat(objectStore.size(), is(0L));
     assertFalse(replyMsg.hasReturnValue());
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.aList, is(nullValue()));
@@ -394,7 +394,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     String fieldName = "objects";
     Object[] newFieldValue = {1, "a", false, 9283.95d};
-    ObjectRef valueObjRef = objectService.storeObject(newFieldValue);
+    ObjectRef valueObjRef = objectStore.storeObject(newFieldValue);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
@@ -405,7 +405,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertFalse(replyMsg.hasReturnValue());
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.objects, sameInstance(newFieldValue));
@@ -443,7 +443,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     String fieldName = "lastError";
     Exception newFieldValue = new Exception("not working");
-    ObjectRef valueObjRef = objectService.storeObject(newFieldValue);
+    ObjectRef valueObjRef = objectStore.storeObject(newFieldValue);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutStatic(peerUuid, targetClass.getName(), fieldName, valueObjRef);
@@ -454,7 +454,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertFalse(replyMsg.hasReturnValue());
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.lastError, sameInstance(newFieldValue));

@@ -2,7 +2,7 @@ package com.ittera.cometa.core.exec.java;
 
 import static java.lang.Class.forName;
 
-import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.ObjectStore;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.common.lang.reflect.ConstructorSignature;
@@ -29,11 +29,11 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
-      ObjectService objectService) {
+      ObjectStore objectStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
-    setObjectService(objectService);
+    setObjectStore(objectStore);
   }
 
   @Override

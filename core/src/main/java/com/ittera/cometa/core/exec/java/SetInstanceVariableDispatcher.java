@@ -1,6 +1,6 @@
 package com.ittera.cometa.core.exec.java;
 
-import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.ObjectStore;
 import com.ittera.cometa.common.lang.ObjectNotFoundException;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.core.exec.DispatcherConnector;
@@ -24,11 +24,11 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
-      ObjectService objectService) {
+      ObjectStore objectStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
-    setObjectService(objectService);
+    setObjectStore(objectStore);
   }
 
   @Override
@@ -54,8 +54,8 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
       }
     } else {
       ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceFieldPut().getObjectRef());
-      if (objectService.containsObjectRef(targetObjRef)) {
-        target = objectService.lookupObject(targetObjRef);
+      if (objectStore.containsObjectRef(targetObjRef)) {
+        target = objectStore.lookupObject(targetObjRef);
       } else {
         throw new ObjectNotFoundException(
             String.format("No object found with objRef: %s", targetObjRef.getRef()));
@@ -96,7 +96,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
       }
     } else {
       value =
-          objectService.lookupObject(
+          objectStore.lookupObject(
               ObjectRef.from(execMessage.getInstanceFieldPut().getValueObjectRef()));
       if (logger.isTraceEnabled()) {
         logger.trace("Loaded value: {}", value);

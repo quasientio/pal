@@ -1,6 +1,6 @@
 package com.ittera.cometa.core.exec.java;
 
-import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.ObjectStore;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
 import java.util.UUID;
@@ -13,7 +13,7 @@ abstract class AbstractDispatcher {
 
   protected UUID peerUuid;
   protected MessageBuilder messageBuilder;
-  protected ObjectService objectService;
+  protected ObjectStore objectStore;
   protected DispatcherConnector connector;
 
   @Inject
@@ -27,8 +27,8 @@ abstract class AbstractDispatcher {
   }
 
   @Inject
-  final void setObjectService(ObjectService objectService) {
-    this.objectService = objectService;
+  final void setObjectStore(ObjectStore objectStore) {
+    this.objectStore = objectStore;
   }
 
   @Inject

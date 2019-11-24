@@ -5,7 +5,6 @@ import static com.ittera.cometa.core.ExecMessageMatchers.ComesFromReflectable.co
 import static com.ittera.cometa.core.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static java.util.stream.Collectors.joining;
 import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -60,7 +59,7 @@ class ClassForConstructorTest {
 public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
   private Dispatcher dispatcher =
-      new ConstructorDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectService);
+      new ConstructorDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
 
   private Class targetClass = ClassForConstructorTest.class;
 
@@ -101,13 +100,13 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
 
-    assertThat(replyMsg.getFollowingUuid(), equalTo(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), equalTo(1));
+    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(objectStore.size(), is(1L));
     assertTrue(
-        objectService.containsObjectRef(
+        objectStore.containsObjectRef(
             ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())));
     assertThat(
-        objectService.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
+        objectStore.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
         instanceOf(targetClass));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
@@ -137,7 +136,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertThat(returned, notNullValue());
     assertThat(returned, instanceOf(targetClass));
-    assertThat(((ClassForConstructorTest) returned).someInteger, equalTo(args[0]));
+    assertThat(((ClassForConstructorTest) returned).someInteger, is(args[0]));
   }
 
   @Test
@@ -159,12 +158,12 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     verifyDispatcherConnectorSendExecMessageCalledOnce();
 
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertTrue(
-        objectService.containsObjectRef(
+        objectStore.containsObjectRef(
             ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())));
     assertThat(
-        objectService.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
+        objectStore.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
         instanceOf(targetClass));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
@@ -214,12 +213,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
-    assertTrue(objectService.containsObjectRef(objRef));
-    assertThat(objectService.lookupObject(objRef), instanceOf(targetClass));
+    assertThat(objectStore.size(), is(1L));
+    assertTrue(objectStore.containsObjectRef(objRef));
+    assertThat(objectStore.lookupObject(objRef), instanceOf(targetClass));
     assertThat(
-        ((ClassForConstructorTest) objectService.lookupObject(objRef)).aLong,
-        is((long) args[1] + 1));
+        ((ClassForConstructorTest) objectStore.lookupObject(objRef)).aLong, is((long) args[1] + 1));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
@@ -232,7 +230,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
     Class[] parameterTypes = {Integer.class};
     Integer arg = new Integer(459);
-    ObjectRef objRef = objectService.storeObject(arg);
+    ObjectRef objRef = objectStore.storeObject(arg);
     Object[] args = {};
     ObjectRef[] argRefs = {objRef};
 
@@ -247,11 +245,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(2));
-    assertTrue(objectService.containsObjectRef(retObjRef));
-    assertThat(objectService.lookupObject(retObjRef), instanceOf(targetClass));
+    assertThat(objectStore.size(), is(2L));
+    assertTrue(objectStore.containsObjectRef(retObjRef));
+    assertThat(objectStore.lookupObject(retObjRef), instanceOf(targetClass));
     assertThat(
-        ((ClassForConstructorTest) objectService.lookupObject(retObjRef)).someInteger, is(arg));
+        ((ClassForConstructorTest) objectStore.lookupObject(retObjRef)).someInteger, is(arg));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
@@ -277,12 +275,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
-    assertTrue(objectService.containsObjectRef(objRef));
-    assertThat(objectService.lookupObject(objRef), instanceOf(targetClass));
+    assertThat(objectStore.size(), is(1L));
+    assertTrue(objectStore.containsObjectRef(objRef));
+    assertThat(objectStore.lookupObject(objRef), instanceOf(targetClass));
     assertThat(
-        ((ClassForConstructorTest) objectService.lookupObject(objRef)).someInteger,
-        is(nullValue()));
+        ((ClassForConstructorTest) objectStore.lookupObject(objRef)).someInteger, is(nullValue()));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
@@ -305,9 +302,9 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
    * <p>// dispatch ExecMessage replyMsg = dispatcher.dispatchIncoming(incomingMessage);
    *
    * <p>// expect verifyDispatcherCalledOnce(); assertThat(replyMessage.getFollowingUuid(),
-   * is(incomingMessage.getMessageUuid())); assertThat(objectService.size(), is(1));
-   * assertTrue(objectService.containsObjectRef(replyMsg.getReturnValue().getObject().getRef()));
-   * assertThat(objectService.lookupObject(replyMsg.getReturnValue().getObject().getRef()),
+   * is(incomingMessage.getMessageUuid())); assertThat(objectStore.size(), is(1));
+   * assertTrue(objectStore.containsObjectRef(replyMsg.getReturnValue().getObject().getRef()));
+   * assertThat(objectStore.lookupObject(replyMsg.getReturnValue().getObject().getRef()),
    * instanceOf(targetClass)); }
    */
   @Test
@@ -357,9 +354,9 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
-    assertTrue(objectService.containsObjectRef(objRef));
-    assertThat(objectService.lookupObject(objRef), instanceOf(targetClass));
+    assertThat(objectStore.size(), is(1L));
+    assertTrue(objectStore.containsObjectRef(objRef));
+    assertThat(objectStore.lookupObject(objRef), instanceOf(targetClass));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
@@ -409,7 +406,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(0));
+    assertThat(objectStore.size(), is(0L));
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NumberFormatException"));

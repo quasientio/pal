@@ -11,8 +11,8 @@ import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.protobuf.Exec.ExecMessage;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
@@ -37,7 +37,7 @@ public class SelfCaller {
   private final ClassLoader customClassloader;
   private final ZContext context;
   private final String offsetPubAddress;
-  private final EnumSet<RunOptions> runOptions;
+  private final Set<RunOptions> runOptions;
 
   @Inject
   SelfCaller(
@@ -47,7 +47,7 @@ public class SelfCaller {
       CustomClassloader customClassloader,
       ZContext context,
       @Named("offset.pub") String offsetPubAddress,
-      EnumSet<RunOptions> runOptions) {
+      Set<RunOptions> runOptions) {
     this.peerUuid = peerUuid;
     this.incomingMessageDispatcher = incomingMessageDispatcher;
     this.messageBuilder = messageBuilder;

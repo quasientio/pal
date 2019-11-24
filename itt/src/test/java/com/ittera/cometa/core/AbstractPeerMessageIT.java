@@ -8,8 +8,8 @@ import static org.junit.Assert.assertTrue;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.ittera.cometa.common.BiMapObjectService;
-import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.ConcurrentHashMapObjectStore;
+import com.ittera.cometa.common.ObjectStore;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.cxn.ThinPeer;
 import com.ittera.cometa.messages.MessageBuilder;
@@ -46,7 +46,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
         new AbstractModule() {
           @Override
           protected void configure() {
-            bind(ObjectService.class).to(BiMapObjectService.class).asEagerSingleton();
+            bind(ObjectStore.class).to(ConcurrentHashMapObjectStore.class).asEagerSingleton();
             bind(MessageBuilder.class).to(ProtobufMessageBuilder.class).asEagerSingleton();
           }
         };

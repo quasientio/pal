@@ -1,6 +1,6 @@
 package com.ittera.cometa.core.exec.java;
 
-import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.ObjectStore;
 import com.ittera.cometa.common.lang.Context;
 import com.ittera.cometa.common.lang.ObjectNotFoundException;
 import com.ittera.cometa.common.lang.ObjectRef;
@@ -30,11 +30,11 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
-      ObjectService objectService) {
+      ObjectStore objectStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
-    setObjectService(objectService);
+    setObjectStore(objectStore);
   }
 
   @Override
@@ -124,8 +124,8 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
       }
     } else {
       ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceMethodCall().getObjectRef());
-      if (objectService.containsObjectRef(targetObjRef)) {
-        target = objectService.lookupObject(targetObjRef);
+      if (objectStore.containsObjectRef(targetObjRef)) {
+        target = objectStore.lookupObject(targetObjRef);
       } else {
         throw new ObjectNotFoundException(
             String.format("No object found with objRef: %s", targetObjRef.getRef()));

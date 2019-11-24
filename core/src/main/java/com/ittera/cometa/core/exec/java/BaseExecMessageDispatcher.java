@@ -192,7 +192,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   }
 
   final ObjectRef storeObject(Object object) {
-    return object != null ? objectService.storeObject(object) : null;
+    return object != null ? objectStore.storeObject(object) : null;
   }
 
   /**
@@ -245,7 +245,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           if (obj.hasRef()) {
             // First try to fetch object by reference (works only with locally-instantiated/stored
             // objects)
-            lookedUpObj = objectService.lookupObject(ObjectRef.from(obj.getRef()));
+            lookedUpObj = objectStore.lookupObject(ObjectRef.from(obj.getRef()));
           }
           if (lookedUpObj != null) {
             args.add(lookedUpObj);

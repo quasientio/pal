@@ -79,7 +79,7 @@ class ClassForVoidClassMethodTest {
 public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
   private Dispatcher dispatcher =
-      new ClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectService);
+      new ClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
 
   private Class targetClass = ClassForVoidClassMethodTest.class;
 
@@ -141,7 +141,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(0));
+    assertThat(objectStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertTrue(ClassForVoidClassMethodTest.slept);
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -207,7 +207,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(0));
+    assertThat(objectStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -270,7 +270,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(0));
+    assertThat(objectStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -285,7 +285,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     String methodName = "sleep";
     Class[] parameterTypes = {Long.class};
     Long millisToSleep = 5l;
-    ObjectRef objRef = objectService.storeObject(millisToSleep);
+    ObjectRef objRef = objectStore.storeObject(millisToSleep);
     Object[] args = {null};
     ObjectRef[] argObjRefs = {objRef};
 
@@ -308,7 +308,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -344,7 +344,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(0));
+    assertThat(objectStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.verified, is(nullValue()));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -388,7 +388,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     long[] someNumbers = {10L, 20L, 30L};
     List<Long> sumContainer = new ArrayList();
     Object[] args = {null, someNumbers};
-    ObjectRef[] argObjRefs = {objectService.storeObject(sumContainer), null};
+    ObjectRef[] argObjRefs = {objectStore.storeObject(sumContainer), null};
 
     ExecMessage incomingMessage =
         messageBuilder.buildClassMethod(
@@ -407,7 +407,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(sumContainer.get(0), is(LongStream.of(someNumbers).sum()));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -470,7 +470,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(0));
+    assertThat(objectStore.size(), is(0L));
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NullPointerException"));

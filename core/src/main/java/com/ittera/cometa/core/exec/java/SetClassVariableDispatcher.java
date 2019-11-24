@@ -1,6 +1,6 @@
 package com.ittera.cometa.core.exec.java;
 
-import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.ObjectStore;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
@@ -23,11 +23,11 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
-      ObjectService objectService) {
+      ObjectStore objectStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
-    setObjectService(objectService);
+    setObjectStore(objectStore);
   }
 
   @Override
@@ -68,7 +68,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
       }
     } else {
       value =
-          objectService.lookupObject(
+          objectStore.lookupObject(
               ObjectRef.from(execMessage.getStaticFieldPut().getValueObjectRef()));
       if (logger.isTraceEnabled()) {
         logger.trace("Loaded value: {}", value);

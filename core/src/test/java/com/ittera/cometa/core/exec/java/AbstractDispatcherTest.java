@@ -9,8 +9,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.ittera.cometa.common.BiMapObjectService;
-import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.ConcurrentHashMapObjectStore;
+import com.ittera.cometa.common.ObjectStore;
 import com.ittera.cometa.core.exec.DispatcherConnector;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
@@ -23,7 +23,7 @@ public abstract class AbstractDispatcherTest {
 
   protected UUID peerUuid = UUID.randomUUID();
 
-  protected ObjectService objectService = new BiMapObjectService();
+  protected ObjectStore objectStore = new ConcurrentHashMapObjectStore();
 
   protected MessageBuilder messageBuilder = new ProtobufMessageBuilder();
 
@@ -57,7 +57,7 @@ public abstract class AbstractDispatcherTest {
 
   @Before
   public void clearStuff() {
-    objectService.clear();
-    assertThat(objectService.size(), is(0));
+    objectStore.clear();
+    assertThat(objectStore.size(), is(0L));
   }
 }

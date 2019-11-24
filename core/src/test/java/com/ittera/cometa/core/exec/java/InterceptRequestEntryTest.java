@@ -3,8 +3,8 @@ package com.ittera.cometa.core.exec.java;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
-import com.ittera.cometa.common.BiMapObjectService;
-import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.ConcurrentHashMapObjectStore;
+import com.ittera.cometa.common.ObjectStore;
 import com.ittera.cometa.common.lang.ObjectRef;
 import com.ittera.cometa.messages.MessageBuilder;
 import com.ittera.cometa.messages.ProtobufMessageBuilder;
@@ -21,7 +21,7 @@ public class InterceptRequestEntryTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
   private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
-  private final ObjectService objectService = new BiMapObjectService();
+  private final ObjectStore objectStore = new ConcurrentHashMapObjectStore();
 
   @Test
   public void antPathMatcherTests() {
@@ -87,7 +87,7 @@ public class InterceptRequestEntryTest {
 
     // create Exec message
     Object target = System.out;
-    ObjectRef targetObjRef = objectService.storeObject(target);
+    ObjectRef targetObjRef = objectStore.storeObject(target);
     ExecMessage execMessage =
         msgBuilder.buildInstanceMethod(
             UUID.randomUUID(),

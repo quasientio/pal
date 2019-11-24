@@ -3,7 +3,8 @@ package com.ittera.cometa.core;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-import com.ittera.cometa.common.ObjectService;
+import com.ittera.cometa.common.ConcurrentHashMapObjectStore;
+import com.ittera.cometa.common.ObjectStore;
 import com.ittera.cometa.common.lang.DispatchForwarder;
 import com.ittera.cometa.common.lang.ProxyDispatcher;
 import com.ittera.cometa.core.exec.java.AspectProxyDispatcher;
@@ -75,9 +76,7 @@ class PeerWiring extends AbstractModule {
     bind(ProxyDispatcher.class).to(com.ittera.cometa.core.exec.java.AspectProxyDispatcher.class);
 
     // common and cxn library classes are not annotated with @Singleton
-    bind(ObjectService.class)
-        .to(com.ittera.cometa.common.BiMapObjectService.class)
-        .asEagerSingleton();
+    bind(ObjectStore.class).to(ConcurrentHashMapObjectStore.class).asEagerSingleton();
     bind(MessageBuilder.class).to(ProtobufMessageBuilder.class).asEagerSingleton();
     bind(PALDirectory.class).asEagerSingleton();
 

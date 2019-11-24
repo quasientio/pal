@@ -3,8 +3,8 @@ package com.ittera.cometa.core;
 import com.google.inject.Injector;
 import com.ittera.cometa.common.znodes.LogInfo;
 import com.ittera.cometa.cxn.PALDirectory;
-import java.util.EnumSet;
 import java.util.Properties;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,14 +16,14 @@ class LogConfigurator {
   private final Long inLogOffset;
   private final Properties appProps;
   private final Injector injector;
-  private final EnumSet<RunOptions> runOptions;
+  private final Set<RunOptions> runOptions;
 
   LogConfigurator(
       String inLogName,
       Long inLogOffset,
       String outLogName,
       Properties appProps,
-      EnumSet<RunOptions> runOptions,
+      Set<RunOptions> runOptions,
       Injector injector) {
     this.inLogName = inLogName;
     this.inLogOffset = inLogOffset;

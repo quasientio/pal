@@ -18,13 +18,13 @@ public class ObjectRef {
 
   @Override
   public int hashCode() {
-    return ref.hashCode();
+    return Integer.parseInt(ref);
   }
 
   @Override
   public boolean equals(Object obj) {
     if (obj instanceof ObjectRef) {
-      return ref.equals(((ObjectRef) obj).getRef());
+      return this.hashCode() == obj.hashCode();
     }
     return false;
   }

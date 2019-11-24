@@ -146,7 +146,7 @@ public class Main implements Callable<Integer> {
   private final Properties properties = new Properties();
 
   // run options
-  private EnumSet<RunOptions> runOptions;
+  private Set<RunOptions> runOptions;
 
   // zmq context
   private ZContext zmqContext;

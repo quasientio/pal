@@ -66,7 +66,7 @@ class ClassForVoidInstanceMethodTest {
 public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
   private Dispatcher dispatcher =
-      new InstanceMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectService);
+      new InstanceMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
 
   private Class targetClass = ClassForVoidInstanceMethodTest.class;
 
@@ -102,7 +102,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // create and store new instance
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    ObjectRef targetObjRef = objectService.storeObject(target);
+    ObjectRef targetObjRef = objectStore.storeObject(target);
 
     String methodName = "addHelloWorld";
     Class[] parameterTypes = {};
@@ -126,7 +126,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(2));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -166,7 +166,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // create and store new instance
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    ObjectRef targetObjRef = objectService.storeObject(target);
+    ObjectRef targetObjRef = objectStore.storeObject(target);
 
     String methodName = "addWord";
     Class[] parameterTypes = {String.class};
@@ -191,7 +191,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     verifyDispatcherConnectorSendExecMessageCalledOnce();
 
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(1));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -230,7 +230,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   public void dispatchIncoming_withPrimitiveArgs_ok() {
     // create and store new instance
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    ObjectRef targetObjRef = objectService.storeObject(target);
+    ObjectRef targetObjRef = objectStore.storeObject(target);
 
     String methodName = "addWords";
     Class[] parameterTypes = {int.class};
@@ -255,7 +255,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(numberOfWordsToAdd));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -269,12 +269,12 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // create and store new instance
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    ObjectRef targetObjRef = objectService.storeObject(target);
+    ObjectRef targetObjRef = objectStore.storeObject(target);
 
     String methodName = "addWordList";
     Class[] parameterTypes = {List.class};
     List<String> wordList = Arrays.asList("the", "truth", "is", "out", "there");
-    ObjectRef listObjRef = objectService.storeObject(wordList);
+    ObjectRef listObjRef = objectStore.storeObject(wordList);
     Object[] args = {null};
     ObjectRef[] argObjRefs = {listObjRef};
 
@@ -295,7 +295,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(2));
+    assertThat(objectStore.size(), is(2L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(wordList.size()));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -308,7 +308,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   public void dispatchIncoming_withNullArgs_ok() {
     // create and store new instance
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    ObjectRef targetObjRef = objectService.storeObject(target);
+    ObjectRef targetObjRef = objectStore.storeObject(target);
 
     String methodName = "addWord";
     Class[] parameterTypes = {List.class};
@@ -332,7 +332,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(0));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -373,7 +373,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // create and store new instance
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    ObjectRef targetObjRef = objectService.storeObject(target);
+    ObjectRef targetObjRef = objectStore.storeObject(target);
 
     String methodName = "addWords";
     Class[] parameterTypes = {String[].class};
@@ -398,7 +398,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(4));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
@@ -439,7 +439,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // create and store new instance
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
-    ObjectRef targetObjRef = objectService.storeObject(target);
+    ObjectRef targetObjRef = objectStore.storeObject(target);
 
     String methodName = "addWord";
     Class[] parameterTypes = {String.class};
@@ -463,7 +463,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectService.size(), is(1));
+    assertThat(objectStore.size(), is(1L));
     assertFalse(replyMsg.hasReturnValue());
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),

@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -196,7 +197,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   }
 
   private DispatcherConnector initDispatcherConnector(boolean publishing) {
-    EnumSet<RunOptions> runOptions;
+    Set<RunOptions> runOptions;
     if (!publishing) {
       runOptions = EnumSet.of(RunOptions.NO_PUBLISHING);
     } else {
