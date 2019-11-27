@@ -2,7 +2,9 @@ package com.ittera.cometa.cxn;
 
 import java.io.IOException;
 import java.util.Set;
-import javax.management.*;
+import javax.management.MBeanServerConnection;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 import javax.management.remote.JMXConnectionNotification;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
