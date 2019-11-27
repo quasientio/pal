@@ -5,6 +5,7 @@ import java.lang.ref.WeakReference;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,8 +37,11 @@ public final class ConcurrentHashMapObjectStore implements ObjectStore {
   private static final int DEFAULT_INITIAL_CAPACITY = 10000;
   private static final float DEFAULT_LOAD_FACTOR = 0.75f;
   private static final int CLEANUP_INTERVAL_SECS = 10;
+  private static final int STATS_INTERVAL_SECS = 30;
 
   private final AtomicLong successfulStoreLookups = new AtomicLong();
+  private final AtomicLong totalObjectsCleared = new AtomicLong();
+  private final AtomicLong maxSize = new AtomicLong();
 
   // A map for all objects created by the this peer
   private final ConcurrentHashMap<ObjectRef, IdentifiableObject> objects;
@@ -45,6 +49,7 @@ public final class ConcurrentHashMapObjectStore implements ObjectStore {
   private class BackgroundProcessor extends Thread {
 
     private BackgroundProcessor() {
+      setName("Object Store GC");
       setPriority(Thread.MIN_PRIORITY);
       setDaemon(true);
       setUncaughtExceptionHandler(
@@ -53,21 +58,19 @@ public final class ConcurrentHashMapObjectStore implements ObjectStore {
 
     private void printStats() {
       if (logger.isDebugEnabled()) {
-        logger.debug("OBJECTS: size={}", size());
-        logger.debug("OBJECTS: successful lookups on store={}", successfulStoreLookups.get());
-        final long cleared =
-            objects.values().stream()
-                .filter(identifiableObject -> identifiableObject.object.get() == null)
-                .count();
-        logger.debug("OBJECTS: cleared={}", cleared);
+        logger.debug("OBJECTS: max size={}", maxSize);
+        logger.debug("OBJECTS: current size={}", size());
+        logger.debug("OBJECTS: successful lookups={}", successfulStoreLookups.get());
+        logger.debug("OBJECTS: total cleared={}", totalObjectsCleared);
       }
     }
 
     @Override
     public void run() {
-      logger.debug("Starting OBJECTS stats");
-      // print stats every 30 secs
-      long minuteStart = Instant.now().getEpochSecond();
+      if (logger.isDebugEnabled()) {
+        logger.debug("Starting OBJECTS stats");
+      }
+      long statsIntervalStart = Instant.now().getEpochSecond();
       while (true) {
         try {
           Thread.sleep(CLEANUP_INTERVAL_SECS * 1000L);
@@ -77,24 +80,38 @@ public final class ConcurrentHashMapObjectStore implements ObjectStore {
         }
         // remove cleared entries
         long cleanupStart = Instant.now().toEpochMilli();
+        final AtomicInteger clearedCount = new AtomicInteger();
         objects.values().stream()
             .filter(identObject -> identObject.object.get() == null)
             .map(identObject -> new ObjectRef(String.valueOf(identObject.hash)))
-            .forEach(objects::remove);
+            .forEach(
+                objectRef -> {
+                  objects.remove(objectRef);
+                  clearedCount.getAndIncrement();
+                });
+        totalObjectsCleared.addAndGet(clearedCount.get());
         if (logger.isDebugEnabled()) {
           long cleanupEnd = Instant.now().toEpochMilli();
-          logger.debug("Cleaned up objects map in {} ms", cleanupEnd - cleanupStart);
+          logger.debug(
+              "Cleaned up {} objects map in {} ms", clearedCount.get(), cleanupEnd - cleanupStart);
         }
 
         // check if it's time to print stats
         if (logger.isDebugEnabled()) {
-          long now = Instant.now().getEpochSecond();
-          if (now - minuteStart >= 60) {
+          if (Instant.now().getEpochSecond() - statsIntervalStart >= STATS_INTERVAL_SECS) {
             printStats();
-            minuteStart = now;
+            statsIntervalStart = Instant.now().getEpochSecond();
           }
         }
       }
+    }
+  }
+
+  private void updateMaxSize() {
+    final long maxSizeVal = maxSize.longValue();
+    final long currentSize = size();
+    if (currentSize > maxSizeVal) {
+      maxSize.compareAndSet(maxSizeVal, currentSize);
     }
   }
 
@@ -157,6 +174,7 @@ public final class ConcurrentHashMapObjectStore implements ObjectStore {
       }
     } else {
       objects.put(objectRef, new IdentifiableObject(object));
+      updateMaxSize();
       if (logger.isTraceEnabled()) {
         logger.trace("out w/ objectRef: {}", objectRef);
       }
@@ -172,10 +190,11 @@ public final class ConcurrentHashMapObjectStore implements ObjectStore {
     if (objectRef == null) {
       throw new NullPointerException("objectRef cannot be null");
     }
-    final IdentifiableObject identifiableObject = objects.get(objectRef);
+    final IdentifiableObject storedObject = objects.get(objectRef);
     Object object = null;
-    if (identifiableObject != null) {
-      object = identifiableObject.object.get();
+    if (storedObject != null) {
+      successfulStoreLookups.getAndIncrement();
+      object = storedObject.object.get();
     }
     if (logger.isTraceEnabled()) {
       logger.trace("out w/ object: {}", object);
