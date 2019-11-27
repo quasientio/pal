@@ -408,7 +408,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
                 callBuilder
                     .setClass_(getWrappedClass(className))
                     .setName(methodName)
-                    .setObjectRef(targetObjRef.getRef()));
+                    .setObjectRef(String.valueOf(targetObjRef.getRef())));
 
     return msgBuilder.build();
   }
@@ -677,7 +677,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
             .setInstanceFieldGet(
                 InstanceFieldGet.newBuilder()
                     .setClass_(getWrappedClass(className))
-                    .setObjectRef(targetObjRef.getRef())
+                    .setObjectRef(String.valueOf(targetObjRef.getRef()))
                     .setField(getWrappedField((String) null, fieldName)));
 
     return msgBuilder.build();
@@ -712,7 +712,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
                 StaticFieldPut.newBuilder()
                     .setClass_(getWrappedClass(className))
                     .setField(getWrappedField((String) null, fieldName))
-                    .setValueObjectRef(valueObjectRef.getRef()));
+                    .setValueObjectRef(String.valueOf(valueObjectRef.getRef())));
 
     return msgBuilder.build();
   }
@@ -754,7 +754,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
             .setInstanceFieldPut(
                 InstanceFieldPut.newBuilder()
                     .setClass_(getWrappedClass(className))
-                    .setObjectRef(targetObjRef.getRef())
+                    .setObjectRef(String.valueOf(targetObjRef.getRef()))
                     .setField(getWrappedField((String) null, fieldName))
                     .setValueObject(getWrappedObject(value, valueClassName, null)));
 
@@ -774,9 +774,9 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
             .setInstanceFieldPut(
                 InstanceFieldPut.newBuilder()
                     .setClass_(getWrappedClass(className))
-                    .setObjectRef(targetObjRef.getRef())
+                    .setObjectRef(String.valueOf(targetObjRef.getRef()))
                     .setField(getWrappedField((String) null, fieldName))
-                    .setValueObjectRef(valueObjectRef.getRef()));
+                    .setValueObjectRef(String.valueOf(valueObjectRef.getRef())));
 
     return msgBuilder.build();
   }

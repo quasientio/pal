@@ -2,13 +2,13 @@ package com.ittera.cometa.common.lang;
 
 public class ObjectRef {
 
-  private final String ref;
+  private final int ref;
 
   public ObjectRef(String ref) {
-    this.ref = ref;
+    this.ref = Integer.parseInt(ref);
   }
 
-  public String getRef() {
+  public int getRef() {
     return ref;
   }
 
@@ -18,7 +18,7 @@ public class ObjectRef {
 
   @Override
   public int hashCode() {
-    return Integer.parseInt(ref);
+    return ref;
   }
 
   @Override

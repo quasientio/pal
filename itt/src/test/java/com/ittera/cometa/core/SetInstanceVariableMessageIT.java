@@ -131,7 +131,7 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
   public void putField_noSuchInstance_exThrown() throws Exception {
 
     // fake non-existing instance
-    ObjectRef badObjRef = ObjectRef.from("Not_A_Real_ObjRef");
+    ObjectRef badObjRef = ObjectRef.from("30482239");
 
     String fieldName = "anInt";
     String fieldClassName = "java.lang.String";

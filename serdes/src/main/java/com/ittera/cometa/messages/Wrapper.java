@@ -78,7 +78,7 @@ public final class Wrapper {
       builder.setClass_(getWrappedClass(className));
     }
     if (objectRef != null) {
-      builder.setRef(objectRef.getRef());
+      builder.setRef(String.valueOf(objectRef.getRef()));
     }
     builder.setIdentityHash(System.identityHashCode(object));
 

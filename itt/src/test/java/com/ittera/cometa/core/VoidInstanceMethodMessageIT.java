@@ -143,7 +143,7 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
     String methodName = "printDate";
 
     // create new instance
-    ObjectRef newObjRef = ObjectRef.from("Not_A_Real_ObjRef");
+    ObjectRef newObjRef = ObjectRef.from("2398248");
 
     // now call the method
     Object[] parameters = {};

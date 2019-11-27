@@ -58,7 +58,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
         target = objectStore.lookupObject(targetObjRef);
       } else {
         throw new ObjectNotFoundException(
-            String.format("No object found with objRef: %s", targetObjRef.getRef()));
+            String.format("No object found with objRef: %d", targetObjRef.getRef()));
       }
       if (logger.isTraceEnabled()) {
         logger.trace("Loaded target: {}", target);

@@ -126,7 +126,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
   @Test
   public void getInstanceVariable_noSuchInstance_exThrown() throws Exception {
     // create new instance
-    ObjectRef newObjRef = ObjectRef.from("Not_A_Real_ObjRef");
+    ObjectRef newObjRef = ObjectRef.from("38923");
 
     callGetInstanceVar(
         className, "someShort", newObjRef, "com.ittera.cometa.common.lang.ObjectNotFoundException");
