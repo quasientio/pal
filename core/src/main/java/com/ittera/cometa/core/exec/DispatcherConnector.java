@@ -17,7 +17,9 @@ import com.ittera.cometa.messages.protobuf.Intercepts.InterceptType;
 import com.ittera.cometa.messages.protobuf.Wrappers.Message;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -95,6 +97,9 @@ public class DispatcherConnector {
   // created
   private final ThreadLocal<Boolean> threadInterceptsSocketCreated =
       ThreadLocal.withInitial(() -> false);
+
+  private final ThreadLocal<Map<UUID, Socket>> threadSockets =
+      ThreadLocal.withInitial(HashMap::new);
 
   @Inject
   public DispatcherConnector(
@@ -286,32 +291,24 @@ public class DispatcherConnector {
       logger.debug("Sending callback message: {} to peer w/uuid: {}", message, interceptor);
     }
     byte[] reply;
-    try (Socket req = zmqContext.createSocket(SocketType.REQ)) {
-      // set receive timeout
-      req.setReceiveTimeOut(CALLBACK_RECV_TIMEOUT_MS);
-      // get peer's address
-      String interceptorAddress;
-      interceptorAddress = palDirectory.getPeerInfo(interceptor).getReqAddress();
-      // connect to peer and send callback message
-      req.connect(interceptorAddress);
-      req.send(messageBuilder.wrap(message).toByteArray(), 0);
+    // get socket for peer and send callback msg
+    Socket req = getConnectedREQSocketFor(interceptor);
+    final boolean sentOk = req.send(messageBuilder.wrap(message).toByteArray(), 0);
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Sent callback message: {} (ret={}) to peer w/uuid: {}", message, sentOk, interceptor);
+    }
 
-      // block until we get a reply or peer is disconnected
-      reply = null;
-      if (getReply) {
-        boolean peerIsUp = true;
-        while (peerIsUp) {
-          reply = req.recv(0);
-          if (reply == null) { // we hit the timeout, check if peer is alive
-            peerIsUp = palDirectory.peerExists(interceptor);
-            if (peerIsUp) {
-              logger.warn(
-                  "Peer w/uuid: {} is taking long to reply, but is alive, so we wait", interceptor);
-            } else {
-              logger.warn(
-                  "Peer w/uuid: {} is disconnected. Giving up, returning null", interceptor);
-            }
-          } else if (logger.isDebugEnabled()) {
+    // block until we get a reply or peer is disconnected
+    reply = null;
+    if (getReply) {
+      boolean peerIsUp = true;
+      boolean gotReply = false;
+      while (!gotReply && peerIsUp) {
+        reply = req.recv(0);
+        if (reply != null) {
+          gotReply = true;
+          if (logger.isDebugEnabled()) {
             try {
               Message replyMessage = Message.parseFrom(reply);
               logger.debug("Got reply from callback: {}", replyMessage);
@@ -319,9 +316,18 @@ public class DispatcherConnector {
               logger.warn("Error parsing reply message", e);
             }
           }
+        } else { // we hit the timeout, check if peer is alive
+          peerIsUp = palDirectory.peerExists(interceptor);
+          if (peerIsUp) {
+            logger.warn(
+                "Peer w/uuid: {} is taking long to reply, but is alive, so we wait", interceptor);
+          } else {
+            logger.warn("Peer w/uuid: {} is disconnected. Giving up, returning null", interceptor);
+          }
         }
       }
     }
+    // TODO getReply  == false --> we still have to recv() !!
     return reply;
   }
 
@@ -331,6 +337,31 @@ public class DispatcherConnector {
 
   private byte[] sendCallbackToPeer(UUID interceptor, ExecMessage message) throws Exception {
     return sendCallbackMessageToPeer(interceptor, message, true);
+  }
+
+  private Socket getConnectedREQSocketFor(UUID peer) throws Exception {
+    // first check if socket for peer is already open
+    if (threadSockets.get().containsKey(peer)) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Returning existing REQ socket for peer w/uuid: {}", peer);
+      }
+      return threadSockets.get().get(peer);
+    }
+
+    // else, create and connect new socket
+    if (logger.isDebugEnabled()) {
+      logger.debug("Connecting new REQ socket to peer w/uuid: {}", peer);
+    }
+    final Socket reqSocket = zmqContext.createSocket(SocketType.REQ);
+    // set receive timeout
+    reqSocket.setReceiveTimeOut(CALLBACK_RECV_TIMEOUT_MS);
+    // get peer's address
+    String interceptorAddress = palDirectory.getPeerInfo(peer).getReqAddress();
+    reqSocket.connect(interceptorAddress);
+    // store in thread-local peer->socket map
+    threadSockets.get().put(peer, reqSocket);
+
+    return reqSocket;
   }
 
   private boolean isInterceptableType(ExecMessageType type) {
@@ -391,5 +422,18 @@ public class DispatcherConnector {
       threadPubSocket.remove();
     }
     threadPubSocketCreated.remove();
+
+    threadSockets
+        .get()
+        .forEach(
+            (uuid, socket) -> {
+              if (socket != null) {
+                socket.close();
+              }
+              if (logger.isDebugEnabled()) {
+                logger.debug("Closed thread-local REQ socket to remote peer w/uuid: {}", uuid);
+              }
+            });
+    threadSockets.remove();
   }
 }
