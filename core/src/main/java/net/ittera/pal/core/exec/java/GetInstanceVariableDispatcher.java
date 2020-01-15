@@ -1,0 +1,82 @@
+package net.ittera.pal.core.exec.java;
+
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import net.ittera.pal.common.ObjectStore;
+import net.ittera.pal.common.lang.ObjectNotFoundException;
+import net.ittera.pal.common.lang.ObjectRef;
+import net.ittera.pal.core.exec.DispatcherConnector;
+import net.ittera.pal.messages.MessageBuilder;
+import net.ittera.pal.messages.Unwrapper;
+import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
+
+@Singleton
+public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
+
+  @Inject
+  public GetInstanceVariableDispatcher(
+      UUID peerUuid,
+      MessageBuilder messageBuilder,
+      DispatcherConnector connector,
+      ObjectStore objectStore) {
+    setPeerUuid(peerUuid);
+    setMessageBuilder(messageBuilder);
+    setConnector(connector);
+    setObjectStore(objectStore);
+  }
+
+  @Override
+  protected final ExecMessageType getBeforeExecMessageType() {
+    return ExecMessageType.GET_FIELD;
+  }
+
+  @Override
+  protected final ExecMessageType getAfterExecMessageType() {
+    return ExecMessageType.RETURN_VALUE;
+  }
+
+  @Override
+  protected Object getTargetFromMessage(
+      ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
+      throws ObjectNotFoundException {
+    Object target;
+    if (execMessage.getInstanceFieldGet().hasObject()) {
+      Class fieldType = ((Field) accessibleObject.get()).getType();
+      target = Unwrapper.unwrapObject(execMessage.getInstanceFieldGet().getObject(), fieldType);
+      if (logger.isTraceEnabled()) {
+        logger.trace("Unwrapped target: {}", target);
+      }
+    } else {
+      ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceFieldGet().getObjectRef());
+      if (objectStore.containsObjectRef(targetObjRef)) {
+        target = objectStore.lookupObject(targetObjRef);
+      } else {
+        throw new ObjectNotFoundException(
+            String.format("No object found with objRef: %d", targetObjRef.getRef()));
+      }
+      if (logger.isTraceEnabled()) {
+        logger.trace("Loaded target: {}", target);
+      }
+    }
+    return target;
+  }
+
+  @Override
+  protected AccessibleObject loadAccessibleObject(
+      ExecMessage execMessage, List<Class> parameterTypes, List<Object> args)
+      throws ReflectiveOperationException {
+
+    Class clazz =
+        Class.forName(
+            execMessage.getInstanceFieldGet().getClass_().getName(),
+            true,
+            Thread.currentThread().getContextClassLoader());
+    return clazz.getDeclaredField(execMessage.getInstanceFieldGet().getField().getName());
+  }
+}

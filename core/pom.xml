@@ -8,20 +8,20 @@
     <name>core classes</name>
 
     <parent>
-        <groupId>com.ittera.cometa</groupId>
+        <groupId>net.ittera.pal</groupId>
         <artifactId>peer-all</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
 
     <properties>
-        <file.appender.class>com.ittera.cometa.common.util.PeerFileAppender</file.appender.class>
-        <console.appender.class>com.ittera.cometa.common.util.PeerConsoleAppender</console.appender.class>
+        <file.appender.class>net.ittera.pal.common.util.PeerFileAppender</file.appender.class>
+        <console.appender.class>net.ittera.pal.common.util.PeerConsoleAppender</console.appender.class>
 
         <!-- shading related -->
-        <shading.prefix>com.ittera.cometa.shd</shading.prefix>
-        <kafka.logger.name>com.ittera.cometa.shd.apache.kafka</kafka.logger.name>
+        <shading.prefix>net.ittera.pal.shd</shading.prefix>
+        <kafka.logger.name>net.ittera.pal.shd.apache.kafka</kafka.logger.name>
         <kafka.logger.name.unshaded>org.apache.kafka</kafka.logger.name.unshaded>
-        <zookeeper.logger.name>com.ittera.cometa.shd.apache.zookeeper</zookeeper.logger.name>
+        <zookeeper.logger.name>net.ittera.pal.shd.apache.zookeeper</zookeeper.logger.name>
         <zookeeper.logger.name.unshaded>org.apache.zookeeper</zookeeper.logger.name.unshaded>
     </properties>
 
@@ -58,7 +58,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.ittera.cometa.core.Main</mainClass>
+                            <mainClass>net.ittera.pal.core.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
@@ -182,7 +182,7 @@
                     <transformers>
                         <transformer
                                 implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                            <mainClass>com.ittera.cometa.core.Main</mainClass>
+                            <mainClass>net.ittera.pal.core.Main</mainClass>
                         </transformer>
                     </transformers>
                 </configuration>
@@ -221,22 +221,22 @@
     <dependencies>
         <!-- OWN DEPENDENCIES -->
         <dependency>
-            <groupId>com.ittera.cometa</groupId>
+            <groupId>net.ittera.pal</groupId>
             <artifactId>common</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>com.ittera.cometa</groupId>
+            <groupId>net.ittera.pal</groupId>
             <artifactId>cxn</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>com.ittera.cometa</groupId>
+            <groupId>net.ittera.pal</groupId>
             <artifactId>serdes</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>com.ittera.cometa</groupId>
+            <groupId>net.ittera.pal</groupId>
             <artifactId>aspects</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>runtime</scope>

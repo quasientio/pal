@@ -4,7 +4,7 @@ package messages.protobuf;
 import "primitives.proto";
 import "ctxt.proto";
 
-option java_package = "com.ittera.cometa.messages.protobuf";
+option java_package = "net.ittera.pal.messages.protobuf";
 option optimize_for = SPEED;
 
 message StaticFieldGet {

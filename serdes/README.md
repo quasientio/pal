@@ -1,4 +1,4 @@
-# The Cometa Project 
+# The PAL Project 
 
 TODO: Write a project description
 

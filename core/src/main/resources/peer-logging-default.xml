@@ -30,7 +30,7 @@
 	</appender>
 
 	<!-- LOGGERS -->
-	<logger name="com.ittera.cometa" level="info" additivity="false">
+	<logger name="net.ittera.pal" level="info" additivity="false">
 		<appender-ref ref="peer"/>
 	</logger>
 
