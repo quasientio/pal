@@ -1,0 +1,3 @@
+#!/bin/bash
+MAIN_ARGS="$@"
+mvn exec:java -Dexec.mainClass="net.ittera.pal.tools.MessageStreamStats" -Dlogback.configurationFile=logback-stats.xml -Dexec.args="$MAIN_ARGS"
