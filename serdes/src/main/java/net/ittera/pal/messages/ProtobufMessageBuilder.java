@@ -1,6 +1,5 @@
 package net.ittera.pal.messages;
 
-
 import com.google.protobuf.Message.Builder;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
@@ -215,19 +214,19 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
 
   public static String getClassname(ExecMessage execMessage) {
     switch (execMessage.getMsgType()) {
-      case ExecMessageType.CONSTRUCTOR:
+      case CONSTRUCTOR:
         return execMessage.getConstructorCall().getClass_().getName();
-      case ExecMessageType.INSTANCE_METHOD:
+      case INSTANCE_METHOD:
         return execMessage.getInstanceMethodCall().getClass_().getName();
-      case ExecMessageType.CLASS_METHOD:
+      case CLASS_METHOD:
         return execMessage.getClassMethodCall().getClass_().getName();
-      case ExecMessageType.GET_STATIC:
+      case GET_STATIC:
         return execMessage.getStaticFieldGet().getClass_().getName();
-      case ExecMessageType.GET_FIELD:
+      case GET_FIELD:
         return execMessage.getInstanceFieldGet().getClass_().getName();
-      case ExecMessageType.PUT_STATIC:
+      case PUT_STATIC:
         return execMessage.getStaticFieldPut().getClass_().getName();
-      case ExecMessageType.PUT_FIELD:
+      case PUT_FIELD:
         return execMessage.getInstanceFieldPut().getClass_().getName();
       default:
         throw new IllegalArgumentException(
@@ -237,19 +236,19 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
 
   public static String getExecutableName(ExecMessage execMessage) {
     switch (execMessage.getMsgType()) {
-      case ExecMessageType.CONSTRUCTOR:
+      case CONSTRUCTOR:
         return "new";
-      case ExecMessageType.INSTANCE_METHOD:
+      case INSTANCE_METHOD:
         return execMessage.getInstanceMethodCall().getName();
-      case ExecMessageType.CLASS_METHOD:
+      case CLASS_METHOD:
         return execMessage.getClassMethodCall().getName();
-      case ExecMessageType.GET_STATIC:
+      case GET_STATIC:
         return execMessage.getStaticFieldGet().getField().getName();
-      case ExecMessageType.GET_FIELD:
+      case GET_FIELD:
         return execMessage.getInstanceFieldGet().getField().getName();
-      case ExecMessageType.PUT_STATIC:
+      case PUT_STATIC:
         return execMessage.getStaticFieldPut().getField().getName();
-      case ExecMessageType.PUT_FIELD:
+      case PUT_FIELD:
         return execMessage.getInstanceFieldPut().getField().getName();
       default:
         throw new IllegalArgumentException(
@@ -263,7 +262,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
    */
   public static List<String> getParameterTypes(ExecMessage execMessage) {
     switch (execMessage.getMsgType()) {
-      case ExecMessageType.CONSTRUCTOR:
+      case CONSTRUCTOR:
         if (execMessage.getConstructorCall().getParameterCount() > 0) {
           return execMessage.getConstructorCall().getParameterList().stream()
               .map(p -> p.getType().getName())
@@ -271,7 +270,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
         } else {
           return Collections.emptyList();
         }
-      case ExecMessageType.INSTANCE_METHOD:
+      case INSTANCE_METHOD:
         if (execMessage.getInstanceMethodCall().getParameterCount() > 0) {
           return execMessage.getInstanceMethodCall().getParameterList().stream()
               .map(p -> p.getType().getName())
@@ -279,7 +278,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
         } else {
           return Collections.emptyList();
         }
-      case ExecMessageType.CLASS_METHOD:
+      case CLASS_METHOD:
         if (execMessage.getClassMethodCall().getParameterCount() > 0) {
           return execMessage.getClassMethodCall().getParameterList().stream()
               .map(p -> p.getType().getName())
@@ -508,33 +507,33 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
     final ClassMethodCall.Builder callBuilder = ClassMethodCall.newBuilder();
     final String fieldParamType;
     switch (otherMessage.getMsgType()) {
-      case ExecMessageType.CONSTRUCTOR:
+      case CONSTRUCTOR:
         setParameters(callBuilder, otherMessage.getConstructorCall().getParameterList());
         break;
-      case ExecMessageType.INSTANCE_METHOD:
+      case INSTANCE_METHOD:
         setParameters(callBuilder, otherMessage.getInstanceMethodCall().getParameterList());
         break;
-      case ExecMessageType.CLASS_METHOD:
+      case CLASS_METHOD:
         setParameters(callBuilder, otherMessage.getClassMethodCall().getParameterList());
         break;
-      case ExecMessageType.PUT_STATIC:
+      case PUT_STATIC:
         // Q: is this right? Or should we use valueObject.class.name if present?
         fieldParamType = otherMessage.getStaticFieldPut().getField().getClass_().getName();
         Primitives.Object object = otherMessage.getStaticFieldPut().getValueObject();
         String objectRef = otherMessage.getStaticFieldPut().getValueObjectRef();
         addParameter(callBuilder, fieldParamType, object, ObjectRef.from(objectRef));
         break;
-      case ExecMessageType.PUT_FIELD:
+      case PUT_FIELD:
         fieldParamType = otherMessage.getInstanceFieldPut().getField().getClass_().getName();
         object = otherMessage.getInstanceFieldPut().getValueObject();
         objectRef = otherMessage.getInstanceFieldPut().getValueObjectRef();
         addParameter(callBuilder, fieldParamType, object, ObjectRef.from(objectRef));
         break;
-      case ExecMessageType.GET_STATIC:
+      case GET_STATIC:
         fieldParamType = otherMessage.getStaticFieldGet().getField().getClass_().getName();
         addParameter(callBuilder, fieldParamType, null, null);
         break;
-      case ExecMessageType.GET_FIELD:
+      case GET_FIELD:
         fieldParamType = otherMessage.getInstanceFieldGet().getField().getClass_().getName();
         addParameter(callBuilder, fieldParamType, null, null);
         break;
