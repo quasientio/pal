@@ -4,7 +4,7 @@ WORKING_DIR=`pwd`
 #############
 # PATH exports
 #
-export PEER_CORE_HOME=$WORKING_DIR/core
+export PEER_CORE_HOME=$WORKING_DIR/peer
 export PEER_TOOLS_HOME=$WORKING_DIR/tools
 
 # Paths needed by some tools in bin/

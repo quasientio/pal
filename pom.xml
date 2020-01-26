@@ -312,7 +312,7 @@
 
     <modules>
         <module>common</module>
-        <module>core</module>
+        <module>peer</module>
         <module>aspects</module>
         <module>serdes</module>
         <module>cxn</module>
