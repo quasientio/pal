@@ -200,21 +200,14 @@
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
-                <excludes>
-                    <exclude>peer-logging-default.xml</exclude>
-                </excludes>
             </resource>
         </resources>
         <testResources>
             <testResource>
                 <directory>src/test/resources</directory>
                 <filtering>true</filtering>
-                <excludes>
-                    <exclude>logback-test-default.xml</exclude>
-                </excludes>
             </testResource>
         </testResources>
-
     </build>
 
     <dependencies>

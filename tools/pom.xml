@@ -46,7 +46,6 @@
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
                 <excludes>
-                    <exclude>logback-runner-default.xml</exclude>
                     <exclude>.gitignore</exclude>
                 </excludes>
             </resource>

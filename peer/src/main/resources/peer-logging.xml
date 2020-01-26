@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false" scan="true" scanPeriod="30 seconds">
+
+    <!-- APPENDERS -->
+    <appender name="peer" class="${file.appender.class}">
+        <file>${logs.dir}/peer.log</file>
+        <encoder>
+            <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="kafka" class="${file.appender.class}">
+        <file>${logs.dir}/kafka.log</file>
+        <encoder>
+            <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="zookeeper" class="${file.appender.class}">
+        <file>${logs.dir}/zookeeper.log</file>
+        <encoder>
+            <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- LOGGERS -->
+    <logger name="net.ittera.pal.core" level="info" additivity="false">
+        <appender-ref ref="peer"/>
+    </logger>
+
+    <logger name="net.ittera.pal.common" level="info" additivity="false">
+        <appender-ref ref="peer"/>
+    </logger>
+
+    <logger name="net.ittera.pal.core.LogReader" level="info" additivity="false">
+        <appender-ref ref="peer"/>
+    </logger>
+
+    <logger name="net.ittera.pal.cxn" level="info" additivity="false">
+        <appender-ref ref="peer"/>
+    </logger>
+
+    <logger name="${kafka.logger.name}" level="info" additivity="false">
+        <appender-ref ref="kafka"/>
+    </logger>
+
+    <logger name="${kafka.logger.name.unshaded}" level="info" additivity="false">
+        <appender-ref ref="kafka"/>
+    </logger>
+
+    <logger name="${zookeeper.logger.name}" level="info" additivity="false">
+        <appender-ref ref="zookeeper"/>
+    </logger>
+
+    <logger name="${zookeeper.logger.name.unshaded}" level="info" additivity="false">
+        <appender-ref ref="zookeeper"/>
+    </logger>
+
+    <root level="warn">
+        <appender-ref ref="peer"/>
+    </root>
+
+</configuration>

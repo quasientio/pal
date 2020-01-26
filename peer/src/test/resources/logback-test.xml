@@ -2,36 +2,39 @@
 <configuration debug="false" scan="true" scanPeriod="30 seconds">
 
 	<!-- APPENDERS -->
-	<appender name="stdout" class="${console.appender.class}">
+	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
-			<pattern>%date %level [%thread] %logger{10} %msg%n</pattern>
+			<pattern>%date %level [%thread] %logger{10} %message%n</pattern>
 		</encoder>
 	</appender>
 
-	<appender name="kafka" class="${file.appender.class}">
+	<appender name="kafka" class="ch.qos.logback.core.FileAppender">
 		<file>${logs.dir}/kafka-tests.log</file>
 		<encoder>
-			<pattern>%date %level [%thread] %logger{10} %msg%n</pattern>
+			<pattern>%date %level [%thread] %logger{10} %message%n</pattern>
 		</encoder>
 	</appender>
 
-	<appender name="zookeeper" class="${file.appender.class}">
+	<appender name="zookeeper" class="ch.qos.logback.core.FileAppender">
 		<file>${logs.dir}/zookeeper-tests.log</file>
 		<encoder>
-			<pattern>%date %level [%thread] %logger{10} %msg%n</pattern>
+			<pattern>%date %level [%thread] %logger{10} %message%n</pattern>
 		</encoder>
 	</appender>
 
-	<appender name="tests" class="${file.appender.class}">
+	<appender name="tests" class="ch.qos.logback.core.FileAppender">
 		<file>${logs.dir}/tests.log</file>
 		<encoder>
-			<pattern>%date %level [%thread] %logger{10} %msg%n</pattern>
+			<pattern>%date %level [%thread] %logger{10} %message%n</pattern>
 		</encoder>
 	</appender>
-
 
 	<!-- LOGGERS -->
 	<logger name="tests" level="debug" additivity="false">
+		<appender-ref ref="tests"/>
+	</logger>
+
+	<logger name="net.ittera.pal.core" level="debug" additivity="false">
 		<appender-ref ref="tests"/>
 	</logger>
 
@@ -47,8 +50,8 @@
 		<appender-ref ref="zookeeper"/>
 	</logger>
 
-	<root level="debug">
-		<appender-ref ref="tests"/>
+	<root level="warn">
+		<appender-ref ref="stdout"/>
 	</root>
 
 </configuration>
