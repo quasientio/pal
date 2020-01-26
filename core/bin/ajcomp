@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CLASSES_TO_WEAVE=target/classes
-PEER_ASPECTS_JAR=/home/libre/.m2/repository/net/ittera/pal/aspects/1.0-SNAPSHOT/aspects-1.0-SNAPSHOT.jar
+PEER_ASPECTS_JAR=/home/libre/.m2/repository/net/ittera/pal/aspects/0.1.0-SNAPSHOT/aspects-0.1.0-SNAPSHOT.jar
 OUTPUT_JAR=apps.jar
 
 # Create jar file containing weaved classes
