@@ -191,6 +191,8 @@ public class PALDirectoryTest {
     // unregister all
     palDirectory.unregisterAllPeers();
 
+    Thread.sleep(100); // allow some time for cache to get updated
+
     // verify
     assertThat(palDirectory.getAllPeers(), is(empty()));
   }

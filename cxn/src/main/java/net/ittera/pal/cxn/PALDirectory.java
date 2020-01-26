@@ -251,7 +251,11 @@ public class PALDirectory implements AutoCloseable {
   public Set<PeerInfo> getAllPeers() throws Exception {
     final Set<PeerInfo> allPeers = new TreeSet<>();
     for (String uuid : getAllPeerUUIDs()) {
-      allPeers.add(getPeerInfo(UUID.fromString(uuid)));
+      try {
+        allPeers.add(getPeerInfo(UUID.fromString(uuid)));
+      } catch (NoPeerInfoNodeException e) {
+        logger.error("Error retrieving PeerInfo, peer node {} is gone", uuid, e);
+      }
     }
     return allPeers;
   }
