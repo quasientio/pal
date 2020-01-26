@@ -14,6 +14,15 @@
         <maven.surefire.version>3.0.0-M3</maven.surefire.version>
         <maven.failsafe.version>3.0.0-M3</maven.failsafe.version>
 
+        <!-- PLUGIN VERSIONS -->
+        <maven.plugin.compiler.version>2.3.2</maven.plugin.compiler.version>
+        <maven.plugin.site.version>3.7.1</maven.plugin.site.version>
+        <maven.plugin.reports.version>3.0.0</maven.plugin.reports.version>
+        <maven.plugin.clean>3.1.0</maven.plugin.clean>
+        <maven.plugin.shade>3.2.1</maven.plugin.shade>
+        <spotbugs.plugin.version>3.1.12</spotbugs.plugin.version>
+        <aspectj.plugin.version>1.11</aspectj.plugin.version>
+
         <!-- DEPENDENCIES VERSIONS -->
         <aspectj.version>1.9.4</aspectj.version>
         <junit.version>4.12</junit.version>
@@ -54,7 +63,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>2.3.2</version>
+                    <version>${maven.plugin.compiler.version}</version>
                     <configuration>
                         <source>${java.version}</source>
                         <target>${java.version}</target>
@@ -64,12 +73,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-site-plugin</artifactId>
-                    <version>3.7.1</version>
+                    <version>${maven.plugin.site.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-project-info-reports-plugin</artifactId>
-                    <version>3.0.0</version>
+                    <version>${maven.plugin.reports.version}</version>
                 </plugin>
                 <!-- code reformatting -->
                 <plugin>
@@ -92,7 +101,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>3.1.12</version>
+                <version>${spotbugs.plugin.version}</version>
             </plugin>
         </plugins>
     </reporting>

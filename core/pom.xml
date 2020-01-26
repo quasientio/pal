@@ -41,8 +41,8 @@
             </plugin>
             <!-- extra clean tasks -->
             <plugin>
-                <version>3.1.0</version>
                 <artifactId>maven-clean-plugin</artifactId>
+                <version>${maven.plugin.clean}</version>
                 <configuration>
                     <filesets>
                         <fileset>
@@ -68,7 +68,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.1</version>
+                <version>${maven.plugin.shade}</version>
                 <configuration>
                     <artifactSet>
                         <excludes>

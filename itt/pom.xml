@@ -60,8 +60,8 @@
             </plugin>
             <!-- extra clean tasks -->
             <plugin>
-                <version>3.1.0</version>
                 <artifactId>maven-clean-plugin</artifactId>
+                <version>${maven.plugin.clean}</version>
                 <configuration>
                     <filesets>
                         <fileset>
