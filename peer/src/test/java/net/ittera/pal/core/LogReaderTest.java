@@ -63,7 +63,7 @@ import zmq.ZError;
 public class LogReaderTest extends ZmqEnabledTest {
 
   /*
-  class for Workers (which REPly to Dealer) IRL: LogMessageInvoker's
+  class for Workers (which REPly to Dealer) IRL: LogMessageInvoker
   */
   class Worker implements Runnable {
 
@@ -374,7 +374,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     String key = peerUuid.toString();
     Set<String> sentUuids = new TreeSet<>();
 
-    int msgsToSend = 30;
+    int msgsToSend = 20;
     for (int i = 0; i < msgsToSend; i++) {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       long offset = i;
@@ -385,7 +385,7 @@ public class LogReaderTest extends ZmqEnabledTest {
       sentUuids.add(msg.getMessageUuid());
     }
 
-    Thread.sleep(300);
+    Thread.sleep(1000);
     // assert received
     logger.debug("received: {}", String.join(",", logMsgInvoker.getReceivedMessages()));
     assertThat(logMsgInvoker.getReceivedMessages(), is(sentUuids));
