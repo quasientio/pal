@@ -20,12 +20,18 @@
 package net.ittera.pal.core;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
 
 public abstract class ZmqEnabledTest {
 
+  private static final Logger logger = LoggerFactory.getLogger("tests");
   protected static final String SYNC_SOCKET_ADDRESS = "inproc://sync_ready";
 
   protected ZContext createContext() {
@@ -47,5 +53,18 @@ public abstract class ZmqEnabledTest {
       }
     }
     syncSocket.close();
+  }
+
+  protected void closeContext(ZContext context) throws InterruptedException {
+    ExecutorService execService = Executors.newCachedThreadPool();
+    execService.submit(
+        () -> {
+          context.close();
+          logger.debug("zmq context terminated");
+        });
+
+    // stop executor
+    execService.shutdown();
+    execService.awaitTermination(5, TimeUnit.SECONDS);
   }
 }

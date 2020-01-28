@@ -151,12 +151,15 @@ public class LogReaderTest extends ZmqEnabledTest {
 
   @After
   public void cleanup() throws Exception {
-    execService.shutdown();
-    execService.awaitTermination(2, TimeUnit.SECONDS);
-    zmqContext.close();
+    closeContext(zmqContext);
+    execService.shutdownNow();
+    execService.awaitTermination(5, TimeUnit.SECONDS);
+    logger.trace("exec service shut down");
     deleteCreatedLogs();
     palDirectory.close();
+    logger.trace("PAL dir closed");
     testingServer.close();
+    logger.trace("testing zk server closed");
   }
 
   @Before
@@ -190,6 +193,7 @@ public class LogReaderTest extends ZmqEnabledTest {
 
   @Test
   public void dontAcceptRequests() throws Exception {
+    logger.trace("entering dontAcceptRequests()");
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -218,11 +222,14 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logMsgInvoker.getReceivedMessages().size(), is(0));
 
     // shut down
-    manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+    manager.stopAsync().awaitStopped();
+
+    logger.trace("leaving dontAcceptRequests()");
   }
 
   @Test
   public void startRunNoMessages() throws Exception {
+    logger.trace("entering startRunNoMessages()");
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -245,13 +252,15 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logMsgInvoker.getReceivedMessages().size(), is(0));
 
     // shut down
-    manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+    manager.stopAsync().awaitStopped();
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
+    logger.trace("leaving startRunNoMessages()");
   }
 
   @Test
   public void consumeExecMessage() throws Exception {
+    logger.trace("entering consumeExecMessage()");
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -286,13 +295,15 @@ public class LogReaderTest extends ZmqEnabledTest {
         is(true));
 
     // shut down
-    manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+    manager.stopAsync().awaitStopped();
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
+    logger.trace("leaving consumeExecMessage()");
   }
 
   @Test
   public void consumeInterceptMessage() throws Exception {
+    logger.trace("entering consumeInterceptMessage()");
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -334,13 +345,15 @@ public class LogReaderTest extends ZmqEnabledTest {
         is(true));
 
     // shut down
-    manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+    manager.stopAsync().awaitStopped();
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
+    logger.trace("leaving consumeInterceptMessage()");
   }
 
   @Test
   public void consumeManyMessages() throws Exception {
+    logger.trace("entering consumeManyMessages()");
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -378,8 +391,9 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logMsgInvoker.getReceivedMessages(), is(sentUuids));
 
     // shut down
-    manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
+    manager.stopAsync().awaitStopped();
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
+    logger.trace("leaving consumeManyMessages()");
   }
 }

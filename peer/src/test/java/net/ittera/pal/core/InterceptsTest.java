@@ -31,9 +31,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import net.ittera.pal.common.ExecPhase;
 import net.ittera.pal.core.messages.InterceptEvtMsg;
 import net.ittera.pal.core.messages.InterceptsMsg;
@@ -109,17 +106,8 @@ public class InterceptsTest extends ZmqEnabledTest {
       matchSocket.close();
     }
 
-    // close local context
-    ExecutorService execService = Executors.newCachedThreadPool();
-    execService.submit(
-        () -> {
-          context.close();
-          logger.debug("context terminated");
-        });
-
-    // stop executor
-    execService.shutdownNow();
-    execService.awaitTermination(1, TimeUnit.SECONDS);
+    // close zmq context
+    closeContext(context);
   }
 
   @Test

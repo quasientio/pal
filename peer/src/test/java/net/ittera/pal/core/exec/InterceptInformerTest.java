@@ -104,17 +104,9 @@ public class InterceptInformerTest extends ZmqEnabledTest {
   public void cleanup() throws Exception {
     interceptRequestMessages.clear();
     requestsToUnregister.clear();
-
-    // close local context
-    execService.submit(
-        () -> {
-          context.close();
-          logger.debug("context terminated");
-        });
-
-    // stop executor
+    closeContext(context);
     execService.shutdownNow();
-    execService.awaitTermination(2, TimeUnit.SECONDS);
+    execService.awaitTermination(5, TimeUnit.SECONDS);
 
     palDirectory.close();
   }

@@ -62,7 +62,7 @@ public class ConnectedServiceTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void test() {
+  public void test() throws InterruptedException {
     final ZContext zmqContext = createContext();
 
     // define services
@@ -93,5 +93,6 @@ public class ConnectedServiceTest extends ZmqEnabledTest {
     // now we know all services have sync'ed (awaitHealthy() is no guarantee of all being running)
     manager.stopAsync();
     manager.awaitStopped();
+    closeContext(zmqContext);
   }
 }

@@ -31,9 +31,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import net.ittera.pal.common.ExecPhase;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.MessageType;
@@ -109,17 +106,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     // shut down services
     manager.stopAsync();
 
-    // close local context
-    ExecutorService execService = Executors.newCachedThreadPool();
-    execService.submit(
-        () -> {
-          context.close();
-          logger.debug("context terminated");
-        });
-
-    // stop executor
-    execService.shutdown();
-    execService.awaitTermination(1, TimeUnit.SECONDS);
+    closeContext(context);
   }
 
   @Test

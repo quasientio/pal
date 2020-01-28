@@ -188,17 +188,9 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
   @After
   public void cleanup() throws Exception {
     manager.stopAsync().awaitStopped();
-
-    // close local context
-    execService.submit(
-        () -> {
-          context.close();
-          logger.debug("context terminated");
-        });
-
-    // stop executor
-    execService.shutdown();
-    execService.awaitTermination(3, TimeUnit.SECONDS);
+    closeContext(context);
+    execService.shutdownNow();
+    execService.awaitTermination(5, TimeUnit.SECONDS);
     logger.debug("executor shut down");
   }
 

@@ -272,7 +272,7 @@ public class XPubSubPOCTest {
 
     // stop executor
     execService.shutdownNow();
-    execService.awaitTermination(2, TimeUnit.SECONDS);
+    execService.awaitTermination(5, TimeUnit.SECONDS);
     System.out.println("executor shut down");
 
     // close context

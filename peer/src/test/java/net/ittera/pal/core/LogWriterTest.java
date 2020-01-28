@@ -32,9 +32,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import net.ittera.pal.common.ExecPhase;
 import net.ittera.pal.common.znodes.LogInfo;
@@ -63,7 +60,6 @@ import org.zeromq.ZMQ;
 
 public class LogWriterTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
-  private ExecutorService execService = Executors.newSingleThreadExecutor();
   private ZContext zmqContext;
   private LogWriter logWriter;
   private UUID peerUuid = UUID.randomUUID();
@@ -91,13 +87,15 @@ public class LogWriterTest extends ZmqEnabledTest {
 
   @After
   public void cleanup() throws Exception {
-    manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
-    execService.shutdown();
-    execService.awaitTermination(2, TimeUnit.SECONDS);
-    this.zmqContext.close();
+    closeContext(zmqContext);
+    manager.stopAsync().awaitStopped();
+    logger.trace("services stopped");
+    logger.trace("exec service shut down");
     deleteCreatedLogs();
     palDirectory.close();
+    logger.trace("PAL dir closed");
     testingServer.close();
+    logger.trace("testing zk server closed");
   }
 
   @Before

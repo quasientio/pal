@@ -190,29 +190,18 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 
   @After
   public void cleanup() throws Exception {
-    logger.debug("in cleanup()");
-
+    logger.trace("entering cleanup");
     // stop stubs
     messagePublisherStub.requestStop();
     interceptsStub.requestStop();
 
     dispatcherConnector.closeThreadLocalSockets();
-
     palDirectory.close();
     testingServer.close();
-
-    // close local context
-    execService.submit(
-        () -> {
-          context.close();
-          logger.debug("context terminated");
-        });
-
-    // stop executor
+    closeContext(context);
     execService.shutdownNow();
-    execService.awaitTermination(2, TimeUnit.SECONDS);
-
-    logger.debug("out cleanup()");
+    execService.awaitTermination(5, TimeUnit.SECONDS);
+    logger.trace("leaving cleanup");
   }
 
   private DispatcherConnector initDispatcherConnector(boolean publishing) {
@@ -233,7 +222,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   }
 
   private void sendExecMessage(boolean publishing) throws Exception {
-    logger.debug("test sendExecMessage");
+    logger.trace("entering sendExecMessage");
     this.dispatcherConnector = initDispatcherConnector(publishing);
     // sends msg and get reply
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
@@ -263,7 +252,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
       assertThat(messagePublisherStub.messagesReceived.size(), is(0));
     }
 
-    logger.debug("test sendExecMessage done");
+    logger.trace("leaving sendExecMessage");
   }
 
   @Test
@@ -277,7 +266,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   }
 
   private void sendExecMessageMany(boolean publishing) throws Exception {
-    logger.debug("test sendExecMessageMany");
+    logger.trace("entering sendExecMessageMany");
     this.dispatcherConnector = initDispatcherConnector(publishing);
     int msgsToSend = 10;
     List<ExecMessage> sentMessages = new ArrayList<>();
@@ -314,7 +303,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     } else {
       assertThat(messagePublisherStub.messagesReceived.size(), is(0));
     }
-    logger.debug("test sendExecMessageMany done");
+    logger.trace("leaving sendExecMessageMany");
   }
 
   @Test

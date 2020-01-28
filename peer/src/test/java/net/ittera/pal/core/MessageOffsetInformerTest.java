@@ -87,13 +87,18 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
       palDirectory.unregisterLog(log);
       logger.debug("Cleaned up created log: {}", log);
     }
+    logger.trace("logs deleted");
     if (offsetPublisher != null) {
       offsetPublisher.close();
     }
+    logger.trace("publisher closed");
     producer.close();
+    logger.trace("producer closed");
     palDirectory.close();
+    logger.trace("PAL dir closed");
     testingServer.close();
-    zmqContext.close();
+    logger.trace("testing zk server closed");
+    closeContext(zmqContext);
   }
 
   /**
@@ -127,7 +132,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
     palDirectory.addLogRequestAsync(
         log.getName(), logRequest, (curatorFramework, curatorEvent) -> latch.countDown());
     // wait to make sure request node exists
-    if (!latch.await(2, TimeUnit.SECONDS)) {
+    if (!latch.await(5, TimeUnit.SECONDS)) {
       fail("Timeout awaiting latch downcount - node not created?");
     }
 
@@ -199,7 +204,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
     CountDownLatch latch = new CountDownLatch(1);
     palDirectory.addLogRequestAsync(
         log.getName(), logRequest, (curatorFramework, curatorEvent) -> latch.countDown());
-    if (!latch.await(2, TimeUnit.SECONDS)) {
+    if (!latch.await(5, TimeUnit.SECONDS)) {
       fail("Timeout awaiting latch downcount - node not created?");
     }
 
@@ -243,7 +248,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
     palDirectory.addLogRequestAsync(
         log.getName(), logRequest, (curatorFramework, curatorEvent) -> latch.countDown());
     // wait to make sure request node exists
-    if (!latch.await(2, TimeUnit.SECONDS)) {
+    if (!latch.await(5, TimeUnit.SECONDS)) {
       fail("Timeout awaiting latch downcount - node not created?");
     }
 
