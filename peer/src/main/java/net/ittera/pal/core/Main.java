@@ -685,9 +685,6 @@ public class Main implements Callable<Integer> {
     // start services
     manager.startAsync();
 
-    // wait for all services up
-    manager.awaitHealthy();
-
     // block until we're registered in Directory
     try {
       selfRegistrationLatch.await();
@@ -697,6 +694,9 @@ public class Main implements Callable<Integer> {
 
     // double-check by collecting all READY signals from services before proceeding
     collectGoSignals(services.size());
+
+    // wait for all services up
+    manager.awaitHealthy();
 
     // start listening to intercept reqs
     if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {

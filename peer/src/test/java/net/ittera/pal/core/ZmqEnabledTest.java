@@ -49,10 +49,13 @@ public abstract class ZmqEnabledTest {
     while (latch.getCount() > 0) {
       String rcvd = syncSocket.recvStr();
       if (rcvd.equalsIgnoreCase("go!")) {
+        logger.debug("go received");
         latch.countDown();
       }
     }
+    logger.debug("all go signals received");
     syncSocket.close();
+    logger.debug("syncSocket closed");
   }
 
   protected void closeContext(ZContext context) throws InterruptedException {

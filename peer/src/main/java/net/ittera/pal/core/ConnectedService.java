@@ -68,8 +68,8 @@ public abstract class ConnectedService extends AbstractService {
   private void startAndRun() {
     openConnections();
     logger.info("{} {}: connections open", INFO_PREFIX, serviceName);
-    notifyStarted();
     signalReady();
+    notifyStarted();
     logger.info("{} {}: started, now running", INFO_PREFIX, serviceName);
     run();
     logger.info("{} {}: finished running", INFO_PREFIX, serviceName);
@@ -83,8 +83,15 @@ public abstract class ConnectedService extends AbstractService {
     // signal Main that we're ready
     ZMQ.Socket sender = zmqContext.createSocket(SocketType.PUSH);
     sender.connect(syncSocketAddress);
-    sender.send("go!");
-    sender.close();
+    try {
+      sender.send("go!");
+    } finally {
+      try {
+        sender.close();
+      } catch (Exception exception) {
+        // ignore; probably closed by receiver
+      }
+    }
   }
 
   @Override
