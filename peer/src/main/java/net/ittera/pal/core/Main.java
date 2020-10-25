@@ -78,14 +78,13 @@ import picocli.CommandLine.Parameters;
 public class Main implements Callable<Integer> {
   @Option(
       names = {"-c", "-cp", "--classpath"},
-      paramLabel = "CLASSPATH",
+      paramLabel = "CLASSPATH", // corresponding ENV var: CLASSPATH
       description = "load classes from given folders/jars")
   private String classpath;
 
   @Option(
       names = {"-d", "--dir"},
-      defaultValue = "localhost:2181",
-      description = "PAL directory URL (default: ${DEFAULT-VALUE})")
+      description = "PAL directory URL")
   private String palDirectoryURL; // corresponding ENV var: PAL_DIRECTORY
 
   @Option(
@@ -291,6 +290,7 @@ public class Main implements Callable<Integer> {
   }
 
   private void setEmptyParamsFromEnv() {
+    classpath = getParameter("CLASSPATH", classpath);
     palDirectoryURL = getParameter("PAL_DIRECTORY", palDirectoryURL);
     name = getParameter("PEER_NAME", name);
     uuid = getParameter("PEER_UUID", uuid);

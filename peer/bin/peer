@@ -11,4 +11,10 @@ JVM_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts
 
 MAIN_ARGS="$@"
 
-java $JVM_OPTS $JMX_PROPS -jar $PEER_CORE_HOME/target/peer-*.jar $MAIN_ARGS
+if [ "$PEER_CORE_HOME" != "" ]; then
+  PEER_JAR=$PEER_CORE_HOME/target/peer-*.jar
+else
+  PEER_JAR=peer-*.jar
+fi
+
+java $JVM_OPTS $JMX_PROPS -jar $PEER_JAR $MAIN_ARGS
