@@ -20,9 +20,9 @@
 package net.ittera.pal.core;
 
 import java.util.UUID;
+import net.ittera.pal.common.directory.nodes.LogInfo;
+import net.ittera.pal.common.directory.nodes.LogReply;
 import net.ittera.pal.common.util.Strings;
-import net.ittera.pal.common.znodes.LogInfo;
-import net.ittera.pal.common.znodes.LogReply;
 import net.ittera.pal.core.messages.PublishedOffsetMsg;
 import net.ittera.pal.cxn.NoLogRequestNodeException;
 import net.ittera.pal.cxn.PALDirectory;

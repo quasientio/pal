@@ -19,7 +19,7 @@
 
 package net.ittera.pal.core.swing;
 
-import net.ittera.pal.common.lang.ObjectRef;
+import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.ProtobufMessageBuilder;

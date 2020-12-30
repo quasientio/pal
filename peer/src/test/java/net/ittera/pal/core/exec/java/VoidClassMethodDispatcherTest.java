@@ -34,11 +34,11 @@ import static org.junit.Assert.fail;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.LongStream;
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.Dispatcher;
-import net.ittera.pal.common.lang.ObjectRef;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
 import org.junit.After;
 import org.junit.Test;
@@ -107,6 +107,8 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     ClassForVoidClassMethodTest.__resetStaticVars();
   }
 
+  private final String sourceFilename = "NotARealClass.java";
+
   @Test
   @Override
   public void dispatch_noArgs_ok() throws Throwable {
@@ -118,7 +120,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Object[] args = {};
@@ -179,7 +181,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Long millisToSleep = 5L;
@@ -244,7 +246,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     long millisToSleep = 5;
@@ -381,7 +383,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     long[] someNumbers = {10L, 20L, 30L};
@@ -445,7 +447,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     long aNumber = 2;

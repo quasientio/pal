@@ -13,8 +13,8 @@
     </parent>
 
     <properties>
-        <file.appender.class>net.ittera.pal.common.util.PeerFileAppender</file.appender.class>
-        <console.appender.class>net.ittera.pal.common.util.PeerConsoleAppender</console.appender.class>
+        <file.appender.class>net.ittera.pal.common.logging.PeerFileAppender</file.appender.class>
+        <console.appender.class>net.ittera.pal.common.logging.PeerConsoleAppender</console.appender.class>
 
         <!-- shading related -->
         <shading.prefix>net.ittera.pal.shd</shading.prefix>
@@ -256,7 +256,7 @@
         </dependency>
         <dependency>
             <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-all</artifactId>
+            <artifactId>hamcrest-core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>

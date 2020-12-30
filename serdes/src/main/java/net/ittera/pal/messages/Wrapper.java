@@ -23,8 +23,8 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.ObjectRef;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.util.Classes;
 import net.ittera.pal.messages.protobuf.Ctxt;
 import net.ittera.pal.messages.protobuf.Primitives;
@@ -235,8 +235,8 @@ public final class Wrapper {
       ctxtBuilder.setSender(getWrappedObject(sender, context.getWithinType(), senderObjRef));
     }
 
-    if (context.getFileName() != null) {
-      ctxtBuilder.setSourceLocationFile(context.getFileName());
+    if (context.getSourceFilename() != null) {
+      ctxtBuilder.setSourceLocationFile(context.getSourceFilename());
     }
 
     ctxtBuilder.setSourceLocationLine(context.getSourceLine());

@@ -20,10 +20,14 @@
 package net.ittera.pal.common.lang.reflect;
 
 import java.lang.reflect.Constructor;
+import java.util.Arrays;
+import java.util.Objects;
+import javax.annotation.Nonnull;
 
-public class ConstructorSignature extends CodeSignature {
+@SuppressWarnings("rawtypes")
+public final class ConstructorSignature extends CodeSignature {
 
-  private final Constructor constructor;
+  @Nonnull private final Constructor constructor;
 
   public ConstructorSignature(
       Class declaringType,
@@ -31,19 +35,10 @@ public class ConstructorSignature extends CodeSignature {
       int modifiers,
       String name,
       Class[] exceptionTypes,
-      String[] parameterNames,
-      Class[] parameterTypes,
-      Constructor constructor) {
-    super(
-        declaringType,
-        declaringTypeName,
-        modifiers,
-        name,
-        exceptionTypes,
-        parameterNames,
-        parameterTypes,
-        constructor.getParameters());
-    this.constructor = constructor;
+      Params params,
+      @Nonnull Constructor constructor) {
+    super(declaringType, declaringTypeName, modifiers, name, exceptionTypes, params);
+    this.constructor = Objects.requireNonNull(constructor);
   }
 
   public ConstructorSignature(Constructor constructor) {
@@ -53,12 +48,56 @@ public class ConstructorSignature extends CodeSignature {
         constructor.getModifiers(),
         constructor.getName(),
         constructor.getExceptionTypes(),
-        null,
-        constructor.getParameterTypes(),
+        new Params(null, constructor.getParameterTypes(), constructor.getParameters()),
         constructor);
   }
 
+  @Nonnull
   public Constructor getConstructor() {
     return constructor;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    ConstructorSignature that = (ConstructorSignature) o;
+    return constructor.equals(that.constructor);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), constructor);
+  }
+
+  @Override
+  public String toString() {
+    return "ConstructorSignature{"
+        + "declaringType="
+        + this.getDeclaringType()
+        + ", declaringTypeName="
+        + this.getDeclaringTypeName()
+        + ", name="
+        + this.getName()
+        + ", modifiers="
+        + this.getModifiers()
+        + ", exceptionTypes="
+        + Arrays.toString(getExceptionTypes())
+        + ", parameterNames="
+        + Arrays.toString(getParameterNames())
+        + ", parameterTypes="
+        + Arrays.toString(getParameterTypes())
+        + ", parameters="
+        + Arrays.toString(getParameters())
+        + ", constructor="
+        + constructor
+        + '}';
   }
 }

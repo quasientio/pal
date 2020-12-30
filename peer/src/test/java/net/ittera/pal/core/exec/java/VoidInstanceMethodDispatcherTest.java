@@ -32,11 +32,11 @@ import static org.junit.Assert.fail;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.Dispatcher;
-import net.ittera.pal.common.lang.ObjectRef;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -89,6 +89,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
   private Class targetClass = ClassForVoidInstanceMethodTest.class;
 
+  private final String sourceFilename = "NotARealClass.java";
+
   @Test
   @Override
   public void dispatch_noArgs_ok() throws Throwable {
@@ -100,7 +102,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Object[] args = {};
@@ -164,7 +166,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Object[] args = {"hello"};
@@ -228,7 +230,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     int numberOfWordsToAdd = 5;
@@ -370,7 +372,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     String[] words = {"hey", "there", "!", "whats", "up", "?"};
@@ -436,7 +438,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Object[] args = {","};

@@ -20,9 +20,10 @@
 package net.ittera.pal.common.util;
 
 import com.google.common.primitives.Longs;
+import java.util.Objects;
 import java.util.UUID;
 
-public class UUIDUtils {
+public final class UUIDUtils {
 
   private UUIDUtils() {}
 
@@ -31,7 +32,7 @@ public class UUIDUtils {
   }
 
   public static byte[] toBytes(UUID uuid) {
-
+    Objects.requireNonNull(uuid);
     byte[] lsbB = Longs.toByteArray(uuid.getLeastSignificantBits());
     byte[] msbB = Longs.toByteArray(uuid.getMostSignificantBits());
     byte[] uuidBytes = new byte[16];

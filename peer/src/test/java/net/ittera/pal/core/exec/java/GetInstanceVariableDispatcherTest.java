@@ -25,11 +25,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.Dispatcher;
-import net.ittera.pal.common.lang.ObjectRef;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromClass;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
@@ -60,6 +60,8 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
   private Class targetClass = ClassForGetFieldTest.class;
 
+  private final String sourceFilename = "NotARealClass.java";
+
   @Override
   @Test
   public void dispatch_primitive_ok() throws Throwable {
@@ -69,7 +71,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     ClassForGetFieldTest target = new ClassForGetFieldTest();
@@ -119,7 +121,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     ClassForGetFieldTest target = new ClassForGetFieldTest();
@@ -169,7 +171,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     ClassForGetFieldTest target = new ClassForGetFieldTest();
@@ -219,7 +221,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     ClassForGetFieldTest target = new ClassForGetFieldTest();
@@ -269,7 +271,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     ClassForGetFieldTest target = new ClassForGetFieldTest();
@@ -320,7 +322,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     ClassForGetFieldTest target = new ClassForGetFieldTest();
@@ -369,7 +371,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     ClassForGetFieldTest target = new ClassForGetFieldTest();
@@ -420,7 +422,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     ClassForGetFieldTest target = new ClassForGetFieldTest();

@@ -27,7 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public class InterceptableMethodCall extends Interceptable {
+public final class InterceptableMethodCall extends Interceptable {
 
   private final List<String> parameterTypes;
   private static final String FIELD_SEP = "&&";
@@ -53,13 +53,16 @@ public class InterceptableMethodCall extends Interceptable {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+    if (!super.equals(o)) {
+      return false;
+    }
     InterceptableMethodCall that = (InterceptableMethodCall) o;
-    return name.equalsIgnoreCase(that.name) && Objects.equals(parameterTypes, that.parameterTypes);
+    return Objects.equals(parameterTypes, that.parameterTypes);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, parameterTypes);
+    return Objects.hash(getName(), getType(), parameterTypes);
   }
 
   @Override
@@ -68,14 +71,14 @@ public class InterceptableMethodCall extends Interceptable {
         + "parameterTypes="
         + parameterTypes
         + ", name='"
-        + name
+        + getName()
         + '\''
         + '}';
   }
 
   @Override
   public String toSerializedString() {
-    return format("%s" + FIELD_SEP + "%s", name, String.join(FIELD_SEP, parameterTypes));
+    return format("%s" + FIELD_SEP + "%s", getName(), String.join(FIELD_SEP, parameterTypes));
   }
 
   public static InterceptableMethodCall fromSerializedString(String serialized) {

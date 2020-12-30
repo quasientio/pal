@@ -30,8 +30,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.UUID;
-import net.ittera.pal.common.ConcurrentHashMapObjectStore;
-import net.ittera.pal.common.ObjectStore;
+import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
+import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.ProtobufMessageBuilder;

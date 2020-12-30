@@ -27,7 +27,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
-import net.ittera.pal.common.ExecPhase;
+import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.messages.protobuf.Headers;
 import org.slf4j.Logger;
@@ -180,7 +180,7 @@ public class OutboundMsg extends BaseMsg {
     final ExecPhase execPhase;
     buff = socket.recv();
     msgSize += buff.length;
-    execPhase = ExecPhase.values[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
+    execPhase = ExecPhase.values()[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
 
     // # of headers to follow
     buff = socket.recv();

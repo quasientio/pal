@@ -32,7 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import net.ittera.pal.common.ExecPhase;
+import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.messages.InterceptsMsg;

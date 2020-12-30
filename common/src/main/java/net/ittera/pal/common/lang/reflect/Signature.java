@@ -19,33 +19,64 @@
 
 package net.ittera.pal.common.lang.reflect;
 
+import java.util.Objects;
+import javax.annotation.Nonnull;
+
+@SuppressWarnings("rawtypes")
 public abstract class Signature {
 
-  private final Class declaringType;
-  private final String declaringTypeName;
+  @Nonnull private final Class declaringType;
+  @Nonnull private final String declaringTypeName;
   private final int modifiers;
-  private final String name;
+  @Nonnull private final String name;
 
-  Signature(Class declaringType, String declaringTypeName, int modifiers, String name) {
-    this.declaringType = declaringType;
-    this.declaringTypeName = declaringTypeName;
+  Signature(
+      @Nonnull Class declaringType,
+      @Nonnull String declaringTypeName,
+      int modifiers,
+      @Nonnull String name) {
+    this.declaringType = Objects.requireNonNull(declaringType);
+    this.declaringTypeName = Objects.requireNonNull(declaringTypeName);
     this.modifiers = modifiers;
-    this.name = name;
+    this.name = Objects.requireNonNull(name);
   }
 
-  public Class getDeclaringType() {
+  @Nonnull
+  public final Class getDeclaringType() {
     return declaringType;
   }
 
-  public String getDeclaringTypeName() {
+  @Nonnull
+  public final String getDeclaringTypeName() {
     return declaringTypeName;
   }
 
-  public int getModifiers() {
+  public final int getModifiers() {
     return modifiers;
   }
 
-  public String getName() {
+  @Nonnull
+  public final String getName() {
     return name;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Signature signature = (Signature) o;
+    return modifiers == signature.modifiers
+        && declaringType.equals(signature.declaringType)
+        && declaringTypeName.equals(signature.declaringTypeName)
+        && name.equals(signature.name);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(declaringType, declaringTypeName, modifiers, name);
   }
 }

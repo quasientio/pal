@@ -31,7 +31,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import net.ittera.pal.common.ExecPhase;
+import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.messages.InterceptEvtMsg;
 import net.ittera.pal.core.messages.InterceptsMsg;
 import net.ittera.pal.messages.MessageBuilder;

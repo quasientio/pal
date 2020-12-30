@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
-import net.ittera.pal.common.ExecPhase;
+import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.messages.InterceptsMsg;
 import net.ittera.pal.cxn.PALDirectory;

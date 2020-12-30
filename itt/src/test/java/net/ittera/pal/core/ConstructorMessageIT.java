@@ -20,7 +20,7 @@
 package net.ittera.pal.core;
 
 import net.ittera.pal.apps.Constructors;
-import net.ittera.pal.common.lang.ObjectRef;
+import net.ittera.pal.common.objects.ObjectRef;
 import org.junit.Test;
 
 /**

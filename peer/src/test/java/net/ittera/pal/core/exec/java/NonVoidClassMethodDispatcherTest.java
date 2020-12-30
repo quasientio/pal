@@ -29,11 +29,11 @@ import static org.junit.Assert.fail;
 
 import java.util.Random;
 import java.util.stream.DoubleStream;
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.Dispatcher;
-import net.ittera.pal.common.lang.ObjectRef;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromClass;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
@@ -87,6 +87,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
   private Class targetClass = ClassForNonVoidClassMethodTest.class;
 
+  private final String sourceFilename = "NotARealClass.java";
+
   @Test
   @Override
   public void dispatch_noArgs_ok() throws Throwable {
@@ -98,7 +100,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Object[] args = {};
@@ -161,7 +163,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Double smallDouble = 8378d;
@@ -226,7 +228,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     double smallDouble = 8378;
@@ -371,7 +373,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     double d1 = 837;
@@ -443,7 +445,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     int number = 8378;

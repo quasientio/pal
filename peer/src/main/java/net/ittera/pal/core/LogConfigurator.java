@@ -22,7 +22,7 @@ package net.ittera.pal.core;
 import com.google.inject.Injector;
 import java.util.Properties;
 import java.util.Set;
-import net.ittera.pal.common.znodes.LogInfo;
+import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.PALDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

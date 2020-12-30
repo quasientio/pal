@@ -20,29 +20,38 @@
 package net.ittera.pal.common.lang.intercept;
 
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertThat;
 
-import net.ittera.pal.common.lang.FieldOpType;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Before;
 import org.junit.Test;
 
 public class InterceptableFieldOpTest {
 
+  private FieldOpType fieldOpType;
+  private String name;
+  private InterceptableFieldOp interceptableFieldOp;
+
+  @Before
+  public void setUp() {
+    fieldOpType = FieldOpType.GET;
+    name = "myField";
+    interceptableFieldOp = new InterceptableFieldOp(name, fieldOpType);
+  }
+
   @Test
-  public void equals() {
-    InterceptableFieldOp interceptable = new InterceptableFieldOp("out", FieldOpType.GET);
-    InterceptableFieldOp interceptable2 = new InterceptableFieldOp("out", FieldOpType.GET);
+  public void getFieldOpType() {
+    assertThat(interceptableFieldOp.getFieldOpType(), is(fieldOpType));
+  }
 
-    // equals
-    assertThat(interceptable, is(not(sameInstance(interceptable2))));
-    assertThat(interceptable, is(interceptable2));
+  @Test
+  public void getName() {
+    assertThat(interceptableFieldOp.getName(), is(name));
+  }
 
-    // different field name
-    assertThat(interceptable, is(not(new InterceptableFieldOp("in", FieldOpType.GET))));
-
-    // different fieldop type
-    assertThat(interceptable, is(not(new InterceptableFieldOp("out", FieldOpType.PUT))));
+  @Test
+  public void equalsContract() {
+    EqualsVerifier.forClass(InterceptableFieldOp.class).usingGetClass().verify();
   }
 
   @Test

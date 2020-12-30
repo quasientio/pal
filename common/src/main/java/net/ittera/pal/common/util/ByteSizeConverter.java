@@ -19,18 +19,44 @@
 
 package net.ittera.pal.common.util;
 
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
+
 /**
- * credits:
+ * Credits:
  * https://stackoverflow.com/questions/3758606/how-to-convert-byte-size-into-human-readable-format-in-java
  */
-public class ByteSizeConverter {
+public final class ByteSizeConverter {
   private ByteSizeConverter() {}
 
+  private static String humanReadableByteCountSi(long bytes) {
+    if (-1000 < bytes && bytes < 1000) {
+      return bytes + " B";
+    }
+    CharacterIterator ci = new StringCharacterIterator("kMGTPE");
+    while (bytes <= -999_950 || bytes >= 999_950) {
+      bytes /= 1000;
+      ci.next();
+    }
+    return String.format("%.1f %cB", bytes / 1000.0, ci.current());
+  }
+
+  private static String humanReadableByteCountBin(long bytes) {
+    long absB = bytes == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(bytes);
+    if (absB < 1024) {
+      return bytes + " B";
+    }
+    long value = absB;
+    CharacterIterator ci = new StringCharacterIterator("KMGTPE");
+    for (int i = 40; i >= 0 && absB > 0xfffccccccccccccL >> i; i -= 10) {
+      value >>= 10;
+      ci.next();
+    }
+    value *= Long.signum(bytes);
+    return String.format("%.1f %ciB", value / 1024.0, ci.current());
+  }
+
   public static String humanReadableByteCount(long bytes, boolean si) {
-    int unit = si ? 1000 : 1024;
-    if (bytes < unit) return bytes + " B";
-    int exp = (int) (Math.log(bytes) / Math.log(unit));
-    String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp - 1) + (si ? "" : "i");
-    return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
+    return si ? humanReadableByteCountSi(bytes) : humanReadableByteCountBin(bytes);
   }
 }

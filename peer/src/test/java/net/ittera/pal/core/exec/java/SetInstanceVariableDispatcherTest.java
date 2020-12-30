@@ -33,11 +33,11 @@ import static org.junit.Assert.assertThat;
 
 import java.util.Arrays;
 import java.util.List;
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.Dispatcher;
-import net.ittera.pal.common.lang.ObjectRef;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,6 +62,8 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
   private Class targetClass = ClassForPutFieldTest.class;
 
+  private final String sourceFilename = "NotARealClass.java";
+
   @Override
   @Test
   public void dispatch_primitive_ok() throws Throwable {
@@ -71,7 +73,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     short newFieldValue = 987;
@@ -132,7 +134,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     byte[] newFieldValue = "bytes".getBytes();
@@ -193,7 +195,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     Long newFieldValue = 100000L;
@@ -254,7 +256,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     String newFieldValue = "to string or not to";
@@ -315,7 +317,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     List newFieldValue = Arrays.asList(938, 3038, 948, 394);
@@ -372,7 +374,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     List newFieldValue = null;
@@ -429,7 +431,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     Object[] newFieldValue = {1, "a", false};
@@ -485,7 +487,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     Error newFieldValue = new Error("uuh ooooh");

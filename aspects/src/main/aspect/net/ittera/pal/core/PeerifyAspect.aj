@@ -19,8 +19,8 @@
 
 package net.ittera.pal.core;
 
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.DispatchForwarder;
+import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.runtime.DispatchForwarder;
 
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.reflect.CodeSignature;

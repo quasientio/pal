@@ -24,7 +24,5 @@ public enum InterceptType {
   AFTER,
   AROUND,
   BEFORE_ASYNC,
-  AFTER_ASYNC;
-
-  public static final InterceptType[] values = values();
+  AFTER_ASYNC,
 }

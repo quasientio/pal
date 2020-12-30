@@ -31,7 +31,7 @@ import java.util.jar.JarFile;
 import java.util.stream.IntStream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import net.ittera.pal.common.lang.ObjectRef;
+import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.core.PeerException;
 import net.ittera.pal.core.RunOptions;

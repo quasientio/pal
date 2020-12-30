@@ -66,7 +66,7 @@ public final class ReflectionHelper {
     if (parameters.length != parameterTypeNames.size()) {
       throw new IllegalArgumentException(
           String.format(
-              "Parameters length=%s, different from parameter types length=%s",
+              "Params length=%s, different from parameter types length=%s",
               parameters.length, parameterTypeNames.size()));
     }
 

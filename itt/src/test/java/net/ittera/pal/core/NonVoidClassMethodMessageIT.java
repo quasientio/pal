@@ -23,7 +23,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
-import net.ittera.pal.common.lang.ObjectRef;
+import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.Unwrapper;
 import net.ittera.pal.messages.protobuf.Values.ReturnValue;
 import org.junit.Test;

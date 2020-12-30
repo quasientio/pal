@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import net.ittera.pal.common.ObjectStore;
+import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.protobuf.Exec.ExecMessage;

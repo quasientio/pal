@@ -19,7 +19,7 @@
 
 package net.ittera.pal.core;
 
-import net.ittera.pal.common.lang.ObjectRef;
+import net.ittera.pal.common.objects.ObjectRef;
 import org.junit.Test;
 
 /**
@@ -174,6 +174,6 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
         parameterTypes,
         parameters,
         new ObjectRef[parameterTypes.length],
-        "net.ittera.pal.common.lang.ObjectNotFoundException");
+        "net.ittera.pal.common.objects.ObjectNotFoundException");
   }
 }

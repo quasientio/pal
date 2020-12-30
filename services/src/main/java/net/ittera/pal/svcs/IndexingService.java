@@ -34,7 +34,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import kong.unirest.Unirest;
-import net.ittera.pal.common.znodes.LogInfo;
+import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.ContextFillingTransformSupplier;
 import net.ittera.pal.messages.protobuf.KafkaExecMessageSerde;

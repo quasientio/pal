@@ -24,9 +24,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class Classes {
+public final class Classes {
 
-  private static final Map<Class<?>, Class<?>> primitiveToWrapper;
+  private static final Map<Class<?>, Class<?>> PRIMITIVE_TO_WRAPPER;
 
   static {
     Map<Class<?>, Class<?>> map = new HashMap<>();
@@ -39,10 +39,10 @@ public class Classes {
     map.put(Double.TYPE, Double.class);
     map.put(Float.TYPE, Float.class);
     map.put(Void.TYPE, Void.TYPE);
-    primitiveToWrapper = Collections.unmodifiableMap(map);
+    PRIMITIVE_TO_WRAPPER = Collections.unmodifiableMap(map);
   }
 
-  private static final Map<String, Class<?>> primitiveNameToClass;
+  private static final Map<String, Class<?>> PRIMITIVE_NAME_TO_CLASS;
 
   static {
     Map<String, Class<?>> map = new HashMap<>();
@@ -55,28 +55,35 @@ public class Classes {
     map.put("double", Double.TYPE);
     map.put("float", Float.TYPE);
     map.put("void", Void.TYPE);
-    primitiveNameToClass = Collections.unmodifiableMap(map);
+    PRIMITIVE_NAME_TO_CLASS = Collections.unmodifiableMap(map);
   }
 
   // reverse map of primitiveWrapper
-  private static final Map<Class<?>, Class<?>> wrapperToPrimitive;
+  private static final Map<Class<?>, Class<?>> WRAPPER_TO_PRIMITIVE;
 
   static {
     Map<Class<?>, Class<?>> map =
-        primitiveToWrapper.entrySet().stream()
+        PRIMITIVE_TO_WRAPPER.entrySet().stream()
             .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
-    wrapperToPrimitive = Collections.unmodifiableMap(map);
+    WRAPPER_TO_PRIMITIVE = Collections.unmodifiableMap(map);
   }
+
+  private Classes() {}
 
   public static boolean isPrimitiveWrapper(Class<?> type) {
-    return type != void.class && wrapperToPrimitive.containsKey(type);
+    return type != void.class && WRAPPER_TO_PRIMITIVE.containsKey(type);
   }
 
+  @SuppressWarnings("rawtypes")
   public static Class getClassForPrimitive(String primitiveName) {
-    return primitiveNameToClass.get(primitiveName);
+    return PRIMITIVE_NAME_TO_CLASS.get(primitiveName);
   }
 
   public static boolean isPrimitiveOrWrapper(Class<?> type) {
-    return type != null && (type.isPrimitive() || isPrimitiveWrapper(type));
+    if (type == null) {
+      return false;
+    }
+
+    return type.isPrimitive() || isPrimitiveWrapper(type);
   }
 }

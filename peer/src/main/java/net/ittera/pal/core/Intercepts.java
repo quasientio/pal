@@ -29,7 +29,7 @@ import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
-import net.ittera.pal.common.ExecPhase;
+import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.exec.DuplicateInterceptException;
 import net.ittera.pal.core.messages.InterceptEvtMsg;
 import net.ittera.pal.core.messages.InterceptEvtMsg.Type;

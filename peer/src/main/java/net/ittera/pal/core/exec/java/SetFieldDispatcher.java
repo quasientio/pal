@@ -23,8 +23,8 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
-import net.ittera.pal.common.lang.Context;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
+import net.ittera.pal.common.runtime.Context;
 
 public abstract class SetFieldDispatcher extends FieldOpDispatcher {
 

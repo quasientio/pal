@@ -19,30 +19,51 @@
 
 package net.ittera.pal.common.lang.intercept;
 
+import java.util.Objects;
+import javax.annotation.Nonnull;
+
+/** Base abstract class for interceptable invokable types: method and field ops. */
 public abstract class Interceptable {
 
   public enum InterceptableType {
     METHOD_CALL,
-    FIELD_OP;
-
-    public static final InterceptableType[] values = InterceptableType.values();
+    FIELD_OP,
   }
 
-  protected final String name;
-  protected final InterceptableType type;
+  @Nonnull private final String name;
+  @Nonnull private final InterceptableType type;
 
-  protected Interceptable(String name, InterceptableType type) {
-    this.name = name;
-    this.type = type;
+  protected Interceptable(@Nonnull String name, @Nonnull InterceptableType type) {
+    this.name = Objects.requireNonNull(name);
+    this.type = Objects.requireNonNull(type);
   }
 
   public abstract String toSerializedString();
 
-  public String getName() {
+  @Nonnull
+  public final String getName() {
     return name;
   }
 
-  public InterceptableType getType() {
+  @Nonnull
+  public final InterceptableType getType() {
     return type;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Interceptable that = (Interceptable) o;
+    return name.equals(that.name) && type == that.type;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(name, type);
   }
 }

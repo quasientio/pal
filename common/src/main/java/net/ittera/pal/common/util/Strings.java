@@ -19,8 +19,10 @@
 
 package net.ittera.pal.common.util;
 
-/** Some of these methods are inspired in commons-lang3 StringUtils class */
-public class Strings {
+/** Some of these methods are inspired in commons-lang3 StringUtils class. */
+public final class Strings {
+
+  private Strings() {}
 
   private static boolean isEmpty(String str) {
     return (str == null || str.length() == 0);
@@ -45,7 +47,7 @@ public class Strings {
   }
 
   public static String stringAfter(String string, String sep) {
-    if (isEmpty(string)) {
+    if (isEmpty(string) || sep == null) {
       return string;
     }
     if (sep.isEmpty()) {
@@ -55,7 +57,7 @@ public class Strings {
   }
 
   public static String stringAfterLast(String string, String sep) {
-    if (isEmpty(string)) {
+    if (isEmpty(string) || sep == null) {
       return string;
     }
     if (isEmpty(sep)) {

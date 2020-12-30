@@ -33,6 +33,7 @@ public class StringsTest {
     assertEquals("Capitalized", Strings.capitalize("CAPITALIZED"));
     assertEquals("Capitalized", Strings.capitalize("cApItAlIzEd"));
 
+    assertEquals("A", Strings.capitalize("a"));
     assertEquals("", Strings.capitalize(""));
     assertNull(Strings.capitalize(null));
   }
@@ -46,6 +47,8 @@ public class StringsTest {
     assertEquals(str, Strings.stringBefore(str, "notfound"));
     assertEquals(null, Strings.stringBefore(null, sep));
     assertEquals("", Strings.stringBefore("", sep));
+    assertEquals("", Strings.stringBefore("blah", ""));
+    assertEquals("blah", Strings.stringBefore("blah", null));
   }
 
   @Test
@@ -57,6 +60,8 @@ public class StringsTest {
     assertEquals("", Strings.stringAfter(str, "notfound"));
     assertEquals(null, Strings.stringAfter(null, sep));
     assertEquals("", Strings.stringAfter("", sep));
+    assertEquals(str, Strings.stringAfter(str, null));
+    assertEquals("", Strings.stringAfter(str, ""));
   }
 
   @Test
@@ -71,5 +76,7 @@ public class StringsTest {
     assertEquals(" really", Strings.stringAfterLast(str, sep));
     assertEquals("", Strings.stringAfterLast("", sep));
     assertEquals(null, Strings.stringAfterLast(null, sep));
+    assertEquals(str, Strings.stringAfterLast(str, null));
+    assertEquals("", Strings.stringAfterLast(str, ""));
   }
 }

@@ -31,11 +31,11 @@ import static org.junit.Assert.fail;
 
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.Dispatcher;
-import net.ittera.pal.common.lang.ObjectRef;
 import net.ittera.pal.common.lang.reflect.ConstructorSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromClass;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
@@ -82,6 +82,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
   private Class targetClass = ClassForConstructorTest.class;
 
+  private final String sourceFilename = "NotARealClass.java";
+
   @Test
   @Override
   public void dispatch_noArgs_ok() throws Throwable {
@@ -92,7 +94,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     Signature signature = new ConstructorSignature(constructor);
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Object[] args = {};
@@ -145,7 +147,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     Signature signature = new ConstructorSignature(constructor);
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Object[] args = {459};
@@ -203,7 +205,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     Signature signature = new ConstructorSignature(constructor);
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Object[] args = {true, 983309835l};
@@ -345,7 +347,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     Signature signature = new ConstructorSignature(constructor);
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Object[] args = new Object[1];
@@ -403,7 +405,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     Signature signature = new ConstructorSignature(constructor);
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
     Object[] args = {"49385InvalidNumber1001"};

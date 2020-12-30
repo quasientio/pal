@@ -22,7 +22,7 @@ package net.ittera.pal.core;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import net.ittera.pal.common.lang.ObjectRef;
+import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.Unwrapper;
 import net.ittera.pal.messages.protobuf.Values.ReturnValue;
 import org.junit.Test;
@@ -148,7 +148,7 @@ public class GetInstanceVariableMessageIT extends AbstractPeerMessageIT {
     ObjectRef newObjRef = ObjectRef.from("38923");
 
     callGetInstanceVar(
-        className, "someShort", newObjRef, "net.ittera.pal.common.lang.ObjectNotFoundException");
+        className, "someShort", newObjRef, "net.ittera.pal.common.objects.ObjectNotFoundException");
   }
 
   @Test

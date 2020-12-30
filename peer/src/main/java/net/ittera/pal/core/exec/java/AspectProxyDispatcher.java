@@ -21,8 +21,8 @@ package net.ittera.pal.core.exec.java;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.ProxyDispatcher;
+import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.runtime.ProxyDispatcher;
 
 @Singleton
 public class AspectProxyDispatcher implements ProxyDispatcher {

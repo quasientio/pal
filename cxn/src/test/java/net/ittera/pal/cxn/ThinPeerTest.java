@@ -25,7 +25,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import net.ittera.pal.common.znodes.LogInfo;
+import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.ProtobufMessageBuilder;
 import net.ittera.pal.messages.protobuf.Exec.ExecMessage;

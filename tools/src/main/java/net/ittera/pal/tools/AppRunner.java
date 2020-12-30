@@ -36,9 +36,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import net.ittera.pal.common.lang.ObjectRef;
-import net.ittera.pal.common.znodes.LogInfo;
-import net.ittera.pal.common.znodes.PeerInfo;
+import net.ittera.pal.common.directory.nodes.LogInfo;
+import net.ittera.pal.common.directory.nodes.PeerInfo;
+import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.ProtobufMessageBuilder;
 import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
@@ -136,7 +136,7 @@ public class AppRunner implements Callable<Integer> {
   @Option(names = "-v", description = "run verbosely")
   private boolean verbose;
 
-  /** Parameters */
+  /** Params */
   @Parameters(index = "0")
   private String className;
 

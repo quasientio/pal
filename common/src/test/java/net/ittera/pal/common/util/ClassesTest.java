@@ -111,9 +111,10 @@ public class ClassesTest {
     assertFalse(Classes.isPrimitiveOrWrapper(Void.class));
 
     // misc stuff that shouldn't be
-    assertFalse(Classes.isPrimitiveWrapper(String.class));
-    assertFalse(Classes.isPrimitiveWrapper(Object.class));
-    assertFalse(Classes.isPrimitiveWrapper(Enum.class));
-    assertFalse(Classes.isPrimitiveWrapper(Throwable.class));
+    assertFalse(Classes.isPrimitiveOrWrapper(null));
+    assertFalse(Classes.isPrimitiveOrWrapper(String.class));
+    assertFalse(Classes.isPrimitiveOrWrapper(Object.class));
+    assertFalse(Classes.isPrimitiveOrWrapper(Enum.class));
+    assertFalse(Classes.isPrimitiveOrWrapper(Throwable.class));
   }
 }

@@ -31,7 +31,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import net.ittera.pal.common.ExecPhase;
+import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.MessageType;
 import net.ittera.pal.messages.OutboundMsg;

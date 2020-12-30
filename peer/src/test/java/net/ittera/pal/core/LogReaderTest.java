@@ -34,7 +34,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import net.ittera.pal.common.znodes.LogInfo;
+import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.MessageBuilder;

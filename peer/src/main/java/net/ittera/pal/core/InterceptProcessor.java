@@ -30,13 +30,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import net.ittera.pal.common.lang.FieldOpType;
-import net.ittera.pal.common.lang.annotation.After;
-import net.ittera.pal.common.lang.annotation.Before;
+import net.ittera.pal.common.directory.nodes.InterceptRequest;
+import net.ittera.pal.common.lang.intercept.After;
+import net.ittera.pal.common.lang.intercept.Before;
+import net.ittera.pal.common.lang.intercept.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.InterceptableFieldOp;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
-import net.ittera.pal.common.znodes.InterceptRequest;
 import net.ittera.pal.cxn.PALDirectory;
 import org.apache.curator.framework.api.CuratorEventType;
 import org.slf4j.Logger;
@@ -119,8 +119,7 @@ public class InterceptProcessor {
                   isMethodInterceptable
                       ? new InterceptableMethodCall(interceptableMethodName, parameterTypes)
                       : new InterceptableFieldOp(
-                          interceptableFieldName,
-                          FieldOpType.fromString(interceptableFieldOpType))));
+                          interceptableFieldName, FieldOpType.valueOf(interceptableFieldOpType))));
         }
       }
     }

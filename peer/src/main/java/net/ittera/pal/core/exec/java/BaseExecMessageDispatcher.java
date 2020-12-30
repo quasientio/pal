@@ -24,12 +24,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import net.ittera.pal.common.ExecPhase;
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.Dispatcher;
-import net.ittera.pal.common.lang.ObjectNotFoundException;
-import net.ittera.pal.common.lang.ObjectRef;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
+import net.ittera.pal.common.objects.ObjectNotFoundException;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.runtime.Dispatcher;
+import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.common.util.Classes;
 import net.ittera.pal.messages.Unwrapper;
 import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
@@ -125,7 +125,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     /**
      * TODO: Verify that message is invokable: - Class can be loaded/found - Method or field can be
-     * found in class - Parameters can be unwrapped or loaded (if refs). What if they are remote?
+     * found in class - Params can be unwrapped or loaded (if refs). What if they are remote?
      */
 
     /**

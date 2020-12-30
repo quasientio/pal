@@ -32,11 +32,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 
 import java.util.LinkedList;
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.Dispatcher;
-import net.ittera.pal.common.lang.ObjectRef;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
 import org.junit.After;
 import org.junit.Test;
@@ -77,6 +77,8 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
   private Class targetClass = ClassForPutStaticTest.class;
 
+  private final String sourceFilename = "NotARealClass.java";
+
   @After
   public void resetTestClassVariables() {
     ClassForPutStaticTest.__resetStaticVars();
@@ -91,7 +93,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     short newFieldValue = 987;
@@ -141,7 +143,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     byte[] newFieldValue = "this is just a test".getBytes();
@@ -191,7 +193,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     Boolean newFieldValue = true;
@@ -243,7 +245,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     String newFieldValue = "abnormally";
@@ -293,7 +295,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     LinkedList newFieldValue = new LinkedList();
@@ -343,7 +345,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     java.util.List newFieldValue = null;
@@ -394,7 +396,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     Object[] newFieldValue = {1, "a", false, 9283.95d};
@@ -443,7 +445,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
-    Context ctxt = new Context(null, -1, targetClass, signature);
+    Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
     Exception newFieldValue = new Exception("not working");

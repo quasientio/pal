@@ -21,34 +21,36 @@ package net.ittera.pal.common.lang.reflect;
 
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
-import java.util.stream.IntStream;
+import java.util.Objects;
+import javax.annotation.Nonnull;
 
+@SuppressWarnings("rawtypes")
 public abstract class CodeSignature extends Signature {
 
-  private final Class[] exceptionTypes;
-  private final String[] parameterNames;
-  private final Class[] parameterTypes;
-  private final Parameter[] parameters;
+  @Nonnull private final Class[] exceptionTypes;
+  @Nonnull private final String[] parameterNames;
+  @Nonnull private final Class[] parameterTypes;
+  @Nonnull private final Parameter[] parameters;
 
   CodeSignature(
       Class declaringType,
       String declaringTypeName,
       int modifiers,
       String name,
-      Class[] exceptionTypes,
-      String[] parameterNames,
-      Class[] parameterTypes,
-      Parameter[] parameters) {
+      @Nonnull Class[] exceptionTypes,
+      @Nonnull Params params) {
     super(declaringType, declaringTypeName, modifiers, name);
-    this.exceptionTypes = Arrays.copyOf(exceptionTypes, exceptionTypes.length);
-    this.parameterTypes = Arrays.copyOf(parameterTypes, parameterTypes.length);
-    if (parameterNames == null) {
-      this.parameterNames =
-          IntStream.range(0, parameterTypes.length).mapToObj(i -> "arg" + i).toArray(String[]::new);
-    } else {
-      this.parameterNames = Arrays.copyOf(parameterNames, parameterNames.length);
-    }
-    this.parameters = Arrays.copyOf(parameters, parameters.length);
+    this.exceptionTypes =
+        Arrays.copyOf(Objects.requireNonNull(exceptionTypes), exceptionTypes.length);
+    this.parameterTypes =
+        Arrays.copyOf(
+            Objects.requireNonNull(params.getParameterTypes()), params.getParameterTypes().length);
+    this.parameterNames =
+        Arrays.copyOf(
+            Objects.requireNonNull(params.getParameterNames()), params.getParameterNames().length);
+    this.parameters =
+        Arrays.copyOf(
+            Objects.requireNonNull(params.getParameters()), params.getParameters().length);
   }
 
   public Class[] getExceptionTypes() {
@@ -65,5 +67,33 @@ public abstract class CodeSignature extends Signature {
 
   public Parameter[] getParameters() {
     return Arrays.copyOf(parameters, parameters.length);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    CodeSignature that = (CodeSignature) o;
+    return Arrays.equals(exceptionTypes, that.exceptionTypes)
+        && Arrays.equals(parameterNames, that.parameterNames)
+        && Arrays.equals(parameterTypes, that.parameterTypes)
+        && Arrays.equals(parameters, that.parameters);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = super.hashCode();
+    result = 31 * result + Arrays.hashCode(exceptionTypes);
+    result = 31 * result + Arrays.hashCode(parameterNames);
+    result = 31 * result + Arrays.hashCode(parameterTypes);
+    result = 31 * result + Arrays.hashCode(parameters);
+    return result;
   }
 }

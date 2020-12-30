@@ -31,10 +31,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.Interceptable.InterceptableType;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
-import net.ittera.pal.common.znodes.InterceptRequest;
 import net.ittera.pal.cxn.PALDirectory;
 import org.junit.After;
 import org.junit.Before;
@@ -44,7 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class App {
-  @net.ittera.pal.common.lang.annotation.Before(clazz = "java.io.PrintStream", method = "println")
+  @net.ittera.pal.common.lang.intercept.Before(clazz = "java.io.PrintStream", method = "println")
   public static void printlnAndStop(String line) {}
 }
 

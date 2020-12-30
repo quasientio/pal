@@ -30,7 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import net.ittera.pal.common.ExecPhase;
+import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.MessageType;

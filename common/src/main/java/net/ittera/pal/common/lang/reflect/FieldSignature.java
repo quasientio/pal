@@ -20,22 +20,25 @@
 package net.ittera.pal.common.lang.reflect;
 
 import java.lang.reflect.Field;
+import java.util.Objects;
+import javax.annotation.Nonnull;
 
-public class FieldSignature extends Signature {
+@SuppressWarnings("rawtypes")
+public final class FieldSignature extends Signature {
 
-  private final Field field;
-  private final Class fieldType;
+  @Nonnull private final Field field;
+  @Nonnull private final Class fieldType;
 
   public FieldSignature(
       Class declaringType,
       String declaringTypeName,
       int modifiers,
       String name,
-      Field field,
-      Class fieldType) {
+      @Nonnull Field field,
+      @Nonnull Class fieldType) {
     super(declaringType, declaringTypeName, modifiers, name);
-    this.field = field;
-    this.fieldType = fieldType;
+    this.field = Objects.requireNonNull(field);
+    this.fieldType = Objects.requireNonNull(fieldType);
   }
 
   public FieldSignature(Field field) {
@@ -48,11 +51,51 @@ public class FieldSignature extends Signature {
         field.getType());
   }
 
+  @Nonnull
   public Field getField() {
     return field;
   }
 
+  @Nonnull
   public Class getFieldType() {
     return fieldType;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    FieldSignature that = (FieldSignature) o;
+    return field.equals(that.field) && fieldType.equals(that.fieldType);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), field, fieldType);
+  }
+
+  @Override
+  public String toString() {
+    return "FieldSignature{"
+        + "declaringType="
+        + this.getDeclaringType()
+        + ", declaringTypeName="
+        + this.getDeclaringTypeName()
+        + ", name="
+        + this.getName()
+        + ", modifiers="
+        + this.getModifiers()
+        + ", field="
+        + field
+        + ", fieldType="
+        + fieldType
+        + '}';
   }
 }

@@ -35,8 +35,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import net.ittera.pal.common.lang.Context;
-import net.ittera.pal.common.lang.ObjectRef;
+import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.intercept.Interceptable.InterceptableType;
 import net.ittera.pal.common.lang.intercept.InterceptableFieldOp;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
@@ -45,7 +44,8 @@ import net.ittera.pal.common.lang.reflect.ConstructorSignature;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
-import net.ittera.pal.common.znodes.InterceptRequest;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.messages.protobuf.Calls.ClassMethodCall;
 import net.ittera.pal.messages.protobuf.Calls.ConstructorCall;
 import net.ittera.pal.messages.protobuf.Calls.InstanceMethodCall;
@@ -1037,7 +1037,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
   }
 
   private static FieldOpType getMessageTypeFromRequestType(
-      net.ittera.pal.common.lang.FieldOpType fieldOpType) {
+      net.ittera.pal.common.lang.intercept.FieldOpType fieldOpType) {
     switch (fieldOpType) {
       case GET:
         return FieldOpType.GET;

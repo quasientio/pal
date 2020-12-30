@@ -21,7 +21,7 @@ package net.ittera.pal.core.exec.java;
 
 import java.util.UUID;
 import javax.inject.Inject;
-import net.ittera.pal.common.ObjectStore;
+import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.MessageBuilder;
 import org.slf4j.Logger;

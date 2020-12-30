@@ -22,15 +22,15 @@ package net.ittera.pal.common.lang.intercept;
 import static java.lang.String.format;
 
 import java.util.Objects;
-import net.ittera.pal.common.lang.FieldOpType;
+import javax.annotation.Nonnull;
 
-public class InterceptableFieldOp extends Interceptable {
+public final class InterceptableFieldOp extends Interceptable {
   private static final String FIELD_SEP = "&&";
-  private final FieldOpType fieldOpType;
+  @Nonnull private final FieldOpType fieldOpType;
 
-  public InterceptableFieldOp(String name, FieldOpType fieldOpType) {
+  public InterceptableFieldOp(String name, @Nonnull FieldOpType fieldOpType) {
     super(name, InterceptableType.FIELD_OP);
-    this.fieldOpType = fieldOpType;
+    this.fieldOpType = Objects.requireNonNull(fieldOpType);
   }
 
   @Override
@@ -41,15 +41,19 @@ public class InterceptableFieldOp extends Interceptable {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+    if (!super.equals(o)) {
+      return false;
+    }
     InterceptableFieldOp that = (InterceptableFieldOp) o;
-    return type == that.type && fieldOpType == that.fieldOpType && name.equalsIgnoreCase(that.name);
+    return fieldOpType == that.fieldOpType;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, type, fieldOpType);
+    return Objects.hash(getName(), getType(), fieldOpType);
   }
 
+  @Nonnull
   public FieldOpType getFieldOpType() {
     return fieldOpType;
   }
@@ -60,22 +64,22 @@ public class InterceptableFieldOp extends Interceptable {
         + "fieldOpType="
         + fieldOpType
         + ", name='"
-        + name
+        + getName()
         + '\''
         + ", type="
-        + type
+        + getType()
         + '}';
   }
 
   @Override
   public String toSerializedString() {
-    return format("%s" + FIELD_SEP + "%d", name, fieldOpType.ordinal());
+    return format("%s" + FIELD_SEP + "%d", getName(), fieldOpType.ordinal());
   }
 
   public static InterceptableFieldOp fromSerializedString(String serialized) {
     final String[] parts = serialized.split(FIELD_SEP);
     final String name = parts[0];
-    final FieldOpType type = FieldOpType.values[Integer.parseInt(parts[1])];
+    final FieldOpType type = FieldOpType.values()[Integer.parseInt(parts[1])];
     return new InterceptableFieldOp(name, type);
   }
 }

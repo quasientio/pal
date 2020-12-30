@@ -20,11 +20,15 @@
 package net.ittera.pal.common.lang.reflect;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Objects;
+import javax.annotation.Nonnull;
 
-public class MethodSignature extends CodeSignature {
+@SuppressWarnings("rawtypes")
+public final class MethodSignature extends CodeSignature {
 
-  private final Method method;
-  private final Class returnType;
+  @Nonnull private final Method method;
+  @Nonnull private final Class returnType;
 
   public MethodSignature(
       Class declaringType,
@@ -32,21 +36,12 @@ public class MethodSignature extends CodeSignature {
       int modifiers,
       String name,
       Class[] exceptionTypes,
-      String[] parameterNames,
-      Class[] parameterTypes,
-      Method method,
-      Class returnType) {
-    super(
-        declaringType,
-        declaringTypeName,
-        modifiers,
-        name,
-        exceptionTypes,
-        parameterNames,
-        parameterTypes,
-        method.getParameters());
-    this.method = method;
-    this.returnType = returnType;
+      Params params,
+      @Nonnull Method method,
+      @Nonnull Class returnType) {
+    super(declaringType, declaringTypeName, modifiers, name, exceptionTypes, params);
+    this.method = Objects.requireNonNull(method);
+    this.returnType = Objects.requireNonNull(returnType);
   }
 
   public MethodSignature(Method method) {
@@ -56,17 +51,64 @@ public class MethodSignature extends CodeSignature {
         method.getModifiers(),
         method.getName(),
         method.getExceptionTypes(),
-        null,
-        method.getParameterTypes(),
+        new Params(null, method.getParameterTypes(), method.getParameters()),
         method,
         method.getReturnType());
   }
 
+  @Nonnull
   public Method getMethod() {
     return method;
   }
 
+  @Nonnull
   public Class getReturnType() {
     return returnType;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    MethodSignature that = (MethodSignature) o;
+    return method.equals(that.method) && returnType.equals(that.returnType);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), method, returnType);
+  }
+
+  @Override
+  public String toString() {
+    return "MethodSignature{"
+        + "declaringType="
+        + this.getDeclaringType()
+        + ", declaringTypeName="
+        + this.getDeclaringTypeName()
+        + ", name="
+        + this.getName()
+        + ", modifiers="
+        + this.getModifiers()
+        + ", exceptionTypes="
+        + Arrays.toString(getExceptionTypes())
+        + ", parameterNames="
+        + Arrays.toString(getParameterNames())
+        + ", parameterTypes="
+        + Arrays.toString(getParameterTypes())
+        + ", parameters="
+        + Arrays.toString(getParameters())
+        + ", method="
+        + method
+        + ", returnType="
+        + returnType
+        + '}';
   }
 }
