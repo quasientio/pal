@@ -44,6 +44,7 @@ integration-tests:
     FF_NETWORK_PER_BUILD: 1
     PAL_DIRECTORY: 'zookeeper:2181'
     TCP_REQ: '5656'
+    LOG: 'auto'
     JMX_HOST: 'localhost'
     JMX_PORT: 9012
   services:
