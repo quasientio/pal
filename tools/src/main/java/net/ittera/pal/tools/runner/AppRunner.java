@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.tools;
+package net.ittera.pal.tools.runner;
 
 import static picocli.CommandLine.Option;
 import static picocli.CommandLine.Parameters;

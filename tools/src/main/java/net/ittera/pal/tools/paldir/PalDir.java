@@ -17,14 +17,12 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.tools;
+package net.ittera.pal.tools.paldir;
 
 import static picocli.CommandLine.Option;
 
 import java.util.concurrent.Callable;
 import net.ittera.pal.cxn.PALDirectory;
-import net.ittera.pal.tools.paldir.List;
-import net.ittera.pal.tools.paldir.Remove;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 

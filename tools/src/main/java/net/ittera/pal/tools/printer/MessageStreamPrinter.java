@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.tools;
+package net.ittera.pal.tools.printer;
 
 import static net.ittera.pal.common.util.Strings.stringAfter;
 import static net.ittera.pal.common.util.Strings.stringBefore;
@@ -43,6 +43,7 @@ import net.ittera.pal.messages.MessageContext;
 import net.ittera.pal.messages.MessageStreamer;
 import net.ittera.pal.messages.protobuf.KafkaExecMessageSerde;
 import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.tools.AbstractTool;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -173,6 +174,7 @@ public class MessageStreamPrinter extends AbstractTool implements Callable<Integ
   }
 
   private Integer printLogMessageStream() {
+    logger.info("Started printer for log: {}", logName);
 
     Objects.requireNonNull(bootstrapServers, "bootstrap servers required");
 
@@ -185,10 +187,10 @@ public class MessageStreamPrinter extends AbstractTool implements Callable<Integ
       System.out.println("CONFIG:");
       System.out.println("=======");
       System.out.printf(
-          "Kafka config: topic=%s bootstrap_servers=%s app_id=%s\n",
+          "Kafka config: topic=%s bootstrap_servers=%s app_id=%s%n",
           logName, bootstrapServers, consumerId);
       if (msgTypes != null) {
-        System.out.printf("Filtering by type(s): %s\n", String.join(",", msgTypes));
+        System.out.printf("Filtering by type(s): %s%n", String.join(",", msgTypes));
       }
     }
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerId);

@@ -1,3 +1,3 @@
 #!/bin/bash
 MAIN_ARGS="$@"
-mvn exec:java -Dexec.mainClass="net.ittera.pal.tools.PalDir" -Dlogback.configurationFile=logback-paldir.xml -Dexec.args="$MAIN_ARGS"
+mvn exec:java -Dexec.mainClass="net.ittera.pal.tools.paldir.PalDir" -Dlogback.configurationFile="logback.xml" -Dexec.args="$MAIN_ARGS"

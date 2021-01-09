@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.tools;
+package net.ittera.pal.tools.stats;
 
 import static net.ittera.pal.common.util.Strings.stringAfter;
 import static net.ittera.pal.common.util.Strings.stringBefore;
@@ -42,8 +42,7 @@ import net.ittera.pal.messages.MessageStreamer;
 import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
 import net.ittera.pal.messages.protobuf.KafkaExecMessageSerde;
 import net.ittera.pal.messages.protobuf.Wrappers.Message;
-import net.ittera.pal.tools.stats.ContinuousPrinter;
-import net.ittera.pal.tools.stats.Counters;
+import net.ittera.pal.tools.AbstractTool;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
