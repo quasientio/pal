@@ -20,8 +20,8 @@
 package net.ittera.pal.core;
 
 import com.google.inject.Injector;
+import java.util.Objects;
 import java.util.Properties;
-import java.util.Set;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.PALDirectory;
 import org.slf4j.Logger;
@@ -35,20 +35,17 @@ class LogConfigurator {
   private final Long inLogOffset;
   private final Properties appProps;
   private final Injector injector;
-  private final Set<RunOptions> runOptions;
 
   LogConfigurator(
       String inLogName,
       Long inLogOffset,
       String outLogName,
       Properties appProps,
-      Set<RunOptions> runOptions,
       Injector injector) {
     this.inLogName = inLogName;
     this.inLogOffset = inLogOffset;
     this.outLogName = outLogName;
     this.appProps = appProps;
-    this.runOptions = runOptions;
     this.injector = injector;
   }
 
@@ -74,43 +71,53 @@ class LogConfigurator {
     return logInfo;
   }
 
-  private void readFromLog(LogInfo log, boolean inAndOutAreSameLog, Long initialOffset)
+  private void readFromLog(LogInfo inLog, boolean inAndOutAreSameLog, Long initialOffset)
       throws Exception {
     LogReader logMessageReader = injector.getInstance(LogReader.class);
-    logMessageReader.readFromLog(log.getName(), inAndOutAreSameLog, initialOffset);
+    logMessageReader.readFromLog(inLog.getName(), inAndOutAreSameLog, initialOffset);
   }
 
   private void writeToLog(LogInfo outLog, LogInfo inLog) {
     LogWriter logMessageWriter = injector.getInstance(LogWriter.class);
-    boolean publishOffsets = outLog.equals(inLog);
-    logMessageWriter.writeToLog(outLog, inLog, publishOffsets);
+    logMessageWriter.writeToLog(outLog, inLog, true);
   }
 
+  /**
+   * When both inLog and outLog are "auto", a single log is created and used as both in and out Logs
+   *
+   * @throws Exception
+   */
   void init() throws Exception {
 
     // register log(s)
-    LogInfo inLog;
-    LogInfo outLog;
+    LogInfo inLog = null;
+    LogInfo outLog = null;
     LogInfo newLog = null;
 
-    if (inLogName != null) {
-      inLog = getOrRegisterGivenLog(inLogName);
-    } else { // no log given, create new
+    if ("auto".equalsIgnoreCase(inLogName)) {
       inLog = registerNewLog();
       newLog = inLog;
+    } else if (inLogName != null) {
+      inLog = getOrRegisterGivenLog(inLogName);
     }
 
-    if (outLogName != null) {
-      outLog = getOrRegisterGivenLog(outLogName);
-    } else { // no log given, create new if not done already
+    if ("auto".equalsIgnoreCase(outLogName)) {
       if (newLog == null) {
         newLog = registerNewLog();
       }
       outLog = newLog;
+    } else if (outLogName != null) {
+      outLog = getOrRegisterGivenLog(outLogName);
     }
 
-    // init log reader+writer
-    readFromLog(inLog, runOptions.contains(RunOptions.INLOG_SAME_AS_OUTLOG), inLogOffset);
-    writeToLog(outLog, inLog);
+    // init log reader
+    if (inLog != null) {
+      readFromLog(inLog, Objects.equals(inLog, outLog), inLogOffset);
+    }
+
+    // init log writer
+    if (outLog != null) {
+      writeToLog(outLog, inLog);
+    }
   }
 }

@@ -123,7 +123,7 @@ public class SelfCaller {
 
     // prepare offset subscriber
     Socket offsetSubscriber = null;
-    if (!runOptions.contains(RunOptions.LOGLESS)) {
+    if (!runOptions.contains(RunOptions.NO_OUTLOG)) {
       offsetSubscriber = context.createSocket(SocketType.SUB);
       offsetSubscriber.connect(offsetPubAddress);
       offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
@@ -143,7 +143,7 @@ public class SelfCaller {
     }
 
     // wait for the reply message offset, to ensure all msg's from have been written to the log
-    if (!runOptions.contains(RunOptions.LOGLESS)) {
+    if (!runOptions.contains(RunOptions.NO_OUTLOG)) {
       boolean offsetPublished = false;
       long offset = -1;
       UUID uuid = null;

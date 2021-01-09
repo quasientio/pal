@@ -69,6 +69,7 @@ import picocli.CommandLine.Parameters;
 @Command(
     name = "peer",
     sortOptions = false,
+    optionListHeading = "where options include:\n",
     customSynopsis = {
       "peer [OPTIONS] class [args...]",
       "            (to execute a class)",
@@ -77,7 +78,7 @@ import picocli.CommandLine.Parameters;
     })
 public class Main implements Callable<Integer> {
   @Option(
-      names = {"-c", "-cp", "--classpath"},
+      names = {"-cp", "--classpath"},
       paramLabel = "CLASSPATH", // corresponding ENV var: CLASSPATH
       description = "load classes from given folders/jars")
   private String classpath;
@@ -105,11 +106,13 @@ public class Main implements Callable<Integer> {
 
   @Option(
       names = {"-l", "--log"},
-      description = "read and write from/to given log\n--log=no to run without log IO")
+      paramLabel = "<logname> or <auto>",
+      description = "read from and write to given log")
   private String log; // corresponding ENV var: LOG
 
   @Option(
       names = {"-i", "--in-log"},
+      paramLabel = "<logname> or <auto>",
       description = "read from given log")
   private String inLog; // corresponding ENV var: IN_LOG
 
@@ -120,26 +123,26 @@ public class Main implements Callable<Integer> {
 
   @Option(
       names = {"-o", "--out-log"},
+      paramLabel = "<logname> or <auto>",
       description = "write to given log")
   private String outLog; // corresponding ENV var: OUT_LOG
 
   @Option(
       names = {"-p", "--tcp-pub"},
-      paramLabel = "[HOST:]PORT",
-      description = "publish messages to TCP socket")
+      paramLabel = "<[HOST:]PORT> or <auto>",
+      description = "publish messages to TCP socket (auto = localhost:random_port)")
   private String tcpPub; // corresponding ENV var: TCP_PUB
 
   @Option(
       names = {"-r", "--tcp-req"},
-      paramLabel = "[HOST:]PORT",
-      description =
-          "listen for requests on TCP socket (default: localhost:random_port)\n--tcp-req=no to accept no requests over TCP")
+      paramLabel = "<[HOST:]PORT> or <auto>",
+      description = "listen for requests on TCP socket (auto = localhost:random_port)")
   private String tcpReq; // corresponding ENV var: TCP_REQ
 
   @Option(
-      names = {"--no-intercepts"},
-      description = "don't allow message interception")
-  private boolean noIntercepts = false;
+      names = {"--interceptable"},
+      description = "allow message interception")
+  private boolean interceptable = false;
 
   @Option(
       names = {"-h", "--help"},
@@ -196,6 +199,9 @@ public class Main implements Callable<Integer> {
       inprocChannels.put("intercepts.reg", "inproc://intcept_reg");
       inprocChannels.put("intercepts.mtx", "inproc://intcept_match");
     }
+
+    private static final String DEFAULT_PUB_HOSTNAME = "localhost";
+    private static final String DEFAULT_REQ_HOSTNAME = "localhost";
   }
 
   static {
@@ -318,45 +324,44 @@ public class Main implements Callable<Integer> {
 
     // verify and set run options
     runOptions = EnumSet.noneOf(RunOptions.class);
-    if (log != null && (inLog != null || outLog != null)) {
-      System.err.println(
-          "WARNING: with --log (LOG), --in-log (IN_LOG) and --out-log (OUT_LOG) options are ignored.");
+    if (log != null) {
+      if (inLog != null || outLog != null) {
+        System.err.println(
+            "WARNING: with --log (LOG), --in-log (IN_LOG) and --out-log (OUT_LOG) options are ignored.");
+      }
+      // if logName is given, assign to both inLog and outLog
+      inLog = outLog = log;
     }
-    final boolean logless = log != null && log.equalsIgnoreCase("no");
-    if (logless) {
-      runOptions.add(RunOptions.LOGLESS);
-    } else {
-      // set INLOG_SAME_AS_OUTLOG
-      if (inLog == null && outLog == null) {
-        runOptions.add(RunOptions.INLOG_SAME_AS_OUTLOG);
-      }
-      // if logName is given, assign to both in and out (overriding any of the latter values)
-      if (log != null) {
-        inLog = outLog = log;
-      }
 
-      // ensure that if offset was given, a log name to read from was also given
-      if (logOffset != null && inLog == null) {
-        fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
-      }
+    if (inLog == null) {
+      runOptions.add(RunOptions.NO_INLOG);
     }
-    if (logless && tcpPub == null) {
+
+    if (outLog == null) {
+      runOptions.add(RunOptions.NO_OUTLOG);
+    }
+
+    // ensure that if offset was given, a log name to read from was also given
+    if (logOffset != null && (inLog == null || inLog.equalsIgnoreCase("auto"))) {
+      fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
+    }
+
+    if (runOptions.contains(RunOptions.NO_OUTLOG) && tcpPub == null) {
       runOptions.add(RunOptions.NO_PUBLISHING);
     }
-    if (noIntercepts) {
+
+    if (!interceptable) {
       runOptions.add(RunOptions.NO_INTERCEPTS);
     }
 
-    // set TCP-related options
-    final boolean reqless = tcpReq != null && tcpReq.equalsIgnoreCase("no");
-    if (reqless) {
+    if (tcpReq == null) {
       runOptions.add(RunOptions.REQLESS);
     }
 
     logger.info("Running with options: {}", runOptions);
   }
 
-  public static int findOpenPort() throws IOException {
+  private static int findOpenPort() throws IOException {
     final ServerSocket tmpSocket = new ServerSocket(0, 0);
     try {
       return tmpSocket.getLocalPort();
@@ -388,9 +393,18 @@ public class Main implements Callable<Integer> {
 
     // are we publishing via TCP, or just internally
     if (tcpPub != null) {
-      int port;
-      String hostname = "0.0.0.0";
-      if (tcpPub.contains(":")) {
+      int port = 0;
+      String hostname = ZMQProps.DEFAULT_PUB_HOSTNAME;
+      if (tcpPub.equalsIgnoreCase("auto")) {
+        try {
+          port = findOpenPort();
+        } catch (IOException e) {
+          fatalExit(
+              null,
+              PeerException.FatalCode.ERROR_FINDING_RND_PORT,
+              "Could not find random port for PUB");
+        }
+      } else if (tcpPub.contains(":")) {
         hostname = Strings.stringBefore(tcpPub, ":");
         port = Integer.parseInt(Strings.stringAfter(tcpPub, ":"));
       } else {
@@ -403,10 +417,19 @@ public class Main implements Callable<Integer> {
     }
 
     // are we listening for requests over TCP
-    if (!runOptions.contains(RunOptions.REQLESS)) {
-      String hostname = "0.0.0.0";
+    if (tcpReq != null) {
+      String hostname = ZMQProps.DEFAULT_REQ_HOSTNAME;
       int port = 0;
-      if (tcpReq != null) {
+      if (tcpReq.equalsIgnoreCase("auto")) {
+        try {
+          port = findOpenPort();
+        } catch (IOException e) {
+          fatalExit(
+              null,
+              PeerException.FatalCode.ERROR_FINDING_RND_PORT,
+              "Could not find random port for REQ");
+        }
+      } else {
         final String portStr;
         if (tcpReq.contains(":")) {
           hostname = Strings.stringBefore(tcpReq, ":");
@@ -418,12 +441,6 @@ public class Main implements Callable<Integer> {
           port = Integer.parseInt(portStr);
         } catch (NumberFormatException e) {
           fatalExit(e, PeerException.FatalCode.ERROR_PARSING_REQ_PORT_NUMBER);
-        }
-      } else { // default is to listen on 0.0.0.0:RANDOM_PORT
-        try {
-          port = findOpenPort();
-        } catch (IOException e) {
-          fatalExit(null, PeerException.FatalCode.ERROR_FINDING_REQ_SOCKET);
         }
       }
       properties.setProperty("in.req.tcp", format("tcp://%s:%d", hostname, port));
@@ -514,8 +531,10 @@ public class Main implements Callable<Integer> {
 
   private Set<Service> createManagedServices(Injector injector) {
     final Set<Service> services = new HashSet<>();
-    if (!runOptions.contains(RunOptions.LOGLESS)) {
+    if (!runOptions.contains(RunOptions.NO_INLOG)) {
       services.add(injector.getInstance(LogReader.class));
+    }
+    if (!runOptions.contains(RunOptions.NO_OUTLOG)) {
       services.add(injector.getInstance(LogWriter.class));
     }
     if (!runOptions.contains(RunOptions.NO_PUBLISHING)) {
@@ -563,7 +582,9 @@ public class Main implements Callable<Integer> {
     ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
     try {
       // stop services
-      manager.stopAsync();
+      if (manager != null) {
+        manager.stopAsync();
+      }
 
       // stop peer executor (interrupts all peer exec threads)
       final ExtendedThreadPoolExecutor peerMessageExecutor =
@@ -590,10 +611,12 @@ public class Main implements Callable<Integer> {
       singleExecutor.shutdown();
 
       // wait a bit for services to stop
-      if (fast) {
-        manager.awaitStopped(500, TimeUnit.MILLISECONDS);
-      } else {
-        manager.awaitStopped(3, TimeUnit.SECONDS);
+      if (manager != null) {
+        if (fast) {
+          manager.awaitStopped(500, TimeUnit.MILLISECONDS);
+        } else {
+          manager.awaitStopped(3, TimeUnit.SECONDS);
+        }
       }
 
       // wait a bit for exec service to finish closing zmq context
@@ -667,9 +690,9 @@ public class Main implements Callable<Integer> {
         });
 
     // init logs IO
-    if (!runOptions.contains(RunOptions.LOGLESS)) {
+    if (!(runOptions.contains(RunOptions.NO_INLOG) && runOptions.contains(RunOptions.NO_OUTLOG))) {
       try {
-        new LogConfigurator(inLog, logOffset, outLog, properties, runOptions, injector).init();
+        new LogConfigurator(inLog, logOffset, outLog, properties, injector).init();
       } catch (Exception ex) {
         fatalExit(ex, PeerException.FatalCode.ERROR_INITIALIZING_LOGS);
       }
@@ -677,13 +700,15 @@ public class Main implements Callable<Integer> {
 
     // set up managed services
     final Set<Service> services = createManagedServices(injector);
-    final ServiceManager manager = createServiceManager(services);
+    final ServiceManager manager = !services.isEmpty() ? createServiceManager(services) : null;
 
     // add shutdown hook
     Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown(manager, injector, false)));
 
     // start services
-    manager.startAsync();
+    if (manager != null) { // manager = null if there are no services
+      manager.startAsync();
+    }
 
     // block until we're registered in Directory
     try {
@@ -696,7 +721,9 @@ public class Main implements Callable<Integer> {
     collectGoSignals(services.size());
 
     // wait for all services up
-    manager.awaitHealthy();
+    if (manager != null) {
+      manager.awaitHealthy();
+    }
 
     // start listening to intercept reqs
     if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {
@@ -709,7 +736,7 @@ public class Main implements Callable<Integer> {
     }
 
     // start accepting Log requests
-    if (!runOptions.contains(RunOptions.LOGLESS)) {
+    if (!runOptions.contains(RunOptions.NO_INLOG)) {
       LogReader logMessageReader = injector.getInstance(LogReader.class);
       logMessageReader.acceptRequests(true);
       injector.getInstance(LogMessageExecutor.class).prestartAllCoreThreads();
@@ -738,8 +765,9 @@ public class Main implements Callable<Integer> {
     if (selfCalled && !asDaemon) {
       shutdown(manager, injector, true);
     } else {
-      // wait here
-      manager.awaitStopped();
+      if (manager != null) {
+        manager.awaitStopped();
+      }
     }
     return 0;
   }

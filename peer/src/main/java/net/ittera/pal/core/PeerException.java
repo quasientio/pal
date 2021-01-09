@@ -31,7 +31,7 @@ public class PeerException extends Exception {
     ERROR_SERVICE_MANAGER_FAILED(5, "Service manager failure"),
     ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST(6, "JAR not found or missing MANIFEST"),
     ERROR_NO_MAINCLASS_IN_JAR_MANIFEST(7, "No Main-Class in MANIFEST"),
-    ERROR_FINDING_REQ_SOCKET(8, "Error finding local random port for REQs"),
+    ERROR_FINDING_RND_PORT(8, "Error finding local random port for socket"),
     ERROR_PARSING_REQ_PORT_NUMBER(9, "Invalid TCP_REQ port");
 
     private final int code;
