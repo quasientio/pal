@@ -1,3 +1,6 @@
 #!/bin/sh
 
-docker-compose --project-directory $PEER_CORE_HOME -f $PEER_CORE_HOME/docker/zk-kafka-compose.yml up
+compose="docker-compose --project-directory $PEER_CORE_HOME -f $PEER_CORE_HOME/docker/zk-kafka-compose.yml"
+
+$compose rm -f
+$compose up --build

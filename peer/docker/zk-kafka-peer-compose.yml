@@ -17,7 +17,7 @@ services:
       - zookeeper
     network_mode: "host"
     environment:
-      HOSTNAME_COMMAND: "docker info | grep ^Name: | cut -d' ' -f 2"
+      HOSTNAME_COMMAND: "docker info | grep '^ *Name:' | tr -d ' ' | cut -d ':' -f 2"
       JMX_PORT: ${KAFKA_JMX_PORT}
       KAFKA_LISTENERS: INSIDE://:${KAFKA_INSIDE_PORT},OUTSIDE://:${KAFKA_OUTSIDE_PORT}
       KAFKA_ADVERTISED_LISTENERS: INSIDE://:${KAFKA_INSIDE_PORT},OUTSIDE://_{HOSTNAME_COMMAND}:${KAFKA_OUTSIDE_PORT}
