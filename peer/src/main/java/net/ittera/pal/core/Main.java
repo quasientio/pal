@@ -40,6 +40,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
@@ -56,6 +57,7 @@ import net.ittera.pal.core.exec.LogMessageExecutor;
 import net.ittera.pal.core.exec.PeerMessageExecutor;
 import net.ittera.pal.core.exec.java.CustomClassloader;
 import net.ittera.pal.core.exec.java.SelfCaller;
+import net.ittera.pal.cxn.DirectoryConnectionFactory;
 import net.ittera.pal.cxn.PALDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,7 +87,8 @@ public class Main implements Callable<Integer> {
 
   @Option(
       names = {"-d", "--dir"},
-      description = "PAL directory URL")
+      paramLabel = "<pal_directory>",
+      description = "PAL directory URL (if not given, run unregistered)")
   private String palDirectoryURL; // corresponding ENV var: PAL_DIRECTORY
 
   @Option(
@@ -106,14 +109,14 @@ public class Main implements Callable<Integer> {
 
   @Option(
       names = {"-l", "--log"},
-      paramLabel = "<logname> or <auto>",
-      description = "read from and write to given log")
+      paramLabel = "<log_name> or <auto>",
+      description = "read from and write to given log ('auto' works only with <pal_directory>)")
   private String log; // corresponding ENV var: LOG
 
   @Option(
       names = {"-i", "--in-log"},
-      paramLabel = "<logname> or <auto>",
-      description = "read from given log")
+      paramLabel = "<log_name> or <auto>",
+      description = "read from given log ('auto' works only with <pal_directory>)")
   private String inLog; // corresponding ENV var: IN_LOG
 
   @Option(
@@ -123,9 +126,15 @@ public class Main implements Callable<Integer> {
 
   @Option(
       names = {"-o", "--out-log"},
-      paramLabel = "<logname> or <auto>",
-      description = "write to given log")
+      paramLabel = "<log_name> or <auto>",
+      description = "write to given log ('auto' works only with <pal_directory>)")
   private String outLog; // corresponding ENV var: OUT_LOG
+
+  @Option(
+      names = {"-k", "--kafka"},
+      paramLabel = "<bootstrap_servers>",
+      description = "connect to given kafka servers when running with no <pal_directory>")
+  private String kafkaServers; // corresponding ENV var: KAFKA_SERVERS
 
   @Option(
       names = {"-p", "--tcp-pub"},
@@ -173,7 +182,10 @@ public class Main implements Callable<Integer> {
   private ZContext zmqContext;
   private Socket syncSocket;
 
-  // STATIC variables
+  // countdown latch to await when daemonized and have no services running
+  private CountDownLatch daemonizedLatch = new CountDownLatch(1);
+
+  // STATIC constants
   private static final Logger logger = LoggerFactory.getLogger(Main.class);
   private static final String PROPERTIES_FILE = "/peer.properties";
   private static final String LOGGING_CONFIG = "/peer-logging.xml";
@@ -298,6 +310,7 @@ public class Main implements Callable<Integer> {
   private void setEmptyParamsFromEnv() {
     classpath = getParameter("CLASSPATH", classpath);
     palDirectoryURL = getParameter("PAL_DIRECTORY", palDirectoryURL);
+    kafkaServers = getParameter("KAFKA_SERVERS", kafkaServers);
     name = getParameter("PEER_NAME", name);
     uuid = getParameter("PEER_UUID", uuid);
     log = getParameter("LOG", log);
@@ -324,12 +337,29 @@ public class Main implements Callable<Integer> {
 
     // verify and set run options
     runOptions = EnumSet.noneOf(RunOptions.class);
+
+    if (palDirectoryURL == null) {
+      runOptions.add(RunOptions.NO_PALDIR);
+
+      // warn of incompatible options that will be ignored
+      if (name != null) {
+        System.err.println(
+            "WARNING: --name only applicable if registering with a <pal_directory>.");
+        logger.warn("--name given, but not <pal_directory>; will be ignored.");
+      }
+      if (interceptable) {
+        System.err.println(
+            "WARNING: --interceptable only applicable if registering with a <pal_directory>.");
+        logger.warn("--interceptable given, but not <pal_directory>; will be ignored.");
+      }
+    }
+
     if (log != null) {
+      // if logName is given, assign to both inLog and outLog
       if (inLog != null || outLog != null) {
         System.err.println(
             "WARNING: with --log (LOG), --in-log (IN_LOG) and --out-log (OUT_LOG) options are ignored.");
       }
-      // if logName is given, assign to both inLog and outLog
       inLog = outLog = log;
     }
 
@@ -350,7 +380,7 @@ public class Main implements Callable<Integer> {
       runOptions.add(RunOptions.NO_PUBLISHING);
     }
 
-    if (!interceptable) {
+    if (runOptions.contains(RunOptions.NO_PALDIR) || !interceptable) {
       runOptions.add(RunOptions.NO_INTERCEPTS);
     }
 
@@ -389,7 +419,13 @@ public class Main implements Callable<Integer> {
     properties.put("id", uuid.toString());
 
     // add Directory url to app properties
-    properties.setProperty("paldir_url", palDirectoryURL);
+    properties.setProperty(
+        "paldir_url", palDirectoryURL != null ? palDirectoryURL : PALDirectory.NO_URL);
+
+    // add kafka servers if given
+    if (kafkaServers != null) {
+      properties.setProperty("kafka.bootstrap.servers", kafkaServers);
+    }
 
     // are we publishing via TCP, or just internally
     if (tcpPub != null) {
@@ -500,7 +536,12 @@ public class Main implements Callable<Integer> {
   }
 
   private void registerSelfAsPeer(Injector injector) {
-    final PALDirectory palDirectory = injector.getInstance(PALDirectory.class);
+
+    final PALDirectory palDirectory =
+        injector
+            .getInstance(DirectoryConnectionFactory.class)
+            .getConnection()
+            .orElseThrow(RuntimeException::new);
 
     // register self as new peer
     try {
@@ -598,13 +639,18 @@ public class Main implements Callable<Integer> {
       logMessageExecutor.shutdownNow();
       logger.info("Done shutting down log threads");
 
-      // close zookeeper conn
-      final PALDirectory palDirectory = injector.getInstance(PALDirectory.class);
-      palDirectory.close();
+      // close connection to paldir
+      if (!runOptions.contains(RunOptions.NO_PALDIR)) {
+        final Optional<PALDirectory> palDirectory =
+            injector.getInstance(DirectoryConnectionFactory.class).getConnection();
+        palDirectory.ifPresent(PALDirectory::close);
+      }
 
       // close sockets that aren't automatically closed
-      final InterceptInformer interceptInformer = injector.getInstance(InterceptInformer.class);
-      interceptInformer.closeThreadLocalSocket();
+      if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {
+        final InterceptInformer interceptInformer = injector.getInstance(InterceptInformer.class);
+        interceptInformer.closeThreadLocalSocket();
+      }
 
       // close zmq context asynchronously
       singleExecutor.submit(this::closeZmqContext);
@@ -624,6 +670,11 @@ public class Main implements Callable<Integer> {
         singleExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
       } else {
         singleExecutor.awaitTermination(2, TimeUnit.SECONDS);
+      }
+
+      // in case we're daemonized and have no services manager (ie. manager == null)
+      if (manager == null) {
+        daemonizedLatch.countDown();
       }
     } catch (TimeoutException ie) {
       logger.error("Timeout exception in shutdown hook", ie);
@@ -683,11 +734,13 @@ public class Main implements Callable<Integer> {
 
     // register peer async
     final CountDownLatch selfRegistrationLatch = new CountDownLatch(1);
-    singleExecutor.submit(
-        () -> {
-          registerSelfAsPeer(injector);
-          selfRegistrationLatch.countDown();
-        });
+    if (!runOptions.contains(RunOptions.NO_PALDIR)) {
+      singleExecutor.submit(
+          () -> {
+            registerSelfAsPeer(injector);
+            selfRegistrationLatch.countDown();
+          });
+    }
 
     // init logs IO
     if (!(runOptions.contains(RunOptions.NO_INLOG) && runOptions.contains(RunOptions.NO_OUTLOG))) {
@@ -711,10 +764,12 @@ public class Main implements Callable<Integer> {
     }
 
     // block until we're registered in Directory
-    try {
-      selfRegistrationLatch.await();
-    } finally {
-      singleExecutor.shutdownNow();
+    if (!runOptions.contains(RunOptions.NO_PALDIR)) {
+      try {
+        selfRegistrationLatch.await();
+      } finally {
+        singleExecutor.shutdownNow();
+      }
     }
 
     // double-check by collecting all READY signals from services before proceeding
@@ -727,10 +782,14 @@ public class Main implements Callable<Integer> {
 
     // start listening to intercept reqs
     if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {
-      final PALDirectory palDir = injector.getInstance(PALDirectory.class);
+      final PALDirectory palDirectory =
+          injector
+              .getInstance(DirectoryConnectionFactory.class)
+              .getConnection()
+              .orElseThrow(RuntimeException::new);
       final InterceptInformer interceptInformer = injector.getInstance(InterceptInformer.class);
       // add as listener for future requests
-      palDir.addInterceptNodeListener(interceptInformer);
+      palDirectory.addInterceptNodeListener(interceptInformer);
       // register all current intercepts in directory
       interceptInformer.registerAllInterceptsInDirectory();
     }
@@ -767,6 +826,8 @@ public class Main implements Callable<Integer> {
     } else {
       if (manager != null) {
         manager.awaitStopped();
+      } else {
+        daemonizedLatch.await();
       }
     }
     return 0;

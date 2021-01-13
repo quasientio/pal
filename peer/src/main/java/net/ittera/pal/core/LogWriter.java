@@ -34,7 +34,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.util.UUIDUtils;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.DirectoryConnectionFactory;
 import net.ittera.pal.messages.LogMessageHeader;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.protobuf.Headers.InternalHeader;
@@ -68,7 +68,7 @@ class LogWriter extends ConnectedService {
   private final String outPubAddress;
   private final String offsetPubAddress;
 
-  private PALDirectory palDirectory;
+  private final DirectoryConnectionFactory directoryConnectionFactory;
   private boolean publishOffsets;
   private boolean writeReplyNodes;
   private LogInfo outLog;
@@ -88,12 +88,16 @@ class LogWriter extends ConnectedService {
       @Named("out.pub") String outPubAddress,
       @Named("offset.pub") String offsetPubAddress,
       @Named("log.registerReplies") String writeReplyNodesStr,
-      PALDirectory palDirectory) {
+      DirectoryConnectionFactory directoryConnectionFactory) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
-    this.palDirectory = palDirectory;
+    this.directoryConnectionFactory = directoryConnectionFactory;
     this.outPubAddress = outPubAddress;
     this.offsetPubAddress = offsetPubAddress;
-    this.writeReplyNodes = writeReplyNodesStr == null || Boolean.parseBoolean(writeReplyNodesStr);
+    if (directoryConnectionFactory.getConnection().isPresent()) {
+      this.writeReplyNodes = writeReplyNodesStr == null || Boolean.parseBoolean(writeReplyNodesStr);
+    } else if (writeReplyNodes) {
+      logger.warn("Not writing reply nodes since we are not connected to a PAL Directory");
+    }
     producerProperties.put("key.serializer", keySerializer);
     producerProperties.put("value.serializer", valueSerializer);
     StringBuilder propsStr = new StringBuilder();
@@ -121,13 +125,17 @@ class LogWriter extends ConnectedService {
       @Named("offset.pub") String offsetPubAddress,
       boolean writeReplyNodes,
       Producer<String, byte[]> producer,
-      PALDirectory palDirectory) {
+      DirectoryConnectionFactory directoryConnectionFactory) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.producer = producer;
-    this.palDirectory = palDirectory;
+    this.directoryConnectionFactory = directoryConnectionFactory;
     this.outPubAddress = outPubAddress;
     this.offsetPubAddress = offsetPubAddress;
-    this.writeReplyNodes = writeReplyNodes;
+    if (directoryConnectionFactory.getConnection().isPresent()) {
+      this.writeReplyNodes = writeReplyNodes;
+    } else if (writeReplyNodes) {
+      logger.warn("Not writing reply nodes since we are not connected to a PAL Directory");
+    }
     logger.info("Created log message writer");
   }
 
@@ -241,7 +249,8 @@ class LogWriter extends ConnectedService {
     }
     ProducerRecord<String, byte[]> newRecord =
         new ProducerRecord<>(outLog.getName(), 0, fromPeer.toString(), message, headers);
-    if (publishOffsets || writeReplyNodes) {
+    if (publishOffsets
+        || (writeReplyNodes && directoryConnectionFactory.getConnection().isPresent())) {
       producer.send(
           newRecord,
           new MessageOffsetInformer(
@@ -250,7 +259,7 @@ class LogWriter extends ConnectedService {
               publishOffsets,
               writeReplyNodes,
               offsetPublisher,
-              palDirectory,
+              directoryConnectionFactory.getConnection().orElse(null),
               inLog,
               peerUuid));
     } else {

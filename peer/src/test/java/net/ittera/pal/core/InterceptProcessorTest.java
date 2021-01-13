@@ -26,15 +26,18 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.Interceptable.InterceptableType;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
+import net.ittera.pal.cxn.DirectoryConnectionFactory;
 import net.ittera.pal.cxn.PALDirectory;
 import org.junit.After;
 import org.junit.Before;
@@ -54,7 +57,6 @@ public class InterceptProcessorTest {
   private PALDirectory palDirectory;
   private InterceptProcessor interceptProcessor;
   private final UUID peerUuid = UUID.randomUUID();
-
   private List<InterceptRequest> requests;
 
   @Before
@@ -71,7 +73,9 @@ public class InterceptProcessorTest {
         .when(palDirectory)
         .registerInterceptAsync(any(), any());
 
-    interceptProcessor = new InterceptProcessor(peerUuid, palDirectory);
+    DirectoryConnectionFactory directoryConnectionFactory = mock(DirectoryConnectionFactory.class);
+    when(directoryConnectionFactory.getConnection()).thenReturn(Optional.of(palDirectory));
+    interceptProcessor = new InterceptProcessor(peerUuid, directoryConnectionFactory);
   }
 
   @After

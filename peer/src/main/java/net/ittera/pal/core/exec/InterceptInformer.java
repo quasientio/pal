@@ -31,6 +31,7 @@ import net.ittera.pal.common.directory.events.InterceptNodeListener;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.core.messages.InterceptEvtMsg;
+import net.ittera.pal.cxn.DirectoryConnectionFactory;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
@@ -49,7 +50,7 @@ public class InterceptInformer implements InterceptNodeListener {
 
   private final ZContext zmqContext;
   private final MessageBuilder messageBuilder;
-  private final PALDirectory palDirectory;
+  private final DirectoryConnectionFactory directoryConnectionFactory;
   private final String interceptsAddr;
   private final UUID peerUuid;
 
@@ -77,18 +78,20 @@ public class InterceptInformer implements InterceptNodeListener {
   public InterceptInformer(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
-      PALDirectory palDirectory,
+      DirectoryConnectionFactory directoryConnectionFactory,
       UUID peerUuid,
       @Named("intercepts.reg") String interceptsAddr) {
     this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
-    this.palDirectory = palDirectory;
+    this.directoryConnectionFactory = directoryConnectionFactory;
     this.peerUuid = peerUuid;
     this.interceptsAddr = interceptsAddr;
   }
 
   public void registerAllInterceptsInDirectory() {
     final Set<PeerInfo> peers;
+    final PALDirectory palDirectory =
+        directoryConnectionFactory.getConnection().orElseThrow(RuntimeException::new);
     try {
       peers = palDirectory.getAllPeers();
     } catch (Exception e) {
@@ -129,6 +132,8 @@ public class InterceptInformer implements InterceptNodeListener {
           return;
         }
         try {
+          final PALDirectory palDirectory =
+              directoryConnectionFactory.getConnection().orElseThrow(RuntimeException::new);
           interceptRequest = palDirectory.getInterceptRequest(interceptPath);
         } catch (Exception e) {
           logger.warn("Error getting intercept request from directory", e);

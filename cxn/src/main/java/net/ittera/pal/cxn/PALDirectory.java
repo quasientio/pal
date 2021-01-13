@@ -40,8 +40,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.inject.Inject;
-import javax.inject.Named;
 import net.ittera.pal.common.directory.events.InterceptEvent;
 import net.ittera.pal.common.directory.events.InterceptEvent.Type;
 import net.ittera.pal.common.directory.events.InterceptNodeListener;
@@ -72,6 +70,9 @@ import org.slf4j.LoggerFactory;
 public class PALDirectory implements AutoCloseable {
 
   private static final Logger logger = LoggerFactory.getLogger(PALDirectory.class);
+
+  // constant to denote pal directory URL is not provided
+  public static final String NO_URL = "<none>";
 
   // root paths
   private static final String DEFAULT_PAL_NAMESPACE = "pal";
@@ -151,8 +152,7 @@ public class PALDirectory implements AutoCloseable {
     }
   }
 
-  @Inject
-  public PALDirectory(@Named("paldir_url") String connectionString) {
+  public PALDirectory(String connectionString) {
     this(connectionString, null, true);
   }
 

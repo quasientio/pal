@@ -26,6 +26,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
@@ -37,6 +38,7 @@ import net.ittera.pal.common.lang.intercept.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.InterceptableFieldOp;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
+import net.ittera.pal.cxn.DirectoryConnectionFactory;
 import net.ittera.pal.cxn.PALDirectory;
 import org.apache.curator.framework.api.CuratorEventType;
 import org.slf4j.Logger;
@@ -47,12 +49,12 @@ public class InterceptProcessor {
 
   private static final Logger logger = LoggerFactory.getLogger(InterceptProcessor.class);
   private final UUID peerUuid;
-  private final PALDirectory directory;
+  private final DirectoryConnectionFactory directoryConnectionFactory;
 
   @Inject
-  InterceptProcessor(UUID peerUuid, PALDirectory directory) {
+  InterceptProcessor(UUID peerUuid, DirectoryConnectionFactory directoryConnectionFactory) {
     this.peerUuid = peerUuid;
-    this.directory = directory;
+    this.directoryConnectionFactory = directoryConnectionFactory;
   }
 
   public void process(Class clazz) {
@@ -140,18 +142,24 @@ public class InterceptProcessor {
 
   private void register(InterceptRequest interceptRequest) {
     try {
-      directory.registerInterceptAsync(
-          interceptRequest,
-          (curatorFramework, curatorEvent) -> {
-            if (curatorEvent.getType().equals(CuratorEventType.CREATE)
-                && curatorEvent.getResultCode() == 0) {
-              if (logger.isDebugEnabled()) {
-                logger.debug("Successfully registered new intercept request in directory");
-              }
-            } else {
-              logger.warn("Wrong event or result code when trying to register intercept request");
-            }
-          });
+      Optional<PALDirectory> directory = directoryConnectionFactory.getConnection();
+      if (directory.isPresent()) {
+        directory
+            .get()
+            .registerInterceptAsync(
+                interceptRequest,
+                (curatorFramework, curatorEvent) -> {
+                  if (curatorEvent.getType().equals(CuratorEventType.CREATE)
+                      && curatorEvent.getResultCode() == 0) {
+                    if (logger.isDebugEnabled()) {
+                      logger.debug("Successfully registered new intercept request in directory");
+                    }
+                  } else {
+                    logger.warn(
+                        "Wrong event or result code when trying to register intercept request");
+                  }
+                });
+      }
     } catch (Exception e) {
       logger.error("Error registering intercept request", e);
     }

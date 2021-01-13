@@ -23,6 +23,7 @@ import com.google.inject.Injector;
 import java.util.Objects;
 import java.util.Properties;
 import net.ittera.pal.common.directory.nodes.LogInfo;
+import net.ittera.pal.cxn.DirectoryConnectionFactory;
 import net.ittera.pal.cxn.PALDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +35,9 @@ class LogConfigurator {
   private final String outLogName;
   private final Long inLogOffset;
   private final Properties appProps;
+  private final boolean noPaldir;
   private final Injector injector;
+  private final String kafkaBootstrapServers;
 
   LogConfigurator(
       String inLogName,
@@ -47,18 +50,31 @@ class LogConfigurator {
     this.outLogName = outLogName;
     this.appProps = appProps;
     this.injector = injector;
+    final String givenPaldirUrl = appProps.getProperty("paldir_url");
+    noPaldir = givenPaldirUrl == null || givenPaldirUrl.equals(PALDirectory.NO_URL);
+    kafkaBootstrapServers = appProps.getProperty("kafka.bootstrap.servers");
+    if (noPaldir && kafkaBootstrapServers == null) {
+      throw new IllegalArgumentException(
+          "No 'paldir_url' nor 'kafka.bootstrap.servers' in properties.");
+    }
   }
 
   private LogInfo registerNewLog() throws Exception {
-
-    final PALDirectory palDirectory = injector.getInstance(PALDirectory.class);
-    final String kafkaTopicPrefix = appProps.getProperty("kafkaTopic");
-    return palDirectory.newLog(kafkaTopicPrefix);
+    final PALDirectory palDirectory =
+        injector
+            .getInstance(DirectoryConnectionFactory.class)
+            .getConnection()
+            .orElseThrow(RuntimeException::new);
+    return palDirectory.newLog(appProps.getProperty("kafkaTopic"));
   }
 
   private LogInfo getOrRegisterGivenLog(String logName) throws Exception {
 
-    final PALDirectory palDirectory = injector.getInstance(PALDirectory.class);
+    final PALDirectory palDirectory =
+        injector
+            .getInstance(DirectoryConnectionFactory.class)
+            .getConnection()
+            .orElseThrow(RuntimeException::new);
     final LogInfo logInfo;
 
     // register given log if not registered
@@ -74,7 +90,7 @@ class LogConfigurator {
   private void readFromLog(LogInfo inLog, boolean inAndOutAreSameLog, Long initialOffset)
       throws Exception {
     LogReader logMessageReader = injector.getInstance(LogReader.class);
-    logMessageReader.readFromLog(inLog.getName(), inAndOutAreSameLog, initialOffset);
+    logMessageReader.readFromLog(inLog, inAndOutAreSameLog, initialOffset);
   }
 
   private void writeToLog(LogInfo outLog, LogInfo inLog) {
@@ -84,6 +100,8 @@ class LogConfigurator {
 
   /**
    * When both inLog and outLog are "auto", a single log is created and used as both in and out Logs
+   * With noPaldir, 'auto' does not register a new sequentially-named log, but is taken literally as
+   * the log's name.
    *
    * @throws Exception
    */
@@ -95,19 +113,30 @@ class LogConfigurator {
     LogInfo newLog = null;
 
     if ("auto".equalsIgnoreCase(inLogName)) {
-      inLog = registerNewLog();
-      newLog = inLog;
+      if (noPaldir) {
+        inLog = new LogInfo(inLogName, kafkaBootstrapServers);
+      } else {
+        inLog = registerNewLog();
+        newLog = inLog;
+      }
     } else if (inLogName != null) {
-      inLog = getOrRegisterGivenLog(inLogName);
+      inLog =
+          noPaldir
+              ? new LogInfo(inLogName, kafkaBootstrapServers)
+              : getOrRegisterGivenLog(inLogName);
     }
 
     if ("auto".equalsIgnoreCase(outLogName)) {
-      if (newLog == null) {
-        newLog = registerNewLog();
+      if (noPaldir) {
+        outLog = new LogInfo(outLogName, kafkaBootstrapServers);
+      } else {
+        outLog = newLog != null ? newLog : registerNewLog();
       }
-      outLog = newLog;
     } else if (outLogName != null) {
-      outLog = getOrRegisterGivenLog(outLogName);
+      outLog =
+          noPaldir
+              ? new LogInfo(outLogName, kafkaBootstrapServers)
+              : getOrRegisterGivenLog(outLogName);
     }
 
     // init log reader

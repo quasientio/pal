@@ -61,6 +61,15 @@ public class LogInfoTest {
   }
 
   @Test
+  public void logInfo_nameAndBootstrapServers() {
+    final String logName = "another_log";
+    final String bootstrapServers = "localhost:9092,a.second.host:9092";
+    LogInfo myLogInfo = new LogInfo(logName, bootstrapServers);
+    assertThat(myLogInfo.getName(), is(logName));
+    assertThat(myLogInfo.getBootstrapServers(), is(bootstrapServers));
+  }
+
+  @Test
   public void logInfo_nameBrokersAndUuid() {
     String logName = "another_log";
     KafkaBrokerEndpoint endpoint1 = new KafkaBrokerEndpoint("plain://", "kafka_host:6091");
@@ -80,6 +89,12 @@ public class LogInfoTest {
   @Test
   public void setBrokerInfoSet_null() {
     logInfo.setBrokerInfoSet(null);
+    assertThat(logInfo.getBootstrapServers(), is(nullValue()));
+  }
+
+  @Test
+  public void setBootstrapServers_null() {
+    logInfo.setBootstrapServers(null);
     assertThat(logInfo.getBootstrapServers(), is(nullValue()));
   }
 
@@ -108,6 +123,13 @@ public class LogInfoTest {
     KafkaBrokerEndpoint endpoint2 = new KafkaBrokerEndpoint("ssl://", "kafka_server:9093");
     logInfo.setBrokerInfoSet(createKafkaBrokerInfoSet(endpoint1, endpoint2));
     verifyBootstrapServersForEndpoints(logInfo, endpoint1, endpoint2);
+  }
+
+  @Test
+  public void setBootstrapServers() {
+    final String bootstrapServers = "localhost:9092,a.second.host:9092";
+    logInfo.setBootstrapServers(bootstrapServers);
+    assertThat(logInfo.getBootstrapServers(), is(bootstrapServers));
   }
 
   @Test
@@ -143,9 +165,12 @@ public class LogInfoTest {
 
   @Test
   public void setExists() {
-    boolean exists = true;
-    logInfo.setExists(exists);
-    assertThat(logInfo.isExists(), is(exists));
+    Stream.of(true, false)
+        .forEach(
+            exists -> {
+              logInfo.setExists(exists);
+              assertThat(logInfo.isExists(), is(exists));
+            });
   }
 
   @Test

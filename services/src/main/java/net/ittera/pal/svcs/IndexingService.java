@@ -217,6 +217,7 @@ public class IndexingService implements Callable<Integer> {
     // close resources
     streams.close();
     Unirest.shutDown();
+    palDirectory.close();
     logger.debug("indexing service for log '{}' has shut down", logName);
     return 0;
   }

@@ -447,7 +447,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
 
     if (peerAddress == null) { // peerUuid must be present then
       String palDirectoryURL =
-          palDirAddress != null ? palDirAddress : getProperty("zookeeper_url", null);
+          palDirAddress != null ? palDirAddress : getProperty("pal_directory", null);
       try (PALDirectory palDirectory = new PALDirectory(palDirectoryURL)) {
         peerAddress = palDirectory.getPeerInfo(peerUuid).getPubAddress();
       }

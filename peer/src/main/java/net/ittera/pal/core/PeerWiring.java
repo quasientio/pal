@@ -34,7 +34,7 @@ import net.ittera.pal.common.runtime.DispatchForwarder;
 import net.ittera.pal.common.runtime.ProxyDispatcher;
 import net.ittera.pal.core.exec.java.AspectProxyDispatcher;
 import net.ittera.pal.core.exec.java.CustomClassloader;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.DirectoryConnectionFactory;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.ProtobufMessageBuilder;
 import org.slf4j.Logger;
@@ -97,7 +97,7 @@ class PeerWiring extends AbstractModule {
     // common and cxn library classes are not annotated with @Singleton
     bind(ObjectStore.class).to(ConcurrentHashMapObjectStore.class).asEagerSingleton();
     bind(MessageBuilder.class).to(ProtobufMessageBuilder.class).asEagerSingleton();
-    bind(PALDirectory.class).asEagerSingleton();
+    bind(DirectoryConnectionFactory.class).asEagerSingleton();
 
     // AspectProxy and DispatchForwarder's fields are static
     requestStaticInjection(AspectProxyDispatcher.class);

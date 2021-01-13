@@ -35,6 +35,7 @@ import javax.inject.Singleton;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.messages.InterceptsMsg;
+import net.ittera.pal.cxn.DirectoryConnectionFactory;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.MessageType;
@@ -63,7 +64,7 @@ public class DispatcherConnector {
   private final ZContext zmqContext;
   private final UUID peerUuid;
   private final MessageBuilder messageBuilder;
-  private final PALDirectory palDirectory;
+  private final DirectoryConnectionFactory directoryConnectionFactory;
   private final String msgPublisherAddress;
   private final String interceptMatchAddress;
   private final List<InternalHeader> WRITE_AHEAD_HEADERS;
@@ -125,14 +126,14 @@ public class DispatcherConnector {
       ZContext zmqContext,
       UUID peerUuid,
       MessageBuilder messageBuilder,
-      PALDirectory palDirectory,
+      DirectoryConnectionFactory directoryConnectionFactory,
       Set<RunOptions> runOptions,
       @Named("out.cell") String msgPublisherAddress,
       @Named("intercepts.mtx") String interceptMatchAddress) {
     this.zmqContext = zmqContext;
     this.peerUuid = peerUuid;
     this.messageBuilder = messageBuilder;
-    this.palDirectory = palDirectory;
+    this.directoryConnectionFactory = directoryConnectionFactory;
     this.runOptions = runOptions;
     this.msgPublisherAddress = msgPublisherAddress;
     this.interceptMatchAddress = interceptMatchAddress;
@@ -336,6 +337,8 @@ public class DispatcherConnector {
             }
           }
         } else { // we hit the timeout, check if peer is alive
+          final PALDirectory palDirectory =
+              directoryConnectionFactory.getConnection().orElseThrow(RuntimeException::new);
           peerIsUp = palDirectory.peerExists(interceptor);
           if (peerIsUp) {
             logger.warn(
@@ -375,6 +378,8 @@ public class DispatcherConnector {
     // set receive timeout
     reqSocket.setReceiveTimeOut(CALLBACK_RECV_TIMEOUT_MS);
     // get peer's address
+    final PALDirectory palDirectory =
+        directoryConnectionFactory.getConnection().orElseThrow(RuntimeException::new);
     String interceptorAddress = palDirectory.getPeerInfo(peer).getReqAddress();
     reqSocket.connect(interceptorAddress);
     // store in thread-local peer->socket map

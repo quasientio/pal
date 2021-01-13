@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,6 +42,7 @@ import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.messages.InterceptEvtMsg;
+import net.ittera.pal.cxn.DirectoryConnectionFactory;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.ProtobufMessageBuilder;
@@ -48,6 +50,7 @@ import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +67,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
   private ExecutorService execService;
   private InterceptInformer interceptInformer;
   private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+  private DirectoryConnectionFactory directoryConnectionFactory;
   private PALDirectory palDirectory;
   private Socket repSocket;
   private List<InterceptMessage> interceptRequestMessages;
@@ -98,6 +102,9 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     execService = Executors.newCachedThreadPool();
     interceptRequestMessages = new ArrayList<>();
     requestsToUnregister = new ArrayList<>();
+    palDirectory = mock(PALDirectory.class);
+    directoryConnectionFactory = mock(DirectoryConnectionFactory.class);
+    when(directoryConnectionFactory.getConnection()).thenReturn(Optional.of(palDirectory));
   }
 
   @After
@@ -107,14 +114,13 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     closeContext(context);
     execService.shutdownNow();
     execService.awaitTermination(5, TimeUnit.SECONDS);
-
     palDirectory.close();
+    Mockito.reset(palDirectory);
+    Mockito.reset(directoryConnectionFactory);
   }
 
   @Test
   public void interceptRequestFromRemotePeer() throws Exception {
-    palDirectory = mock(PALDirectory.class);
-
     // stub getInterceptRequest call
     when(palDirectory.getInterceptRequest(any()))
         .thenAnswer(
@@ -136,7 +142,8 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     final UUID remotePeerUuid = UUID.randomUUID();
     final UUID interceptUuid = UUID.randomUUID();
     interceptInformer =
-        new InterceptInformer(context, msgBuilder, palDirectory, peerUuid, INTERCEPT_REG_ADDR);
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionFactory, peerUuid, INTERCEPT_REG_ADDR);
     final InterceptEvent interceptEvent =
         new InterceptEvent(
             Type.INTERCEPT_ADDED,
@@ -154,8 +161,6 @@ public class InterceptInformerTest extends ZmqEnabledTest {
 
   @Test
   public void unregisterRequestFromRemotePeer() throws Exception {
-    palDirectory = mock(PALDirectory.class);
-
     // stub getInterceptRequest call
     when(palDirectory.getInterceptRequest(any()))
         .thenAnswer(
@@ -177,7 +182,8 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     final UUID remotePeerUuid = UUID.randomUUID();
     final UUID interceptUuid = UUID.randomUUID();
     interceptInformer =
-        new InterceptInformer(context, msgBuilder, palDirectory, peerUuid, INTERCEPT_REG_ADDR);
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionFactory, peerUuid, INTERCEPT_REG_ADDR);
     InterceptEvent interceptEvent =
         new InterceptEvent(
             Type.INTERCEPT_ADDED,
@@ -207,8 +213,6 @@ public class InterceptInformerTest extends ZmqEnabledTest {
 
   @Test
   public void interceptRequestFromThisPeer() throws Exception {
-    palDirectory = mock(PALDirectory.class);
-
     // stub getInterceptRequest call
     when(palDirectory.getInterceptRequest(any()))
         .thenAnswer(
@@ -229,7 +233,8 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     // create and send new intercept event to informer
     final UUID interceptUuid = UUID.randomUUID();
     interceptInformer =
-        new InterceptInformer(context, msgBuilder, palDirectory, peerUuid, INTERCEPT_REG_ADDR);
+        new InterceptInformer(
+            context, msgBuilder, directoryConnectionFactory, peerUuid, INTERCEPT_REG_ADDR);
     final InterceptEvent interceptEvent =
         new InterceptEvent(
             Type.INTERCEPT_ADDED,

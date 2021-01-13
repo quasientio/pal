@@ -52,6 +52,11 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
     this.name = Objects.requireNonNull(name);
   }
 
+  public LogInfo(String name, String bootstrapServers) {
+    this(name);
+    setBootstrapServers(bootstrapServers);
+  }
+
   public LogInfo(String name, Set<KafkaBrokerInfo> brokerInfoSet) {
     this(name);
     setBrokerInfoSet(brokerInfoSet);
@@ -77,6 +82,10 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
 
   public String getBootstrapServers() {
     return bootstrapServers;
+  }
+
+  public void setBootstrapServers(String bootstrapServers) {
+    this.bootstrapServers = bootstrapServers;
   }
 
   public void setBrokerInfoSet(Set<KafkaBrokerInfo> brokerInfoSet) {
