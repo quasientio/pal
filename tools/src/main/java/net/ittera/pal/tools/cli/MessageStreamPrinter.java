@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.tools.printer;
+package net.ittera.pal.tools.cli;
 
 import static net.ittera.pal.common.util.Strings.stringAfter;
 import static net.ittera.pal.common.util.Strings.stringBefore;
@@ -28,22 +28,21 @@ import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.util.JsonFormat.Printer;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
+import net.ittera.pal.common.cli.PALCommand;
+import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.ContextFillingTransformSupplier;
 import net.ittera.pal.messages.MessageContext;
 import net.ittera.pal.messages.MessageStreamer;
 import net.ittera.pal.messages.protobuf.KafkaExecMessageSerde;
 import net.ittera.pal.messages.protobuf.Wrappers.Message;
-import net.ittera.pal.tools.AbstractTool;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -53,46 +52,41 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ParentCommand;
 
-@Command(name = "printer")
-public class MessageStreamPrinter extends AbstractTool implements Callable<Integer> {
+@Command(
+    name = "print",
+    customSynopsis = "pal print [OPTIONS]%n",
+    description = "Print messages from peers or logs",
+    separator = " ",
+    sortOptions = false,
+    optionListHeading = "%nOptions:%n",
+    commandListHeading = "%nCommands:%n")
+public class MessageStreamPrinter extends AbstractPALSubcommand {
 
-  private static final Logger logger = LoggerFactory.getLogger(MessageStreamPrinter.class);
+  private final Logger logger = LoggerFactory.getLogger(MessageStreamPrinter.class);
   private static final Printer protobufJsonPrinter = JsonFormat.printer();
 
-  @Option(
-      names = {"-b", "--bootstrap-servers"},
-      paramLabel = "BOOTSTRAP_SERVERS",
-      defaultValue = "localhost:9092",
-      description = "kafka bootstrap servers (default: ${DEFAULT-VALUE})")
-  private String bootstrapServers;
+  @ParentCommand PALCommand palCommand;
 
   @Option(
       names = {"-l", "--log"},
-      paramLabel = "LOGNAME",
+      paramLabel = "name|uuid",
       description = "read from given log")
-  private String logName;
+  private String logIdentifier;
 
   @Option(
       names = {"-pu", "--peer-uuid"},
-      paramLabel = "PEER_UUID",
+      paramLabel = "uuid",
       description = "subscribe to peer with given UUID")
   private UUID peerUuid;
 
   @Option(
       names = {"-pa", "--peer-address"},
-      paramLabel = "PEER_ADDRESS",
+      paramLabel = "HOST:PORT",
       description = "subscribe to peer with given address")
   private String peerAddress;
-
-  @Option(
-      names = {"-d", "--dir-address"},
-      paramLabel = "PAL_DIRECTORY",
-      defaultValue = "localhost:2181",
-      description = "address of PAL directory (default: ${DEFAULT-VALUE})")
-  private String palDirAddress;
 
   @Option(
       names = {"-t", "--types"},
@@ -109,13 +103,13 @@ public class MessageStreamPrinter extends AbstractTool implements Callable<Integ
 
   @Option(
       names = {"-fp", "--from-peer"},
-      paramLabel = "PEER_UUID",
+      paramLabel = "uuid",
       description = "filter by peer uuid")
   private String fromPeer;
 
   @Option(
       names = {"-ft", "--from-thread"},
-      paramLabel = "THREAD_NAME",
+      paramLabel = "thread_name",
       description = "filter by thread name")
   private String threadName;
 
@@ -125,13 +119,13 @@ public class MessageStreamPrinter extends AbstractTool implements Callable<Integ
    */
   @Option(
       names = {"-o", "--offset"},
-      paramLabel = "MESSAGE_OFFSET",
+      paramLabel = "offset",
       description = "print message with given offset (only valid with --log/-l option)")
   protected Long offset;
 
   @Option(
       names = {"-u", "--uuid"},
-      paramLabel = "MESSAGE_UUID",
+      paramLabel = "uuid",
       description = "print message with given UUID")
   private String uuid;
 
@@ -145,38 +139,65 @@ public class MessageStreamPrinter extends AbstractTool implements Callable<Integ
       description = "full message output (JSON format)")
   private boolean jsonOutput;
 
+  @Option(names = "-v", description = "run verbosely")
+  private boolean verbose;
+
   @Option(
       names = {"-h", "--help"},
       usageHelp = true,
       description = "display this help message")
   private boolean helpRequested = false;
 
-  @Option(names = "-v", description = "run verbosely")
-  private boolean verbose;
-
-  private static String getProperty(String propertyName, @Nullable String defaultValue) {
-    if (System.getProperty(propertyName) != null) {
-      logger.debug("loading value of '{}' from system properties", propertyName);
-      return System.getProperty(propertyName);
-    } else if (System.getenv(propertyName.toUpperCase()) != null) {
-      logger.debug("loading value of '{}' from ENV", propertyName.toUpperCase());
-      return System.getenv(propertyName.toUpperCase());
-    } else if (defaultValue != null) {
-      logger.debug("loading value of '{}' from default", propertyName);
-      return defaultValue;
-    }
-    return null;
-  }
-
-  public static void main(String[] args) {
-    int exitCode = new CommandLine(new MessageStreamPrinter()).execute(args);
-    System.exit(exitCode);
+  @Override
+  protected void initialize() throws Exception {
+    initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
   }
 
   private Integer printLogMessageStream() {
-    logger.info("Started printer for log: {}", logName);
+    logger.info("Started printer for log: {}", logIdentifier);
+    PALDirectory palDirectory = getPalDirectory();
 
-    Objects.requireNonNull(bootstrapServers, "bootstrap servers required");
+    LogInfo log = null;
+
+    // try to get log by name
+    try {
+      log = palDirectory.getLogInfo(logIdentifier);
+    } catch (Exception e) {
+      logger.debug("Error trying to find log by name in directory: {}", logIdentifier);
+    }
+
+    if (log == null) {
+
+      // ok, then try as UUID
+      final UUID logUuid;
+      UUID parsedUuid = null;
+      try {
+        parsedUuid = UUID.fromString(logIdentifier);
+      } catch (IllegalArgumentException iae) {
+        // nevermind
+      } finally {
+        logUuid = parsedUuid;
+      }
+      // log identifier is a valid UUID so let's treat it as such
+      if (logUuid != null) {
+        try {
+          Optional<LogInfo> logInfoByUuid =
+              palDirectory.getAllLogs().stream()
+                  .filter(l -> logUuid.equals(l.getUuid()))
+                  .findFirst();
+          if (logInfoByUuid.isPresent()) {
+            log = logInfoByUuid.get();
+            logger.info("Got matching Log: {} for logIdentifier: {}", log, logIdentifier);
+          }
+        } catch (Exception e) {
+          logger.error("Error fetching logs from directory.");
+        }
+      }
+    }
+
+    // if not a valid UUID, or we have no PALDirectory, then treat log identifier as name
+    final String logName = log.getName();
+    final String bootstrapServers = log.getBootstrapServers();
 
     /*
     1. CONFIGURE STREAMS API
@@ -331,16 +352,10 @@ public class MessageStreamPrinter extends AbstractTool implements Callable<Integ
   }
 
   private Integer printSocketMessageStream() throws Exception {
-    Objects.requireNonNull(palDirAddress, "palDirAddress required");
-
     ExecutorService executor = getExecutor(1);
 
     if (peerAddress == null) { // peerUuid must be present then
-      String palDirectoryURL =
-          palDirAddress != null ? palDirAddress : getProperty("pal_directory", null);
-      try (PALDirectory palDirectory = new PALDirectory(palDirectoryURL)) {
-        peerAddress = palDirectory.getPeerInfo(peerUuid).getPubAddress();
-      }
+      peerAddress = getPalDirectory().getPeerInfo(peerUuid).getPubAddress();
     }
 
     // parse address
@@ -424,10 +439,14 @@ public class MessageStreamPrinter extends AbstractTool implements Callable<Integ
     return 0;
   }
 
-  public Integer call() throws Exception {
+  @Override
+  public void validateInput() {}
+
+  @Override
+  protected int runCommand() throws Exception {
     if (peerAddress != null || peerUuid != null) {
       return printSocketMessageStream();
-    } else if (logName != null) {
+    } else if (logIdentifier != null) {
       return printLogMessageStream();
     } else {
       throw new RuntimeException(

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+JMX_PROPS="-Dcom.sun.management.jmxremote \
+           -Djava.rmi.server.hostname=$JMX_HOST \
+           -Dcom.sun.management.jmxremote.port=$JMX_PORT \
+           -Dcom.sun.management.jmxremote.local.only=true \
+           -Dcom.sun.management.jmxremote.authenticate=false \
+           -Dcom.sun.management.jmxremote.ssl=false"
+
+
+MAVEN_OPTS="-Xmx1024M \
+           -Xms512M \
+           -server \
+           -XX:+UseConcMarkSweepGC \
+           -XX:+AggressiveOpts \
+           -XX:+UseBiasedLocking \
+           -XX:+UseNUMA"
+
+MAIN_ARGS="$@"
+
+mvn -f tools/pom.xml --quiet exec:java -Dexec.mainClass="net.ittera.pal.tools.cli.Pal" -Dexec.args="$MAIN_ARGS"

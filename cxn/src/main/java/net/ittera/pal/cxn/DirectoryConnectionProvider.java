@@ -22,38 +22,52 @@ package net.ittera.pal.cxn;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 
 /**
- * This class provides an indirect way to inject PALDirectory to peer classes. Dependency injection
- * cannot be used (at least not in a simple/straightforward way), since peer can run without a
- * PALDirectory connection, but we need to inject PALDirectory into classes that may need it if such
- * connection exists.
+ * This class implements a null-safe Provider for PALDirectory.
  *
- * <p>This factory is then used as a singleton that gets injected instead of PALDirectory. Classes
- * will then call getConnection() to get the Optional<PALDirectory> reference.
+ * <p>It is used as a singleton that gets injected instead of PALDirectory. Methods that need a
+ * connection need to call get() which returns the Optional<PALDirectory> reference.
  *
- * <p>When peer runs without a pal directory, the factory must be instantiated with the special
- * connection string PALDirectory.NO_URL.
+ * <p>When peer runs without a pal directory, the Provider is initialized with the constant
+ * PALDirectory.NO_URL.
  */
-public class DirectoryConnectionFactory {
+public class DirectoryConnectionProvider implements Provider<Optional<PALDirectory>> {
 
+  // PALDirectory constructor parameters
   private final String connectionString;
+  private final String namespace;
+  private final boolean withCaching;
+
   private PALDirectory palDirectoryInstance;
 
   @Inject
-  public DirectoryConnectionFactory(@Named("paldir_url") String connectionString) {
-    this.connectionString = connectionString;
+  public DirectoryConnectionProvider(@Named("paldir_url") String connectionString) {
+    this(connectionString, null, true);
   }
 
-  public Optional<PALDirectory> getConnection() {
+  public DirectoryConnectionProvider(
+      String connectionString, String namespace, boolean withCaching) {
+    this.connectionString = connectionString;
+    this.namespace = namespace;
+    this.withCaching = withCaching;
+  }
+
+  @Override
+  public Optional<PALDirectory> get() {
     if (connectionString.equals(PALDirectory.NO_URL)) {
       return Optional.empty();
     }
 
     if (palDirectoryInstance == null) {
-      palDirectoryInstance = new PALDirectory(connectionString);
+      palDirectoryInstance = new PALDirectory(connectionString, namespace, withCaching);
     }
 
     return Optional.of(palDirectoryInstance);
+  }
+
+  public String getConnectionString() {
+    return connectionString;
   }
 }

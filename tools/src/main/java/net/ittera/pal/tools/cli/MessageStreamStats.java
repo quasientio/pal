@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.tools.stats;
+package net.ittera.pal.tools.cli;
 
 import static net.ittera.pal.common.util.Strings.stringAfter;
 import static net.ittera.pal.common.util.Strings.stringBefore;
@@ -43,6 +43,8 @@ import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
 import net.ittera.pal.messages.protobuf.KafkaExecMessageSerde;
 import net.ittera.pal.messages.protobuf.Wrappers.Message;
 import net.ittera.pal.tools.AbstractTool;
+import net.ittera.pal.tools.stats.ContinuousPrinter;
+import net.ittera.pal.tools.stats.Counters;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -59,7 +61,7 @@ import picocli.CommandLine.Command;
 @Command(name = "stats")
 public class MessageStreamStats extends AbstractTool implements Callable<Integer> {
 
-  private static final Logger logger = LoggerFactory.getLogger(MessageStreamStats.class);
+  private final Logger logger = LoggerFactory.getLogger(MessageStreamStats.class);
 
   private final Counters counters = new Counters();
   private final CountDownLatch shutdownLatch = new CountDownLatch(1);
@@ -414,20 +416,6 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       return 1;
     }
     return 0;
-  }
-
-  private static String getProperty(String propertyName, @Nullable String defaultValue) {
-    if (System.getProperty(propertyName) != null) {
-      logger.debug("loading value of '{}' from system properties", propertyName);
-      return System.getProperty(propertyName);
-    } else if (System.getenv(propertyName.toUpperCase()) != null) {
-      logger.debug("loading value of '{}' from ENV", propertyName.toUpperCase());
-      return System.getenv(propertyName.toUpperCase());
-    } else if (defaultValue != null) {
-      logger.debug("loading value of '{}' from default", propertyName);
-      return defaultValue;
-    }
-    return null;
   }
 
   private ExecutorService getExecutor(int nThreads) {

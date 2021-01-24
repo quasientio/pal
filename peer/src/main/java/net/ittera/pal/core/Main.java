@@ -50,6 +50,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import net.ittera.pal.common.cli.PALCommand;
 import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.core.exec.ExtendedThreadPoolExecutor;
 import net.ittera.pal.core.exec.InterceptInformer;
@@ -57,7 +58,7 @@ import net.ittera.pal.core.exec.LogMessageExecutor;
 import net.ittera.pal.core.exec.PeerMessageExecutor;
 import net.ittera.pal.core.exec.java.CustomClassloader;
 import net.ittera.pal.core.exec.java.SelfCaller;
-import net.ittera.pal.cxn.DirectoryConnectionFactory;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,38 +68,47 @@ import org.zeromq.ZMQ.Socket;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
+import picocli.CommandLine.ParentCommand;
 
 @Command(
     name = "peer",
+    description = "Run a new peer",
+    separator = " ",
     sortOptions = false,
-    optionListHeading = "where options include:\n",
+    optionListHeading = "%nOptions:%n",
+    usageHelpWidth = 90,
     customSynopsis = {
-      "peer [OPTIONS] class [args...]",
+      "pal run [OPTIONS] class [args...]",
       "            (to execute a class)",
-      "or     peer [OPTIONS] -jar jarFile [args...]",
-      "            (to execute a jar file)",
+      "    or pal run [OPTIONS] -jar jarFile [args...]",
+      "            (to execute a jar file)%n",
     })
 public class Main implements Callable<Integer> {
+
+  @ParentCommand private PALCommand palCommand;
+
   @Option(
-      names = {"-cp", "--classpath"},
+      names = {"-c", "-cp", "--classpath"},
       paramLabel = "CLASSPATH", // corresponding ENV var: CLASSPATH
       description = "load classes from given folders/jars")
   private String classpath;
 
   @Option(
       names = {"-d", "--dir"},
-      paramLabel = "<pal_directory>",
-      description = "PAL directory URL (if not given, run unregistered)")
+      paramLabel = "HOST:PORT",
+      description = "PAL directory (if not given, run unregistered)")
   private String palDirectoryURL; // corresponding ENV var: PAL_DIRECTORY
 
   @Option(
       names = {"-u", "--uuid"},
-      description = "uuid for this peer (default: random)")
+      paramLabel = "uuid",
+      description = "uuid for this peer (default: <random>)")
   private UUID uuid; // corresponding ENV var: PEER_UUID
 
   @Option(
       names = {"-n", "--name"},
       arity = "1",
+      paramLabel = "name",
       description = "name for this peer")
   private String name; // corresponding ENV var: PEER_NAME
 
@@ -109,42 +119,43 @@ public class Main implements Callable<Integer> {
 
   @Option(
       names = {"-l", "--log"},
-      paramLabel = "<log_name> or <auto>",
+      paramLabel = "name|auto",
       description = "read from and write to given log ('auto' works only with <pal_directory>)")
   private String log; // corresponding ENV var: LOG
 
   @Option(
       names = {"-i", "--in-log"},
-      paramLabel = "<log_name> or <auto>",
+      paramLabel = "name|auto",
       description = "read from given log ('auto' works only with <pal_directory>)")
   private String inLog; // corresponding ENV var: IN_LOG
 
   @Option(
       names = {"-s", "--start-at"},
+      paramLabel = "log_offset",
       description = "start reading from given offset")
   private Long logOffset;
 
   @Option(
       names = {"-o", "--out-log"},
-      paramLabel = "<log_name> or <auto>",
+      paramLabel = "name|auto",
       description = "write to given log ('auto' works only with <pal_directory>)")
   private String outLog; // corresponding ENV var: OUT_LOG
 
   @Option(
       names = {"-k", "--kafka"},
-      paramLabel = "<bootstrap_servers>",
+      paramLabel = "bootstrap_servers",
       description = "connect to given kafka servers when running with no <pal_directory>")
   private String kafkaServers; // corresponding ENV var: KAFKA_SERVERS
 
   @Option(
       names = {"-p", "--tcp-pub"},
-      paramLabel = "<[HOST:]PORT> or <auto>",
+      paramLabel = "[HOST:]PORT|auto",
       description = "publish messages to TCP socket (auto = localhost:random_port)")
   private String tcpPub; // corresponding ENV var: TCP_PUB
 
   @Option(
       names = {"-r", "--tcp-req"},
-      paramLabel = "<[HOST:]PORT> or <auto>",
+      paramLabel = "[HOST:]PORT|auto",
       description = "listen for requests on TCP socket (auto = localhost:random_port)")
   private String tcpReq; // corresponding ENV var: TCP_REQ
 
@@ -216,7 +227,7 @@ public class Main implements Callable<Integer> {
     private static final String DEFAULT_REQ_HOSTNAME = "localhost";
   }
 
-  static {
+  private void initLogging() {
     // configure logging
     LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
     JoranConfigurator configurator = new JoranConfigurator();
@@ -288,7 +299,7 @@ public class Main implements Callable<Integer> {
 
   // load from 1) cmd-line or 2) env variable
   private static String getParameter(String envKey, String paramValue) {
-    if (paramValue != null && !paramValue.isEmpty()) {
+    if (paramValue != null && !paramValue.trim().isEmpty()) {
       return paramValue;
     }
     final String envVar = System.getenv(envKey);
@@ -309,7 +320,6 @@ public class Main implements Callable<Integer> {
 
   private void setEmptyParamsFromEnv() {
     classpath = getParameter("CLASSPATH", classpath);
-    palDirectoryURL = getParameter("PAL_DIRECTORY", palDirectoryURL);
     kafkaServers = getParameter("KAFKA_SERVERS", kafkaServers);
     name = getParameter("PEER_NAME", name);
     uuid = getParameter("PEER_UUID", uuid);
@@ -318,6 +328,23 @@ public class Main implements Callable<Integer> {
     outLog = getParameter("OUT_LOG", outLog);
     tcpReq = getParameter("TCP_REQ", tcpReq);
     tcpPub = getParameter("TCP_PUB", tcpPub);
+
+    // if not given as option to this CMD, check if it was given as option to parent (Pal) command
+    // else, set it from ENV if present
+    if (palDirectoryURL == null || palDirectoryURL.trim().isEmpty()) {
+      // check ENV variable
+      String palDirectoryEnvVar = System.getenv("PAL_DIRECTORY");
+      palDirectoryEnvVar = palDirectoryEnvVar != null ? palDirectoryEnvVar.trim() : null;
+      // check if it was given to parent command (Pal) as option
+      if (palCommand != null
+          && !Arrays.asList(palDirectoryEnvVar, PALDirectory.NO_URL)
+              .contains(palCommand.getPalDirectoryConnectionString())) {
+        palDirectoryURL = palCommand.getPalDirectoryConnectionString();
+      } else {
+        // set it from parsed ENV variable (which at this point may be null, that's ok)
+        palDirectoryURL = palDirectoryEnvVar;
+      }
+    }
   }
 
   private void validateInput() {
@@ -338,7 +365,7 @@ public class Main implements Callable<Integer> {
     // verify and set run options
     runOptions = EnumSet.noneOf(RunOptions.class);
 
-    if (palDirectoryURL == null) {
+    if (palDirectoryURL == null || palDirectoryURL.isEmpty()) {
       runOptions.add(RunOptions.NO_PALDIR);
 
       // warn of incompatible options that will be ignored
@@ -420,7 +447,10 @@ public class Main implements Callable<Integer> {
 
     // add Directory url to app properties
     properties.setProperty(
-        "paldir_url", palDirectoryURL != null ? palDirectoryURL : PALDirectory.NO_URL);
+        "paldir_url",
+        palDirectoryURL == null || palDirectoryURL.isEmpty()
+            ? PALDirectory.NO_URL
+            : palDirectoryURL);
 
     // add kafka servers if given
     if (kafkaServers != null) {
@@ -539,8 +569,8 @@ public class Main implements Callable<Integer> {
 
     final PALDirectory palDirectory =
         injector
-            .getInstance(DirectoryConnectionFactory.class)
-            .getConnection()
+            .getInstance(DirectoryConnectionProvider.class)
+            .get()
             .orElseThrow(RuntimeException::new);
 
     // register self as new peer
@@ -642,7 +672,7 @@ public class Main implements Callable<Integer> {
       // close connection to paldir
       if (!runOptions.contains(RunOptions.NO_PALDIR)) {
         final Optional<PALDirectory> palDirectory =
-            injector.getInstance(DirectoryConnectionFactory.class).getConnection();
+            injector.getInstance(DirectoryConnectionProvider.class).get();
         palDirectory.ifPresent(PALDirectory::close);
       }
 
@@ -699,14 +729,15 @@ public class Main implements Callable<Integer> {
   }
 
   public static void main(final String[] args) {
-    logger.info("peer::main called w/args: {}", String.join(" ", args));
-    int exitCode = new CommandLine(new Main()).execute(args);
+    CommandLine commandLine = new CommandLine(new Main());
+    int exitCode = commandLine.execute(args);
     System.exit(exitCode);
   }
 
   @Override
   public Integer call() throws InterruptedException {
 
+    initLogging();
     // for async calls
     final ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
 
@@ -784,8 +815,8 @@ public class Main implements Callable<Integer> {
     if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {
       final PALDirectory palDirectory =
           injector
-              .getInstance(DirectoryConnectionFactory.class)
-              .getConnection()
+              .getInstance(DirectoryConnectionProvider.class)
+              .get()
               .orElseThrow(RuntimeException::new);
       final InterceptInformer interceptInformer = injector.getInstance(InterceptInformer.class);
       // add as listener for future requests

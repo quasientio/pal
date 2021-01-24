@@ -38,7 +38,7 @@ import net.ittera.pal.common.lang.intercept.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.InterceptableFieldOp;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
-import net.ittera.pal.cxn.DirectoryConnectionFactory;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import org.apache.curator.framework.api.CuratorEventType;
 import org.slf4j.Logger;
@@ -49,12 +49,12 @@ public class InterceptProcessor {
 
   private static final Logger logger = LoggerFactory.getLogger(InterceptProcessor.class);
   private final UUID peerUuid;
-  private final DirectoryConnectionFactory directoryConnectionFactory;
+  private final DirectoryConnectionProvider directoryConnectionProvider;
 
   @Inject
-  InterceptProcessor(UUID peerUuid, DirectoryConnectionFactory directoryConnectionFactory) {
+  InterceptProcessor(UUID peerUuid, DirectoryConnectionProvider directoryConnectionProvider) {
     this.peerUuid = peerUuid;
-    this.directoryConnectionFactory = directoryConnectionFactory;
+    this.directoryConnectionProvider = directoryConnectionProvider;
   }
 
   public void process(Class clazz) {
@@ -142,7 +142,7 @@ public class InterceptProcessor {
 
   private void register(InterceptRequest interceptRequest) {
     try {
-      Optional<PALDirectory> directory = directoryConnectionFactory.getConnection();
+      Optional<PALDirectory> directory = directoryConnectionProvider.get();
       if (directory.isPresent()) {
         directory
             .get()

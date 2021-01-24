@@ -23,7 +23,7 @@ import com.google.inject.Injector;
 import java.util.Objects;
 import java.util.Properties;
 import net.ittera.pal.common.directory.nodes.LogInfo;
-import net.ittera.pal.cxn.DirectoryConnectionFactory;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,8 +62,8 @@ class LogConfigurator {
   private LogInfo registerNewLog() throws Exception {
     final PALDirectory palDirectory =
         injector
-            .getInstance(DirectoryConnectionFactory.class)
-            .getConnection()
+            .getInstance(DirectoryConnectionProvider.class)
+            .get()
             .orElseThrow(RuntimeException::new);
     return palDirectory.newLog(appProps.getProperty("kafkaTopic"));
   }
@@ -72,8 +72,8 @@ class LogConfigurator {
 
     final PALDirectory palDirectory =
         injector
-            .getInstance(DirectoryConnectionFactory.class)
-            .getConnection()
+            .getInstance(DirectoryConnectionProvider.class)
+            .get()
             .orElseThrow(RuntimeException::new);
     final LogInfo logInfo;
 

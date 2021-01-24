@@ -1,3 +1,0 @@
-#!/bin/bash
-MAIN_ARGS="$@"
-mvn --quiet exec:java -Dexec.mainClass="net.ittera.pal.tools.printer.MessageStreamPrinter" -Dlogback.configurationFile="logback.xml" -Dexec.args="$MAIN_ARGS"

@@ -40,7 +40,7 @@ import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.core.messages.PublishedOffsetMsg;
-import net.ittera.pal.cxn.DirectoryConnectionFactory;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -92,7 +92,7 @@ public class LogReader extends ConnectedService {
   private volatile long lastOffsetRead = -1;
 
   // pal directory
-  private final DirectoryConnectionFactory directoryConnectionFactory;
+  private final DirectoryConnectionProvider directoryConnectionProvider;
 
   // shared by threads OffsetUpdater and LogReader: TODO avoid sharing
   private final AbstractQueue<Long> skipOffsets = new ConcurrentLinkedQueue<>();
@@ -160,9 +160,9 @@ public class LogReader extends ConnectedService {
       @Named("pollDuration") String pollDuration,
       @Named("in.log") String inLogAddress,
       @Named("offset.pub") String offsetPubAddress,
-      DirectoryConnectionFactory directoryConnectionFactory) {
+      DirectoryConnectionProvider directoryConnectionProvider) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
-    this.directoryConnectionFactory = directoryConnectionFactory;
+    this.directoryConnectionProvider = directoryConnectionProvider;
     // zmq addresses
     this.inLogAddress = inLogAddress;
     this.offsetPubAddress = offsetPubAddress;
@@ -196,13 +196,13 @@ public class LogReader extends ConnectedService {
       String serviceName,
       String inLogAddress,
       String offsetPubAddress,
-      DirectoryConnectionFactory directoryConnectionFactory,
+      DirectoryConnectionProvider directoryConnectionProvider,
       Consumer<String, byte[]> consumer,
       long pollDuration) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.inLogAddress = inLogAddress;
     this.offsetPubAddress = offsetPubAddress;
-    this.directoryConnectionFactory = directoryConnectionFactory;
+    this.directoryConnectionProvider = directoryConnectionProvider;
     this.consumer = consumer;
     this.pollDuration = Duration.of(pollDuration, ChronoUnit.MILLIS);
     logger.info("Created log reader for peer with id '{}'", peerUuid);
@@ -213,7 +213,7 @@ public class LogReader extends ConnectedService {
     this.kafkaTopic = log.getName();
     this.skipWrittenOffsets = skipWrittenOffsets;
     this.initialOffset = initialOffset;
-    Optional<PALDirectory> palDirectory = directoryConnectionFactory.getConnection();
+    Optional<PALDirectory> palDirectory = directoryConnectionProvider.get();
     final LogInfo logInfo =
         palDirectory.isPresent() ? palDirectory.get().getLogInfo(log.getName()) : log;
     consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());

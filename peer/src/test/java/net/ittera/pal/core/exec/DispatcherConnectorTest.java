@@ -36,7 +36,7 @@ import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.messages.InterceptsMsg;
-import net.ittera.pal.cxn.DirectoryConnectionFactory;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.ProtobufMessageBuilder;
@@ -171,7 +171,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   private InterceptsStub interceptsStub;
   private InternalHeader WRITE_AHEAD_HEADER;
   private TestingServer testingServer;
-  private DirectoryConnectionFactory directoryConnectionFactory;
+  private DirectoryConnectionProvider directoryConnectionProvider;
 
   @Before
   public void setup() throws Exception {
@@ -179,7 +179,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     this.context = createContext();
     this.execService = Executors.newCachedThreadPool();
     testingServer = new TestingServer(TEST_PORT, true);
-    directoryConnectionFactory = new DirectoryConnectionFactory(CONNECTION_STR);
+    directoryConnectionProvider = new DirectoryConnectionProvider(CONNECTION_STR);
 
     // start stub services
     messagePublisherStub = new MessagePublisherStub();
@@ -196,7 +196,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     interceptsStub.requestStop();
 
     dispatcherConnector.closeThreadLocalSockets();
-    directoryConnectionFactory.getConnection().get().close();
+    directoryConnectionProvider.get().get().close();
     testingServer.close();
     closeContext(context);
     execService.shutdownNow();
@@ -215,7 +215,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
         context,
         peerUuid,
         msgBuilder,
-        directoryConnectionFactory,
+        directoryConnectionProvider,
         runOptions,
         MSG_PUBLISHER_ADDR,
         INTERCEPTS_ADDR);

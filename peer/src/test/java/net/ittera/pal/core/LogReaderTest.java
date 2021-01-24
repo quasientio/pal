@@ -36,7 +36,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.core.messages.InboundLogMsg;
-import net.ittera.pal.cxn.DirectoryConnectionFactory;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.ProtobufMessageBuilder;
@@ -167,8 +167,8 @@ public class LogReaderTest extends ZmqEnabledTest {
   public void setup() throws Exception {
     execService = Executors.newSingleThreadExecutor();
     testingServer = new TestingServer(TEST_PORT, true);
-    DirectoryConnectionFactory directoryConnectionFactory =
-        new DirectoryConnectionFactory(CONNECTION_STR);
+    DirectoryConnectionProvider directoryConnectionProvider =
+        new DirectoryConnectionProvider(CONNECTION_STR);
     zmqContext = this.createContext();
     consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     logReader =
@@ -180,10 +180,10 @@ public class LogReaderTest extends ZmqEnabledTest {
             "LogReaderTest-Service",
             DEALER_ADDR,
             OFFSET_PUB_ADDR,
-            directoryConnectionFactory,
+            directoryConnectionProvider,
             consumer,
             10);
-    palDirectory = directoryConnectionFactory.getConnection().orElseThrow(RuntimeException::new);
+    palDirectory = directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
     log = palDirectory.newLog("testapp");
     createdLogs.add(this.log.getName());
     TopicPartition topicPartition = new TopicPartition(log.getName(), 0);

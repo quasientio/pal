@@ -17,12 +17,15 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.tools.paldir;
+package net.ittera.pal.tools.cli;
 
 import static java.lang.String.format;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.TextStyle;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,28 +37,39 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import javax.management.ObjectName;
+import net.ittera.pal.common.cli.PALCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.cxn.JmxClient;
-import net.ittera.pal.cxn.PALDirectory;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.ParentCommand;
 
-@Command(name = "ls", description = "List logs and peers")
-public class List extends AbstractPALDirSubcommand {
+@Command(
+    name = "ls",
+    customSynopsis = "pal ls [OPTIONS]%n",
+    description = "List peers and logs in directory",
+    separator = " ",
+    sortOptions = false,
+    optionListHeading = "%nOptions:%n",
+    commandListHeading = "%nCommands:%n")
+public class List extends AbstractPALSubcommand {
+
+  @ParentCommand PALCommand palCommand;
 
   @Option(
       names = {"-L", "--logs"},
-      description = "list logs in directory")
+      description = "list logs")
   private boolean listLogs;
 
   @Option(
       names = {"-P", "--peers"},
-      description = "list peers in directory")
+      description = "list peers")
   private boolean listPeers;
 
   @Option(
@@ -65,6 +79,7 @@ public class List extends AbstractPALDirSubcommand {
 
   @Option(
       names = "--kafka-jmx-port",
+      paramLabel = "port",
       defaultValue = "10121",
       description = "JMX port used by kafka servers (default: ${DEFAULT-VALUE})")
   private Integer kafkaJmxPort;
@@ -75,7 +90,7 @@ public class List extends AbstractPALDirSubcommand {
       description = "display this help message")
   private boolean helpRequested = false;
 
-  private static final Logger logger = LoggerFactory.getLogger(List.class);
+  private final Logger logger = LoggerFactory.getLogger(List.class);
   private static final UUID KAFKA_CLIENT_ID = UUID.randomUUID();
   private final Map<String, JmxClient> jmxClientsPerServer = new HashMap<>();
   private final Map<String, AdminClient> adminClientsPerServer = new HashMap<>();
@@ -86,8 +101,9 @@ public class List extends AbstractPALDirSubcommand {
   /** uuid name req pub jmx ctime mtime */
   private static final String PEERS_LONG_FORMAT = "%-36s %10s %20s %20s %20s %12s";
 
-  public List(PALDirectory palDirectory) {
-    super(palDirectory);
+  @Override
+  protected void initialize() throws Exception {
+    initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
   }
 
   @Override
@@ -208,6 +224,12 @@ public class List extends AbstractPALDirSubcommand {
     out.println(logInfoLine);
   }
 
+  private static String getFormattedUptime(OffsetDateTime startDateTime) {
+    final OffsetDateTime now = OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC);
+    return DurationFormatUtils.formatDuration(
+        Duration.between(startDateTime, now).toMillis(), "H:mm:ss");
+  }
+
   private void print(PeerInfo peerInfo) {
     if (longListing) {
       out.println(
@@ -222,7 +244,7 @@ public class List extends AbstractPALDirSubcommand {
                   ? ""
                   : Strings.stringAfter(peerInfo.getPubAddress(), "tcp://"),
               peerInfo.getJmxAddress() == null ? "" : peerInfo.getJmxAddress(),
-              getFormattedDate(peerInfo.getCTime())));
+              getFormattedUptime(peerInfo.getCTime())));
     } else {
       out.println(format("%s", peerInfo.getUuid()));
     }
@@ -236,13 +258,15 @@ public class List extends AbstractPALDirSubcommand {
     }
     // close kafka admin clients
     adminClientsPerServer.values().forEach(AdminClient::close);
+
+    super.closeResources();
   }
 
   @Override
   protected int runCommand() throws Exception {
     if (listLogs) {
       // get all logs in directory
-      Set<LogInfo> logsInDirectory = palDirectory.getAllLogs();
+      Set<LogInfo> logsInDirectory = getPalDirectory().getAllLogs();
 
       // get logs from all different kafka servers
       Set<LogInfo> allLogsInKafka = new HashSet<>();
@@ -268,12 +292,13 @@ public class List extends AbstractPALDirSubcommand {
     }
 
     if (listPeers) {
-      Set<PeerInfo> peers = palDirectory.getAllPeers();
+      Set<PeerInfo> peers = getPalDirectory().getAllPeers();
+      logger.debug("{} peers found in directory", peers.size());
       if (longListing) {
         if (!peers.isEmpty()) {
           // print total and header lines
           out.println(format("total %d", peers.size()));
-          out.println((format(PEERS_LONG_FORMAT, "UUID", "Name", "REQ", "PUB", "JMX", "Created")));
+          out.println((format(PEERS_LONG_FORMAT, "UUID", "Name", "REQ", "PUB", "JMX", "Uptime")));
         }
       }
       peers.forEach(this::print);

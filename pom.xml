@@ -18,6 +18,7 @@
         <maven.plugin.compiler.version>2.3.2</maven.plugin.compiler.version>
         <maven.plugin.site.version>3.7.1</maven.plugin.site.version>
         <maven.plugin.reports.version>3.0.0</maven.plugin.reports.version>
+        <maven.plugin.install.version>3.0.0-M1</maven.plugin.install.version>
         <maven.plugin.clean>3.1.0</maven.plugin.clean>
         <maven.plugin.shade>3.2.1</maven.plugin.shade>
         <spotbugs.plugin.version>3.1.12</spotbugs.plugin.version>
@@ -37,7 +38,7 @@
         <kafka.clients.version>2.3.0</kafka.clients.version>
         <kafka.streams.version>2.3.0</kafka.streams.version>
         <commons.lang3.version>3.9</commons.lang3.version>
-        <picocli.version>4.0.0-beta-2</picocli.version>
+        <picocli.version>4.6.1</picocli.version>
         <jeromq.version>0.5.1</jeromq.version>
         <zookeeper.version>3.4.14</zookeeper.version>
         <curator.version>4.2.0</curator.version>
@@ -169,6 +170,11 @@
             <dependency>
                 <groupId>net.ittera.pal</groupId>
                 <artifactId>itt-apps</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.ittera.pal</groupId>
+                <artifactId>peer</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

@@ -104,7 +104,7 @@ public class ThinPeer {
   private boolean zmqContextGiven;
 
   // PAL directory
-  private PALDirectory palDirectory;
+  private DirectoryConnectionProvider directoryConnectionProvider;
   private boolean directoryGiven;
   private String palDirectoryUrl;
 
@@ -186,8 +186,8 @@ public class ThinPeer {
     return this;
   }
 
-  public ThinPeer withDirectory(PALDirectory directory) {
-    this.palDirectory = directory;
+  public ThinPeer withDirectoryProvider(DirectoryConnectionProvider directoryConnectionProvider) {
+    this.directoryConnectionProvider = directoryConnectionProvider;
     this.directoryGiven = true;
     return this;
   }
@@ -203,25 +203,32 @@ public class ThinPeer {
       this.peerUuid = UUID.randomUUID();
     }
 
+    if (palDirectoryUrl != null && directoryConnectionProvider != null) {
+      throw new IllegalArgumentException(
+          "ThinPeer needs a PAL directory address or a connection provider, but not both");
+    }
+
     // configure PAL directory
-    if (palDirectory == null) {
+    if (directoryConnectionProvider != null) {
+      this.palDirectoryUrl = directoryConnectionProvider.getConnectionString();
+    } else {
       if (palDirectoryUrl == null) {
-        throw new RuntimeException("You must supply either Directory or DirectoryURL");
-      } else {
-        logger.info("Using PAL_DIRECTORY = {}", palDirectoryUrl);
-        this.palDirectory = new PALDirectory(palDirectoryUrl);
+        this.palDirectoryUrl = PALDirectory.NO_URL;
       }
+      directoryConnectionProvider = new DirectoryConnectionProvider(palDirectoryUrl);
     }
 
     // register self as peer
-    try {
-      final Properties peerProperties = new Properties();
-      if (this.peerName != null) {
-        peerProperties.put("name", peerName);
+    if (getPalDirectory() != null) {
+      try {
+        final Properties peerProperties = new Properties();
+        if (this.peerName != null) {
+          peerProperties.put("name", peerName);
+        }
+        getPalDirectory().registerPeer(peerUuid, peerProperties);
+      } catch (Exception ex) {
+        logger.error("Error registering peer", ex);
       }
-      palDirectory.registerPeer(peerUuid, peerProperties);
-    } catch (Exception ex) {
-      logger.error("Error registering peer", ex);
     }
 
     final boolean logless = currentPeer != null;
@@ -230,22 +237,22 @@ public class ThinPeer {
       String kafkaTopicPrefix = logPrefix != null ? logPrefix : DEFAULT_TOPIC_PREFIX;
       LogInfo lastLog = null;
       if (this.inLog == null) {
-        lastLog = palDirectory.getLastLog(kafkaTopicPrefix);
+        lastLog = getPalDirectory().getLastLog(kafkaTopicPrefix);
         this.inLog = lastLog;
       } else {
         if (this.inLog.getBootstrapServers() == null) {
-          this.inLog.setBrokerInfoSet(palDirectory.getKafkaBrokers());
+          this.inLog.setBrokerInfoSet(getPalDirectory().getKafkaBrokers());
         }
       }
 
       if (outLog == null) {
         if (lastLog == null) {
-          lastLog = palDirectory.getLastLog(kafkaTopicPrefix);
+          lastLog = getPalDirectory().getLastLog(kafkaTopicPrefix);
         }
         this.outLog = lastLog;
       } else {
         if (this.outLog.getBootstrapServers() == null) {
-          this.outLog.setBrokerInfoSet(palDirectory.getKafkaBrokers());
+          this.outLog.setBrokerInfoSet(getPalDirectory().getKafkaBrokers());
         }
       }
 
@@ -315,9 +322,16 @@ public class ThinPeer {
     logger.info(
         format(
             "Initialized ThinPeer with:%n uuid: %s,%n name: %s,%n directory: %s,%n initialPeer: %s,%n inLog: %s,%n outLog: %s",
-            peerUuid, peerName, palDirectory.getDirectoryUrl(), currentPeer, inLog, outLog));
+            peerUuid, peerName, palDirectoryUrl, currentPeer, inLog, outLog));
 
     return this;
+  }
+
+  private PALDirectory getPalDirectory() {
+    if (directoryConnectionProvider != null) {
+      return directoryConnectionProvider.get().orElse(null);
+    }
+    return null;
   }
 
   private void connectSocket() {
@@ -491,7 +505,7 @@ public class ThinPeer {
     final ExecMessageFuture messageFuture =
         new ExecMessageFuture(
             this,
-            palDirectory,
+            getPalDirectory(),
             asyncConsumerExecutor,
             outLog.getName(),
             new LogRequest(requestMsgUuid));
@@ -506,7 +520,7 @@ public class ThinPeer {
 
     // asynchronously create req node
     try {
-      palDirectory.addLogRequestAsync(outLog.getName(), logRequest, messageFuture);
+      getPalDirectory().addLogRequestAsync(outLog.getName(), logRequest, messageFuture);
     } catch (Exception e) {
       logger.error("Couldn't add request node to directory", e);
       return null;
@@ -618,7 +632,7 @@ public class ThinPeer {
             PeerInfo newPeer = null;
             try {
               // we getPeerProperties and close after since we assume we'll get here only once
-              newPeer = palDirectory.getPeerInfo(msgPeerUuid);
+              newPeer = getPalDirectory().getPeerInfo(msgPeerUuid);
             } catch (Exception ex) {
               logger.error("Couldn't get peer properties", ex);
             }
@@ -639,7 +653,7 @@ public class ThinPeer {
   public void connectToPeer(UUID peerUuid) {
     PeerInfo newPeer = null;
     try {
-      newPeer = palDirectory.getPeerInfo(peerUuid);
+      newPeer = getPalDirectory().getPeerInfo(peerUuid);
     } catch (Exception ex) {
       logger.error("Couldn't get peer properties", ex);
     }
@@ -753,9 +767,10 @@ public class ThinPeer {
     }
 
     // close directory
-    if (!directoryGiven) {
-      palDirectory.close();
+    if (!directoryGiven && getPalDirectory() != null) {
+      getPalDirectory().close();
     }
+
     closed = true;
   }
 

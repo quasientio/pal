@@ -14,7 +14,7 @@ services:
   peer:
     build:
       context: .
-    image: peer
+    image: pal
     network_mode: "host"
     env_file: peer.env
     depends_on:

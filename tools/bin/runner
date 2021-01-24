@@ -1,8 +1,0 @@
-#!/bin/bash
-
-
-MAIN_ARGS="$@"
-
-export MAVEN_OPTS="-Xmx1024M -Xms512M -server -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -XX:+UseBiasedLocking -XX:+UseNUMA"
-
-mvn --quiet exec:java -Dexec.mainClass="net.ittera.pal.tools.runner.AppRunner" -Dlogback.configurationFile="logback.xml" -Dexec.args="$MAIN_ARGS"

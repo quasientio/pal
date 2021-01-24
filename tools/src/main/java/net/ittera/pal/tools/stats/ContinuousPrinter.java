@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 public class ContinuousPrinter implements Runnable {
 
-  private static final Logger logger = LoggerFactory.getLogger(ContinuousPrinter.class);
+  private final Logger logger = LoggerFactory.getLogger(ContinuousPrinter.class);
   private static int DEFAULT_SECS_TO_SLEEP = 2;
   private final int secsToSleep;
   private boolean done;

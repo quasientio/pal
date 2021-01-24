@@ -37,7 +37,7 @@ import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.Interceptable.InterceptableType;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
-import net.ittera.pal.cxn.DirectoryConnectionFactory;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import org.junit.After;
 import org.junit.Before;
@@ -73,9 +73,10 @@ public class InterceptProcessorTest {
         .when(palDirectory)
         .registerInterceptAsync(any(), any());
 
-    DirectoryConnectionFactory directoryConnectionFactory = mock(DirectoryConnectionFactory.class);
-    when(directoryConnectionFactory.getConnection()).thenReturn(Optional.of(palDirectory));
-    interceptProcessor = new InterceptProcessor(peerUuid, directoryConnectionFactory);
+    DirectoryConnectionProvider directoryConnectionProvider =
+        mock(DirectoryConnectionProvider.class);
+    when(directoryConnectionProvider.get()).thenReturn(Optional.of(palDirectory));
+    interceptProcessor = new InterceptProcessor(peerUuid, directoryConnectionProvider);
   }
 
   @After

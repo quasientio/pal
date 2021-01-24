@@ -42,7 +42,7 @@ import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.messages.InterceptEvtMsg;
-import net.ittera.pal.cxn.DirectoryConnectionFactory;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.ProtobufMessageBuilder;
@@ -67,7 +67,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
   private ExecutorService execService;
   private InterceptInformer interceptInformer;
   private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
-  private DirectoryConnectionFactory directoryConnectionFactory;
+  private DirectoryConnectionProvider directoryConnectionProvider;
   private PALDirectory palDirectory;
   private Socket repSocket;
   private List<InterceptMessage> interceptRequestMessages;
@@ -103,8 +103,8 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     interceptRequestMessages = new ArrayList<>();
     requestsToUnregister = new ArrayList<>();
     palDirectory = mock(PALDirectory.class);
-    directoryConnectionFactory = mock(DirectoryConnectionFactory.class);
-    when(directoryConnectionFactory.getConnection()).thenReturn(Optional.of(palDirectory));
+    directoryConnectionProvider = mock(DirectoryConnectionProvider.class);
+    when(directoryConnectionProvider.get()).thenReturn(Optional.of(palDirectory));
   }
 
   @After
@@ -115,8 +115,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     execService.shutdownNow();
     execService.awaitTermination(5, TimeUnit.SECONDS);
     palDirectory.close();
-    Mockito.reset(palDirectory);
-    Mockito.reset(directoryConnectionFactory);
+    Mockito.reset(palDirectory, directoryConnectionProvider);
   }
 
   @Test
@@ -143,7 +142,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     final UUID interceptUuid = UUID.randomUUID();
     interceptInformer =
         new InterceptInformer(
-            context, msgBuilder, directoryConnectionFactory, peerUuid, INTERCEPT_REG_ADDR);
+            context, msgBuilder, directoryConnectionProvider, peerUuid, INTERCEPT_REG_ADDR);
     final InterceptEvent interceptEvent =
         new InterceptEvent(
             Type.INTERCEPT_ADDED,
@@ -183,7 +182,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     final UUID interceptUuid = UUID.randomUUID();
     interceptInformer =
         new InterceptInformer(
-            context, msgBuilder, directoryConnectionFactory, peerUuid, INTERCEPT_REG_ADDR);
+            context, msgBuilder, directoryConnectionProvider, peerUuid, INTERCEPT_REG_ADDR);
     InterceptEvent interceptEvent =
         new InterceptEvent(
             Type.INTERCEPT_ADDED,
@@ -234,7 +233,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     final UUID interceptUuid = UUID.randomUUID();
     interceptInformer =
         new InterceptInformer(
-            context, msgBuilder, directoryConnectionFactory, peerUuid, INTERCEPT_REG_ADDR);
+            context, msgBuilder, directoryConnectionProvider, peerUuid, INTERCEPT_REG_ADDR);
     final InterceptEvent interceptEvent =
         new InterceptEvent(
             Type.INTERCEPT_ADDED,

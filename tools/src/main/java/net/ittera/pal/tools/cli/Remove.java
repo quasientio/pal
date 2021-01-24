@@ -17,8 +17,9 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.tools.paldir;
+package net.ittera.pal.tools.cli;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -29,10 +30,10 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import net.ittera.pal.common.cli.PALCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.cxn.NoLogInfoNodeException;
-import net.ittera.pal.cxn.PALDirectory;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.DeleteTopicsOptions;
 import org.slf4j.Logger;
@@ -40,17 +41,21 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import picocli.CommandLine.ParentCommand;
 
-@Command(name = "rm", description = "Remove logs and peers")
-public class Remove extends AbstractPALDirSubcommand {
+@Command(
+    name = "rm",
+    customSynopsis = "pal rm [OPTIONS] [-L LOG, ...] [-P PEER, ...]%n",
+    separator = " ",
+    sortOptions = false,
+    optionListHeading = "%nOptions:%n",
+    description = "Remove peers or logs from directory")
+public class Remove extends AbstractPALSubcommand {
 
-  @Parameters(index = "0..*", description = "where arg = (log name|UUID OR peer name|UUID)")
+  @Parameters(index = "0..*", hidden = true)
   private java.util.List<String> argList;
 
-  @Option(
-      names = {"-P", "--delete-peers"},
-      description = "delete peers")
-  private boolean deletePeers = false;
+  @ParentCommand PALCommand palCommand;
 
   @Option(
       names = {"-L", "--delete-logs"},
@@ -58,8 +63,13 @@ public class Remove extends AbstractPALDirSubcommand {
   private boolean deleteLogs;
 
   @Option(
+      names = {"-P", "--delete-peers"},
+      description = "delete peers")
+  private boolean deletePeers = false;
+
+  @Option(
       names = {"-s", "--starting-with"},
-      description = "delete all logs/peers starting with given name(s)")
+      description = "delete peers or logs starting with given prefix")
   private boolean startingWith;
 
   @Option(
@@ -76,16 +86,17 @@ public class Remove extends AbstractPALDirSubcommand {
   private static final UUID KAFKA_CLIENT_ID = UUID.randomUUID();
   private static final int DELETE_TOPIC_TIMEOUT_MS = 250;
   private static final int ADMIN_CLIENT_CLOSE_TIMEOUT_SECS = 2;
-  private static final Logger logger = LoggerFactory.getLogger(Remove.class);
+  private final Logger logger = LoggerFactory.getLogger(Remove.class);
   private final Map<String, AdminClient> adminClientsPerServer = new HashMap<>();
   private int errors = 0;
 
-  public Remove(PALDirectory palDirectory) {
-    super(palDirectory);
-  }
-
   @Override
   public void validateInput() {}
+
+  @Override
+  protected void initialize() throws Exception {
+    initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
+  }
 
   private AdminClient getAdminClientForServers(String bootstrapServers) {
     if (!adminClientsPerServer.containsKey(bootstrapServers)) {
@@ -117,7 +128,7 @@ public class Remove extends AbstractPALDirSubcommand {
   // remove from PAL directory
   private void deleteLog(LogInfo logInfo) {
     try {
-      palDirectory.unregisterLog(logInfo.getName());
+      getPalDirectory().unregisterLog(logInfo.getName());
     } catch (Exception e) {
       logger.error("Error unregistering log '{}' from directory", logInfo.getName(), e);
       errors++;
@@ -133,7 +144,7 @@ public class Remove extends AbstractPALDirSubcommand {
     final Set<LogInfo> matchingLogs;
     try {
       matchingLogs =
-          palDirectory.getAllLogs().stream()
+          getPalDirectory().getAllLogs().stream()
               .filter(l -> l.getUuid().equals(uuid))
               .collect(Collectors.toSet());
     } catch (Exception e) {
@@ -165,7 +176,7 @@ public class Remove extends AbstractPALDirSubcommand {
   private void deleteAllLogs() {
     final Set<LogInfo> allLogs;
     try {
-      allLogs = palDirectory.getAllLogs();
+      allLogs = getPalDirectory().getAllLogs();
     } catch (Exception e) {
       errors++;
       return;
@@ -175,7 +186,7 @@ public class Remove extends AbstractPALDirSubcommand {
 
   private void deletePeer(UUID peerUUID) {
     try {
-      palDirectory.unregisterPeer(peerUUID);
+      getPalDirectory().unregisterPeer(peerUUID);
     } catch (Exception e) {
       errors++;
     }
@@ -183,7 +194,7 @@ public class Remove extends AbstractPALDirSubcommand {
 
   private void deletePeersNamed(String peerName) throws Exception {
     final Set<PeerInfo> matchingPeers =
-        palDirectory.getAllPeers().stream()
+        getPalDirectory().getAllPeers().stream()
             .filter(p -> peerName.equals(p.getName()))
             .collect(Collectors.toSet());
 
@@ -205,7 +216,7 @@ public class Remove extends AbstractPALDirSubcommand {
     // delete
     for (PeerInfo peer : matchingPeers) {
       try {
-        palDirectory.unregisterPeer(peer.getUuid());
+        getPalDirectory().unregisterPeer(peer.getUuid());
       } catch (Exception e) {
         logger.error("Error unregistering peer UUID '{}' from directory", peer.getUuid(), e);
         errors++;
@@ -215,24 +226,31 @@ public class Remove extends AbstractPALDirSubcommand {
 
   private void deleteAllPeers() {
     try {
-      palDirectory.unregisterAllPeers();
+      getPalDirectory().unregisterAllPeers();
     } catch (Exception e) {
       errors++;
     }
   }
 
   @Override
-  protected void closeResources() {
+  protected void closeResources() throws IOException {
     adminClientsPerServer
         .values()
         .forEach(
             adminClient ->
                 adminClient.close(
                     Duration.of(ADMIN_CLIENT_CLOSE_TIMEOUT_SECS, ChronoUnit.SECONDS)));
+
+    super.closeResources();
   }
 
   @Override
   protected int runCommand() throws Exception {
+    if (!(deletePeers || deleteLogs)) {
+      out.println("Use -L/--logs to remove logs, or -P/--peers to remove peers.");
+      return 1;
+    }
+
     if (deletePeers) {
       if (deleteAll) {
         deleteAllPeers();
@@ -250,7 +268,7 @@ public class Remove extends AbstractPALDirSubcommand {
           } else {
             // if not a valid UUID we will consider it a name
             if (startingWith) {
-              final Set<PeerInfo> allPeers = palDirectory.getAllPeers();
+              final Set<PeerInfo> allPeers = getPalDirectory().getAllPeers();
               allPeers.stream()
                   .filter(p -> p.getName() != null && p.getName().startsWith(arg))
                   .forEach(p -> deletePeer(p.getUuid()));
@@ -260,12 +278,14 @@ public class Remove extends AbstractPALDirSubcommand {
           }
         }
       }
-    } else if (deleteLogs) {
+    }
+
+    if (deleteLogs) {
       if (deleteAll) {
         deleteAllLogs();
       }
       // TODO group all logs with same bootstrap servers and remove in batch
-      if (argList != null && !argList.isEmpty()) {
+      else if (argList != null && !argList.isEmpty()) {
         for (String arg : argList) {
           // try to parse arg as UUID
           UUID logUuid = null;
@@ -280,12 +300,12 @@ public class Remove extends AbstractPALDirSubcommand {
             // if not a valid UUID we will consider it a name
             Set<LogInfo> logsToDelete;
             if (startingWith) {
-              final Set<LogInfo> allLogs = palDirectory.getAllLogs();
+              final Set<LogInfo> allLogs = getPalDirectory().getAllLogs();
               allLogs.stream().filter(l -> l.getName().startsWith(arg)).forEach(this::deleteLog);
             } else {
               final LogInfo log;
               try {
-                log = palDirectory.getLogInfo(arg);
+                log = getPalDirectory().getLogInfo(arg);
               } catch (NoLogInfoNodeException e) {
                 logger.error("Cannot find log named '{}' in directory", arg, e);
                 errors++;
@@ -296,9 +316,6 @@ public class Remove extends AbstractPALDirSubcommand {
           }
         }
       }
-    } else {
-      out.println("Use -L/--logs to remove logs, or -P/--peers to remove peers.");
-      return 1;
     }
     return errors;
   }

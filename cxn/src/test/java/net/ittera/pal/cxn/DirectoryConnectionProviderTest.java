@@ -27,7 +27,7 @@ import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.Test;
 
-public class DirectoryConnectionFactoryTest {
+public class DirectoryConnectionProviderTest {
 
   private TestingServer testingServer;
   private PALDirectory palDirectory;
@@ -47,18 +47,18 @@ public class DirectoryConnectionFactoryTest {
 
   @Test
   public void getConnection_noPaldirUrl() {
-    DirectoryConnectionFactory connectionFactory =
-        new DirectoryConnectionFactory(PALDirectory.NO_URL);
-    assertThat(connectionFactory.getConnection().isPresent(), is(false));
+    DirectoryConnectionProvider connectionFactory =
+        new DirectoryConnectionProvider(PALDirectory.NO_URL);
+    assertThat(connectionFactory.get().isPresent(), is(false));
   }
 
   @Test
   public void getConnection() throws Exception {
     final int paldirPort = 2182;
     final String paldirUrl = String.format("localhost:%d", paldirPort);
-    DirectoryConnectionFactory connectionFactory = new DirectoryConnectionFactory(paldirUrl);
+    DirectoryConnectionProvider connectionFactory = new DirectoryConnectionProvider(paldirUrl);
     testingServer = new TestingServer(paldirPort, true);
 
-    assertThat(connectionFactory.getConnection().isPresent(), is(true));
+    assertThat(connectionFactory.get().isPresent(), is(true));
   }
 }

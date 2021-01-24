@@ -54,31 +54,31 @@ integration-tests:
       alias: kafka
   script:
     - export PAL_VERSION=$(grep '<version>' pom.xml | head -1 | sed -E 's/.*<version>(.+)<\/version>.*/\1/')
-    - export PEER_JAR=$CI_PROJECT_DIR/.m2/repository/net/ittera/pal/peer/$PAL_VERSION/peer-$PAL_VERSION.jar
+    - export PAL_JAR=$CI_PROJECT_DIR/.m2/repository/net/ittera/pal/pal/$PAL_VERSION/pal-$PAL_VERSION.jar
     - export ITT_APPS_JAR=$CI_PROJECT_DIR/.m2/repository/net/ittera/pal/itt-apps/$PAL_VERSION/itt-apps-$PAL_VERSION.jar
-    - cd peer && cp $PEER_JAR . && bin/peer --classpath $ITT_APPS_JAR &
+    - cp $PAL_JAR . && bin/pal run --classpath $ITT_APPS_JAR &
     - mvn $MAVEN_CLI_OPTS verify -DskipUTs
   artifacts:
     when: on_failure
     paths:
       - itt/target/failsafe-reports
       - itt/logs
-      - peer/logs
+      - logs
 
-publish-peer-image:
+publish-pal-image:
   stage: publish-artifacts
   image: docker:latest
   script:
     - export PAL_VERSION=$(grep '<version>' pom.xml | head -1 | sed -E 's/.*<version>(.+)<\/version>.*/\1/')
-    - export PEER_JAR=$CI_PROJECT_DIR/.m2/repository/net/ittera/pal/peer/$PAL_VERSION/peer-$PAL_VERSION.jar
-    - mkdir peer/target/ && cp $PEER_JAR peer/target/
+    - export PAL_JAR=$CI_PROJECT_DIR/.m2/repository/net/ittera/pal/pal/$PAL_VERSION/pal-$PAL_VERSION.jar
+    - mkdir tools/target/ && cp -f $PAL_JAR tools/target/
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build -f peer/docker/Dockerfile --tag $CI_REGISTRY/cometera/pal/peer:latest peer/
-    - docker push $CI_REGISTRY/cometera/pal/peer:latest
+    - docker build -f docker/Dockerfile --tag $CI_REGISTRY/cometera/pal/pal:latest .
+    - docker push $CI_REGISTRY/cometera/pal/pal:latest
   only:
     - master
 
-deploy-peer:
+deploy-pal:
   stage: publish-artifacts
   script: 
     - mvn deploy -s ci_settings.xml -DskipTests

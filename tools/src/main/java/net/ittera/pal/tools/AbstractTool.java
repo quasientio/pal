@@ -19,9 +19,31 @@
 
 package net.ittera.pal.tools;
 
+import javax.annotation.Nullable;
 import net.ittera.pal.messages.protobuf.Wrappers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AbstractTool {
+
+  private final Logger logger = LoggerFactory.getLogger(AbstractTool.class);
+
+  protected AbstractTool() {}
+
+  protected String getProperty(String propertyName, @Nullable String defaultValue) {
+    if (System.getProperty(propertyName) != null) {
+      logger.debug("loading value of '{}' from system properties", propertyName);
+      return System.getProperty(propertyName);
+    } else if (System.getenv(propertyName.toUpperCase()) != null) {
+      logger.debug("loading value of '{}' from ENV", propertyName.toUpperCase());
+      return System.getenv(propertyName.toUpperCase());
+    } else if (defaultValue != null) {
+      logger.debug("loading value of '{}' from default", propertyName);
+      return defaultValue;
+    }
+    return null;
+  }
+
   protected static String getPeerUuid(Wrappers.Message msg) {
     if (msg.hasExecMessage()) {
       return msg.getExecMessage().getPeerUuid();
@@ -36,8 +58,6 @@ public class AbstractTool {
       return msg.getExecMessage().getMessageUuid();
     } else if (msg.hasInterceptMessage()) {
       return msg.getInterceptMessage().getMessageUuid();
-      //    } else if (msg.hasInterceptReply()) {
-      //      return msg.getInterceptReply().getMessageUuid();
     }
     return null;
   }

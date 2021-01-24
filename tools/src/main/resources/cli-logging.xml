@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration debug="false" scan="false" scanPeriod="30 seconds">
+<configuration debug="false" scan="false">
 
-    <!-- APPENDERS -->
-    <appender name="peer" class="${file.appender.class}">
-        <file>${logs.dir}/peer.log</file>
+    <appender name="cli" class="${file.appender.class}">
+        <file>${logs.dir}/cli.log</file>
         <encoder>
             <pattern>%date %level [%thread][%logger{10}] %message%n</pattern>
         </encoder>
@@ -23,21 +22,8 @@
         </encoder>
     </appender>
 
-    <!-- LOGGERS -->
-    <logger name="net.ittera.pal.core" level="info" additivity="false">
-        <appender-ref ref="peer"/>
-    </logger>
-
-    <logger name="net.ittera.pal.common" level="info" additivity="false">
-        <appender-ref ref="peer"/>
-    </logger>
-
-    <logger name="net.ittera.pal.core.LogReader" level="info" additivity="false">
-        <appender-ref ref="peer"/>
-    </logger>
-
-    <logger name="net.ittera.pal.cxn" level="info" additivity="false">
-        <appender-ref ref="peer"/>
+    <logger name="net.ittera.pal" level="debug" additivity="false">
+        <appender-ref ref="cli"/>
     </logger>
 
     <logger name="${kafka.logger.name}" level="info" additivity="false">
@@ -57,7 +43,7 @@
     </logger>
 
     <root level="warn">
-        <appender-ref ref="peer"/>
+        <!--appender-ref ref="cli"/-->
     </root>
 
 </configuration>

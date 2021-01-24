@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.tools.runner;
+package net.ittera.pal.tools.cli;
 
 import static picocli.CommandLine.Option;
 import static picocli.CommandLine.Parameters;
@@ -30,12 +30,12 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Queue;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import net.ittera.pal.common.cli.PALCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -44,14 +44,20 @@ import net.ittera.pal.messages.ProtobufMessageBuilder;
 import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ParentCommand;
 
-@Command(name = "runner")
-public class AppRunner implements Callable<Integer> {
+@Command(
+    name = "call",
+    customSynopsis = "pal call [OPTIONS] class [args...]%n",
+    description = "Send messages to peers or logs",
+    separator = " ",
+    sortOptions = false,
+    optionListHeading = "%nOptions:%n")
+public class Caller extends AbstractPALSubcommand {
 
-  private static final Logger logger = LoggerFactory.getLogger(AppRunner.class);
-  private static final String RUNNER_PROPERTIES_PATH = "/runner.properties";
+  private final Logger logger = LoggerFactory.getLogger(Caller.class);
+  private static final String CALLER_PROPERTIES_PATH = "/caller.properties";
   private static final String CONSUMER_PROPERTIES_PATH = "/consumer.properties";
   private static final String PRODUCER_PROPERTIES_PATH = "/producer.properties";
   private static final long REPLY_PROCESSOR_SLEEP_MS = 100;
@@ -61,17 +67,51 @@ public class AppRunner implements Callable<Integer> {
   private final Properties producerProperties = new Properties();
   private Long pollDuration;
   private String logPrefix;
+  private String methodName = "main";
+  private String palDirectoryURL;
+
+  @ParentCommand PALCommand palCommand;
 
   /** Options */
   @Option(
       names = {"-u", "--uuid"},
-      description = "uuid to use by this peer (default: random)")
+      paramLabel = "uuid",
+      description = "uuid to use by this peer (default <random>)")
   private UUID uuid;
 
   @Option(
-      names = {"-d", "--dir"},
-      description = "PAL directory URL")
-  private String palDirectoryURL;
+      names = {"-l", "--log"},
+      paramLabel = "name",
+      description = "read from and write to given log")
+  private String logName;
+
+  @Option(
+      names = {"-i", "--in-log"},
+      paramLabel = "name",
+      description = "read from given log")
+  private String inLogName;
+
+  @Option(
+      names = {"-o", "--out-log"},
+      paramLabel = "name",
+      description = "write to given log")
+  private String outLogName;
+
+  @Option(
+      names = {"-p", "--peer"},
+      paramLabel = "uuid|HOST:PORT",
+      description = "talk to peer with given UUID or REQ address")
+  private String peerIdentifier;
+
+  @Option(
+      names = {"-a", "--async"},
+      description = "send to log in async mode")
+  private boolean async;
+
+  @Option(
+      names = {"-f", "--forget-reply"},
+      description = "do not wait for replies")
+  private boolean sendAndForget;
 
   @Option(
       names = {"-n", "--num-requests"},
@@ -87,45 +127,8 @@ public class AppRunner implements Callable<Integer> {
       description = "number of clients to use")
   private int clients;
 
-  @Option(
-      names = {"-li", "--log-in"},
-      paramLabel = "LOGNAME",
-      description = "read from given log")
-  private String inLogName;
-
-  @Option(
-      names = {"-lo", "--log-out"},
-      paramLabel = "LOGNAME",
-      description = "write to given log")
-  private String outLogName;
-
-  @Option(
-      names = {"-l", "--log"},
-      paramLabel = "LOGNAME",
-      description = "read and write from/to given log")
-  private String logName;
-
-  @Option(
-      names = {"-pu", "--peer-uuid"},
-      paramLabel = "PEER_UUID",
-      description = "talk to peer with given UUID")
-  private UUID peerUuid;
-
-  @Option(
-      names = {"-pa", "--peer-address"},
-      paramLabel = "PEER_ADDRESS",
-      description = "talk to peer with given address")
-  private String peerAddress;
-
-  @Option(
-      names = {"-a", "--async"},
-      description = "send to log in async mode")
-  private boolean async;
-
-  @Option(
-      names = {"-f", "--forget-reply"},
-      description = "do not wait for replies")
-  private boolean sendAndForget;
+  @Option(names = "-v", description = "run verbosely")
+  private boolean verbose;
 
   @Option(
       names = {"-h", "--help"},
@@ -133,25 +136,43 @@ public class AppRunner implements Callable<Integer> {
       description = "display this help message")
   private boolean helpRequested = false;
 
-  @Option(names = "-v", description = "run verbosely")
-  private boolean verbose;
-
   /** Params */
-  @Parameters(index = "0")
+  @Parameters(index = "0", hidden = true)
   private String className;
 
-  private String methodName = "main";
-
-  @Parameters(index = "1..*")
+  @Parameters(index = "1..*", hidden = true)
   private List<String> argList;
 
-  AppRunner() {
+  private UUID peerUuid;
+  private String peerAddress;
+
+  Caller() {
     this.messageBuilder = new ProtobufMessageBuilder();
   }
 
+  @Override
+  protected void initialize() throws Exception {
+    palDirectoryURL = palCommand.getPalDirectoryConnectionString();
+    initializeDirectoryConnectionProvider(palDirectoryURL);
+
+    // resolve peer identifier
+    UUID parsedUuid = null;
+    try {
+      parsedUuid = UUID.fromString(peerIdentifier);
+    } catch (IllegalArgumentException iae) {
+      // nevermind
+    } finally {
+      peerUuid = parsedUuid;
+    }
+    // not a valid UUID, must be an address then
+    if (peerUuid == null) {
+      peerAddress = peerIdentifier;
+    }
+  }
+
   private void loadProperties() throws IOException {
-    // runner properties
-    try (final InputStream stream = AppRunner.class.getResourceAsStream(RUNNER_PROPERTIES_PATH)) {
+    // caller properties
+    try (final InputStream stream = Caller.class.getResourceAsStream(CALLER_PROPERTIES_PATH)) {
       properties.load(stream);
     }
     final String pollDurationProp = properties.getProperty("pollDuration");
@@ -164,25 +185,17 @@ public class AppRunner implements Callable<Integer> {
     }
 
     // load consumer properties
-    try (final InputStream stream = AppRunner.class.getResourceAsStream(CONSUMER_PROPERTIES_PATH)) {
+    try (final InputStream stream = Caller.class.getResourceAsStream(CONSUMER_PROPERTIES_PATH)) {
       consumerProperties.load(stream);
     }
     // load producer properties
-    try (final InputStream stream = AppRunner.class.getResourceAsStream(PRODUCER_PROPERTIES_PATH)) {
+    try (final InputStream stream = Caller.class.getResourceAsStream(PRODUCER_PROPERTIES_PATH)) {
       producerProperties.load(stream);
     }
   }
 
-  private void validateInput() {
-    // directory
-    if (palDirectoryURL == null || palDirectoryURL.isEmpty()) {
-      palDirectoryURL = System.getenv("PAL_DIRECTORY");
-    }
-    if (palDirectoryURL == null) {
-      throw new RuntimeException(
-          "Please provide -d/--dir, or set the ENV variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2181)");
-    }
-  }
+  @Override
+  protected final void validateInput() {}
 
   /**
    * Serially sends all requests in a single (ThinPeer) thread. With log IO 1st req to log and waits
@@ -491,14 +504,8 @@ public class AppRunner implements Callable<Integer> {
     }
   }
 
-  public static void main(String[] args) {
-    int exitCode = new CommandLine(new AppRunner()).execute(args);
-    System.exit(exitCode);
-  }
-
   @Override
-  public Integer call() throws Exception {
-    validateInput();
+  protected int runCommand() throws Exception {
     loadProperties();
     if ((async || sendAndForget) && (peerAddress != null || peerUuid != null)) {
       throw new RuntimeException(

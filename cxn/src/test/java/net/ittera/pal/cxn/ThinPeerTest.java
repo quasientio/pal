@@ -49,6 +49,7 @@ public class ThinPeerTest {
   // PAL directory
   private TestingServer testingServer;
   private PALDirectory palDirectory;
+  private DirectoryConnectionProvider directoryConnectionProvider;
   private static final int TEST_PORT = 2182;
   private static final String PAL_DIR_URL = String.format("localhost:%d", TEST_PORT);
 
@@ -64,7 +65,8 @@ public class ThinPeerTest {
   public void setUp() throws Exception {
     // init PALDirectory
     testingServer = new TestingServer(TEST_PORT, true);
-    palDirectory = new PALDirectory(PAL_DIR_URL);
+    directoryConnectionProvider = new DirectoryConnectionProvider(PAL_DIR_URL);
+    palDirectory = directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
 
     // init kafka producer & consumer
     producer = new MockProducer<>(Cluster.empty(), true, null, null, null);
@@ -104,7 +106,7 @@ public class ThinPeerTest {
   private ThinPeer createUninitialized() throws Exception {
     return new ThinPeer()
         .withUUID(UUID.randomUUID())
-        .withDirectory(palDirectory)
+        .withDirectoryProvider(directoryConnectionProvider)
         .withConsumer(consumer)
         .withProducer(producer)
         .withLog(createLog("testlog"));
@@ -114,7 +116,7 @@ public class ThinPeerTest {
   public void initOK() throws Exception {
     thinPeer =
         new ThinPeer()
-            .withDirectory(palDirectory)
+            .withDirectoryProvider(directoryConnectionProvider)
             .withConsumer(consumer)
             .withProducer(producer)
             .withLog(createLog("testlog"))
@@ -122,19 +124,13 @@ public class ThinPeerTest {
   }
 
   @Test
-  public void initWithMissingDirectory() throws Exception {
-    // no palDirectory nor palDirectoryUrl
-    try {
-      thinPeer =
-          new ThinPeer()
-              .withConsumer(consumer)
-              .withProducer(producer)
-              .withLog(createLog("testlog"))
-              .init();
-      fail("Should have raised RuntimeException");
-    } catch (RuntimeException e) {
-      // ok
-    }
+  public void initWithMissingDirectoryOK() throws Exception {
+    thinPeer =
+        new ThinPeer()
+            .withConsumer(consumer)
+            .withProducer(producer)
+            .withLog(createLog("testlog"))
+            .init();
   }
 
   @Test
@@ -143,7 +139,7 @@ public class ThinPeerTest {
     try {
       thinPeer =
           new ThinPeer()
-              .withDirectory(palDirectory)
+              .withDirectoryProvider(directoryConnectionProvider)
               .withProducer(producer)
               .withLog(createLog("testlog"))
               .init();
@@ -159,7 +155,7 @@ public class ThinPeerTest {
     try {
       thinPeer =
           new ThinPeer()
-              .withDirectory(palDirectory)
+              .withDirectoryProvider(directoryConnectionProvider)
               .withConsumer(consumer)
               .withLog(createLog("testlog"))
               .init();

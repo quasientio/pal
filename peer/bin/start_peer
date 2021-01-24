@@ -1,3 +1,0 @@
-#!/bin/sh
-
-docker run --network=host --name peer --rm --env-file $PEER_CORE_HOME/peer.env peer

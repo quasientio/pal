@@ -27,7 +27,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Stream;
 import net.ittera.pal.common.directory.nodes.LogInfo;
-import net.ittera.pal.cxn.DirectoryConnectionFactory;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import org.junit.After;
 import org.junit.Before;
@@ -55,16 +55,15 @@ public class LogConfiguratorTest {
     Stream.of(appPropsWithPalDir, appPropsWithKafka)
         .forEach(props -> props.setProperty("kafkaTopic", kafkaTopicPrefix));
 
-    DirectoryConnectionFactory mockedDirectoryConnectionFactory =
-        mock(DirectoryConnectionFactory.class);
+    DirectoryConnectionProvider mockedDirectoryConnectionProvider =
+        mock(DirectoryConnectionProvider.class);
     mockedPalDirectory = mock(PALDirectory.class);
     mockedLogReader = mock(LogReader.class);
     mockedLogWriter = mock(LogWriter.class);
     mockedInjector = mock(Injector.class);
-    when(mockedDirectoryConnectionFactory.getConnection())
-        .thenReturn(Optional.of(mockedPalDirectory));
-    when(mockedInjector.getInstance(DirectoryConnectionFactory.class))
-        .thenReturn(mockedDirectoryConnectionFactory);
+    when(mockedDirectoryConnectionProvider.get()).thenReturn(Optional.of(mockedPalDirectory));
+    when(mockedInjector.getInstance(DirectoryConnectionProvider.class))
+        .thenReturn(mockedDirectoryConnectionProvider);
     when(mockedInjector.getInstance(LogReader.class)).thenReturn(mockedLogReader);
     when(mockedInjector.getInstance(LogWriter.class)).thenReturn(mockedLogWriter);
   }

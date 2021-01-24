@@ -35,7 +35,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.runtime.ExecPhase;
-import net.ittera.pal.cxn.DirectoryConnectionFactory;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.MessageType;
@@ -102,8 +102,8 @@ public class LogWriterTest extends ZmqEnabledTest {
   @Before
   public void setup() throws Exception {
     testingServer = new TestingServer(TEST_PORT, true);
-    DirectoryConnectionFactory directoryConnectionFactory =
-        new DirectoryConnectionFactory(CONNECTION_STR);
+    DirectoryConnectionProvider directoryConnectionProvider =
+        new DirectoryConnectionProvider(CONNECTION_STR);
     zmqContext = this.createContext();
     producer = new MockProducer<>(Cluster.empty(), true, null, null, null);
     logWriter =
@@ -117,9 +117,9 @@ public class LogWriterTest extends ZmqEnabledTest {
             OFFSET_PUB_ADDR,
             true,
             producer,
-            directoryConnectionFactory);
+            directoryConnectionProvider);
     // configure log
-    palDirectory = directoryConnectionFactory.getConnection().orElseThrow(RuntimeException::new);
+    palDirectory = directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
     log = palDirectory.newLog("testapp");
     createdLogs.add(log.getName());
     logWriter.writeToLog(log, log, false);

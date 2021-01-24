@@ -2,12 +2,12 @@
 # Dockerfile
 #
 # Build:
-#    build          docker build --pull --tag registry.gitlab.com/cometera/pal/peer .
-#    push           docker push registry.gitlab.com/cometera/pal/peer
-#    tag            docker tag registry.gitlab.com/cometera/pal/peer:latest peer:latest
+#    build          docker build --pull --tag registry.gitlab.com/cometera/pal/pal .
+#    push           docker push registry.gitlab.com/cometera/pal/pal
+#    tag            docker tag registry.gitlab.com/cometera/pal/pal:latest pal:latest
 # Build Args:       extra_lib
 # Run ENV-file:     SEE peer.env file
-# Run Cmd Example:  docker run --network=host --name peer --rm --env-file peer.env peer
+# Run Cmd Example:  docker run --network=host --name pal --rm --env-file peer.env pal
 ###################################################################
 
 FROM openjdk:8u151-jre-alpine
@@ -17,9 +17,9 @@ ARG extra_lib
 WORKDIR /app
 
 COPY bin/wait-for .
-COPY bin/peer .
-RUN chmod +x peer wait-for
-COPY target/peer-*.jar .
+COPY bin/pal .
+RUN chmod +x pal wait-for
+COPY tools/target/pal-*.jar .
 
 # workaround to copy $extra_lib if present
 RUN mkdir libs/
@@ -28,4 +28,4 @@ COPY pom.xml *jar /throwaway/
 RUN cp /throwaway/$extra_lib* libs/ || true
 RUN rm -rf /throwaway
 
-ENTRYPOINT ["./peer"]
+ENTRYPOINT ["./pal"]

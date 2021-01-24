@@ -32,10 +32,10 @@ services:
   peer:
     build:
       context: .
-    image: peer
+    image: pal
     network_mode: "host"
     env_file: peer.env
     depends_on:
       - zookeeper
       - kafka
-    command: ["./wait-for", "localhost:${KAFKA_INSIDE_PORT}", "--", "./peer"]
+    command: ["./wait-for", "localhost:${KAFKA_INSIDE_PORT}", "--", "./pal"]

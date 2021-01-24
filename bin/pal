@@ -1,0 +1,41 @@
+#!/bin/sh
+
+MAIN_ARGS="$@"
+RUN_JMX_PROPS=""
+JVM_OPTS=""
+JMX_PROPS=""
+
+# Enable JMX for 'run' command only if ENV variables JMX_HOST and JMX_PORT are set.
+if [ -n "$JMX_HOST" ] && [ -n "$JMX_PORT" ]; then
+  RUN_JMX_PROPS="-Dcom.sun.management.jmxremote \
+                 -Djava.rmi.server.hostname=$JMX_HOST \
+                 -Dcom.sun.management.jmxremote.port=$JMX_PORT \
+                 -Dcom.sun.management.jmxremote.local.only=true \
+                 -Dcom.sun.management.jmxremote.authenticate=false \
+                 -Dcom.sun.management.jmxremote.ssl=false"
+fi
+
+RUN_JVM_OPTS="-Xmx1024M \
+              -Xms512M \
+              -server \
+              -XX:+UseConcMarkSweepGC \
+              -XX:+AggressiveOpts \
+              -XX:+UseBiasedLocking \
+              -XX:+UseNUMA \
+              -noverify"
+
+
+echo $MAIN_ARGS | sed -E 's/^-+d[^:]*:[0-9]+ //' |  grep -q "^run"
+if [ "$?" -eq "0" ]; then
+  JVM_OPTS=$RUN_JVM_OPTS
+  JMX_PROPS=$RUN_JMX_PROPS
+fi
+
+if [ -n "$PAL_HOME" ]; then
+  PAL_JAR=$PAL_HOME/tools/target/pal-*.jar
+else
+  # When running inside docker container, jar is expected to be in the CWD.
+  PAL_JAR=pal-*.jar
+fi
+
+java $JVM_OPTS $JMX_PROPS -jar $PAL_JAR $MAIN_ARGS
