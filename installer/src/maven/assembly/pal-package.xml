@@ -1,0 +1,50 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd">
+
+  <id>bin</id>
+  <formats>
+    <format>zip</format>
+    <format>tar.gz</format>
+  </formats>
+  <includeBaseDirectory>true</includeBaseDirectory>
+  <baseDirectory>pal-${project.version}</baseDirectory>
+  <files>
+    <file>
+      <source>../tools/target/pal-${project.version}.jar</source>
+      <outputDirectory>lib</outputDirectory>
+    </file>
+  </files>
+  <fileSets>
+    <fileSet>
+      <directory>..</directory>
+      <includes>
+        <include>README.md</include>
+        <include>AUTHORS</include>
+        <include>COPYING</include>
+        <!-- export env variables for running on host -->
+        <include>export_env</include>
+        <!-- env variables for running inside docker -->
+        <include>peer.env</include>
+        <!-- env variables for running docker-compose -->
+        <include>.env</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>../docker</directory>
+      <outputDirectory>docker</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>../bin</directory>
+      <outputDirectory>bin</outputDirectory>
+      <includes>
+        <include>pal</include>
+        <include>dpal</include>
+        <include>start_zk</include>
+        <include>start_zk_and_kafka</include>
+        <include>stop_zk</include>
+        <include>stop_zk_and_kafka</include>
+      </includes>
+    </fileSet>
+  </fileSets>
+</assembly>

@@ -32,10 +32,10 @@ if [ "$?" -eq "0" ]; then
 fi
 
 if [ -n "$PAL_HOME" ]; then
-  PAL_JAR=$PAL_HOME/tools/target/pal-*.jar
+  PAL_JAR=$PAL_HOME/lib/pal-*.jar
 else
-  # When running inside docker container, jar is expected to be in the CWD.
-  PAL_JAR=pal-*.jar
+  # if $PAL_HOME undefined, expect jar in $PWD/lib.
+  PAL_JAR=lib/pal-*.jar
 fi
 
 java $JVM_OPTS $JMX_PROPS -jar $PAL_JAR $MAIN_ARGS

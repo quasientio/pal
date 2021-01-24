@@ -19,6 +19,8 @@
         <maven.plugin.site.version>3.7.1</maven.plugin.site.version>
         <maven.plugin.reports.version>3.0.0</maven.plugin.reports.version>
         <maven.plugin.install.version>3.0.0-M1</maven.plugin.install.version>
+        <maven.plugin.assembly.version>3.3.0</maven.plugin.assembly.version>
+        <maven.plugin.antrun.version>3.0.0</maven.plugin.antrun.version>
         <maven.plugin.clean>3.1.0</maven.plugin.clean>
         <maven.plugin.shade>3.2.1</maven.plugin.shade>
         <spotbugs.plugin.version>3.1.12</spotbugs.plugin.version>
@@ -380,6 +382,7 @@
         <module>services</module>
         <module>itt-apps</module>
         <module>itt</module>
+        <module>installer</module>
     </modules>
 
 		<repositories>

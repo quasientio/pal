@@ -1,5 +1,6 @@
 export JMX_HOST=localhost
 export JMX_PORT=9012
+# export PAL_HOME=.
 # export NO_COLOR=
 
 # The following properties can be given as args to the `pal` command.

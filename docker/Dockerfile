@@ -19,7 +19,8 @@ WORKDIR /app
 COPY bin/wait-for .
 COPY bin/pal .
 RUN chmod +x pal wait-for
-COPY tools/target/pal-*.jar .
+RUN mkdir lib/
+COPY tools/target/pal-*.jar lib/
 
 # workaround to copy $extra_lib if present
 RUN mkdir libs/
