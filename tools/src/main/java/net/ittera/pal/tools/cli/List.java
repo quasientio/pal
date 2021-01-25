@@ -27,15 +27,18 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.TextStyle;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.management.ObjectName;
 import net.ittera.pal.common.cli.PALCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
@@ -76,6 +79,21 @@ public class List extends AbstractPALSubcommand {
       names = {"-l", "--long"},
       description = "use long listing format")
   private boolean longListing;
+
+  @Option(
+      names = {"-S", "--sort-by-size"},
+      description = "sort logs by size, largest first")
+  private boolean sortBySize;
+
+  @Option(
+      names = {"-c", "--sort-by-ctime"},
+      description = "sort by creation/up time, newest first")
+  private boolean sortByCTime;
+
+  @Option(
+      names = {"-r", "--reverse"},
+      description = "reverse order while sorting")
+  private boolean reverseOrder;
 
   @Option(
       names = "--kafka-jmx-port",
@@ -250,6 +268,44 @@ public class List extends AbstractPALSubcommand {
     }
   }
 
+  private void printLogs(Set<LogInfo> logs) {
+    final Comparator<LogInfo> comparator;
+
+    if (sortBySize) {
+      final Comparator<LogInfo> logSizeComparator = Comparator.comparing(LogInfo::getBytes);
+      // Comparator<long> orders small -> large, so that is actually our reverse
+      comparator = reverseOrder ? logSizeComparator : logSizeComparator.reversed();
+    } else if (sortByCTime) {
+      final Comparator<LogInfo> cTimeComparator = Comparator.comparing(LogInfo::getCTime);
+      // Comparator<OffsetDateTime> orders old -> new, so that is actually our reverse
+      comparator = reverseOrder ? cTimeComparator : cTimeComparator.reversed();
+    } else {
+      final Comparator<LogInfo> logNaturalComparator = Comparator.naturalOrder();
+      comparator = reverseOrder ? logNaturalComparator.reversed() : logNaturalComparator;
+    }
+
+    Stream<LogInfo> sortedLogs = logs.stream().sorted(comparator);
+    sortedLogs.forEach(this::print);
+  }
+
+  private void printPeers(Set<PeerInfo> peers) {
+    final Comparator<PeerInfo> comparator;
+    if (sortByCTime) {
+      final Comparator<PeerInfo> cTimeComparator = Comparator.comparing(PeerInfo::getCTime);
+      // Comparator<OffsetDateTime> orders old -> new, so that is actually our reverse
+      comparator = reverseOrder ? cTimeComparator : cTimeComparator.reversed();
+    } else {
+      final Comparator<PeerInfo> peerNameComparator =
+          (o1, o2) ->
+              Objects.compare( // no need to check for null PeerInfo's here since it can't happen
+                  o1.getName(), o2.getName(), Comparator.nullsLast(Comparator.naturalOrder()));
+      comparator = reverseOrder ? peerNameComparator.reversed() : peerNameComparator;
+    }
+
+    Stream<PeerInfo> sortedPeers = peers.stream().sorted(comparator);
+    sortedPeers.forEach(this::print);
+  }
+
   @Override
   protected void closeResources() throws IOException {
     // close jmx clients
@@ -281,27 +337,25 @@ public class List extends AbstractPALSubcommand {
       // fill mbean info of all logs found in kafka (assumes JMX connection)
       logsInDirectory.stream().filter(allLogsInKafka::contains).forEach(this::fillMbeanInfo);
       if (longListing) {
+        out.println(format("total %d", logsInDirectory.size()));
         if (!logsInDirectory.isEmpty()) {
-          // print total and header lines
-          out.println(format("total %d", logsInDirectory.size()));
           out.println(
               (format(LOGS_LONG_FORMAT, "Name", "UUID", "Size", "Start", "End", "Created")));
         }
       }
-      logsInDirectory.forEach(this::print);
+      printLogs(logsInDirectory);
     }
 
     if (listPeers) {
       Set<PeerInfo> peers = getPalDirectory().getAllPeers();
       logger.debug("{} peers found in directory", peers.size());
       if (longListing) {
+        out.println(format("total %d", peers.size()));
         if (!peers.isEmpty()) {
-          // print total and header lines
-          out.println(format("total %d", peers.size()));
           out.println((format(PEERS_LONG_FORMAT, "UUID", "Name", "REQ", "PUB", "JMX", "Uptime")));
         }
       }
-      peers.forEach(this::print);
+      printPeers(peers);
     }
     return 0;
   }
