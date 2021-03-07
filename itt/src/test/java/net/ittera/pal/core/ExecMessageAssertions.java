@@ -27,8 +27,12 @@ import net.ittera.pal.messages.Unwrapper;
 import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
 import net.ittera.pal.messages.protobuf.Primitives;
 import net.ittera.pal.messages.protobuf.Values.ReturnValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ExecMessageAssertions {
+
+  protected static final Logger logger = LoggerFactory.getLogger("tests");
 
   /**
    * Helper assertion methods. Encapsulates details of the protobuf serialization.
@@ -45,6 +49,15 @@ public class ExecMessageAssertions {
       boolean hasObjRef,
       boolean isNull,
       boolean isArray) {
+    logger.trace(
+        "in assertIsObjectOfType w/: returnValue:\n{}"
+            + ", className: {}, hasObjRef: {}, isNull: {}, isArray: {}",
+        returnValue,
+        className,
+        hasObjRef,
+        isNull,
+        isArray);
+
     assertFalse(returnValue.getIsVoid());
     assertFalse(returnValue.getIsClass());
     assertTrue(returnValue.hasClazz());
@@ -82,6 +95,8 @@ public class ExecMessageAssertions {
 
   protected <T> void assertValueEqualsArray(T[] actualArray, ReturnValue retValue)
       throws Exception {
+    logger.trace(
+        "in assertValueEqualsArray w/: actualArray: {}, retValue:\n{}", actualArray, retValue);
 
     // check array type
     Class classOfArray = actualArray.getClass();
@@ -98,6 +113,8 @@ public class ExecMessageAssertions {
   }
 
   protected void assertHasThrowableOfType(ExecMessage msg, String throwableType) {
+    logger.trace("in assertHasThrowableOfType w/: msg:\n{}, throwableType: {}", msg, throwableType);
+
     assertTrue(msg.hasRaisedThrowable());
     assertEquals(throwableType, msg.getRaisedThrowable().getThrowable().getType());
   }

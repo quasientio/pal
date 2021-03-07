@@ -125,8 +125,7 @@ public class ObjectStoreBackgroundProcessorTest {
                       .debug(eq("OBJECTS: total cleared={}"), (Object) any());
                 }
               }
-              Mockito.reset(mockedLogger);
-              Mockito.reset(objectStore);
+              Mockito.reset(mockedLogger, objectStore);
             });
   }
 }
