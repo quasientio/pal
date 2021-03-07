@@ -160,6 +160,28 @@ public class Main implements Callable<Integer> {
   private String tcpReq; // corresponding ENV var: TCP_REQ
 
   @Option(
+      names = {"--tcp-req-core-threads"},
+      defaultValue = "1",
+      paramLabel = "num_threads",
+      description = "number of core threads for tcp requests (default: ${DEFAULT-VALUE})")
+  private Integer tcpReqCoreThreads;
+
+  @Option(
+      names = {"--tcp-req-max-threads"},
+      defaultValue = "100",
+      paramLabel = "num_threads",
+      description = "maximum number of threads for tcp requests (default: ${DEFAULT-VALUE})")
+  private Integer tcpReqMaxThreads;
+
+  @Option(
+      names = {"--tcp-req-threads-keepalive"},
+      defaultValue = "60",
+      paramLabel = "num_seconds",
+      description =
+          "seconds to wait before terminating idle tcp request threads (default: ${DEFAULT-VALUE})")
+  private Long tcpReqThreadsKeepAliveSecs;
+
+  @Option(
       names = {"--interceptable"},
       description = "allow message interception")
   private boolean interceptable = false;
@@ -510,6 +532,9 @@ public class Main implements Callable<Integer> {
         }
       }
       properties.setProperty("in.req.tcp", format("tcp://%s:%d", hostname, port));
+      properties.setProperty("peer.corePoolSize", String.valueOf(tcpReqCoreThreads));
+      properties.setProperty("peer.maximumPoolSize", String.valueOf(tcpReqMaxThreads));
+      properties.setProperty("peer.keepAliveSeconds", String.valueOf(tcpReqThreadsKeepAliveSecs));
     }
   }
 
@@ -658,16 +683,20 @@ public class Main implements Callable<Integer> {
       }
 
       // stop peer executor (interrupts all peer exec threads)
-      final ExtendedThreadPoolExecutor peerMessageExecutor =
-          injector.getInstance(PeerMessageExecutor.class);
-      peerMessageExecutor.shutdownNow();
-      logger.info("Done shutting down peer threads");
+      if (!runOptions.contains(RunOptions.REQLESS)) {
+        final ExtendedThreadPoolExecutor peerMessageExecutor =
+            injector.getInstance(PeerMessageExecutor.class);
+        peerMessageExecutor.shutdownNow();
+        logger.info("Done shutting down peer threads");
+      }
 
       // stop log executor (interrupts all log exec threads)
-      final ExtendedThreadPoolExecutor logMessageExecutor =
-          injector.getInstance(LogMessageExecutor.class);
-      logMessageExecutor.shutdownNow();
-      logger.info("Done shutting down log threads");
+      if (!runOptions.contains(RunOptions.NO_INLOG)) {
+        final ExtendedThreadPoolExecutor logMessageExecutor =
+            injector.getInstance(LogMessageExecutor.class);
+        logMessageExecutor.shutdownNow();
+        logger.info("Done shutting down log threads");
+      }
 
       // close connection to paldir
       if (!runOptions.contains(RunOptions.NO_PALDIR)) {
