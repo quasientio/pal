@@ -15,9 +15,7 @@ if [ -n "$JMX_HOST" ] && [ -n "$JMX_PORT" ]; then
                  -Dcom.sun.management.jmxremote.ssl=false"
 fi
 
-RUN_JVM_OPTS="-Xmx1024M \
-              -Xms512M \
-              -server \
+RUN_JVM_OPTS="-server \
               -XX:+UseConcMarkSweepGC \
               -XX:+AggressiveOpts \
               -XX:+UseBiasedLocking \
