@@ -47,6 +47,10 @@ public abstract class AbstractPALSubcommand extends AbstractTool implements Call
         new DirectoryConnectionProvider(paldirConnectionString, null, false);
   }
 
+  protected static boolean optionGiven(String option) {
+    return !(option == null || option.isEmpty());
+  }
+
   protected abstract void validateInput();
 
   /**

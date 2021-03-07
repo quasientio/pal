@@ -76,7 +76,7 @@ public class Caller extends AbstractPALSubcommand {
   @Option(
       names = {"-u", "--uuid"},
       paramLabel = "uuid",
-      description = "uuid to use by this peer (default <random>)")
+      description = "uuid to use by this peer (default: <random>)")
   private UUID uuid;
 
   @Option(
@@ -117,15 +117,15 @@ public class Caller extends AbstractPALSubcommand {
       names = {"-n", "--num-requests"},
       defaultValue = "1",
       paramLabel = "NUM_REQUESTS",
-      description = "number of requests to send")
+      description = "number of requests to send (default: 1)")
   private int requests;
 
   @Option(
       names = {"-c", "--num-clients"},
       defaultValue = "1",
       paramLabel = "NUM_CLIENTS",
-      description = "number of clients to use")
-  private int clients;
+      description = "number of clients to use (default: 1)")
+  private int numberOfClients;
 
   @Option(names = "-v", description = "run verbosely")
   private boolean verbose;
@@ -151,22 +151,38 @@ public class Caller extends AbstractPALSubcommand {
   }
 
   @Override
+  protected final void validateInput() {
+    if (Stream.of(peerIdentifier, logName, outLogName).noneMatch(Caller::optionGiven)) {
+      throw new RuntimeException("Nowhere to call. Please specify --peer, --log or --out-log.");
+    }
+
+    if (optionGiven(outLogName) && !optionGiven(inLogName) && !sendAndForget) {
+      throw new RuntimeException(
+          "You must specify a log to read from, or else use --forget-reply.");
+    }
+  }
+
+  @Override
   protected void initialize() throws Exception {
     palDirectoryURL = palCommand.getPalDirectoryConnectionString();
     initializeDirectoryConnectionProvider(palDirectoryURL);
 
+    loadProperties();
+
     // resolve peer identifier
-    UUID parsedUuid = null;
-    try {
-      parsedUuid = UUID.fromString(peerIdentifier);
-    } catch (IllegalArgumentException iae) {
-      // nevermind
-    } finally {
-      peerUuid = parsedUuid;
-    }
-    // not a valid UUID, must be an address then
-    if (peerUuid == null) {
-      peerAddress = peerIdentifier;
+    if (peerIdentifier != null && !peerIdentifier.isEmpty()) {
+      UUID parsedUuid = null;
+      try {
+        parsedUuid = UUID.fromString(peerIdentifier);
+      } catch (IllegalArgumentException iae) {
+        // nevermind
+      } finally {
+        peerUuid = parsedUuid;
+      }
+      // not a valid UUID, must be an address then
+      if (peerUuid == null) {
+        peerAddress = peerIdentifier;
+      }
     }
   }
 
@@ -194,13 +210,11 @@ public class Caller extends AbstractPALSubcommand {
     }
   }
 
-  @Override
-  protected final void validateInput() {}
-
   /**
    * Serially sends all requests in a single (ThinPeer) thread. With log IO 1st req to log and waits
-   * for Future reply, then sends all other directly to peer In logless mode (-pa / -pu), it sends
-   * all directly to peer
+   * for Future reply, then sends all other directly to peer.
+   *
+   * <p>In p2p mode (-p), it sends all directly to peer.
    */
   private int runReqsWithSingleClient() throws Exception {
 
@@ -211,6 +225,7 @@ public class Caller extends AbstractPALSubcommand {
     IntStream.range(0, parameterTypes.length)
         .forEach(i -> parameterTypesNamesArray[i] = parameterTypes[i].getName());
     Object[] parameters = new Object[] {new String[] {}};
+    ObjectRef[] argObjRefs = new ObjectRef[parameterTypes.length];
     if ("main".equals(methodName) && argList != null) {
       parameters[0] = argList.toArray(new String[0]);
     }
@@ -249,7 +264,7 @@ public class Caller extends AbstractPALSubcommand {
                 this,
                 null,
                 parameters,
-                new ObjectRef[parameterTypes.length]);
+                argObjRefs);
         thinPeer.sendAndReceive(requestMsg, true);
       }
     }
@@ -290,7 +305,7 @@ public class Caller extends AbstractPALSubcommand {
                 this,
                 null,
                 parameters,
-                new ObjectRef[parameterTypes.length]);
+                argObjRefs);
         thinPeer.sendAndReceive(requestMsg, true);
       }
     }
@@ -316,8 +331,7 @@ public class Caller extends AbstractPALSubcommand {
   private int runReqsWithSingleClientAsync() throws Exception {
 
     if (peerAddress != null || peerUuid != null) {
-      throw new RuntimeException(
-          "Direct p2p talk (-pa / -pu) is not compatible with -a or -f modes");
+      throw new RuntimeException("Direct p2p talk (-p) is not compatible with -a or -f options");
     }
 
     // load properties and init ThinPeer
@@ -397,6 +411,7 @@ public class Caller extends AbstractPALSubcommand {
     IntStream.range(0, parameterTypes.length)
         .forEach(i -> parameterTypesNamesArray[i] = parameterTypes[i].getName());
     Object[] parameters = new Object[] {new String[] {}};
+    ObjectRef[] argObjRefs = new ObjectRef[parameterTypes.length];
     // TODO: generalize this to other methods (non-varargs)
     if ("main".equals(methodName) && argList != null) {
       parameters[0] = argList.toArray(new String[0]);
@@ -413,7 +428,7 @@ public class Caller extends AbstractPALSubcommand {
               this,
               null,
               parameters,
-              new ObjectRef[parameterTypes.length]);
+              argObjRefs);
       if (sendAndForget) {
         // send to log and forget
         thinPeer.sendToLogAndForget(requestMsg);
@@ -453,12 +468,12 @@ public class Caller extends AbstractPALSubcommand {
       throw new IllegalArgumentException(
           "Method must be called with requests > 1. requests = " + requests);
     }
-    if (clients <= 1) {
+    if (numberOfClients <= 1) {
       throw new IllegalArgumentException(
-          "Method must be called with clients > 1. clients = " + clients);
+          "Method must be called with clients > 1. clients = " + numberOfClients);
     }
 
-    Thread[] clientList = new Thread[clients];
+    Thread[] clientList = new Thread[numberOfClients];
     final AtomicInteger finishedThreads = new AtomicInteger(0);
     final AtomicInteger reqsSent = new AtomicInteger(0);
 
@@ -466,7 +481,7 @@ public class Caller extends AbstractPALSubcommand {
     long start = System.currentTimeMillis();
 
     // create all threads
-    IntStream.range(0, clients)
+    IntStream.range(0, numberOfClients)
         .forEach(
             i -> {
               Thread client =
@@ -492,7 +507,7 @@ public class Caller extends AbstractPALSubcommand {
     Arrays.stream(clientList).forEach(Thread::start);
 
     // wait for threads to finish
-    while (finishedThreads.get() < clients) {
+    while (finishedThreads.get() < numberOfClients) {
       Thread.sleep(10);
     }
 
@@ -500,18 +515,16 @@ public class Caller extends AbstractPALSubcommand {
       System.out.println(
           String.format(
               "sent %s requests with %s client(s) in %s ms",
-              reqsSent.get(), clients, (System.currentTimeMillis() - start)));
+              reqsSent.get(), numberOfClients, (System.currentTimeMillis() - start)));
     }
   }
 
   @Override
   protected int runCommand() throws Exception {
-    loadProperties();
     if ((async || sendAndForget) && (peerAddress != null || peerUuid != null)) {
-      throw new RuntimeException(
-          "Direct p2p talk (-pa / -pu) is not compatible with -a or -f options");
+      throw new RuntimeException("Direct p2p talk (-p) is not compatible with -a or -f options");
     }
-    if (requests == 1 || clients == 1) {
+    if (requests == 1 || numberOfClients == 1) {
       if (async || sendAndForget) {
         logger.info("running runReqsWithSingleClientAsync()");
         runReqsWithSingleClientAsync();
