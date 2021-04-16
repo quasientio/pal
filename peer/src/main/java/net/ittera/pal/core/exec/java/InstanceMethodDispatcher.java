@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
@@ -35,11 +36,12 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.core.exec.DispatcherConnector;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.Unwrapper;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
-import net.ittera.pal.messages.protobuf.Primitives;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.messages.colfer.Parameter;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.Unwrapper;
 
 @Singleton
 public class InstanceMethodDispatcher extends MethodDispatcher {
@@ -47,7 +49,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   @Inject
   public InstanceMethodDispatcher(
       UUID peerUuid,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       DispatcherConnector connector,
       ObjectStore objectStore) {
     setPeerUuid(peerUuid);
@@ -122,8 +124,8 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   }
 
   @Override
-  protected List<Primitives.Parameter> getParameterList(ExecMessage execMessage) {
-    return execMessage.getInstanceMethodCall().getParameterList();
+  protected List<Parameter> getParameterList(ExecMessage execMessage) {
+    return Arrays.asList(execMessage.getInstanceMethodCall().getParameters());
   }
 
   @Override
@@ -131,13 +133,14 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
       ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
       throws ClassNotFoundException, ObjectNotFoundException {
     Object target;
-    if (execMessage.getInstanceMethodCall().hasObject()) {
+    final Obj methodCallObject = execMessage.getInstanceMethodCall().getObject();
+    if (methodCallObject != null) {
       Class objClass =
           Class.forName(
-              execMessage.getInstanceMethodCall().getClass_().getName(),
+              execMessage.getInstanceMethodCall().getClazz().getName(),
               true,
               Thread.currentThread().getContextClassLoader());
-      target = Unwrapper.unwrapObject(execMessage.getInstanceMethodCall().getObject(), objClass);
+      target = Unwrapper.unwrapObject(methodCallObject, objClass);
       if (logger.isTraceEnabled()) {
         logger.trace("Unwrapped target: {}", target);
       }
@@ -169,15 +172,15 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
       throws ReflectiveOperationException {
     Class clazz =
         Class.forName(
-            execMessage.getInstanceMethodCall().getClass_().getName(),
+            execMessage.getInstanceMethodCall().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
     AccessibleObject accessibleObject =
         ReflectionHelper.getMethodToInvoke(
             clazz,
             args.toArray(),
-            execMessage.getInstanceMethodCall().getParameterList().stream()
-                .map(Primitives.Parameter::getValue)
+            Stream.of(execMessage.getInstanceMethodCall().getParameters())
+                .map(Parameter::getValue)
                 .collect(Collectors.toList()),
             execMessage.getInstanceMethodCall().getName());
     if (accessibleObject == null) {

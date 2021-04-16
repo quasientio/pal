@@ -17,12 +17,12 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages;
+package net.ittera.pal.serdes.colfer;
 
 import java.lang.reflect.Constructor;
 import java.util.Optional;
 import net.ittera.pal.common.util.Classes;
-import net.ittera.pal.messages.protobuf.Primitives.Object;
+import net.ittera.pal.messages.colfer.Obj;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +36,7 @@ public class Unwrapper {
 
   private Unwrapper() {}
 
-  private static <T> T reconstructCharSequence(T t, Object object) {
+  private static <T> T reconstructCharSequence(T t, Obj object) {
     Optional<Class> charSeqClass =
         Wrapper.reconstructableCharSeqClasses.stream().filter(c -> c.equals(t)).findFirst();
 
@@ -52,7 +52,7 @@ public class Unwrapper {
     try {
       newObject = (T) c.newInstance(object.getValue());
     } catch (Exception e) {
-      logger.warn("Couldn't insantiate char seq object", e);
+      logger.warn("Couldn't instantiate char seq object", e);
       return null;
     }
 
@@ -67,7 +67,7 @@ public class Unwrapper {
    * @param clazz
    * @return
    */
-  public static java.lang.Object unwrapObject(Object object, Class clazz) {
+  public static java.lang.Object unwrapObject(Obj object, Class clazz) {
     if (logger.isTraceEnabled()) {
       logger.trace("in with object:\n{}, clazz:\n{}", object, clazz);
     }
@@ -117,127 +117,128 @@ public class Unwrapper {
         throw new IllegalArgumentException(
             "Type is array but wrapped object isn't:" + clazz.getName());
       }
+      final Obj[] arrayValues = object.getArrayValues();
       // String[]
       if (clazz == String[].class) {
-        String[] array = new String[object.getArrayValueList().size()];
+        final String[] array = new String[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = strObj.getValue();
         }
         return array;
       }
       // PRIMITIVE WRAPPERS
       else if (clazz == Integer[].class) {
-        Integer[] array = new Integer[object.getArrayValueList().size()];
+        Integer[] array = new Integer[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Integer.valueOf(strObj.getValue());
         }
         return array;
       } else if (clazz == Boolean[].class) {
-        Boolean[] array = new Boolean[object.getArrayValueList().size()];
+        Boolean[] array = new Boolean[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Boolean.valueOf(strObj.getValue());
         }
         return array;
       } else if (clazz == Byte[].class) {
-        Byte[] array = new Byte[object.getArrayValueList().size()];
+        Byte[] array = new Byte[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Byte.valueOf(strObj.getValue());
         }
         return array;
       } else if (clazz == Character[].class) {
-        Character[] array = new Character[object.getArrayValueList().size()];
+        Character[] array = new Character[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = strObj.getValue().charAt(0);
         }
         return array;
       } else if (clazz == Short[].class) {
-        Short[] array = new Short[object.getArrayValueList().size()];
+        Short[] array = new Short[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Short.valueOf(strObj.getValue());
         }
         return array;
       } else if (clazz == Long[].class) {
-        Long[] array = new Long[object.getArrayValueList().size()];
+        Long[] array = new Long[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Long.valueOf(strObj.getValue());
         }
         return array;
       } else if (clazz == Float[].class) {
-        Float[] array = new Float[object.getArrayValueList().size()];
+        Float[] array = new Float[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Float.valueOf(strObj.getValue());
         }
         return array;
       } else if (clazz == Double[].class) {
-        Double[] array = new Double[object.getArrayValueList().size()];
+        Double[] array = new Double[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Double.valueOf(strObj.getValue());
         }
         return array;
       }
       // PRIMITIVES
       else if (clazz == int[].class) {
-        int[] array = new int[object.getArrayValueList().size()];
+        int[] array = new int[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Integer.parseInt(strObj.getValue());
         }
         return array;
       } else if (clazz == boolean[].class) {
-        boolean[] array = new boolean[object.getArrayValueList().size()];
+        boolean[] array = new boolean[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Boolean.parseBoolean(strObj.getValue());
         }
         return array;
       } else if (clazz == byte[].class) {
-        byte[] array = new byte[object.getArrayValueList().size()];
+        byte[] array = new byte[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Byte.parseByte(strObj.getValue());
         }
         return array;
       } else if (clazz == char[].class) {
-        char[] array = new char[object.getArrayValueList().size()];
+        char[] array = new char[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = strObj.getValue().charAt(0);
         }
         return array;
       } else if (clazz == short[].class) {
-        short[] array = new short[object.getArrayValueList().size()];
+        short[] array = new short[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Short.parseShort(strObj.getValue());
         }
         return array;
       } else if (clazz == long[].class) {
-        long[] array = new long[object.getArrayValueList().size()];
+        long[] array = new long[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Long.parseLong(strObj.getValue());
         }
         return array;
       } else if (clazz == float[].class) {
-        float[] array = new float[object.getArrayValueList().size()];
+        float[] array = new float[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Float.parseFloat(strObj.getValue());
         }
         return array;
       } else if (clazz == double[].class) {
-        double[] array = new double[object.getArrayValueList().size()];
+        double[] array = new double[arrayValues.length];
         int idx = 0;
-        for (Object strObj : object.getArrayValueList()) {
+        for (Obj strObj : arrayValues) {
           array[idx++] = Double.parseDouble(strObj.getValue());
         }
         return array;
@@ -258,8 +259,8 @@ public class Unwrapper {
     }
   }
 
-  public static java.lang.Object unwrapObject(Object object) throws ClassNotFoundException {
-    final String objClassName = object.getClass_().getName();
+  public static java.lang.Object unwrapObject(Obj object) throws ClassNotFoundException {
+    final String objClassName = object.getClazz().getName();
     Class objectClass = Classes.getClassForPrimitive(objClassName);
     if (objectClass == null) {
       objectClass =

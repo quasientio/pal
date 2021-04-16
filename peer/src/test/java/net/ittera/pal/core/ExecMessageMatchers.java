@@ -19,8 +19,9 @@
 
 package net.ittera.pal.core;
 
-import net.ittera.pal.messages.protobuf.Fields;
-import net.ittera.pal.messages.protobuf.Values.ReturnValue;
+import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
+import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
@@ -43,14 +44,14 @@ public class ExecMessageMatchers {
             .getClazz()
             .getName()
             .equalsIgnoreCase(declaringClass.getName());
-      } else if (returnValue instanceof Fields.StaticFieldPutDone) {
-        return ((Fields.StaticFieldPutDone) returnValue)
-            .getClass_()
+      } else if (returnValue instanceof StaticFieldPutDone) {
+        return ((StaticFieldPutDone) returnValue)
+            .getClazz()
             .getName()
             .equalsIgnoreCase(declaringClass.getName());
-      } else if (returnValue instanceof Fields.InstanceFieldPutDone) {
-        return ((Fields.InstanceFieldPutDone) returnValue)
-            .getClass_()
+      } else if (returnValue instanceof InstanceFieldPutDone) {
+        return ((InstanceFieldPutDone) returnValue)
+            .getClazz()
             .getName()
             .equalsIgnoreCase(declaringClass.getName());
       } else {
@@ -78,19 +79,19 @@ public class ExecMessageMatchers {
     @Override
     protected boolean matchesSafely(Object returnValue) {
       if (returnValue instanceof ReturnValue) {
-        if (((ReturnValue) returnValue).getFrom().hasField()) {
+        if (((ReturnValue) returnValue).getFrom().getField() != null) {
           return ((ReturnValue) returnValue)
               .getFrom()
               .getField()
               .getRepr()
               .contains(clazz.getName());
-        } else if (((ReturnValue) returnValue).getFrom().hasConstructor()) {
+        } else if (((ReturnValue) returnValue).getFrom().getConstructor() != null) {
           return ((ReturnValue) returnValue)
               .getFrom()
               .getConstructor()
               .getRepr()
               .contains(clazz.getName());
-        } else if (((ReturnValue) returnValue).getFrom().hasMethod()) {
+        } else if (((ReturnValue) returnValue).getFrom().getMethod() != null) {
           return ((ReturnValue) returnValue)
               .getFrom()
               .getMethod()
@@ -99,16 +100,10 @@ public class ExecMessageMatchers {
         } else {
           return false;
         }
-      } else if (returnValue instanceof Fields.StaticFieldPutDone) {
-        return ((Fields.StaticFieldPutDone) returnValue)
-            .getField()
-            .getRepr()
-            .contains(clazz.getName());
-      } else if (returnValue instanceof Fields.InstanceFieldPutDone) {
-        return ((Fields.InstanceFieldPutDone) returnValue)
-            .getField()
-            .getRepr()
-            .contains(clazz.getName());
+      } else if (returnValue instanceof StaticFieldPutDone) {
+        return ((StaticFieldPutDone) returnValue).getField().getRepr().contains(clazz.getName());
+      } else if (returnValue instanceof InstanceFieldPutDone) {
+        return ((InstanceFieldPutDone) returnValue).getField().getRepr().contains(clazz.getName());
       } else {
         return false;
       }
@@ -134,19 +129,19 @@ public class ExecMessageMatchers {
     @Override
     protected boolean matchesSafely(Object returnValue) {
       if (returnValue instanceof ReturnValue) {
-        if (((ReturnValue) returnValue).getFrom().hasField()) {
+        if (((ReturnValue) returnValue).getFrom().getField() != null) {
           return ((ReturnValue) returnValue)
               .getFrom()
               .getField()
               .getRepr()
               .contains(reflectableName);
-        } else if (((ReturnValue) returnValue).getFrom().hasConstructor()) {
+        } else if (((ReturnValue) returnValue).getFrom().getConstructor() != null) {
           return ((ReturnValue) returnValue)
               .getFrom()
               .getConstructor()
               .getRepr()
               .contains(reflectableName);
-        } else if (((ReturnValue) returnValue).getFrom().hasMethod()) {
+        } else if (((ReturnValue) returnValue).getFrom().getMethod() != null) {
           return ((ReturnValue) returnValue)
               .getFrom()
               .getMethod()
@@ -155,16 +150,10 @@ public class ExecMessageMatchers {
         } else {
           return false;
         }
-      } else if (returnValue instanceof Fields.StaticFieldPutDone) {
-        return ((Fields.StaticFieldPutDone) returnValue)
-            .getField()
-            .getRepr()
-            .contains(reflectableName);
-      } else if (returnValue instanceof Fields.InstanceFieldPutDone) {
-        return ((Fields.InstanceFieldPutDone) returnValue)
-            .getField()
-            .getRepr()
-            .contains(reflectableName);
+      } else if (returnValue instanceof StaticFieldPutDone) {
+        return ((StaticFieldPutDone) returnValue).getField().getRepr().contains(reflectableName);
+      } else if (returnValue instanceof InstanceFieldPutDone) {
+        return ((InstanceFieldPutDone) returnValue).getField().getRepr().contains(reflectableName);
       } else {
         return false;
       }

@@ -19,12 +19,11 @@
 
 package net.ittera.pal.core.exec;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.UUID;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundLogMsg;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
@@ -37,7 +36,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
       Runnable target,
       String name,
       ZContext zmqContext,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
@@ -56,7 +55,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 
   LogMessageInvoker(
       ZContext zmqContext,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       UUID peerUuid) {
@@ -104,14 +103,15 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
         continue;
       }
 
-      Message requestMsg = null;
+      final Message requestMsg = new Message();
       long started = System.currentTimeMillis();
 
       // parse req
       try {
-        requestMsg = Message.parseFrom(msg.getBody());
-      } catch (InvalidProtocolBufferException e) {
+        requestMsg.unmarshal(msg.getBody(), 0);
+      } catch (Exception e) {
         logger.error("Caught exception parsing message", e);
+        continue;
       }
 
       if (logger.isDebugEnabled()) {
@@ -122,16 +122,14 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
       }
 
       // dispatch it
-      if (requestMsg != null) {
-        dispatch(requestMsg, msg.getOffset());
+      dispatch(requestMsg, msg.getOffset());
+      if (logger.isDebugEnabled()) {
+        final long took = System.currentTimeMillis() - started;
         if (logger.isDebugEnabled()) {
-          final long took = System.currentTimeMillis() - started;
-          if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Dispatched log message with uuid: {} in {} millisecs",
-                getMessageUuid(requestMsg),
-                took);
-          }
+          logger.debug(
+              "Dispatched log message with uuid: {} in {} millisecs",
+              getMessageUuid(requestMsg),
+              took);
         }
       }
     }

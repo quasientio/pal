@@ -34,18 +34,17 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import net.ittera.pal.common.directory.nodes.LogInfo;
+import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
-import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.MessageType;
 import net.ittera.pal.messages.OutboundMsg;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Headers.InternalHeader;
-import net.ittera.pal.messages.protobuf.Intercepts;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.colfer.InternalHeader;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -73,7 +72,7 @@ public class LogWriterTest extends ZmqEnabledTest {
   private final String OUT_PUB_ADDR = "inproc://pub";
   private final String OFFSET_PUB_ADDR = "inproc://offsets";
   private static final Set<String> createdLogs = new HashSet<>();
-  private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
 
   private static final int TEST_PORT = 2182;
@@ -131,18 +130,24 @@ public class LogWriterTest extends ZmqEnabledTest {
   }
 
   private String getMessageUuid(Message msg) throws IllegalArgumentException {
-    if (msg.hasExecMessage()) {
-      return msg.getExecMessage().getMessageUuid();
-    } else if (msg.hasInterceptMessage()) {
-      return msg.getInterceptMessage().getMessageUuid();
-    } else {
-      throw new IllegalArgumentException(format("Unsupported message type: %s", msg));
+    ExecMessage execMessage = msg.getExecMessage();
+    if (execMessage != null) {
+      return execMessage.getMessageUuid();
     }
+    InterceptMessage interceptMessage = msg.getInterceptMessage();
+    if (interceptMessage != null) {
+      return interceptMessage.getMessageUuid();
+    }
+    throw new IllegalArgumentException(format("Unsupported message type: %s", msg));
   }
 
   private UUID getFollowingUuid(Message msg) {
-    if (msg.hasExecMessage() && msg.getExecMessage().hasFollowingUuid()) {
-      return UUID.fromString(msg.getExecMessage().getFollowingUuid());
+    ExecMessage execMessage = msg.getExecMessage();
+    if (execMessage != null) {
+      String followingUuid = execMessage.getFollowingUuid();
+      if (followingUuid != null && !followingUuid.isEmpty()) {
+        return UUID.fromString(followingUuid);
+      }
     }
     return null;
   }
@@ -176,7 +181,7 @@ public class LogWriterTest extends ZmqEnabledTest {
       InterceptMessage msg =
           msgBuilder.buildInterceptMessage(
               peerUuid,
-              Intercepts.InterceptType.BEFORE,
+              InterceptType.BEFORE,
               "java.io.PrintStream",
               "println",
               Collections.EMPTY_LIST,
@@ -188,9 +193,10 @@ public class LogWriterTest extends ZmqEnabledTest {
     // PUB them
     msgsCreated.forEach(
         msg -> {
+          boolean hasExecMessage = msg.getExecMessage() != null;
           MessageType msgType =
-              msg.hasExecMessage() ? MessageType.ExecMessage : MessageType.InterceptMessage;
-          ExecPhase execPhase = msg.hasExecMessage() ? ExecPhase.BEFORE : ExecPhase.UNDEFINED;
+              hasExecMessage ? MessageType.ExecMessage : MessageType.InterceptMessage;
+          ExecPhase execPhase = hasExecMessage ? ExecPhase.BEFORE : ExecPhase.UNDEFINED;
           OutboundMsg outMsg =
               new OutboundMsg(
                   msgType,
@@ -198,7 +204,7 @@ public class LogWriterTest extends ZmqEnabledTest {
                   null,
                   UUID.fromString(getMessageUuid(msg)),
                   getFollowingUuid(msg),
-                  msg.toByteArray());
+                  msg);
           outMsg.send(pubSocket);
         });
 
@@ -208,7 +214,8 @@ public class LogWriterTest extends ZmqEnabledTest {
     // assert published messages are produced to the log
     List<String> producedMsgUuids = new ArrayList<>();
     for (ProducerRecord<String, byte[]> record : producer.history()) {
-      Message msg = Message.parseFrom(record.value());
+      Message msg = new Message();
+      msg.unmarshal(record.value(), 0);
       producedMsgUuids.add(getMessageUuid(msg));
     }
     List<String> sentMsgUuids =
@@ -244,7 +251,7 @@ public class LogWriterTest extends ZmqEnabledTest {
                       headers,
                       UUID.fromString(getMessageUuid(msg)),
                       getFollowingUuid(msg),
-                      msg.toByteArray());
+                      msg);
               outMsg.send(pubSocket);
             });
 
@@ -254,7 +261,9 @@ public class LogWriterTest extends ZmqEnabledTest {
     // assert published messages are produced to the log
     List<String> producedMsgUuids = new ArrayList<>();
     for (ProducerRecord<String, byte[]> record : producer.history()) {
-      producedMsgUuids.add(getMessageUuid(Message.parseFrom(record.value())));
+      Message msg = new Message();
+      msg.unmarshal(record.value(), 0);
+      producedMsgUuids.add(getMessageUuid(msg));
     }
     List<String> sentMsgUuids =
         msgsCreated.stream().map(this::getMessageUuid).collect(Collectors.toList());

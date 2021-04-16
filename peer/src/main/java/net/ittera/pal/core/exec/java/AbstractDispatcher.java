@@ -23,7 +23,7 @@ import java.util.UUID;
 import javax.inject.Inject;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
-import net.ittera.pal.messages.MessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +31,7 @@ abstract class AbstractDispatcher {
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   protected UUID peerUuid;
-  protected MessageBuilder messageBuilder;
+  protected ColferMessageBuilder messageBuilder;
   protected ObjectStore objectStore;
   protected DispatcherConnector connector;
 
@@ -41,7 +41,7 @@ abstract class AbstractDispatcher {
   }
 
   @Inject
-  final void setMessageBuilder(MessageBuilder messageBuilder) {
+  final void setMessageBuilder(ColferMessageBuilder messageBuilder) {
     this.messageBuilder = messageBuilder;
   }
 

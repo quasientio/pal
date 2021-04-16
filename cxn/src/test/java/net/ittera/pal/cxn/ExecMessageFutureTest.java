@@ -37,10 +37,9 @@ import java.util.concurrent.TimeUnit;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.LogReply;
 import net.ittera.pal.common.directory.nodes.LogRequest;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.Before;
@@ -57,7 +56,7 @@ public class ExecMessageFutureTest {
 
   private static final Set<String> createdLogs = new HashSet<>();
 
-  private final MessageBuilder messageBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder messageBuilder = new ColferMessageBuilder();
   private static final UUID peerUuid = UUID.randomUUID();
   private ThinPeer thinPeer; // mocked!
   private PALDirectory palDirectory;

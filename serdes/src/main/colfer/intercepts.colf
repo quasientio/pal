@@ -1,0 +1,67 @@
+/*
+   Copyright (c) 2020 Contributors listed in the AUTHORS file
+
+   This file is part of PAL, the friendly java runtime.
+
+   PAL is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   PAL is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
+package colfer
+
+/*
+Values for interceptType:
+    BEFORE = 1;
+    AFTER = 2;
+    AROUND = 3;
+    BEFORE_ASYNC = 4;
+    AFTER_ASYNC = 5;
+
+Values for fieldOpType:
+    GET = 1;
+    PUT = 2;
+*/
+
+type InterceptableMethod struct {
+	name           text
+	parameterTypes []text
+}
+
+type InterceptableField struct {
+	name        text
+	fieldOpType uint8
+}
+
+type InterceptMessage struct {
+	peerUuid       text
+	messageUuid    text
+	interceptType  uint8
+	clazz          text
+	field          InterceptableField
+	method         InterceptableMethod
+	callbackClass  text
+	callbackMethod text
+}
+
+type InterceptKeyMessage struct {
+	clazz          text
+	execMsgType    uint8
+	executableName text
+	parameterTypes []text
+}
+
+type InterceptReply struct {
+	peerUuid      text
+	followingUuid text
+	result        bool
+}

@@ -28,7 +28,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 
 import java.util.Arrays;
@@ -38,7 +38,7 @@ import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.runtime.Dispatcher;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -115,7 +115,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectStore.size(), is(1L));
-    assertFalse(replyMsg.hasReturnValue());
+    assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.someShort, is(newFieldValue));
     assertThat(replyMsg.getInstanceFieldPutDone(), hasDeclaringClass(targetClass));
@@ -176,7 +176,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectStore.size(), is(1L));
-    assertFalse(replyMsg.hasReturnValue());
+    assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.bytes, is(newFieldValue));
     assertThat(replyMsg.getInstanceFieldPutDone(), hasDeclaringClass(targetClass));
@@ -237,7 +237,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectStore.size(), is(1L));
-    assertFalse(replyMsg.hasReturnValue());
+    assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aLong, is(newFieldValue));
     assertThat(replyMsg.getInstanceFieldPutDone(), hasDeclaringClass(targetClass));
@@ -298,7 +298,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectStore.size(), is(1L));
-    assertFalse(replyMsg.hasReturnValue());
+    assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aString, is(newFieldValue));
     assertThat(replyMsg.getInstanceFieldPutDone(), hasDeclaringClass(targetClass));
@@ -354,7 +354,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectStore.size(), is(2L));
-    assertFalse(replyMsg.hasReturnValue());
+    assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aList, sameInstance(newFieldValue));
     assertEquals(newFieldValue, target.aList);
@@ -412,7 +412,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectStore.size(), is(1L));
-    assertFalse(replyMsg.hasReturnValue());
+    assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aList, is(nullValue()));
     assertThat(replyMsg.getInstanceFieldPutDone(), hasDeclaringClass(targetClass));
@@ -468,7 +468,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectStore.size(), is(2L));
-    assertFalse(replyMsg.hasReturnValue());
+    assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.objects, sameInstance(newFieldValue));
     assertThat(replyMsg.getInstanceFieldPutDone(), hasDeclaringClass(targetClass));
@@ -524,7 +524,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectStore.size(), is(2L));
-    assertFalse(replyMsg.hasReturnValue());
+    assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.lastError, sameInstance(newFieldValue));
     assertThat(replyMsg.getInstanceFieldPutDone(), hasDeclaringClass(targetClass));

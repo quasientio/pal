@@ -35,10 +35,10 @@ import javax.inject.Singleton;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
+import net.ittera.pal.messages.InternalHeaderType;
 import net.ittera.pal.messages.LogMessageHeader;
 import net.ittera.pal.messages.OutboundMsg;
-import net.ittera.pal.messages.protobuf.Headers.InternalHeader;
-import net.ittera.pal.messages.protobuf.Headers.InternalHeaderType;
+import net.ittera.pal.messages.colfer.InternalHeader;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -224,7 +224,7 @@ class LogWriter extends ConnectedService {
     boolean isWriteAhead = false;
     if (internalHeaders != null) {
       for (InternalHeader ih : internalHeaders) {
-        if (ih.getHeaderType().equals(InternalHeaderType.WRITE_AHEAD)) {
+        if (ih.getHeaderType() == InternalHeaderType.WRITE_AHEAD.ordinal()) {
           isWriteAhead = true;
           logHeaders.add(HEADERS.get("SELF_DISPATCHING_HEADER"));
           break;

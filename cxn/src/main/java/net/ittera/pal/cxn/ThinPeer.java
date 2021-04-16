@@ -21,7 +21,6 @@ package net.ittera.pal.cxn;
 
 import static java.lang.String.format;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
@@ -41,11 +40,12 @@ import java.util.concurrent.Future;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.LogRequest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -70,7 +70,7 @@ public class ThinPeer {
   private boolean allowP2P = true;
   private boolean closed;
   private boolean initialized;
-  private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
 
   // static
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);
@@ -346,10 +346,10 @@ public class ThinPeer {
   }
 
   public ExecMessage sendAndReceive(ExecMessage message, boolean consumeLogUntilReply)
-      throws ExecutionException, InterruptedException, InvalidProtocolBufferException {
+      throws ExecutionException, InterruptedException {
     assertInitialized();
     if (logger.isTraceEnabled()) {
-      logger.trace("sendAndReceive: in with message: {}", message);
+      logger.trace("sendAndReceive: in with message: {}", ColferUtils.format(message));
     }
     if (talkingToPeer) {
       return sendToPeer(message);
@@ -359,8 +359,7 @@ public class ThinPeer {
   }
 
   /** <b>INCOMPLETE</b>: only checks for matches of staticFieldPutDone's ONLY USED BY SWING TESTS */
-  public ExecMessage waitFor(ExecMessageType type, String fieldName)
-      throws InvalidProtocolBufferException {
+  public ExecMessage waitFor(ExecMessageType type, String fieldName) {
     assertInitialized();
     if (logger.isDebugEnabled()) {
       logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
@@ -370,15 +369,19 @@ public class ThinPeer {
     while (true) {
       ConsumerRecords<String, byte[]> records = consumer.poll(pollingDuration);
       for (ConsumerRecord<String, byte[]> record : records) {
-        final Message message = Message.parseFrom(record.value());
+        final Message message = new Message();
+        message.unmarshal(record.value(), 0);
         long receivedMsgOffset = record.offset();
-        if (message.hasExecMessage()) {
-          final ExecMessage execMessage = message.getExecMessage();
-          if (execMessage.hasStaticFieldPutDone()
-              && fieldName.equals(execMessage.getStaticFieldPutDone().getField().getName())) {
+        final ExecMessage execMessage = message.getExecMessage();
+        if (execMessage != null) {
+          final StaticFieldPutDone staticFieldPutDone = execMessage.getStaticFieldPutDone();
+          if (staticFieldPutDone != null
+              && fieldName.equals(staticFieldPutDone.getField().getName())) {
             if (logger.isDebugEnabled()) {
               logger.debug(
-                  "Got matching message with offset {}:\n{}", receivedMsgOffset, execMessage);
+                  "Got matching message with offset {}:\n{}",
+                  receivedMsgOffset,
+                  ColferUtils.format(execMessage));
             }
             return execMessage;
           }
@@ -391,12 +394,11 @@ public class ThinPeer {
     }
   }
 
-  public Message getMessageAtOffset(Long seek) throws InvalidProtocolBufferException {
+  public Message getMessageAtOffset(Long seek) {
     return getMessageAtOffset(seek, true);
   }
 
-  private Message getMessageAtOffset(Long seek, boolean lookupCached)
-      throws InvalidProtocolBufferException {
+  private Message getMessageAtOffset(Long seek, boolean lookupCached) {
     assertInitialized();
     if (logger.isDebugEnabled()) {
       logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
@@ -434,13 +436,18 @@ public class ThinPeer {
     }
     // now swap last batch (map) of records read with the new one
     this.lastRecordsRead = recordsRead;
-    return Message.parseFrom(requestedRecord.value());
+
+    Message message = new Message();
+    message.unmarshal(requestedRecord.value(), 0);
+    return message;
   }
 
-  private Message getCachedMessageAtOffset(Long offset) throws InvalidProtocolBufferException {
+  private Message getCachedMessageAtOffset(Long offset) {
     ConsumerRecord<String, byte[]> cached = lastRecordsRead.get(offset);
     if (cached != null) {
-      return Message.parseFrom(cached.value());
+      Message message = new Message();
+      message.unmarshal(cached.value(), 0);
+      return message;
     }
     return null;
   }
@@ -477,29 +484,34 @@ public class ThinPeer {
   public void sendToLogAndForget(ExecMessage message) {
     assertInitialized();
     if (logger.isTraceEnabled()) {
-      logger.trace("sendToLogAndForget: in with message: {}", message);
+      logger.trace("sendToLogAndForget: in with message: {}", ColferUtils.format(message));
     }
     // send to kafka
-    final byte[] body = msgBuilder.wrap(message).toByteArray();
+    final byte[] body = ColferUtils.toBytes(msgBuilder.wrap(message));
     producer.send(
         new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body));
     if (logger.isDebugEnabled()) {
-      logger.debug("Message sent to log:\n{} ({} bytes), and we're done", message, body.length);
+      logger.debug(
+          "Message sent to log:\n{} ({} bytes), and we're done",
+          ColferUtils.format(message),
+          body.length);
     }
   }
 
   public Future<ExecMessage> sendToLogAndAsyncProcessReqAndRepNodes(ExecMessage message) {
     assertInitialized();
     if (logger.isTraceEnabled()) {
-      logger.trace("sendToLogAndAsyncProcessReqAndRepNodes: in with message: {}", message);
+      logger.trace(
+          "sendToLogAndAsyncProcessReqAndRepNodes: in with message: {}",
+          ColferUtils.format(message));
     }
     final UUID requestMsgUuid = UUID.fromString(message.getMessageUuid());
     // send to kafka
-    final byte[] body = msgBuilder.wrap(message).toByteArray();
+    final byte[] body = ColferUtils.toBytes(msgBuilder.wrap(message));
     producer.send(
         new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body));
     if (logger.isDebugEnabled()) {
-      logger.debug("Message sent to log:\n{} ({} bytes)", message, body.length);
+      logger.debug("Message sent to log:\n{} ({} bytes)", ColferUtils.format(message), body.length);
     }
 
     final ExecMessageFuture messageFuture =
@@ -530,10 +542,10 @@ public class ThinPeer {
   }
 
   private ExecMessage sendToLogAndReceive(ExecMessage message, boolean consumeLogUntilReply)
-      throws ExecutionException, InterruptedException, InvalidProtocolBufferException {
+      throws ExecutionException, InterruptedException {
 
     if (logger.isTraceEnabled()) {
-      logger.trace("sendToLogAndReceive: in with message: {}", message);
+      logger.trace("sendToLogAndReceive: in with message: {}", ColferUtils.format(message));
     }
     if (!allowP2P) {
       return sendAndReceiveConsumingLog(message);
@@ -547,10 +559,10 @@ public class ThinPeer {
     }
   }
 
-  private ExecMessage sendToLogConsumeAndSwitchToPeer(ExecMessage message)
-      throws InvalidProtocolBufferException {
+  private ExecMessage sendToLogConsumeAndSwitchToPeer(ExecMessage message) {
     if (logger.isTraceEnabled()) {
-      logger.trace("sendToLogConsumeAndSwitchToPeer: in with message: {}", message);
+      logger.trace(
+          "sendToLogConsumeAndSwitchToPeer: in with message: {}", ColferUtils.format(message));
     }
     ExecMessage replyMsg = sendAndReceiveConsumingLog(message);
 
@@ -564,7 +576,7 @@ public class ThinPeer {
   private ExecMessage sendAsyncAndSwitchToPeer(ExecMessage message)
       throws ExecutionException, InterruptedException {
     if (logger.isTraceEnabled()) {
-      logger.trace("sendAsyncAndSwitchToPeer: in with message: {}", message);
+      logger.trace("sendAsyncAndSwitchToPeer: in with message: {}", ColferUtils.format(message));
     }
     Future<ExecMessage> replyFuture = sendToLogAndAsyncProcessReqAndRepNodes(message);
 
@@ -578,14 +590,13 @@ public class ThinPeer {
     return replyMsg;
   }
 
-  private ExecMessage sendAndReceiveConsumingLog(ExecMessage message)
-      throws InvalidProtocolBufferException {
+  private ExecMessage sendAndReceiveConsumingLog(ExecMessage message) {
     if (logger.isTraceEnabled()) {
-      logger.trace("sendAndReceiveConsumingLog: in with message: {}", message);
+      logger.trace("sendAndReceiveConsumingLog: in with message: {}", ColferUtils.format(message));
     }
     // send to kafka
     long sentRecordOffset;
-    final byte[] body = msgBuilder.wrap(message).toByteArray();
+    final byte[] body = ColferUtils.toBytes(msgBuilder.wrap(message));
     Future<RecordMetadata> recordMetadataFuture =
         producer.send(
             new ProducerRecord<>(
@@ -593,7 +604,7 @@ public class ThinPeer {
     try {
       RecordMetadata recordMetadata = recordMetadataFuture.get();
       if (logger.isDebugEnabled()) {
-        logger.debug("Message sent ({} bytes):\n {}", body.length, message);
+        logger.debug("Message sent ({} bytes):\n {}", body.length, ColferUtils.format(message));
       }
       sentRecordOffset = recordMetadata.offset();
     } catch (Exception e) {
@@ -614,12 +625,14 @@ public class ThinPeer {
         logger.debug("Received {} records", records.count());
       }
       for (ConsumerRecord<String, byte[]> record : records) {
-        final Message rcvdMsg = Message.parseFrom(record.value());
+        final Message rcvdMsg = new Message();
+        rcvdMsg.unmarshal(record.value(), 0);
         long receivedMsgOffset = record.offset();
         final ExecMessage execMessage = rcvdMsg.getExecMessage();
+        final String followingUuid = execMessage == null ? null : execMessage.getFollowingUuid();
         if (execMessage != null
-            && execMessage.hasFollowingUuid()
-            && message.getMessageUuid().equals(execMessage.getFollowingUuid())) {
+            && followingUuid != null
+            && message.getMessageUuid().equals(followingUuid)) {
           if (logger.isDebugEnabled()) {
             logger.debug(
                 "Got reply with offset {} and uuid {} ",
@@ -678,26 +691,23 @@ public class ThinPeer {
   public ExecMessage sendToPeer(ExecMessage message) {
     assertInitialized();
     if (logger.isTraceEnabled()) {
-      logger.trace("sendToPeer: in with message: {}", message);
+      logger.trace("sendToPeer: in with message: {}", ColferUtils.format(message));
     }
     // send message request to peer
-    peerSocket.send(msgBuilder.wrap(message).toByteArray());
+    peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
 
     final long waitStart = System.currentTimeMillis();
     byte[] reply = peerSocket.recv(0);
     final long waitEnd = System.currentTimeMillis();
 
-    ExecMessage replyMsg = null;
-    try {
-      replyMsg = Message.parseFrom(reply).getExecMessage();
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            "Got reply message with uuid: {}, waited {} ms",
-            replyMsg.getMessageUuid(),
-            (waitEnd - waitStart));
-      }
-    } catch (InvalidProtocolBufferException ipbe) {
-      logger.error("Caught protobuf exception", ipbe);
+    final Message replyMsgWrapper = new Message();
+    replyMsgWrapper.unmarshal(reply, 0);
+    final ExecMessage replyMsg = replyMsgWrapper.getExecMessage();
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Got reply message with uuid: {}, waited {} ms",
+          replyMsg.getMessageUuid(),
+          (waitEnd - waitStart));
     }
 
     return replyMsg;

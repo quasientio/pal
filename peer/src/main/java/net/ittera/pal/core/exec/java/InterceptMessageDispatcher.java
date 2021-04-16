@@ -19,7 +19,7 @@
 
 package net.ittera.pal.core.exec.java;
 
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
 
 public interface InterceptMessageDispatcher {
   boolean dispatchIncoming(InterceptMessage incomingCall, boolean isDirect);

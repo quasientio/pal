@@ -37,13 +37,12 @@ import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.messages.InterceptsMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.OutboundMsg;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Headers.InternalHeader;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.colfer.InternalHeader;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.Before;
@@ -86,7 +85,9 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
           if (msg.getHeaders() != null) {
             headersReceived.addAll(msg.getHeaders());
           }
-          messagesReceived.add(Message.parseFrom(msg.getBody()));
+          Message message = new Message();
+          message.unmarshal(msg.getBody(), 0);
+          messagesReceived.add(message);
           repSocket.send("0"); // OK_REPLY
           logger.debug(
               "Publisher stub replied to received message w/uuid: {}", msg.getMessageUuid());
@@ -131,7 +132,9 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
           if (msg == null) {
             continue;
           }
-          messagesReceived.add(Message.parseFrom(msg.getBody()));
+          Message message = new Message();
+          message.unmarshal(msg.getBody(), 0);
+          messagesReceived.add(message);
           // pretend message has no intercepts -> send empty list
           List<InterceptMessage> intercepts = Collections.emptyList();
           new InterceptsMsg(intercepts).send(repSocket);
@@ -166,7 +169,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   private ZContext context;
   private ExecutorService execService;
   private DispatcherConnector dispatcherConnector;
-  private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
   private MessagePublisherStub messagePublisherStub;
   private InterceptsStub interceptsStub;
   private InternalHeader WRITE_AHEAD_HEADER;

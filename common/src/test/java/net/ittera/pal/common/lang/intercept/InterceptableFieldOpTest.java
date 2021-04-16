@@ -22,6 +22,7 @@ package net.ittera.pal.common.lang.intercept;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
+import net.ittera.pal.common.lang.FieldOpType;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
 import org.junit.Test;

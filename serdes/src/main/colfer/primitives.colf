@@ -1,0 +1,72 @@
+/*
+   Copyright (c) 2020 Contributors listed in the AUTHORS file
+
+   This file is part of PAL, the friendly java runtime.
+
+   PAL is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   PAL is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
+package colfer
+
+/*
+ The Object is either a ref (ref!=null), or can be reconstructed.
+ An Object can be reconstructed if:
+ a) isPrimitive or String and value!=null
+ b) isClass=true
+*/
+
+type Class struct {
+	name    text
+	unknown bool
+}
+
+type Obj struct {
+	value        text
+	hash         uint32
+	identityHash uint32
+	clazz        Class
+	isArray      bool
+	arrayValues  []Obj
+	ref          text
+	isNull       bool
+	isVoid       bool
+}
+
+type Field struct {
+	name  text
+	clazz Class
+	repr  text
+}
+
+type Method struct {
+	repr text
+}
+
+type Constructor struct {
+	repr text
+}
+
+type Reflectable struct {
+	constructor Constructor
+	method      Method
+	field       Field
+}
+
+type Parameter struct {
+	name      text
+	value     Obj
+	modifiers uint32
+	Type      Class
+	isVarArgs bool
+}

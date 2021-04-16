@@ -29,10 +29,11 @@ import javax.inject.Singleton;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.Unwrapper;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.Unwrapper;
 
 @Singleton
 public class SetClassVariableDispatcher extends SetFieldDispatcher {
@@ -40,7 +41,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
   @Inject
   public SetClassVariableDispatcher(
       UUID peerUuid,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       DispatcherConnector connector,
       ObjectStore objectStore) {
     setPeerUuid(peerUuid);
@@ -66,7 +67,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 
     Class clazz =
         Class.forName(
-            execMessage.getStaticFieldPut().getClass_().getName(),
+            execMessage.getStaticFieldPut().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
     return clazz.getDeclaredField(execMessage.getStaticFieldPut().getField().getName());
@@ -79,9 +80,9 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
     final Object value;
     final Field field = (Field) accessibleObject.get();
 
-    if (execMessage.getStaticFieldPut().hasValueObject()) {
-      value =
-          Unwrapper.unwrapObject(execMessage.getStaticFieldPut().getValueObject(), field.getType());
+    Obj fieldPutObject = execMessage.getStaticFieldPut().getValueObject();
+    if (fieldPutObject != null) {
+      value = Unwrapper.unwrapObject(fieldPutObject, field.getType());
       if (logger.isTraceEnabled()) {
         logger.trace("Unwrapped value: {}", value);
       }

@@ -31,17 +31,16 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.messages.InterceptEvtMsg;
 import net.ittera.pal.core.messages.InterceptsMsg;
-import net.ittera.pal.messages.MessageBuilder;
 import net.ittera.pal.messages.MessageType;
 import net.ittera.pal.messages.OutboundMsg;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptKeyMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InterceptKeyMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,7 +60,7 @@ public class InterceptsTest extends ZmqEnabledTest {
   private ServiceManager manager;
   private Intercepts interceptsService;
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
-  private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
   private Socket registerSocket, matchSocket;
 
   @Before
@@ -122,7 +121,9 @@ public class InterceptsTest extends ZmqEnabledTest {
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
+    byte[] buf = new byte[interceptMessage.marshalFit()];
+    interceptMessage.marshal(buf, 0);
+    new InterceptEvtMsg(buf).send(registerSocket);
 
     // verify reply
     String reply = registerSocket.recvStr();
@@ -141,14 +142,14 @@ public class InterceptsTest extends ZmqEnabledTest {
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
+    new InterceptEvtMsg(interceptMessage).send(registerSocket);
 
     // verify reply
     String reply = registerSocket.recvStr();
     assertThat(reply, is(Intercepts.REG_OK_REPLY));
 
     // now send again
-    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
+    new InterceptEvtMsg(interceptMessage).send(registerSocket);
 
     // verify reply
     reply = registerSocket.recvStr();
@@ -167,24 +168,26 @@ public class InterceptsTest extends ZmqEnabledTest {
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
+    new InterceptEvtMsg(interceptMessage).send(registerSocket);
 
     // verify reply
     String reply = registerSocket.recvStr();
     assertThat(reply, is(Intercepts.REG_OK_REPLY));
 
     // send a non-matching ExecMessage
-    ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.HashMap");
+    ExecMessage execMessage = msgBuilder.buildEmptyConstructor(peerUuid, "java.util.HashMap");
+    InterceptKeyMessage execKeyMessage = msgBuilder.buildInterceptKey(execMessage);
+
     OutboundMsg outMsg =
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.InterceptKey,
             ExecPhase.BEFORE,
             null,
-            UUID.fromString(msg.getMessageUuid()),
+            UUID.fromString(execMessage.getMessageUuid()),
             null,
-            msgBuilder.wrap(msg).toByteArray());
+            msgBuilder.wrap(execKeyMessage));
     outMsg.send(matchSocket);
-    logger.debug("Sent exec message: {}", outMsg);
+    logger.debug("Sent intercept key message: {}", outMsg);
 
     // verify it doesn't get intercepted
     InterceptsMsg interceptsMsg = InterceptsMsg.recvMsg(matchSocket, true);
@@ -204,7 +207,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
+    new InterceptEvtMsg(interceptMessage).send(registerSocket);
 
     // verify reply
     String reply = registerSocket.recvStr();
@@ -215,14 +218,14 @@ public class InterceptsTest extends ZmqEnabledTest {
     InterceptKeyMessage execKeyMessage = msgBuilder.buildInterceptKey(execMessage);
     OutboundMsg outMsg =
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.InterceptKey,
             ExecPhase.AFTER,
             null,
             UUID.fromString(execMessage.getMessageUuid()),
             null,
-            msgBuilder.wrap(execKeyMessage).toByteArray());
+            msgBuilder.wrap(execKeyMessage));
     outMsg.send(matchSocket);
-    logger.debug("Sent exec message: {}", outMsg);
+    logger.debug("Sent intercept key message: {}", outMsg);
 
     // verify it doesn't get intercepted
     InterceptsMsg interceptsMsg = InterceptsMsg.recvMsg(matchSocket, true);
@@ -242,7 +245,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
+    new InterceptEvtMsg(interceptMessage).send(registerSocket);
 
     // verify reply
     String reply = registerSocket.recvStr();
@@ -259,9 +262,9 @@ public class InterceptsTest extends ZmqEnabledTest {
             null,
             UUID.fromString(execMessage.getMessageUuid()),
             null,
-            msgBuilder.wrap(execKeyMessage).toByteArray());
+            msgBuilder.wrap(execKeyMessage));
     outMsg.send(matchSocket);
-    logger.debug("Sent exec message: {}", outMsg);
+    logger.debug("Sent intercept key message: {}", outMsg);
 
     // verify that it gets intercepted
     InterceptsMsg interceptsMsg = InterceptsMsg.recvMsg(matchSocket, true);
@@ -284,7 +287,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             this.getClass().getName(),
             "someCallbackMethod");
     final UUID interceptUuid = UUID.fromString(interceptMessage.getMessageUuid());
-    new InterceptEvtMsg(interceptMessage.toByteArray()).send(registerSocket);
+    new InterceptEvtMsg(interceptMessage).send(registerSocket);
 
     // verify reply
     String reply = registerSocket.recvStr();

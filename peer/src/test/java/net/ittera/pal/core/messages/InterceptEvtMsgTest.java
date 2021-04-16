@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
 import java.util.UUID;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.messages.InterceptEvtMsg.Type;
+import net.ittera.pal.messages.Marshallable;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,6 +105,12 @@ public class InterceptEvtMsgTest extends ZmqEnabledTest {
 
   @Test
   public void testNPE() {
+    try {
+      new InterceptEvtMsg((Marshallable) null);
+      fail("Should have raised NPE");
+    } catch (NullPointerException e) {
+      // ok then
+    }
     try {
       new InterceptEvtMsg((byte[]) null);
       fail("Should have raised NPE");

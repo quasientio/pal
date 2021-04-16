@@ -24,17 +24,14 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.core.ZmqEnabledTest;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Intercepts;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptType;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,11 +40,11 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
 public class InterceptsMsgTest extends ZmqEnabledTest {
-  private MessageBuilder messageBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder messageBuilder = new ColferMessageBuilder();
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
   @Test
-  public void sendNoIntercepts() throws InvalidProtocolBufferException {
+  public void sendNoIntercepts() {
     InterceptsMsg msgOut = new InterceptsMsg(null);
 
     // verify getters
@@ -72,7 +69,7 @@ public class InterceptsMsgTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendOneIntercept() throws InvalidProtocolBufferException {
+  public void sendOneIntercept() {
 
     InterceptMessage interceptMessage =
         messageBuilder.buildInterceptMessage(
@@ -114,7 +111,7 @@ public class InterceptsMsgTest extends ZmqEnabledTest {
   public void sendManyIntercepts() throws Exception {
 
     int interceptsToSend = 5;
-    List<Intercepts.InterceptMessage> interceptMessages = new ArrayList<>();
+    List<InterceptMessage> interceptMessages = new ArrayList<>();
 
     for (int i = 0; i < interceptsToSend; i++) {
       interceptMessages.add(

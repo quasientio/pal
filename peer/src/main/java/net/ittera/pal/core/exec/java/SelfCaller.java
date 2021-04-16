@@ -36,8 +36,8 @@ import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.core.PeerException;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.exec.UnsupportedMessageException;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -52,7 +52,7 @@ public class SelfCaller {
 
   private final UUID peerUuid;
   private final IncomingMessageDispatcher incomingMessageDispatcher;
-  private final MessageBuilder messageBuilder;
+  private final ColferMessageBuilder messageBuilder;
   private final ClassLoader customClassloader;
   private final ZContext context;
   private final String offsetPubAddress;
@@ -62,7 +62,7 @@ public class SelfCaller {
   SelfCaller(
       UUID peerUuid,
       IncomingMessageDispatcher incomingMessageDispatcher,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       CustomClassloader customClassloader,
       ZContext context,
       @Named("offset.pub") String offsetPubAddress,

@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages;
+package net.ittera.pal.serdes.protobuf;
 
 import java.lang.reflect.AccessibleObject;
 import java.util.List;

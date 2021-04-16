@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages;
+package net.ittera.pal.serdes.protobuf;
 
 import com.google.protobuf.Message.Builder;
 import java.lang.reflect.AccessibleObject;
@@ -1037,7 +1037,7 @@ public final class ProtobufMessageBuilder implements MessageBuilder {
   }
 
   private static FieldOpType getMessageTypeFromRequestType(
-      net.ittera.pal.common.lang.intercept.FieldOpType fieldOpType) {
+      net.ittera.pal.common.lang.FieldOpType fieldOpType) {
     switch (fieldOpType) {
       case GET:
         return FieldOpType.GET;

@@ -19,12 +19,15 @@
 
 package net.ittera.pal.core.messages;
 
+import static net.ittera.pal.serdes.colfer.ColferUtils.toBytes;
+
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.messages.BaseMsg;
+import net.ittera.pal.messages.Marshallable;
 import org.zeromq.ZMQ;
 
 public class InterceptEvtMsg extends BaseMsg {
@@ -51,16 +54,24 @@ public class InterceptEvtMsg extends BaseMsg {
   @Nullable private final byte[] body;
 
   public InterceptEvtMsg(byte[] body) {
-    this(Type.REGISTER, body, null);
+    this(Type.REGISTER, body, null, null);
+  }
+
+  public InterceptEvtMsg(Marshallable message) {
+    this(Type.REGISTER, null, message, null);
   }
 
   public InterceptEvtMsg(UUID interceptMsgUUID) {
-    this(Type.UNREGISTER, null, interceptMsgUUID);
+    this(Type.UNREGISTER, null, null, interceptMsgUUID);
   }
 
-  private InterceptEvtMsg(Type type, @Nullable byte[] body, @Nullable UUID interceptMsgUUID) {
-    if (type.equals(Type.REGISTER)) {
-      Objects.requireNonNull(body);
+  private InterceptEvtMsg(
+      Type type,
+      @Nullable byte[] body,
+      @Nullable Marshallable marshallable,
+      @Nullable UUID interceptMsgUUID) {
+    if (type.equals(Type.REGISTER) && (body == null && marshallable == null)) {
+      throw new NullPointerException("Both body and marshallable are null.");
     }
 
     if (type.equals(Type.UNREGISTER)) {
@@ -68,12 +79,12 @@ public class InterceptEvtMsg extends BaseMsg {
     }
 
     this.type = type;
-    this.body = body;
+    this.body = marshallable != null ? toBytes(marshallable) : body;
     this.interceptMsgUUID = interceptMsgUUID;
   }
 
   private InterceptEvtMsg(Type type, byte[] body, @Nullable UUID interceptMsgUUID, int size) {
-    this(type, body, interceptMsgUUID);
+    this(type, body, null, interceptMsgUUID);
     this.size = size;
   }
 

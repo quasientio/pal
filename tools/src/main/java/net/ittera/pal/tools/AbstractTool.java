@@ -20,7 +20,9 @@
 package net.ittera.pal.tools;
 
 import javax.annotation.Nullable;
-import net.ittera.pal.messages.protobuf.Wrappers;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.MessageType;
+import net.ittera.pal.messages.colfer.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,32 +46,43 @@ public class AbstractTool {
     return null;
   }
 
-  protected static String getPeerUuid(Wrappers.Message msg) {
-    if (msg.hasExecMessage()) {
-      return msg.getExecMessage().getPeerUuid();
-    } else if (msg.hasInterceptMessage()) {
-      return msg.getInterceptMessage().getPeerUuid();
+  protected static String getPeerUuid(Message msg) {
+    final MessageType messageType = MessageType.values()[msg.getMessageType()];
+    switch (messageType) {
+      case ExecMessage:
+        return msg.getExecMessage().getPeerUuid();
+      case InterceptMessage:
+        return msg.getInterceptMessage().getPeerUuid();
+      default:
+        return null;
     }
-    return null;
   }
 
-  protected static String getMessageUuid(Wrappers.Message msg) {
-    if (msg.hasExecMessage()) {
-      return msg.getExecMessage().getMessageUuid();
-    } else if (msg.hasInterceptMessage()) {
-      return msg.getInterceptMessage().getMessageUuid();
+  protected static String getMessageUuid(Message msg) {
+    final MessageType messageType = MessageType.values()[msg.getMessageType()];
+    switch (messageType) {
+      case ExecMessage:
+        return msg.getExecMessage().getMessageUuid();
+      case InterceptMessage:
+        return msg.getInterceptMessage().getMessageUuid();
+      default:
+        return null;
     }
-    return null;
   }
 
-  protected static String getMessageType(Wrappers.Message msg) {
-    if (msg.hasExecMessage()) {
-      return msg.getExecMessage().getMsgType().name();
-    } else if (msg.hasInterceptMessage()) {
-      return "InterceptMessage";
-    } else if (msg.hasInterceptReply()) {
-      return "InterceptReply";
+  protected static String getMessageType(Message msg) {
+    final MessageType messageType = MessageType.values()[msg.getMessageType()];
+    switch (messageType) {
+      case ExecMessage:
+        ExecMessageType execMessageType =
+            ExecMessageType.values()[msg.getExecMessage().getExecMessageType()];
+        return execMessageType.name();
+      case InterceptMessage:
+        return "InterceptMessage";
+      case InterceptReply:
+        return "InterceptReply";
+      default:
+        return null;
     }
-    return null;
   }
 }

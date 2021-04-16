@@ -26,9 +26,9 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 
 @Singleton
 public class GetClassVariableDispatcher extends GetFieldDispatcher {
@@ -36,7 +36,7 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
   @Inject
   public GetClassVariableDispatcher(
       UUID peerUuid,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       DispatcherConnector connector,
       ObjectStore objectStore) {
     setPeerUuid(peerUuid);
@@ -62,7 +62,7 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
 
     Class clazz =
         Class.forName(
-            execMessage.getStaticFieldGet().getClass_().getName(),
+            execMessage.getStaticFieldGet().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
     return clazz.getDeclaredField(execMessage.getStaticFieldGet().getField().getName());

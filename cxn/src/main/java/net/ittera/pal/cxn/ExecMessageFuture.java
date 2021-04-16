@@ -19,7 +19,6 @@
 
 package net.ittera.pal.cxn;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -29,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import net.ittera.pal.common.directory.nodes.LogReply;
 import net.ittera.pal.common.directory.nodes.LogRequest;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.BackgroundCallback;
 import org.apache.curator.framework.api.CuratorEvent;
@@ -172,13 +171,8 @@ class ExecMessageFuture implements BackgroundCallback, CuratorWatcher, Future<Ex
           }
 
           // set msg value to complete future
-          ExecMessage messageReply = null;
-          try {
-            messageReply = thinPeer.getMessageAtOffset(logReply.getOffset()).getExecMessage();
-          } catch (InvalidProtocolBufferException e) {
-            logger.error(
-                "Error deserializing reply message for req w/uuid: {}", logRequest.getUuid(), e);
-          }
+          ExecMessage messageReply =
+              thinPeer.getMessageAtOffset(logReply.getOffset()).getExecMessage();
           if (logger.isDebugEnabled()) {
             logger.debug(
                 "completing future reply msg w/uuid: {} for request w/uuid: {}",

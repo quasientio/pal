@@ -21,8 +21,9 @@ package net.ittera.pal.core.exec;
 
 import java.util.UUID;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
@@ -35,7 +36,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
       Runnable target,
       String name,
       ZContext zmqContext,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
@@ -55,7 +56,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
   // Constructor for unit-testing
   PeerMessageInvoker(
       ZContext zmqContext,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       UUID peerUuid) {
@@ -71,6 +72,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
 
     Message requestMsg;
     Message replyMsg;
+    byte[] req;
 
     if (logger.isDebugEnabled()) {
       logger.debug("Start getting requests from socket");
@@ -78,10 +80,9 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
 
     boolean socketError = false;
     while (!interrupted() && !socketError) {
+      req = null;
 
-      // recv req
-      byte[] req = null;
-
+      // receive req
       try {
         req = socket.recv();
       } catch (ZMQException ex) {
@@ -104,47 +105,44 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
         }
       }
 
-      if (req != null) {
-        final long started = System.currentTimeMillis();
+      if (req == null) {
+        continue;
+      }
 
-        requestMsg = null;
+      final long started = System.currentTimeMillis();
+      requestMsg = new Message();
 
-        // parse req
-        try {
-          requestMsg = Message.parseFrom(req);
-        } catch (Exception e) {
-          logger.error("Caught exception parsing message", e);
-        }
+      // parse req
+      try {
+        requestMsg.unmarshal(req, 0);
+      } catch (Exception e) {
+        logger.error("Caught exception parsing message", e);
+        continue;
+      }
+
+      if (logger.isDebugEnabled()) {
+        logger.debug("Received req message with uuid: {}", getMessageUuid(requestMsg));
+      }
+
+      // dispatch
+      try {
+        replyMsg = dispatch(requestMsg);
+
+        // send reply
+        socket.send(ColferUtils.toBytes(replyMsg));
 
         if (logger.isDebugEnabled()) {
-          logger.debug(
-              "Received req message with uuid: {}",
-              requestMsg != null ? getMessageUuid(requestMsg) : null);
-        }
-
-        if (requestMsg != null) {
-
-          // dispatch
-          try {
-            replyMsg = dispatch(requestMsg);
-
-            // send reply
-            socket.send(replyMsg.toByteArray());
-
-            if (logger.isDebugEnabled()) {
-              final long took = System.currentTimeMillis() - started;
-              if (logger.isDebugEnabled()) {
-                logger.debug(
-                    "Dispatched and sent direct message w/uuid: {} in reply to request w/uuid: {} in {} millisecs",
-                    getMessageUuid(replyMsg),
-                    getMessageUuid(requestMsg),
-                    took);
-              }
-            }
-          } catch (Exception e) {
-            logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
+          final long took = System.currentTimeMillis() - started;
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Dispatched and sent direct message w/uuid: {} in reply to request w/uuid: {} in {} ms",
+                getMessageUuid(replyMsg),
+                getMessageUuid(requestMsg),
+                took);
           }
         }
+      } catch (Exception e) {
+        logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
       }
     }
     closeConnections();

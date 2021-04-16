@@ -23,6 +23,7 @@ import static java.lang.String.format;
 
 import java.util.Objects;
 import javax.annotation.Nonnull;
+import net.ittera.pal.common.lang.FieldOpType;
 
 public final class InterceptableFieldOp extends Interceptable {
   private static final String FIELD_SEP = "&&";

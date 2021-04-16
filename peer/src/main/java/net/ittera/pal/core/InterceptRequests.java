@@ -28,10 +28,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import net.ittera.pal.common.lang.FieldOpType;
 import net.ittera.pal.core.exec.DuplicateInterceptException;
 import net.ittera.pal.core.exec.java.InterceptRequestEntry;
-import net.ittera.pal.messages.protobuf.Intercepts;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptKeyMessage;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.InterceptKeyMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.colfer.InterceptableField;
+import net.ittera.pal.messages.colfer.InterceptableMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,9 +47,11 @@ class InterceptRequests {
   private final List<InterceptRequestEntry> fieldGetIntercepts = new ArrayList<>();
   private final List<InterceptRequestEntry> fieldPutIntercepts = new ArrayList<>();
 
-  List<Intercepts.InterceptMessage> getMatchingIntercepts(InterceptKeyMessage execKeyMessage) {
+  List<InterceptMessage> getMatchingIntercepts(InterceptKeyMessage execKeyMessage) {
     final List<InterceptRequestEntry> interceptEntriesToSearch;
-    switch (execKeyMessage.getMsgType()) {
+    ExecMessageType execKeyMessageType = ExecMessageType.values()[execKeyMessage.getExecMsgType()];
+
+    switch (execKeyMessageType) {
       case CONSTRUCTOR:
         interceptEntriesToSearch = constructorIntercepts;
         break;
@@ -73,25 +79,29 @@ class InterceptRequests {
         .collect(Collectors.toList());
   }
 
-  void registerInterceptRequest(Intercepts.InterceptMessage interceptMessage)
+  void registerInterceptRequest(InterceptMessage interceptMessage)
       throws DuplicateInterceptException {
     InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
 
-    if (!interceptMessage.hasField() && !interceptMessage.hasMethod()) {
+    InterceptableMethod interceptableMethod = interceptMessage.getMethod();
+    InterceptableField interceptableField = interceptMessage.getField();
+
+    if (interceptableField == null && interceptableMethod == null) {
       throw new IllegalArgumentException(
           format("Unsupported intercept request message:%n%s", interceptMessage));
     }
 
     final List<InterceptRequestEntry> targetList;
 
-    if (interceptMessage.hasField()) {
-      if (interceptMessage.getField().getType().equals(Intercepts.FieldOpType.GET)) {
+    if (interceptableField != null) {
+      FieldOpType fieldOpType = FieldOpType.values()[interceptableField.getFieldOpType()];
+      if (fieldOpType.equals(FieldOpType.GET)) {
         targetList = fieldGetIntercepts;
       } else {
         targetList = fieldPutIntercepts;
       }
     } else {
-      if (interceptMessage.getMethod().getName().equalsIgnoreCase("new")) {
+      if (interceptableMethod.getName().equalsIgnoreCase("new")) {
         targetList = constructorIntercepts;
       } else {
         targetList = methodIntercepts;

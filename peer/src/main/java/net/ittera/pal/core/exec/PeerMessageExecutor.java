@@ -27,7 +27,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 import net.ittera.pal.core.exec.java.CustomClassloader;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
-import net.ittera.pal.messages.MessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
@@ -44,7 +44,7 @@ public class PeerMessageExecutor extends ExtendedThreadPoolExecutor {
       @Named("peer.keepAliveSeconds") String keepAliveSeconds,
       ZContext zmqContext,
       @Named("in.dealer") String zmqSocketAddress,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
       CustomClassloader customClassloader,
@@ -53,7 +53,7 @@ public class PeerMessageExecutor extends ExtendedThreadPoolExecutor {
     super(
         Integer.parseInt(corePoolSize),
         Integer.parseInt(maximumPoolSize),
-        Integer.parseInt(keepAliveSeconds),
+        Long.parseLong(keepAliveSeconds),
         TimeUnit.SECONDS,
         new SynchronousQueue<>(),
         new ExecThreadFactory(

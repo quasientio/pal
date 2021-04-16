@@ -37,10 +37,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,7 +61,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   private ExecutorService execService;
   private PeerMessageInvoker peerMessageInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
-  private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
 
   @Before
   public void setup() throws Exception {
@@ -121,11 +121,12 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
     ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     Message wrapper = msgBuilder.wrap(invokable);
     dealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
-    dealerSocket.send(wrapper.toByteArray(), 0);
+    dealerSocket.send(ColferUtils.toBytes(wrapper), 0);
     // get reply
     dealerSocket.recv(); // 1st frame empty to emulate REP envelope
-    byte[] buff = dealerSocket.recv();
-    ExecMessage reply = Message.parseFrom(buff).getExecMessage();
+    Message msg = new Message();
+    msg.unmarshal(dealerSocket.recv(), 0);
+    ExecMessage reply = msg.getExecMessage();
 
     assertThat(peerMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(1)));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
@@ -149,12 +150,13 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
       ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       Message wrapper = msgBuilder.wrap(invokable);
       dealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
-      dealerSocket.send(wrapper.toByteArray(), 0);
+      dealerSocket.send(ColferUtils.toBytes(wrapper), 0);
       msgsToInvoke.add(invokable);
       // get reply
       dealerSocket.recv(); // 1st frame empty to emulate REP envelope
-      byte[] buff = dealerSocket.recv();
-      ExecMessage reply = Message.parseFrom(buff).getExecMessage();
+      Message msg = new Message();
+      msg.unmarshal(dealerSocket.recv(), 0);
+      ExecMessage reply = msg.getExecMessage();
       replyMessages.add(reply);
     }
 

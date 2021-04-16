@@ -19,15 +19,18 @@
 
 package net.ittera.pal.messages;
 
-public class NonWrappableObjectException extends RuntimeException {
-
-  private final transient Object nonWrappableObject;
-
-  public NonWrappableObjectException(Object nonWrappableObject) {
-    this.nonWrappableObject = nonWrappableObject;
-  }
-
-  public Object getNonWrappableObject() {
-    return nonWrappableObject;
-  }
+public enum ExecMessageType {
+  STATIC_CONSTRUCTOR,
+  RETURN_CLASS,
+  CONSTRUCTOR,
+  INSTANCE_METHOD,
+  CLASS_METHOD,
+  GET_STATIC,
+  GET_FIELD,
+  PUT_STATIC,
+  PUT_FIELD,
+  PUT_STATIC_DONE,
+  PUT_FIELD_DONE,
+  THROWABLE,
+  RETURN_VALUE,
 }

@@ -19,14 +19,19 @@
 
 package net.ittera.pal.core;
 
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-import net.ittera.pal.messages.Unwrapper;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Primitives;
-import net.ittera.pal.messages.protobuf.Values.ReturnValue;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +40,7 @@ public class ExecMessageAssertions {
   protected static final Logger logger = LoggerFactory.getLogger("tests");
 
   /**
-   * Helper assertion methods. Encapsulates details of the protobuf serialization.
+   * Helper assertion methods. Encapsulates details of serialization.
    *
    * @param returnValue
    * @param className
@@ -60,17 +65,17 @@ public class ExecMessageAssertions {
 
     assertFalse(returnValue.getIsVoid());
     assertFalse(returnValue.getIsClass());
-    assertTrue(returnValue.hasClazz());
-    assertEquals(className, returnValue.getObject().getClass_().getName());
-    assertTrue(returnValue.hasObject());
+    assertThat(returnValue.getClazz(), is(not(nullValue())));
+    assertEquals(className, returnValue.getObject().getClazz().getName());
+    assertThat(returnValue.getObject(), is(not(nullValue())));
 
-    Primitives.Object retObj = returnValue.getObject();
+    Obj retObj = returnValue.getObject();
     assertEquals(isArray, retObj.getIsArray());
     assertEquals(isNull, retObj.getIsNull());
-    assertEquals(hasObjRef, retObj.hasRef());
-    assertTrue(retObj.hasClass_());
-    assertFalse(retObj.getClass_().getUnknown());
-    assertEquals(className, retObj.getClass_().getName());
+    assertEquals(hasObjRef, retObj.getRef() != null && !retObj.getRef().isEmpty());
+    assertThat(retObj.getClazz(), is(not(nullValue())));
+    assertFalse(retObj.getClazz().getUnknown());
+    assertEquals(className, retObj.getClazz().getName());
   }
 
   protected void assertValueIsObjectOfType(ReturnValue returnValue, String className) {
@@ -113,9 +118,12 @@ public class ExecMessageAssertions {
   }
 
   protected void assertHasThrowableOfType(ExecMessage msg, String throwableType) {
-    logger.trace("in assertHasThrowableOfType w/: msg:\n{}, throwableType: {}", msg, throwableType);
+    logger.trace(
+        "in assertHasThrowableOfType w/: msg:\n{}, throwableType: {}",
+        ColferUtils.format(msg),
+        throwableType);
 
-    assertTrue(msg.hasRaisedThrowable());
+    assertThat(msg.getRaisedThrowable(), is(not(nullValue())));
     assertEquals(throwableType, msg.getRaisedThrowable().getThrowable().getType());
   }
 }

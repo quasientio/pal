@@ -36,9 +36,9 @@ import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.LogRequest;
 import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.cxn.PALDirectory;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -62,7 +62,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
   private static final Set<String> createdLogs = new HashSet<>();
 
-  private final MessageBuilder messageBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder messageBuilder = new ColferMessageBuilder();
   private static final UUID peerUuid = UUID.randomUUID();
   private PALDirectory palDirectory;
   private TestingServer testingServer;
@@ -123,7 +123,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
     // create a reply message
     AccessibleObject from =
-        this.getClass().getDeclaredMethod("writeReplyNodes_existingReqNode", null);
+        this.getClass().getDeclaredMethod("writeReplyNodes_existingReqNode", (Class<?>[]) null);
     ExecMessage replyMessage =
         messageBuilder.buildReturnValue(peerUuid, null, from, null, false, requestUuid.toString());
 
@@ -138,7 +138,8 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
     // create and send ProducerRecord w/ MessageOffsetInformer callback
     ProducerRecord<String, byte[]> newRecord =
-        new ProducerRecord<>(log.getName(), 0, peerUuid.toString(), replyMessage.toByteArray());
+        new ProducerRecord<>(
+            log.getName(), 0, peerUuid.toString(), ColferUtils.toBytes(replyMessage));
     MessageOffsetInformer offsetInformer =
         new MessageOffsetInformer(
             UUID.fromString(replyMessage.getMessageUuid()),
@@ -178,7 +179,8 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
     // create fake reply message
     AccessibleObject from =
-        this.getClass().getDeclaredMethod("writeReplyNodes_reqNodeInitiallyMissing", null);
+        this.getClass()
+            .getDeclaredMethod("writeReplyNodes_reqNodeInitiallyMissing", (Class<?>[]) null);
     ExecMessage replyMessage =
         messageBuilder.buildReturnValue(peerUuid, null, from, null, false, requestUuid.toString());
 
@@ -186,7 +188,8 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
     // create and send ProducerRecord w/ MessageOffsetInformer callback
     ProducerRecord<String, byte[]> newRecord =
-        new ProducerRecord<>(log.getName(), 0, peerUuid.toString(), replyMessage.toByteArray());
+        new ProducerRecord<>(
+            log.getName(), 0, peerUuid.toString(), ColferUtils.toBytes(replyMessage));
     MessageOffsetInformer offsetInformer =
         new MessageOffsetInformer(
             UUID.fromString(replyMessage.getMessageUuid()),
@@ -239,7 +242,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
     // create a reply message
     AccessibleObject from =
-        this.getClass().getDeclaredMethod("writeReplyNodes_existingReqNode", null);
+        this.getClass().getDeclaredMethod("writeReplyNodes_existingReqNode", (Class<?>[]) null);
     ExecMessage replyMessage =
         messageBuilder.buildReturnValue(peerUuid, null, from, null, false, requestUuid.toString());
 
@@ -254,7 +257,8 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
     // create and send ProducerRecord w/ MessageOffsetInformer callback
     ProducerRecord<String, byte[]> newRecord =
-        new ProducerRecord<>(log.getName(), 0, peerUuid.toString(), replyMessage.toByteArray());
+        new ProducerRecord<>(
+            log.getName(), 0, peerUuid.toString(), ColferUtils.toBytes(replyMessage));
     MessageOffsetInformer offsetInformer =
         new MessageOffsetInformer(
             UUID.fromString(replyMessage.getMessageUuid()),

@@ -24,7 +24,7 @@ import static net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable.comes
 import static net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertFalse;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -37,7 +37,7 @@ import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.runtime.Dispatcher;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -485,7 +485,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectStore.size(), is(1L));
-    assertFalse(replyMsg.hasReturnValue());
+    assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.IllegalArgumentException"));

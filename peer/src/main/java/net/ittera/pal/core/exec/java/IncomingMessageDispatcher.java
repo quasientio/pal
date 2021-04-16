@@ -22,8 +22,10 @@ package net.ittera.pal.core.exec.java;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.ittera.pal.core.exec.UnsupportedMessageException;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,28 +53,33 @@ public class IncomingMessageDispatcher {
   public ExecMessage incomingCall(ExecMessage execMessage, boolean isDirect)
       throws UnsupportedMessageException {
 
-    if (execMessage.hasConstructorCall()) {
-      return constructorDispatcher.dispatchIncoming(execMessage, isDirect);
-    } else if (execMessage.hasClassMethodCall()) {
-      return classMethodDispatcher.dispatchIncoming(execMessage, isDirect);
-    } else if (execMessage.hasInstanceMethodCall()) {
-      return instanceMethodDispatcher.dispatchIncoming(execMessage, isDirect);
-    } else if (execMessage.hasStaticFieldGet()) {
-      return getClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
-    } else if (execMessage.hasInstanceFieldGet()) {
-      return getInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
-    } else if (execMessage.hasStaticFieldPut()) {
-      return setClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
-    } else if (execMessage.hasInstanceFieldPut()) {
-      return setInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
-    } else {
-      throw new UnsupportedMessageException(
-          String.format("Incoming message ignored - no handler:%n%s", execMessage));
+    final ExecMessageType execMessageType =
+        ExecMessageType.values()[execMessage.getExecMessageType()];
+    switch (execMessageType) {
+      case CONSTRUCTOR:
+        return constructorDispatcher.dispatchIncoming(execMessage, isDirect);
+      case INSTANCE_METHOD:
+        return instanceMethodDispatcher.dispatchIncoming(execMessage, isDirect);
+      case CLASS_METHOD:
+        return classMethodDispatcher.dispatchIncoming(execMessage, isDirect);
+      case GET_STATIC:
+        return getClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+      case GET_FIELD:
+        return getInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+      case PUT_STATIC:
+        return setClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+      case PUT_FIELD:
+        return setInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+      default:
+        throw new UnsupportedMessageException(
+            String.format(
+                "Incoming message ignored - no handler:%n%s", ColferUtils.format(execMessage)));
     }
   }
 
   public boolean incomingIntercept(InterceptMessage interceptMessage, boolean isDirect) {
-    logger.warn("DEPRECATED incomingCall with intercept msg: {}", interceptMessage);
+    logger.warn(
+        "DEPRECATED incomingCall with intercept msg: {}", ColferUtils.format(interceptMessage));
     return false;
   }
 }

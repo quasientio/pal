@@ -19,14 +19,14 @@
 
 package net.ittera.pal.core.messages;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import static net.ittera.pal.serdes.colfer.ColferUtils.toBytes;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import net.ittera.pal.messages.BaseMsg;
-import net.ittera.pal.messages.protobuf.Intercepts;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
 import org.zeromq.ZMQ;
 
 public class InterceptsMsg extends BaseMsg {
@@ -45,11 +45,11 @@ public class InterceptsMsg extends BaseMsg {
   // fields
   @Nullable private final List<InterceptMessage> intercepts;
 
-  public InterceptsMsg(@Nullable List<Intercepts.InterceptMessage> intercepts) {
+  public InterceptsMsg(@Nullable List<InterceptMessage> intercepts) {
     this.intercepts = intercepts;
   }
 
-  private InterceptsMsg(@Nullable List<Intercepts.InterceptMessage> intercepts, int size) {
+  private InterceptsMsg(@Nullable List<InterceptMessage> intercepts, int size) {
     this(intercepts);
     this.size = size;
   }
@@ -75,7 +75,7 @@ public class InterceptsMsg extends BaseMsg {
     if (interceptsCount > 0) {
       int interceptsSent = 0;
       for (InterceptMessage interceptMessage : intercepts) {
-        buff = interceptMessage.toByteArray();
+        buff = toBytes(interceptMessage);
         size += buff.length;
         if (!socket.send(buff, ++interceptsSent < interceptsCount ? ZMQ.SNDMORE : 0)) {
           return false;
@@ -87,8 +87,7 @@ public class InterceptsMsg extends BaseMsg {
 
   // blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
   // ready, then all are)
-  public static InterceptsMsg recvMsg(ZMQ.Socket socket, boolean blocking)
-      throws InvalidProtocolBufferException {
+  public static InterceptsMsg recvMsg(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
@@ -102,13 +101,15 @@ public class InterceptsMsg extends BaseMsg {
     // 1. number of intercepts
     final int interceptCount = Integer.parseInt(new String(buff, ZMQ.CHARSET));
     // 2. intercepts
-    final List<Intercepts.InterceptMessage> interceptMessages;
+    final List<InterceptMessage> interceptMessages;
     if (interceptCount > 0) {
       interceptMessages = new ArrayList<>();
       for (int i = 0; i < interceptCount; i++) {
         buff = socket.recv();
         msgSize += buff.length;
-        interceptMessages.add(InterceptMessage.parseFrom(buff));
+        InterceptMessage interceptMessage = new InterceptMessage();
+        interceptMessage.unmarshal(buff, 0);
+        interceptMessages.add(interceptMessage);
       }
     } else {
       interceptMessages = null;
@@ -118,12 +119,12 @@ public class InterceptsMsg extends BaseMsg {
   }
 
   // default is non-blocking
-  public static InterceptsMsg recvMsg(ZMQ.Socket socket) throws InvalidProtocolBufferException {
+  public static InterceptsMsg recvMsg(ZMQ.Socket socket) {
     return recvMsg(socket, false);
   }
 
   @Nullable
-  public List<Intercepts.InterceptMessage> getIntercepts() {
+  public List<InterceptMessage> getIntercepts() {
     return intercepts;
   }
 

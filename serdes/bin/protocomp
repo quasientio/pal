@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 WORKING_DIR=`pwd`
 SRC_DIR=$WORKING_DIR/src/main/protobuf

@@ -32,14 +32,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import net.ittera.pal.common.runtime.ExecPhase;
-import net.ittera.pal.messages.MessageBuilder;
+import net.ittera.pal.messages.InternalHeaderType;
 import net.ittera.pal.messages.MessageType;
 import net.ittera.pal.messages.OutboundMsg;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Headers.InternalHeader;
-import net.ittera.pal.messages.protobuf.Headers.InternalHeaderType;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InternalHeader;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,7 +57,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
   private ZContext context;
   private ServiceManager manager;
   private OutgoingMessageDispatcher outgoingMessageDispatcher;
-  private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
   private InternalHeader WRITE_AHEAD_HEADER;
   private Socket reqSocket, subSocket;
@@ -120,7 +119,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
             null,
             UUID.fromString(msg.getMessageUuid()),
             null,
-            msgBuilder.wrap(msg).toByteArray());
+            msgBuilder.wrap(msg));
     outMsg.send(reqSocket);
 
     // expect a 0-reply
@@ -132,7 +131,8 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     assertThat(publishedOutMsg, is(outMsg));
 
     // verify exec message is what we sent
-    Message publishedMsg = Message.parseFrom(publishedOutMsg.getBody());
+    Message publishedMsg = new Message();
+    publishedMsg.unmarshal(publishedOutMsg.getBody(), 0);
     assertThat(publishedMsg.getExecMessage(), is(msg));
   }
 
@@ -148,7 +148,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
             headers,
             UUID.fromString(msg.getMessageUuid()),
             null,
-            msgBuilder.wrap(msg).toByteArray());
+            msgBuilder.wrap(msg));
     outMsg.send(reqSocket);
 
     // expect a 0-reply
@@ -160,10 +160,12 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     assertThat(publishedOutMsg, is(outMsg));
 
     // verify exec message is what we sent
-    Message publishedMsg = Message.parseFrom(publishedOutMsg.getBody());
+    Message publishedMsg = new Message();
+    publishedMsg.unmarshal(publishedOutMsg.getBody(), 0);
     // verify header and msg as expected
     assertThat(
-        publishedOutMsg.getHeaders().get(0).getHeaderType(), is(InternalHeaderType.WRITE_AHEAD));
+        publishedOutMsg.getHeaders().get(0).getHeaderType(),
+        is((byte) InternalHeaderType.WRITE_AHEAD.ordinal()));
     assertThat(publishedOutMsg.getHeaders().get(0).getValue(), is(peerUuid.toString()));
     assertThat(publishedMsg.getExecMessage(), is(msg));
   }
@@ -182,7 +184,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
               null,
               UUID.fromString(msg.getMessageUuid()),
               null,
-              msgBuilder.wrap(msg).toByteArray());
+              msgBuilder.wrap(msg));
       outMsg.send(reqSocket);
       messagesSent.add(msg);
 
@@ -195,7 +197,9 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     List<ExecMessage> messagesPublished = new ArrayList<>();
     for (int i = 0; i < messagesToSend; i++) {
       OutboundMsg publishedOutMsg = OutboundMsg.recvMsg(subSocket, true);
-      messagesPublished.add(Message.parseFrom(publishedOutMsg.getBody()).getExecMessage());
+      Message receivedMsg = new Message();
+      receivedMsg.unmarshal(publishedOutMsg.getBody(), 0);
+      messagesPublished.add(receivedMsg.getExecMessage());
     }
 
     // compare sent and published lists

@@ -23,9 +23,6 @@ import static net.ittera.pal.common.util.Strings.stringAfter;
 import static net.ittera.pal.common.util.Strings.stringBefore;
 import static picocli.CommandLine.Option;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
-import com.google.protobuf.util.JsonFormat.Printer;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,10 +36,13 @@ import net.ittera.pal.common.cli.PALCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.ContextFillingTransformSupplier;
+import net.ittera.pal.messages.ExecMessageType;
 import net.ittera.pal.messages.MessageContext;
 import net.ittera.pal.messages.MessageStreamer;
-import net.ittera.pal.messages.protobuf.KafkaExecMessageSerde;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.KafkaExecMessageSerde;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -66,7 +66,6 @@ import picocli.CommandLine.ParentCommand;
 public class MessageStreamPrinter extends AbstractPALSubcommand {
 
   private final Logger logger = LoggerFactory.getLogger(MessageStreamPrinter.class);
-  private static final Printer protobufJsonPrinter = JsonFormat.printer();
 
   @ParentCommand PALCommand palCommand;
 
@@ -88,6 +87,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
       description = "subscribe to peer with given address")
   private String peerAddress;
 
+  // TODO consider using EnumSet for msgTypes
   @Option(
       names = {"-t", "--types"},
       arity = "0..*",
@@ -229,21 +229,21 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
         builder.<String, byte[]>stream(logName)
             .map(
                 (k, v) -> {
-                  try {
-                    return new KeyValue<>(k, Message.parseFrom(v));
-                  } catch (InvalidProtocolBufferException e) {
-                    logger.error("Error parsing message", e);
-                    return new KeyValue<>(k, null);
-                  }
+                  Message message = new Message();
+                  message.unmarshal(v, 0);
+                  return new KeyValue<>(k, message);
                 });
 
     // stream: apply filter: message types
     if (msgTypes != null) {
       stream =
           stream.filter(
-              (k, m) ->
-                  (m.hasExecMessage()
-                      && msgTypes.contains(m.getExecMessage().getMsgType().toString())));
+              (k, m) -> {
+                ExecMessage execMessage = m.getExecMessage();
+                return execMessage != null
+                    && msgTypes.contains(
+                        ExecMessageType.values()[execMessage.getExecMessageType()].toString());
+              });
     }
 
     // stream: apply filter: from peer (uuid)
@@ -255,9 +255,11 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
     if (threadName != null) {
       stream =
           stream.filter(
-              (k, m) ->
-                  (m.hasExecMessage()
-                      && threadName.equalsIgnoreCase(m.getExecMessage().getThreadName())));
+              (k, m) -> {
+                ExecMessage execMessage = m.getExecMessage();
+                return execMessage != null
+                    && threadName.equalsIgnoreCase(execMessage.getThreadName());
+              });
     }
 
     // stream: apply filter: msg UUID
@@ -289,13 +291,8 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
                 ctxt.getHeadersToString(),
                 msg.toString());
           } else if (jsonOutput) {
-            try {
-              System.out.printf(
-                  "offset: %d,%nmessage: %s%n", ctxt.getOffset(), protobufJsonPrinter.print(msg));
-            } catch (InvalidProtocolBufferException e) {
-              logger.error("Error printing message as JSON", e);
-              e.printStackTrace();
-            }
+            System.out.printf(
+                "offset: %d,%nmessage: %s%n", ctxt.getOffset(), ColferUtils.toJSON(msg));
           } else { // compact format (default)
             System.out.printf(
                 "offset=%d uuid=%s key=%s type=%s%n",
@@ -384,9 +381,11 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
           if (threadName != null) {
             stream =
                 stream.filter(
-                    m ->
-                        m.hasExecMessage()
-                            && threadName.equalsIgnoreCase(m.getExecMessage().getThreadName()));
+                    m -> {
+                      ExecMessage execMessage = m.getExecMessage();
+                      return execMessage != null
+                          && threadName.equalsIgnoreCase(execMessage.getThreadName());
+                    });
           }
 
           // stream: apply filter: msg UUID
@@ -400,11 +399,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
                 if (fullOutput) {
                   System.out.printf("%s%n", msg.toString());
                 } else if (jsonOutput) {
-                  try {
-                    System.out.printf("%s%n", protobufJsonPrinter.print(msg));
-                  } catch (InvalidProtocolBufferException e) {
-                    logger.error("Error printing message as JSON", e);
-                  }
+                  System.out.printf("%s%n", ColferUtils.toJSON(msg));
                 } else { // compact format (default)
                   System.out.printf("uuid=%s type=%s%n", getMessageType(msg), getMessageType(msg));
                 }

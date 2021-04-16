@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
@@ -34,10 +35,10 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.core.exec.DispatcherConnector;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
-import net.ittera.pal.messages.protobuf.Primitives;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Parameter;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 
 @Singleton
 public class ClassMethodDispatcher extends MethodDispatcher {
@@ -45,7 +46,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   @Inject
   public ClassMethodDispatcher(
       UUID peerUuid,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       DispatcherConnector connector,
       ObjectStore objectStore) {
     setPeerUuid(peerUuid);
@@ -118,8 +119,8 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   }
 
   @Override
-  protected List<Primitives.Parameter> getParameterList(ExecMessage execMessage) {
-    return execMessage.getClassMethodCall().getParameterList();
+  protected List<Parameter> getParameterList(ExecMessage execMessage) {
+    return Arrays.asList(execMessage.getClassMethodCall().getParameters());
   }
 
   /**
@@ -136,15 +137,15 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 
     Class clazz =
         Class.forName(
-            execMessage.getClassMethodCall().getClass_().getName(),
+            execMessage.getClassMethodCall().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
     AccessibleObject accessibleObject =
         ReflectionHelper.getMethodToInvoke(
             clazz,
             args.toArray(),
-            execMessage.getClassMethodCall().getParameterList().stream()
-                .map(Primitives.Parameter::getValue)
+            Stream.of(execMessage.getClassMethodCall().getParameters())
+                .map(Parameter::getValue)
                 .collect(Collectors.toList()),
             execMessage.getClassMethodCall().getName());
     if (accessibleObject == null) {

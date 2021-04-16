@@ -26,20 +26,19 @@ import static org.junit.Assert.fail;
 
 import java.util.Collections;
 import java.util.UUID;
+import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.core.exec.DuplicateInterceptException;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptKeyMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InterceptKeyMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.junit.Test;
 
 public class InterceptRequestsTest {
 
   @Test
   public void getMatchingIntercepts() throws Exception {
-    MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
 
     InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(
@@ -66,7 +65,7 @@ public class InterceptRequestsTest {
 
   @Test
   public void registerInterceptRequest() throws Exception {
-    MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
 
     InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(
@@ -89,7 +88,7 @@ public class InterceptRequestsTest {
 
   @Test
   public void registerDupInterceptRequest() throws Exception {
-    MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
 
     InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(
@@ -117,7 +116,7 @@ public class InterceptRequestsTest {
 
   @Test
   public void unregisterInterceptRequest() throws Exception {
-    MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
 
     InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(

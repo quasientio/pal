@@ -21,15 +21,14 @@ package net.ittera.pal.core.swing;
 
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.ThinPeer;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
-import net.ittera.pal.messages.protobuf.Primitives;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 
 public class SwingAppConcurrentActor extends AbstractSwingTest {
 
-  protected static final MessageBuilder MESSAGE_BUILDER = new ProtobufMessageBuilder();
+  protected static final ColferMessageBuilder MESSAGE_BUILDER = new ColferMessageBuilder();
 
   protected static final String swingAppClassName = "net.ittera.pal.apps.SwingApp";
   protected static final String TEST_PROPERTIES_PATH = "/tests.properties";
@@ -122,7 +121,7 @@ public class SwingAppConcurrentActor extends AbstractSwingTest {
     ExecMessage requestMsg =
         MESSAGE_BUILDER.buildGetStatic(thinPeer.getPeerUuid(), swingAppClassName, fieldName);
     ExecMessage replyMsg = thinPeer.sendAndReceive(requestMsg, true);
-    Primitives.Object myFrame = replyMsg.getReturnValue().getObject();
+    Obj myFrame = replyMsg.getReturnValue().getObject();
 
     // start some actors and pass them the frame to play with
     final Thread[] actors = new Thread[5];

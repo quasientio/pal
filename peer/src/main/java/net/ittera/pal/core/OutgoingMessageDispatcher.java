@@ -19,7 +19,6 @@
 
 package net.ittera.pal.core;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -95,9 +94,6 @@ class OutgoingMessageDispatcher extends ConnectedService {
         } else {
           throw ex;
         }
-      } catch (InvalidProtocolBufferException e) {
-        logger.error("Error parsing received message", e);
-        repSocket.send(ERROR_REPLY);
       } catch (Exception e) {
         logger.error("Error receiving message", e);
         repSocket.send(ERROR_REPLY);

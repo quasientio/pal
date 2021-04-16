@@ -23,9 +23,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.messages.Unwrapper;
-import net.ittera.pal.messages.protobuf.Primitives;
-import net.ittera.pal.messages.protobuf.Values.ReturnValue;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
 /**
@@ -51,7 +51,7 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 
     // get instance variable, assert original value
     ReturnValue retValue = callGetInstanceVar(className, fieldName, newObjRef);
-    Primitives.Object retObj = retValue.getObject();
+    Obj retObj = retValue.getObject();
     assertValueIsObjectOfType(retValue, fieldClassName);
     Object rawObj = Unwrapper.unwrapObject(retObj);
     assertTrue(rawObj instanceof Integer);
@@ -81,7 +81,7 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
 
     // test with a non null integer
     ReturnValue retValue = callGetInstanceVar(className, fieldName, newObjRef);
-    Primitives.Object retObj = retValue.getObject();
+    Obj retObj = retValue.getObject();
     assertValueIsObjectOfType(retValue, fieldClassName);
     Object rawObj = Unwrapper.unwrapObject(retObj);
     assertTrue(rawObj instanceof Integer);

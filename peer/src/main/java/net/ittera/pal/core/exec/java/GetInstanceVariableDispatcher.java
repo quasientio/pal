@@ -30,10 +30,11 @@ import net.ittera.pal.common.objects.ObjectNotFoundException;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.Unwrapper;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.Unwrapper;
 
 @Singleton
 public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
@@ -41,7 +42,7 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
   @Inject
   public GetInstanceVariableDispatcher(
       UUID peerUuid,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       DispatcherConnector connector,
       ObjectStore objectStore) {
     setPeerUuid(peerUuid);
@@ -65,9 +66,10 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
       ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
       throws ObjectNotFoundException {
     Object target;
-    if (execMessage.getInstanceFieldGet().hasObject()) {
+    Obj fieldGetObject = execMessage.getInstanceFieldGet().getObject();
+    if (fieldGetObject != null) {
       Class fieldType = ((Field) accessibleObject.get()).getType();
-      target = Unwrapper.unwrapObject(execMessage.getInstanceFieldGet().getObject(), fieldType);
+      target = Unwrapper.unwrapObject(fieldGetObject, fieldType);
       if (logger.isTraceEnabled()) {
         logger.trace("Unwrapped target: {}", target);
       }
@@ -93,7 +95,7 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 
     Class clazz =
         Class.forName(
-            execMessage.getInstanceFieldGet().getClass_().getName(),
+            execMessage.getInstanceFieldGet().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
     return clazz.getDeclaredField(execMessage.getInstanceFieldGet().getField().getName());

@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages;
+package net.ittera.pal.serdes.protobuf;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -28,116 +28,19 @@ import static org.junit.Assert.fail;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import net.ittera.pal.messages.protobuf.Primitives;
 import net.ittera.pal.messages.protobuf.Primitives.Field;
+import net.ittera.pal.serdes.NonWrappableObjectException;
+import net.ittera.pal.serdes.WrappingTestBase;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 /** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior */
-public class WrapperTest {
+public class WrapperTest extends WrappingTestBase {
 
   private static List<Class> allPrimitiveAndLangClasses;
-
-  private static final List<Class> primitiveClasses =
-      Arrays.asList(
-          boolean.class,
-          byte.class,
-          char.class,
-          double.class,
-          float.class,
-          int.class,
-          long.class,
-          short.class);
-
-  private static final List<Class> primitiveWrapperClasses =
-      Arrays.asList(
-          Boolean.class,
-          Byte.class,
-          Character.class,
-          Double.class,
-          Float.class,
-          Integer.class,
-          Long.class,
-          Short.class);
-
-  /** Comprehensive list of all java.lang(8) classes */
-  private static final List<Class> nonWrapperJavaLangClasses =
-      Arrays.asList(
-          Character.Subset.class,
-          Character.UnicodeBlock.class,
-          Class.class,
-          ClassLoader.class,
-          ClassValue.class,
-          Compiler.class,
-          Enum.class,
-          InheritableThreadLocal.class,
-          Math.class,
-          Number.class,
-          Object.class,
-          Package.class,
-          Process.class,
-          ProcessBuilder.class,
-          ProcessBuilder.Redirect.class,
-          Runtime.class,
-          RuntimePermission.class,
-          SecurityManager.class,
-          StackTraceElement.class,
-          StrictMath.class,
-          StringBuffer.class,
-          StringBuilder.class,
-          System.class,
-          Thread.class,
-          ThreadGroup.class,
-          ThreadLocal.class,
-          Throwable.class,
-          Void.class);
-
-  /** List of objects that should be wrappable */
-  static final List<Object> wrappableObjects =
-      Arrays.asList(
-          /** null and void * */
-          null,
-          Void.class,
-          void.class,
-          /** primitives * */
-          false,
-          Byte.parseByte("0"),
-          'c',
-          0.43d,
-          512.5f,
-          Integer.parseInt("4"),
-          34L,
-          Short.parseShort("10"),
-          /** char sequences * */
-          String.valueOf("hello"),
-          new StringBuilder("world"),
-          new StringBuffer("!!"),
-          /** primitive wrappers * */
-          Boolean.TRUE,
-          Byte.valueOf("1"),
-          Character.valueOf('a'),
-          Double.valueOf("382.03"),
-          Float.valueOf("393.4"),
-          Integer.valueOf("458"),
-          Long.valueOf("348333"),
-          Short.valueOf("25"));
-
-  /** List of some objects that should NOT be wrappable */
-  static final List<Object> someNonWrappableObjects =
-      Arrays.asList(
-          Object.class,
-          new Object(),
-          new java.util.Date(),
-          new ArrayList(),
-          new java.util.HashSet(),
-          new java.util.HashMap(),
-          new java.util.Stack(),
-          new java.util.Random(),
-          new Object[1],
-          new Class[1]);
 
   @BeforeClass
   public static void setupLists() {

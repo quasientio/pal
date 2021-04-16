@@ -26,7 +26,7 @@ import java.util.Optional;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
 
 public abstract class GetFieldDispatcher extends FieldOpDispatcher {
 

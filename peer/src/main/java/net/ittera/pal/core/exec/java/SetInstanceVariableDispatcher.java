@@ -30,10 +30,11 @@ import net.ittera.pal.common.objects.ObjectNotFoundException;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.Unwrapper;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.Unwrapper;
 
 @Singleton
 public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
@@ -41,7 +42,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
   @Inject
   public SetInstanceVariableDispatcher(
       UUID peerUuid,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       DispatcherConnector connector,
       ObjectStore objectStore) {
     setPeerUuid(peerUuid);
@@ -65,9 +66,10 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
       ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
       throws ObjectNotFoundException {
     Object target;
-    if (execMessage.getInstanceFieldPut().hasObject()) {
+    Obj fieldPutObject = execMessage.getInstanceFieldPut().getObject();
+    if (fieldPutObject != null) {
       Class fieldType = ((Field) accessibleObject.get()).getType();
-      target = Unwrapper.unwrapObject(execMessage.getInstanceFieldPut().getObject(), fieldType);
+      target = Unwrapper.unwrapObject(fieldPutObject, fieldType);
       if (logger.isTraceEnabled()) {
         logger.trace("Unwrapped target: {}", target);
       }
@@ -93,7 +95,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
 
     Class clazz =
         Class.forName(
-            execMessage.getInstanceFieldPut().getClass_().getName(),
+            execMessage.getInstanceFieldPut().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
     return clazz.getDeclaredField(execMessage.getInstanceFieldPut().getField().getName());
@@ -106,10 +108,9 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
     final Object value;
     final Field field = (Field) accessibleObject.get();
 
-    if (execMessage.getInstanceFieldPut().hasValueObject()) {
-      value =
-          Unwrapper.unwrapObject(
-              execMessage.getInstanceFieldPut().getValueObject(), field.getType());
+    Obj valueObject = execMessage.getInstanceFieldPut().getValueObject();
+    if (valueObject != null) {
+      value = Unwrapper.unwrapObject(valueObject, field.getType());
       if (logger.isTraceEnabled()) {
         logger.trace("Unwrapped value: {}", value);
       }

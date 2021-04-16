@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages;
+package net.ittera.pal.serdes.colfer;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -26,10 +26,8 @@ import java.util.List;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.util.Classes;
-import net.ittera.pal.messages.protobuf.Ctxt;
-import net.ittera.pal.messages.protobuf.Primitives;
-import net.ittera.pal.messages.protobuf.Primitives.Object;
-import net.ittera.pal.messages.protobuf.Primitives.Object.Builder;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.serdes.NonWrappableObjectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,15 +56,15 @@ public final class Wrapper {
    * Wrappable objects: - null, void.class, Void.class - all primitive types - all wrapper types -
    * reconstructable char sequence types: String, StringBuilder, StringBuffer
    *
-   * @param builder
+   * @param wrappedObject
    * @param object
    * @param t
    * @param objectRef
    * @param <T>
    * @return
    */
-  private static <T> Object getWrappedObjectAux(
-      Builder builder, java.lang.Object object, T t, ObjectRef objectRef) {
+  private static <T> Obj getWrappedObjectAux(
+      Obj wrappedObject, java.lang.Object object, T t, ObjectRef objectRef) {
 
     if (logger.isTraceEnabled()) {
       logger.trace(
@@ -89,38 +87,40 @@ public final class Wrapper {
     }
 
     // set required fields
-    builder.setIsNull(object == null && objectRef == null);
-    builder.setIsVoid(object == void.class || object == Void.class);
+    wrappedObject.setIsNull(object == null && objectRef == null);
+    wrappedObject.setIsVoid(object == void.class || object == Void.class);
 
     if (clazz != null) {
-      builder.setClass_(getWrappedClass(clazz));
-      builder.setIsArray(clazz.isArray());
+      wrappedObject.setClazz(getWrappedClass(clazz));
+      wrappedObject.setIsArray(clazz.isArray());
     } else {
-      builder.setClass_(getWrappedClass(className));
+      wrappedObject.setClazz(getWrappedClass(className));
     }
     if (objectRef != null) {
-      builder.setRef(String.valueOf(objectRef.getRef()));
+      wrappedObject.setRef(String.valueOf(objectRef.getRef()));
     }
-    builder.setIdentityHash(System.identityHashCode(object));
+    wrappedObject.setIdentityHash(System.identityHashCode(object));
 
     // wrap object
     if (object != null) {
-      builder.setHash(object.hashCode());
+      wrappedObject.setHash(object.hashCode());
       if ((object instanceof String) || isWrappableCharSeqClass(clazz)) {
-        builder.setValue(object.toString());
+        wrappedObject.setValue(object.toString());
       } else if (object.getClass().isArray()) {
-        builder.setIsArray(true);
+        wrappedObject.setIsArray(true);
         // TODO only handles 1-dimensional arrays ?? Check out Arrays.deepToString
 
         final int length = Array.getLength(object);
+        final Obj[] arrayElems = new Obj[length];
         // NOTE: we iterate using reflection (Array) because the array type is unknown
         for (int i = 0; i < length; i++) {
           final java.lang.Object arrayElem = Array.get(object, i);
           // wrap and all array elements -- recursive
-          builder.addArrayValue(getWrappedObject(arrayElem, arrayElem.getClass(), null));
+          arrayElems[i] = getWrappedObject(arrayElem, arrayElem.getClass(), null);
         }
+        wrappedObject.setArrayValues(arrayElems);
       } else if (Classes.isPrimitiveOrWrapper(object.getClass())) {
-        builder.setValue(String.valueOf(object));
+        wrappedObject.setValue(String.valueOf(object));
       } else {
         // nothing we can do but leave a trace
         if (logger.isTraceEnabled()) {
@@ -129,11 +129,10 @@ public final class Wrapper {
       }
     }
 
-    final Object builtValue = builder.build();
     if (logger.isTraceEnabled()) {
-      logger.trace("out with wrappedValue: {}", builtValue);
+      logger.trace("out with wrappedValue: {}", ColferUtils.format(wrappedObject));
     }
-    return builtValue;
+    return wrappedObject;
   }
 
   /**
@@ -169,82 +168,86 @@ public final class Wrapper {
    * @param <T>
    * @return
    */
-  static <T> Object getWrappedObject(java.lang.Object object, T t, ObjectRef objectRef) {
+  static <T> Obj getWrappedObject(java.lang.Object object, T t, ObjectRef objectRef) {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "in getWrappedObject with object: {}, class: {}, objectRef: {}", object, t, objectRef);
     }
-    final Builder builder = Primitives.Object.newBuilder();
+    final Obj obj = new Obj();
     if (objectRef == null && !isWrappable(object)) {
       throw new NonWrappableObjectException(object);
     }
-    return getWrappedObjectAux(builder, object, t, objectRef);
+    return getWrappedObjectAux(obj, object, t, objectRef);
   }
 
-  static Primitives.Class getWrappedClass(String className) {
-    final Primitives.Class.Builder clazzBuilder = Primitives.Class.newBuilder();
+  static net.ittera.pal.messages.colfer.Class getWrappedClass(String className) {
+    final net.ittera.pal.messages.colfer.Class wrappedClass =
+        new net.ittera.pal.messages.colfer.Class();
     if (className == null) {
-      clazzBuilder.setUnknown(true);
+      wrappedClass.setUnknown(true);
     } else {
-      clazzBuilder.setName(className);
+      wrappedClass.setName(className);
     }
-    return clazzBuilder.build();
+    return wrappedClass;
   }
 
-  static Primitives.Class getWrappedClass(Class clazz) {
-    final Primitives.Class.Builder clazzBuilder = Primitives.Class.newBuilder();
+  static net.ittera.pal.messages.colfer.Class getWrappedClass(Class clazz) {
+    final net.ittera.pal.messages.colfer.Class wrappedClass =
+        new net.ittera.pal.messages.colfer.Class();
     if (clazz == null) {
-      clazzBuilder.setUnknown(true);
+      wrappedClass.setUnknown(true);
     } else {
-      clazzBuilder.setName(clazz.getName());
+      wrappedClass.setName(clazz.getName());
     }
-    // TODO: fill all other available Class info
-    return clazzBuilder.build();
+    return wrappedClass;
   }
 
-  static Primitives.Field getWrappedField(Field field) {
-    final Primitives.Field.Builder fieldBuilder = Primitives.Field.newBuilder();
-    fieldBuilder.setName(field.getName());
-    fieldBuilder.setClass_(getWrappedClass(field.getDeclaringClass()));
-    fieldBuilder.setRepr(field.toGenericString());
-    return fieldBuilder.build();
+  static net.ittera.pal.messages.colfer.Field getWrappedField(Field field) {
+    final net.ittera.pal.messages.colfer.Field wrappedField =
+        new net.ittera.pal.messages.colfer.Field();
+    wrappedField.setName(field.getName());
+    wrappedField.setClazz(getWrappedClass(field.getDeclaringClass()));
+    wrappedField.setRepr(field.toGenericString());
+    return wrappedField;
   }
 
-  static Primitives.Field getWrappedField(Class clazz, String fieldName) {
-    final Primitives.Field.Builder fieldBuilder = Primitives.Field.newBuilder();
-
-    fieldBuilder.setName(fieldName);
-    fieldBuilder.setClass_(getWrappedClass(clazz));
-    return fieldBuilder.build();
+  static net.ittera.pal.messages.colfer.Field getWrappedField(Class clazz, String fieldName) {
+    final net.ittera.pal.messages.colfer.Field wrappedField =
+        new net.ittera.pal.messages.colfer.Field();
+    wrappedField.setName(fieldName);
+    wrappedField.setClazz(getWrappedClass(clazz));
+    return wrappedField;
   }
 
-  static Primitives.Field getWrappedField(String className, String fieldName) {
-    final Primitives.Field.Builder fieldBuilder = Primitives.Field.newBuilder();
-
-    fieldBuilder.setName(fieldName);
-    fieldBuilder.setClass_(getWrappedClass(className));
-    return fieldBuilder.build();
+  static net.ittera.pal.messages.colfer.Field getWrappedField(String className, String fieldName) {
+    final net.ittera.pal.messages.colfer.Field wrappedField =
+        new net.ittera.pal.messages.colfer.Field();
+    wrappedField.setName(fieldName);
+    wrappedField.setClazz(getWrappedClass(className));
+    return wrappedField;
   }
 
-  static Ctxt.Context getWrappedContext(
+  static net.ittera.pal.messages.colfer.Context getWrappedContext(
       Context context, java.lang.Object sender, ObjectRef senderObjRef) {
-    final Ctxt.Context.Builder ctxtBuilder = Ctxt.Context.newBuilder();
 
-    ctxtBuilder.setSenderClass(getWrappedClass(context.getWithinType()));
+    final net.ittera.pal.messages.colfer.Context wrappedCtxt =
+        new net.ittera.pal.messages.colfer.Context();
+
+    wrappedCtxt.setSenderClass(getWrappedClass(context.getWithinType()));
     if (sender != null) {
-      ctxtBuilder.setSender(getWrappedObject(sender, context.getWithinType(), senderObjRef));
+      wrappedCtxt.setSender(getWrappedObject(sender, context.getWithinType(), senderObjRef));
     }
 
     if (context.getSourceFilename() != null) {
-      ctxtBuilder.setSourceLocationFile(context.getSourceFilename());
+      wrappedCtxt.setSourceLocationFile(context.getSourceFilename());
     }
 
-    ctxtBuilder.setSourceLocationLine(context.getSourceLine());
+    wrappedCtxt.setSourceLocationLine(context.getSourceLine());
 
     if (context.getWithinType() != null) {
-      ctxtBuilder.setSourceLocationType(context.getWithinType().getName());
+      wrappedCtxt.setSourceLocationType(context.getWithinType().getName());
     }
 
-    return ctxtBuilder.build();
+    return wrappedCtxt;
   }
 }

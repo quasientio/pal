@@ -25,13 +25,13 @@ import static org.junit.Assert.assertThat;
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
 import java.util.Arrays;
 import java.util.UUID;
+import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Intercepts;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 public class InterceptRequestEntryTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
-  private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
   private final ObjectStore objectStore = new ConcurrentHashMapObjectStore();
 
   @Test
@@ -72,10 +72,10 @@ public class InterceptRequestEntryTest {
   public void matchesConstructorWithNoParameters() {
 
     // create InterceptMessage message
-    Intercepts.InterceptMessage interceptMessage =
+    InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(
             UUID.randomUUID(),
-            Intercepts.InterceptType.BEFORE,
+            InterceptType.BEFORE,
             "java.util.ArrayList",
             "new",
             Arrays.asList(new String[0]),
@@ -94,10 +94,10 @@ public class InterceptRequestEntryTest {
   public void matchesVoidInstanceMethodWithNoParameters() {
 
     // create InterceptMessage message
-    Intercepts.InterceptMessage interceptMessage =
+    InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(
             UUID.randomUUID(),
-            Intercepts.InterceptType.BEFORE,
+            InterceptType.BEFORE,
             "java.io.PrintStream",
             "println",
             Arrays.asList(new String[0]),
@@ -126,10 +126,10 @@ public class InterceptRequestEntryTest {
   public void matchesVoidClassMethodWithNoParameters() {
 
     // create InterceptMessage message
-    Intercepts.InterceptMessage interceptMessage =
+    InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(
             UUID.randomUUID(),
-            Intercepts.InterceptType.BEFORE,
+            InterceptType.BEFORE,
             "java.lang.System",
             "gc",
             Arrays.asList(new String[0]),

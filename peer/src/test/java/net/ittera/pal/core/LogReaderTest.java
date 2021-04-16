@@ -35,15 +35,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import net.ittera.pal.common.directory.nodes.LogInfo;
+import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Intercepts;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
@@ -89,14 +89,15 @@ public class LogReaderTest extends ZmqEnabledTest {
         InboundLogMsg logMsg = null;
         try {
           logMsg = InboundLogMsg.recvMsg(socket, true);
-          Message wrapper = Message.parseFrom(logMsg.getBody());
-          if (wrapper.hasExecMessage()) {
+          Message wrapper = new Message();
+          wrapper.unmarshal(logMsg.getBody(), 0);
+          if (wrapper.getExecMessage() != null) {
             ExecMessage msg = wrapper.getExecMessage();
-            logger.debug("ExecMessage received = {}", msg);
+            logger.debug("ExecMessage received = {}", ColferUtils.format(msg));
             rcvdMsgUuids.add(msg.getMessageUuid());
           } else {
             InterceptMessage msg = wrapper.getInterceptMessage();
-            logger.debug("InterceptMessage msg received = {}", msg);
+            logger.debug("InterceptMessage msg received = {}", ColferUtils.format(msg));
             rcvdMsgUuids.add(msg.getMessageUuid());
           }
         } catch (ZMQException ex) {
@@ -213,12 +214,12 @@ public class LogReaderTest extends ZmqEnabledTest {
     execService.submit(logMsgInvoker);
 
     // send 1 message
-    MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
     String key = peerUuid.toString();
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     ConsumerRecord<String, byte[]> record =
         new ConsumerRecord<>(
-            this.log.getName(), partition, 0, key, msgBuilder.wrap(msg).toByteArray());
+            this.log.getName(), partition, 0, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
     this.consumer.addRecord(record);
 
     // assert received = 0
@@ -280,13 +281,13 @@ public class LogReaderTest extends ZmqEnabledTest {
     execService.submit(logMsgInvoker);
 
     // send 1 message
-    MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
     String key = peerUuid.toString();
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
     ConsumerRecord<String, byte[]> record =
         new ConsumerRecord<>(
-            this.log.getName(), partition, 0, key, msgBuilder.wrap(msg).toByteArray());
+            this.log.getName(), partition, 0, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
     this.consumer.addRecord(record);
 
     Thread.sleep(300);
@@ -323,12 +324,12 @@ public class LogReaderTest extends ZmqEnabledTest {
     execService.submit(logMsgInvoker);
 
     // send 1 message
-    MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
     String key = peerUuid.toString();
-    Intercepts.InterceptMessage msg =
+    InterceptMessage msg =
         msgBuilder.buildInterceptMessage(
             peerUuid,
-            Intercepts.InterceptType.BEFORE,
+            InterceptType.BEFORE,
             "java.io.PrintStream",
             "println",
             Collections.EMPTY_LIST,
@@ -336,7 +337,7 @@ public class LogReaderTest extends ZmqEnabledTest {
             "someCallbackMethod");
     ConsumerRecord<String, byte[]> record =
         new ConsumerRecord<>(
-            this.log.getName(), partition, 0, key, msgBuilder.wrap(msg).toByteArray());
+            this.log.getName(), partition, 0, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
     this.consumer.addRecord(record);
 
     Thread.sleep(300);
@@ -373,7 +374,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     execService.submit(logMsgInvoker);
 
     // send many messages
-    MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
     String key = peerUuid.toString();
     Set<String> sentUuids = new TreeSet<>();
 
@@ -383,7 +384,11 @@ public class LogReaderTest extends ZmqEnabledTest {
       long offset = i;
       ConsumerRecord<String, byte[]> record =
           new ConsumerRecord<>(
-              this.log.getName(), partition, offset, key, msgBuilder.wrap(msg).toByteArray());
+              this.log.getName(),
+              partition,
+              offset,
+              key,
+              ColferUtils.toBytes(msgBuilder.wrap(msg)));
       this.consumer.addRecord(record);
       sentUuids.add(msg.getMessageUuid());
     }

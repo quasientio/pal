@@ -1,0 +1,4 @@
+#!/bin/sh
+
+
+colf-linux -f -b src/main/java -p net.ittera.pal.messages -i net.ittera.pal.messages.Marshallable Java src/main/colfer/*.colf

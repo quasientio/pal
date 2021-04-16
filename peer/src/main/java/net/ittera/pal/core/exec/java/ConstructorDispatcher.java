@@ -35,10 +35,10 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.core.exec.DispatcherConnector;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
-import net.ittera.pal.messages.protobuf.Primitives;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Parameter;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 
 @Singleton
 public class ConstructorDispatcher extends BaseExecMessageDispatcher {
@@ -46,7 +46,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   @Inject
   public ConstructorDispatcher(
       UUID peerUuid,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       DispatcherConnector connector,
       ObjectStore objectStore) {
     setPeerUuid(peerUuid);
@@ -167,8 +167,8 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   }
 
   @Override
-  protected List<Primitives.Parameter> getParameterList(ExecMessage execMessage) {
-    return execMessage.getConstructorCall().getParameterList();
+  protected List<Parameter> getParameterList(ExecMessage execMessage) {
+    return Arrays.asList(execMessage.getConstructorCall().getParameters());
   }
 
   @Override
@@ -178,7 +178,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
     // TODO why are we not using ReflectionHelper to get the constructor?
     Class clazz =
         forName(
-            execMessage.getConstructorCall().getClass_().getName(),
+            execMessage.getConstructorCall().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
     return clazz.getDeclaredConstructor(parameterTypes.toArray(new Class[0]));

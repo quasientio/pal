@@ -21,7 +21,7 @@ package net.ittera.pal.messages;
 
 import java.util.HashMap;
 import java.util.Map;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.Message;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;

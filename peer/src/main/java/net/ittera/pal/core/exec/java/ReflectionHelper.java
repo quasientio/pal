@@ -23,7 +23,8 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import net.ittera.pal.messages.protobuf.Primitives;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.apache.commons.lang3.ClassUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,10 +56,7 @@ public final class ReflectionHelper {
    * @return
    */
   public static Method getMethodToInvoke(
-      Class clazz,
-      Object[] parameters,
-      List<Primitives.Object> parameterTypeNames,
-      String methodName) {
+      Class clazz, Object[] parameters, List<Obj> parameterTypeNames, String methodName) {
     if (logger.isTraceEnabled()) {
       logger.trace("in w/ class:{} and method:{}", clazz.getName(), methodName);
     }
@@ -83,7 +81,7 @@ public final class ReflectionHelper {
               .append("]=")
               .append(parameters[i])
               .append(" type:")
-              .append(parameterTypeNames.get(i))
+              .append(ColferUtils.format(parameterTypeNames.get(i)))
               .append('\n');
         }
         logger.trace(stringBuilder.toString());
@@ -106,7 +104,7 @@ public final class ReflectionHelper {
       for (int i = 0; i < parameterTypeNames.size(); i++) {
         parameterTypes[i] =
             Class.forName(
-                parameterTypeNames.get(i).getClass_().getName(),
+                parameterTypeNames.get(i).getClazz().getName(),
                 true,
                 Thread.currentThread().getContextClassLoader());
       }
@@ -187,25 +185,23 @@ public final class ReflectionHelper {
   }
 
   private static void cache(
-      Class clazz, String methodName, List<Primitives.Object> parameterTypeNames, Method method) {
+      Class clazz, String methodName, List<Obj> parameterTypeNames, Method method) {
     String key = buildKey(clazz, methodName, parameterTypeNames);
     matchedMethodsCache.put(key, method);
   }
 
-  private static Method lookup(
-      Class clazz, String methodName, List<Primitives.Object> parameterTypeNames) {
+  private static Method lookup(Class clazz, String methodName, List<Obj> parameterTypeNames) {
     String key = buildKey(clazz, methodName, parameterTypeNames);
     return matchedMethodsCache.get(key);
   }
 
-  private static String buildKey(
-      Class clazz, String methodName, List<Primitives.Object> parameterTypeNames) {
+  private static String buildKey(Class clazz, String methodName, List<Obj> parameterTypeNames) {
     StringBuilder keyBuilder = new StringBuilder(methodName);
     ClassLoader cl = clazz.getClassLoader();
     keyBuilder.append(cl == null ? "bootstrapCL" : cl.toString());
     keyBuilder.append(clazz.getName());
-    for (Primitives.Object paramType : parameterTypeNames) {
-      keyBuilder.append(paramType.getClass_().getName());
+    for (Obj paramType : parameterTypeNames) {
+      keyBuilder.append(paramType.getClazz().getName());
     }
     return keyBuilder.toString();
   }

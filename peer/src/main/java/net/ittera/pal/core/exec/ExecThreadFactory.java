@@ -26,7 +26,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
-import net.ittera.pal.messages.MessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
@@ -46,7 +46,7 @@ public class ExecThreadFactory implements ThreadFactory {
   private static final Logger logger = LoggerFactory.getLogger(ExecThreadFactory.class);
 
   private final ExecChannelType execChannelType;
-  private final MessageBuilder messageBuilder;
+  private final ColferMessageBuilder messageBuilder;
   private final DispatcherConnector dispatcherConnector;
   private final IncomingMessageDispatcher incomingMessageDispatcher;
 
@@ -71,7 +71,7 @@ public class ExecThreadFactory implements ThreadFactory {
   public ExecThreadFactory(
       ZContext zmqContext,
       String zmqSocketAddress,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
       ExecChannelType execChannelType,

@@ -19,7 +19,7 @@
 
 package net.ittera.pal.core.exec.java;
 
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
 
 public interface ExecMessageDispatcher {
   ExecMessage dispatchIncoming(ExecMessage incomingCall);

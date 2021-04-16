@@ -21,7 +21,6 @@ package net.ittera.pal.svcs;
 
 import static picocli.CommandLine.Option;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -37,8 +36,8 @@ import kong.unirest.Unirest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.ContextFillingTransformSupplier;
-import net.ittera.pal.messages.protobuf.KafkaExecMessageSerde;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.KafkaExecMessageSerde;
+import net.ittera.pal.messages.colfer.Message;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -160,12 +159,9 @@ public class IndexingService implements Callable<Integer> {
         builder.<String, byte[]>stream(logName)
             .map(
                 (k, v) -> {
-                  try {
-                    return new KeyValue<>(k, Message.parseFrom(v));
-                  } catch (InvalidProtocolBufferException e) {
-                    logger.error("Error parsing message", e);
-                    return new KeyValue<>(k, null);
-                  }
+                  Message message = new Message();
+                  message.unmarshal(v, 0);
+                  return new KeyValue<>(k, message);
                 });
 
     KStream<String, Map> streamWithCtxt = stream.transform(ContextFillingTransformSupplier::new);

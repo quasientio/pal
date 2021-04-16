@@ -29,7 +29,7 @@ import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.Stream;
-import net.ittera.pal.common.lang.intercept.FieldOpType;
+import net.ittera.pal.common.lang.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.InterceptableFieldOp;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;

@@ -20,16 +20,16 @@
 package net.ittera.pal.svcs;
 
 import static java.lang.String.format;
+import static net.ittera.pal.serdes.colfer.ColferUtils.toJSON;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import java.util.List;
 import java.util.Map;
 import kong.unirest.HttpResponse;
 import kong.unirest.JsonNode;
 import kong.unirest.Unirest;
 import net.ittera.pal.messages.MessageContext;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.MessageType;
+import net.ittera.pal.messages.colfer.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,8 +38,6 @@ class MessageIndexer {
   private static final Logger logger = LoggerFactory.getLogger(MessageIndexer.class);
 
   private final String indexingServerUrl;
-  private final JsonFormat.Printer protobufJsonPrinter =
-      JsonFormat.printer().omittingInsignificantWhitespace();
 
   MessageIndexer(String indexingServerUrl) {
     this.indexingServerUrl = indexingServerUrl;
@@ -62,11 +60,7 @@ class MessageIndexer {
                       "{ \"create\" : { \"_index\" : \"%s\", \"_id\" : \"%d\" } }",
                       logName, ctxt.getOffset()))
               .append("\n");
-          try {
-            queryB.append(printMessage(msg)).append("\n");
-          } catch (InvalidProtocolBufferException e) {
-            logger.error("protobuf parse error", e);
-          }
+          queryB.append(printMessage(msg)).append("\n");
         });
 
     HttpResponse<JsonNode> response = null;
@@ -98,42 +92,41 @@ class MessageIndexer {
     }
 
     HttpResponse<JsonNode> response;
-    try {
-      response =
-          Unirest.put(putQuery)
-              .header("Accept", "application/json")
-              .header("Content-Type", "application/json")
-              .body(printMessage(message))
-              .asJson();
-      if (logger.isDebugEnabled()) {
-        logger.debug("response status: {}", response.getStatusText());
-        logger.debug("response body: {}", response.getBody());
-      }
-    } catch (InvalidProtocolBufferException e) {
-      logger.error("protobuf parse error", e);
+    response =
+        Unirest.put(putQuery)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .body(printMessage(message))
+            .asJson();
+    if (logger.isDebugEnabled()) {
+      logger.debug("response status: {}", response.getStatusText());
+      logger.debug("response body: {}", response.getBody());
     }
   }
 
   private static String getMessageUuid(Message msg) {
-    if (msg.hasExecMessage()) {
-      return msg.getExecMessage().getMessageUuid();
-    } else if (msg.hasInterceptMessage()) {
-      return msg.getInterceptMessage().getMessageUuid();
-      //    } else if (msg.hasInterceptReply()) {
-      //      return msg.getInterceptReply().getMessageUuid();
+    final MessageType messageType = MessageType.values()[msg.getMessageType()];
+    switch (messageType) {
+      case ExecMessage:
+        return msg.getExecMessage().getMessageUuid();
+      case InterceptMessage:
+        return msg.getInterceptMessage().getMessageUuid();
+      default:
+        return null;
     }
-    return null;
   }
 
-  private String printMessage(Message msg) throws InvalidProtocolBufferException {
-    if (msg.hasExecMessage()) {
-      return protobufJsonPrinter.print(msg.getExecMessage());
-    } else if (msg.hasInterceptMessage()) {
-      return protobufJsonPrinter.print(msg.getInterceptMessage());
-    } else if (msg.hasInterceptReply()) {
-      return protobufJsonPrinter.print(msg.getInterceptReply());
-    } else {
-      throw new RuntimeException(format("unknown message type: %s", msg.toString()));
+  private String printMessage(Message msg) {
+    final MessageType messageType = MessageType.values()[msg.getMessageType()];
+    switch (messageType) {
+      case ExecMessage:
+        return toJSON(msg.getExecMessage(), true);
+      case InterceptMessage:
+        return toJSON(msg.getInterceptMessage(), true);
+      case InterceptReply:
+        return toJSON(msg.getInterceptReply(), true);
+      default:
+        throw new RuntimeException(format("unknown message type: %s", msg.toString()));
     }
   }
 }

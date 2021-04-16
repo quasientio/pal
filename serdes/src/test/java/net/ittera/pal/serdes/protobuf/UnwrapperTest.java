@@ -17,16 +17,17 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages;
+package net.ittera.pal.serdes.protobuf;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 import net.ittera.pal.messages.protobuf.Primitives;
+import net.ittera.pal.serdes.WrappingTestBase;
 import org.junit.Test;
 
-public class UnwrapperTest {
+public class UnwrapperTest extends WrappingTestBase {
 
   @Test
   public void unwrapObject_wrappedNullObject_originalValue() throws ClassNotFoundException {
@@ -87,7 +88,7 @@ public class UnwrapperTest {
 
     // test all wrappables with value except charSeq's
     List<Object> valuedWrappableObjs =
-        WrapperTest.wrappableObjects.stream()
+        wrappableObjects.stream()
             .filter(o -> o != null && o != void.class && o != Void.class)
             .filter(o -> !Wrapper.reconstructableCharSeqClasses.contains(o.getClass()))
             .collect(toList());

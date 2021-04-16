@@ -39,7 +39,7 @@ import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.runtime.Dispatcher;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;

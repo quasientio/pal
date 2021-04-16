@@ -17,9 +17,16 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.common.lang.intercept;
+package colfer
 
-public enum FieldOpType {
-  GET,
-  PUT,
+type ReturnValue struct {
+	isVoid  bool
+	isClass bool
+	object  Obj
+
+	// the method/constructor returning this object
+	from Reflectable
+
+	// the class returning this object through a fieldop, constructor or method (i.e. the declaring class)
+	clazz Class
 }

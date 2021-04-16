@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -34,8 +35,8 @@ import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromClass;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
-import net.ittera.pal.messages.Unwrapper;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -369,7 +370,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
-    assertTrue(replyMsg.getReturnValue().getObject().hasRef());
+    assertNotNull(replyMsg.getReturnValue().getObject().getRef());
     Object returned =
         objectStore.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
     assertThat(returned, sameInstance(ClassForGetStaticTest.objects));
@@ -416,7 +417,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
-    assertTrue(replyMsg.getReturnValue().getObject().hasRef());
+    assertNotNull(replyMsg.getReturnValue().getObject().getRef());
     Throwable returned =
         (Throwable)
             objectStore.lookupObject(

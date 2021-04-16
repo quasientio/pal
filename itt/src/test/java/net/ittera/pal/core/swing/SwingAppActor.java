@@ -21,15 +21,14 @@ package net.ittera.pal.core.swing;
 
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.ThinPeer;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
-import net.ittera.pal.messages.protobuf.Primitives;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 
 public class SwingAppActor extends AbstractSwingTest {
 
-  protected static final MessageBuilder MESSAGE_BUILDER = new ProtobufMessageBuilder();
+  protected static final ColferMessageBuilder MESSAGE_BUILDER = new ColferMessageBuilder();
 
   protected static final String swingAppClassName = "net.ittera.pal.apps.SwingApp";
 
@@ -67,7 +66,7 @@ public class SwingAppActor extends AbstractSwingTest {
     ExecMessage requestMsg =
         MESSAGE_BUILDER.buildGetStatic(thinPeer.getPeerUuid(), swingAppClassName, fieldName);
     ExecMessage replyMsg = thinPeer.sendAndReceive(requestMsg, true);
-    Primitives.Object myFrame = replyMsg.getReturnValue().getObject();
+    Obj myFrame = replyMsg.getReturnValue().getObject();
 
     for (int i = 0; i < 5; i++) {
       sleep(1);

@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.core.messages;
+package net.ittera.pal.messages;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -25,18 +25,13 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import net.ittera.pal.common.runtime.ExecPhase;
-import net.ittera.pal.core.ZmqEnabledTest;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.MessageType;
-import net.ittera.pal.messages.OutboundMsg;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Headers.InternalHeader;
+import net.ittera.pal.messages.colfer.InternalHeader;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,12 +39,21 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-public class OutboundMsgTest extends ZmqEnabledTest {
-  private MessageBuilder messageBuilder = new ProtobufMessageBuilder();
+/** TODO: call constructor with marshallable instead of body (byte[]) */
+public class OutboundMsgTest {
+  private final ColferMessageBuilder messageBuilder = new ColferMessageBuilder();
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
+  protected ZContext createContext() {
+    ZContext ctxt = new ZContext();
+    ctxt.setLinger(1000);
+    ctxt.setRcvHWM(10000);
+    ctxt.setSndHWM(10000);
+    return ctxt;
+  }
+
   @Test
-  public void sendWithNullables() throws InvalidProtocolBufferException {
+  public void sendWithNullables() {
     UUID execMessageUuid = UUID.randomUUID();
     UUID followingMessageUuid = null;
     byte[] body = "whatever".getBytes();
@@ -93,7 +97,7 @@ public class OutboundMsgTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void send() throws InvalidProtocolBufferException {
+  public void send() {
     UUID interceptMessageUuid = UUID.randomUUID();
     UUID followingMessageUuid = UUID.randomUUID();
     byte[] body = "whatever".getBytes();
@@ -184,7 +188,7 @@ public class OutboundMsgTest extends ZmqEnabledTest {
           headers,
           messageUuid,
           UUID.randomUUID(),
-          null);
+          (byte[]) null);
       fail("Should have thrown NPE");
     } catch (NullPointerException e) {
       // ok then

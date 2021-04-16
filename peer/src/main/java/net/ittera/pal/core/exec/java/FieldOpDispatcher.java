@@ -26,9 +26,9 @@ import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
-import net.ittera.pal.messages.protobuf.Primitives;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Parameter;
 
 public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
 
@@ -71,7 +71,7 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
   }
 
   @Override
-  protected List<Primitives.Parameter> getParameterList(ExecMessage execMessage) {
+  protected List<Parameter> getParameterList(ExecMessage execMessage) {
     return null;
   }
 

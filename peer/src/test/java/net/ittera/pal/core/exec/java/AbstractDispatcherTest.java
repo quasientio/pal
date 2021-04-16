@@ -33,8 +33,7 @@ import java.util.UUID;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.junit.Before;
 import org.mockito.AdditionalAnswers;
 
@@ -44,7 +43,7 @@ public abstract class AbstractDispatcherTest {
 
   protected ObjectStore objectStore = new ConcurrentHashMapObjectStore();
 
-  protected MessageBuilder messageBuilder = new ProtobufMessageBuilder();
+  protected ColferMessageBuilder messageBuilder = new ColferMessageBuilder();
 
   protected DispatcherConnector dispatcherConnector;
 

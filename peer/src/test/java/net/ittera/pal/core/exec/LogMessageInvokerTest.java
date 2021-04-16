@@ -36,14 +36,14 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundLogMsg;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Intercepts;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,7 +63,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
   private ExecutorService execService;
   private LogMessageInvoker logMessageInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
-  private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
   private List<ExecMessage> execMessageReplies = new ArrayList<>();
   private List<Boolean> interceptReqMessageResults = new ArrayList<>();
 
@@ -135,7 +135,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
     // send request to DEALER socket
-    InboundLogMsg msg = new InboundLogMsg(fakeOffset, msgBuilder.wrap(invokable).toByteArray());
+    InboundLogMsg msg =
+        new InboundLogMsg(fakeOffset, ColferUtils.toBytes(msgBuilder.wrap(invokable)));
     msg.send(dealerSocket);
 
     // wait for msg to be rcvd
@@ -161,13 +162,14 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     InterceptMessage invokable =
         msgBuilder.buildInterceptMessage(
             peerUuid,
-            Intercepts.InterceptType.BEFORE,
+            InterceptType.BEFORE,
             "java.io.PrintStream",
             "println",
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    InboundLogMsg msg = new InboundLogMsg(fakeOffset, msgBuilder.wrap(invokable).toByteArray());
+    InboundLogMsg msg =
+        new InboundLogMsg(fakeOffset, ColferUtils.toBytes(msgBuilder.wrap(invokable)));
     msg.send(dealerSocket);
 
     // wait for msg to be rcvd
@@ -192,7 +194,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     for (int i = 0; i < msgCount; i++) {
       ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       msgsToInvoke.add(invokable);
-      InboundLogMsg msg = new InboundLogMsg(fakeOffset, msgBuilder.wrap(invokable).toByteArray());
+      InboundLogMsg msg =
+          new InboundLogMsg(fakeOffset, ColferUtils.toBytes(msgBuilder.wrap(invokable)));
       msg.send(dealerSocket);
     }
 

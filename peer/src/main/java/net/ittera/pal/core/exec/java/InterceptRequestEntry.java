@@ -22,10 +22,10 @@ package net.ittera.pal.core.exec.java;
 import static java.lang.String.format;
 
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
-import java.util.List;
 import java.util.Objects;
-import net.ittera.pal.messages.protobuf.Intercepts;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptKeyMessage;
+import net.ittera.pal.messages.colfer.InterceptKeyMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.colfer.InterceptableMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +35,7 @@ public class InterceptRequestEntry {
   private final String paramTypes;
   private final int numberOfParams;
   private final boolean isMethod;
-  private final Intercepts.InterceptMessage interceptMessage;
+  private final InterceptMessage interceptMessage;
 
   // Not safe-thread, which is fine since we only deal with InterceptRequestEntry objects from a
   // single thread
@@ -46,21 +46,21 @@ public class InterceptRequestEntry {
           .withIgnoreCase()
           .build();
 
-  public InterceptRequestEntry(Intercepts.InterceptMessage interceptMessage) {
-    this.isMethod = interceptMessage.hasMethod();
+  public InterceptRequestEntry(InterceptMessage interceptMessage) {
+    InterceptableMethod interceptableMethod = interceptMessage.getMethod();
+    this.isMethod = interceptableMethod != null;
     // create executable pattern to match
     this.pattern =
         format(
             "%s.%s",
             interceptMessage.getClazz(),
-            isMethod
-                ? interceptMessage.getMethod().getName()
-                : interceptMessage.getField().getName());
+            isMethod ? interceptableMethod.getName() : interceptMessage.getField().getName());
     // add param info
     if (isMethod) {
-      this.numberOfParams = interceptMessage.getMethod().getParameterTypeCount();
+      String[] parameterTypes = interceptableMethod.getParameterTypes();
+      this.numberOfParams = parameterTypes.length;
       if (numberOfParams > 0) {
-        this.paramTypes = String.join(",", interceptMessage.getMethod().getParameterTypeList());
+        this.paramTypes = String.join(",", parameterTypes);
       } else {
         this.paramTypes = "";
       }
@@ -107,7 +107,7 @@ public class InterceptRequestEntry {
 
     // match parameter types
     // TODO it won't be this simple; we'll need to take extends and impl into account
-    final List<String> execMessageParamTypes = keyMessage.getParameterTypeList();
+    final String[] execMessageParamTypes = keyMessage.getParameterTypes();
     if (paramTypes == null) {
       return execMessageParamTypes == null;
     } else {
@@ -115,7 +115,7 @@ public class InterceptRequestEntry {
     }
   }
 
-  public Intercepts.InterceptMessage getInterceptMessage() {
+  public InterceptMessage getInterceptMessage() {
     return interceptMessage;
   }
 }

@@ -19,7 +19,8 @@
 
 package net.ittera.pal.messages;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import static net.ittera.pal.serdes.colfer.ColferUtils.toBytes;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,7 +30,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.common.util.UUIDUtils;
-import net.ittera.pal.messages.protobuf.Headers;
+import net.ittera.pal.messages.colfer.InternalHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZMQ;
@@ -58,18 +59,20 @@ public class OutboundMsg extends BaseMsg {
   private final MessageType messageType;
 
   private final ExecPhase execPhase;
-  @Nullable private final List<Headers.InternalHeader> headers;
+  @Nullable private final List<InternalHeader> headers;
   private final UUID messageUuid;
   @Nullable private final UUID followingUuid;
   private final byte[] body;
 
-  public OutboundMsg(
+  /** Only used by unit test */
+  OutboundMsg(
       MessageType messageType,
       ExecPhase execPhase,
-      @Nullable List<Headers.InternalHeader> headers,
+      @Nullable List<InternalHeader> headers,
       UUID messageUuid,
       @Nullable UUID followingUuid,
       byte[] body) {
+
     Stream.of(messageType, execPhase, messageUuid, body).forEach(Objects::requireNonNull);
     this.messageType = messageType;
     this.execPhase = execPhase;
@@ -79,10 +82,27 @@ public class OutboundMsg extends BaseMsg {
     this.body = body;
   }
 
+  public OutboundMsg(
+      MessageType messageType,
+      ExecPhase execPhase,
+      @Nullable List<InternalHeader> headers,
+      UUID messageUuid,
+      @Nullable UUID followingUuid,
+      @Nullable Marshallable marshallable) {
+
+    Stream.of(messageType, execPhase, messageUuid, marshallable).forEach(Objects::requireNonNull);
+    this.messageType = messageType;
+    this.execPhase = execPhase;
+    this.headers = headers;
+    this.messageUuid = messageUuid;
+    this.followingUuid = followingUuid;
+    this.body = toBytes(marshallable);
+  }
+
   private OutboundMsg(
       MessageType messageType,
       ExecPhase execPhase,
-      @Nullable List<Headers.InternalHeader> headers,
+      @Nullable List<InternalHeader> headers,
       UUID messageUuid,
       @Nullable UUID followingUuid,
       byte[] body,
@@ -128,8 +148,8 @@ public class OutboundMsg extends BaseMsg {
 
     // headers
     if (headers != null && !headers.isEmpty()) {
-      for (Headers.InternalHeader header : headers) {
-        buff = header.toByteArray();
+      for (InternalHeader header : headers) {
+        buff = toBytes(header);
         size += buff.length;
         if (!socket.send(buff, ZMQ.SNDMORE)) {
           return false;
@@ -161,8 +181,7 @@ public class OutboundMsg extends BaseMsg {
 
   // blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
   // ready, then all are)
-  public static OutboundMsg recvMsg(ZMQ.Socket socket, boolean blocking)
-      throws InvalidProtocolBufferException {
+  public static OutboundMsg recvMsg(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
@@ -187,13 +206,15 @@ public class OutboundMsg extends BaseMsg {
     msgSize += buff.length;
     final int headerCount = Integer.parseInt(new String(buff, ZMQ.CHARSET));
     // headers
-    final List<Headers.InternalHeader> headers;
+    final List<InternalHeader> headers;
     if (headerCount > 0) {
       headers = new ArrayList<>();
       for (int i = 0; i < headerCount; i++) {
         buff = socket.recv();
         msgSize += buff.length;
-        headers.add(Headers.InternalHeader.parseFrom(buff));
+        InternalHeader internalHeader = new InternalHeader();
+        internalHeader.unmarshal(buff, 0);
+        headers.add(internalHeader);
       }
     } else {
       headers = null;
@@ -223,7 +244,7 @@ public class OutboundMsg extends BaseMsg {
   }
 
   // default is non-blocking
-  public static OutboundMsg recvMsg(ZMQ.Socket socket) throws InvalidProtocolBufferException {
+  public static OutboundMsg recvMsg(ZMQ.Socket socket) {
     return recvMsg(socket, false);
   }
 
@@ -276,7 +297,7 @@ public class OutboundMsg extends BaseMsg {
     return execPhase;
   }
 
-  public List<Headers.InternalHeader> getHeaders() {
+  public List<InternalHeader> getHeaders() {
     return headers;
   }
 

@@ -31,10 +31,12 @@ import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.common.util.Classes;
-import net.ittera.pal.messages.Unwrapper;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
-import net.ittera.pal.messages.protobuf.Primitives;
+import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.messages.colfer.Parameter;
+import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.Unwrapper;
 
 abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     implements Dispatcher, ExecMessageDispatcher {
@@ -205,7 +207,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     // 11. Return received message
     if (logger.isTraceEnabled()) {
-      logger.trace("dispatchIncoming:out returning message: {}", afterExecReplyMsg);
+      logger.trace(
+          "dispatchIncoming:out returning message: {}", ColferUtils.format(afterExecReplyMsg));
     }
     return afterExecReplyMsg;
   }
@@ -224,12 +227,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       throws ClassNotFoundException {
 
     final List<Class> paramClasses = new ArrayList<>();
-    List<Primitives.Parameter> parameterList = getParameterList(execMessage);
+    List<Parameter> parameterList = getParameterList(execMessage);
 
-    if (execMessage.hasConstructorCall()
-        || execMessage.hasClassMethodCall()
-        || execMessage.hasInstanceMethodCall()) {
-      for (Primitives.Parameter param : parameterList) {
+    final ExecMessageType execMessageType =
+        ExecMessageType.values()[execMessage.getExecMessageType()];
+    if (execMessageType.equals(ExecMessageType.CONSTRUCTOR)
+        || execMessageType.equals(ExecMessageType.CLASS_METHOD)
+        || execMessageType.equals(ExecMessageType.INSTANCE_METHOD)) {
+      for (Parameter param : parameterList) {
         Class paramClass = Classes.getClassForPrimitive(param.getType().getName());
         if (paramClass == null) { // ie. not a primitive
           paramClass =
@@ -248,23 +253,24 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   private List<Object> getArgsFromMessage(ExecMessage execMessage, List<Class> parameterTypes) {
 
     final List<Object> args = new ArrayList<>();
-    final List<Primitives.Parameter> parameterList = getParameterList(execMessage);
+    final List<Parameter> parameterList = getParameterList(execMessage);
 
     int i = 0;
     if (parameterList != null) {
-      for (Primitives.Parameter parameter : parameterList) {
+      for (Parameter parameter : parameterList) {
         if (logger.isTraceEnabled()) {
-          logger.trace("getting arg from param #{}: {}", i, parameter);
+          logger.trace("getting arg from param #{}: {}", i, ColferUtils.format(parameter));
         }
-        Primitives.Object obj = parameter.getValue();
+        Obj obj = parameter.getValue();
         if (obj.getIsNull()) {
           args.add(null);
         } else {
           Object lookedUpObj = null;
-          if (obj.hasRef()) {
+          final String objRef = obj.getRef();
+          if (objRef != null && !objRef.isEmpty()) {
             // First try to fetch object by reference (works only with locally-instantiated/stored
             // objects)
-            lookedUpObj = objectStore.lookupObject(ObjectRef.from(obj.getRef()));
+            lookedUpObj = objectStore.lookupObject(ObjectRef.from(objRef));
           }
           if (lookedUpObj != null) {
             args.add(lookedUpObj);
@@ -367,7 +373,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    */
   protected abstract ExecutableObjectType getExecutableObjectType();
 
-  protected abstract List<Primitives.Parameter> getParameterList(ExecMessage execMessage);
+  protected abstract List<Parameter> getParameterList(ExecMessage execMessage);
 
   /**
    * @param execMessage

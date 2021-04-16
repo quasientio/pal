@@ -23,7 +23,7 @@ public enum MessageType {
   ExecMessage,
   InterceptMessage,
   InterceptKey,
-  Unknown;
+  InterceptReply;
 
   public static final MessageType[] values = values();
 }

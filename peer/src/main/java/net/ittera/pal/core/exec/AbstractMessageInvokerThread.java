@@ -25,11 +25,12 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptReply;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.colfer.InterceptReply;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
@@ -51,14 +52,14 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   private final UUID peerUuid;
   private final IncomingMessageDispatcher incomingMessageDispatcher;
   protected final DispatcherConnector dispatcherConnector;
-  protected final MessageBuilder messageBuilder;
+  protected final ColferMessageBuilder messageBuilder;
 
   AbstractMessageInvokerThread(
       ThreadGroup group,
       Runnable target,
       String name,
       ZContext zmqContext,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
@@ -84,7 +85,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
    */
   AbstractMessageInvokerThread(
       ZContext zmqContext,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       UUID peerUuid) {
@@ -100,11 +101,16 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   }
 
   protected final String getMessageUuid(Message msg) {
-    if (msg.hasExecMessage()) {
-      return msg.getExecMessage().getMessageUuid();
-    } else if (msg.hasInterceptMessage()) {
-      return msg.getInterceptMessage().getMessageUuid();
+    final ExecMessage execMessage = msg.getExecMessage();
+    if (execMessage != null) {
+      return execMessage.getMessageUuid();
     }
+
+    final InterceptMessage interceptMessage = msg.getInterceptMessage();
+    if (interceptMessage != null) {
+      return interceptMessage.getMessageUuid();
+    }
+
     return null;
   }
 
@@ -136,24 +142,34 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   public abstract void run();
 
   protected final void dispatch(Message message, Long recordOffset) {
-    if (message.hasExecMessage()) {
+    final ExecMessage execMessage = message.getExecMessage();
+    if (execMessage != null) {
       dispatch(message.getExecMessage(), recordOffset);
-    } else if (message.hasInterceptMessage()) {
-      dispatch(message.getInterceptMessage(), recordOffset);
-    } else {
-      logger.error("Ignoring dispatch of msg of unknown type: {}", message);
+      return;
     }
+
+    final InterceptMessage interceptMessage = message.getInterceptMessage();
+    if (interceptMessage != null) {
+      dispatch(message.getInterceptMessage(), recordOffset);
+      return;
+    }
+
+    logger.error("Ignoring dispatch of msg of unknown type: {}", ColferUtils.format(message));
   }
 
   protected final Message dispatch(Message message) {
-    if (message.hasExecMessage()) {
+    final ExecMessage execMessage = message.getExecMessage();
+    if (execMessage != null) {
       return messageBuilder.wrap(dispatch(message.getExecMessage(), null));
-    } else if (message.hasInterceptMessage()) {
-      return messageBuilder.wrap(dispatch(message.getInterceptMessage(), null));
-    } else {
-      throw new IllegalArgumentException(
-          format("No dispatch handler for this message type: %s", message));
     }
+
+    final InterceptMessage interceptMessage = message.getInterceptMessage();
+    if (interceptMessage != null) {
+      return messageBuilder.wrap(dispatch(message.getInterceptMessage(), null));
+    }
+
+    throw new IllegalArgumentException(
+        format("No dispatch handler for this message type: %s", message));
   }
 
   private ExecMessage dispatch(ExecMessage requestMsg, @Nullable Long recordOffset) {

@@ -19,7 +19,8 @@
 
 package net.ittera.pal.core.exec;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import static net.ittera.pal.serdes.colfer.ColferUtils.toBytes;
+
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,21 +33,22 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.messages.InterceptsMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
-import net.ittera.pal.messages.MessageBuilder;
+import net.ittera.pal.messages.ExecMessageType;
 import net.ittera.pal.messages.MessageType;
 import net.ittera.pal.messages.OutboundMsg;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessageType;
-import net.ittera.pal.messages.protobuf.Headers.InternalHeader;
-import net.ittera.pal.messages.protobuf.Intercepts;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptKeyMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptType;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InterceptKeyMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.colfer.InternalHeader;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -63,7 +65,7 @@ public class DispatcherConnector {
 
   private final ZContext zmqContext;
   private final UUID peerUuid;
-  private final MessageBuilder messageBuilder;
+  private final ColferMessageBuilder messageBuilder;
   private final DirectoryConnectionProvider directoryConnectionProvider;
   private final String msgPublisherAddress;
   private final String interceptMatchAddress;
@@ -125,7 +127,7 @@ public class DispatcherConnector {
   public DispatcherConnector(
       ZContext zmqContext,
       UUID peerUuid,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       DirectoryConnectionProvider directoryConnectionProvider,
       Set<RunOptions> runOptions,
       @Named("out.cell") String msgPublisherAddress,
@@ -151,12 +153,15 @@ public class DispatcherConnector {
       logger.trace("sendExecMessage:in w/ execMessage with uuid: {}", execMessage.getMessageUuid());
     }
 
+    final String followingUuidStr = execMessage.getFollowingUuid();
     UUID followingUuid =
-        execMessage.hasFollowingUuid() ? UUID.fromString(execMessage.getFollowingUuid()) : null;
+        followingUuidStr == null || followingUuidStr.isEmpty()
+            ? null
+            : UUID.fromString(execMessage.getFollowingUuid());
     InterceptsMsg interceptsMsg = null;
 
-    if (!runOptions.contains(RunOptions.NO_INTERCEPTS)
-        && isInterceptableType(execMessage.getMsgType())) {
+    ExecMessageType execMessageType = ExecMessageType.values()[execMessage.getExecMessageType()];
+    if (!runOptions.contains(RunOptions.NO_INTERCEPTS) && isInterceptableType(execMessageType)) {
       Socket interceptsReqSocket = threadInterceptsSocket.get();
       // find matching intercepts for execMessage
       InterceptKeyMessage interceptKeyMessage = messageBuilder.buildInterceptKey(execMessage);
@@ -167,7 +172,7 @@ public class DispatcherConnector {
               headers,
               UUID.fromString(execMessage.getMessageUuid()),
               followingUuid,
-              messageBuilder.wrap(interceptKeyMessage).toByteArray());
+              messageBuilder.wrap(interceptKeyMessage));
 
       long start = Instant.now().toEpochMilli();
       msg.send(interceptsReqSocket);
@@ -184,8 +189,6 @@ public class DispatcherConnector {
           logger.warn("Caught EINTR during blocking read. Will close socket.");
           interceptsReqSocket.close();
         }
-      } catch (InvalidProtocolBufferException e) {
-        logger.error("Error parsing received execMessage", e);
       } finally {
         totalIntrcptSocketTime.getAndAdd((Instant.now().toEpochMilli() - start));
         totalMatchReqs.getAndIncrement();
@@ -201,11 +204,11 @@ public class DispatcherConnector {
               headers,
               UUID.fromString(execMessage.getMessageUuid()),
               followingUuid,
-              messageBuilder.wrap(execMessage).toByteArray());
+              messageBuilder.wrap(execMessage));
       publishMessage(msg);
     }
 
-    // in case of error, simply return received ExecMessage
+    // if no intercepts, or if we got an error checking, return received ExecMessage
     if (interceptsMsg == null) {
       return execMessage;
     }
@@ -219,26 +222,27 @@ public class DispatcherConnector {
       returnValue = execMessage;
     } else {
       // for now we only care about the first intercept request
-      Intercepts.InterceptMessage interceptMessage = interceptsMsg.getIntercepts().get(0);
+      InterceptMessage interceptMessage = interceptsMsg.getIntercepts().get(0);
       ExecMessage callbackMessage =
           messageBuilder.buildCallbackForInterceptRequest(peerUuid, execMessage, interceptMessage);
       UUID interceptor = UUID.fromString(interceptMessage.getPeerUuid());
       final byte[] reply;
+      InterceptType interceptType = InterceptType.values()[interceptMessage.getInterceptType()];
       try {
-        if (interceptMessage.getType().equals(InterceptType.BEFORE_ASYNC)
-            || interceptMessage.getType().equals(InterceptType.AFTER_ASYNC)) {
+        if (interceptType.equals(InterceptType.BEFORE_ASYNC)
+            || interceptType.equals(InterceptType.AFTER_ASYNC)) {
           sendAsyncCallbackToPeer(interceptor, callbackMessage);
-        } else if (interceptMessage.getType().equals(InterceptType.BEFORE)
-            || interceptMessage.getType().equals(InterceptType.AFTER)) {
+        } else if (interceptType.equals(InterceptType.BEFORE)
+            || interceptType.equals(InterceptType.AFTER)) {
           reply = sendCallbackToPeer(interceptor, callbackMessage);
         } else {
-          logger.error("Unsupported callback type: {}", interceptMessage.getType());
+          logger.error("Unsupported callback type: {}", interceptType);
         }
       } catch (Exception ex) {
         logger.error(
             "Error sending callback to peer w/uuid: {}, callback execMessage: {}",
             interceptor,
-            callbackMessage,
+            ColferUtils.format(callbackMessage),
             ex);
       }
 
@@ -256,7 +260,7 @@ public class DispatcherConnector {
     }
 
     if (logger.isTraceEnabled()) {
-      logger.trace("out w/ {}", returnValue);
+      logger.trace("out w/ {}", ColferUtils.format(returnValue));
     }
     return returnValue;
   }
@@ -290,8 +294,11 @@ public class DispatcherConnector {
       return;
     }
 
-    final UUID followingUuid =
-        message.hasFollowingUuid() ? UUID.fromString(message.getFollowingUuid()) : null;
+    final String followingUuidStr = message.getFollowingUuid();
+    UUID followingUuid =
+        followingUuidStr == null || followingUuidStr.isEmpty()
+            ? null
+            : UUID.fromString(message.getFollowingUuid());
     final OutboundMsg msg =
         new OutboundMsg(
             MessageType.ExecMessage,
@@ -299,7 +306,7 @@ public class DispatcherConnector {
             WRITE_AHEAD_HEADERS,
             UUID.fromString(message.getMessageUuid()),
             followingUuid,
-            messageBuilder.wrap(message).toByteArray());
+            messageBuilder.wrap(message));
 
     // no intercept matching, just publish it
     publishMessage(msg);
@@ -308,15 +315,21 @@ public class DispatcherConnector {
   private @Nullable byte[] sendCallbackMessageToPeer(
       UUID interceptor, ExecMessage message, boolean getReply) throws Exception {
     if (logger.isDebugEnabled()) {
-      logger.debug("Sending callback message: {} to peer w/uuid: {}", message, interceptor);
+      logger.debug(
+          "Sending callback message: {} to peer w/uuid: {}",
+          ColferUtils.format(message),
+          interceptor);
     }
     byte[] reply;
     // get socket for peer and send callback msg
     Socket req = getConnectedREQSocketFor(interceptor);
-    final boolean sentOk = req.send(messageBuilder.wrap(message).toByteArray(), 0);
+    final boolean sentOk = req.send(toBytes(messageBuilder.wrap(message)), 0);
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Sent callback message: {} (ret={}) to peer w/uuid: {}", message, sentOk, interceptor);
+          "Sent callback message: {} (ret={}) to peer w/uuid: {}",
+          ColferUtils.format(message),
+          sentOk,
+          interceptor);
     }
 
     // block until we get a reply or peer is disconnected
@@ -329,12 +342,9 @@ public class DispatcherConnector {
         if (reply != null) {
           gotReply = true;
           if (logger.isDebugEnabled()) {
-            try {
-              Message replyMessage = Message.parseFrom(reply);
-              logger.debug("Got reply from callback: {}", replyMessage);
-            } catch (InvalidProtocolBufferException e) {
-              logger.warn("Error parsing reply message", e);
-            }
+            final Message replyMessage = new Message();
+            message.unmarshal(reply, 0);
+            logger.debug("Got reply from callback: {}", ColferUtils.format(replyMessage));
           }
         } else { // we hit the timeout, check if peer is alive
           final PALDirectory palDirectory =

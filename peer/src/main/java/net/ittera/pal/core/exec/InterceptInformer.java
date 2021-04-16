@@ -33,8 +33,9 @@ import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.core.messages.InterceptEvtMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -49,7 +50,7 @@ public class InterceptInformer implements InterceptNodeListener {
   private static final Logger logger = LoggerFactory.getLogger(InterceptInformer.class);
 
   private final ZContext zmqContext;
-  private final MessageBuilder messageBuilder;
+  private final ColferMessageBuilder messageBuilder;
   private final DirectoryConnectionProvider directoryConnectionProvider;
   private final String interceptsAddr;
   private final UUID peerUuid;
@@ -77,7 +78,7 @@ public class InterceptInformer implements InterceptNodeListener {
   @Inject
   public InterceptInformer(
       ZContext zmqContext,
-      MessageBuilder messageBuilder,
+      ColferMessageBuilder messageBuilder,
       DirectoryConnectionProvider directoryConnectionProvider,
       UUID peerUuid,
       @Named("intercepts.reg") String interceptsAddr) {
@@ -112,7 +113,7 @@ public class InterceptInformer implements InterceptNodeListener {
         interceptRequest -> {
           InterceptMessage interceptMessage =
               messageBuilder.buildInterceptMessage(interceptRequest);
-          sendInterceptEventMsg(new InterceptEvtMsg(interceptMessage.toByteArray()));
+          sendInterceptEventMsg(new InterceptEvtMsg(ColferUtils.toBytes(interceptMessage)));
         });
   }
 
@@ -140,7 +141,7 @@ public class InterceptInformer implements InterceptNodeListener {
           return;
         }
         InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
-        sendInterceptEventMsg(new InterceptEvtMsg(interceptMessage.toByteArray()));
+        sendInterceptEventMsg(new InterceptEvtMsg(ColferUtils.toBytes(interceptMessage)));
         break;
       case INTERCEPT_REMOVED:
         if (event.getPeerUUID().equals(peerUuid)) {

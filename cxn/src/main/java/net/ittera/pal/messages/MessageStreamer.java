@@ -19,9 +19,8 @@
 
 package net.ittera.pal.messages;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.stream.Stream;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -68,7 +67,8 @@ public class MessageStreamer {
     Message message = null;
     try {
       OutboundMsg msg = OutboundMsg.recvMsg(subscriber, true);
-      message = Message.parseFrom(msg.getBody());
+      message = new Message();
+      message.unmarshal(msg.getBody(), 0);
       receivedMessagesCount++;
     } catch (ZMQException ex) {
       int errorCode = ex.getErrorCode();
@@ -79,9 +79,6 @@ public class MessageStreamer {
       } else {
         logger.warn("Unknown exception, returning null.", ex);
       }
-    } catch (InvalidProtocolBufferException e) {
-      logger.error("Error deserializing received message", e);
-      logger.error("Caught exception parsing message, returning null.", e);
     }
     if (logger.isDebugEnabled() && receivedMessagesCount % STATS_TRACE_INTERVAL == 0) {
       logger.debug("Total messages streamed so far: {}", receivedMessagesCount);

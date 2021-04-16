@@ -22,8 +22,8 @@ package net.ittera.pal.core;
 import static org.junit.Assert.assertEquals;
 
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.messages.Unwrapper;
-import net.ittera.pal.messages.protobuf.Values.ReturnValue;
+import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
 /**

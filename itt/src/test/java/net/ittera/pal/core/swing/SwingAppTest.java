@@ -21,13 +21,12 @@ package net.ittera.pal.core.swing;
 
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.ThinPeer;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 
 public class SwingAppTest extends AbstractSwingTest {
 
-  protected static final MessageBuilder MESSAGE_BUILDER = new ProtobufMessageBuilder();
+  protected static final ColferMessageBuilder MESSAGE_BUILDER = new ColferMessageBuilder();
 
   protected static final String className = "net.ittera.pal.apps.SwingApp";
 

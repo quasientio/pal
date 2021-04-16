@@ -27,7 +27,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -44,9 +43,8 @@ import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.messages.InterceptEvtMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -66,7 +64,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
   private ZContext context;
   private ExecutorService execService;
   private InterceptInformer interceptInformer;
-  private final MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
   private DirectoryConnectionProvider directoryConnectionProvider;
   private PALDirectory palDirectory;
   private Socket repSocket;
@@ -83,12 +81,14 @@ public class InterceptInformerTest extends ZmqEnabledTest {
         try {
           InterceptEvtMsg interceptEvtMsg = InterceptEvtMsg.recvMsg(repSocket, true);
           if (interceptEvtMsg.getType().equals(InterceptEvtMsg.Type.REGISTER)) {
-            interceptRequestMessages.add(InterceptMessage.parseFrom(interceptEvtMsg.getBody()));
+            InterceptMessage interceptMessage = new InterceptMessage();
+            interceptMessage.unmarshal(interceptEvtMsg.getBody(), 0);
+            interceptRequestMessages.add(interceptMessage);
           } else { // Type.UNREGISTER
             requestsToUnregister.add(interceptEvtMsg.getInterceptMsgUUID());
           }
           repSocket.send("0");
-        } catch (InvalidProtocolBufferException e) {
+        } catch (Exception e) {
           e.printStackTrace();
           break;
         }

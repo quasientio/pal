@@ -40,8 +40,8 @@ import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.ThinPeer;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -61,7 +61,7 @@ public class Caller extends AbstractPALSubcommand {
   private static final String CONSUMER_PROPERTIES_PATH = "/consumer.properties";
   private static final String PRODUCER_PROPERTIES_PATH = "/producer.properties";
   private static final long REPLY_PROCESSOR_SLEEP_MS = 100;
-  private final ProtobufMessageBuilder messageBuilder;
+  private final ColferMessageBuilder messageBuilder;
   private final Properties properties = new Properties();
   private final Properties consumerProperties = new Properties();
   private final Properties producerProperties = new Properties();
@@ -147,7 +147,7 @@ public class Caller extends AbstractPALSubcommand {
   private String peerAddress;
 
   Caller() {
-    this.messageBuilder = new ProtobufMessageBuilder();
+    this.messageBuilder = new ColferMessageBuilder();
   }
 
   @Override

@@ -19,7 +19,6 @@
 
 package net.ittera.pal.core;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -29,16 +28,17 @@ import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.exec.DuplicateInterceptException;
 import net.ittera.pal.core.messages.InterceptEvtMsg;
 import net.ittera.pal.core.messages.InterceptEvtMsg.Type;
 import net.ittera.pal.core.messages.InterceptsMsg;
 import net.ittera.pal.messages.OutboundMsg;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptKeyMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptMessage;
-import net.ittera.pal.messages.protobuf.Intercepts.InterceptType;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.InterceptKeyMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -107,10 +107,13 @@ public class Intercepts extends ConnectedService {
 
   private void registerInterceptRequest(InterceptMessage incomingInterceptMessage)
       throws DuplicateInterceptException {
-    InterceptRequests registeredIntercepts = allIntercepts.get(incomingInterceptMessage.getType());
+    InterceptRequests registeredIntercepts =
+        allIntercepts.get(InterceptType.values()[incomingInterceptMessage.getInterceptType()]);
     registeredIntercepts.registerInterceptRequest(incomingInterceptMessage);
     if (logger.isDebugEnabled()) {
-      logger.debug("Registered incoming intercept message: {}", incomingInterceptMessage);
+      logger.debug(
+          "Registered incoming intercept message: {}",
+          ColferUtils.format(incomingInterceptMessage));
     }
   }
 
@@ -220,8 +223,9 @@ public class Intercepts extends ConnectedService {
     if (interceptEvtMsg.getType().equals(Type.REGISTER)) {
       InterceptMessage interceptMessage = null;
       try {
-        interceptMessage = InterceptMessage.parseFrom(interceptEvtMsg.getBody());
-      } catch (InvalidProtocolBufferException e) {
+        interceptMessage = new InterceptMessage();
+        interceptMessage.unmarshal(interceptEvtMsg.getBody(), 0);
+      } catch (Exception e) {
         logger.error("Error parsing intercept request message", e);
         registerSocket.send(REG_PARSING_ERROR_REPLY);
       }
@@ -267,7 +271,7 @@ public class Intercepts extends ConnectedService {
           logger.debug(
               "Received new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
         }
-      } catch (InvalidProtocolBufferException e) {
+      } catch (Exception e) {
         logger.error("Error parsing received message", e);
         matchSocket.send(MATCH_ERROR_REPLY);
         return;
@@ -276,8 +280,9 @@ public class Intercepts extends ConnectedService {
       // try to match message and send reply
       final Message message;
       try {
-        message = Message.parseFrom(msg.getBody());
-      } catch (InvalidProtocolBufferException e) {
+        message = new Message();
+        message.unmarshal(msg.getBody(), 0);
+      } catch (Exception e) {
         logger.error("Parsing received exec message", e);
         matchSocket.send(MATCH_ERROR_REPLY);
         return;

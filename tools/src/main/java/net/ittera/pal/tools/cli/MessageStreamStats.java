@@ -23,7 +23,6 @@ import static net.ittera.pal.common.util.Strings.stringAfter;
 import static net.ittera.pal.common.util.Strings.stringBefore;
 import static picocli.CommandLine.Option;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -38,10 +37,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.messages.ExecMessageType;
 import net.ittera.pal.messages.MessageStreamer;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.KafkaExecMessageSerde;
-import net.ittera.pal.messages.protobuf.Wrappers.Message;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.KafkaExecMessageSerde;
+import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.tools.AbstractTool;
 import net.ittera.pal.tools.stats.ContinuousPrinter;
 import net.ittera.pal.tools.stats.Counters;
@@ -101,6 +101,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       description = "address of PAL directory (default: ${DEFAULT-VALUE})")
   private String palDirAddress;
 
+  // TODO consider using EnumSet for msgTypes
   @Option(
       names = {"-t", "--types"},
       arity = "0..*",
@@ -240,92 +241,107 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       cntr.getAndIncrement();
     }
 
+    final ExecMessage execMessage = message.getExecMessage();
+    if (execMessage == null) {
+      return;
+    }
+
     // by thread
-    if (message.hasExecMessage()) {
-      final ExecMessage execMessage = message.getExecMessage();
-      cntr = counters.getMessagesByThread().get(execMessage.getThreadName());
-      if (cntr == null) {
-        counters.getMessagesByThread().put(execMessage.getThreadName(), new AtomicLong(1));
-      } else {
-        cntr.getAndIncrement();
-      }
+    cntr = counters.getMessagesByThread().get(execMessage.getThreadName());
+    if (cntr == null) {
+      counters.getMessagesByThread().put(execMessage.getThreadName(), new AtomicLong(1));
+    } else {
+      cntr.getAndIncrement();
+    }
 
-      // objects created by class
-      if (execMessage.hasConstructorCall()) {
-        String objClass = execMessage.getConstructorCall().getClass_().getName();
-        cntr = counters.getObjectsCreated().get(objClass);
-        if (cntr == null) {
-          counters.getObjectsCreated().put(objClass, new AtomicLong(1));
-        } else {
-          cntr.getAndIncrement();
-        }
-      }
-
-      // methods called by class+name
-      if (execMessage.hasClassMethodCall() || execMessage.hasInstanceMethodCall()) {
-        String className = null, methodName = null;
-        switch (execMessage.getMsgType()) {
-          case INSTANCE_METHOD:
-            className = execMessage.getInstanceMethodCall().getClass_().getName();
-            methodName = execMessage.getInstanceMethodCall().getName();
-            break;
-          case CLASS_METHOD:
-            className = execMessage.getClassMethodCall().getClass_().getName();
-            methodName = execMessage.getClassMethodCall().getName();
-            break;
-        }
+    String className, methodName, fieldName, classFieldKey;
+    final ExecMessageType execMessageType =
+        ExecMessageType.values()[execMessage.getExecMessageType()];
+    switch (execMessageType) {
+        // objects created by class
+      case CONSTRUCTOR:
+        String objClassKey = execMessage.getConstructorCall().getClazz().getName();
+        incrementObjectsCreated(objClassKey);
+        break;
+        // methods called by class+name
+      case INSTANCE_METHOD:
+        className = execMessage.getInstanceMethodCall().getClazz().getName();
+        methodName = execMessage.getInstanceMethodCall().getName();
         String classMethodKey = String.format("%s.%s()", getShortClassname(className), methodName);
-        cntr = counters.getMethodsCalled().get(classMethodKey);
-        if (cntr == null) {
-          counters.getMethodsCalled().put(classMethodKey, new AtomicLong(1));
-        } else {
-          cntr.getAndIncrement();
-        }
-      }
+        incrementMethodCalls(classMethodKey);
+        break;
+        // methods called by class+name
+      case CLASS_METHOD:
+        className = execMessage.getClassMethodCall().getClazz().getName();
+        methodName = execMessage.getClassMethodCall().getName();
+        classMethodKey = String.format("%s.%s()", getShortClassname(className), methodName);
+        incrementMethodCalls(classMethodKey);
+        break;
+        // field reads
+      case GET_STATIC:
+        className = execMessage.getStaticFieldGet().getClazz().getName();
+        fieldName = execMessage.getStaticFieldGet().getField().getName();
+        classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
+        incrementFieldReads(classFieldKey);
+        break;
+        // field reads
+      case GET_FIELD:
+        className = execMessage.getInstanceFieldGet().getClazz().getName();
+        fieldName = execMessage.getInstanceFieldGet().getField().getName();
+        classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
+        incrementFieldReads(classFieldKey);
+        break;
+        // field writes
+      case PUT_STATIC:
+        className = execMessage.getStaticFieldPut().getClazz().getName();
+        fieldName = execMessage.getStaticFieldPut().getField().getName();
+        classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
+        incrementFieldWrites(classFieldKey);
+        break;
+        // field writes
+      case PUT_FIELD:
+        className = execMessage.getInstanceFieldPut().getClazz().getName();
+        fieldName = execMessage.getInstanceFieldPut().getField().getName();
+        classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
+        incrementFieldWrites(classFieldKey);
+        break;
+      default:
+    }
+  }
 
-      // field reads
-      if (execMessage.hasInstanceFieldGet() || execMessage.hasStaticFieldGet()) {
-        String className = null, fieldName = null;
-        switch (execMessage.getMsgType()) {
-          case GET_STATIC:
-            className = execMessage.getStaticFieldGet().getClass_().getName();
-            fieldName = execMessage.getStaticFieldGet().getField().getName();
-            break;
-          case GET_FIELD:
-            className = execMessage.getInstanceFieldGet().getClass_().getName();
-            fieldName = execMessage.getInstanceFieldGet().getField().getName();
-            break;
-        }
-        String classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
-        cntr = counters.getFieldReads().get(classFieldKey);
-        if (cntr == null) {
-          counters.getFieldReads().put(classFieldKey, new AtomicLong(1));
-        } else {
-          cntr.getAndIncrement();
-        }
-      }
+  private void incrementObjectsCreated(String key) {
+    AtomicLong counter = counters.getObjectsCreated().get(key);
+    if (counter == null) {
+      counters.getObjectsCreated().put(key, new AtomicLong(1));
+    } else {
+      counter.getAndIncrement();
+    }
+  }
 
-      // field writes
-      if (execMessage.hasInstanceFieldPut() || execMessage.hasStaticFieldPut()) {
-        String className = null, fieldName = null;
-        switch (execMessage.getMsgType()) {
-          case PUT_STATIC:
-            className = execMessage.getStaticFieldPut().getClass_().getName();
-            fieldName = execMessage.getStaticFieldPut().getField().getName();
-            break;
-          case PUT_FIELD:
-            className = execMessage.getInstanceFieldPut().getClass_().getName();
-            fieldName = execMessage.getInstanceFieldPut().getField().getName();
-            break;
-        }
-        String classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
-        cntr = counters.getFieldWrites().get(classFieldKey);
-        if (cntr == null) {
-          counters.getFieldWrites().put(classFieldKey, new AtomicLong(1));
-        } else {
-          cntr.getAndIncrement();
-        }
-      }
+  private void incrementMethodCalls(String key) {
+    AtomicLong counter = counters.getMethodsCalled().get(key);
+    if (counter == null) {
+      counters.getMethodsCalled().put(key, new AtomicLong(1));
+    } else {
+      counter.getAndIncrement();
+    }
+  }
+
+  private void incrementFieldReads(String key) {
+    AtomicLong counter = counters.getFieldReads().get(key);
+    if (counter == null) {
+      counters.getFieldReads().put(key, new AtomicLong(1));
+    } else {
+      counter.getAndIncrement();
+    }
+  }
+
+  private void incrementFieldWrites(String key) {
+    AtomicLong counter = counters.getFieldWrites().get(key);
+    if (counter == null) {
+      counters.getFieldWrites().put(key, new AtomicLong(1));
+    } else {
+      counter.getAndIncrement();
     }
   }
 
@@ -359,21 +375,21 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
         builder.<String, byte[]>stream(logName)
             .map(
                 (k, v) -> {
-                  try {
-                    return new KeyValue<>(k, Message.parseFrom(v));
-                  } catch (InvalidProtocolBufferException e) {
-                    logger.error("Error parsing message", e);
-                    return new KeyValue<>(k, null);
-                  }
+                  Message message = new Message();
+                  message.unmarshal(v, 0);
+                  return new KeyValue<>(k, message);
                 });
 
     // stream: apply filter: message types
     if (msgTypes != null) {
       stream =
           stream.filter(
-              (k, m) ->
-                  (m.hasExecMessage()
-                      && msgTypes.contains(m.getExecMessage().getMsgType().toString())));
+              (k, m) -> {
+                ExecMessage execMessage = m.getExecMessage();
+                return execMessage != null
+                    && msgTypes.contains(
+                        ExecMessageType.values()[execMessage.getExecMessageType()].toString());
+              });
     }
 
     // stream: apply filter: from peer (uuid)

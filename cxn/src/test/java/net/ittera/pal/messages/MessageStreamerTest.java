@@ -29,8 +29,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Headers.InternalHeader;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InternalHeader;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +80,7 @@ public class MessageStreamerTest {
     ZContext context = createContext();
     String address = String.format("tcp://%s:%d", host, port);
     logger.debug("Will use address: {}", address);
-    MessageBuilder msgBuilder = new ProtobufMessageBuilder();
+    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
     ExecutorService executor = getExecutor(2);
     List<InternalHeader> headers = new ArrayList<>();
     boolean done = false;
@@ -94,10 +96,10 @@ public class MessageStreamerTest {
             // send headers
             socket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
             if (headers.size() > 0) {
-              headers.forEach(h -> socket.send(h.toByteArray(), ZMQ.SNDMORE));
+              headers.forEach(h -> socket.send(ColferUtils.toBytes(h), ZMQ.SNDMORE));
             }
             // send message
-            socket.send(msg.toByteArray());
+            socket.send(ColferUtils.toBytes(msg));
             sentMessages++;
           }
           logger.debug("Sent {} messages", sentMessages);

@@ -19,9 +19,11 @@
 
 package net.ittera.pal.core;
 
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import com.google.inject.AbstractModule;
@@ -34,12 +36,12 @@ import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.cxn.ThinPeer;
-import net.ittera.pal.messages.MessageBuilder;
-import net.ittera.pal.messages.ProtobufMessageBuilder;
-import net.ittera.pal.messages.protobuf.Exec.ExecMessage;
-import net.ittera.pal.messages.protobuf.Fields.InstanceFieldPutDone;
-import net.ittera.pal.messages.protobuf.Fields.StaticFieldPutDone;
-import net.ittera.pal.messages.protobuf.Values.ReturnValue;
+import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
+import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
@@ -54,7 +56,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 
   protected static final UUID clientId = UUID.randomUUID();
 
-  protected static MessageBuilder messageBuilder;
+  protected static ColferMessageBuilder messageBuilder;
   private static ThinPeer thinPeer;
 
   @BeforeClass
@@ -66,12 +68,12 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
           @Override
           protected void configure() {
             bind(ObjectStore.class).to(ConcurrentHashMapObjectStore.class).asEagerSingleton();
-            bind(MessageBuilder.class).to(ProtobufMessageBuilder.class).asEagerSingleton();
+            bind(ColferMessageBuilder.class).asEagerSingleton();
           }
         };
 
     final Injector injector = Guice.createInjector(module);
-    messageBuilder = injector.getInstance(MessageBuilder.class);
+    messageBuilder = injector.getInstance(ColferMessageBuilder.class);
 
     final Properties consumerProperties = new Properties();
     try (final InputStream stream =
@@ -103,7 +105,10 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
       reply = thinPeer.sendAndReceive(message, true);
     } catch (Exception e) {
       logger.error(
-          "Exception sending/receiving message with uuid: {}", message.getMessageUuid(), e);
+          "Exception sending/receiving message with uuid: {}\n{}",
+          message.getMessageUuid(),
+          ColferUtils.format(message),
+          e);
       throw e;
     }
     return reply;
@@ -145,7 +150,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     if (expectedThrowableType != null) {
       assertHasThrowableOfType(replyMsg, expectedThrowableType);
     } else {
-      assertTrue(replyMsg.hasReturnValue());
+      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
       assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
     }
 
@@ -165,7 +170,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     if (expectedThrowableType != null) {
       assertHasThrowableOfType(replyMsg, expectedThrowableType);
     } else {
-      assertTrue(replyMsg.hasReturnValue());
+      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
       assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className);
     }
 
@@ -185,7 +190,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     if (expectedThrowableType != null) {
       assertHasThrowableOfType(replyMsg, expectedThrowableType);
     } else {
-      assertTrue(replyMsg.hasReturnValue());
+      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
     }
 
     return replyMsg.getReturnValue();
@@ -211,8 +216,8 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     if (expectedThrowableType != null) {
       assertHasThrowableOfType(replyMsg, expectedThrowableType);
     } else {
-      assertFalse(replyMsg.hasReturnValue());
-      assertTrue(replyMsg.hasStaticFieldPutDone());
+      assertThat(replyMsg.getReturnValue(), is(nullValue()));
+      assertThat(replyMsg.getStaticFieldPutDone(), is(not(nullValue())));
       StaticFieldPutDone staticFieldPutDone = replyMsg.getStaticFieldPutDone();
       assertEquals(staticFieldPutDone.getField().getName(), fieldName);
     }
@@ -233,7 +238,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     if (expectedThrowableType != null) {
       assertHasThrowableOfType(replyMsg, expectedThrowableType);
     } else {
-      assertTrue(replyMsg.hasReturnValue());
+      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
     }
 
     return replyMsg.getReturnValue();
@@ -267,8 +272,8 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     if (expectedThrowableType != null) {
       assertHasThrowableOfType(replyMsg, expectedThrowableType);
     } else {
-      assertFalse(replyMsg.hasReturnValue());
-      assertTrue(replyMsg.hasInstanceFieldPutDone());
+      assertThat(replyMsg.getReturnValue(), is(nullValue()));
+      assertThat(replyMsg.getInstanceFieldPutDone(), is(not(nullValue())));
       InstanceFieldPutDone fieldPutDone = replyMsg.getInstanceFieldPutDone();
       assertEquals(fieldPutDone.getField().getName(), fieldName);
     }
@@ -309,7 +314,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     if (expectedThrowableType != null) {
       assertHasThrowableOfType(replyMsg, expectedThrowableType);
     } else {
-      assertTrue(replyMsg.hasReturnValue());
+      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
     }
 
     return replyMsg.getReturnValue();
@@ -349,8 +354,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     if (expectedThrowableType != null) {
       assertHasThrowableOfType(replyMsg, expectedThrowableType);
     } else {
-      assertTrue(replyMsg.hasReturnValue());
-      assertNotNull(replyMsg.getReturnValue());
+      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
       assertTrue(replyMsg.getReturnValue().getIsVoid());
     }
   }
@@ -392,7 +396,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     if (expectedThrowableType != null) {
       assertHasThrowableOfType(replyMsg, expectedThrowableType);
     } else {
-      assertTrue(replyMsg.hasReturnValue());
+      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
     }
 
     return replyMsg.getReturnValue();
@@ -436,8 +440,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
     if (expectedThrowableType != null) {
       assertHasThrowableOfType(replyMsg, expectedThrowableType);
     } else {
-      assertTrue(replyMsg.hasReturnValue());
-      assertNotNull(replyMsg.getReturnValue());
+      assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
       assertTrue(replyMsg.getReturnValue().getIsVoid());
     }
   }
