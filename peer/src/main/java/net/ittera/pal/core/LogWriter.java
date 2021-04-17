@@ -183,10 +183,7 @@ class LogWriter extends ConnectedService {
     while (!Thread.interrupted() && !socketError) {
       OutboundMsg msg = null;
       try {
-        msg = OutboundMsg.recvMsg(subscriber);
-        if (msg == null) {
-          continue;
-        }
+        msg = OutboundMsg.recvMsg(subscriber, true);
         if (logger.isDebugEnabled()) {
           logger.debug(
               "Received new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());

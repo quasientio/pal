@@ -75,10 +75,7 @@ class OutgoingMessageDispatcher extends ConnectedService {
     while (!Thread.interrupted() && !socketError) {
       OutboundMsg msg = null;
       try {
-        msg = OutboundMsg.recvMsg(repSocket);
-        if (msg == null) {
-          continue;
-        }
+        msg = OutboundMsg.recvMsg(repSocket, true);
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
         if (errorCode == ZError.ETERM) {

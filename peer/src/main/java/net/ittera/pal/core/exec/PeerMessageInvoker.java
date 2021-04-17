@@ -84,7 +84,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
 
       // receive req
       try {
-        req = socket.recv();
+        req = socket.recv(0);
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
         if (errorCode == ZError.ETERM) {

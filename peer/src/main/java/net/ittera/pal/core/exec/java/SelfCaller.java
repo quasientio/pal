@@ -149,8 +149,8 @@ public class SelfCaller {
       UUID uuid = null;
       while (!offsetPublished) {
         // multi-part msg: 1) offset as byte[], 2) uuid as byte[]
-        offset = Longs.fromByteArray(offsetSubscriber.recv());
-        uuid = UUIDUtils.fromBytes(offsetSubscriber.recv());
+        offset = Longs.fromByteArray(offsetSubscriber.recv(0));
+        uuid = UUIDUtils.fromBytes(offsetSubscriber.recv(0));
         if (reply.getMessageUuid().equalsIgnoreCase(uuid.toString())) {
           offsetPublished = true;
         }

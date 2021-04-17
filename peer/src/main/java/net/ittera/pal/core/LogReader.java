@@ -113,10 +113,7 @@ public class LogReader extends ConnectedService {
       boolean socketError = false;
       while (!shutdownRequested && !Thread.interrupted() && !socketError) {
         try {
-          PublishedOffsetMsg msg = PublishedOffsetMsg.recvMsg(offsetSubscriber);
-          if (msg == null) {
-            continue;
-          }
+          PublishedOffsetMsg msg = PublishedOffsetMsg.recvMsg(offsetSubscriber, true);
           skipOffsets.add(msg.getOffset());
         } catch (ClosedSelectorException ex) {
           if (logger.isDebugEnabled()) {
