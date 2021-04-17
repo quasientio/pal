@@ -318,12 +318,9 @@ public class LogReader extends ConnectedService {
           }
         }
       }
-      // short pause, not to be eager
-      try {
-        Thread.sleep(1);
-      } catch (InterruptedException e) {
-        break;
-      }
+      // let's not to be eager
+      Thread.yield();
+
       // get next offset to poll
       if (skipWrittenOffsets) {
         Long nextOffset = nextOffset();
