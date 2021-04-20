@@ -25,11 +25,11 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.core.exec.DuplicateInterceptException;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.colfer.InterceptKeyMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import org.junit.Test;
@@ -58,9 +58,10 @@ public class InterceptRequestsTest {
     // now try matching ExecMessage
     ExecMessage execMessage =
         msgBuilder.buildEmptyConstructor(UUID.randomUUID(), "java.util.ArrayList");
-    InterceptKeyMessage execKeyMessage = msgBuilder.buildInterceptKey(execMessage);
-    assertThat(interceptRequests.getMatchingIntercepts(execKeyMessage), is(notNullValue()));
-    assertThat(interceptRequests.getMatchingIntercepts(execKeyMessage).size(), is(1));
+
+    List<InterceptMessage> matchedIntercepts = interceptRequests.getMatchingIntercepts(execMessage);
+    assertThat(matchedIntercepts, is(notNullValue()));
+    assertThat(matchedIntercepts.size(), is(1));
   }
 
   @Test

@@ -19,11 +19,13 @@
 
 package net.ittera.pal.core.exec.java;
 
+import static net.ittera.pal.serdes.colfer.MessageUtils.getParameterTypes;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
@@ -32,6 +34,7 @@ import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,9 +88,14 @@ public class InterceptRequestEntryTest {
     // create Exec message
     ExecMessage execMessage =
         msgBuilder.buildEmptyConstructor(UUID.randomUUID(), "java.util.ArrayList");
+    final String classname = MessageUtils.getClassname(execMessage);
+    final String executableName = MessageUtils.getExecutableName(execMessage);
+    final List<String> paramTypesList = getParameterTypes(execMessage);
+    final String[] parameterTypes =
+        paramTypesList == null ? null : paramTypesList.toArray(new String[0]);
 
     InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
-    assertThat(interceptRequestEntry.matches(msgBuilder.buildInterceptKey(execMessage)), is(true));
+    assertThat(interceptRequestEntry.matches(classname, executableName, parameterTypes), is(true));
   }
 
   @Test
@@ -117,9 +125,14 @@ public class InterceptRequestEntryTest {
             new String[0],
             new Object[0],
             new ObjectRef[0]);
+    final String classname = MessageUtils.getClassname(execMessage);
+    final String executableName = MessageUtils.getExecutableName(execMessage);
+    final List<String> paramTypesList = getParameterTypes(execMessage);
+    final String[] parameterTypes =
+        paramTypesList == null ? null : paramTypesList.toArray(new String[0]);
 
     InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
-    assertThat(interceptRequestEntry.matches(msgBuilder.buildInterceptKey(execMessage)), is(true));
+    assertThat(interceptRequestEntry.matches(classname, executableName, parameterTypes), is(true));
   }
 
   @Test
@@ -147,8 +160,13 @@ public class InterceptRequestEntryTest {
             null,
             new Object[0],
             new ObjectRef[0]);
+    final String classname = MessageUtils.getClassname(execMessage);
+    final String executableName = MessageUtils.getExecutableName(execMessage);
+    final List<String> paramTypesList = getParameterTypes(execMessage);
+    final String[] parameterTypes =
+        paramTypesList == null ? null : paramTypesList.toArray(new String[0]);
 
     InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
-    assertThat(interceptRequestEntry.matches(msgBuilder.buildInterceptKey(execMessage)), is(true));
+    assertThat(interceptRequestEntry.matches(classname, executableName, parameterTypes), is(true));
   }
 }

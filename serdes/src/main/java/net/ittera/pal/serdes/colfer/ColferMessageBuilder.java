@@ -19,6 +19,10 @@
 
 package net.ittera.pal.serdes.colfer;
 
+import static net.ittera.pal.serdes.colfer.MessageUtils.getClassname;
+import static net.ittera.pal.serdes.colfer.MessageUtils.getExecutableName;
+import static net.ittera.pal.serdes.colfer.MessageUtils.getParameterTypes;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
@@ -28,12 +32,10 @@ import java.lang.reflect.Method;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;
@@ -230,81 +232,6 @@ public final class ColferMessageBuilder {
 
   private net.ittera.pal.messages.colfer.Class getWrappedClass(String className) {
     return Wrapper.getWrappedClass(className);
-  }
-
-  public static String getClassname(ExecMessage execMessage) {
-    final ExecMessageType msgType = ExecMessageType.values()[execMessage.getExecMessageType()];
-    switch (msgType) {
-      case CONSTRUCTOR:
-        return execMessage.getConstructorCall().getClazz().getName();
-      case INSTANCE_METHOD:
-        return execMessage.getInstanceMethodCall().getClazz().getName();
-      case CLASS_METHOD:
-        return execMessage.getClassMethodCall().getClazz().getName();
-      case GET_STATIC:
-        return execMessage.getStaticFieldGet().getClazz().getName();
-      case GET_FIELD:
-        return execMessage.getInstanceFieldGet().getClazz().getName();
-      case PUT_STATIC:
-        return execMessage.getStaticFieldPut().getClazz().getName();
-      case PUT_FIELD:
-        return execMessage.getInstanceFieldPut().getClazz().getName();
-      default:
-        throw new IllegalArgumentException(
-            String.format("Unsupported ExecMessage type: %s", msgType));
-    }
-  }
-
-  public static String getExecutableName(ExecMessage execMessage) {
-    final ExecMessageType execMessageType =
-        ExecMessageType.values()[execMessage.getExecMessageType()];
-    switch (execMessageType) {
-      case CONSTRUCTOR:
-        return "new";
-      case INSTANCE_METHOD:
-        return execMessage.getInstanceMethodCall().getName();
-      case CLASS_METHOD:
-        return execMessage.getClassMethodCall().getName();
-      case GET_STATIC:
-        return execMessage.getStaticFieldGet().getField().getName();
-      case GET_FIELD:
-        return execMessage.getInstanceFieldGet().getField().getName();
-      case PUT_STATIC:
-        return execMessage.getStaticFieldPut().getField().getName();
-      case PUT_FIELD:
-        return execMessage.getInstanceFieldPut().getField().getName();
-      default:
-        throw new IllegalArgumentException(
-            String.format("Unsupported ExecMessage type: %s", execMessageType));
-    }
-  }
-
-  /**
-   * @return null if not a constructor/method call, possibly empty list of parameter class names
-   *     otherwise
-   */
-  public static List<String> getParameterTypes(ExecMessage execMessage) {
-    final ExecMessageType execMessageType =
-        ExecMessageType.values()[execMessage.getExecMessageType()];
-    Parameter[] params;
-    switch (execMessageType) {
-      case CONSTRUCTOR:
-        params = execMessage.getConstructorCall().getParameters();
-        break;
-      case INSTANCE_METHOD:
-        params = execMessage.getInstanceMethodCall().getParameters();
-        break;
-      case CLASS_METHOD:
-        params = execMessage.getClassMethodCall().getParameters();
-        break;
-      default:
-        return null;
-    }
-
-    if (params != null && params.length > 0) {
-      return Arrays.stream(params).map(p -> p.getType().getName()).collect(Collectors.toList());
-    }
-    return Collections.emptyList();
   }
 
   // </editor-fold>

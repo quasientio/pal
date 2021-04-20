@@ -23,7 +23,6 @@ import static java.lang.String.format;
 
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
 import java.util.Objects;
-import net.ittera.pal.messages.colfer.InterceptKeyMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InterceptableMethod;
 import org.slf4j.Logger;
@@ -37,7 +36,7 @@ public class InterceptRequestEntry {
   private final boolean isMethod;
   private final InterceptMessage interceptMessage;
 
-  // Not safe-thread, which is fine since we only deal with InterceptRequestEntry objects from a
+  // Not thread-safe, which is fine since we only deal with InterceptRequestEntry objects from a
   // single thread
   private static final AntPathMatcherArrays matcher =
       new AntPathMatcherArrays.Builder()
@@ -92,11 +91,9 @@ public class InterceptRequestEntry {
     return Objects.hash(pattern, paramTypes, numberOfParams, isMethod, interceptMessage);
   }
 
-  public boolean matches(InterceptKeyMessage keyMessage) {
-
+  public boolean matches(String classname, String executableName, String[] parameterTypes) {
     // use matcher on pattern
-    final String executablePath =
-        format("%s.%s", keyMessage.getClazz(), keyMessage.getExecutableName());
+    final String executablePath = format("%s.%s", classname, executableName);
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Matching entry pattern '{}' against execMessage pattern '{}'", pattern, executablePath);
@@ -107,12 +104,11 @@ public class InterceptRequestEntry {
 
     // match parameter types
     // TODO it won't be this simple; we'll need to take extends and impl into account
-    final String[] execMessageParamTypes = keyMessage.getParameterTypes();
     if (paramTypes == null) {
-      return execMessageParamTypes == null;
-    } else {
-      return Objects.equals(paramTypes, String.join(",", execMessageParamTypes));
+      return parameterTypes == null;
     }
+
+    return Objects.equals(paramTypes, String.join(",", parameterTypes));
   }
 
   public InterceptMessage getInterceptMessage() {

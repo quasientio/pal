@@ -242,7 +242,6 @@ public class Main implements Callable<Integer> {
       inprocChannels.put("offset.pub", "inproc://offsets");
       inprocChannels.put("sync.ready", "inproc://sync_ready");
       inprocChannels.put("intercepts.reg", "inproc://intcept_reg");
-      inprocChannels.put("intercepts.mtx", "inproc://intcept_match");
     }
 
     private static final String DEFAULT_PUB_HOSTNAME = "localhost";
@@ -640,7 +639,7 @@ public class Main implements Callable<Integer> {
       services.add(injector.getInstance(DirectRequestDispatcher.class));
     }
     if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {
-      services.add(injector.getInstance(Intercepts.class));
+      services.add(injector.getInstance(InterceptMatcher.class));
     }
     return services;
   }

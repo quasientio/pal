@@ -21,6 +21,9 @@ package net.ittera.pal.core.exec;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,13 +36,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import net.ittera.pal.common.runtime.ExecPhase;
+import net.ittera.pal.core.InterceptMatcher;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.ZmqEnabledTest;
-import net.ittera.pal.core.messages.InterceptsMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
@@ -47,6 +49,7 @@ import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -77,7 +80,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
       while (!stopRequested && !Thread.interrupted()) {
         OutboundMsg msg;
         try {
-          msg = OutboundMsg.recvMsg(repSocket);
+          msg = OutboundMsg.recvMsg(repSocket, true);
           if (msg == null) {
             continue;
           }
@@ -108,73 +111,22 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     }
   }
 
-  /*
-  Intercepts service stub
-   */
-  private final class InterceptsStub implements Runnable {
-    List<Message> messagesReceived = new ArrayList<>();
-
-    private volatile boolean stopRequested;
-
-    void requestStop() {
-      stopRequested = true;
-    }
-
-    @Override
-    public void run() {
-      Socket repSocket = context.createSocket(SocketType.REP);
-      repSocket.bind(INTERCEPTS_ADDR);
-
-      while (!stopRequested && !Thread.interrupted()) {
-        OutboundMsg msg;
-        try {
-          msg = OutboundMsg.recvMsg(repSocket);
-          if (msg == null) {
-            continue;
-          }
-          Message message = new Message();
-          message.unmarshal(msg.getBody(), 0);
-          messagesReceived.add(message);
-          // pretend message has no intercepts -> send empty list
-          List<InterceptMessage> intercepts = Collections.emptyList();
-          new InterceptsMsg(intercepts).send(repSocket);
-          logger.debug(
-              "Intercepts stub replied to received message w/uuid: {}, received so far: {}",
-              msg.getMessageUuid(),
-              messagesReceived.size());
-        } catch (ZMQException ex) {
-          int errorCode = ex.getErrorCode();
-          if (errorCode == ZError.ETERM) {
-            break;
-          } else if (errorCode == ZError.EINTR) {
-            break;
-          } else {
-            throw ex;
-          }
-        } catch (Exception e) {
-          logger.error("Error parsing received message", e);
-        }
-      }
-      logger.debug("InterceptsStub: exiting");
-    }
-  }
-
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private static final String MSG_PUBLISHER_ADDR = "inproc://cell";
-  private static final String INTERCEPTS_ADDR = "inproc://intercepts";
   private static final int TEST_PORT = 2182;
   private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
 
   private final UUID peerUuid = UUID.randomUUID();
   private ZContext context;
   private ExecutorService execService;
+  private InterceptMatcher interceptMatcher;
   private DispatcherConnector dispatcherConnector;
   private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
   private MessagePublisherStub messagePublisherStub;
-  private InterceptsStub interceptsStub;
   private InternalHeader WRITE_AHEAD_HEADER;
   private TestingServer testingServer;
   private DirectoryConnectionProvider directoryConnectionProvider;
+  private List<ExecMessage> messagesToMatchReceived;
 
   @Before
   public void setup() throws Exception {
@@ -183,21 +135,28 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     this.execService = Executors.newCachedThreadPool();
     testingServer = new TestingServer(TEST_PORT, true);
     directoryConnectionProvider = new DirectoryConnectionProvider(CONNECTION_STR);
+    messagesToMatchReceived = new ArrayList<>();
+    interceptMatcher = mock(InterceptMatcher.class);
+    when(interceptMatcher.getMatchingIntercepts(any(), any()))
+        .thenAnswer(
+            (Answer)
+                invocation -> {
+                  ExecMessage execMessage = (ExecMessage) invocation.getArguments()[0];
+                  messagesToMatchReceived.add(execMessage);
+                  // we're not testing matching here, so just return nothing
+                  return Collections.emptyList();
+                });
 
     // start stub services
     messagePublisherStub = new MessagePublisherStub();
-    interceptsStub = new InterceptsStub();
     execService.submit(messagePublisherStub);
-    execService.submit(interceptsStub);
   }
 
   @After
   public void cleanup() throws Exception {
     logger.trace("entering cleanup");
-    // stop stubs
+    messagesToMatchReceived.clear();
     messagePublisherStub.requestStop();
-    interceptsStub.requestStop();
-
     dispatcherConnector.closeThreadLocalSockets();
     directoryConnectionProvider.get().get().close();
     testingServer.close();
@@ -220,12 +179,12 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
         msgBuilder,
         directoryConnectionProvider,
         runOptions,
-        MSG_PUBLISHER_ADDR,
-        INTERCEPTS_ADDR);
+        interceptMatcher,
+        MSG_PUBLISHER_ADDR);
   }
 
   private void sendExecMessage(boolean publishing) throws Exception {
-    logger.trace("entering sendExecMessage");
+    logger.trace("entering sendExecMessage w/publishing: {}", publishing);
     this.dispatcherConnector = initDispatcherConnector(publishing);
     // sends msg and get reply
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
@@ -236,12 +195,8 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     assertThat(returnedMsg, is(msg));
 
     // verify message was received by Intercepts service
-    assertThat(interceptsStub.messagesReceived.size(), is(1));
-    assertThat(
-        interceptsStub.messagesReceived.stream()
-            .map(Message::getInterceptKeyMessage)
-            .collect(Collectors.toList()),
-        is(Collections.singletonList(msgBuilder.buildInterceptKey(msg))));
+    assertThat(messagesToMatchReceived.size(), is(1));
+    assertThat(messagesToMatchReceived.get(0), is(msg));
 
     // verify message was received by Message Publisher
     if (publishing) {
@@ -288,12 +243,8 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     assertThat(returnedMessages, is(sentMessages));
 
     // verify messages received by Intercepts service
-    assertThat(interceptsStub.messagesReceived.size(), is(msgsToSend));
-    assertThat(
-        interceptsStub.messagesReceived.stream()
-            .map(Message::getInterceptKeyMessage)
-            .collect(Collectors.toList()),
-        is(sentMessages.stream().map(msgBuilder::buildInterceptKey).collect(Collectors.toList())));
+    assertThat(messagesToMatchReceived.size(), is(msgsToSend));
+    assertThat(messagesToMatchReceived, is(sentMessages));
 
     // verify messages received by Message Publisher
     if (publishing) {
@@ -326,7 +277,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     dispatcherConnector.writeAhead(msg);
 
     // verify NO messages received by Intercepts service
-    assertThat(interceptsStub.messagesReceived.size(), is(0));
+    assertThat(messagesToMatchReceived.size(), is(0));
 
     // verify message and header received by Message Publisher
     if (publishing) {
