@@ -47,8 +47,8 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -64,7 +64,7 @@ public class DispatcherConnector {
 
   private final ZContext zmqContext;
   private final UUID peerUuid;
-  private final ColferMessageBuilder messageBuilder;
+  private final MessageBuilder messageBuilder;
   private final DirectoryConnectionProvider directoryConnectionProvider;
   private final InterceptMatcher interceptMatcher;
   private final String msgPublisherAddress;
@@ -103,7 +103,7 @@ public class DispatcherConnector {
   public DispatcherConnector(
       ZContext zmqContext,
       UUID peerUuid,
-      ColferMessageBuilder messageBuilder,
+      MessageBuilder messageBuilder,
       DirectoryConnectionProvider directoryConnectionProvider,
       Set<RunOptions> runOptions,
       InterceptMatcher interceptMatcher,

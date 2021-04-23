@@ -39,8 +39,8 @@ import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,7 +61,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   private ExecutorService execService;
   private PeerMessageInvoker peerMessageInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
-  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder();
 
   @Before
   public void setup() throws Exception {

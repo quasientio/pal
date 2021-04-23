@@ -23,7 +23,7 @@ import java.util.UUID;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
@@ -36,7 +36,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
       Runnable target,
       String name,
       ZContext zmqContext,
-      ColferMessageBuilder messageBuilder,
+      MessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
@@ -55,7 +55,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 
   LogMessageInvoker(
       ZContext zmqContext,
-      ColferMessageBuilder messageBuilder,
+      MessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       UUID peerUuid) {

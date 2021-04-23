@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.UUID;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.messages.colfer.InternalHeader;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +41,7 @@ import org.zeromq.ZMQ;
 
 /** TODO: call constructor with marshallable instead of body (byte[]) */
 public class OutboundMsgTest {
-  private final ColferMessageBuilder messageBuilder = new ColferMessageBuilder();
+  private final MessageBuilder messageBuilder = new MessageBuilder();
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
   protected ZContext createContext() {

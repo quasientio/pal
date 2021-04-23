@@ -40,7 +40,7 @@ import net.ittera.pal.messages.ExecMessageType;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 
 @Singleton
@@ -49,7 +49,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   @Inject
   public InstanceMethodDispatcher(
       UUID peerUuid,
-      ColferMessageBuilder messageBuilder,
+      MessageBuilder messageBuilder,
       DispatcherConnector connector,
       ObjectStore objectStore) {
     setPeerUuid(peerUuid);

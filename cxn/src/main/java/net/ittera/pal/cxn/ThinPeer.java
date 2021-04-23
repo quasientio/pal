@@ -44,8 +44,8 @@ import net.ittera.pal.messages.ExecMessageType;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -70,7 +70,7 @@ public class ThinPeer {
   private boolean allowP2P = true;
   private boolean closed;
   private boolean initialized;
-  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder();
 
   // static
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);

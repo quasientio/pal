@@ -37,8 +37,8 @@ import net.ittera.pal.common.directory.nodes.LogRequest;
 import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -62,7 +62,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
   private static final Set<String> createdLogs = new HashSet<>();
 
-  private final ColferMessageBuilder messageBuilder = new ColferMessageBuilder();
+  private final MessageBuilder messageBuilder = new MessageBuilder();
   private static final UUID peerUuid = UUID.randomUUID();
   private PALDirectory palDirectory;
   private TestingServer testingServer;

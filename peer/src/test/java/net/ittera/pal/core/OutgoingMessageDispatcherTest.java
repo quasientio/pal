@@ -38,7 +38,7 @@ import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,7 +57,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
   private ZContext context;
   private ServiceManager manager;
   private OutgoingMessageDispatcher outgoingMessageDispatcher;
-  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder();
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
   private InternalHeader WRITE_AHEAD_HEADER;
   private Socket reqSocket, subSocket;

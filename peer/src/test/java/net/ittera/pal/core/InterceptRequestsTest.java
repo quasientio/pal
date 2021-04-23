@@ -31,14 +31,14 @@ import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.core.exec.DuplicateInterceptException;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.Test;
 
 public class InterceptRequestsTest {
 
   @Test
   public void getMatchingIntercepts() throws Exception {
-    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+    MessageBuilder msgBuilder = new MessageBuilder();
 
     InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(
@@ -66,7 +66,7 @@ public class InterceptRequestsTest {
 
   @Test
   public void registerInterceptRequest() throws Exception {
-    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+    MessageBuilder msgBuilder = new MessageBuilder();
 
     InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(
@@ -89,7 +89,7 @@ public class InterceptRequestsTest {
 
   @Test
   public void registerDupInterceptRequest() throws Exception {
-    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+    MessageBuilder msgBuilder = new MessageBuilder();
 
     InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(
@@ -117,7 +117,7 @@ public class InterceptRequestsTest {
 
   @Test
   public void unregisterInterceptRequest() throws Exception {
-    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+    MessageBuilder msgBuilder = new MessageBuilder();
 
     InterceptMessage interceptMessage =
         msgBuilder.buildInterceptMessage(

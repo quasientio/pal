@@ -29,8 +29,8 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InterceptReply;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
@@ -52,14 +52,14 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   private final UUID peerUuid;
   private final IncomingMessageDispatcher incomingMessageDispatcher;
   protected final DispatcherConnector dispatcherConnector;
-  protected final ColferMessageBuilder messageBuilder;
+  protected final MessageBuilder messageBuilder;
 
   AbstractMessageInvokerThread(
       ThreadGroup group,
       Runnable target,
       String name,
       ZContext zmqContext,
-      ColferMessageBuilder messageBuilder,
+      MessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
@@ -85,7 +85,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
    */
   AbstractMessageInvokerThread(
       ZContext zmqContext,
-      ColferMessageBuilder messageBuilder,
+      MessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       UUID peerUuid) {

@@ -44,7 +44,7 @@ import net.ittera.pal.core.messages.InterceptEvtMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.colfer.InterceptMessage;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -64,7 +64,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
   private ZContext context;
   private ExecutorService execService;
   private InterceptInformer interceptInformer;
-  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder();
   private DirectoryConnectionProvider directoryConnectionProvider;
   private PALDirectory palDirectory;
   private Socket repSocket;

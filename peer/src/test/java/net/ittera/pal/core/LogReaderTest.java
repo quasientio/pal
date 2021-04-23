@@ -42,8 +42,8 @@ import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
@@ -214,7 +214,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     execService.submit(logMsgInvoker);
 
     // send 1 message
-    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+    MessageBuilder msgBuilder = new MessageBuilder();
     String key = peerUuid.toString();
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     ConsumerRecord<String, byte[]> record =
@@ -281,7 +281,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     execService.submit(logMsgInvoker);
 
     // send 1 message
-    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+    MessageBuilder msgBuilder = new MessageBuilder();
     String key = peerUuid.toString();
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
@@ -324,7 +324,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     execService.submit(logMsgInvoker);
 
     // send 1 message
-    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+    MessageBuilder msgBuilder = new MessageBuilder();
     String key = peerUuid.toString();
     InterceptMessage msg =
         msgBuilder.buildInterceptMessage(
@@ -374,7 +374,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     execService.submit(logMsgInvoker);
 
     // send many messages
-    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+    MessageBuilder msgBuilder = new MessageBuilder();
     String key = peerUuid.toString();
     Set<String> sentUuids = new TreeSet<>();
 

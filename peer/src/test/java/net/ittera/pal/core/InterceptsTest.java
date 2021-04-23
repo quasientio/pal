@@ -37,7 +37,7 @@ import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.messages.InterceptEvtMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,7 +56,7 @@ public class InterceptsTest extends ZmqEnabledTest {
   private ServiceManager manager;
   private InterceptMatcher interceptMatcher;
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
-  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder();
   private Socket registerSocket;
 
   @Before

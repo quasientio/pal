@@ -42,8 +42,8 @@ import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,7 +63,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
   private ExecutorService execService;
   private LogMessageInvoker logMessageInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
-  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder();
   private List<ExecMessage> execMessageReplies = new ArrayList<>();
   private List<Boolean> interceptReqMessageResults = new ArrayList<>();
 

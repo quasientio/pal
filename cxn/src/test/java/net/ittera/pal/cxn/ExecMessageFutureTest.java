@@ -39,7 +39,7 @@ import net.ittera.pal.common.directory.nodes.LogReply;
 import net.ittera.pal.common.directory.nodes.LogRequest;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.Before;
@@ -56,7 +56,7 @@ public class ExecMessageFutureTest {
 
   private static final Set<String> createdLogs = new HashSet<>();
 
-  private final ColferMessageBuilder messageBuilder = new ColferMessageBuilder();
+  private final MessageBuilder messageBuilder = new MessageBuilder();
   private static final UUID peerUuid = UUID.randomUUID();
   private ThinPeer thinPeer; // mocked!
   private PALDirectory palDirectory;

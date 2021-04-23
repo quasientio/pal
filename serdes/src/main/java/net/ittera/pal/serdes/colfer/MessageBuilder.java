@@ -81,9 +81,9 @@ import org.slf4j.LoggerFactory;
  * Apart from minor refactorings, this class is different from ProtobufMessageBuilder: - Parameter
  * imported here is our colfer message, instead of java.lang.reflect.Parameter
  */
-public final class ColferMessageBuilder {
+public final class MessageBuilder {
 
-  protected static final Logger logger = LoggerFactory.getLogger(ColferMessageBuilder.class);
+  protected static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);
 
   // ISO 8601 with millis (fraction-of-second) + TZ (no name, only offset)
   private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
@@ -96,10 +96,10 @@ public final class ColferMessageBuilder {
 
   private boolean includeSourceContext;
 
-  public ColferMessageBuilder() {}
+  public MessageBuilder() {}
 
   @Inject
-  public ColferMessageBuilder(@Named("messages.with_src_context") String includeSourceContextStr) {
+  public MessageBuilder(@Named("messages.with_src_context") String includeSourceContextStr) {
     this.includeSourceContext = Boolean.parseBoolean(includeSourceContextStr);
   }
 

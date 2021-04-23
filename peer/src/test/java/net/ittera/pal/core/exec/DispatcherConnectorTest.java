@@ -44,7 +44,7 @@ import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.Before;
@@ -121,7 +121,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   private ExecutorService execService;
   private InterceptMatcher interceptMatcher;
   private DispatcherConnector dispatcherConnector;
-  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder();
   private MessagePublisherStub messagePublisherStub;
   private InternalHeader WRITE_AHEAD_HEADER;
   private TestingServer testingServer;

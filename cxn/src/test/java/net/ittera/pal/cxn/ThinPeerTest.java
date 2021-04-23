@@ -27,7 +27,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
@@ -43,7 +43,7 @@ public class ThinPeerTest {
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
-  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder();
 
   // PAL directory
   private TestingServer testingServer;

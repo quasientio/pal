@@ -24,11 +24,11 @@ import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.ExecMessageType;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 
 public class SwingAppActor extends AbstractSwingTest {
 
-  protected static final ColferMessageBuilder MESSAGE_BUILDER = new ColferMessageBuilder();
+  protected static final MessageBuilder MESSAGE_BUILDER = new MessageBuilder();
 
   protected static final String swingAppClassName = "net.ittera.pal.apps.SwingApp";
 

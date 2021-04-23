@@ -41,8 +41,8 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
@@ -57,7 +57,7 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
 
   protected static final UUID clientId = UUID.randomUUID();
 
-  protected static ColferMessageBuilder messageBuilder;
+  protected static MessageBuilder messageBuilder;
   private static ThinPeer thinPeer;
 
   @BeforeClass
@@ -72,12 +72,12 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
             appProperties.setProperty("messages.with_src_context", Boolean.toString(false));
             Names.bindProperties(binder(), appProperties);
             bind(ObjectStore.class).to(ConcurrentHashMapObjectStore.class).asEagerSingleton();
-            bind(ColferMessageBuilder.class).asEagerSingleton();
+            bind(MessageBuilder.class).asEagerSingleton();
           }
         };
 
     final Injector injector = Guice.createInjector(module);
-    messageBuilder = injector.getInstance(ColferMessageBuilder.class);
+    messageBuilder = injector.getInstance(MessageBuilder.class);
 
     final Properties consumerProperties = new Properties();
     try (final InputStream stream =

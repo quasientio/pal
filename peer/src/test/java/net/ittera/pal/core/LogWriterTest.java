@@ -44,7 +44,7 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -72,7 +72,7 @@ public class LogWriterTest extends ZmqEnabledTest {
   private final String OUT_PUB_ADDR = "inproc://pub";
   private final String OFFSET_PUB_ADDR = "inproc://offsets";
   private static final Set<String> createdLogs = new HashSet<>();
-  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder();
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
 
   private static final int TEST_PORT = 2182;

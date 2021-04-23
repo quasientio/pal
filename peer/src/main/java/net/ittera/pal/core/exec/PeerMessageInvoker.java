@@ -22,8 +22,8 @@ package net.ittera.pal.core.exec;
 import java.util.UUID;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQException;
@@ -36,7 +36,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
       Runnable target,
       String name,
       ZContext zmqContext,
-      ColferMessageBuilder messageBuilder,
+      MessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
@@ -56,7 +56,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
   // Constructor for unit-testing
   PeerMessageInvoker(
       ZContext zmqContext,
-      ColferMessageBuilder messageBuilder,
+      MessageBuilder messageBuilder,
       String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       UUID peerUuid) {

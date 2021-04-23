@@ -31,8 +31,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +80,7 @@ public class MessageStreamerTest {
     ZContext context = createContext();
     String address = String.format("tcp://%s:%d", host, port);
     logger.debug("Will use address: {}", address);
-    ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+    MessageBuilder msgBuilder = new MessageBuilder();
     ExecutorService executor = getExecutor(2);
     List<InternalHeader> headers = new ArrayList<>();
     boolean done = false;

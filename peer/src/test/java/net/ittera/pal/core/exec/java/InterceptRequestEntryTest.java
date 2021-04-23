@@ -33,7 +33,7 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import net.ittera.pal.serdes.colfer.MessageUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 public class InterceptRequestEntryTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
-  private final ColferMessageBuilder msgBuilder = new ColferMessageBuilder();
+  private final MessageBuilder msgBuilder = new MessageBuilder();
   private final ObjectStore objectStore = new ConcurrentHashMapObjectStore();
 
   @Test

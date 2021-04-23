@@ -38,7 +38,7 @@ import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.ExecMessageType;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
-import net.ittera.pal.serdes.colfer.ColferMessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 
 @Singleton
 public class ConstructorDispatcher extends BaseExecMessageDispatcher {
@@ -46,7 +46,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   @Inject
   public ConstructorDispatcher(
       UUID peerUuid,
-      ColferMessageBuilder messageBuilder,
+      MessageBuilder messageBuilder,
       DispatcherConnector connector,
       ObjectStore objectStore) {
     setPeerUuid(peerUuid);
