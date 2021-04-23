@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.inject.Inject;
+import javax.inject.Named;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;
@@ -86,21 +88,26 @@ public final class ColferMessageBuilder {
   // ISO 8601 with millis (fraction-of-second) + TZ (no name, only offset)
   private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
-  // <editor-fold desc="Thread-local sequence stamping methods">
-
   private final ThreadLocal<AtomicInteger> threadDispatchSequence =
       ThreadLocal.withInitial(() -> new AtomicInteger(1));
 
   private final ThreadLocal<AtomicInteger> threadBuilderSequence =
       ThreadLocal.withInitial(() -> new AtomicInteger(1));
 
+  private boolean includeSourceContext;
+
   public ColferMessageBuilder() {}
 
+  @Inject
+  public ColferMessageBuilder(@Named("messages.with_src_context") String includeSourceContextStr) {
+    this.includeSourceContext = Boolean.parseBoolean(includeSourceContextStr);
+  }
+
+  // <editor-fold desc="Thread-local sequence stamping methods">
   public void resetThreadLocalSequence() {
     threadBuilderSequence.set(new AtomicInteger(1));
     threadDispatchSequence.get().getAndIncrement();
   }
-
   // </editor-fold>
 
   // <editor-fold desc="Private Auxiliary methods">
@@ -269,7 +276,9 @@ public final class ColferMessageBuilder {
       final ConstructorSignature codeSignature = (ConstructorSignature) context.getSignature();
       constructorCall.setParameters(createNamedParameters(context, args, argObjRefs));
       constructorCall.setModifiers(codeSignature.getModifiers());
-      constructorCall.setContext(getWrappedContext(context, sender, senderObjRef));
+      if (includeSourceContext) {
+        constructorCall.setContext(getWrappedContext(context, sender, senderObjRef));
+      }
       constructorCall.setClazz(getWrappedClass(codeSignature.getDeclaringTypeName()));
     } else {
       constructorCall.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
@@ -350,16 +359,21 @@ public final class ColferMessageBuilder {
 
     final MethodSignature codeSignature = (MethodSignature) context.getSignature();
 
+    final InstanceMethodCall instanceMethodCall =
+        new InstanceMethodCall()
+            .withParameters(createNamedParameters(context, args, argObjRefs))
+            .withClazz(getWrappedClass(codeSignature.getDeclaringTypeName()))
+            .withName(codeSignature.getName())
+            .withObject(
+                getWrappedObject(target, codeSignature.getDeclaringTypeName(), targetObjRef))
+            .withModifiers(codeSignature.getModifiers());
+
+    if (includeSourceContext) {
+      instanceMethodCall.setContext(getWrappedContext(context, sender, senderObjRef));
+    }
+
     return newWrapper(ExecMessageType.INSTANCE_METHOD, peerUuid)
-        .withInstanceMethodCall(
-            new InstanceMethodCall()
-                .withParameters(createNamedParameters(context, args, argObjRefs))
-                .withClazz(getWrappedClass(codeSignature.getDeclaringTypeName()))
-                .withName(codeSignature.getName())
-                .withObject(
-                    getWrappedObject(target, codeSignature.getDeclaringTypeName(), targetObjRef))
-                .withModifiers(codeSignature.getModifiers())
-                .withContext(getWrappedContext(context, sender, senderObjRef)));
+        .withInstanceMethodCall(instanceMethodCall);
   }
   // </editor-fold>
 
@@ -392,14 +406,18 @@ public final class ColferMessageBuilder {
       ObjectRef[] argObjRefs) {
 
     final MethodSignature codeSignature = (MethodSignature) context.getSignature();
-    return newWrapper(ExecMessageType.CLASS_METHOD, peerUuid)
-        .withClassMethodCall(
-            new ClassMethodCall()
-                .withParameters(createNamedParameters(context, args, argObjRefs))
-                .withContext(getWrappedContext(context, sender, senderObjRef))
-                .withClazz(getWrappedClass(codeSignature.getDeclaringTypeName()))
-                .withName(codeSignature.getName())
-                .withModifiers(codeSignature.getModifiers()));
+    final ClassMethodCall classMethodCall =
+        new ClassMethodCall()
+            .withParameters(createNamedParameters(context, args, argObjRefs))
+            .withClazz(getWrappedClass(codeSignature.getDeclaringTypeName()))
+            .withName(codeSignature.getName())
+            .withModifiers(codeSignature.getModifiers());
+
+    if (includeSourceContext) {
+      classMethodCall.setContext(getWrappedContext(context, sender, senderObjRef));
+    }
+
+    return newWrapper(ExecMessageType.CLASS_METHOD, peerUuid).withClassMethodCall(classMethodCall);
   }
 
   // build ClassMethodCall with another message's parameter list
@@ -477,7 +495,8 @@ public final class ColferMessageBuilder {
     net.ittera.pal.messages.colfer.Field field =
         getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName());
     int modifiers = fieldSignature.getModifiers();
-    net.ittera.pal.messages.colfer.Context ctxt = getWrappedContext(context, sender, senderObjRef);
+    net.ittera.pal.messages.colfer.Context ctxt =
+        includeSourceContext ? getWrappedContext(context, sender, senderObjRef) : null;
 
     final ExecMessage execMessage = newWrapper(execMessageType, peerUuid);
 

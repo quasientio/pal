@@ -29,6 +29,7 @@ import static org.junit.Assert.assertTrue;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.name.Names;
 import java.io.InputStream;
 import java.util.Properties;
 import java.util.UUID;
@@ -67,6 +68,9 @@ public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
         new AbstractModule() {
           @Override
           protected void configure() {
+            final Properties appProperties = new Properties();
+            appProperties.setProperty("messages.with_src_context", Boolean.toString(false));
+            Names.bindProperties(binder(), appProperties);
             bind(ObjectStore.class).to(ConcurrentHashMapObjectStore.class).asEagerSingleton();
             bind(ColferMessageBuilder.class).asEagerSingleton();
           }

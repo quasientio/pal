@@ -187,6 +187,11 @@ public class Main implements Callable<Integer> {
   private boolean interceptable = false;
 
   @Option(
+      names = {"--with-source-context"},
+      description = "include source context in messages")
+  private boolean includeSourceContext = false;
+
+  @Option(
       names = {"-h", "--help"},
       usageHelp = true,
       description = "display this help message")
@@ -535,6 +540,9 @@ public class Main implements Callable<Integer> {
       properties.setProperty("peer.maximumPoolSize", String.valueOf(tcpReqMaxThreads));
       properties.setProperty("peer.keepAliveSeconds", String.valueOf(tcpReqThreadsKeepAliveSecs));
     }
+
+    // message content options
+    properties.setProperty("messages.with_src_context", String.valueOf(includeSourceContext));
   }
 
   private String getJMXAddress() {
