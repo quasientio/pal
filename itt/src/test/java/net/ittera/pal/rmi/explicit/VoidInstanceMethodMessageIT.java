@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.core;
+package net.ittera.pal.rmi.explicit;
 
 import net.ittera.pal.common.objects.ObjectRef;
 import org.junit.Test;
@@ -29,7 +29,7 @@ import org.junit.Test;
  */
 public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
 
-  protected final String className = "net.ittera.pal.apps.VoidInstanceMethods";
+  protected final String className = "net.ittera.pal.apps.rmi.explicit.VoidInstanceMethods";
 
   @Test
   public void callInstanceMethod_packageVisibleNoArgs_void() throws Exception {

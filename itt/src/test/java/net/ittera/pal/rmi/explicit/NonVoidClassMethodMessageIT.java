@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.core;
+package net.ittera.pal.rmi.explicit;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -35,7 +35,7 @@ import org.junit.Test;
  */
 public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
-  protected final String className = "net.ittera.pal.apps.NonVoidStaticMethods";
+  protected final String className = "net.ittera.pal.apps.rmi.explicit.NonVoidStaticMethods";
 
   @Test
   public void callClassMethod_privateWithArg_retValue() throws Exception {

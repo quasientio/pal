@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.apps;
+package net.ittera.pal.apps.rmi.explicit;
 
 import java.util.ArrayList;
 

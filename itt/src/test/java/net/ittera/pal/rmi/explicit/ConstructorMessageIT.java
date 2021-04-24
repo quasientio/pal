@@ -17,9 +17,9 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.core;
+package net.ittera.pal.rmi.explicit;
 
-import net.ittera.pal.apps.Constructors;
+import net.ittera.pal.apps.rmi.explicit.Constructors;
 import net.ittera.pal.common.objects.ObjectRef;
 import org.junit.Test;
 
@@ -33,7 +33,7 @@ import org.junit.Test;
  */
 public class ConstructorMessageIT extends AbstractPeerMessageIT {
 
-  protected final String className = "net.ittera.pal.apps.Constructors";
+  protected final String className = "net.ittera.pal.apps.rmi.explicit.Constructors";
 
   /**
    * Explained here why won't pass
@@ -42,7 +42,7 @@ public class ConstructorMessageIT extends AbstractPeerMessageIT {
   // @Test
   public void innerConstructor() throws Exception {
 
-    String className = "net.ittera.pal.apps.Constructors$Empty";
+    String className = "net.ittera.pal.apps.rmi.explicit.Constructors$Empty";
     callEmptyConstructor(className);
   }
 

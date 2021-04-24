@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.core;
+package net.ittera.pal.rmi.explicit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -33,7 +33,7 @@ import org.junit.Test;
  */
 public class SetClassVariableMessageIT extends AbstractPeerMessageIT {
 
-  protected final String className = "net.ittera.pal.apps.StaticVars";
+  protected final String className = "net.ittera.pal.apps.rmi.explicit.StaticVars";
 
   @Test
   public void putStatic_integerNotNull_ok() throws Exception {

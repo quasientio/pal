@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.core;
+package net.ittera.pal.rmi.explicit;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;

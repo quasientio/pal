@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.core;
+package net.ittera.pal.rmi.explicit;
 
 import net.ittera.pal.common.objects.ObjectRef;
 import org.junit.Test;
@@ -30,7 +30,7 @@ import org.junit.Test;
  */
 public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
 
-  protected final String className = "net.ittera.pal.apps.VoidStaticMethods";
+  protected final String className = "net.ittera.pal.apps.rmi.explicit.VoidStaticMethods";
 
   @Test
   public void callClassMethod_privateWithArg_void() throws Exception {

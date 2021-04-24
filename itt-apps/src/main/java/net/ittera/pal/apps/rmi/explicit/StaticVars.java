@@ -17,32 +17,14 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.apps;
+package net.ittera.pal.apps.rmi.explicit;
 
-import java.util.ArrayList;
+public class StaticVars {
 
-public class VoidStaticMethods {
-
-  private static void testVoidStatic(String arg) {
-    System.out.println(arg);
-  }
-
-  private static void printArg(int argIdx, String arg) {
-    System.out.println(String.format("Argument #%d to printArg: %s", argIdx, arg));
-  }
-
-  static void doSomethingStatically() {
-    System.out.println("whatever");
-  }
-
-  static void throwRuntimeException() {
-    throw new RuntimeException("Bastards threw me out!");
-  }
-
-  public static void sumUpList(ArrayList<Integer> listOfInts) {
-    int sum = listOfInts.stream().reduce(0, Integer::sum);
-    System.out.println(String.format("The sum of ints = %d", sum));
-  }
-
-  public static void main(String[] args) {}
+  public static String aClassString = "I'm classy";
+  public static String aNullStaticStr;
+  private static Integer aPrivateClassInt = 39328;
+  protected static Boolean aProtectedBool;
+  static boolean aPackageVisibleBool = true;
+  static int aStaticInteger = 3000;
 }

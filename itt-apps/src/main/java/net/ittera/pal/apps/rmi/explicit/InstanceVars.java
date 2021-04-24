@@ -17,14 +17,16 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.apps;
+package net.ittera.pal.apps.rmi.explicit;
 
-public class StaticVars {
+public class InstanceVars {
 
-  public static String aClassString = "I'm classy";
-  public static String aNullStaticStr;
-  private static Integer aPrivateClassInt = 39328;
-  protected static Boolean aProtectedBool;
-  static boolean aPackageVisibleBool = true;
-  static int aStaticInteger = 3000;
+  public Integer anInt = 4;
+  Integer anotherInt = 1;
+  private Integer aNullInt;
+  protected String someString = "I'm not blank";
+  public String aNullStr;
+  Boolean aNullBool;
+  public boolean aBool = true;
+  private final short someShort = 233;
 }

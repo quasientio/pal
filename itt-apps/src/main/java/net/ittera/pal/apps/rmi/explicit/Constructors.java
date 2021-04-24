@@ -17,34 +17,37 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.apps;
+package net.ittera.pal.apps.rmi.explicit;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+public class Constructors {
 
-public class VoidInstanceMethods {
+  private Constructors innerInstance;
 
-  void doSomething() {
-    int chars = 19;
+  public Constructors() {}
+
+  public Constructors(Integer anInt) {}
+
+  public Constructors(String someString) {
+    Integer integer = Integer.parseInt(someString);
+  }
+
+  Constructors(String msg, Integer times) {
+
     StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < chars; i++) {
-      sb.append(i);
-    }
-    if (sb.toString().length() != 28) {
-      throw new RuntimeException("OMG not 28?!!");
+    for (int i = 0; i < times; i++) {
+      sb.append(msg).append(",");
     }
   }
 
-  private void testArg(String arg) {
-    System.out.println(arg);
+  private Constructors(String[] aStringArrayParam) {
+
+    StringBuilder sb = new StringBuilder();
+    for (String anAStringArrayParam : aStringArrayParam) {
+      sb.append(anAStringArrayParam).append(",");
+    }
   }
 
-  private void testNonNullArg(String arg) {
-    System.out.println(arg.concat("and stuff"));
-  }
-
-  protected void printDate() {
-    LocalDate date = LocalDate.now();
-    System.out.println(date.format(DateTimeFormatter.ISO_LOCAL_DATE));
+  protected Constructors(Constructors aConstructor) {
+    this.innerInstance = aConstructor;
   }
 }
