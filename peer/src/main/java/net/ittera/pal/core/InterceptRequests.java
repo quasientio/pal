@@ -120,15 +120,32 @@ class InterceptRequests {
       FieldOpType fieldOpType = FieldOpType.values()[interceptableField.getFieldOpType()];
       if (fieldOpType.equals(FieldOpType.GET)) {
         fieldGetIntercepts = cloneListWithNewRequest(fieldGetIntercepts, interceptRequestEntry);
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Added new intercept request: {} to fieldGet intercept list", interceptRequestEntry);
+        }
       } else {
         fieldPutIntercepts = cloneListWithNewRequest(fieldPutIntercepts, interceptRequestEntry);
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Added new intercept request: {} to fieldPut intercept list", interceptRequestEntry);
+        }
       }
     } else {
       if (interceptableMethod.getName().equalsIgnoreCase("new")) {
         constructorIntercepts =
             cloneListWithNewRequest(constructorIntercepts, interceptRequestEntry);
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Added new intercept request: {} to constructor intercept list",
+              interceptRequestEntry);
+        }
       } else {
         methodIntercepts = cloneListWithNewRequest(methodIntercepts, interceptRequestEntry);
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Added new intercept request: {} to method intercept list", interceptRequestEntry);
+        }
       }
     }
   }

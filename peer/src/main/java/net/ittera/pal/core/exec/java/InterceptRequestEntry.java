@@ -114,4 +114,22 @@ public class InterceptRequestEntry {
   public InterceptMessage getInterceptMessage() {
     return interceptMessage;
   }
+
+  @Override
+  public String toString() {
+    return "InterceptRequestEntry{"
+        + "pattern='"
+        + pattern
+        + '\''
+        + ", paramTypes='"
+        + paramTypes
+        + '\''
+        + ", numberOfParams="
+        + numberOfParams
+        + ", isMethod="
+        + isMethod
+        + ", interceptMessage="
+        + interceptMessage
+        + '}';
+  }
 }

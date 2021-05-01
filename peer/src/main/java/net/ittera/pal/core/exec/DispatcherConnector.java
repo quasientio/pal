@@ -92,8 +92,7 @@ public class DispatcherConnector {
           return worker;
         }
       };
-  // flag to avoid creating the threadLocal socket when we're trying to close it before having been
-  // created
+  // flag to avoid closing a socket that hasn't been created
   private final ThreadLocal<Boolean> threadPubSocketCreated = ThreadLocal.withInitial(() -> false);
 
   private final ThreadLocal<Map<UUID, Socket>> threadSockets =
@@ -126,7 +125,11 @@ public class DispatcherConnector {
   private ExecMessage sendExecMessage(
       ExecMessage execMessage, ExecPhase execPhase, @Nullable List<InternalHeader> headers) {
     if (logger.isTraceEnabled()) {
-      logger.trace("sendExecMessage:in w/ execMessage with uuid: {}", execMessage.getMessageUuid());
+      logger.trace(
+          "sendExecMessage:in w/ execMessage: {}, execPhase: {}\n, headers: {}",
+          format(execMessage),
+          execPhase,
+          headers);
     }
 
     final String followingUuidStr = execMessage.getFollowingUuid();
@@ -256,21 +259,21 @@ public class DispatcherConnector {
   }
 
   private @Nullable byte[] sendCallbackMessageToPeer(
-      UUID interceptor, ExecMessage message, boolean getReply) throws Exception {
+      UUID interceptor, ExecMessage callbackMessage, boolean getReply) throws Exception {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Sending callback message: {} to peer w/uuid: {}",
-          ColferUtils.format(message),
+          ColferUtils.format(callbackMessage),
           interceptor);
     }
     byte[] reply;
     // get socket for peer and send callback msg
     Socket req = getConnectedREQSocketFor(interceptor);
-    final boolean sentOk = req.send(toBytes(messageBuilder.wrap(message)), 0);
+    final boolean sentOk = req.send(toBytes(messageBuilder.wrap(callbackMessage)), 0);
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Sent callback message: {} (ret={}) to peer w/uuid: {}",
-          ColferUtils.format(message),
+          ColferUtils.format(callbackMessage),
           sentOk,
           interceptor);
     }
@@ -285,9 +288,9 @@ public class DispatcherConnector {
         if (reply != null) {
           gotReply = true;
           if (logger.isDebugEnabled()) {
-            final Message replyMessage = new Message();
-            message.unmarshal(reply, 0);
-            logger.debug("Got reply from callback: {}", ColferUtils.format(replyMessage));
+            final Message callbackReplyMessage = new Message();
+            callbackReplyMessage.unmarshal(reply, 0);
+            logger.debug("Got reply from callback: {}", ColferUtils.format(callbackReplyMessage));
           }
         } else { // we hit the timeout, check if peer is alive
           final PALDirectory palDirectory =

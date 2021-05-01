@@ -33,6 +33,7 @@ import com.google.inject.name.Names;
 import java.io.InputStream;
 import java.util.Properties;
 import java.util.UUID;
+import net.ittera.pal.ExecMessageAssertions;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
@@ -48,7 +49,7 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractPeerMessageIT extends ExecMessageAssertions {
+public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
 

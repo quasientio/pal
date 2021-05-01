@@ -76,6 +76,7 @@ public class ThinPeer {
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);
 
   // kafka stuff
+  private boolean logIOEnabled;
   private LogInfo inLog;
   private LogInfo outLog;
   private TopicPartition inTopicPartition;
@@ -100,6 +101,7 @@ public class ThinPeer {
   private ZContext zmqContext;
   private Socket peerSocket;
   private PeerInfo currentPeer;
+  private String reqAddress;
   private boolean talkingToPeer;
   private boolean zmqContextGiven;
 
@@ -119,6 +121,11 @@ public class ThinPeer {
 
   public ThinPeer withName(String name) {
     this.peerName = name;
+    return this;
+  }
+
+  public ThinPeer withReqAddress(String reqAddress) {
+    this.reqAddress = reqAddress;
     return this;
   }
 
@@ -225,13 +232,20 @@ public class ThinPeer {
         if (this.peerName != null) {
           peerProperties.put("name", peerName);
         }
+        if (this.reqAddress != null) {
+          peerProperties.put("reqAddress", reqAddress);
+        }
         getPalDirectory().registerPeer(peerUuid, peerProperties);
       } catch (Exception ex) {
         logger.error("Error registering peer", ex);
       }
     }
 
-    final boolean logless = currentPeer != null;
+    final boolean logless =
+        (!producerGiven && producerProperties == null)
+            || (!consumerGiven && consumerProperties == null)
+            || currentPeer != null;
+
     if (!logless) {
       // configure log(s) to connect to; fill bootstrap servers if only log names given
       String kafkaTopicPrefix = logPrefix != null ? logPrefix : DEFAULT_TOPIC_PREFIX;
@@ -295,6 +309,8 @@ public class ThinPeer {
 
       // init executor
       asyncConsumerExecutor = Executors.newSingleThreadExecutor();
+
+      logIOEnabled = true;
     }
 
     // configure ZMQ
@@ -321,8 +337,8 @@ public class ThinPeer {
     initialized = true;
     logger.info(
         format(
-            "Initialized ThinPeer with:%n uuid: %s,%n name: %s,%n directory: %s,%n initialPeer: %s,%n inLog: %s,%n outLog: %s",
-            peerUuid, peerName, palDirectoryUrl, currentPeer, inLog, outLog));
+            "Initialized ThinPeer with:%n uuid: %s,%n name: %s,%n reqAddress: %s,%n directory: %s,%n initialPeer: %s,%n inLog: %s,%n outLog: %s",
+            peerUuid, peerName, reqAddress, palDirectoryUrl, currentPeer, inLog, outLog));
 
     return this;
   }
@@ -705,8 +721,8 @@ public class ThinPeer {
     final ExecMessage replyMsg = replyMsgWrapper.getExecMessage();
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Got reply message with uuid: {}, waited {} ms",
-          replyMsg.getMessageUuid(),
+          "Got reply message: {}, waited {} ms",
+          ColferUtils.format(replyMsg),
           (waitEnd - waitStart));
     }
 
@@ -782,6 +798,10 @@ public class ThinPeer {
     }
 
     closed = true;
+  }
+
+  public boolean isLogIOEnabled() {
+    return logIOEnabled;
   }
 
   public boolean isClosed() {

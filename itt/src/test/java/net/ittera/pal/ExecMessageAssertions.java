@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.rmi.explicit;
+package net.ittera.pal;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -35,9 +35,9 @@ import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ExecMessageAssertions {
+public interface ExecMessageAssertions {
 
-  protected static final Logger logger = LoggerFactory.getLogger("tests");
+  Logger logger = LoggerFactory.getLogger("tests");
 
   /**
    * Helper assertion methods. Encapsulates details of serialization.
@@ -48,7 +48,7 @@ public class ExecMessageAssertions {
    * @param isNull
    * @param isArray
    */
-  private void assertIsObjectOfType(
+  default void assertIsObjectOfType(
       ReturnValue returnValue,
       String className,
       boolean hasObjRef,
@@ -78,28 +78,27 @@ public class ExecMessageAssertions {
     assertEquals(className, retObj.getClazz().getName());
   }
 
-  protected void assertValueIsObjectOfType(ReturnValue returnValue, String className) {
+  default void assertValueIsObjectOfType(ReturnValue returnValue, String className) {
     assertIsObjectOfType(returnValue, className, true, false, false);
   }
 
-  protected void assertValueIsObjectRefOfType(ReturnValue returnValue, String className) {
+  default void assertValueIsObjectRefOfType(ReturnValue returnValue, String className) {
     assertIsObjectOfType(returnValue, className, true, false, false);
   }
 
-  protected void assertValueIsArrayOfType(ReturnValue returnValue, String className) {
+  default void assertValueIsArrayOfType(ReturnValue returnValue, String className) {
     assertIsObjectOfType(returnValue, className, true, false, true);
   }
 
-  protected void assertValueIsNullObjectOfType(ReturnValue returnValue, String className) {
+  default void assertValueIsNullObjectOfType(ReturnValue returnValue, String className) {
     assertIsObjectOfType(returnValue, className, false, true, false);
   }
 
-  protected void assertValueIsNullArrayOfType(ReturnValue returnValue, String className) {
+  default void assertValueIsNullArrayOfType(ReturnValue returnValue, String className) {
     assertIsObjectOfType(returnValue, className, false, true, true);
   }
 
-  protected <T> void assertValueEqualsArray(T[] actualArray, ReturnValue retValue)
-      throws Exception {
+  default <T> void assertValueEqualsArray(T[] actualArray, ReturnValue retValue) throws Exception {
     logger.trace(
         "in assertValueEqualsArray w/: actualArray: {}, retValue:\n{}", actualArray, retValue);
 
@@ -117,7 +116,7 @@ public class ExecMessageAssertions {
     }
   }
 
-  protected void assertHasThrowableOfType(ExecMessage msg, String throwableType) {
+  default void assertHasThrowableOfType(ExecMessage msg, String throwableType) {
     logger.trace(
         "in assertHasThrowableOfType w/: msg:\n{}, throwableType: {}",
         ColferUtils.format(msg),

@@ -818,6 +818,8 @@ class JSONSerializers {
           jsonElement.add(
               "intercept_reply", jsonSerializationContext.serialize(message.interceptReply));
           break;
+        default:
+          logger.error("Unable to serialize message of type: {}", messageType);
       }
       return jsonElement;
     }

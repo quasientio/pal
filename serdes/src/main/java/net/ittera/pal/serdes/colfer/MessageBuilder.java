@@ -324,6 +324,39 @@ public final class MessageBuilder {
     return buildConstructorMessage(
         peerUuid, null, context, sender, senderObjRef, null, args, argObjRefs);
   }
+
+  public ExecMessage buildConstructor(
+      UUID peerUuid,
+      Object sender,
+      ObjectRef senderObjRef,
+      net.ittera.pal.common.api.rmi.ConstructorCall constructorCall) {
+    Object[] args = null;
+    ObjectRef[] argObjRefs = null;
+    Object[] constructorCallArgs = constructorCall.getArgs();
+    if (constructorCall.getArgs() != null) {
+      args = new Object[constructorCall.getArgs().length];
+      argObjRefs = new ObjectRef[constructorCall.getArgs().length];
+      for (int i = 0; i < args.length; i++) {
+        Object arg = constructorCallArgs[i];
+        if (arg instanceof ObjectRef) {
+          argObjRefs[i] = (ObjectRef) arg;
+        } else {
+          args[i] = arg;
+        }
+      }
+    }
+
+    return buildConstructorMessage(
+        peerUuid,
+        constructorCall.getClassname(),
+        null,
+        sender,
+        senderObjRef,
+        constructorCall.getParameterTypes(),
+        args,
+        argObjRefs);
+  }
+
   // </editor-fold>
 
   // <editor-fold desc="Instance method messages">
@@ -375,6 +408,36 @@ public final class MessageBuilder {
     return newWrapper(ExecMessageType.INSTANCE_METHOD, peerUuid)
         .withInstanceMethodCall(instanceMethodCall);
   }
+
+  public ExecMessage buildInstanceMethod(
+      UUID peerUuid, net.ittera.pal.common.api.rmi.InstanceMethodCall instanceMethodCall) {
+    Object[] args = null;
+    ObjectRef[] argObjRefs = null;
+    Object[] methodCallArgs = instanceMethodCall.getArgs();
+    if (instanceMethodCall.getArgs() != null) {
+      args = new Object[instanceMethodCall.getArgs().length];
+      argObjRefs = new ObjectRef[instanceMethodCall.getArgs().length];
+      for (int i = 0; i < args.length; i++) {
+        Object arg = methodCallArgs[i];
+        if (arg instanceof ObjectRef) {
+          argObjRefs[i] = (ObjectRef) arg;
+        } else {
+          args[i] = arg;
+        }
+      }
+    }
+
+    return buildInstanceMethod(
+        peerUuid,
+        instanceMethodCall.getClassname(),
+        instanceMethodCall.getMethod(),
+        null,
+        instanceMethodCall.getInstance(),
+        instanceMethodCall.getParameterTypes(),
+        args,
+        argObjRefs);
+  }
+
   // </editor-fold>
 
   // <editor-fold desc="Class method messages">
@@ -418,6 +481,39 @@ public final class MessageBuilder {
     }
 
     return newWrapper(ExecMessageType.CLASS_METHOD, peerUuid).withClassMethodCall(classMethodCall);
+  }
+
+  public ExecMessage buildClassMethod(
+      UUID peerUuid,
+      Object sender,
+      ObjectRef senderObjRef,
+      net.ittera.pal.common.api.rmi.StaticMethodCall staticMethodCall) {
+
+    Object[] args = null;
+    ObjectRef[] argObjRefs = null;
+    Object[] methodCallArgs = staticMethodCall.getArgs();
+    if (staticMethodCall.getArgs() != null) {
+      args = new Object[staticMethodCall.getArgs().length];
+      argObjRefs = new ObjectRef[staticMethodCall.getArgs().length];
+      for (int i = 0; i < args.length; i++) {
+        Object arg = methodCallArgs[i];
+        if (arg instanceof ObjectRef) {
+          argObjRefs[i] = (ObjectRef) arg;
+        } else {
+          args[i] = arg;
+        }
+      }
+    }
+
+    return buildClassMethod(
+        peerUuid,
+        staticMethodCall.getClassname(),
+        staticMethodCall.getMethod(),
+        staticMethodCall.getParameterTypes(),
+        sender,
+        senderObjRef,
+        args,
+        argObjRefs);
   }
 
   // build ClassMethodCall with another message's parameter list
@@ -581,6 +677,16 @@ public final class MessageBuilder {
                 .withField(getWrappedField(className, fieldName)));
   }
 
+  public ExecMessage buildGetStatic(
+      UUID peerUuid, net.ittera.pal.common.api.rmi.StaticFieldGet staticFieldGet) {
+
+    return newWrapper(ExecMessageType.GET_STATIC, peerUuid)
+        .withStaticFieldGet(
+            new StaticFieldGet()
+                .withClazz(getWrappedClass(staticFieldGet.getClassname()))
+                .withField(
+                    getWrappedField(staticFieldGet.getClassname(), staticFieldGet.getField())));
+  }
   // </editor-fold>
 
   // <editor-fold desc="Instance field get messages">
@@ -593,6 +699,17 @@ public final class MessageBuilder {
                 .withClazz(getWrappedClass(className))
                 .withObjectRef(String.valueOf(targetObjRef.getRef()))
                 .withField(getWrappedField((String) null, fieldName)));
+  }
+
+  public ExecMessage buildGetObject(
+      UUID peerUuid, net.ittera.pal.common.api.rmi.InstanceFieldGet instanceFieldGet) {
+
+    return newWrapper(ExecMessageType.GET_FIELD, peerUuid)
+        .withInstanceFieldGet(
+            new InstanceFieldGet()
+                .withClazz(getWrappedClass(instanceFieldGet.getClassname()))
+                .withObjectRef(String.valueOf(instanceFieldGet.getInstance().getRef()))
+                .withField(getWrappedField((String) null, instanceFieldGet.getField())));
   }
 
   // </editor-fold>

@@ -294,6 +294,29 @@ public class PALDirectory implements AutoCloseable {
   // </editor-fold>
 
   // <editor-fold desc="Intercept request methods">
+  public void registerIntercept(InterceptRequest interceptRequest) throws Exception {
+    if (!peerExists(interceptRequest.getPeer())) {
+      throw new NoPeerInfoNodeException(
+          format("Peer w/uuid %s does not exist", interceptRequest.getPeer()));
+    }
+    final byte[] interceptData = interceptRequest.toBytes(getEncodingCharset());
+    final String interceptPath =
+        format(
+            "%s/%s",
+            getInterceptsPathForPeer(interceptRequest.getPeer()), interceptRequest.getUuid());
+    curator
+        .create()
+        .creatingParentsIfNeeded()
+        .withMode(CreateMode.EPHEMERAL)
+        .forPath(interceptPath, interceptData);
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "created new node for intercept request: {} at path: {}",
+          interceptRequest,
+          interceptPath);
+    }
+  }
+
   public void registerInterceptAsync(InterceptRequest interceptRequest, BackgroundCallback callback)
       throws Exception {
     if (!peerExists(interceptRequest.getPeer())) {
@@ -365,6 +388,34 @@ public class PALDirectory implements AutoCloseable {
 
   public void addInterceptNodeListener(InterceptNodeListener listener) {
     interceptListeners.add(listener);
+  }
+
+  public void unregisterPeerInterceptRequests(UUID peerUuid) throws Exception {
+    final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
+    int reqsDeleted = 0;
+    if (interceptsCache == null) {
+      try {
+        for (String interceptNode : curator.getChildren().forPath(peerInterceptsPath)) {
+          final String interceptPath = format("%s/%s", peerInterceptsPath, interceptNode);
+          curator.delete().forPath(interceptPath);
+          reqsDeleted++;
+        }
+      } catch (NoNodeException e) {
+        // so no intercepts
+      }
+    } else {
+      Map<String, ChildData> children = interceptsCache.getCurrentChildren(peerInterceptsPath);
+      if (children != null) {
+        for (ChildData child : children.values()) {
+          if (logger.isDebugEnabled()) {
+            logger.debug("getting cached intercept from path: {}", child.getPath());
+          }
+          curator.delete().forPath(child.getPath());
+          reqsDeleted++;
+        }
+      }
+    }
+    logger.info("Unregistered {} intercept request(s) for peer w/uuid: {}", reqsDeleted, peerUuid);
   }
 
   // </editor-fold>

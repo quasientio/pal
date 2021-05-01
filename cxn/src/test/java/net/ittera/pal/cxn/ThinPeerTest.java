@@ -19,6 +19,8 @@
 
 package net.ittera.pal.cxn;
 
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.util.HashSet;
@@ -120,6 +122,7 @@ public class ThinPeerTest {
             .withProducer(producer)
             .withLog(createLog("testlog"))
             .init();
+    assertThat(thinPeer.isLogIOEnabled(), is(true));
   }
 
   @Test
@@ -130,38 +133,31 @@ public class ThinPeerTest {
             .withProducer(producer)
             .withLog(createLog("testlog"))
             .init();
+    assertThat(thinPeer.isLogIOEnabled(), is(true));
   }
 
   @Test
   public void initWithMissingConsumer() throws Exception {
     // no Consumer nor Consumer Properties
-    try {
-      thinPeer =
-          new ThinPeer()
-              .withDirectoryProvider(directoryConnectionProvider)
-              .withProducer(producer)
-              .withLog(createLog("testlog"))
-              .init();
-      fail("Should have raised RuntimeException");
-    } catch (RuntimeException e) {
-      // ok
-    }
+    thinPeer =
+        new ThinPeer()
+            .withDirectoryProvider(directoryConnectionProvider)
+            .withProducer(producer)
+            .withLog(createLog("testlog"))
+            .init();
+    assertThat(thinPeer.isLogIOEnabled(), is(false));
   }
 
   @Test
   public void initWithMissingProducer() throws Exception {
     // no Producer nor Producer Properties
-    try {
-      thinPeer =
-          new ThinPeer()
-              .withDirectoryProvider(directoryConnectionProvider)
-              .withConsumer(consumer)
-              .withLog(createLog("testlog"))
-              .init();
-      fail("Should have raised RuntimeException");
-    } catch (RuntimeException e) {
-      // ok
-    }
+    thinPeer =
+        new ThinPeer()
+            .withDirectoryProvider(directoryConnectionProvider)
+            .withConsumer(consumer)
+            .withLog(createLog("testlog"))
+            .init();
+    assertThat(thinPeer.isLogIOEnabled(), is(false));
   }
 
   @Test
