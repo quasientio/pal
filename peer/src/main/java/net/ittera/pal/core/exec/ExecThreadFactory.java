@@ -105,7 +105,6 @@ public class ExecThreadFactory implements ThreadFactory {
         thread =
             new LogMessageInvoker(
                 threadGroup,
-                r,
                 newThreadName,
                 zmqContext,
                 messageBuilder,
@@ -118,7 +117,6 @@ public class ExecThreadFactory implements ThreadFactory {
         thread =
             new PeerMessageInvoker(
                 threadGroup,
-                r,
                 newThreadName,
                 zmqContext,
                 messageBuilder,

@@ -33,7 +33,6 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
 
   public PeerMessageInvoker(
       ThreadGroup group,
-      Runnable target,
       String name,
       ZContext zmqContext,
       MessageBuilder messageBuilder,
@@ -43,7 +42,6 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
       UUID peerUuid) {
     super(
         group,
-        target,
         name,
         zmqContext,
         messageBuilder,
@@ -83,6 +81,9 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
       req = null;
 
       // receive req
+      if (logger.isDebugEnabled()) {
+        logger.debug("Ready and reading from socket...");
+      }
       try {
         req = socket.recv(0);
       } catch (ZMQException ex) {

@@ -56,7 +56,6 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
   AbstractMessageInvokerThread(
       ThreadGroup group,
-      Runnable target,
       String name,
       ZContext zmqContext,
       MessageBuilder messageBuilder,
@@ -64,7 +63,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
       UUID peerUuid) {
-    super(group, target, name);
+    super(group, null, name);
     this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
     this.dealerAddress = dealerAddress;

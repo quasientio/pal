@@ -33,7 +33,6 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 
   public LogMessageInvoker(
       ThreadGroup group,
-      Runnable target,
       String name,
       ZContext zmqContext,
       MessageBuilder messageBuilder,
@@ -43,7 +42,6 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
       UUID peerUuid) {
     super(
         group,
-        target,
         name,
         zmqContext,
         messageBuilder,

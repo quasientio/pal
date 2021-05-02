@@ -52,10 +52,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import net.ittera.pal.common.cli.PALCommand;
 import net.ittera.pal.common.util.Strings;
-import net.ittera.pal.core.exec.ExtendedThreadPoolExecutor;
 import net.ittera.pal.core.exec.InterceptInformer;
 import net.ittera.pal.core.exec.LogMessageExecutor;
 import net.ittera.pal.core.exec.PeerMessageExecutor;
+import net.ittera.pal.core.exec.ThreadPool;
 import net.ittera.pal.core.exec.java.CustomClassloader;
 import net.ittera.pal.core.exec.java.SelfCaller;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
@@ -160,26 +160,11 @@ public class Main implements Callable<Integer> {
   private String tcpReq; // corresponding ENV var: TCP_REQ
 
   @Option(
-      names = {"--tcp-req-core-threads"},
+      names = {"--tcp-req-threads"},
       defaultValue = "1",
       paramLabel = "num_threads",
-      description = "number of core threads for tcp requests (default: ${DEFAULT-VALUE})")
-  private Integer tcpReqCoreThreads;
-
-  @Option(
-      names = {"--tcp-req-max-threads"},
-      defaultValue = "100",
-      paramLabel = "num_threads",
-      description = "maximum number of threads for tcp requests (default: ${DEFAULT-VALUE})")
-  private Integer tcpReqMaxThreads;
-
-  @Option(
-      names = {"--tcp-req-threads-keepalive"},
-      defaultValue = "60",
-      paramLabel = "num_seconds",
-      description =
-          "seconds to wait before terminating idle tcp request threads (default: ${DEFAULT-VALUE})")
-  private Long tcpReqThreadsKeepAliveSecs;
+      description = "number of threads for tcp requests (default: ${DEFAULT-VALUE})")
+  private Integer tcpReqThreads;
 
   @Option(
       names = {"--interceptable"},
@@ -536,9 +521,7 @@ public class Main implements Callable<Integer> {
         }
       }
       properties.setProperty("in.req.tcp", format("tcp://%s:%d", hostname, port));
-      properties.setProperty("peer.corePoolSize", String.valueOf(tcpReqCoreThreads));
-      properties.setProperty("peer.maximumPoolSize", String.valueOf(tcpReqMaxThreads));
-      properties.setProperty("peer.keepAliveSeconds", String.valueOf(tcpReqThreadsKeepAliveSecs));
+      properties.setProperty("peer.threadPoolSize", String.valueOf(tcpReqThreads));
     }
 
     // message content options
@@ -691,17 +674,15 @@ public class Main implements Callable<Integer> {
 
       // stop peer executor (interrupts all peer exec threads)
       if (!runOptions.contains(RunOptions.REQLESS)) {
-        final ExtendedThreadPoolExecutor peerMessageExecutor =
-            injector.getInstance(PeerMessageExecutor.class);
-        peerMessageExecutor.shutdownNow();
+        final ThreadPool peerMessageExecutor = injector.getInstance(PeerMessageExecutor.class);
+        peerMessageExecutor.shutdown();
         logger.info("Done shutting down peer threads");
       }
 
       // stop log executor (interrupts all log exec threads)
       if (!runOptions.contains(RunOptions.NO_INLOG)) {
-        final ExtendedThreadPoolExecutor logMessageExecutor =
-            injector.getInstance(LogMessageExecutor.class);
-        logMessageExecutor.shutdownNow();
+        final ThreadPool logMessageExecutor = injector.getInstance(LogMessageExecutor.class);
+        logMessageExecutor.shutdown();
         logger.info("Done shutting down log threads");
       }
 
@@ -865,12 +846,12 @@ public class Main implements Callable<Integer> {
     if (!runOptions.contains(RunOptions.NO_INLOG)) {
       LogReader logMessageReader = injector.getInstance(LogReader.class);
       logMessageReader.acceptRequests(true);
-      injector.getInstance(LogMessageExecutor.class).prestartAllCoreThreads();
+      injector.getInstance(LogMessageExecutor.class).startAllThreads();
     }
 
     // prestart threads to create the REP sockets; this must be done after DEALER
     if (!runOptions.contains(RunOptions.REQLESS)) {
-      injector.getInstance(PeerMessageExecutor.class).prestartAllCoreThreads();
+      injector.getInstance(PeerMessageExecutor.class).startAllThreads();
     }
 
     // now call target (main class or JAR file), if given

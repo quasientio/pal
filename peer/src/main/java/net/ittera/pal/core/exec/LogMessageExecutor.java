@@ -23,8 +23,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import java.util.UUID;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.TimeUnit;
 import net.ittera.pal.core.exec.java.CustomClassloader;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -33,15 +31,13 @@ import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 
 @Singleton
-public class LogMessageExecutor extends ExtendedThreadPoolExecutor {
+public class LogMessageExecutor extends ThreadPool {
 
   protected static final Logger logger = LoggerFactory.getLogger(LogMessageExecutor.class);
 
   @Inject
   public LogMessageExecutor(
-      @Named("log.corePoolSize") String corePoolSize,
-      @Named("log.maximumPoolSize") String maximumPoolSize,
-      @Named("log.keepAliveSeconds") String keepAliveSeconds,
+      @Named("log.threadPoolSize") String threadPoolSize,
       ZContext zmqContext,
       @Named("in.log") String zmqSocketAddress,
       MessageBuilder messageBuilder,
@@ -51,11 +47,7 @@ public class LogMessageExecutor extends ExtendedThreadPoolExecutor {
       UUID peerUuid) {
 
     super(
-        Integer.parseInt(corePoolSize),
-        Integer.parseInt(maximumPoolSize),
-        Integer.parseInt(keepAliveSeconds),
-        TimeUnit.SECONDS,
-        new SynchronousQueue<>(),
+        Integer.parseInt(threadPoolSize),
         new ExecThreadFactory(
             zmqContext,
             zmqSocketAddress,
