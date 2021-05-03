@@ -5,10 +5,11 @@
     <groupId>net.ittera.pal</groupId>
     <artifactId>pal</artifactId>
     <packaging>pom</packaging>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.2.0-SNAPSHOT</version>
     <name>pal</name>
 
     <properties>
+        <pal.version>0.2.0-SNAPSHOT</pal.version>
         <!-- BUILD VERSIONS -->
         <java.version>1.8</java.version>
         <maven.surefire.version>3.0.0-M3</maven.surefire.version>
