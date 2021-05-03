@@ -113,11 +113,26 @@ public class List extends AbstractPALSubcommand {
   private final Map<String, JmxClient> jmxClientsPerServer = new HashMap<>();
   private final Map<String, AdminClient> adminClientsPerServer = new HashMap<>();
 
-  /** name uuid size start --> end ctime mtime */
-  private static final String LOGS_LONG_FORMAT = "%-20s %36s  %10s %8s --> %-8s %12s";
+  /* Column widths for variable-length fields.
+   NOTE: Adjust these values, not the format strings below.
+  */
+  private static final short MAX_LOG_NAME_LEN = 20;
+  private static final short MAX_LOG_SIZE_LEN = 10;
+  private static final short MAX_LOG_IDX_LEN = 8;
+  private static final short MAX_PEER_NAME_LEN = 15;
+  private static final short MAX_ENDPOINT_LEN = 20;
 
-  /** uuid name req pub jmx ctime mtime */
-  private static final String PEERS_LONG_FORMAT = "%-36s %10s %20s %20s %20s %12s";
+  /** name uuid size start --> end ctime */
+  private static final String LOGS_LONG_FORMAT =
+      format(
+          "%%-%ds %%-36s  %%-%ds %%-%ds --> %%-%ds %%-8s",
+          MAX_LOG_NAME_LEN, MAX_LOG_SIZE_LEN, MAX_LOG_IDX_LEN, MAX_LOG_IDX_LEN);
+
+  /** uuid name req pub jmx ctime */
+  private static final String PEERS_LONG_FORMAT =
+      format(
+          "%%-36s %%-%ds %%-%ds %%-%ds %%-%ds %%-8s",
+          MAX_PEER_NAME_LEN, MAX_ENDPOINT_LEN, MAX_ENDPOINT_LEN, MAX_ENDPOINT_LEN);
 
   @Override
   protected void initialize() throws Exception {
@@ -228,13 +243,17 @@ public class List extends AbstractPALSubcommand {
       logInfoLine =
           format(
               LOGS_LONG_FORMAT,
-              logInfo.getName(),
+              trimTo(logInfo.getName(), MAX_LOG_NAME_LEN),
               logInfo.getUuid(),
               logInfo.getHumanReadableByteSize() == null
                   ? "??"
-                  : logInfo.getHumanReadableByteSize(),
-              logInfo.getStartOffset() == null ? "?" : logInfo.getStartOffset(),
-              logInfo.getEndOffset() == null ? "?" : logInfo.getEndOffset(),
+                  : trimTo(logInfo.getHumanReadableByteSize(), MAX_LOG_SIZE_LEN),
+              logInfo.getStartOffset() == null
+                  ? "?"
+                  : trimTo(String.valueOf(logInfo.getStartOffset()), MAX_LOG_IDX_LEN),
+              logInfo.getEndOffset() == null
+                  ? "?"
+                  : trimTo(String.valueOf(logInfo.getEndOffset()), MAX_LOG_IDX_LEN),
               getFormattedDate(logInfo.getCTime()));
     } else {
       logInfoLine = format("%s", logInfo.getName());
@@ -248,20 +267,31 @@ public class List extends AbstractPALSubcommand {
         Duration.between(startDateTime, now).toMillis(), "H:mm:ss");
   }
 
+  private static String trimTo(String aString, int maxLength) {
+    if (aString.length() <= maxLength) {
+      return aString;
+    }
+    return aString.substring(0, maxLength - 2) + "..";
+  }
+
   private void print(PeerInfo peerInfo) {
     if (longListing) {
       out.println(
           format(
               PEERS_LONG_FORMAT,
               peerInfo.getUuid(),
-              peerInfo.getName() == null ? "" : peerInfo.getName(),
+              peerInfo.getName() == null ? "" : trimTo(peerInfo.getName(), MAX_PEER_NAME_LEN),
               peerInfo.getReqAddress() == null
                   ? ""
-                  : Strings.stringAfter(peerInfo.getReqAddress(), "tcp://"),
+                  : trimTo(
+                      Strings.stringAfter(peerInfo.getReqAddress(), "tcp://"), MAX_ENDPOINT_LEN),
               peerInfo.getPubAddress() == null
                   ? ""
-                  : Strings.stringAfter(peerInfo.getPubAddress(), "tcp://"),
-              peerInfo.getJmxAddress() == null ? "" : peerInfo.getJmxAddress(),
+                  : trimTo(
+                      Strings.stringAfter(peerInfo.getPubAddress(), "tcp://"), MAX_ENDPOINT_LEN),
+              peerInfo.getJmxAddress() == null
+                  ? ""
+                  : trimTo(peerInfo.getJmxAddress(), MAX_ENDPOINT_LEN),
               getFormattedUptime(peerInfo.getCTime())));
     } else {
       out.println(format("%s", peerInfo.getUuid()));
