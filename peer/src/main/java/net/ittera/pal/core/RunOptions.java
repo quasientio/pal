@@ -20,10 +20,10 @@
 package net.ittera.pal.core;
 
 public enum RunOptions {
-  NO_PALDIR, // No PAL directory
-  REQLESS, // Don't listen to requests over TCP
-  NO_PUBLISHING, // Don't publish messages
-  NO_INTERCEPTS, // Don't allow message interception
-  NO_INLOG, // Don't read messages from LOG
-  NO_OUTLOG, // Don't publish messages to LOG
+  WITH_PALDIR, // Connect to PAL directory
+  WITH_TCP_REQ, // Listen to requests over TCP
+  WITH_TCP_PUB, // Publish messages
+  WITH_INTERCEPTS, // Allow message interception
+  WITH_INLOG, // Read messages from LOG
+  WITH_OUTLOG, // Publish messages to LOG
 }

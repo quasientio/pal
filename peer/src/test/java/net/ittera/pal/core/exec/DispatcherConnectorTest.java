@@ -166,12 +166,14 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     logger.trace("leaving cleanup");
   }
 
-  private DispatcherConnector initDispatcherConnector(boolean publishing) {
-    Set<RunOptions> runOptions;
-    if (!publishing) {
-      runOptions = EnumSet.of(RunOptions.NO_PUBLISHING);
-    } else {
-      runOptions = EnumSet.noneOf(RunOptions.class);
+  private DispatcherConnector initDispatcherConnector(
+      boolean withPublishing, boolean withIntercepts) {
+    Set<RunOptions> runOptions = EnumSet.noneOf(RunOptions.class);
+    if (withPublishing) {
+      runOptions.add(RunOptions.WITH_TCP_PUB);
+    }
+    if (withIntercepts) {
+      runOptions.add(RunOptions.WITH_INTERCEPTS);
     }
     return new DispatcherConnector(
         context,
@@ -183,9 +185,12 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
         MSG_PUBLISHER_ADDR);
   }
 
-  private void sendExecMessage(boolean publishing) throws Exception {
-    logger.trace("entering sendExecMessage w/publishing: {}", publishing);
-    this.dispatcherConnector = initDispatcherConnector(publishing);
+  private void sendExecMessage(boolean withPublishing, boolean withIntercepts) throws Exception {
+    logger.trace(
+        "entering sendExecMessage w/publishing: {}, w/intercepts: {}",
+        withPublishing,
+        withIntercepts);
+    this.dispatcherConnector = initDispatcherConnector(withPublishing, withIntercepts);
     // sends msg and get reply
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     ExecMessage returnedMsg = dispatcherConnector.sendExecMessage(msg, ExecPhase.BEFORE);
@@ -199,7 +204,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     assertThat(messagesToMatchReceived.get(0), is(msg));
 
     // verify message was received by Message Publisher
-    if (publishing) {
+    if (withPublishing) {
       assertThat(messagePublisherStub.messagesReceived.size(), is(1));
       assertThat(
           messagePublisherStub.messagesReceived.stream()
@@ -215,17 +220,18 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 
   @Test
   public void sendExecMessage() throws Exception {
-    sendExecMessage(true);
+    sendExecMessage(true, true);
   }
 
   @Test
   public void sendExecMessageNoPublishing() throws Exception {
-    sendExecMessage(false);
+    sendExecMessage(false, true);
   }
 
-  private void sendExecMessageMany(boolean publishing) throws Exception {
+  private void sendExecMessageMany(boolean withPublishing, boolean withIntercepts)
+      throws Exception {
     logger.trace("entering sendExecMessageMany");
-    this.dispatcherConnector = initDispatcherConnector(publishing);
+    this.dispatcherConnector = initDispatcherConnector(withPublishing, withIntercepts);
     int msgsToSend = 10;
     List<ExecMessage> sentMessages = new ArrayList<>();
     List<ExecMessage> returnedMessages = new ArrayList<>();
@@ -247,7 +253,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     assertThat(messagesToMatchReceived, is(sentMessages));
 
     // verify messages received by Message Publisher
-    if (publishing) {
+    if (withPublishing) {
       assertThat(messagePublisherStub.messagesReceived.size(), is(msgsToSend));
       assertThat(
           messagePublisherStub.messagesReceived.stream()
@@ -262,17 +268,17 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 
   @Test
   public void sendExecMessageMany() throws Exception {
-    sendExecMessageMany(true);
+    sendExecMessageMany(true, true);
   }
 
   @Test
   public void sendExecMessageManyNoPublishing() throws Exception {
-    sendExecMessageMany(false);
+    sendExecMessageMany(false, true);
   }
 
-  private void writeAhead(boolean publishing) throws Exception {
-    logger.debug("test writeAhead (publishing={})", publishing);
-    this.dispatcherConnector = initDispatcherConnector(publishing);
+  private void writeAhead(boolean withPublishing, boolean withIntercepts) throws Exception {
+    logger.debug("test writeAhead (publishing={}, intercepts={})", withPublishing, withIntercepts);
+    this.dispatcherConnector = initDispatcherConnector(withPublishing, withIntercepts);
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     dispatcherConnector.writeAhead(msg);
 
@@ -280,7 +286,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     assertThat(messagesToMatchReceived.size(), is(0));
 
     // verify message and header received by Message Publisher
-    if (publishing) {
+    if (withPublishing) {
       assertThat(messagePublisherStub.messagesReceived.size(), is(1));
       assertThat(
           messagePublisherStub.messagesReceived.stream()
@@ -294,16 +300,16 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
       assertThat(messagePublisherStub.messagesReceived.size(), is(0));
       assertThat(messagePublisherStub.headersReceived.size(), is(0));
     }
-    logger.debug("test writeAhead done (publishing={})", publishing);
+    logger.debug("test writeAhead done (publishing={})", withPublishing);
   }
 
   @Test
   public void writeAhead() throws Exception {
-    writeAhead(true);
+    writeAhead(true, true);
   }
 
   @Test
   public void writeAheadNoPublishing() throws Exception {
-    writeAhead(false);
+    writeAhead(false, true);
   }
 }

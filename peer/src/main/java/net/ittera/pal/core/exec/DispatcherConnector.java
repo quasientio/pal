@@ -141,13 +141,13 @@ public class DispatcherConnector {
     ExecMessageType execMessageType = ExecMessageType.values()[execMessage.getExecMessageType()];
     List<InterceptMessage> matchingIntercepts = null;
 
-    if (!runOptions.contains(RunOptions.NO_INTERCEPTS) && isInterceptableType(execMessageType)) {
+    if (runOptions.contains(RunOptions.WITH_INTERCEPTS) && isInterceptableType(execMessageType)) {
       // find matching intercepts for execMessage
       matchingIntercepts = interceptMatcher.getMatchingIntercepts(execMessage, execPhase);
     }
 
     // publish execMessage -- TODO should we in case of intercepts publish it after
-    if (!runOptions.contains(RunOptions.NO_PUBLISHING)) {
+    if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
       final OutboundMsg msg =
           new OutboundMsg(
               MessageType.ExecMessage,
@@ -236,7 +236,7 @@ public class DispatcherConnector {
           message.getPeerUuid());
     }
 
-    if (runOptions.contains(RunOptions.NO_PUBLISHING)) {
+    if (!runOptions.contains(RunOptions.WITH_TCP_PUB)) {
       return;
     }
 

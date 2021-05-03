@@ -377,8 +377,6 @@ public class Main implements Callable<Integer> {
     runOptions = EnumSet.noneOf(RunOptions.class);
 
     if (palDirectoryURL == null || palDirectoryURL.isEmpty()) {
-      runOptions.add(RunOptions.NO_PALDIR);
-
       // warn of incompatible options that will be ignored
       if (name != null) {
         System.err.println(
@@ -390,6 +388,8 @@ public class Main implements Callable<Integer> {
             "WARNING: --interceptable only applicable if registering with a <pal_directory>.");
         logger.warn("--interceptable given, but not <pal_directory>; will be ignored.");
       }
+    } else {
+      runOptions.add(RunOptions.WITH_PALDIR);
     }
 
     if (log != null) {
@@ -401,12 +401,12 @@ public class Main implements Callable<Integer> {
       inLog = outLog = log;
     }
 
-    if (inLog == null) {
-      runOptions.add(RunOptions.NO_INLOG);
+    if (inLog != null) {
+      runOptions.add(RunOptions.WITH_INLOG);
     }
 
-    if (outLog == null) {
-      runOptions.add(RunOptions.NO_OUTLOG);
+    if (outLog != null) {
+      runOptions.add(RunOptions.WITH_OUTLOG);
     }
 
     // ensure that if offset was given, a log name to read from was also given
@@ -414,16 +414,16 @@ public class Main implements Callable<Integer> {
       fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
     }
 
-    if (runOptions.contains(RunOptions.NO_OUTLOG) && tcpPub == null) {
-      runOptions.add(RunOptions.NO_PUBLISHING);
+    if (runOptions.contains(RunOptions.WITH_OUTLOG) || tcpPub != null) {
+      runOptions.add(RunOptions.WITH_TCP_PUB);
     }
 
-    if (runOptions.contains(RunOptions.NO_PALDIR) || !interceptable) {
-      runOptions.add(RunOptions.NO_INTERCEPTS);
+    if (runOptions.contains(RunOptions.WITH_PALDIR) && interceptable) {
+      runOptions.add(RunOptions.WITH_INTERCEPTS);
     }
 
-    if (tcpReq == null) {
-      runOptions.add(RunOptions.REQLESS);
+    if (tcpReq != null) {
+      runOptions.add(RunOptions.WITH_TCP_REQ);
     }
 
     logger.info("Running with options: {}", runOptions);
@@ -592,7 +592,7 @@ public class Main implements Callable<Integer> {
     try {
       final Properties peerProperties = new Properties();
       // public listening interfaces
-      if (!runOptions.contains(RunOptions.REQLESS)) {
+      if (runOptions.contains(RunOptions.WITH_TCP_REQ)) {
         peerProperties.put("reqAddress", properties.getProperty("in.req.tcp"));
       }
       if (properties
@@ -617,19 +617,19 @@ public class Main implements Callable<Integer> {
 
   private Set<Service> createManagedServices(Injector injector) {
     final Set<Service> services = new HashSet<>();
-    if (!runOptions.contains(RunOptions.NO_INLOG)) {
+    if (runOptions.contains(RunOptions.WITH_INLOG)) {
       services.add(injector.getInstance(LogReader.class));
     }
-    if (!runOptions.contains(RunOptions.NO_OUTLOG)) {
+    if (runOptions.contains(RunOptions.WITH_OUTLOG)) {
       services.add(injector.getInstance(LogWriter.class));
     }
-    if (!runOptions.contains(RunOptions.NO_PUBLISHING)) {
+    if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
       services.add(injector.getInstance(OutgoingMessageDispatcher.class));
     }
-    if (!runOptions.contains(RunOptions.REQLESS)) {
+    if (runOptions.contains(RunOptions.WITH_TCP_REQ)) {
       services.add(injector.getInstance(DirectRequestDispatcher.class));
     }
-    if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {
+    if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
       services.add(injector.getInstance(InterceptMatcher.class));
     }
     return services;
@@ -673,28 +673,28 @@ public class Main implements Callable<Integer> {
       }
 
       // stop peer executor (interrupts all peer exec threads)
-      if (!runOptions.contains(RunOptions.REQLESS)) {
+      if (runOptions.contains(RunOptions.WITH_TCP_REQ)) {
         final ThreadPool peerMessageExecutor = injector.getInstance(PeerMessageExecutor.class);
         peerMessageExecutor.shutdown();
         logger.info("Done shutting down peer threads");
       }
 
       // stop log executor (interrupts all log exec threads)
-      if (!runOptions.contains(RunOptions.NO_INLOG)) {
+      if (runOptions.contains(RunOptions.WITH_INLOG)) {
         final ThreadPool logMessageExecutor = injector.getInstance(LogMessageExecutor.class);
         logMessageExecutor.shutdown();
         logger.info("Done shutting down log threads");
       }
 
       // close connection to paldir
-      if (!runOptions.contains(RunOptions.NO_PALDIR)) {
+      if (runOptions.contains(RunOptions.WITH_PALDIR)) {
         final Optional<PALDirectory> palDirectory =
             injector.getInstance(DirectoryConnectionProvider.class).get();
         palDirectory.ifPresent(PALDirectory::close);
       }
 
       // close sockets that aren't automatically closed
-      if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {
+      if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
         final InterceptInformer interceptInformer = injector.getInstance(InterceptInformer.class);
         interceptInformer.closeThreadLocalSocket();
       }
@@ -782,7 +782,7 @@ public class Main implements Callable<Integer> {
 
     // register peer async
     final CountDownLatch selfRegistrationLatch = new CountDownLatch(1);
-    if (!runOptions.contains(RunOptions.NO_PALDIR)) {
+    if (runOptions.contains(RunOptions.WITH_PALDIR)) {
       singleExecutor.submit(
           () -> {
             registerSelfAsPeer(injector);
@@ -791,7 +791,7 @@ public class Main implements Callable<Integer> {
     }
 
     // init logs IO
-    if (!(runOptions.contains(RunOptions.NO_INLOG) && runOptions.contains(RunOptions.NO_OUTLOG))) {
+    if (runOptions.contains(RunOptions.WITH_INLOG) || runOptions.contains(RunOptions.WITH_OUTLOG)) {
       try {
         new LogConfigurator(inLog, logOffset, outLog, properties, injector).init();
       } catch (Exception ex) {
@@ -812,7 +812,7 @@ public class Main implements Callable<Integer> {
     }
 
     // block until we're registered in Directory
-    if (!runOptions.contains(RunOptions.NO_PALDIR)) {
+    if (runOptions.contains(RunOptions.WITH_PALDIR)) {
       try {
         selfRegistrationLatch.await();
       } finally {
@@ -829,7 +829,7 @@ public class Main implements Callable<Integer> {
     }
 
     // start listening to intercept reqs
-    if (!runOptions.contains(RunOptions.NO_INTERCEPTS)) {
+    if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
       final PALDirectory palDirectory =
           injector
               .getInstance(DirectoryConnectionProvider.class)
@@ -843,14 +843,14 @@ public class Main implements Callable<Integer> {
     }
 
     // start accepting Log requests
-    if (!runOptions.contains(RunOptions.NO_INLOG)) {
+    if (runOptions.contains(RunOptions.WITH_INLOG)) {
       LogReader logMessageReader = injector.getInstance(LogReader.class);
       logMessageReader.acceptRequests(true);
       injector.getInstance(LogMessageExecutor.class).startAllThreads();
     }
 
     // prestart threads to create the REP sockets; this must be done after DEALER
-    if (!runOptions.contains(RunOptions.REQLESS)) {
+    if (runOptions.contains(RunOptions.WITH_TCP_REQ)) {
       injector.getInstance(PeerMessageExecutor.class).startAllThreads();
     }
 
