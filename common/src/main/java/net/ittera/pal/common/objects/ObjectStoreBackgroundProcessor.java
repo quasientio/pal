@@ -28,8 +28,7 @@ import org.slf4j.LoggerFactory;
 
 class ObjectStoreBackgroundProcessor extends Thread {
 
-  private static final Logger logger =
-      LoggerFactory.getLogger(ObjectStoreBackgroundProcessor.class);
+  private final Logger logger;
   private static final int DEFAULT_CLEANUP_INTERVAL_SECS = 10;
   private static final int DEFAULT_STATS_INTERVAL_SECS = 30;
 
@@ -44,6 +43,7 @@ class ObjectStoreBackgroundProcessor extends Thread {
       @Nonnull ObjectStoreStats objectStoreStats,
       int cleanupIntervalSecs,
       int statsIntervalSecs) {
+    logger = LoggerFactory.getLogger(ObjectStoreBackgroundProcessor.class);
     this.objectStore = Objects.requireNonNull(objectStore);
     this.objectStoreStats = Objects.requireNonNull(objectStoreStats);
     setName("Object Store GC");
