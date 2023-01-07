@@ -153,10 +153,11 @@ public class PALDirectory implements AutoCloseable {
   }
 
   public PALDirectory(String connectionString) {
-    this(connectionString, null, true);
+    this(connectionString, null, true, false);
   }
 
-  public PALDirectory(String connectionString, String namespace, boolean withCaching) {
+  public PALDirectory(
+      String connectionString, String namespace, boolean withCaching, boolean syncConnect) {
     this.curator = newCuratorInstance(connectionString);
     logger.info("Will connect to zookeeper@{}", connectionString);
     /* we can't set the namespace on the Curator instance, as we need access to
@@ -165,6 +166,14 @@ public class PALDirectory implements AutoCloseable {
     this.namespace = namespace != null ? namespace : DEFAULT_PAL_NAMESPACE;
     this.directoryUrl = connectionString;
     curator.start();
+    if (syncConnect) {
+      try {
+        curator.blockUntilConnected();
+      } catch (InterruptedException e) {
+        logger.error("Error while waiting for connection to be established", e);
+        throw new RuntimeException(e);
+      }
+    }
     try {
       createSubPaths();
     } catch (Exception e) {

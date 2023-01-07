@@ -39,19 +39,21 @@ public class DirectoryConnectionProvider implements Provider<Optional<PALDirecto
   private final String connectionString;
   private final String namespace;
   private final boolean withCaching;
+  private final boolean syncConnect;
 
   private PALDirectory palDirectoryInstance;
 
   @Inject
   public DirectoryConnectionProvider(@Named("paldir_url") String connectionString) {
-    this(connectionString, null, true);
+    this(connectionString, null, true, false);
   }
 
   public DirectoryConnectionProvider(
-      String connectionString, String namespace, boolean withCaching) {
+      String connectionString, String namespace, boolean withCaching, boolean syncConnect) {
     this.connectionString = connectionString;
     this.namespace = namespace;
     this.withCaching = withCaching;
+    this.syncConnect = syncConnect;
   }
 
   @Override
@@ -61,7 +63,8 @@ public class DirectoryConnectionProvider implements Provider<Optional<PALDirecto
     }
 
     if (palDirectoryInstance == null) {
-      palDirectoryInstance = new PALDirectory(connectionString, namespace, withCaching);
+      palDirectoryInstance =
+          new PALDirectory(connectionString, namespace, withCaching, syncConnect);
     }
 
     return Optional.of(palDirectoryInstance);
