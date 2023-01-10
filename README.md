@@ -47,6 +47,8 @@ Pal is 100% java, laid out as a multi-module Maven project.
 
 Quickly build and install, running unittests: `mvn install -DskipITs`
 
+The above command skips integration tests. To run these as well, follow the instructions in the [itt README](itt/README.md).
+
 ### License
 
 Pal is made available as open source under the terms of the [GNU General Public License v3.0](https://opensource.org/licenses/GPL-3.0).
