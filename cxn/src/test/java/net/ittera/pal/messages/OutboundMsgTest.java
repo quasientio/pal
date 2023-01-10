@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.UUID;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.messages.colfer.InternalHeader;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -63,7 +64,7 @@ public class OutboundMsgTest {
     // with null headers and followingUuid
     OutboundMsg msgOut =
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.EXEC_MESSAGE,
             execPhase,
             headers,
             execMessageUuid,
@@ -71,7 +72,7 @@ public class OutboundMsgTest {
             body);
 
     // verify getters
-    assertThat(msgOut.getMessageType(), is(MessageType.ExecMessage));
+    assertThat(msgOut.getMessageType(), is(MessageType.EXEC_MESSAGE));
     assertThat(msgOut.getExecPhase(), is(execPhase));
     assertThat(msgOut.getHeaders(), is(nullValue()));
     assertThat(msgOut.getMessageUuid(), is(execMessageUuid));
@@ -107,7 +108,7 @@ public class OutboundMsgTest {
     // with all values filled
     OutboundMsg msgOut =
         new OutboundMsg(
-            MessageType.InterceptMessage,
+            MessageType.INTERCEPT_MESSAGE,
             ExecPhase.UNDEFINED,
             headers,
             interceptMessageUuid,
@@ -115,7 +116,7 @@ public class OutboundMsgTest {
             body);
 
     // verify getters
-    assertThat(msgOut.getMessageType(), is(MessageType.InterceptMessage));
+    assertThat(msgOut.getMessageType(), is(MessageType.INTERCEPT_MESSAGE));
     assertThat(msgOut.getExecPhase(), is(ExecPhase.UNDEFINED));
     assertThat(msgOut.getHeaders().size(), is(1));
     assertThat(msgOut.getHeaders().get(0), is(writeAhead));
@@ -160,7 +161,7 @@ public class OutboundMsgTest {
     // null execPhase
     try {
       new OutboundMsg(
-          MessageType.InterceptMessage, null, headers, messageUuid, UUID.randomUUID(), body);
+          MessageType.INTERCEPT_MESSAGE, null, headers, messageUuid, UUID.randomUUID(), body);
       fail("Should have thrown NPE");
     } catch (NullPointerException e) {
       // ok then
@@ -169,7 +170,7 @@ public class OutboundMsgTest {
     // null messageUuid
     try {
       new OutboundMsg(
-          MessageType.InterceptMessage,
+          MessageType.INTERCEPT_MESSAGE,
           ExecPhase.UNDEFINED,
           headers,
           null,
@@ -183,7 +184,7 @@ public class OutboundMsgTest {
     // null body
     try {
       new OutboundMsg(
-          MessageType.InterceptMessage,
+          MessageType.INTERCEPT_MESSAGE,
           ExecPhase.UNDEFINED,
           headers,
           messageUuid,
@@ -205,7 +206,7 @@ public class OutboundMsgTest {
 
     OutboundMsg msg1 =
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
             messageUuid,
@@ -215,7 +216,7 @@ public class OutboundMsgTest {
     // equal
     assertThat(
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
             messageUuid,
@@ -226,7 +227,7 @@ public class OutboundMsgTest {
     // different type
     assertThat(
         new OutboundMsg(
-            MessageType.InterceptMessage,
+            MessageType.INTERCEPT_MESSAGE,
             ExecPhase.BEFORE,
             headers,
             messageUuid,
@@ -239,7 +240,7 @@ public class OutboundMsgTest {
         Arrays.asList(writeAhead, writeAhead); // just duplicate the header
     assertThat(
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             otherHeaders,
             messageUuid,
@@ -250,7 +251,7 @@ public class OutboundMsgTest {
     // different message UUID
     assertThat(
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
             UUID.randomUUID(),
@@ -261,7 +262,7 @@ public class OutboundMsgTest {
     // different followingUuid
     assertThat(
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
             messageUuid,
@@ -272,7 +273,7 @@ public class OutboundMsgTest {
     // different body
     assertThat(
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
             messageUuid,

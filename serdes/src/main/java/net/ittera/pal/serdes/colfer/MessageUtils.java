@@ -23,9 +23,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import net.ittera.pal.messages.ExecMessageType;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
+import net.ittera.pal.messages.types.ExecMessageType;
 
 public class MessageUtils {
 

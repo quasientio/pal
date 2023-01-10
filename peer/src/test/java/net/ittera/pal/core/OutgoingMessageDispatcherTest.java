@@ -32,12 +32,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import net.ittera.pal.common.runtime.ExecPhase;
-import net.ittera.pal.messages.InternalHeaderType;
-import net.ittera.pal.messages.MessageType;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.types.InternalHeaderType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
 import org.junit.Before;
@@ -114,7 +114,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     OutboundMsg outMsg =
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             null,
             UUID.fromString(msg.getMessageUuid()),
@@ -143,7 +143,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
     List<InternalHeader> headers = Collections.singletonList(this.WRITE_AHEAD_HEADER);
     OutboundMsg outMsg =
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
             UUID.fromString(msg.getMessageUuid()),
@@ -179,7 +179,7 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       OutboundMsg outMsg =
           new OutboundMsg(
-              MessageType.ExecMessage,
+              MessageType.EXEC_MESSAGE,
               ExecPhase.BEFORE,
               null,
               UUID.fromString(msg.getMessageUuid()),

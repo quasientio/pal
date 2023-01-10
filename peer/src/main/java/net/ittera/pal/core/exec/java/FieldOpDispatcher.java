@@ -26,9 +26,9 @@ import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
-import net.ittera.pal.messages.ExecMessageType;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
+import net.ittera.pal.messages.types.ExecMessageType;
 
 public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
 

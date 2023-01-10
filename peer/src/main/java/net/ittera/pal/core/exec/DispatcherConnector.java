@@ -40,13 +40,13 @@ import net.ittera.pal.core.InterceptMatcher;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
-import net.ittera.pal.messages.ExecMessageType;
-import net.ittera.pal.messages.MessageType;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
@@ -150,7 +150,7 @@ public class DispatcherConnector {
     if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
       final OutboundMsg msg =
           new OutboundMsg(
-              MessageType.ExecMessage,
+              MessageType.EXEC_MESSAGE,
               execPhase,
               headers,
               UUID.fromString(execMessage.getMessageUuid()),
@@ -247,7 +247,7 @@ public class DispatcherConnector {
             : UUID.fromString(message.getFollowingUuid());
     final OutboundMsg msg =
         new OutboundMsg(
-            MessageType.ExecMessage,
+            MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             WRITE_AHEAD_HEADERS,
             UUID.fromString(message.getMessageUuid()),

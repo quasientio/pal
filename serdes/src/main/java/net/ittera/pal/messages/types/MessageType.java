@@ -17,20 +17,14 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages;
+package net.ittera.pal.messages.types;
 
-public enum ExecMessageType {
-  STATIC_CONSTRUCTOR,
-  RETURN_CLASS,
-  CONSTRUCTOR,
-  INSTANCE_METHOD,
-  CLASS_METHOD,
-  GET_STATIC,
-  GET_FIELD,
-  PUT_STATIC,
-  PUT_FIELD,
-  PUT_STATIC_DONE,
-  PUT_FIELD_DONE,
-  THROWABLE,
-  RETURN_VALUE,
+public enum MessageType {
+  CONTROL_MESSAGE,
+  EXEC_MESSAGE,
+  INTERCEPT_MESSAGE,
+  INTERCEPT_KEY,
+  INTERCEPT_REPLY;
+
+  public static final MessageType[] values = values();
 }

@@ -38,12 +38,12 @@ import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
-import net.ittera.pal.messages.MessageType;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.producer.MockProducer;
@@ -195,7 +195,7 @@ public class LogWriterTest extends ZmqEnabledTest {
         msg -> {
           boolean hasExecMessage = msg.getExecMessage() != null;
           MessageType msgType =
-              hasExecMessage ? MessageType.ExecMessage : MessageType.InterceptMessage;
+              hasExecMessage ? MessageType.EXEC_MESSAGE : MessageType.INTERCEPT_MESSAGE;
           ExecPhase execPhase = hasExecMessage ? ExecPhase.BEFORE : ExecPhase.UNDEFINED;
           OutboundMsg outMsg =
               new OutboundMsg(
@@ -246,7 +246,7 @@ public class LogWriterTest extends ZmqEnabledTest {
             msg -> {
               OutboundMsg outMsg =
                   new OutboundMsg(
-                      MessageType.ExecMessage,
+                      MessageType.EXEC_MESSAGE,
                       ExecPhase.BEFORE,
                       headers,
                       UUID.fromString(getMessageUuid(msg)),

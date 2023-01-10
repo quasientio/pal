@@ -17,13 +17,13 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages;
+package net.ittera.pal.messages.types;
 
-public enum MessageType {
-  ExecMessage,
-  InterceptMessage,
-  InterceptKey,
-  InterceptReply;
-
-  public static final MessageType[] values = values();
+public enum InternalHeaderType {
+  /**
+   * Sent before dispatching a received message. Value is the UUID of the receiving-dispatching
+   * peer, not the producer.
+   */
+  WRITE_AHEAD,
+  INCOMING_INTERCEPT_REQ,
 }

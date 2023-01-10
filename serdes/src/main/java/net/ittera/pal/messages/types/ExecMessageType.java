@@ -17,13 +17,20 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages;
+package net.ittera.pal.messages.types;
 
-public enum InternalHeaderType {
-  /**
-   * Sent before dispatching a received message. Value is the UUID of the receiving-dispatching
-   * peer, not the producer.
-   */
-  WRITE_AHEAD,
-  INCOMING_INTERCEPT_REQ,
+public enum ExecMessageType {
+  STATIC_CONSTRUCTOR,
+  RETURN_CLASS,
+  CONSTRUCTOR,
+  INSTANCE_METHOD,
+  CLASS_METHOD,
+  GET_STATIC,
+  GET_FIELD,
+  PUT_STATIC,
+  PUT_FIELD,
+  PUT_STATIC_DONE,
+  PUT_FIELD_DONE,
+  THROWABLE,
+  RETURN_VALUE,
 }

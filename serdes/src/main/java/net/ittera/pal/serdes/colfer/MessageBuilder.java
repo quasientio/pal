@@ -51,9 +51,6 @@ import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
-import net.ittera.pal.messages.ExecMessageType;
-import net.ittera.pal.messages.InternalHeaderType;
-import net.ittera.pal.messages.MessageType;
 import net.ittera.pal.messages.colfer.ClassMethodCall;
 import net.ittera.pal.messages.colfer.ConstructorCall;
 import net.ittera.pal.messages.colfer.ExecMessage;
@@ -74,6 +71,9 @@ import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldGet;
 import net.ittera.pal.messages.colfer.StaticFieldPut;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.InternalHeaderType;
+import net.ittera.pal.messages.types.MessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1030,25 +1030,25 @@ public final class MessageBuilder {
   // <editor-fold desc="Message Wrapper">
   public Message wrap(ExecMessage execMessage) {
     return new Message()
-        .withMessageType((byte) MessageType.ExecMessage.ordinal())
+        .withMessageType((byte) MessageType.EXEC_MESSAGE.ordinal())
         .withExecMessage(execMessage);
   }
 
   public Message wrap(InterceptMessage interceptMessage) {
     return new Message()
-        .withMessageType((byte) MessageType.InterceptMessage.ordinal())
+        .withMessageType((byte) MessageType.INTERCEPT_MESSAGE.ordinal())
         .withInterceptMessage(interceptMessage);
   }
 
   public Message wrap(InterceptKeyMessage interceptKeyMessage) {
     return new Message()
-        .withMessageType((byte) MessageType.InterceptKey.ordinal())
+        .withMessageType((byte) MessageType.INTERCEPT_KEY.ordinal())
         .withInterceptKeyMessage(interceptKeyMessage);
   }
 
   public Message wrap(InterceptReply interceptReply) {
     return new Message()
-        .withMessageType((byte) MessageType.InterceptReply.ordinal())
+        .withMessageType((byte) MessageType.INTERCEPT_REPLY.ordinal())
         .withInterceptReply(interceptReply);
   }
   // </editor-fold>

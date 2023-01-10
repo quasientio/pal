@@ -26,9 +26,6 @@ import com.google.gson.JsonSerializer;
 import java.lang.reflect.Type;
 import net.ittera.pal.common.lang.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;
-import net.ittera.pal.messages.ExecMessageType;
-import net.ittera.pal.messages.InternalHeaderType;
-import net.ittera.pal.messages.MessageType;
 import net.ittera.pal.messages.colfer.ClInitCall;
 import net.ittera.pal.messages.colfer.Class;
 import net.ittera.pal.messages.colfer.ClassMethodCall;
@@ -58,6 +55,9 @@ import net.ittera.pal.messages.colfer.StaticFieldGet;
 import net.ittera.pal.messages.colfer.StaticFieldPut;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.colfer.Throwable;
+import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.InternalHeaderType;
+import net.ittera.pal.messages.types.MessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -802,19 +802,19 @@ class JSONSerializers {
       final MessageType messageType = MessageType.values()[message.messageType];
       jsonElement.addProperty("type", messageType.name());
       switch (messageType) {
-        case ExecMessage:
+        case EXEC_MESSAGE:
           jsonElement.add("exec_message", jsonSerializationContext.serialize(message.execMessage));
           break;
-        case InterceptMessage:
+        case INTERCEPT_MESSAGE:
           jsonElement.add(
               "intercept_message", jsonSerializationContext.serialize(message.interceptMessage));
           break;
-        case InterceptKey:
+        case INTERCEPT_KEY:
           jsonElement.add(
               "intercept_key_message",
               jsonSerializationContext.serialize(message.interceptKeyMessage));
           break;
-        case InterceptReply:
+        case INTERCEPT_REPLY:
           jsonElement.add(
               "intercept_reply", jsonSerializationContext.serialize(message.interceptReply));
           break;

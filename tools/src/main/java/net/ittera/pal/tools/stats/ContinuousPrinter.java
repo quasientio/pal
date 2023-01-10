@@ -24,7 +24,7 @@ import com.google.gson.GsonBuilder;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
-import net.ittera.pal.messages.ExecMessageType;
+import net.ittera.pal.messages.types.ExecMessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

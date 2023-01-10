@@ -28,8 +28,8 @@ import kong.unirest.HttpResponse;
 import kong.unirest.JsonNode;
 import kong.unirest.Unirest;
 import net.ittera.pal.messages.MessageContext;
-import net.ittera.pal.messages.MessageType;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.types.MessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,9 +107,9 @@ class MessageIndexer {
   private static String getMessageUuid(Message msg) {
     final MessageType messageType = MessageType.values()[msg.getMessageType()];
     switch (messageType) {
-      case ExecMessage:
+      case EXEC_MESSAGE:
         return msg.getExecMessage().getMessageUuid();
-      case InterceptMessage:
+      case INTERCEPT_MESSAGE:
         return msg.getInterceptMessage().getMessageUuid();
       default:
         return null;
@@ -119,11 +119,11 @@ class MessageIndexer {
   private String printMessage(Message msg) {
     final MessageType messageType = MessageType.values()[msg.getMessageType()];
     switch (messageType) {
-      case ExecMessage:
+      case EXEC_MESSAGE:
         return toJSON(msg.getExecMessage(), true);
-      case InterceptMessage:
+      case INTERCEPT_MESSAGE:
         return toJSON(msg.getInterceptMessage(), true);
-      case InterceptReply:
+      case INTERCEPT_REPLY:
         return toJSON(msg.getInterceptReply(), true);
       default:
         throw new RuntimeException(format("unknown message type: %s", msg.toString()));

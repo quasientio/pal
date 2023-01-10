@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.messages.colfer.InternalHeader;
+import net.ittera.pal.messages.types.MessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZMQ;
@@ -194,7 +195,7 @@ public class OutboundMsg extends BaseMsg {
     // type of message
     int msgSize = buff.length;
     final MessageType messageType =
-        MessageType.values[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
+        MessageType.values()[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
     // execution phase
     final ExecPhase execPhase;
     buff = socket.recv();
