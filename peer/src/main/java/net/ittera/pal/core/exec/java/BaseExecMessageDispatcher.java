@@ -181,14 +181,23 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       try {
         // 7. Invoke constructor/method/field
         returnValue = invokeIncoming(accessibleObject, target, args, value);
+      } catch (Exception e) {
+        logger.error("Error during invocation phase", e);
+        if (e instanceof InvocationTargetException) {
+          exceptionWhileInvoking = e.getCause();
+        } else {
+          exceptionWhileInvoking = e;
+        }
+      }
 
-        // 8. Store? object in object map
+      // 8. Store? object in object map
+      try {
         if (!returnsVoid(accessibleObject) && returnValue != null) {
           objectRef = storeObject(returnValue);
         }
       } catch (Exception e) {
-        logger.error("Error during invocation phase", e);
-        exceptionWhileInvoking = e.getCause();
+        logger.error("Error after invocation phase", e);
+        exceptionWhileInvoking = e;
       }
     }
 
