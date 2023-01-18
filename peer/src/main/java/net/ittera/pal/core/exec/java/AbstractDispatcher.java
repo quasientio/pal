@@ -22,6 +22,7 @@ package net.ittera.pal.core.exec.java;
 import java.util.UUID;
 import javax.inject.Inject;
 import net.ittera.pal.common.objects.ObjectStore;
+import net.ittera.pal.core.SessionStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ abstract class AbstractDispatcher {
   protected UUID peerUuid;
   protected MessageBuilder messageBuilder;
   protected ObjectStore objectStore;
+  protected SessionStore sessionStore;
   protected DispatcherConnector connector;
 
   @Inject
@@ -53,5 +55,10 @@ abstract class AbstractDispatcher {
   @Inject
   final void setConnector(DispatcherConnector connector) {
     this.connector = connector;
+  }
+
+  @Inject
+  final void setSessionStore(SessionStore sessionStore) {
+    this.sessionStore = sessionStore;
   }
 }

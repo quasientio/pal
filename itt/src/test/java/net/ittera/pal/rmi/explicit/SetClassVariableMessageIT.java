@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.rmi.AbstractPeerMessageIT;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 

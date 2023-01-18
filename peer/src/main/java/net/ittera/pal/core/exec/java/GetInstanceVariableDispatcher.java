@@ -29,6 +29,7 @@ import javax.inject.Singleton;
 import net.ittera.pal.common.objects.ObjectNotFoundException;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
+import net.ittera.pal.core.SessionStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
@@ -44,11 +45,13 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
-      ObjectStore objectStore) {
+      ObjectStore objectStore,
+      SessionStore sessionStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
     setObjectStore(objectStore);
+    setSessionStore(sessionStore);
   }
 
   @Override
@@ -64,7 +67,7 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
   @Override
   protected Object getTargetFromMessage(
       ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
-      throws ObjectNotFoundException {
+      throws NullPointerException {
     Object target;
     Obj fieldGetObject = execMessage.getInstanceFieldGet().getObject();
     if (fieldGetObject != null) {
@@ -78,8 +81,12 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
       if (objectStore.containsObjectRef(targetObjRef)) {
         target = objectStore.lookupObject(targetObjRef);
       } else {
-        throw new ObjectNotFoundException(
-            String.format("No object found with objRef: %d", targetObjRef.getRef()));
+        Exception onfe =
+            new ObjectNotFoundException(
+                String.format("No object found with objRef: %d", targetObjRef.getRef()));
+        NullPointerException npe = new NullPointerException(onfe.getMessage());
+        npe.initCause(onfe);
+        throw npe;
       }
       if (logger.isTraceEnabled()) {
         logger.trace("Loaded target: {}", target);

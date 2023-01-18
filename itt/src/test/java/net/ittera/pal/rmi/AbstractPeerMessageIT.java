@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.rmi.explicit;
+package net.ittera.pal.rmi;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -33,7 +33,6 @@ import com.google.inject.name.Names;
 import java.io.InputStream;
 import java.util.Properties;
 import java.util.UUID;
-import net.ittera.pal.ExecMessageAssertions;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
@@ -59,7 +58,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
   protected static final UUID clientId = UUID.randomUUID();
 
   protected static MessageBuilder messageBuilder;
-  private static ThinPeer thinPeer;
+  protected static ThinPeer thinPeer;
 
   @BeforeClass
   public static void initialize() throws Exception {
@@ -128,13 +127,13 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
   }
 
   /** Helper Methods */
-  ReturnValue callConstructor(
+  protected ReturnValue callConstructor(
       String className, Class[] parameterTypes, Object[] args, ObjectRef[] argObjRefs)
       throws Exception {
     return callConstructor(className, parameterTypes, args, argObjRefs, null);
   }
 
-  ReturnValue callConstructor(
+  protected ReturnValue callConstructor(
       String className,
       Class[] parameterTypes,
       Object[] args,
@@ -162,7 +161,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  ReturnValue callEmptyConstructor(String className) throws Exception {
+  protected ReturnValue callEmptyConstructor(String className) throws Exception {
     return callEmptyConstructor(className, null);
   }
 
@@ -182,12 +181,12 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  ReturnValue callGetStatic(String className, String fieldName) throws Exception {
+  protected ReturnValue callGetStatic(String className, String fieldName) throws Exception {
     return callGetStatic(className, fieldName, null);
   }
 
-  ReturnValue callGetStatic(String className, String fieldName, String expectedThrowableType)
-      throws Exception {
+  protected ReturnValue callGetStatic(
+      String className, String fieldName, String expectedThrowableType) throws Exception {
     ExecMessage requestMsg = messageBuilder.buildGetStatic(clientId, className, fieldName);
     ExecMessage replyMsg = sendAndReceive(requestMsg);
 
@@ -201,12 +200,12 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  void callPutStatic(String className, String fieldName, String fieldClassName, Object value)
-      throws Exception {
+  protected void callPutStatic(
+      String className, String fieldName, String fieldClassName, Object value) throws Exception {
     callPutStatic(className, fieldName, fieldClassName, value, null);
   }
 
-  void callPutStatic(
+  protected void callPutStatic(
       String className,
       String fieldName,
       String fieldClassName,
@@ -228,12 +227,12 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
     }
   }
 
-  ReturnValue callGetInstanceVar(String className, String fieldName, ObjectRef objRef)
+  protected ReturnValue callGetInstanceVar(String className, String fieldName, ObjectRef objRef)
       throws Exception {
     return callGetInstanceVar(className, fieldName, objRef, null);
   }
 
-  ReturnValue callGetInstanceVar(
+  protected ReturnValue callGetInstanceVar(
       String className, String fieldName, ObjectRef objRef, String expectedThrowableType)
       throws Exception {
     ExecMessage requestMsg = messageBuilder.buildGetObject(clientId, className, fieldName, objRef);
@@ -249,7 +248,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  void callPutField(
+  protected void callPutField(
       String className,
       String fieldName,
       ObjectRef targetObjRef,
@@ -259,7 +258,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
     callPutField(className, fieldName, targetObjRef, valueClassName, value, null);
   }
 
-  void callPutField(
+  protected void callPutField(
       String className,
       String fieldName,
       ObjectRef targetObjRef,
@@ -284,7 +283,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
     }
   }
 
-  ReturnValue callClassMethod(
+  protected ReturnValue callClassMethod(
       String className,
       String methodName,
       String[] parameterTypeNames,
@@ -295,7 +294,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
         className, methodName, parameterTypeNames, parameters, paramObjRefs, null);
   }
 
-  ReturnValue callClassMethod(
+  protected ReturnValue callClassMethod(
       String className,
       String methodName,
       String[] parameterTypeNames,
@@ -325,7 +324,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  void callVoidClassMethod(
+  protected void callVoidClassMethod(
       String className,
       String methodName,
       String[] parameterTypeNames,
@@ -335,7 +334,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
     callVoidClassMethod(className, methodName, parameterTypeNames, parameters, paramObjRefs, null);
   }
 
-  void callVoidClassMethod(
+  protected void callVoidClassMethod(
       String className,
       String methodName,
       String[] parameterTypeNames,
@@ -364,7 +363,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
     }
   }
 
-  ReturnValue callInstanceMethod(
+  protected ReturnValue callInstanceMethod(
       String className,
       String methodName,
       ObjectRef targetObjRef,
@@ -376,7 +375,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
         className, methodName, targetObjRef, parameterTypeNames, parameters, paramObjRefs, null);
   }
 
-  ReturnValue callInstanceMethod(
+  protected ReturnValue callInstanceMethod(
       String className,
       String methodName,
       ObjectRef targetObjRef,
@@ -407,7 +406,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
     return replyMsg.getReturnValue();
   }
 
-  void callVoidInstanceMethod(
+  protected void callVoidInstanceMethod(
       String className,
       String methodName,
       ObjectRef targetObjRef,
@@ -419,7 +418,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
         className, methodName, targetObjRef, parameterTypeNames, parameters, paramObjRefs, null);
   }
 
-  void callVoidInstanceMethod(
+  protected void callVoidInstanceMethod(
       String className,
       String methodName,
       ObjectRef targetObjRef,

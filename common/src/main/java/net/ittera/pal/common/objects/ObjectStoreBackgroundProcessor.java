@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 class ObjectStoreBackgroundProcessor extends Thread {
 
   private final Logger logger;
-  private static final int DEFAULT_CLEANUP_INTERVAL_SECS = 10;
+  private static final int DEFAULT_CLEANUP_INTERVAL_SECS = 2;
   private static final int DEFAULT_STATS_INTERVAL_SECS = 30;
 
   @Nonnull final ConcurrentHashMapObjectStore objectStore;
@@ -85,7 +85,7 @@ class ObjectStoreBackgroundProcessor extends Thread {
     if (logger.isDebugEnabled()) {
       long cleanupEnd = Instant.now().toEpochMilli();
       logger.debug(
-          "Cleaned up {} objects map in {} ms", clearedCount.get(), cleanupEnd - cleanupStart);
+          "Cleaned up {} object refs in {} ms", clearedCount.get(), cleanupEnd - cleanupStart);
     }
   }
 

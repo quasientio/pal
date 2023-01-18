@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.rmi.AbstractPeerMessageIT;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
@@ -147,7 +148,7 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
   }
 
   @Test
-  public void putField_noSuchInstance_exThrown() throws Exception {
+  public void putField_noSuchInstance_npeThrown() throws Exception {
 
     // fake non-existing instance
     ObjectRef badObjRef = ObjectRef.from("30482239");
@@ -162,6 +163,6 @@ public class SetInstanceVariableMessageIT extends AbstractPeerMessageIT {
         badObjRef,
         fieldClassName,
         newValue,
-        "net.ittera.pal.common.objects.ObjectNotFoundException");
+        "java.lang.NullPointerException");
   }
 }

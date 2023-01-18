@@ -25,6 +25,7 @@ import static org.junit.Assert.assertEquals;
 import java.util.Arrays;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.rmi.AbstractPeerMessageIT;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 

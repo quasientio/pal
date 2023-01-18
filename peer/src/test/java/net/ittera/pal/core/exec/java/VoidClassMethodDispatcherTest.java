@@ -98,7 +98,8 @@ class ClassForVoidClassMethodTest {
 public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
   private Dispatcher dispatcher =
-      new ClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
+      new ClassMethodDispatcher(
+          peerUuid, messageBuilder, dispatcherConnector, objectStore, sessionStore);
 
   private Class targetClass = ClassForVoidClassMethodTest.class;
 

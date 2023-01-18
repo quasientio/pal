@@ -84,7 +84,8 @@ class ClassForNonVoidClassMethodTest {
 public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
   private Dispatcher dispatcher =
-      new ClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
+      new ClassMethodDispatcher(
+          peerUuid, messageBuilder, dispatcherConnector, objectStore, sessionStore);
 
   private Class targetClass = ClassForNonVoidClassMethodTest.class;
 

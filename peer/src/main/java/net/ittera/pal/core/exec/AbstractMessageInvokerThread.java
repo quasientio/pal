@@ -25,9 +25,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
+import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.colfer.InterceptMessage;
-import net.ittera.pal.messages.colfer.InterceptReply;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -105,9 +104,9 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       return execMessage.getMessageUuid();
     }
 
-    final InterceptMessage interceptMessage = msg.getInterceptMessage();
-    if (interceptMessage != null) {
-      return interceptMessage.getMessageUuid();
+    final ControlMessage controlMessage = msg.getControlMessage();
+    if (controlMessage != null) {
+      return controlMessage.getMessageUuid();
     }
 
     return null;
@@ -147,12 +146,6 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       return;
     }
 
-    final InterceptMessage interceptMessage = message.getInterceptMessage();
-    if (interceptMessage != null) {
-      dispatch(message.getInterceptMessage(), recordOffset);
-      return;
-    }
-
     logger.error("Ignoring dispatch of msg of unknown type: {}", ColferUtils.format(message));
   }
 
@@ -162,9 +155,9 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       return messageBuilder.wrap(dispatch(message.getExecMessage(), null));
     }
 
-    final InterceptMessage interceptMessage = message.getInterceptMessage();
-    if (interceptMessage != null) {
-      return messageBuilder.wrap(dispatch(message.getInterceptMessage(), null));
+    final ControlMessage controlMessage = message.getControlMessage();
+    if (controlMessage != null) {
+      return messageBuilder.wrap(dispatch(message.getControlMessage()));
     }
 
     throw new IllegalArgumentException(
@@ -193,23 +186,11 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     return replyMsg;
   }
 
-  private InterceptReply dispatch(InterceptMessage interceptMsg, @Nullable Long recordOffset) {
-    final boolean isDirectRequest = recordOffset == null;
-    final boolean result =
-        incomingMessageDispatcher.incomingIntercept(interceptMsg, isDirectRequest);
-    if (logger.isDebugEnabled()) {
-      logger.debug(
-          "Invoker dispatched Intercept Request w/uuid: {} and recordOffset: {}, reply: {}",
-          interceptMsg.getMessageUuid(),
-          recordOffset,
-          result);
-    }
-
-    final InterceptReply interceptReply =
-        messageBuilder.buildInterceptReply(
-            peerUuid, UUID.fromString(interceptMsg.getMessageUuid()), result);
+  private ControlMessage dispatch(ControlMessage controlMsg) {
+    final ControlMessage statusMessage =
+        incomingMessageDispatcher.incomingControlMessage(controlMsg);
     updateCounters();
-    return interceptReply;
+    return statusMessage;
   }
 
   private void updateCounters() {

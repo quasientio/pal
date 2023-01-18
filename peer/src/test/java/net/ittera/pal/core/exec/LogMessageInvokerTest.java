@@ -30,18 +30,15 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
@@ -65,7 +62,6 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
   private IncomingMessageDispatcher incomingMessageDispatcher;
   private final MessageBuilder msgBuilder = new MessageBuilder();
   private List<ExecMessage> execMessageReplies = new ArrayList<>();
-  private List<Boolean> interceptReqMessageResults = new ArrayList<>();
 
   @Before
   public void setup() throws Exception {
@@ -101,15 +97,6 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
                           incomingMsg.getMessageUuid());
                   execMessageReplies.add(reply);
                   return reply;
-                });
-
-    // stub incomingCall for InterceptMessage
-    when(incomingMessageDispatcher.incomingIntercept(any(), anyBoolean()))
-        .thenAnswer(
-            (Answer<Boolean>)
-                invocationOnMock -> {
-                  interceptReqMessageResults.add(true);
-                  return true;
                 });
 
     this.logMessageInvoker =
@@ -149,36 +136,6 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 
     // assert reply msg followsUuid of original
     assertThat(execMessageReplies.get(0).getFollowingUuid(), is(invokable.getMessageUuid()));
-  }
-
-  @Test
-  public void invokeInterceptRequestMessage() throws Exception {
-
-    // start invoker thread
-    execService.submit(logMessageInvoker);
-
-    // deal msg
-    int fakeOffset = 0;
-    InterceptMessage invokable =
-        msgBuilder.buildInterceptMessage(
-            peerUuid,
-            InterceptType.BEFORE,
-            "java.io.PrintStream",
-            "println",
-            Collections.emptyList(),
-            this.getClass().getName(),
-            "someCallbackMethod");
-    InboundLogMsg msg =
-        new InboundLogMsg(fakeOffset, ColferUtils.toBytes(msgBuilder.wrap(invokable)));
-    msg.send(dealerSocket);
-
-    // wait for msg to be rcvd
-    while (logMessageInvoker.getRequestsDispatched().get() < 1) {
-      Thread.sleep(100);
-    }
-    verify(incomingMessageDispatcher, times(1)).incomingIntercept(any(), anyBoolean());
-
-    assertThat(interceptReqMessageResults.size(), is(1));
   }
 
   @Test

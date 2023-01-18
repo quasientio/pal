@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.UUID;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
 import net.ittera.pal.common.objects.ObjectStore;
+import net.ittera.pal.core.SessionStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.Before;
@@ -42,6 +43,8 @@ public abstract class AbstractDispatcherTest {
   protected UUID peerUuid = UUID.randomUUID();
 
   protected ObjectStore objectStore = new ConcurrentHashMapObjectStore();
+
+  protected SessionStore sessionStore = new SessionStore();
 
   protected MessageBuilder messageBuilder = new MessageBuilder();
 

@@ -19,8 +19,10 @@
 
 package net.ittera.pal.common.objects;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +33,7 @@ import org.slf4j.LoggerFactory;
  * <pre>
  * Contract:
  * --=====--
- * Storing an object returns an ObjectRef (Plain wrapper around String)
+ * storeObject() creates and saves a WeakReference and returns an ObjectRef (Plain wrapper around String)
  *
  * We wrap objects before putting them in the map, so the Map implementation uses our overriden hashCode(),
  * which delegates to the value's System.identityHashCode, and not the normal hashCode.
@@ -53,7 +55,7 @@ public final class ConcurrentHashMapObjectStore implements ObjectStore {
 
   private final ObjectStoreStats objectStoreStats = new ObjectStoreStats();
 
-  // A map for all objects created by the this peer
+  // A map for all objects created by this peer
   private final ConcurrentHashMap<ObjectRef, IdentifiableObject> objects;
 
   private void updateMaxSize() {
@@ -160,5 +162,19 @@ public final class ConcurrentHashMapObjectStore implements ObjectStore {
       logger.trace("out w/ containsObjectRef: {}", containsObjectRef);
     }
     return containsObjectRef;
+  }
+
+  @Override
+  public Object remove(@Nonnull ObjectRef objectRef) {
+    final IdentifiableObject storedObject = objects.remove(objectRef);
+    if (storedObject != null) {
+      return storedObject.getObject().get();
+    }
+    return null;
+  }
+
+  @Override
+  public void removeAll(Collection<ObjectRef> objectRefs) {
+    objectRefs.forEach(objects::remove);
   }
 }

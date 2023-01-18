@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -40,9 +41,13 @@ import java.util.concurrent.Future;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.LogRequest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.messages.types.ControlCommandType;
+import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -68,6 +73,7 @@ public class ThinPeer {
   private UUID peerUuid;
   private String peerName;
   private boolean allowP2P = true;
+  private boolean isSocketConnected = false;
   private boolean closed;
   private boolean initialized;
   private final MessageBuilder msgBuilder = new MessageBuilder();
@@ -353,6 +359,7 @@ public class ThinPeer {
   private void connectSocket() {
     peerSocket.setIdentity(("Dual-Peer-" + peerUuid.toString()).getBytes(ZMQ.CHARSET));
     peerSocket.connect(currentPeer.getReqAddress());
+    isSocketConnected = true;
   }
 
   private void assertInitialized() {
@@ -698,10 +705,15 @@ public class ThinPeer {
     if (!allowP2P) {
       throw new RuntimeException("Cannot connect to peer: p2p is disallowed");
     }
-    logger.info("Now in direct talk with {}", peerInfo);
+
+    if (currentPeer != null && isSocketConnected) {
+      sendDeleteSessionRequest();
+    }
+
     currentPeer = peerInfo;
     connectSocket();
     talkingToPeer = true;
+    logger.info("Now in direct talk with {}", peerInfo);
   }
 
   public ExecMessage sendToPeer(ExecMessage message) {
@@ -727,6 +739,61 @@ public class ThinPeer {
     }
 
     return replyMsg;
+  }
+
+  // TODO: refactor this and above method
+  public ControlMessage sendToPeer(ControlMessage message) {
+    assertInitialized();
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendToPeer: in with message: {}", ColferUtils.format(message));
+    }
+    // send message request to peer
+    peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
+
+    final long waitStart = System.currentTimeMillis();
+    byte[] reply = peerSocket.recv(0);
+    final long waitEnd = System.currentTimeMillis();
+
+    final Message replyMsgWrapper = new Message();
+    replyMsgWrapper.unmarshal(reply, 0);
+    final ControlMessage replyMsg = replyMsgWrapper.getControlMessage();
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Got reply message: {}, waited {} ms",
+          ColferUtils.format(replyMsg),
+          (waitEnd - waitStart));
+    }
+
+    return replyMsg;
+  }
+
+  public void sendDeleteSessionRequest() {
+    final String sessionId = peerUuid.toString();
+    ControlMessage msg =
+        msgBuilder.buildControlMessage(peerUuid, ControlCommandType.DELETE_SESSION, sessionId);
+    ControlMessage replyMsg = sendToPeer(msg);
+    ControlStatusType statusType = ControlStatusType.values()[replyMsg.getStatus()];
+    if (Objects.requireNonNull(statusType) == ControlStatusType.OK) {
+      logger.info("Session w/uuid {} was deleted.", sessionId);
+    } else {
+      logger.error("Error deleting session w/uuid {} - status {}", sessionId, statusType.name());
+    }
+  }
+
+  public void sendDeleteObjectRequest(ObjectRef objectRef) throws Exception {
+    ControlMessage msg =
+        msgBuilder.buildControlMessage(
+            peerUuid, ControlCommandType.DELETE_OBJECT, objectRef.asString());
+    ControlMessage replyMsg = sendToPeer(msg);
+    ControlStatusType statusType = ControlStatusType.values()[replyMsg.getStatus()];
+    if (Objects.requireNonNull(statusType) == ControlStatusType.OK) {
+      logger.info("Object w/ref {} was deleted.", objectRef);
+      return;
+    } else {
+      throw new Exception(
+          String.format(
+              "Error deleting object w/ref %s - status %s", objectRef, statusType.name()));
+    }
   }
 
   private void close(Consumer consumer, long timeout, TemporalUnit timeUnit, String msg) {
@@ -765,10 +832,15 @@ public class ThinPeer {
   public void close() {
     assertInitialized();
 
-    // NOTE: we only resources that were not passed to us
+    if (currentPeer != null && isSocketConnected) {
+      sendDeleteSessionRequest();
+    }
+
+    // NOTE: we only close resources that were not passed to us
 
     // close socket-related resources
     close(peerSocket, "Peer socket closed.");
+    isSocketConnected = false;
     if (!zmqContextGiven) {
       try {
         if (zmqContext != null) {

@@ -78,7 +78,8 @@ class ClassForConstructorTest {
 public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
   private Dispatcher dispatcher =
-      new ConstructorDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
+      new ConstructorDispatcher(
+          peerUuid, messageBuilder, dispatcherConnector, objectStore, sessionStore);
 
   private Class targetClass = ClassForConstructorTest.class;
 

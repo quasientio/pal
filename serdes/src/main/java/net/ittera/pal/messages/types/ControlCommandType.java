@@ -17,14 +17,9 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package colfer
+package net.ittera.pal.messages.types;
 
-type Message struct {
-	messageType uint8
-	// one of
-	controlMessage      ControlMessage
-	execMessage         ExecMessage
-	interceptMessage    InterceptMessage
-	interceptKeyMessage InterceptKeyMessage
-	interceptReply      InterceptReply
+public enum ControlCommandType {
+  DELETE_OBJECT,
+  DELETE_SESSION
 }

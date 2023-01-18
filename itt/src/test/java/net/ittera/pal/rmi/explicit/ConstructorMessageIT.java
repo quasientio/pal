@@ -21,6 +21,7 @@ package net.ittera.pal.rmi.explicit;
 
 import net.ittera.pal.apps.rmi.explicit.Constructors;
 import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.rmi.AbstractPeerMessageIT;
 import org.junit.Test;
 
 /**

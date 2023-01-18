@@ -20,6 +20,7 @@
 package net.ittera.pal.rmi.explicit;
 
 import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.rmi.AbstractPeerMessageIT;
 import org.junit.Test;
 
 /**
@@ -157,11 +158,11 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
   }
 
   @Test
-  public void callInstanceMethod_noSuchInstance_throwsEx() throws Exception {
+  public void callInstanceMethod_noSuchInstance_throwsNPE() throws Exception {
 
     String methodName = "printDate";
 
-    // create new instance
+    // fake non-existing instance
     ObjectRef newObjRef = ObjectRef.from("2398248");
 
     // now call the method
@@ -174,6 +175,6 @@ public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
         parameterTypes,
         parameters,
         new ObjectRef[parameterTypes.length],
-        "net.ittera.pal.common.objects.ObjectNotFoundException");
+        "java.lang.NullPointerException");
   }
 }

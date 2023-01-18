@@ -43,6 +43,11 @@ public class ObjectRefTest {
   }
 
   @Test
+  public void testAsString() {
+    assertThat(objectRef.asString(), is(String.valueOf(ref)));
+  }
+
+  @Test
   public void equalsContract() {
     EqualsVerifier.forClass(ObjectRef.class).usingGetClass().verify();
   }

@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
@@ -53,6 +54,7 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.messages.colfer.ClassMethodCall;
 import net.ittera.pal.messages.colfer.ConstructorCall;
+import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InstanceFieldGet;
 import net.ittera.pal.messages.colfer.InstanceFieldPut;
@@ -71,6 +73,8 @@ import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldGet;
 import net.ittera.pal.messages.colfer.StaticFieldPut;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.messages.types.ControlCommandType;
+import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.InternalHeaderType;
 import net.ittera.pal.messages.types.MessageType;
@@ -1027,6 +1031,36 @@ public final class MessageBuilder {
   }
   // </editor-fold>
 
+  // <editor-fold desc="Control messages">
+  public ControlMessage buildControlMessage(
+      UUID peerUuid, ControlCommandType commandType, @Nullable String body) {
+    final ControlMessage controlMessage =
+        new ControlMessage()
+            .withPeerUuid(peerUuid.toString())
+            .withMessageUuid(UUID.randomUUID().toString())
+            .withCommand((byte) commandType.ordinal());
+
+    if (body != null && !body.isEmpty()) {
+      controlMessage.setBody(body);
+    }
+    return controlMessage;
+  }
+
+  public ControlMessage buildControlMessage(
+      UUID peerUuid, ControlStatusType statusType, @Nullable String body) {
+    final ControlMessage controlMessage =
+        new ControlMessage()
+            .withPeerUuid(peerUuid.toString())
+            .withMessageUuid(UUID.randomUUID().toString())
+            .withStatus((byte) statusType.ordinal());
+
+    if (body != null && !body.isEmpty()) {
+      controlMessage.setBody(body);
+    }
+    return controlMessage;
+  }
+  // </editor-fold>
+
   // <editor-fold desc="Message Wrapper">
   public Message wrap(ExecMessage execMessage) {
     return new Message()
@@ -1050,6 +1084,12 @@ public final class MessageBuilder {
     return new Message()
         .withMessageType((byte) MessageType.INTERCEPT_REPLY.ordinal())
         .withInterceptReply(interceptReply);
+  }
+
+  public Message wrap(ControlMessage controlMessage) {
+    return new Message()
+        .withMessageType((byte) MessageType.CONTROL_MESSAGE.ordinal())
+        .withControlMessage(controlMessage);
   }
   // </editor-fold>
 }

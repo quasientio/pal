@@ -19,6 +19,8 @@
 
 package net.ittera.pal.common.objects;
 
+import java.util.Collection;
+
 public interface ObjectStore {
 
   ObjectRef storeObject(Object object);
@@ -26,6 +28,10 @@ public interface ObjectStore {
   Object lookupObject(ObjectRef objectRef);
 
   boolean containsObjectRef(ObjectRef objectRef);
+
+  Object remove(ObjectRef objectRef);
+
+  void removeAll(Collection<ObjectRef> objectRefs);
 
   void clear();
 

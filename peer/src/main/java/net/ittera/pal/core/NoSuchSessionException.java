@@ -17,14 +17,13 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package colfer
+package net.ittera.pal.core;
 
-type Message struct {
-	messageType uint8
-	// one of
-	controlMessage      ControlMessage
-	execMessage         ExecMessage
-	interceptMessage    InterceptMessage
-	interceptKeyMessage InterceptKeyMessage
-	interceptReply      InterceptReply
+public class NoSuchSessionException extends Exception {
+
+  public NoSuchSessionException() {}
+
+  public NoSuchSessionException(String message) {
+    super(message);
+  }
 }

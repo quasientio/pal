@@ -32,6 +32,7 @@ import net.ittera.pal.messages.colfer.ClassMethodCall;
 import net.ittera.pal.messages.colfer.Constructor;
 import net.ittera.pal.messages.colfer.ConstructorCall;
 import net.ittera.pal.messages.colfer.Context;
+import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Field;
 import net.ittera.pal.messages.colfer.InstanceFieldGet;
@@ -55,6 +56,8 @@ import net.ittera.pal.messages.colfer.StaticFieldGet;
 import net.ittera.pal.messages.colfer.StaticFieldPut;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.colfer.Throwable;
+import net.ittera.pal.messages.types.ControlCommandType;
+import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.InternalHeaderType;
 import net.ittera.pal.messages.types.MessageType;
@@ -794,6 +797,32 @@ class JSONSerializers {
     }
   }
 
+  static class ControlMessageSerializer implements JsonSerializer<ControlMessage> {
+    @Override
+    public JsonElement serialize(
+        ControlMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
+      final JsonObject jsonElement = new JsonObject();
+      if (notEmpty(message.peerUuid)) {
+        jsonElement.addProperty("peer_uuid", message.peerUuid);
+      }
+      if (notEmpty(message.messageUuid)) {
+        jsonElement.addProperty("message_uuid", message.messageUuid);
+      }
+      if (notEmpty(message.command)) {
+        ControlCommandType commandType = ControlCommandType.values()[message.getCommand()];
+        jsonElement.addProperty("command", commandType.name());
+      }
+      if (notEmpty(message.status)) {
+        ControlStatusType statusType = ControlStatusType.values()[message.getStatus()];
+        jsonElement.addProperty("status", statusType.name());
+      }
+      if (notEmpty(message.body)) {
+        jsonElement.addProperty("body", message.body);
+      }
+      return jsonElement;
+    }
+  }
+
   static class MessageSerializer implements JsonSerializer<Message> {
     @Override
     public JsonElement serialize(
@@ -802,6 +831,10 @@ class JSONSerializers {
       final MessageType messageType = MessageType.values()[message.messageType];
       jsonElement.addProperty("type", messageType.name());
       switch (messageType) {
+        case CONTROL_MESSAGE:
+          jsonElement.add(
+              "control_message", jsonSerializationContext.serialize(message.controlMessage));
+          break;
         case EXEC_MESSAGE:
           jsonElement.add("exec_message", jsonSerializationContext.serialize(message.execMessage));
           break;

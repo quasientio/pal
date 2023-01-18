@@ -19,12 +19,10 @@
 
 package colfer
 
-type Message struct {
-	messageType uint8
-	// one of
-	controlMessage      ControlMessage
-	execMessage         ExecMessage
-	interceptMessage    InterceptMessage
-	interceptKeyMessage InterceptKeyMessage
-	interceptReply      InterceptReply
+type ControlMessage struct {
+	peerUuid    text
+	messageUuid text
+	command     uint8
+	status      uint8
+	body        text
 }

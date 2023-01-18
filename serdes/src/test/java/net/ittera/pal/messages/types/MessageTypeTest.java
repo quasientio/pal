@@ -17,14 +17,22 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package colfer
+package net.ittera.pal.messages.types;
 
-type Message struct {
-	messageType uint8
-	// one of
-	controlMessage      ControlMessage
-	execMessage         ExecMessage
-	interceptMessage    InterceptMessage
-	interceptKeyMessage InterceptKeyMessage
-	interceptReply      InterceptReply
+import org.junit.Test;
+
+public class MessageTypeTest {
+
+  @Test
+  public void testToByte() {
+    MessageType controlMsg = MessageType.CONTROL_MESSAGE;
+    MessageType interceptReply = MessageType.INTERCEPT_REPLY;
+
+    byte controlMsgAsByte = controlMsg.toByte();
+    byte interceptReplyMsgAsByte = interceptReply.toByte();
+    System.out.println("control toByte: " + controlMsgAsByte);
+    System.out.println("control fromByte: " + MessageType.fromByte(controlMsgAsByte));
+    System.out.println("inter repl toByte: " + interceptReplyMsgAsByte);
+    System.out.println("inter repl fromByte: " + MessageType.fromByte(interceptReplyMsgAsByte));
+  }
 }

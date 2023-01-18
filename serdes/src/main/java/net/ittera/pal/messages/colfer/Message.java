@@ -32,6 +32,8 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
   public byte messageType;
 
   /** one of */
+  public ControlMessage controlMessage;
+
   public ExecMessage execMessage;
 
   public InterceptMessage interceptMessage;
@@ -141,6 +143,7 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
    */
   public int marshalFit() {
     long n = 1L + 2;
+    if (this.controlMessage != null) n += 1 + (long) this.controlMessage.marshalFit();
     if (this.execMessage != null) n += 1 + (long) this.execMessage.marshalFit();
     if (this.interceptMessage != null) n += 1 + (long) this.interceptMessage.marshalFit();
     if (this.interceptKeyMessage != null) n += 1 + (long) this.interceptKeyMessage.marshalFit();
@@ -192,23 +195,28 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
         buf[i++] = this.messageType;
       }
 
-      if (this.execMessage != null) {
+      if (this.controlMessage != null) {
         buf[i++] = (byte) 1;
+        i = this.controlMessage.marshal(buf, i);
+      }
+
+      if (this.execMessage != null) {
+        buf[i++] = (byte) 2;
         i = this.execMessage.marshal(buf, i);
       }
 
       if (this.interceptMessage != null) {
-        buf[i++] = (byte) 2;
+        buf[i++] = (byte) 3;
         i = this.interceptMessage.marshal(buf, i);
       }
 
       if (this.interceptKeyMessage != null) {
-        buf[i++] = (byte) 3;
+        buf[i++] = (byte) 4;
         i = this.interceptKeyMessage.marshal(buf, i);
       }
 
       if (this.interceptReply != null) {
-        buf[i++] = (byte) 4;
+        buf[i++] = (byte) 5;
         i = this.interceptReply.marshal(buf, i);
       }
 
@@ -263,24 +271,30 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
       }
 
       if (header == (byte) 1) {
+        this.controlMessage = new ControlMessage();
+        i = this.controlMessage.unmarshal(buf, i, end);
+        header = buf[i++];
+      }
+
+      if (header == (byte) 2) {
         this.execMessage = new ExecMessage();
         i = this.execMessage.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 2) {
+      if (header == (byte) 3) {
         this.interceptMessage = new InterceptMessage();
         i = this.interceptMessage.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 3) {
+      if (header == (byte) 4) {
         this.interceptKeyMessage = new InterceptKeyMessage();
         i = this.interceptKeyMessage.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 4) {
+      if (header == (byte) 5) {
         this.interceptReply = new InterceptReply();
         i = this.interceptReply.unmarshal(buf, i, end);
         header = buf[i++];
@@ -302,7 +316,7 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 5L;
+  private static final long serialVersionUID = 6L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -353,6 +367,35 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
    */
   public Message withMessageType(byte value) {
     this.messageType = value;
+    return this;
+  }
+
+  /**
+   * Gets net.ittera.pal.messages/colfer.Message.controlMessage.
+   *
+   * @return the value.
+   */
+  public ControlMessage getControlMessage() {
+    return this.controlMessage;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.Message.controlMessage.
+   *
+   * @param value the replacement.
+   */
+  public void setControlMessage(ControlMessage value) {
+    this.controlMessage = value;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.Message.controlMessage.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public Message withControlMessage(ControlMessage value) {
+    this.controlMessage = value;
     return this;
   }
 
@@ -476,6 +519,7 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
   public final int hashCode() {
     int h = 1;
     h = 31 * h + (this.messageType & 0xff);
+    if (this.controlMessage != null) h = 31 * h + this.controlMessage.hashCode();
     if (this.execMessage != null) h = 31 * h + this.execMessage.hashCode();
     if (this.interceptMessage != null) h = 31 * h + this.interceptMessage.hashCode();
     if (this.interceptKeyMessage != null) h = 31 * h + this.interceptKeyMessage.hashCode();
@@ -493,6 +537,9 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
     if (o == this) return true;
 
     return this.messageType == o.messageType
+        && (this.controlMessage == null
+            ? o.controlMessage == null
+            : this.controlMessage.equals(o.controlMessage))
         && (this.execMessage == null
             ? o.execMessage == null
             : this.execMessage.equals(o.execMessage))

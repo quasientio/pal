@@ -24,8 +24,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
-import net.ittera.pal.common.objects.ObjectNotFoundException;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.runtime.Dispatcher;
@@ -170,7 +170,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         accessibleObject.ifPresent(aobj -> aobj.setAccessible(true));
       }
     } catch (Exception ex) {
-      logger.error("Error during loading phase (before invocation)", ex);
+      logger.error("Error during loading phase", ex);
       exceptionWhileLoading = ex;
     }
 
@@ -182,26 +182,33 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         // 7. Invoke constructor/method/field
         returnValue = invokeIncoming(accessibleObject, target, args, value);
       } catch (Exception e) {
-        logger.error("Error during invocation phase", e);
+        logger.error("Error during invocation phase - invoke", e);
         if (e instanceof InvocationTargetException) {
           exceptionWhileInvoking = e.getCause();
         } else {
           exceptionWhileInvoking = e;
         }
       }
+    }
 
-      // 8. Store? object in object map
+    // 8. Map returnValue: add new entry in objectRef->object map
+    if (exceptionWhileLoading == null && exceptionWhileInvoking == null) {
       try {
         if (!returnsVoid(accessibleObject) && returnValue != null) {
           objectRef = storeObject(returnValue);
         }
       } catch (Exception e) {
-        logger.error("Error after invocation phase", e);
-        exceptionWhileInvoking = e;
+        logger.error("Error after invocation phase - storing return value", e);
+      }
+
+      // 9. Save returnValue to peer's session
+      if (objectRef != null && incomingCall.getPeerUuid() != null) {
+        final UUID peerUuid = UUID.fromString(incomingCall.getPeerUuid());
+        sessionStore.storeInSession(peerUuid, objectRef, returnValue);
       }
     }
 
-    // 9. Wrap object or exception
+    // 10. Wrap object or exception
     final ExecMessage afterExecMsg =
         wrapAfterExecMessage(
             incomingCall,
@@ -211,10 +218,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             exceptionWhileLoading,
             exceptionWhileInvoking);
 
-    // 10. Send object or exception, and receive
+    // 11. Send object or exception, and receive
     final ExecMessage afterExecReplyMsg = connector.sendExecMessage(afterExecMsg, ExecPhase.AFTER);
 
-    // 11. Return received message
+    // 12. Return received message
     if (logger.isTraceEnabled()) {
       logger.trace(
           "dispatchIncoming:out returning message: {}", ColferUtils.format(afterExecReplyMsg));
@@ -311,7 +318,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * @return
    */
   Object getTargetFromMessage(ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
-      throws ClassNotFoundException, ObjectNotFoundException {
+      throws ClassNotFoundException, NullPointerException {
     return null;
   }
 

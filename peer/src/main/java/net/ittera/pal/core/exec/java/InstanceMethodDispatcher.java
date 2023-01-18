@@ -35,6 +35,7 @@ import net.ittera.pal.common.objects.ObjectNotFoundException;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.core.SessionStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
@@ -51,11 +52,13 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
-      ObjectStore objectStore) {
+      ObjectStore objectStore,
+      SessionStore sessionStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
     setObjectStore(objectStore);
+    setSessionStore(sessionStore);
   }
 
   @Override
@@ -131,7 +134,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   @Override
   protected Object getTargetFromMessage(
       ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
-      throws ClassNotFoundException, ObjectNotFoundException {
+      throws ClassNotFoundException, NullPointerException {
     Object target;
     final Obj methodCallObject = execMessage.getInstanceMethodCall().getObject();
     if (methodCallObject != null) {
@@ -149,8 +152,12 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
       if (objectStore.containsObjectRef(targetObjRef)) {
         target = objectStore.lookupObject(targetObjRef);
       } else {
-        throw new ObjectNotFoundException(
-            String.format("No object found with objRef: %d", targetObjRef.getRef()));
+        Exception onfe =
+            new ObjectNotFoundException(
+                String.format("No object found with objRef: %d", targetObjRef.getRef()));
+        NullPointerException npe = new NullPointerException(onfe.getMessage());
+        npe.initCause(onfe);
+        throw npe;
       }
       if (logger.isTraceEnabled()) {
         logger.trace("Loaded target: {}", target);

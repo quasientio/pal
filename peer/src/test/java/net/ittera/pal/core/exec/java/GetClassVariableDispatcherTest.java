@@ -58,7 +58,8 @@ class ClassForGetStaticTest {
 public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
 
   private Dispatcher dispatcher =
-      new GetClassVariableDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
+      new GetClassVariableDispatcher(
+          peerUuid, messageBuilder, dispatcherConnector, objectStore, sessionStore);
 
   private Class targetClass = ClassForGetStaticTest.class;
 

@@ -49,6 +49,10 @@ public final class ObjectRef {
     return ref == objectRef.ref;
   }
 
+  public String asString() {
+    return String.valueOf(ref);
+  }
+
   @Override
   public int hashCode() {
     return Objects.hash(ref);

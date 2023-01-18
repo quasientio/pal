@@ -26,5 +26,11 @@ public enum MessageType {
   INTERCEPT_KEY,
   INTERCEPT_REPLY;
 
-  public static final MessageType[] values = values();
+  public static MessageType fromByte(byte messageTypeAsByte) {
+    return MessageType.values()[messageTypeAsByte - 1];
+  }
+
+  public byte toByte() {
+    return (byte) (this.ordinal() + 1);
+  }
 }

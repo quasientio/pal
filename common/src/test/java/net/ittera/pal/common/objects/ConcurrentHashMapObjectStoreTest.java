@@ -32,6 +32,7 @@ import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.stream.Stream;
 import org.junit.Test;
 import org.mockito.MockedStatic;
@@ -399,6 +400,7 @@ public class ConcurrentHashMapObjectStoreTest {
     objectStore = new ConcurrentHashMapObjectStore();
 
     assertThat(objectStore.getObjects(), is(anEmptyMap()));
+    assertTrue(objectStore.isEmpty());
   }
 
   @Test
@@ -408,5 +410,41 @@ public class ConcurrentHashMapObjectStoreTest {
     objectStore.storeObject(new ArrayList<>());
     assertThat(objectStore.getObjects(), is(aMapWithSize(1)));
   }
+  // </editor-fold>
+
+  // <editor-fold desc="removeObject">
+  @Test
+  public void remove_objectIsStored_objectRemoved() {
+    objectStore = new ConcurrentHashMapObjectStore();
+    final ObjectRef objRef = objectStore.storeObject(new ArrayList<>());
+    assertTrue(objectStore.containsObjectRef(objRef));
+    assertFalse(objectStore.isEmpty());
+    assertThat(objectStore.getObjects(), is(aMapWithSize(1)));
+
+    // remove and check
+    objectStore.remove(objRef);
+    assertFalse(objectStore.containsObjectRef(objRef));
+    assertTrue(objectStore.isEmpty());
+    assertThat(objectStore.getObjects(), is(anEmptyMap()));
+  }
+
+  @Test
+  public void removeAll_someOjectsStored_allRemoved() {
+    objectStore = new ConcurrentHashMapObjectStore();
+    List<ObjectRef> objectRefList = new ArrayList<>();
+    objectRefList.add(objectStore.storeObject(new ArrayList<>()));
+    objectRefList.add(objectStore.storeObject(new ArrayList<>()));
+    objectRefList.add(objectStore.storeObject(new ArrayList<>()));
+    objectRefList.forEach(objRef -> assertTrue(objectStore.containsObjectRef(objRef)));
+    assertFalse(objectStore.isEmpty());
+    assertThat(objectStore.getObjects(), is(aMapWithSize(objectRefList.size())));
+
+    // remove and check
+    objectStore.removeAll(objectRefList);
+    objectRefList.forEach(objRef -> assertFalse(objectStore.containsObjectRef(objRef)));
+    assertTrue(objectStore.isEmpty());
+    assertThat(objectStore.getObjects(), is(anEmptyMap()));
+  }
+
   // </editor-fold>
 }

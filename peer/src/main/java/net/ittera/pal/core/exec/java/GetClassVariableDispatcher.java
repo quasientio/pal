@@ -25,6 +25,7 @@ import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.ittera.pal.common.objects.ObjectStore;
+import net.ittera.pal.core.SessionStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.types.ExecMessageType;
@@ -38,11 +39,13 @@ public class GetClassVariableDispatcher extends GetFieldDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
-      ObjectStore objectStore) {
+      ObjectStore objectStore,
+      SessionStore sessionStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
     setObjectStore(objectStore);
+    setSessionStore(sessionStore);
   }
 
   @Override

@@ -19,13 +19,24 @@
 
 package net.ittera.pal.core.exec.java;
 
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.objects.ObjectStore;
+import net.ittera.pal.core.NoSuchSessionException;
+import net.ittera.pal.core.SessionStore;
 import net.ittera.pal.core.exec.UnsupportedMessageException;
+import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.types.ControlCommandType;
+import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +44,10 @@ import org.slf4j.LoggerFactory;
 public class IncomingMessageDispatcher {
 
   protected static final Logger logger = LoggerFactory.getLogger(IncomingMessageDispatcher.class);
+  @Inject private ObjectStore objectStore;
+  @Inject private SessionStore sessionStore;
+  @Inject MessageBuilder messageBuilder;
+  @Inject private UUID peerUuid;
 
   // constructor & method dispatchers
   @Inject private ConstructorDispatcher constructorDispatcher;
@@ -77,9 +92,60 @@ public class IncomingMessageDispatcher {
     }
   }
 
-  public boolean incomingIntercept(InterceptMessage interceptMessage, boolean isDirect) {
-    logger.warn(
-        "DEPRECATED incomingCall with intercept msg: {}", ColferUtils.format(interceptMessage));
-    return false;
+  public ControlMessage incomingControlMessage(ControlMessage controlMessage) {
+    final UUID remotePeerUuid = UUID.fromString(controlMessage.getPeerUuid());
+    final ControlCommandType commandType = ControlCommandType.values()[controlMessage.getCommand()];
+    String body = null;
+    ControlStatusType statusType;
+    switch (commandType) {
+      case DELETE_OBJECT:
+        ObjectRef objectRef = ObjectRef.from(controlMessage.getBody());
+        try {
+          if (sessionStore.deleteObject(remotePeerUuid, objectRef)) {
+            statusType = ControlStatusType.OK;
+          } else {
+            statusType = ControlStatusType.NO_SUCH_OBJECT;
+          }
+          // delete object reference in objectStore
+          objectStore.remove(objectRef);
+          logger.info("Object {} deleted for peer w/uuid: {}", objectRef, remotePeerUuid);
+        } catch (NoSuchSessionException ex) {
+          statusType = ControlStatusType.NO_SUCH_SESSION;
+        } catch (Exception ex) {
+          statusType = ControlStatusType.ERROR;
+          body = ex.getMessage();
+          logger.error("Error deleting object w/objectRef: {}", objectRef, ex);
+        }
+        break;
+      case DELETE_SESSION:
+        Set<Entry<ObjectRef, Object>> objectEntriesInSession;
+        try {
+          objectEntriesInSession = sessionStore.getEntriesInSession(remotePeerUuid);
+          // delete references to objects in objectStore
+          objectStore.removeAll(
+              objectEntriesInSession.stream().map(Entry::getKey).collect(Collectors.toList()));
+          // delete session
+          sessionStore.deleteSession(remotePeerUuid);
+          statusType = ControlStatusType.OK;
+          logger.info("Session deleted for peer w/uuid: {}", remotePeerUuid);
+        } catch (NoSuchSessionException ex) {
+          statusType = ControlStatusType.NO_SUCH_SESSION;
+        } catch (Exception ex) {
+          statusType = ControlStatusType.ERROR;
+          body = ex.getMessage();
+          logger.error("Error deleting session for peer with uuid: {}", remotePeerUuid, ex);
+        }
+        break;
+      default:
+        String errorMessage =
+            String.format(
+                "Incoming message w/uuid %s ignored - no handler:%n%s",
+                controlMessage.getMessageUuid(), ColferUtils.format(controlMessage));
+        logger.warn(errorMessage);
+        statusType = ControlStatusType.UNSUPPORTED_COMMAND;
+        body = errorMessage;
+    }
+
+    return messageBuilder.buildControlMessage(remotePeerUuid, statusType, body);
   }
 }
