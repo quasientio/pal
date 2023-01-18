@@ -73,9 +73,6 @@ public class DispatcherConnector {
 
   private final AtomicLong totalPubSocketTime = new AtomicLong();
   private final AtomicLong totalPubReqs = new AtomicLong();
-  /*
-  2 sockets per thread: 1 to send REQs to Intercepts; 1 to send REQs to MessagePublisher
-  */
 
   // per-thread REQ socket to publish exec messages
   private final ThreadLocal<Socket> threadPubSocket =
@@ -95,7 +92,9 @@ public class DispatcherConnector {
   // flag to avoid closing a socket that hasn't been created
   private final ThreadLocal<Boolean> threadPubSocketCreated = ThreadLocal.withInitial(() -> false);
 
-  private final ThreadLocal<Map<UUID, Socket>> threadSockets =
+  // ThreadLocal map of peerUUID -> socket connecting to remote ROUTER/REQ to invoke intercept
+  // callbacks
+  private final ThreadLocal<Map<UUID, Socket>> callbackSockets =
       ThreadLocal.withInitial(HashMap::new);
 
   @Inject
@@ -319,11 +318,11 @@ public class DispatcherConnector {
 
   private Socket getConnectedREQSocketFor(UUID peer) throws Exception {
     // first check if socket for peer is already open
-    if (threadSockets.get().containsKey(peer)) {
+    if (callbackSockets.get().containsKey(peer)) {
       if (logger.isDebugEnabled()) {
         logger.debug("Returning existing REQ socket for peer w/uuid: {}", peer);
       }
-      return threadSockets.get().get(peer);
+      return callbackSockets.get().get(peer);
     }
 
     // else, create and connect new socket
@@ -339,7 +338,7 @@ public class DispatcherConnector {
     String interceptorAddress = palDirectory.getPeerInfo(peer).getReqAddress();
     reqSocket.connect(interceptorAddress);
     // store in thread-local peer->socket map
-    threadSockets.get().put(peer, reqSocket);
+    callbackSockets.get().put(peer, reqSocket);
 
     return reqSocket;
   }
@@ -384,7 +383,7 @@ public class DispatcherConnector {
     }
     threadPubSocketCreated.remove();
 
-    threadSockets
+    callbackSockets
         .get()
         .forEach(
             (uuid, socket) -> {
@@ -395,6 +394,6 @@ public class DispatcherConnector {
                 logger.debug("Closed thread-local REQ socket to remote peer w/uuid: {}", uuid);
               }
             });
-    threadSockets.remove();
+    callbackSockets.remove();
   }
 }
