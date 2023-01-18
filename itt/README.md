@@ -18,14 +18,14 @@ docker pull wurstmeister/kafka:2.12-2.3.0
 # Start zookeeper and kafka
 start_zk_and_kafka &> /dev/null &
 
-# Launch a listening peer
+# Launch a listening peer (tcp-req may be any available port number)
 pal run \
-  --dir localhost:2181 \
-  --tcp-req 5656 \
-  --log auto \
-  --interceptable \
-  --tcp-req-threads 3 \
-  --classpath itt-apps/target/itt-apps-0.2.0-SNAPSHOT.jar
+--dir localhost:2181 \
+--tcp-req 5656 \
+--log auto \
+--interceptable \
+--tcp-req-threads 3 \
+--classpath itt-apps/target/itt-apps-0.2.0-SNAPSHOT.jar
 ```
 2. Open a second terminal and run mvn verify
 ```bash
