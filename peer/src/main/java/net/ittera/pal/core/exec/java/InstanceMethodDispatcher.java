@@ -35,7 +35,6 @@ import net.ittera.pal.common.objects.ObjectNotFoundException;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.common.runtime.Context;
-import net.ittera.pal.core.SessionStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
@@ -52,13 +51,11 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
-      ObjectStore objectStore,
-      SessionStore sessionStore) {
+      ObjectStore objectStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
     setObjectStore(objectStore);
-    setSessionStore(sessionStore);
   }
 
   @Override

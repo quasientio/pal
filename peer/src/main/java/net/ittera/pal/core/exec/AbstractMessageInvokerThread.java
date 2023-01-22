@@ -187,10 +187,22 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   }
 
   private ControlMessage dispatch(ControlMessage controlMsg) {
-    final ControlMessage statusMessage =
-        incomingMessageDispatcher.incomingControlMessage(controlMsg);
-    updateCounters();
-    return statusMessage;
+    ControlMessage replyMsg = null;
+    try {
+      replyMsg = incomingMessageDispatcher.incomingControlMessage(controlMsg);
+    } catch (UnsupportedMessageException e) {
+      logger.error("Unsupported incoming message", e);
+    }
+    if (replyMsg != null) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Invoker dispatched Exec Message w/uuid: {} , reply uuid: {}",
+            controlMsg.getMessageUuid(),
+            replyMsg.getMessageUuid());
+      }
+      updateCounters();
+    }
+    return replyMsg;
   }
 
   private void updateCounters() {

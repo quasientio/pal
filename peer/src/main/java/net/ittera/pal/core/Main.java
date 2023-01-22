@@ -232,6 +232,7 @@ public class Main implements Callable<Integer> {
       inprocChannels.put("offset.pub", "inproc://offsets");
       inprocChannels.put("sync.ready", "inproc://sync_ready");
       inprocChannels.put("intercepts.reg", "inproc://intcept_reg");
+      inprocChannels.put("sessions.svc", "inproc://sessions");
     }
 
     private static final String DEFAULT_PUB_HOSTNAME = "localhost";
@@ -617,8 +618,11 @@ public class Main implements Callable<Integer> {
 
   private Set<Service> createManagedServices(Injector injector) {
     final Set<Service> services = new HashSet<>();
+    boolean sessionRequired = false;
+
     if (runOptions.contains(RunOptions.WITH_INLOG)) {
       services.add(injector.getInstance(LogReader.class));
+      sessionRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_OUTLOG)) {
       services.add(injector.getInstance(LogWriter.class));
@@ -628,9 +632,13 @@ public class Main implements Callable<Integer> {
     }
     if (runOptions.contains(RunOptions.WITH_TCP_REQ)) {
       services.add(injector.getInstance(DirectRequestDispatcher.class));
+      sessionRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
       services.add(injector.getInstance(InterceptMatcher.class));
+    }
+    if (sessionRequired) {
+      services.add(injector.getInstance(Sessions.class));
     }
     return services;
   }

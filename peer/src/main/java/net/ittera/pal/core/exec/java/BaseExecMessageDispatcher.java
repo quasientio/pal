@@ -25,16 +25,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nonnull;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.common.util.Classes;
+import net.ittera.pal.core.messages.SessionCmdMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
 import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.SessionCommandType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 
@@ -198,13 +201,17 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           objectRef = storeObject(returnValue);
         }
       } catch (Exception e) {
-        logger.error("Error after invocation phase - storing return value", e);
+        logger.error("Error after invocation phase - mapping objectref -> return value", e);
       }
 
       // 9. Save returnValue to peer's session
       if (objectRef != null && incomingCall.getPeerUuid() != null) {
-        final UUID peerUuid = UUID.fromString(incomingCall.getPeerUuid());
-        sessionStore.storeInSession(peerUuid, objectRef, returnValue);
+        try {
+          final UUID peerUuid = UUID.fromString(incomingCall.getPeerUuid());
+          storeObjectInSession(peerUuid, objectRef);
+        } catch (Exception e) {
+          logger.error("Error after invocation phase - saving return value to session", e);
+        }
       }
     }
 
@@ -341,6 +348,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         exceptionWhileLoading != null ? exceptionWhileLoading : exceptionWhileInvoking;
     return messageBuilder.buildAccessibleObjectThrowable(
         peerUuid, accessibleObject, executableObjectType, throwable, messageUuid);
+  }
+
+  private void storeObjectInSession(@Nonnull UUID peerUuid, @Nonnull ObjectRef objectRef) {
+    SessionCmdMsg sessionCmdMsg =
+        new SessionCmdMsg(SessionCommandType.STORE_OBJECT, peerUuid, objectRef);
+    connector.sendMessageToSessionService(sessionCmdMsg);
   }
 
   protected abstract ExecMessage wrapBeforeExecMessage(

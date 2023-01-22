@@ -38,6 +38,8 @@ import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.InterceptMatcher;
 import net.ittera.pal.core.RunOptions;
+import net.ittera.pal.core.messages.SessionCmdMsg;
+import net.ittera.pal.core.messages.SessionReplyMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.OutboundMsg;
@@ -68,6 +70,7 @@ public class DispatcherConnector {
   private final DirectoryConnectionProvider directoryConnectionProvider;
   private final InterceptMatcher interceptMatcher;
   private final String msgPublisherAddress;
+  private final String sessionServiceAddress;
   private final List<InternalHeader> WRITE_AHEAD_HEADERS;
   private final Set<RunOptions> runOptions;
 
@@ -83,7 +86,7 @@ public class DispatcherConnector {
           worker.connect(msgPublisherAddress);
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Created and connected REQ new socket to outCellAddress: {}", msgPublisherAddress);
+                "Created and connected new REQ socket to outCellAddress: {}", msgPublisherAddress);
           }
           threadPubSocketCreated.set(true);
           return worker;
@@ -91,6 +94,25 @@ public class DispatcherConnector {
       };
   // flag to avoid closing a socket that hasn't been created
   private final ThreadLocal<Boolean> threadPubSocketCreated = ThreadLocal.withInitial(() -> false);
+
+  private final ThreadLocal<Socket> threadSessionsSocket =
+      new ThreadLocal<Socket>() {
+        @Override
+        protected Socket initialValue() {
+          Socket worker = zmqContext.createSocket(SocketType.REQ);
+          worker.connect(sessionServiceAddress);
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Created and connected new REQ socket to sessionServiceAddress: {}",
+                sessionServiceAddress);
+          }
+          threadSessionsSocketCreated.set(true);
+          return worker;
+        }
+      };
+
+  private final ThreadLocal<Boolean> threadSessionsSocketCreated =
+      ThreadLocal.withInitial(() -> false);
 
   // ThreadLocal map of peerUUID -> socket connecting to remote ROUTER/REQ to invoke intercept
   // callbacks
@@ -105,7 +127,8 @@ public class DispatcherConnector {
       DirectoryConnectionProvider directoryConnectionProvider,
       Set<RunOptions> runOptions,
       InterceptMatcher interceptMatcher,
-      @Named("out.cell") String msgPublisherAddress) {
+      @Named("out.cell") String msgPublisherAddress,
+      @Named("sessions.svc") String sessionServiceAddress) {
     this.zmqContext = zmqContext;
     this.peerUuid = peerUuid;
     this.messageBuilder = messageBuilder;
@@ -113,6 +136,7 @@ public class DispatcherConnector {
     this.runOptions = runOptions;
     this.interceptMatcher = interceptMatcher;
     this.msgPublisherAddress = msgPublisherAddress;
+    this.sessionServiceAddress = sessionServiceAddress;
     this.WRITE_AHEAD_HEADERS =
         Collections.singletonList(messageBuilder.buildWriteAheadHeader(peerUuid));
   }
@@ -312,6 +336,22 @@ public class DispatcherConnector {
     sendCallbackMessageToPeer(interceptor, message, false);
   }
 
+  public final SessionReplyMsg sendMessageToSessionService(SessionCmdMsg sessionCmdMsg) {
+    SessionReplyMsg replyMsg = null;
+    final Socket sessionServiceSocket = threadSessionsSocket.get();
+    final boolean msgSent = sessionCmdMsg.send(sessionServiceSocket);
+    if (msgSent) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Sent session command message: {}", sessionCmdMsg);
+      }
+      replyMsg = SessionReplyMsg.recvMsg(sessionServiceSocket, true);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Received session reply message: {}", replyMsg);
+      }
+    }
+    return replyMsg;
+  }
+
   private byte[] sendCallbackToPeer(UUID interceptor, ExecMessage message) throws Exception {
     return sendCallbackMessageToPeer(interceptor, message, true);
   }
@@ -382,6 +422,18 @@ public class DispatcherConnector {
       threadPubSocket.remove();
     }
     threadPubSocketCreated.remove();
+
+    if (Boolean.TRUE.equals(threadSessionsSocketCreated.get())) {
+      Socket socket = threadSessionsSocket.get();
+      if (socket != null) {
+        socket.close();
+        if (logger.isDebugEnabled()) {
+          logger.debug("Thread local REQ socket for sessions service closed");
+        }
+      }
+      threadSessionsSocket.remove();
+    }
+    threadSessionsSocketCreated.remove();
 
     callbackSockets
         .get()

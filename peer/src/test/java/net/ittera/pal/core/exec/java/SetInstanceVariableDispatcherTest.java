@@ -58,8 +58,7 @@ class ClassForPutFieldTest {
 public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
 
   private Dispatcher dispatcher =
-      new SetInstanceVariableDispatcher(
-          peerUuid, messageBuilder, dispatcherConnector, objectStore, sessionStore);
+      new SetInstanceVariableDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
 
   private Class targetClass = ClassForPutFieldTest.class;
 

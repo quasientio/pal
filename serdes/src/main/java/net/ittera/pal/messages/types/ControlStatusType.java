@@ -22,7 +22,16 @@ package net.ittera.pal.messages.types;
 public enum ControlStatusType {
   OK,
   ERROR,
+  UNAUTHORIZED,
   UNSUPPORTED_COMMAND,
   NO_SUCH_SESSION,
-  NO_SUCH_OBJECT
+  NO_SUCH_OBJECT;
+
+  public static ControlStatusType fromByte(byte messageTypeAsByte) {
+    return ControlStatusType.values()[messageTypeAsByte - 1];
+  }
+
+  public byte toByte() {
+    return (byte) (this.ordinal() + 1);
+  }
 }

@@ -46,7 +46,6 @@ import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
-import net.ittera.pal.messages.types.ControlCommandType;
 import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
@@ -769,8 +768,7 @@ public class ThinPeer {
 
   public void sendDeleteSessionRequest() {
     final String sessionId = peerUuid.toString();
-    ControlMessage msg =
-        msgBuilder.buildControlMessage(peerUuid, ControlCommandType.DELETE_SESSION, sessionId);
+    ControlMessage msg = msgBuilder.buildDeleteSessionControlMessage(peerUuid);
     ControlMessage replyMsg = sendToPeer(msg);
     ControlStatusType statusType = ControlStatusType.values()[replyMsg.getStatus()];
     if (Objects.requireNonNull(statusType) == ControlStatusType.OK) {
@@ -781,9 +779,7 @@ public class ThinPeer {
   }
 
   public void sendDeleteObjectRequest(ObjectRef objectRef) throws Exception {
-    ControlMessage msg =
-        msgBuilder.buildControlMessage(
-            peerUuid, ControlCommandType.DELETE_OBJECT, objectRef.asString());
+    ControlMessage msg = msgBuilder.buildDeleteObjectControlMessage(peerUuid, objectRef.asString());
     ControlMessage replyMsg = sendToPeer(msg);
     ControlStatusType statusType = ControlStatusType.values()[replyMsg.getStatus()];
     if (Objects.requireNonNull(statusType) == ControlStatusType.OK) {

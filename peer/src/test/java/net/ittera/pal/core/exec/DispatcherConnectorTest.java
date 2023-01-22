@@ -35,15 +35,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.InterceptMatcher;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.ZmqEnabledTest;
+import net.ittera.pal.core.messages.SessionCmdMsg;
+import net.ittera.pal.core.messages.SessionReplyMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.types.SessionCommandType;
+import net.ittera.pal.messages.types.SessionStatusType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.curator.test.TestingServer;
 import org.junit.After;
@@ -110,9 +115,51 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
       logger.debug("MessagePublisherStub: exiting");
     }
   }
+  /*
+  Sessions service stub
+   */
+  private final class SessionsStub implements Runnable {
+    List<SessionCmdMsg> messagesReceived = new ArrayList<>();
+    private volatile boolean stopRequested;
+
+    void requestStop() {
+      stopRequested = true;
+    }
+
+    @Override
+    public void run() {
+      Socket repSocket = context.createSocket(SocketType.REP);
+      repSocket.bind(SESSION_SERVICE_REQ_ADDR);
+      while (!stopRequested && !Thread.interrupted()) {
+        SessionCmdMsg msg;
+        try {
+          msg = SessionCmdMsg.recvMsg(repSocket, true);
+          if (msg == null) {
+            continue;
+          }
+          messagesReceived.add(msg);
+          SessionReplyMsg replyMsg = new SessionReplyMsg(SessionStatusType.OK);
+          replyMsg.send(repSocket);
+        } catch (ZMQException ex) {
+          int errorCode = ex.getErrorCode();
+          if (errorCode == ZError.ETERM) {
+            break;
+          } else if (errorCode == ZError.EINTR) {
+            break;
+          } else {
+            throw ex;
+          }
+        } catch (Exception e) {
+          logger.error("Error parsing received message", e);
+        }
+      }
+      logger.debug("SessionsStub: exiting");
+    }
+  }
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private static final String MSG_PUBLISHER_ADDR = "inproc://cell";
+  private static final String SESSION_SERVICE_REQ_ADDR = "inproc://sessions";
   private static final int TEST_PORT = 2182;
   private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
 
@@ -123,6 +170,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   private DispatcherConnector dispatcherConnector;
   private final MessageBuilder msgBuilder = new MessageBuilder();
   private MessagePublisherStub messagePublisherStub;
+  private SessionsStub sessionsStub;
   private InternalHeader WRITE_AHEAD_HEADER;
   private TestingServer testingServer;
   private DirectoryConnectionProvider directoryConnectionProvider;
@@ -149,7 +197,9 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 
     // start stub services
     messagePublisherStub = new MessagePublisherStub();
+    sessionsStub = new SessionsStub();
     execService.submit(messagePublisherStub);
+    execService.submit(sessionsStub);
   }
 
   @After
@@ -157,6 +207,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     logger.trace("entering cleanup");
     messagesToMatchReceived.clear();
     messagePublisherStub.requestStop();
+    sessionsStub.requestStop();
     dispatcherConnector.closeThreadLocalSockets();
     directoryConnectionProvider.get().get().close();
     testingServer.close();
@@ -182,7 +233,8 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
         directoryConnectionProvider,
         runOptions,
         interceptMatcher,
-        MSG_PUBLISHER_ADDR);
+        MSG_PUBLISHER_ADDR,
+        SESSION_SERVICE_REQ_ADDR);
   }
 
   private void sendExecMessage(boolean withPublishing, boolean withIntercepts) throws Exception {
@@ -311,5 +363,33 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   @Test
   public void writeAheadNoPublishing() throws Exception {
     writeAhead(false, true);
+  }
+
+  @Test
+  public void sendMessagesToSessionService() throws Exception {
+    logger.trace("entering sendMessageToSessionService");
+    this.dispatcherConnector = initDispatcherConnector(false, false);
+
+    // sends 2 msgs and get reply
+    SessionCmdMsg sessionCmdMsg1 =
+        new SessionCmdMsg(
+            SessionCommandType.STORE_OBJECT, UUID.randomUUID(), ObjectRef.from("39872356"));
+    SessionReplyMsg returnedMsg1 = dispatcherConnector.sendMessageToSessionService(sessionCmdMsg1);
+
+    SessionCmdMsg sessionCmdMsg2 =
+        new SessionCmdMsg(
+            SessionCommandType.STORE_OBJECT, UUID.randomUUID(), ObjectRef.from("7734876"));
+    SessionReplyMsg returnedMsg2 = dispatcherConnector.sendMessageToSessionService(sessionCmdMsg2);
+
+    // reply has status OK
+    assertThat(returnedMsg1.getStatus(), is(SessionStatusType.OK));
+    assertThat(returnedMsg2.getStatus(), is(SessionStatusType.OK));
+
+    // verify messages received by Sessions service
+    assertThat(sessionsStub.messagesReceived.size(), is(2));
+    assertThat(sessionsStub.messagesReceived.get(0), is(sessionCmdMsg1));
+    assertThat(sessionsStub.messagesReceived.get(1), is(sessionCmdMsg2));
+
+    logger.trace("leaving sendMessageToSessionService");
   }
 }

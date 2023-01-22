@@ -30,7 +30,7 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
   /** The upper limit for serial byte sizes. */
   public static int colferSizeMax = 16 * 1024 * 1024;
 
-  public String peerUuid;
+  public String fromPeer;
 
   public String messageUuid;
 
@@ -47,7 +47,7 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
 
   /** Colfer zero values. */
   private void init() {
-    peerUuid = "";
+    fromPeer = "";
     messageUuid = "";
     body = "";
   }
@@ -148,7 +148,7 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
     long n =
         1L
             + 6
-            + (long) this.peerUuid.length() * 3
+            + (long) this.fromPeer.length() * 3
             + 6
             + (long) this.messageUuid.length() * 3
             + 2
@@ -197,11 +197,11 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
     int i = offset;
 
     try {
-      if (!this.peerUuid.isEmpty()) {
+      if (!this.fromPeer.isEmpty()) {
         buf[i++] = (byte) 0;
         int start = ++i;
 
-        String s = this.peerUuid;
+        String s = this.fromPeer;
         for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
           char c = s.charAt(sIndex);
           if (c < '\u0080') {
@@ -228,7 +228,7 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
         if (size > ControlMessage.colferSizeMax)
           throw new IllegalStateException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.ControlMessage.peerUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.ControlMessage.fromPeer size %d exceeds %d UTF-8 bytes",
                   size, ControlMessage.colferSizeMax));
 
         int ii = start - 1;
@@ -406,12 +406,12 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
         if (size < 0 || size > ControlMessage.colferSizeMax)
           throw new SecurityException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.ControlMessage.peerUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.ControlMessage.fromPeer size %d exceeds %d UTF-8 bytes",
                   size, ControlMessage.colferSizeMax));
 
         int start = i;
         i += size;
-        this.peerUuid = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.fromPeer = new String(buf, start, size, StandardCharsets.UTF_8);
         header = buf[i++];
       }
 
@@ -506,31 +506,31 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.ControlMessage.peerUuid.
+   * Gets net.ittera.pal.messages/colfer.ControlMessage.fromPeer.
    *
    * @return the value.
    */
-  public String getPeerUuid() {
-    return this.peerUuid;
+  public String getFromPeer() {
+    return this.fromPeer;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.ControlMessage.peerUuid.
+   * Sets net.ittera.pal.messages/colfer.ControlMessage.fromPeer.
    *
    * @param value the replacement.
    */
-  public void setPeerUuid(String value) {
-    this.peerUuid = value;
+  public void setFromPeer(String value) {
+    this.fromPeer = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.ControlMessage.peerUuid.
+   * Sets net.ittera.pal.messages/colfer.ControlMessage.fromPeer.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public ControlMessage withPeerUuid(String value) {
-    this.peerUuid = value;
+  public ControlMessage withFromPeer(String value) {
+    this.fromPeer = value;
     return this;
   }
 
@@ -653,7 +653,7 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
   @Override
   public final int hashCode() {
     int h = 1;
-    if (this.peerUuid != null) h = 31 * h + this.peerUuid.hashCode();
+    if (this.fromPeer != null) h = 31 * h + this.fromPeer.hashCode();
     if (this.messageUuid != null) h = 31 * h + this.messageUuid.hashCode();
     h = 31 * h + (this.command & 0xff);
     h = 31 * h + (this.status & 0xff);
@@ -670,7 +670,7 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
     if (o == null) return false;
     if (o == this) return true;
 
-    return (this.peerUuid == null ? o.peerUuid == null : this.peerUuid.equals(o.peerUuid))
+    return (this.fromPeer == null ? o.fromPeer == null : this.fromPeer.equals(o.fromPeer))
         && (this.messageUuid == null
             ? o.messageUuid == null
             : this.messageUuid.equals(o.messageUuid))

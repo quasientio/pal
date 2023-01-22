@@ -83,6 +83,7 @@ class PeerWiring extends AbstractModule {
     properties.setProperty("DirectRequestDispatcher.service", "Direct_Request_Dispatcher");
     properties.setProperty("OutgoingMessageDispatcher.service", "Outgoing_Message_Dispatcher");
     properties.setProperty("Intercepts.service", "Intercepts_Processor");
+    properties.setProperty("Sessions.service", "Sessions_Service");
   }
 
   @Override

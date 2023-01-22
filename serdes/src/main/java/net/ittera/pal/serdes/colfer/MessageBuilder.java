@@ -1032,13 +1032,12 @@ public final class MessageBuilder {
   // </editor-fold>
 
   // <editor-fold desc="Control messages">
-  public ControlMessage buildControlMessage(
-      UUID peerUuid, ControlCommandType commandType, @Nullable String body) {
+  public ControlMessage buildDeleteObjectControlMessage(UUID fromPeer, String body) {
     final ControlMessage controlMessage =
         new ControlMessage()
-            .withPeerUuid(peerUuid.toString())
+            .withFromPeer(fromPeer.toString())
             .withMessageUuid(UUID.randomUUID().toString())
-            .withCommand((byte) commandType.ordinal());
+            .withCommand((byte) ControlCommandType.DELETE_OBJECT.ordinal());
 
     if (body != null && !body.isEmpty()) {
       controlMessage.setBody(body);
@@ -1046,11 +1045,18 @@ public final class MessageBuilder {
     return controlMessage;
   }
 
+  public ControlMessage buildDeleteSessionControlMessage(UUID fromPeer) {
+    return new ControlMessage()
+        .withFromPeer(fromPeer.toString())
+        .withMessageUuid(UUID.randomUUID().toString())
+        .withCommand((byte) ControlCommandType.DELETE_SESSION.ordinal());
+  }
+
   public ControlMessage buildControlMessage(
-      UUID peerUuid, ControlStatusType statusType, @Nullable String body) {
+      UUID fromPeerUuid, ControlStatusType statusType, @Nullable String body) {
     final ControlMessage controlMessage =
         new ControlMessage()
-            .withPeerUuid(peerUuid.toString())
+            .withFromPeer(fromPeerUuid.toString())
             .withMessageUuid(UUID.randomUUID().toString())
             .withStatus((byte) statusType.ordinal());
 
@@ -1058,6 +1064,10 @@ public final class MessageBuilder {
       controlMessage.setBody(body);
     }
     return controlMessage;
+  }
+
+  public ControlMessage buildControlMessage(UUID fromPeerUuid, ControlStatusType statusType) {
+    return buildControlMessage(fromPeerUuid, statusType, null);
   }
   // </editor-fold>
 

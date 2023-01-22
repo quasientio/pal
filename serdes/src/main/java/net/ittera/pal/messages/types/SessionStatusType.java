@@ -17,12 +17,20 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package colfer
+package net.ittera.pal.messages.types;
 
-type ControlMessage struct {
-	fromPeer    text
-	messageUuid text
-	command     uint8
-	status      uint8
-	body        text
+public enum SessionStatusType {
+  OK,
+  ERROR,
+  UNSUPPORTED_SESSION_CMD,
+  NO_SUCH_SESSION,
+  NO_SUCH_OBJECT;
+
+  public static SessionStatusType fromByte(byte messageTypeAsByte) {
+    return SessionStatusType.values()[messageTypeAsByte - 1];
+  }
+
+  public byte toByte() {
+    return (byte) (this.ordinal() + 1);
+  }
 }

@@ -802,8 +802,8 @@ class JSONSerializers {
     public JsonElement serialize(
         ControlMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      if (notEmpty(message.peerUuid)) {
-        jsonElement.addProperty("peer_uuid", message.peerUuid);
+      if (notEmpty(message.fromPeer)) {
+        jsonElement.addProperty("from_peer", message.fromPeer);
       }
       if (notEmpty(message.messageUuid)) {
         jsonElement.addProperty("message_uuid", message.messageUuid);

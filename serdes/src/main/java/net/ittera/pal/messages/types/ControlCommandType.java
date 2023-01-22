@@ -21,5 +21,13 @@ package net.ittera.pal.messages.types;
 
 public enum ControlCommandType {
   DELETE_OBJECT,
-  DELETE_SESSION
+  DELETE_SESSION;
+
+  public static ControlCommandType fromByte(byte messageTypeAsByte) {
+    return ControlCommandType.values()[messageTypeAsByte - 1];
+  }
+
+  public byte toByte() {
+    return (byte) (this.ordinal() + 1);
+  }
 }
