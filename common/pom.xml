@@ -27,6 +27,17 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>${maven.plugin.clean}</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${logs.dir}</directory>
+                        </fileset>
+                    </filesets>
+                </configuration>
+            </plugin>
             <!-- coverage -->
             <plugin>
                 <groupId>org.jacoco</groupId>
@@ -48,6 +59,18 @@
                 </executions>
             </plugin>
         </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
     </build>
 
     <!-- DEPENDENCIES -->
