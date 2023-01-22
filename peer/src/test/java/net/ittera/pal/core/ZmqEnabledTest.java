@@ -36,7 +36,6 @@ public abstract class ZmqEnabledTest {
 
   protected ZContext createContext() {
     ZContext ctxt = new ZContext();
-    ctxt.setLinger(1000);
     ctxt.setRcvHWM(10000);
     ctxt.setSndHWM(10000);
     return ctxt;
@@ -68,6 +67,6 @@ public abstract class ZmqEnabledTest {
 
     // stop executor
     execService.shutdown();
-    execService.awaitTermination(5, TimeUnit.SECONDS);
+    execService.awaitTermination(1, TimeUnit.SECONDS);
   }
 }
