@@ -19,6 +19,9 @@
 
 package net.ittera.pal.messages.types;
 
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+
 import org.junit.Test;
 
 public class MessageTypeTest {
@@ -30,9 +33,8 @@ public class MessageTypeTest {
 
     byte controlMsgAsByte = controlMsg.toByte();
     byte interceptReplyMsgAsByte = interceptReply.toByte();
-    System.out.println("control toByte: " + controlMsgAsByte);
-    System.out.println("control fromByte: " + MessageType.fromByte(controlMsgAsByte));
-    System.out.println("inter repl toByte: " + interceptReplyMsgAsByte);
-    System.out.println("inter repl fromByte: " + MessageType.fromByte(interceptReplyMsgAsByte));
+
+    assertThat(MessageType.fromByte(controlMsgAsByte), is(MessageType.CONTROL_MESSAGE));
+    assertThat(MessageType.fromByte(interceptReplyMsgAsByte), is(MessageType.INTERCEPT_REPLY));
   }
 }
