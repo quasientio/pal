@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ServiceManager;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Executors;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,7 +87,8 @@ public class ConnectedServiceTest extends ZmqEnabledTest {
           public void failure(Service service) {
             logger.debug("failure: {} ", service.failureCause());
           }
-        });
+        },
+        Executors.newFixedThreadPool(1));
 
     manager.startAsync().awaitHealthy(); // we could skip awaiting here
     collectGoSignals(services.size(), zmqContext);
