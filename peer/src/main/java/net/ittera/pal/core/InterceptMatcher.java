@@ -157,7 +157,7 @@ public class InterceptMatcher extends ConnectedService {
   }
 
   private void registerNewAndGoneIntercepts() {
-    InterceptEvtMsg interceptEvtMsg = InterceptEvtMsg.recvMsg(registerSocket);
+    InterceptEvtMsg interceptEvtMsg = InterceptEvtMsg.recvMsg(registerSocket, true);
     if (interceptEvtMsg == null) {
       return;
     }
