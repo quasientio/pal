@@ -117,7 +117,7 @@ public class Caller extends AbstractPALSubcommand {
       names = {"-n", "--num-requests"},
       defaultValue = "1",
       paramLabel = "NUM_REQUESTS",
-      description = "number of requests to send (default: 1)")
+      description = "number of requests to send per client (default: 1)")
   private int requests;
 
   @Option(
