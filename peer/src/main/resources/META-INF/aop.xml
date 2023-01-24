@@ -1,6 +1,6 @@
 <aspectj>
     <aspects>
-        <aspect name="net.ittera.pal.core.PeerifyAspect"/>
+        <aspect name="net.ittera.pal.core.FullQuantizeAspect"/>
     </aspects>
 
     <!-- use these options for debugging weaving: options="-verbose -debug -showWeaveInfo" -->

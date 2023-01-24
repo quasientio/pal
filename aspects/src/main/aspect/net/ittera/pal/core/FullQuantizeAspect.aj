@@ -26,7 +26,7 @@ import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.reflect.CodeSignature;
 import org.aspectj.lang.reflect.FieldSignature;
 
-aspect PeerifyAspect {
+aspect FullQuantizeAspect {
 	//if false, no output at all
 	private static final boolean verbose=false;
 
@@ -43,7 +43,7 @@ aspect PeerifyAspect {
 
 	/** POINTCUT DEFINITIONS **/
 
-	pointcut allClasses(): !within(PeerifyAspect);
+	pointcut allClasses(): !within(FullQuantizeAspect);
 
 	pointcut voidInstanceMethods(): allClasses() && call(!static void *(..));
 
