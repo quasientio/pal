@@ -81,7 +81,9 @@ import picocli.CommandLine.ParentCommand;
       "pal run [OPTIONS] class [args...]",
       "            (to execute a class)",
       "    or pal run [OPTIONS] -jar jarFile [args...]",
-      "            (to execute a jar file)%n",
+      "            (to execute a jar file)",
+      "    or pal run [OPTIONS]",
+      "            (to run as service - ie. no entry point)%n",
     })
 public class Main implements Callable<Integer> {
 
@@ -113,9 +115,9 @@ public class Main implements Callable<Integer> {
   private String name; // corresponding ENV var: PEER_NAME
 
   @Option(
-      names = {"-m", "--as-daemon"},
+      names = {"-s", "--as-service"},
       description = "keep running after call to mainClass/jar returns")
-  private boolean asDaemon = false;
+  private boolean asService = false;
 
   @Option(
       names = {"-l", "--log"},
@@ -130,7 +132,7 @@ public class Main implements Callable<Integer> {
   private String inLog; // corresponding ENV var: IN_LOG
 
   @Option(
-      names = {"-s", "--start-at"},
+      names = {"--start-at"},
       paramLabel = "log_offset",
       description = "start reading from given offset")
   private Long logOffset;
@@ -205,8 +207,7 @@ public class Main implements Callable<Integer> {
   private ZContext zmqContext;
   private Socket syncSocket;
 
-  // countdown latch to await when daemonized and have no services running
-  private CountDownLatch daemonizedLatch = new CountDownLatch(1);
+  private final CountDownLatch runAsServiceLatch = new CountDownLatch(1);
 
   // STATIC constants
   private static final Logger logger = LoggerFactory.getLogger(Main.class);
@@ -369,9 +370,9 @@ public class Main implements Callable<Integer> {
       argList = cmdArgList.subList(1, cmdArgList.size());
     }
 
-    // warn if daemon flag does not apply
-    if (asDaemon && (className == null && jarFile == null)) {
-      System.err.println("WARNING: -d (--as-daemon) option only relevant with mainClass or -jar.");
+    // warn if as-service flag does not apply
+    if (asService && (className == null && jarFile == null)) {
+      System.err.println("NOTE: -s (--as-service) option only relevant with mainClass or -jar.");
     }
 
     // verify and set run options
@@ -727,9 +728,9 @@ public class Main implements Callable<Integer> {
         singleExecutor.awaitTermination(2, TimeUnit.SECONDS);
       }
 
-      // in case we're daemonized and have no services manager (ie. manager == null)
+      // in case we're running asService and manager == null
       if (manager == null) {
-        daemonizedLatch.countDown();
+        runAsServiceLatch.countDown();
       }
     } catch (TimeoutException ie) {
       logger.error("Timeout exception in shutdown hook", ie);
@@ -863,11 +864,11 @@ public class Main implements Callable<Integer> {
     }
 
     // now call target (main class or JAR file), if given
-    boolean selfCalled = false;
+    boolean mainCalled = false;
     if (className != null) {
       // self-call className.main() if given, and then we're done
       injector.getInstance(SelfCaller.class).callMain(className, argList);
-      selfCalled = true;
+      mainCalled = true;
     } else if (jarFile != null) { // NOTE: jarFile was previously added to classpath
       // self-call Main-Class found in manifest
       try {
@@ -875,15 +876,15 @@ public class Main implements Callable<Integer> {
       } catch (PeerException e) {
         fatalExit(e);
       }
-      selfCalled = true;
+      mainCalled = true;
     }
-    if (selfCalled && !asDaemon) {
+    if (mainCalled && !asService) {
       shutdown(manager, injector, true);
     } else {
       if (manager != null) {
         manager.awaitStopped();
       } else {
-        daemonizedLatch.await();
+        runAsServiceLatch.await();
       }
     }
     return 0;
