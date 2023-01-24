@@ -22,11 +22,11 @@ package net.ittera.pal.common.runtime;
 import javax.inject.Inject;
 
 /**
- * This class decouples the QuantizeAspect from the dispatch calls in AspectProxyDispatcher, by means
- * of the ProxyDispatcher interface, so that the aspect (and the aspects module) is not directly
- * dependent on the *Dispatcher classes (in the core module), imported by AspectProxyDispatcher.
- * Therefore, aspects only needs to import common. This avoids a circular dependency at runtime,
- * where core depends on aspects (to classload the aspect)
+ * This class decouples the QuantizeAspect from the dispatch calls in AspectProxyDispatcher, by
+ * means of the ProxyDispatcher interface, so that the aspect (and the aspects module) is not
+ * directly dependent on the Dispatcher classes (in the core module), imported by
+ * AspectProxyDispatcher. Therefore, aspects only needs to import common. This avoids a circular
+ * dependency at runtime, where core depends on aspects (to classload the aspect)
  */
 public final class DispatchForwarder {
 
