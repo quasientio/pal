@@ -132,6 +132,21 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+
+        <plugins>
+            <!-- extra clean tasks -->
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>${maven.plugin.clean}</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>logs</directory>
+                        </fileset>
+                    </filesets>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 
     <reporting>
