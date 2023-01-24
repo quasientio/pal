@@ -34,9 +34,9 @@ import zmq.ZError;
 
 /** TODO replace this with a XPUB-XSUB proxy */
 @Singleton
-class OutgoingMessageDispatcher extends ConnectedService {
+class MessagePublisher extends ConnectedService {
 
-  private static final Logger logger = LoggerFactory.getLogger(OutgoingMessageDispatcher.class);
+  private static final Logger logger = LoggerFactory.getLogger(MessagePublisher.class);
   private static final String OK_REPLY = "0";
   private static final String ERROR_REPLY = "1";
 
@@ -47,12 +47,12 @@ class OutgoingMessageDispatcher extends ConnectedService {
   private final String outPubAddress;
 
   @Inject
-  public OutgoingMessageDispatcher(
+  public MessagePublisher(
       UUID peerUuid,
       ZContext context,
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
-      @Named("OutgoingMessageDispatcher.service") String serviceName,
+      @Named("MessagePublisher.service") String serviceName,
       @Named("out.cell") String outCellAddress,
       @Named("out.pub") String outPubAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);

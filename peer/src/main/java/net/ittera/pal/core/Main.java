@@ -629,7 +629,7 @@ public class Main implements Callable<Integer> {
       services.add(injector.getInstance(LogWriter.class));
     }
     if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
-      services.add(injector.getInstance(OutgoingMessageDispatcher.class));
+      services.add(injector.getInstance(MessagePublisher.class));
     }
     if (runOptions.contains(RunOptions.WITH_TCP_REQ)) {
       services.add(injector.getInstance(DirectRequestDispatcher.class));

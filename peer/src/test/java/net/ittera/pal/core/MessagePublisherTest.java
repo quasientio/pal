@@ -49,14 +49,14 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
-public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
+public class MessagePublisherTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
   private final String OUTCELL_ADDR = "inproc://cell";
   private final String OUTPUB_ADDR = "inproc://pub";
   private ZContext context;
   private ServiceManager manager;
-  private OutgoingMessageDispatcher outgoingMessageDispatcher;
+  private MessagePublisher messagePublisher;
   private final MessageBuilder msgBuilder = new MessageBuilder();
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
   private InternalHeader WRITE_AHEAD_HEADER;
@@ -66,22 +66,22 @@ public class OutgoingMessageDispatcherTest extends ZmqEnabledTest {
   public void setup() throws InterruptedException {
     this.WRITE_AHEAD_HEADER = msgBuilder.buildWriteAheadHeader(peerUuid);
     this.context = createContext();
-    this.outgoingMessageDispatcher =
-        new OutgoingMessageDispatcher(
+    this.messagePublisher =
+        new MessagePublisher(
             UUID.randomUUID(),
             context,
             SYNC_SOCKET_ADDRESS,
             servicesThreadGroup,
-            "OutgoingMessageDispatcherTest-Service",
+            "MessagePublisherTest-Service",
             OUTCELL_ADDR,
             OUTPUB_ADDR);
-    final Set<Service> services = new HashSet<>(Arrays.asList(this.outgoingMessageDispatcher));
+    final Set<Service> services = new HashSet<>(Arrays.asList(this.messagePublisher));
     this.manager = new ServiceManager(services);
 
     // start service
     manager.startAsync().awaitHealthy();
     collectGoSignals(services.size(), context);
-    assertThat(outgoingMessageDispatcher.isRunning(), is(true));
+    assertThat(messagePublisher.isRunning(), is(true));
 
     // create REQ socket to simulate requests (IRL: DispatcherConnector)
     reqSocket = context.createSocket(SocketType.REQ);

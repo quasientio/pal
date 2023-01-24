@@ -85,7 +85,7 @@ public class MessageStreamerTest {
     List<InternalHeader> headers = new ArrayList<>();
     boolean done = false;
     CountDownLatch latch = new CountDownLatch(1);
-    // start publisher, which simulates OutgoingMessageDispatcher
+    // start publisher, which simulates MessagePublisher
     Runnable publisher =
         () -> {
           ZMQ.Socket socket = context.createSocket(SocketType.PUB);
