@@ -142,6 +142,7 @@
                     <filesets>
                         <fileset>
                             <directory>logs</directory>
+                            <directory>lib</directory>
                         </fileset>
                     </filesets>
                 </configuration>
