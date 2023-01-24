@@ -81,10 +81,6 @@ import net.ittera.pal.messages.types.MessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Apart from minor refactorings, this class is different from ProtobufMessageBuilder: - Parameter
- * imported here is our colfer message, instead of java.lang.reflect.Parameter
- */
 public final class MessageBuilder {
 
   protected static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);

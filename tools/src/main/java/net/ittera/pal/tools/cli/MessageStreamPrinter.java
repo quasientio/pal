@@ -93,10 +93,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
       arity = "0..*",
       description =
           "type(s) of messages to filter by ("
-              +
-              // list of available msg types is in wrappers.proto (serdes module) TODO: list
-              // programmatically
-              "STATIC_CONSTRUCTOR, RETURN_CLASS, CONSTRUCTOR, INSTANCE_METHOD,"
+              + "STATIC_CONSTRUCTOR, RETURN_CLASS, CONSTRUCTOR, INSTANCE_METHOD,"
               + "CLASS_METHOD, GET_STATIC, GET_FIELD, PUT_STATIC, PUT_FIELD, PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE,"
               + "RETURN_VALUE)")
   private List<String> msgTypes;
@@ -131,7 +128,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
 
   @Option(
       names = {"-f", "--full-output"},
-      description = "full message output (PROTOBUF format)")
+      description = "full message output")
   private boolean fullOutput;
 
   @Option(

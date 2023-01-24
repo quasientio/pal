@@ -120,10 +120,6 @@
                             <shadedPattern>${shading.prefix}.google</shadedPattern>
                         </relocation>
                         <relocation>
-                            <pattern>google.protobuf</pattern>
-                            <shadedPattern>${shading.prefix}.protobuf</shadedPattern>
-                        </relocation>
-                        <relocation>
                             <pattern>org.json</pattern>
                             <shadedPattern>${shading.prefix}.json</shadedPattern>
                         </relocation>
@@ -297,14 +293,6 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java-util</artifactId>
         </dependency>
         <dependency>
             <groupId>info.picocli</groupId>

@@ -41,7 +41,6 @@ Pal is 100% java, laid out as a multi-module Maven project.
 #### Optional dependencies
 * If you wish to run zookeeper natively (i.e. not inside docker), install [zookeeper](https://zookeeper.apache.org/releases.html#download)
 * If you wish to run kafka natively (i.e. not inside docker), install [kafka](https://kafka.apache.org/downloads)
-* To recompile protobuf source files, you will need to install [protocol buffers](https://developers.google.com/protocol-buffers/docs/downloads)
 
 #### Build
 

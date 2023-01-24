@@ -107,11 +107,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       arity = "0..*",
       description =
           "type(s) of messages to filter by ("
-              +
-              /*
-              Msg types in wrappers.proto (peer-serdes) TODO: have option to list them from Enum, instead of hardcode them
-              */
-              "STATIC_CONSTRUCTOR, RETURN_CLASS, CONSTRUCTOR, INSTANCE_METHOD,"
+              + "STATIC_CONSTRUCTOR, RETURN_CLASS, CONSTRUCTOR, INSTANCE_METHOD,"
               + "CLASS_METHOD, GET_STATIC, GET_FIELD, PUT_STATIC, PUT_FIELD, PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE,"
               + "RETURN_VALUE)")
   private List<String> msgTypes;

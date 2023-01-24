@@ -19,23 +19,19 @@
 
 package net.ittera.pal.serdes;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.protobuf.Exec;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
-import net.ittera.pal.serdes.protobuf.ProtobufMessageBuilder;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
 public class SerdesSpeedTest {
 
-  private ProtobufMessageBuilder protobufMessageBuilder;
   private MessageBuilder messageBuilder;
   private final int MESSAGES_TO_CREATE = 1000000;
   String className = "net.ittera.pal.apps.MyClass";
@@ -48,30 +44,11 @@ public class SerdesSpeedTest {
 
   @Before
   public void init() {
-    protobufMessageBuilder = new ProtobufMessageBuilder();
     messageBuilder = new MessageBuilder();
     parameterTypesNamesArray = new String[parameterTypes.length];
     for (int i = 0; i < parameterTypes.length; i++) {
       parameterTypesNamesArray[i] = parameterTypes[i].getName();
     }
-  }
-
-  @Ignore
-  @Test
-  public void protobufSerdes() throws InvalidProtocolBufferException {
-    Instant start = Instant.now();
-    for (int i = 0; i < MESSAGES_TO_CREATE; i++) {
-      Exec.ExecMessage msg =
-          protobufMessageBuilder.buildNonEmptyConstructor(
-              UUID.randomUUID(), className, parameterTypesNamesArray, args, argRefs);
-
-      byte[] msgBytes = msg.toByteArray();
-      Exec.ExecMessage.parseFrom(msgBytes);
-    }
-    Instant end = Instant.now();
-    System.out.printf(
-        "%d messages serialized+deserialized with protobuf in %d ms%n",
-        MESSAGES_TO_CREATE, Duration.between(start, end).toMillis());
   }
 
   @Ignore

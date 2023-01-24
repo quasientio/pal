@@ -20,10 +20,6 @@
         <exclude within="net.jpountz..*"/>
         <exclude within="org.xerial.snappy..*"/>
 
-        <!-- protobuf -->
-        <exclude within="com.google.protobuf..*"/>
-        <exclude within="google.protobuf..*"/>
-
         <!-- guava -->
         <exclude within="com.google.common..*"/>
         <exclude within="com.google.thirdparty..*"/>
