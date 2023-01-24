@@ -24,7 +24,7 @@ docker pull wurstmeister/kafka:2.12-2.3.0
     --log auto \
     --interceptable \
     --tcp-req-threads 3 \
-    --classpath itt-apps/target/itt-apps-0.2.0-SNAPSHOT.jar
+    --classpath itt-apps/target/itt-apps-1.0.0-SNAPSHOT.jar
     ```
 3. Open a second terminal and run mvn verify from the itt subdirectory
     ```bash
