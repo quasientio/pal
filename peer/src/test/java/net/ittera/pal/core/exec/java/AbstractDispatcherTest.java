@@ -30,8 +30,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.UUID;
-import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
-import net.ittera.pal.common.objects.ObjectStore;
+import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
+import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.Before;
@@ -41,7 +41,7 @@ public abstract class AbstractDispatcherTest {
 
   protected UUID peerUuid = UUID.randomUUID();
 
-  protected ObjectStore objectStore = new ConcurrentHashMapObjectStore();
+  protected ObjectLookupStore objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
   protected MessageBuilder messageBuilder = new MessageBuilder();
 
@@ -75,7 +75,7 @@ public abstract class AbstractDispatcherTest {
 
   @Before
   public void clearStuff() {
-    objectStore.clear();
-    assertThat(objectStore.size(), is(0L));
+    objectLookupStore.clear();
+    assertThat(objectLookupStore.size(), is(0L));
   }
 }

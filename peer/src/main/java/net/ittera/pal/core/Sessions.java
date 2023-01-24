@@ -29,8 +29,8 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.messages.SessionCmdMsg;
 import net.ittera.pal.core.messages.SessionReplyMsg;
 import net.ittera.pal.messages.types.SessionStatusType;
@@ -50,7 +50,7 @@ public class Sessions extends ConnectedService {
 
   // one objectRef -> object map for each peer
   private final Map<UUID, HashMap<ObjectRef, Object>> sessionsMap;
-  private final ObjectStore objectStore;
+  private final ObjectLookupStore objectLookupStore;
   private final String repAddress;
   private Socket repSocket;
 
@@ -62,15 +62,15 @@ public class Sessions extends ConnectedService {
       ThreadGroup serviceThreadGroup,
       @Named("Sessions.service") String serviceName,
       @Named("sessions.svc") String repAddress,
-      ObjectStore objectStore) {
+      ObjectLookupStore objectLookupStore) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.repAddress = repAddress;
-    this.objectStore = objectStore;
+    this.objectLookupStore = objectLookupStore;
     sessionsMap = new HashMap<>();
   }
 
   private boolean storeInSession(@Nonnull UUID sessionId, @Nonnull ObjectRef objectRef) {
-    final Object object = objectStore.lookupObject(objectRef);
+    final Object object = objectLookupStore.lookupObject(objectRef);
     if (object == null) {
       logger.warn("Cannot store a null object in session, for {}", objectRef.asString());
       return false;

@@ -47,36 +47,36 @@ import org.slf4j.LoggerFactory;
  * TODO: although unlikely, the identityHashCode may break this store. Find alternative. <br>
  * TODO: replace trace enter and exit stmts (see issue #5) <br>
  */
-public final class ConcurrentHashMapObjectStore implements ObjectStore {
+public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupStore {
 
-  private final Logger logger = LoggerFactory.getLogger(ConcurrentHashMapObjectStore.class);
+  private final Logger logger = LoggerFactory.getLogger(ConcurrentHashMapObjectLookupStore.class);
   static final int DEFAULT_INITIAL_CAPACITY = 10000;
   static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
-  private final ObjectStoreStats objectStoreStats = new ObjectStoreStats();
+  private final ObjectLookupStoreStats objectLookupStoreStats = new ObjectLookupStoreStats();
 
   // A map for all objects created by this peer
   private final ConcurrentHashMap<ObjectRef, IdentifiableObject> objects;
 
   private void updateMaxSize() {
-    final long maxSizeVal = objectStoreStats.getMaxSize().longValue();
+    final long maxSizeVal = objectLookupStoreStats.getMaxSize().longValue();
     final long currentSize = size();
     if (currentSize > maxSizeVal) {
-      objectStoreStats.getMaxSize().compareAndSet(maxSizeVal, currentSize);
+      objectLookupStoreStats.getMaxSize().compareAndSet(maxSizeVal, currentSize);
     }
   }
 
-  public ConcurrentHashMapObjectStore() {
+  public ConcurrentHashMapObjectLookupStore() {
     this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
   }
 
-  public ConcurrentHashMapObjectStore(int initialCapacity, float loadFactor) {
+  public ConcurrentHashMapObjectLookupStore(int initialCapacity, float loadFactor) {
     objects = new ConcurrentHashMap<>(initialCapacity, loadFactor);
     startBackgroundProcessor();
   }
 
   private void startBackgroundProcessor() {
-    new ObjectStoreBackgroundProcessor(this, objectStoreStats).start();
+    new ObjectLookupStoreBackgroundProcessor(this, objectLookupStoreStats).start();
   }
 
   private ObjectRef generateObjectRef(Object object) {
@@ -100,7 +100,7 @@ public final class ConcurrentHashMapObjectStore implements ObjectStore {
     final IdentifiableObject storedObject = objects.get(objectRef);
 
     if (storedObject != null) {
-      objectStoreStats.getSuccessfulStoreLookups().getAndIncrement();
+      objectLookupStoreStats.getSuccessfulStoreLookups().getAndIncrement();
       if (logger.isTraceEnabled()) {
         logger.trace("out w/ (pre-existing) objectRef: {}", objectRef);
       }
@@ -125,7 +125,7 @@ public final class ConcurrentHashMapObjectStore implements ObjectStore {
     final IdentifiableObject storedObject = objects.get(objectRef);
     Object object = null;
     if (storedObject != null) {
-      objectStoreStats.getSuccessfulStoreLookups().getAndIncrement();
+      objectLookupStoreStats.getSuccessfulStoreLookups().getAndIncrement();
       object = storedObject.getObject().get();
     }
     if (logger.isTraceEnabled()) {

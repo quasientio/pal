@@ -58,7 +58,8 @@ class ClassForPutFieldTest {
 public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
 
   private Dispatcher dispatcher =
-      new SetInstanceVariableDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
+      new SetInstanceVariableDispatcher(
+          peerUuid, messageBuilder, dispatcherConnector, objectLookupStore);
 
   private Class targetClass = ClassForPutFieldTest.class;
 
@@ -97,7 +98,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
-    ObjectRef targetObjRef = objectStore.storeObject(target);
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutObject(
@@ -114,7 +115,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.someShort, is(newFieldValue));
@@ -158,7 +159,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
-    ObjectRef targetObjRef = objectStore.storeObject(target);
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutObject(
@@ -175,7 +176,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.bytes, is(newFieldValue));
@@ -219,7 +220,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
-    ObjectRef targetObjRef = objectStore.storeObject(target);
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutObject(
@@ -236,7 +237,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aLong, is(newFieldValue));
@@ -280,7 +281,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
-    ObjectRef targetObjRef = objectStore.storeObject(target);
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutObject(
@@ -297,7 +298,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aString, is(newFieldValue));
@@ -337,11 +338,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     String fieldName = "aList";
     List newFieldValue = Arrays.asList(938, 3038, 948, 394);
-    ObjectRef newValueObjRef = objectStore.storeObject(newFieldValue);
+    ObjectRef newValueObjRef = objectLookupStore.storeObject(newFieldValue);
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
-    ObjectRef targetObjRef = objectStore.storeObject(target);
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutObject(
@@ -353,7 +354,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(2L));
+    assertThat(objectLookupStore.size(), is(2L));
     assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aList, sameInstance(newFieldValue));
@@ -398,7 +399,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
-    ObjectRef targetObjRef = objectStore.storeObject(target);
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutObject(
@@ -411,7 +412,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.aList, is(nullValue()));
@@ -451,11 +452,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     String fieldName = "objects";
     Object[] newFieldValue = {1, "a", false};
-    ObjectRef newValueObjRef = objectStore.storeObject(newFieldValue);
+    ObjectRef newValueObjRef = objectLookupStore.storeObject(newFieldValue);
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
-    ObjectRef targetObjRef = objectStore.storeObject(target);
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutObject(
@@ -467,7 +468,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(2L));
+    assertThat(objectLookupStore.size(), is(2L));
     assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.objects, sameInstance(newFieldValue));
@@ -507,11 +508,11 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     String fieldName = "lastError";
     Error newFieldValue = new Error("uuh ooooh");
-    ObjectRef newValueObjRef = objectStore.storeObject(newFieldValue);
+    ObjectRef newValueObjRef = objectLookupStore.storeObject(newFieldValue);
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
-    ObjectRef targetObjRef = objectStore.storeObject(target);
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutObject(
@@ -523,7 +524,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(2L));
+    assertThat(objectLookupStore.size(), is(2L));
     assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertThat(target.lastError, sameInstance(newFieldValue));

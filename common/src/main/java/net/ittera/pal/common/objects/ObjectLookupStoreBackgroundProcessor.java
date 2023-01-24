@@ -26,62 +26,68 @@ import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class ObjectStoreBackgroundProcessor extends Thread {
+class ObjectLookupStoreBackgroundProcessor extends Thread {
 
   private final Logger logger;
   private static final int DEFAULT_CLEANUP_INTERVAL_SECS = 2;
   private static final int DEFAULT_STATS_INTERVAL_SECS = 30;
 
-  @Nonnull final ConcurrentHashMapObjectStore objectStore;
-  @Nonnull private final ObjectStoreStats objectStoreStats;
+  @Nonnull final ConcurrentHashMapObjectLookupStore objectLookupStore;
+  @Nonnull private final ObjectLookupStoreStats objectLookupStoreStats;
 
   private final int cleanupIntervalSecs;
   private final int statsIntervalSecs;
 
-  ObjectStoreBackgroundProcessor(
-      @Nonnull ConcurrentHashMapObjectStore objectStore,
-      @Nonnull ObjectStoreStats objectStoreStats,
+  ObjectLookupStoreBackgroundProcessor(
+      @Nonnull ConcurrentHashMapObjectLookupStore objectLookupStore,
+      @Nonnull ObjectLookupStoreStats objectLookupStoreStats,
       int cleanupIntervalSecs,
       int statsIntervalSecs) {
-    logger = LoggerFactory.getLogger(ObjectStoreBackgroundProcessor.class);
-    this.objectStore = Objects.requireNonNull(objectStore);
-    this.objectStoreStats = Objects.requireNonNull(objectStoreStats);
+    logger = LoggerFactory.getLogger(ObjectLookupStoreBackgroundProcessor.class);
+    this.objectLookupStore = Objects.requireNonNull(objectLookupStore);
+    this.objectLookupStoreStats = Objects.requireNonNull(objectLookupStoreStats);
     setName("Object Store GC");
     setPriority(Thread.MIN_PRIORITY);
     setDaemon(true);
     setUncaughtExceptionHandler(
-        (t, e) -> logger.error("Uncaught error in ObjectStoreBackgroundProcessor", e));
+        (t, e) -> logger.error("Uncaught error in ObjectLookupStoreBackgroundProcessor", e));
     this.cleanupIntervalSecs = cleanupIntervalSecs;
     this.statsIntervalSecs = statsIntervalSecs;
   }
 
-  ObjectStoreBackgroundProcessor(
-      ConcurrentHashMapObjectStore objectStore, ObjectStoreStats objectStoreStats) {
-    this(objectStore, objectStoreStats, DEFAULT_CLEANUP_INTERVAL_SECS, DEFAULT_STATS_INTERVAL_SECS);
+  ObjectLookupStoreBackgroundProcessor(
+      ConcurrentHashMapObjectLookupStore objectLookupStore,
+      ObjectLookupStoreStats objectLookupStoreStats) {
+    this(
+        objectLookupStore,
+        objectLookupStoreStats,
+        DEFAULT_CLEANUP_INTERVAL_SECS,
+        DEFAULT_STATS_INTERVAL_SECS);
   }
 
   private void printStats() {
     if (logger.isDebugEnabled()) {
-      logger.debug("OBJECTS: max size={}", objectStoreStats.getMaxSize());
-      logger.debug("OBJECTS: current size={}", objectStore.size());
+      logger.debug("OBJECTS: max size={}", objectLookupStoreStats.getMaxSize());
+      logger.debug("OBJECTS: current size={}", objectLookupStore.size());
       logger.debug(
-          "OBJECTS: successful lookups={}", objectStoreStats.getSuccessfulStoreLookups().get());
-      logger.debug("OBJECTS: total cleared={}", objectStoreStats.getTotalObjectsCleared());
+          "OBJECTS: successful lookups={}",
+          objectLookupStoreStats.getSuccessfulStoreLookups().get());
+      logger.debug("OBJECTS: total cleared={}", objectLookupStoreStats.getTotalObjectsCleared());
     }
   }
 
   void removeClearedEntries() {
     long cleanupStart = Instant.now().toEpochMilli();
     final AtomicInteger clearedCount = new AtomicInteger();
-    objectStore.getObjects().values().stream()
+    objectLookupStore.getObjects().values().stream()
         .filter(identObject -> identObject.getObject().get() == null)
         .map(identObject -> ObjectRef.from(String.valueOf(identObject.getHash())))
         .forEach(
             objectRef -> {
-              objectStore.getObjects().remove(objectRef);
+              objectLookupStore.getObjects().remove(objectRef);
               clearedCount.getAndIncrement();
             });
-    objectStoreStats.getTotalObjectsCleared().addAndGet(clearedCount.get());
+    objectLookupStoreStats.getTotalObjectsCleared().addAndGet(clearedCount.get());
     if (logger.isDebugEnabled()) {
       long cleanupEnd = Instant.now().toEpochMilli();
       logger.debug(

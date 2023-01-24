@@ -31,8 +31,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.ittera.pal.common.lang.reflect.ConstructorSignature;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
+import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.colfer.ExecMessage;
@@ -48,11 +48,11 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
-      ObjectStore objectStore) {
+      ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
-    setObjectStore(objectStore);
+    setObjectLookupStore(objectLookupStore);
   }
 
   @Override

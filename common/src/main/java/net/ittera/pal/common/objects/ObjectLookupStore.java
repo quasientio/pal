@@ -21,7 +21,7 @@ package net.ittera.pal.common.objects;
 
 import java.util.Collection;
 
-public interface ObjectStore {
+public interface ObjectLookupStore {
 
   ObjectRef storeObject(Object object);
 

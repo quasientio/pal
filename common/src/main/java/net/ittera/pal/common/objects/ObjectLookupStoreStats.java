@@ -21,13 +21,13 @@ package net.ittera.pal.common.objects;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-public final class ObjectStoreStats {
+public final class ObjectLookupStoreStats {
 
   private final AtomicLong successfulStoreLookups = new AtomicLong();
   private final AtomicLong totalObjectsCleared = new AtomicLong();
   private final AtomicLong maxSize = new AtomicLong();
 
-  ObjectStoreStats() {}
+  ObjectLookupStoreStats() {}
 
   public AtomicLong getSuccessfulStoreLookups() {
     return successfulStoreLookups;

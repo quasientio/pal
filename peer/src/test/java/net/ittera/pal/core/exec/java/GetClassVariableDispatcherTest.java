@@ -58,7 +58,8 @@ class ClassForGetStaticTest {
 public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
 
   private Dispatcher dispatcher =
-      new GetClassVariableDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
+      new GetClassVariableDispatcher(
+          peerUuid, messageBuilder, dispatcherConnector, objectLookupStore);
 
   private Class targetClass = ClassForGetStaticTest.class;
 
@@ -98,7 +99,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     short returned = (short) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.someShort));
@@ -143,7 +144,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     byte[] returned = (byte[]) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.bytes));
@@ -188,7 +189,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     Integer returned = (Integer) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.someInteger));
@@ -233,7 +234,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.aString));
@@ -278,10 +279,11 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     Object returned =
-        objectStore.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
+        objectLookupStore.lookupObject(
+            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
     assertThat(returned, sameInstance(ClassForGetStaticTest.anObject));
     assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
@@ -324,7 +326,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(0L));
+    assertThat(objectLookupStore.size(), is(0L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     assertTrue(replyMsg.getReturnValue().getObject().getIsNull());
     assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
@@ -368,11 +370,12 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     assertNotNull(replyMsg.getReturnValue().getObject().getRef());
     Object returned =
-        objectStore.lookupObject(ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
+        objectLookupStore.lookupObject(
+            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
     assertThat(returned, sameInstance(ClassForGetStaticTest.objects));
     assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
@@ -415,12 +418,12 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     assertNotNull(replyMsg.getReturnValue().getObject().getRef());
     Throwable returned =
         (Throwable)
-            objectStore.lookupObject(
+            objectLookupStore.lookupObject(
                 ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
     assertThat(returned, is(ClassForGetStaticTest.lastError));
     assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));

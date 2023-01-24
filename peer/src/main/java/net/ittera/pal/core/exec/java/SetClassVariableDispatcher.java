@@ -26,8 +26,8 @@ import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
@@ -43,11 +43,11 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
-      ObjectStore objectStore) {
+      ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
-    setObjectStore(objectStore);
+    setObjectLookupStore(objectLookupStore);
   }
 
   @Override
@@ -88,7 +88,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
       }
     } else {
       value =
-          objectStore.lookupObject(
+          objectLookupStore.lookupObject(
               ObjectRef.from(execMessage.getStaticFieldPut().getValueObjectRef()));
       if (logger.isTraceEnabled()) {
         logger.trace("Loaded value: {}", value);

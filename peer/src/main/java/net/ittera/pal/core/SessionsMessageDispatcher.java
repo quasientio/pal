@@ -23,8 +23,8 @@ import java.util.Set;
 import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.core.messages.SessionCmdMsg;
 import net.ittera.pal.core.messages.SessionReplyMsg;
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class SessionsMessageDispatcher {
   @Inject private DispatcherConnector dispatcherConnector;
-  @Inject private ObjectStore objectStore;
+  @Inject private ObjectLookupStore objectLookupStore;
   @Inject private MessageBuilder messageBuilder;
 
   @Inject private UUID peerUuid;
@@ -62,8 +62,8 @@ public class SessionsMessageDispatcher {
             dispatcherConnector.sendMessageToSessionService(
                 new SessionCmdMsg(SessionCommandType.DELETE_OBJECT, sessionId, objectRef));
 
-        // delete object reference in objectStore
-        objectStore.remove(objectRef);
+        // delete object reference in objectLookupStore
+        objectLookupStore.remove(objectRef);
         logger.info("Object {} deleted for peer w/uuid: {}", objectRef, remotePeerUuid);
         return sessionReplyMessageToControlMessage(sessionReplyMsg);
       case DELETE_SESSION:
@@ -72,9 +72,9 @@ public class SessionsMessageDispatcher {
             dispatcherConnector.sendMessageToSessionService(
                 new SessionCmdMsg(SessionCommandType.DELETE_SESSION, sessionId));
         final Set<ObjectRef> objectRefsInSession = sessionReplyMsg.getObjectRefs();
-        // delete references to objects in objectStore
+        // delete references to objects in objectLookupStore
         if (objectRefsInSession != null && !objectRefsInSession.isEmpty()) {
-          objectStore.removeAll(objectRefsInSession);
+          objectLookupStore.removeAll(objectRefsInSession);
         }
         return sessionReplyMessageToControlMessage(sessionReplyMsg);
       default:

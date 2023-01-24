@@ -40,10 +40,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior */
-public class ConcurrentHashMapObjectStoreTest {
+public class ConcurrentHashMapObjectLookupStoreTest {
 
   private Logger mockedLogger;
-  private ConcurrentHashMapObjectStore objectStore;
+  private ConcurrentHashMapObjectLookupStore objectLookupStore;
 
   private MockedStatic<LoggerFactory> mockLoggerFactory(boolean traceEnabled) {
 
@@ -52,7 +52,7 @@ public class ConcurrentHashMapObjectStoreTest {
     when(mockedLogger.isTraceEnabled()).thenReturn(traceEnabled);
     MockedStatic<LoggerFactory> mockedLoggerFactory = mockStatic(LoggerFactory.class);
     mockedLoggerFactory
-        .when(() -> LoggerFactory.getLogger(ConcurrentHashMapObjectStore.class))
+        .when(() -> LoggerFactory.getLogger(ConcurrentHashMapObjectLookupStore.class))
         .thenReturn(mockedLogger);
     return mockedLoggerFactory;
   }
@@ -64,15 +64,15 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
                 try {
-                  objectStore.storeObject(null);
+                  objectLookupStore.storeObject(null);
                   fail("Trying to store null should throw a NullPointerException");
                 } catch (NullPointerException npe) {
                   // expected
                 }
 
-                assertThat(objectStore.size(), is(0L));
+                assertThat(objectLookupStore.size(), is(0L));
 
                 if (traceEnabled) {
                   verify(mockedLogger).trace(eq("in w/ object: {}"), (Object) any());
@@ -87,11 +87,11 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
-                ObjectRef objRef = objectStore.storeObject(new ArrayList<>());
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
+                ObjectRef objRef = objectLookupStore.storeObject(new ArrayList<>());
                 assertNotNull(objRef);
 
-                assertThat(objectStore.size(), is(1L));
+                assertThat(objectLookupStore.size(), is(1L));
 
                 if (traceEnabled) {
                   verify(mockedLogger).trace(eq("in w/ object: {}"), (Object) any());
@@ -107,13 +107,13 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
                 ArrayList<Integer> listOfInts = new ArrayList<>();
-                ObjectRef firstObjRef = objectStore.storeObject(listOfInts);
-                assertEquals(firstObjRef, objectStore.storeObject(listOfInts));
+                ObjectRef firstObjRef = objectLookupStore.storeObject(listOfInts);
+                assertEquals(firstObjRef, objectLookupStore.storeObject(listOfInts));
 
-                assertThat(objectStore.size(), is(1L));
+                assertThat(objectLookupStore.size(), is(1L));
 
                 if (traceEnabled) {
                   verify(mockedLogger, times(2)).trace(eq("in w/ object: {}"), (Object) any());
@@ -131,13 +131,13 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
-                objectStore.storeObject(new ArrayList<>());
-                objectStore.storeObject(34182);
-                objectStore.storeObject("some chars");
+                objectLookupStore.storeObject(new ArrayList<>());
+                objectLookupStore.storeObject(34182);
+                objectLookupStore.storeObject("some chars");
 
-                assertThat(objectStore.size(), is(3L));
+                assertThat(objectLookupStore.size(), is(3L));
 
                 if (traceEnabled) {
                   verify(mockedLogger, times(3)).trace(eq("in w/ object: {}"), (Object) any());
@@ -153,12 +153,12 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
-                objectStore.storeObject(new ArrayList<>());
-                objectStore.storeObject(new ArrayList<>());
+                objectLookupStore.storeObject(new ArrayList<>());
+                objectLookupStore.storeObject(new ArrayList<>());
 
-                assertThat(objectStore.size(), is(2L));
+                assertThat(objectLookupStore.size(), is(2L));
 
                 if (traceEnabled) {
                   verify(mockedLogger, times(2)).trace(eq("in w/ object: {}"), (Object) any());
@@ -176,10 +176,10 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
                 try {
-                  objectStore.lookupObject(null);
+                  objectLookupStore.lookupObject(null);
                   fail("Trying to look up a null objectRef should throw a NullPointerException");
                 } catch (NullPointerException npe) {
                   // expected
@@ -198,14 +198,14 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
                 ArrayList<Integer> listOfInts = new ArrayList<>();
-                ObjectRef objRef = objectStore.storeObject(listOfInts);
+                ObjectRef objRef = objectLookupStore.storeObject(listOfInts);
 
-                assertThat(objectStore.size(), is(1L));
+                assertThat(objectLookupStore.size(), is(1L));
 
-                assertEquals(listOfInts, objectStore.lookupObject(objRef));
+                assertEquals(listOfInts, objectLookupStore.lookupObject(objRef));
 
                 if (traceEnabled) {
                   // storeObject
@@ -225,9 +225,9 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
-                assertNull(objectStore.lookupObject(ObjectRef.from("2323823")));
+                assertNull(objectLookupStore.lookupObject(ObjectRef.from("2323823")));
 
                 if (traceEnabled) {
                   verify(mockedLogger).trace(eq("in w/ objectRef: {}"), (Object) any());
@@ -245,10 +245,10 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
                 try {
-                  objectStore.containsObjectRef(null);
+                  objectLookupStore.containsObjectRef(null);
                   fail("Checking for a null key should throw a NullPointerException");
                 } catch (NullPointerException npe) {
                   // expected
@@ -267,13 +267,13 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
-                ObjectRef objectRef = objectStore.storeObject(new ArrayList<>());
+                ObjectRef objectRef = objectLookupStore.storeObject(new ArrayList<>());
 
-                assertThat(objectStore.size(), is(1L));
+                assertThat(objectLookupStore.size(), is(1L));
 
-                assertTrue(objectStore.containsObjectRef(objectRef));
+                assertTrue(objectLookupStore.containsObjectRef(objectRef));
 
                 if (traceEnabled) {
                   // storeObject
@@ -293,9 +293,9 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
-                assertFalse(objectStore.containsObjectRef(ObjectRef.from("2092373")));
+                assertFalse(objectLookupStore.containsObjectRef(ObjectRef.from("2092373")));
 
                 if (traceEnabled) {
                   verify(mockedLogger).trace(eq("in w/ objectRef: {}"), (Object) any());
@@ -309,9 +309,9 @@ public class ConcurrentHashMapObjectStoreTest {
   // <editor-fold desc="size">
   @Test
   public void size_noObjectsStored_sizeIsZero() {
-    objectStore = new ConcurrentHashMapObjectStore();
+    objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
-    assertThat(objectStore.size(), is(0L));
+    assertThat(objectLookupStore.size(), is(0L));
   }
 
   @Test
@@ -320,12 +320,12 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
-                objectStore.storeObject(new ArrayList<>());
-                objectStore.storeObject(new HashMap<>());
+                objectLookupStore.storeObject(new ArrayList<>());
+                objectLookupStore.storeObject(new HashMap<>());
 
-                assertThat(objectStore.size(), is(2L));
+                assertThat(objectLookupStore.size(), is(2L));
 
                 if (traceEnabled) {
                   verify(mockedLogger, times(2)).trace(eq("in w/ object: {}"), (Object) any());
@@ -343,15 +343,15 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
                 // store objects
-                objectStore.storeObject(new ArrayList<>());
-                objectStore.storeObject(new HashMap<>());
+                objectLookupStore.storeObject(new ArrayList<>());
+                objectLookupStore.storeObject(new HashMap<>());
 
-                assertThat(objectStore.size(), is(2L));
-                objectStore.clear();
-                assertThat(objectStore.size(), is(0L));
+                assertThat(objectLookupStore.size(), is(2L));
+                objectLookupStore.clear();
+                assertThat(objectLookupStore.size(), is(0L));
 
                 if (traceEnabled) {
                   verify(mockedLogger, times(2)).trace(eq("in w/ object: {}"), (Object) any());
@@ -365,11 +365,11 @@ public class ConcurrentHashMapObjectStoreTest {
   // <editor-fold desc="isEmpty">
   @Test
   public void isEmpty_noObjectsStored_true() {
-    objectStore = new ConcurrentHashMapObjectStore();
+    objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
-    assertThat(objectStore.size(), is(0L));
+    assertThat(objectLookupStore.size(), is(0L));
 
-    assertTrue(objectStore.isEmpty());
+    assertTrue(objectLookupStore.isEmpty());
   }
 
   @Test
@@ -378,12 +378,12 @@ public class ConcurrentHashMapObjectStoreTest {
         .forEach(
             traceEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(traceEnabled)) {
-                objectStore = new ConcurrentHashMapObjectStore();
+                objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
-                objectStore.storeObject(new ArrayList<>());
-                assertThat(objectStore.size(), is(1L));
+                objectLookupStore.storeObject(new ArrayList<>());
+                assertThat(objectLookupStore.size(), is(1L));
 
-                assertFalse(objectStore.isEmpty());
+                assertFalse(objectLookupStore.isEmpty());
 
                 if (traceEnabled) {
                   verify(mockedLogger).trace(eq("in w/ object: {}"), (Object) any());
@@ -397,53 +397,53 @@ public class ConcurrentHashMapObjectStoreTest {
   // <editor-fold desc="getObjects">
   @Test
   public void getObjects_noObjectsStored_objectsEmpty() {
-    objectStore = new ConcurrentHashMapObjectStore();
+    objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
-    assertThat(objectStore.getObjects(), is(anEmptyMap()));
-    assertTrue(objectStore.isEmpty());
+    assertThat(objectLookupStore.getObjects(), is(anEmptyMap()));
+    assertTrue(objectLookupStore.isEmpty());
   }
 
   @Test
   public void getObjects_someObjectsStored_objects() {
-    objectStore = new ConcurrentHashMapObjectStore();
+    objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
-    objectStore.storeObject(new ArrayList<>());
-    assertThat(objectStore.getObjects(), is(aMapWithSize(1)));
+    objectLookupStore.storeObject(new ArrayList<>());
+    assertThat(objectLookupStore.getObjects(), is(aMapWithSize(1)));
   }
   // </editor-fold>
 
   // <editor-fold desc="removeObject">
   @Test
   public void remove_objectIsStored_objectRemoved() {
-    objectStore = new ConcurrentHashMapObjectStore();
-    final ObjectRef objRef = objectStore.storeObject(new ArrayList<>());
-    assertTrue(objectStore.containsObjectRef(objRef));
-    assertFalse(objectStore.isEmpty());
-    assertThat(objectStore.getObjects(), is(aMapWithSize(1)));
+    objectLookupStore = new ConcurrentHashMapObjectLookupStore();
+    final ObjectRef objRef = objectLookupStore.storeObject(new ArrayList<>());
+    assertTrue(objectLookupStore.containsObjectRef(objRef));
+    assertFalse(objectLookupStore.isEmpty());
+    assertThat(objectLookupStore.getObjects(), is(aMapWithSize(1)));
 
     // remove and check
-    objectStore.remove(objRef);
-    assertFalse(objectStore.containsObjectRef(objRef));
-    assertTrue(objectStore.isEmpty());
-    assertThat(objectStore.getObjects(), is(anEmptyMap()));
+    objectLookupStore.remove(objRef);
+    assertFalse(objectLookupStore.containsObjectRef(objRef));
+    assertTrue(objectLookupStore.isEmpty());
+    assertThat(objectLookupStore.getObjects(), is(anEmptyMap()));
   }
 
   @Test
   public void removeAll_someOjectsStored_allRemoved() {
-    objectStore = new ConcurrentHashMapObjectStore();
+    objectLookupStore = new ConcurrentHashMapObjectLookupStore();
     List<ObjectRef> objectRefList = new ArrayList<>();
-    objectRefList.add(objectStore.storeObject(new ArrayList<>()));
-    objectRefList.add(objectStore.storeObject(new ArrayList<>()));
-    objectRefList.add(objectStore.storeObject(new ArrayList<>()));
-    objectRefList.forEach(objRef -> assertTrue(objectStore.containsObjectRef(objRef)));
-    assertFalse(objectStore.isEmpty());
-    assertThat(objectStore.getObjects(), is(aMapWithSize(objectRefList.size())));
+    objectRefList.add(objectLookupStore.storeObject(new ArrayList<>()));
+    objectRefList.add(objectLookupStore.storeObject(new ArrayList<>()));
+    objectRefList.add(objectLookupStore.storeObject(new ArrayList<>()));
+    objectRefList.forEach(objRef -> assertTrue(objectLookupStore.containsObjectRef(objRef)));
+    assertFalse(objectLookupStore.isEmpty());
+    assertThat(objectLookupStore.getObjects(), is(aMapWithSize(objectRefList.size())));
 
     // remove and check
-    objectStore.removeAll(objectRefList);
-    objectRefList.forEach(objRef -> assertFalse(objectStore.containsObjectRef(objRef)));
-    assertTrue(objectStore.isEmpty());
-    assertThat(objectStore.getObjects(), is(anEmptyMap()));
+    objectLookupStore.removeAll(objectRefList);
+    objectRefList.forEach(objRef -> assertFalse(objectLookupStore.containsObjectRef(objRef)));
+    assertTrue(objectLookupStore.isEmpty());
+    assertThat(objectLookupStore.getObjects(), is(anEmptyMap()));
   }
 
   // </editor-fold>

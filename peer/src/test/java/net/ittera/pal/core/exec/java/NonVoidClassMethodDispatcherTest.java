@@ -84,7 +84,7 @@ class ClassForNonVoidClassMethodTest {
 public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
   private Dispatcher dispatcher =
-      new ClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectStore);
+      new ClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectLookupStore);
 
   private Class targetClass = ClassForNonVoidClassMethodTest.class;
 
@@ -141,7 +141,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     short returned = (short) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertTrue(returned >= 0 && returned < 60);
@@ -207,7 +207,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     Double returned = (Double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(bigDouble));
@@ -271,7 +271,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     double returned = (double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(smallDouble));
@@ -293,7 +293,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     double bigDouble = 827193;
     Object[] args = {null, null};
     ObjectRef[] argObjRefs = {
-      objectStore.storeObject(smallDouble), objectStore.storeObject(bigDouble)
+      objectLookupStore.storeObject(smallDouble), objectLookupStore.storeObject(bigDouble)
     };
 
     ExecMessage incomingMessage =
@@ -313,7 +313,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(3L));
+    assertThat(objectLookupStore.size(), is(3L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     double returned = (double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(bigDouble));
@@ -352,7 +352,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     Integer returned = (Integer) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(realNumber));
@@ -423,7 +423,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(1L));
+    assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     double returned = (double) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertEquals(d4, returned, 0);
@@ -491,7 +491,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
-    assertThat(objectStore.size(), is(0L));
+    assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),

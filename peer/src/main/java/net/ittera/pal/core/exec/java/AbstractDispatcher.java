@@ -21,7 +21,7 @@ package net.ittera.pal.core.exec.java;
 
 import java.util.UUID;
 import javax.inject.Inject;
-import net.ittera.pal.common.objects.ObjectStore;
+import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
@@ -32,7 +32,7 @@ abstract class AbstractDispatcher {
 
   protected UUID peerUuid;
   protected MessageBuilder messageBuilder;
-  protected ObjectStore objectStore;
+  protected ObjectLookupStore objectLookupStore;
   protected DispatcherConnector connector;
 
   @Inject
@@ -46,8 +46,8 @@ abstract class AbstractDispatcher {
   }
 
   @Inject
-  final void setObjectStore(ObjectStore objectStore) {
-    this.objectStore = objectStore;
+  final void setObjectLookupStore(ObjectLookupStore objectLookupStore) {
+    this.objectLookupStore = objectLookupStore;
   }
 
   @Inject

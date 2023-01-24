@@ -30,9 +30,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
+import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
+import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.core.messages.SessionCmdMsg;
 import net.ittera.pal.core.messages.SessionReplyMsg;
 import net.ittera.pal.messages.types.SessionCommandType;
@@ -54,7 +54,7 @@ public class SessionsTest extends ZmqEnabledTest {
   private ZContext context;
   private Socket socket;
   private ServiceManager manager;
-  private final ObjectStore objectStore = new ConcurrentHashMapObjectStore();
+  private final ObjectLookupStore objectLookupStore = new ConcurrentHashMapObjectLookupStore();
   private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
 
   @Before
@@ -69,7 +69,7 @@ public class SessionsTest extends ZmqEnabledTest {
             servicesThreadGroup,
             "Session_Service",
             SESSIONS_SERVICE_ADDR,
-            objectStore);
+            objectLookupStore);
     final Set<Service> services = new HashSet<>(Collections.singletonList(sessionService));
     manager = new ServiceManager(services);
     // start service
@@ -83,7 +83,7 @@ public class SessionsTest extends ZmqEnabledTest {
   public void sendStoreObjectCmd_objectExists_ok() {
     UUID sessionId = UUID.randomUUID();
     Object object = new HashMap<>();
-    ObjectRef objectRef = objectStore.storeObject(object);
+    ObjectRef objectRef = objectLookupStore.storeObject(object);
     SessionCmdMsg sessionCmdMsg =
         new SessionCmdMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
     boolean sentOk = sessionCmdMsg.send(socket);
@@ -106,7 +106,7 @@ public class SessionsTest extends ZmqEnabledTest {
   public void sendDeleteSessionCmd_sessionExists_ok() {
     // store an object so the session is created
     UUID sessionId = UUID.randomUUID();
-    ObjectRef objectRef = objectStore.storeObject(new HashMap<>());
+    ObjectRef objectRef = objectLookupStore.storeObject(new HashMap<>());
     SessionCmdMsg sessionCmdMsg =
         new SessionCmdMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
     boolean sentOk = sessionCmdMsg.send(socket);
@@ -129,7 +129,7 @@ public class SessionsTest extends ZmqEnabledTest {
   public void sendDeleteObjectCmd_objectInSession_ok() {
     UUID sessionId = UUID.randomUUID();
     // create and store an object
-    ObjectRef objectRef = objectStore.storeObject(new HashMap<>());
+    ObjectRef objectRef = objectLookupStore.storeObject(new HashMap<>());
     SessionCmdMsg sessionCmdMsg =
         new SessionCmdMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
     boolean sentOk = sessionCmdMsg.send(socket);
@@ -161,7 +161,7 @@ public class SessionsTest extends ZmqEnabledTest {
   public void sendDeleteObjectCmd_objectNotInSession_noSuchObject() {
     UUID sessionId = UUID.randomUUID();
     // store an object so the session is created
-    ObjectRef objectRef = objectStore.storeObject(new HashMap<>());
+    ObjectRef objectRef = objectLookupStore.storeObject(new HashMap<>());
     SessionCmdMsg sessionCmdMsg =
         new SessionCmdMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
     boolean sentOk = sessionCmdMsg.send(socket);
@@ -182,7 +182,7 @@ public class SessionsTest extends ZmqEnabledTest {
   public void clearAllSessions() throws Exception {
     // store an object into sessionId1
     UUID sessionId1 = UUID.randomUUID();
-    ObjectRef objectRef1 = objectStore.storeObject(new HashMap<>());
+    ObjectRef objectRef1 = objectLookupStore.storeObject(new HashMap<>());
     SessionCmdMsg sessionCmdMsg =
         new SessionCmdMsg(SessionCommandType.STORE_OBJECT, sessionId1, objectRef1);
     sessionCmdMsg.send(socket);
@@ -190,7 +190,7 @@ public class SessionsTest extends ZmqEnabledTest {
 
     // store an object into sessionId2
     UUID sessionId2 = UUID.randomUUID();
-    ObjectRef objectRef2 = objectStore.storeObject(new HashSet<>());
+    ObjectRef objectRef2 = objectLookupStore.storeObject(new HashSet<>());
     sessionCmdMsg = new SessionCmdMsg(SessionCommandType.STORE_OBJECT, sessionId2, objectRef2);
     sessionCmdMsg.send(socket);
     SessionReplyMsg.recvMsg(socket, true);

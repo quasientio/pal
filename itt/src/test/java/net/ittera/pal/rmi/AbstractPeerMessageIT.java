@@ -33,9 +33,9 @@ import com.google.inject.name.Names;
 import java.io.InputStream;
 import java.util.Properties;
 import java.util.UUID;
-import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
+import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
+import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
@@ -71,7 +71,9 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
             final Properties appProperties = new Properties();
             appProperties.setProperty("messages.with_src_context", Boolean.toString(false));
             Names.bindProperties(binder(), appProperties);
-            bind(ObjectStore.class).to(ConcurrentHashMapObjectStore.class).asEagerSingleton();
+            bind(ObjectLookupStore.class)
+                .to(ConcurrentHashMapObjectLookupStore.class)
+                .asEagerSingleton();
             bind(MessageBuilder.class).asEagerSingleton();
           }
         };

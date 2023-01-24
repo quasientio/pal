@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
-import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
-import net.ittera.pal.common.objects.ObjectStore;
+import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
+import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.runtime.DispatchForwarder;
 import net.ittera.pal.common.runtime.ProxyDispatcher;
 import net.ittera.pal.core.exec.java.AspectProxyDispatcher;
@@ -95,7 +95,7 @@ class PeerWiring extends AbstractModule {
     bind(ProxyDispatcher.class).to(AspectProxyDispatcher.class);
 
     // common and cxn library classes are not annotated with @Singleton
-    bind(ObjectStore.class).to(ConcurrentHashMapObjectStore.class).asEagerSingleton();
+    bind(ObjectLookupStore.class).to(ConcurrentHashMapObjectLookupStore.class).asEagerSingleton();
     bind(MessageBuilder.class).asEagerSingleton();
     bind(DirectoryConnectionProvider.class).asEagerSingleton();
 

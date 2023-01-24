@@ -32,13 +32,13 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ObjectStoreBackgroundProcessorTest {
+public class ObjectLookupStoreBackgroundProcessorTest {
 
   private final int CLEANUP_INTERVAL_SECS = 1;
   private final int STATS_INTERVAL_SECS = 1;
   private Logger mockedLogger;
-  private ConcurrentHashMapObjectStore objectStore;
-  private ObjectStoreStats objectStoreStats;
+  private ConcurrentHashMapObjectLookupStore objectLookupStore;
+  private ObjectLookupStoreStats objectLookupStoreStats;
   private ConcurrentHashMap<ObjectRef, IdentifiableObject> objects;
 
   private MockedStatic<LoggerFactory> mockLoggerFactory(boolean loggingEnabled) {
@@ -48,22 +48,22 @@ public class ObjectStoreBackgroundProcessorTest {
     when(mockedLogger.isDebugEnabled()).thenReturn(loggingEnabled);
     MockedStatic<LoggerFactory> mockedLoggerFactory = mockStatic(LoggerFactory.class);
     mockedLoggerFactory
-        .when(() -> LoggerFactory.getLogger(ObjectStoreBackgroundProcessor.class))
+        .when(() -> LoggerFactory.getLogger(ObjectLookupStoreBackgroundProcessor.class))
         .thenReturn(mockedLogger);
     return mockedLoggerFactory;
   }
 
-  private ObjectStoreBackgroundProcessor initMockedObjectStore(
+  private ObjectLookupStoreBackgroundProcessor initMockedObjectLookupStore(
       int cleanupIntervalSecs, int statsIntervalSecs) {
     objects =
         new ConcurrentHashMap<>(
-            ConcurrentHashMapObjectStore.DEFAULT_INITIAL_CAPACITY,
-            ConcurrentHashMapObjectStore.DEFAULT_LOAD_FACTOR);
-    objectStore = mock(ConcurrentHashMapObjectStore.class);
-    when(objectStore.getObjects()).thenReturn(objects);
-    objectStoreStats = new ObjectStoreStats();
-    return new ObjectStoreBackgroundProcessor(
-        objectStore, objectStoreStats, cleanupIntervalSecs, statsIntervalSecs);
+            ConcurrentHashMapObjectLookupStore.DEFAULT_INITIAL_CAPACITY,
+            ConcurrentHashMapObjectLookupStore.DEFAULT_LOAD_FACTOR);
+    objectLookupStore = mock(ConcurrentHashMapObjectLookupStore.class);
+    when(objectLookupStore.getObjects()).thenReturn(objects);
+    objectLookupStoreStats = new ObjectLookupStoreStats();
+    return new ObjectLookupStoreBackgroundProcessor(
+        objectLookupStore, objectLookupStoreStats, cleanupIntervalSecs, statsIntervalSecs);
   }
 
   private ObjectRef generateObjectRef(Object object) {
@@ -77,9 +77,9 @@ public class ObjectStoreBackgroundProcessorTest {
         .forEach(
             loggingEnabled -> {
               try (MockedStatic<LoggerFactory> ignored = mockLoggerFactory(loggingEnabled)) {
-                ObjectStoreBackgroundProcessor objectStoreProcessor =
-                    initMockedObjectStore(CLEANUP_INTERVAL_SECS, STATS_INTERVAL_SECS);
-                ObjectStoreBackgroundProcessor processorSpy = spy(objectStoreProcessor);
+                ObjectLookupStoreBackgroundProcessor objectLookupStoreProcessor =
+                    initMockedObjectLookupStore(CLEANUP_INTERVAL_SECS, STATS_INTERVAL_SECS);
+                ObjectLookupStoreBackgroundProcessor processorSpy = spy(objectLookupStoreProcessor);
 
                 Object aString = new String("just a string");
                 Object aList = new ArrayList<>();
@@ -104,13 +104,13 @@ public class ObjectStoreBackgroundProcessorTest {
 
                 // verify removeClearedEntries called
                 verify(processorSpy, atLeastOnce()).removeClearedEntries();
-                verify(objectStore, atLeastOnce()).getObjects();
+                verify(objectLookupStore, atLeastOnce()).getObjects();
 
                 // verify entries cleared
                 assertThat(objects.mappingCount(), is(0L));
 
                 // verify stats
-                assertThat(objectStoreStats.getTotalObjectsCleared().get(), is(2L));
+                assertThat(objectLookupStoreStats.getTotalObjectsCleared().get(), is(2L));
 
                 // verify stats printed
                 if (loggingEnabled) {
@@ -125,7 +125,7 @@ public class ObjectStoreBackgroundProcessorTest {
                       .debug(eq("OBJECTS: total cleared={}"), (Object) any());
                 }
               }
-              Mockito.reset(mockedLogger, objectStore);
+              Mockito.reset(mockedLogger, objectLookupStore);
             });
   }
 }

@@ -28,9 +28,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import net.ittera.pal.common.lang.intercept.InterceptType;
-import net.ittera.pal.common.objects.ConcurrentHashMapObjectStore;
+import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
+import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.common.objects.ObjectStore;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -43,7 +43,7 @@ public class InterceptRequestEntryTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
   private final MessageBuilder msgBuilder = new MessageBuilder();
-  private final ObjectStore objectStore = new ConcurrentHashMapObjectStore();
+  private final ObjectLookupStore objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
   @Test
   public void antPathMatcherTests() {
@@ -114,7 +114,7 @@ public class InterceptRequestEntryTest {
 
     // create Exec message
     Object target = System.out;
-    ObjectRef targetObjRef = objectStore.storeObject(target);
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
     ExecMessage execMessage =
         msgBuilder.buildInstanceMethod(
             UUID.randomUUID(),
