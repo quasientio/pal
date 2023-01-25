@@ -114,7 +114,7 @@ public class Caller extends AbstractPALSubcommand {
   private boolean sendAndForget;
 
   @Option(
-      names = {"-n", "--num-requests"},
+      names = {"-r", "--num-requests"},
       defaultValue = "1",
       paramLabel = "NUM_REQUESTS",
       description = "number of requests to send per client (default: 1)")
