@@ -2,7 +2,8 @@
 # Dockerfile
 #
 # Build:
-#    build          docker build --pull --tag registry.gitlab.com/cometera/pal/pal .
+#                   (run from $PAL_HOME)
+#                   docker build --file docker/Dockerfile --tag registry.gitlab.com/cometera/pal/pal .
 #    push           docker push registry.gitlab.com/cometera/pal/pal
 #    tag            docker tag registry.gitlab.com/cometera/pal/pal:latest pal:latest
 # Build Args:       extra_lib

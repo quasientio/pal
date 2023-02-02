@@ -1,6 +1,0 @@
-#!/bin/sh
-
-compose="docker-compose --project-directory $PAL_HOME -f $PAL_HOME/docker/zk-kafka-compose.yml"
-
-$compose rm -f
-$compose up --build

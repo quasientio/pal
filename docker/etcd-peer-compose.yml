@@ -1,0 +1,35 @@
+###################################################################
+# etcd-peer-compose.yml
+#
+# CMD's (from `docker` dir):   docker-compose --project-directory .. -f etcd-peer-compose.yml up/config
+###################################################################
+
+version: '3.7'
+
+networks:
+  pal:
+    driver: bridge
+
+services:
+  etcd:
+    image: etcd:latest
+    networks:
+      - pal
+    ports:
+      - '2379:2379'
+      - '2380:2380'
+    volumes:
+      - type: bind
+        source: $PAL_HOME/config/etcd
+        target: /etc/etcd
+    command: ./etcd --config-file /etc/etcd/etcd.conf.yml
+
+  peer:
+    build:
+      context: .
+    image: pal
+    networks:
+      - pal
+    env_file: peer.env
+    depends_on:
+      - etcd

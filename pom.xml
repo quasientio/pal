@@ -43,6 +43,7 @@
         <commons.lang3.version>3.9</commons.lang3.version>
         <picocli.version>4.6.1</picocli.version>
         <jeromq.version>0.5.3</jeromq.version>
+        <jetcd.version>0.7.5</jetcd.version>
         <zookeeper.version>3.4.14</zookeeper.version>
         <curator.version>4.2.0</curator.version>
         <curator.test.version>2.13.0</curator.test.version>
@@ -271,6 +272,13 @@
                 <groupId>com.google.inject</groupId>
                 <artifactId>guice</artifactId>
                 <version>${guice.version}</version>
+            </dependency>
+
+            <!-- etcd -->
+            <dependency>
+                <groupId>io.etcd</groupId>
+                <artifactId>jetcd-core</artifactId>
+                <version>${jetcd.version}</version>
             </dependency>
 
             <!-- zookeeper & curator -->

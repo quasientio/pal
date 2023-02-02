@@ -1,0 +1,40 @@
+###################################################################
+# etcd-kafka-compose.yml
+#
+# Usage: docker-compose --project-directory $PAL_HOME -f etcd-kafka-compose.yml up/config
+###################################################################
+
+version: '3.7'
+
+networks:
+  pal:
+    driver: bridge
+
+services:
+  etcd:
+    image: etcd:latest
+    networks:
+      - pal
+    ports:
+      - ${ETCD_CLIENT_PORT}:${ETCD_CLIENT_PORT}
+      - ${ETCD_PEER_PORT}:${ETCD_PEER_PORT}
+    command: ./etcd -name etcd0
+      -advertise-client-urls http://${HOST}:${ETCD_CLIENT_PORT}
+      -listen-client-urls http://0.0.0.0:${ETCD_CLIENT_PORT}
+      -initial-advertise-peer-urls http://${HOST}:${ETCD_PEER_PORT}
+      -listen-peer-urls http://0.0.0.0:${ETCD_PEER_PORT}
+      -initial-cluster-token etcd-cluster-1
+      -initial-cluster etcd0=http://${HOST}:${ETCD_PEER_PORT}
+      -initial-cluster-state new
+
+  kafka:
+    image: kafka:latest
+    networks:
+      - pal
+    ports:
+      - '9092:9092'
+    volumes:
+      - type: bind
+        source: $PAL_HOME/config/kafka
+        target: /etc/kafka
+    command: format_start --config /etc/kafka/server.properties

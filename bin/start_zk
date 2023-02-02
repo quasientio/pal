@@ -1,6 +1,0 @@
-#!/bin/sh
-
-LISTEN_PORT=2181
-
-docker container rm --volumes zk
-docker run --expose $LISTEN_PORT --publish $LISTEN_PORT:$LISTEN_PORT --name zk wurstmeister/zookeeper

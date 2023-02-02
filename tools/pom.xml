@@ -21,8 +21,8 @@
         <shading.prefix>net.ittera.pal.shd</shading.prefix>
         <kafka.logger.name>net.ittera.pal.shd.apache.kafka</kafka.logger.name>
         <kafka.logger.name.unshaded>org.apache.kafka</kafka.logger.name.unshaded>
-        <zookeeper.logger.name>net.ittera.pal.shd.apache.zookeeper</zookeeper.logger.name>
-        <zookeeper.logger.name.unshaded>org.apache.zookeeper</zookeeper.logger.name.unshaded>
+        <jetcd.logger.name>net.ittera.pal.shd.io.etcd</jetcd.logger.name>
+        <jetcd.logger.name.unshaded>io.etcd</jetcd.logger.name.unshaded>
     </properties>
 
 
@@ -108,10 +108,6 @@
                             <exclude>org.aspectj:aspectjtools:*</exclude>
                             <exclude>com.fasterxml.jackson.*</exclude>
                             <exclude>org.rocksdb:rocksdbjni:*</exclude>
-                            <!-- exclude zookeeper dependencies -->
-                            <exclude>com.github.spotbugs:spotbugs-annotations</exclude>
-                            <exclude>com.google.code.findbugs:jsr305</exclude>
-                            <exclude>jline:jline</exclude>
                         </excludes>
                     </artifactSet>
                     <relocations>

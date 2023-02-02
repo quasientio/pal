@@ -39,7 +39,7 @@ Pal is 100% java, laid out as a multi-module Maven project.
 * Docker (recommended)
 
 #### Optional dependencies
-* If you wish to run zookeeper natively (i.e. not inside docker), install [zookeeper](https://zookeeper.apache.org/releases.html#download)
+* If you wish to run etcd natively (i.e. not inside docker), install [etcd](https://etcd.io/docs/v3.2/install/)
 * If you wish to run kafka natively (i.e. not inside docker), install [kafka](https://kafka.apache.org/downloads)
 
 #### Build

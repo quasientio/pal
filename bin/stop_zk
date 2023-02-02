@@ -1,3 +1,0 @@
-#!/bin/sh
-
-docker container stop -t 1 zk

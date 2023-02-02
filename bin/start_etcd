@@ -1,0 +1,19 @@
+#!/bin/sh
+
+ETCD_CLIENT_PORT=2379
+ETCD_PEER_PORT=2380
+
+# unset previously set ETCD_ env variables
+for v in `env | grep ^ETCD | cut -d'=' -f1`; do unset $v; done
+
+export ETCDCTL_API="3"
+export ALLOW_NONE_AUTHENTICATION="yes"
+export ETCD_LOG_LEVEL="info"
+export ETCD_LISTEN_CLIENT_URLS="http://127.0.0.1:$ETCD_CLIENT_PORT"
+export ETCD_ADVERTISE_CLIENT_URLS="http://127.0.0.1:$ETCD_CLIENT_PORT"
+export ETCD_LISTEN_PEER_URLS="http://127.0.0.1:$ETCD_PEER_PORT"
+
+etcd \
+  --name paldir \
+  --data-dir /tmp/etcd/data \
+  --wal-dir /tmp/etcd/wal

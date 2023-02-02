@@ -1,0 +1,27 @@
+#!/bin/sh
+
+source $PAL_HOME/.env
+HOST=$(docker info | grep '^ *Name:' | tr -d ' ' | cut -d ':' -f 2)
+
+if ($(docker network ls | grep pal &> /dev/null ))
+then
+  echo 'pal network exists'
+else
+  docker network create pal --driver bridge
+  echo 'new network created: pal' 
+fi
+
+docker container rm --volumes etcd
+
+docker run \
+  --publish ${ETCD_CLIENT_PORT}:${ETCD_CLIENT_PORT} \
+  --publish ${ETCD_PEER_PORT}:${ETCD_PEER_PORT} \
+  --name etcd \
+  etcd ./etcd -name etcd0 \
+ -advertise-client-urls http://${HOST}:${ETCD_CLIENT_PORT}\
+ -listen-client-urls http://0.0.0.0:${ETCD_CLIENT_PORT} \
+ -initial-advertise-peer-urls http://${HOST}:${ETCD_PEER_PORT} \
+ -listen-peer-urls http://0.0.0.0:${ETCD_PEER_PORT} \
+ -initial-cluster-token etcd-cluster-1 \
+ -initial-cluster etcd0=http://${HOST}:${ETCD_PEER_PORT} \
+ -initial-cluster-state new
