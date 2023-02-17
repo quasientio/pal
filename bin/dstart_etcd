@@ -17,6 +17,7 @@ docker run \
   --publish ${ETCD_CLIENT_PORT}:${ETCD_CLIENT_PORT} \
   --publish ${ETCD_PEER_PORT}:${ETCD_PEER_PORT} \
   --name etcd \
+  --detach \
   etcd ./etcd -name etcd0 \
  -advertise-client-urls http://${HOST}:${ETCD_CLIENT_PORT}\
  -listen-client-urls http://0.0.0.0:${ETCD_CLIENT_PORT} \

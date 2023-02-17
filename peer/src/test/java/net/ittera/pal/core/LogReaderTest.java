@@ -44,7 +44,6 @@ import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
-import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
@@ -130,26 +129,14 @@ public class LogReaderTest extends ZmqEnabledTest {
   private ZContext zmqContext;
   private LogReader logReader;
   private UUID peerUuid = UUID.randomUUID();
-  private PALDirectory palDirectory;
-  private TestingServer testingServer;
   private ServiceManager manager;
   private MockConsumer<String, byte[]> consumer;
   private LogInfo log;
   private final int partition = 0;
-  private static Set<String> createdLogs = new HashSet<>();
   private final String DEALER_ADDR = "inproc://inlog_tests";
   private final String OFFSET_PUB_ADDR = "inproc://offsets_tests";
-  private static final int TEST_PORT = 2182;
-  private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
   private Set<Service> services;
-
-  private void deleteCreatedLogs() throws Exception {
-    for (String log : createdLogs) {
-      palDirectory.unregisterLog(log);
-      logger.debug("Cleaned up left over log: {}", log);
-    }
-  }
 
   @After
   public void cleanup() throws Exception {
@@ -157,19 +144,13 @@ public class LogReaderTest extends ZmqEnabledTest {
     execService.shutdownNow();
     execService.awaitTermination(5, TimeUnit.SECONDS);
     logger.trace("exec service shut down");
-    deleteCreatedLogs();
-    palDirectory.close();
-    logger.trace("PAL dir closed");
-    testingServer.close();
-    logger.trace("testing zk server closed");
   }
 
   @Before
   public void setup() throws Exception {
     execService = Executors.newSingleThreadExecutor();
-    testingServer = new TestingServer(TEST_PORT, true);
     DirectoryConnectionProvider directoryConnectionProvider =
-        new DirectoryConnectionProvider(CONNECTION_STR);
+        new DirectoryConnectionProvider(PALDirectory.NO_URL);
     zmqContext = this.createContext();
     consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     logReader =
@@ -184,9 +165,7 @@ public class LogReaderTest extends ZmqEnabledTest {
             directoryConnectionProvider,
             consumer,
             10);
-    palDirectory = directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
-    log = palDirectory.newLog("testapp");
-    createdLogs.add(this.log.getName());
+    this.log = new LogInfo("testapp");
     TopicPartition topicPartition = new TopicPartition(log.getName(), 0);
     final List<TopicPartition> topicPartitionList = Collections.singletonList(topicPartition);
     consumer.assign(topicPartitionList);

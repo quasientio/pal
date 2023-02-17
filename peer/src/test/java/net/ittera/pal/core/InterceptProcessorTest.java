@@ -71,7 +71,7 @@ public class InterceptProcessorTest {
                   return null;
                 })
         .when(palDirectory)
-        .registerInterceptAsync(any(), any());
+        .registerInterceptAsync(any());
 
     DirectoryConnectionProvider directoryConnectionProvider =
         mock(DirectoryConnectionProvider.class);
@@ -89,7 +89,7 @@ public class InterceptProcessorTest {
     interceptProcessor.process(App.class);
 
     // ensure register() called
-    verify(palDirectory, times(1)).registerInterceptAsync(any(), any());
+    verify(palDirectory, times(1)).registerInterceptAsync(any());
 
     // verify request contents
     assertThat(requests.size(), is(1));

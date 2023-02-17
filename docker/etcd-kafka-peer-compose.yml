@@ -1,34 +1,48 @@
 ###################################################################
 # etcd-kafka-peer-compose.yml
 #
-# CMD's (from `docker` dir):   docker-compose --project-directory .. -f etcd-kafka-peer-compose.yml up/build/config
+# CMD's (from `docker` dir):   docker-compose --project-directory $PAL_HOME -f etcd-kafka-peer-compose.yml up/build/config
 ###################################################################
 
 version: '3.7'
 
+networks:
+  pal:
+    driver: bridge
+
 services:
   etcd:
-    image: bitnami/etcd:3.5.0
-    network_mode: "host"
+    image: etcd:latest
+    networks:
+      - pal
+    ports:
+      - '2379:2379'
+      - '2380:2380'
+    volumes:
+      - type: bind
+        source: $PAL_HOME/config/etcd
+        target: /etc/etcd
+    command: ./etcd --config-file /etc/etcd/etcd.conf.yml
 
   kafka:
-    image: bitnami/kafka:3.3.2
-    network_mode: "host"
-    environment:
-      HOSTNAME_COMMAND: "docker info | grep '^ *Name:' | tr -d ' ' | cut -d ':' -f 2"
-      JMX_PORT: ${KAFKA_JMX_PORT}
-      KAFKA_LISTENERS: INSIDE://:${KAFKA_INSIDE_PORT},OUTSIDE://:${KAFKA_OUTSIDE_PORT}
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://:${KAFKA_INSIDE_PORT},OUTSIDE://_{HOSTNAME_COMMAND}:${KAFKA_OUTSIDE_PORT}
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+    image: kafka:latest
+    networks:
+      - pal
+    ports:
+      - '9092:9092'
+    volumes:
+      - type: bind
+        source: $PAL_HOME/config/kafka
+        target: /etc/kafka
+    command: format_start --config /etc/kafka/server.properties
 
   peer:
     build:
       context: .
     image: pal
-    network_mode: "host"
+    network_mode: "bridge"
     env_file: peer.env
     depends_on:
       - etcd
       - kafka
-    command: ["./wait-for", "localhost:${KAFKA_INSIDE_PORT}", "--", "./pal"]
+    command: ["./wait-for", "kafka:${KAFKA_INTERNAL_PORT}", "--", "./pal"]

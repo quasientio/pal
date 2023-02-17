@@ -39,7 +39,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import net.ittera.pal.common.directory.nodes.LogInfo;
-import net.ittera.pal.common.directory.nodes.LogRequest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ControlMessage;
@@ -81,6 +80,7 @@ public class ThinPeer {
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);
 
   // kafka stuff
+  private String bootstrapServers;
   private boolean logIOEnabled;
   private LogInfo inLog;
   private LogInfo outLog;
@@ -131,6 +131,11 @@ public class ThinPeer {
 
   public ThinPeer withReqAddress(String reqAddress) {
     this.reqAddress = reqAddress;
+    return this;
+  }
+
+  public ThinPeer withBootstrapServers(String bootstrapServers) {
+    this.bootstrapServers = bootstrapServers;
     return this;
   }
 
@@ -256,22 +261,22 @@ public class ThinPeer {
       String kafkaTopicPrefix = logPrefix != null ? logPrefix : DEFAULT_TOPIC_PREFIX;
       LogInfo lastLog = null;
       if (this.inLog == null) {
-        lastLog = getPalDirectory().getLastLog(kafkaTopicPrefix);
+        lastLog = getPalDirectory().getLastLogWithPrefix(kafkaTopicPrefix);
         this.inLog = lastLog;
       } else {
-        if (this.inLog.getBootstrapServers() == null) {
-          this.inLog.setBrokerInfoSet(getPalDirectory().getKafkaBrokers());
+        if (this.inLog.getBootstrapServers() == null && bootstrapServers != null) {
+          this.inLog.setBootstrapServers(bootstrapServers);
         }
       }
 
       if (outLog == null) {
         if (lastLog == null) {
-          lastLog = getPalDirectory().getLastLog(kafkaTopicPrefix);
+          lastLog = getPalDirectory().getLastLogWithPrefix(kafkaTopicPrefix);
         }
         this.outLog = lastLog;
       } else {
-        if (this.outLog.getBootstrapServers() == null) {
-          this.outLog.setBrokerInfoSet(getPalDirectory().getKafkaBrokers());
+        if (this.outLog.getBootstrapServers() == null && bootstrapServers != null) {
+          this.outLog.setBootstrapServers(bootstrapServers);
         }
       }
 
@@ -367,7 +372,7 @@ public class ThinPeer {
     }
   }
 
-  public ExecMessage sendAndReceive(ExecMessage message, boolean consumeLogUntilReply)
+  public ExecMessage sendAndReceive(ExecMessage message)
       throws ExecutionException, InterruptedException {
     assertInitialized();
     if (logger.isTraceEnabled()) {
@@ -376,7 +381,7 @@ public class ThinPeer {
     if (talkingToPeer) {
       return sendToPeer(message);
     } else {
-      return sendToLogAndReceive(message, consumeLogUntilReply);
+      return sendToLogAndReceive(message);
     }
   }
 
@@ -520,50 +525,7 @@ public class ThinPeer {
     }
   }
 
-  public Future<ExecMessage> sendToLogAndAsyncProcessReqAndRepNodes(ExecMessage message) {
-    assertInitialized();
-    if (logger.isTraceEnabled()) {
-      logger.trace(
-          "sendToLogAndAsyncProcessReqAndRepNodes: in with message: {}",
-          ColferUtils.format(message));
-    }
-    final UUID requestMsgUuid = UUID.fromString(message.getMessageUuid());
-    // send to kafka
-    final byte[] body = ColferUtils.toBytes(msgBuilder.wrap(message));
-    producer.send(
-        new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body));
-    if (logger.isDebugEnabled()) {
-      logger.debug("Message sent to log:\n{} ({} bytes)", ColferUtils.format(message), body.length);
-    }
-
-    final ExecMessageFuture messageFuture =
-        new ExecMessageFuture(
-            this,
-            getPalDirectory(),
-            asyncConsumerExecutor,
-            outLog.getName(),
-            new LogRequest(requestMsgUuid));
-
-    LogRequest logRequest;
-    if (!outLog.equals(inLog)) {
-      // if we are reading from a different log, ask for reply to be written to that log (our inLog)
-      logRequest = new LogRequest(requestMsgUuid, inLog);
-    } else {
-      logRequest = new LogRequest(requestMsgUuid);
-    }
-
-    // asynchronously create req node
-    try {
-      getPalDirectory().addLogRequestAsync(outLog.getName(), logRequest, messageFuture);
-    } catch (Exception e) {
-      logger.error("Couldn't add request node to directory", e);
-      return null;
-    }
-
-    return messageFuture;
-  }
-
-  private ExecMessage sendToLogAndReceive(ExecMessage message, boolean consumeLogUntilReply)
+  private ExecMessage sendToLogAndReceive(ExecMessage message)
       throws ExecutionException, InterruptedException {
 
     if (logger.isTraceEnabled()) {
@@ -573,12 +535,7 @@ public class ThinPeer {
       return sendAndReceiveConsumingLog(message);
     }
 
-    if (consumeLogUntilReply) {
-      return sendToLogConsumeAndSwitchToPeer(message);
-    } else {
-      // wait for Future reply on directory
-      return sendAsyncAndSwitchToPeer(message);
-    }
+    return sendToLogConsumeAndSwitchToPeer(message);
   }
 
   private ExecMessage sendToLogConsumeAndSwitchToPeer(ExecMessage message) {
@@ -587,23 +544,6 @@ public class ThinPeer {
           "sendToLogConsumeAndSwitchToPeer: in with message: {}", ColferUtils.format(message));
     }
     ExecMessage replyMsg = sendAndReceiveConsumingLog(message);
-
-    // switch to direct p2p talk
-    String msgPeerUuid = replyMsg.getPeerUuid();
-    connectToPeer(UUID.fromString(msgPeerUuid));
-
-    return replyMsg;
-  }
-
-  private ExecMessage sendAsyncAndSwitchToPeer(ExecMessage message)
-      throws ExecutionException, InterruptedException {
-    if (logger.isTraceEnabled()) {
-      logger.trace("sendAsyncAndSwitchToPeer: in with message: {}", ColferUtils.format(message));
-    }
-    Future<ExecMessage> replyFuture = sendToLogAndAsyncProcessReqAndRepNodes(message);
-
-    // wait for reply (blocking)
-    ExecMessage replyMsg = replyFuture.get();
 
     // switch to direct p2p talk
     String msgPeerUuid = replyMsg.getPeerUuid();

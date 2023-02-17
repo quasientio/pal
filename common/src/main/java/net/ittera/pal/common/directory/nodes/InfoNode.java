@@ -19,6 +19,7 @@
 
 package net.ittera.pal.common.directory.nodes;
 
+import com.alibaba.fastjson.JSON;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -33,9 +34,17 @@ public abstract class InfoNode {
     this.ctime = OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
   }
 
+  public final void setCtime(Instant time) {
+    this.ctime = OffsetDateTime.ofInstant(time, ZoneOffset.UTC);
+  }
+
   public final void setMtime(long mtime) {
     Instant instant = Instant.ofEpochMilli(mtime);
     this.mtime = OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
+  }
+
+  public final void setMtime(Instant time) {
+    this.mtime = OffsetDateTime.ofInstant(time, ZoneOffset.UTC);
   }
 
   public final OffsetDateTime getCTime() {
@@ -44,5 +53,9 @@ public abstract class InfoNode {
 
   public final OffsetDateTime getMTime() {
     return mtime;
+  }
+
+  public final String toJSONString() {
+    return JSON.toJSONString(this);
   }
 }

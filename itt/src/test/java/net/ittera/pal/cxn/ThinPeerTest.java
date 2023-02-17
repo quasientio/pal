@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
-import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.clients.producer.MockProducer;
@@ -48,11 +47,9 @@ public class ThinPeerTest {
   private final MessageBuilder msgBuilder = new MessageBuilder();
 
   // PAL directory
-  private TestingServer testingServer;
   private PALDirectory palDirectory;
   private DirectoryConnectionProvider directoryConnectionProvider;
-  private static final int TEST_PORT = 2182;
-  private static final String PAL_DIR_URL = String.format("localhost:%d", TEST_PORT);
+  private static final String PAL_DIR_URL = "ip://localhost:2379";
 
   // mock Kafka producer & consumer
   private MockProducer<String, byte[]> producer;
@@ -65,7 +62,6 @@ public class ThinPeerTest {
   @Before
   public void setUp() throws Exception {
     // init PALDirectory
-    testingServer = new TestingServer(TEST_PORT, true);
     directoryConnectionProvider = new DirectoryConnectionProvider(PAL_DIR_URL);
     palDirectory = directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
 
@@ -93,9 +89,8 @@ public class ThinPeerTest {
       palDirectory.unregisterLog(log);
       logger.info("Cleaned up created log: {}", log);
     }
-    // closed PAL Directory and ZK
+    // close PAL Directory
     palDirectory.close();
-    testingServer.close();
   }
 
   private LogInfo createLog(String name) throws Exception {
@@ -165,7 +160,7 @@ public class ThinPeerTest {
     thinPeer = createUninitialized();
     ExecMessage msg = msgBuilder.buildEmptyConstructor(thinPeer.getPeerUuid(), "java.lang.String");
     try {
-      thinPeer.sendAndReceive(msg, false);
+      thinPeer.sendAndReceive(msg);
       fail("Should have raised IllegalStateException");
     } catch (IllegalStateException e) {
       // ok

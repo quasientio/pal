@@ -28,10 +28,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.Queue;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -102,11 +99,6 @@ public class Caller extends AbstractPALSubcommand {
       paramLabel = "uuid|HOST:PORT",
       description = "talk to peer with given UUID or REQ address")
   private String peerIdentifier;
-
-  @Option(
-      names = {"-a", "--async"},
-      description = "send to log in async mode")
-  private boolean async;
 
   @Option(
       names = {"-f", "--forget-reply"},
@@ -265,7 +257,7 @@ public class Caller extends AbstractPALSubcommand {
                 null,
                 parameters,
                 argObjRefs);
-        thinPeer.sendAndReceive(requestMsg, true);
+        thinPeer.sendAndReceive(requestMsg);
       }
     }
 
@@ -306,7 +298,7 @@ public class Caller extends AbstractPALSubcommand {
                 null,
                 parameters,
                 argObjRefs);
-        thinPeer.sendAndReceive(requestMsg, true);
+        thinPeer.sendAndReceive(requestMsg);
       }
     }
 
@@ -324,14 +316,16 @@ public class Caller extends AbstractPALSubcommand {
 
   /**
    * Use this method when no direct peer-to-peer talk is available or desirable. Sends all requests
-   * asynchronously to log, waits for reply offsets in directory, then fetches them from log. If
-   * sendAndForget=true, it doesn't wait for replies, useful for void methods or any other type of
-   * call where we don't care about the returned value or thrown exceptions.
+   * to log, and doesn't wait for replies, useful for void methods or any other type of call where
+   * we don't care about the returned value or thrown exceptions. The 'async' word in the method
+   * name simply refers to the fact that ThinPeer won't wait for a reply to the message sent, as
+   * when calling sendAndReceive().
    */
   private int runReqsWithSingleClientAsync() throws Exception {
 
     if (peerAddress != null || peerUuid != null) {
-      throw new RuntimeException("Direct p2p talk (-p) is not compatible with -a or -f options");
+      throw new RuntimeException(
+          "Direct p2p talk (-p) is not compatible with -f (--forget-reply) option");
     }
 
     // load properties and init ThinPeer
@@ -360,50 +354,6 @@ public class Caller extends AbstractPALSubcommand {
 
     long start = System.currentTimeMillis();
     int reqsSent = 0;
-    Future<ExecMessage> messageFuture;
-
-    // a queue to store futures (async mode)
-    final Queue<Future<ExecMessage>> messageFutureQueue = new ConcurrentLinkedQueue<>();
-    Thread replyProcessorThread = null;
-    if (!sendAndForget) {
-      replyProcessorThread =
-          new Thread(
-              () -> {
-                int totalProcessed = 0;
-                int processed;
-                while (totalProcessed < requests) {
-                  processed = 0;
-                  for (Future<ExecMessage> futureReply : messageFutureQueue) {
-                    if (futureReply.isDone()) {
-                      messageFutureQueue.remove(futureReply);
-                      processed++;
-                    }
-                  }
-                  totalProcessed += processed;
-                  if (logger.isDebugEnabled()) {
-                    int queueSize = messageFutureQueue.size();
-                    logger.debug(
-                        "processed {} records, total so far: {}, size of queue: {}",
-                        processed,
-                        totalProcessed,
-                        queueSize);
-                    if (logger.isTraceEnabled() && queueSize > 0) {
-                      logger.trace("PENDING:");
-                      messageFutureQueue.stream().forEach(f -> logger.trace(f.toString()));
-                    }
-                  }
-                  try {
-                    Thread.sleep(REPLY_PROCESSOR_SLEEP_MS);
-                  } catch (InterruptedException e) {
-                    // what to do
-                  }
-                }
-              });
-
-      // start background reply processor
-      replyProcessorThread.setDaemon(true);
-      replyProcessorThread.start();
-    }
 
     // prepare arrays for message construction
     Class[] parameterTypes = new Class[] {String[].class};
@@ -429,20 +379,10 @@ public class Caller extends AbstractPALSubcommand {
               null,
               parameters,
               argObjRefs);
-      if (sendAndForget) {
-        // send to log and forget
-        thinPeer.sendToLogAndForget(requestMsg);
-      } else {
-        // send async, store future reply
-        messageFuture = thinPeer.sendToLogAndAsyncProcessReqAndRepNodes(requestMsg);
-        messageFutureQueue.add(messageFuture);
-      }
-      reqsSent++;
-    }
 
-    // wait for background reply processor to be done
-    if (!sendAndForget) {
-      replyProcessorThread.join();
+      // send to log and forget
+      thinPeer.sendToLogAndForget(requestMsg);
+      reqsSent++;
     }
 
     thinPeer.close();
@@ -489,7 +429,7 @@ public class Caller extends AbstractPALSubcommand {
                       () -> {
                         try {
                           int sent;
-                          if (async || sendAndForget) {
+                          if (sendAndForget) {
                             sent = runReqsWithSingleClientAsync();
                           } else {
                             sent = runReqsWithSingleClient();
@@ -521,11 +461,12 @@ public class Caller extends AbstractPALSubcommand {
 
   @Override
   protected int runCommand() throws Exception {
-    if ((async || sendAndForget) && (peerAddress != null || peerUuid != null)) {
-      throw new RuntimeException("Direct p2p talk (-p) is not compatible with -a or -f options");
+    if (sendAndForget && (peerAddress != null || peerUuid != null)) {
+      throw new RuntimeException(
+          "Direct p2p talk (-p) is not compatible with -f (--forget-reply) option");
     }
     if (requests == 1 || numberOfClients == 1) {
-      if (async || sendAndForget) {
+      if (sendAndForget) {
         logger.info("running runReqsWithSingleClientAsync()");
         runReqsWithSingleClientAsync();
       } else {

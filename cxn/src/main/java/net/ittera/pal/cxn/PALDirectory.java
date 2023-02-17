@@ -21,13 +21,21 @@ package net.ittera.pal.cxn;
 
 import static java.lang.String.format;
 
-import java.io.IOException;
+import io.etcd.jetcd.ByteSequence;
+import io.etcd.jetcd.Client;
+import io.etcd.jetcd.KV;
+import io.etcd.jetcd.KeyValue;
+import io.etcd.jetcd.kv.DeleteResponse;
+import io.etcd.jetcd.kv.GetResponse;
+import io.etcd.jetcd.kv.PutResponse;
+import io.etcd.jetcd.options.DeleteOption;
+import io.etcd.jetcd.options.GetOption;
 import java.lang.reflect.Field;
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,35 +43,17 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import net.ittera.pal.common.directory.events.InterceptEvent;
-import net.ittera.pal.common.directory.events.InterceptEvent.Type;
 import net.ittera.pal.common.directory.events.InterceptNodeListener;
-import net.ittera.pal.common.directory.kafka.KafkaBrokerInfo;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
-import net.ittera.pal.common.directory.nodes.LogReply;
-import net.ittera.pal.common.directory.nodes.LogRequest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.util.Strings;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.api.BackgroundCallback;
-import org.apache.curator.framework.api.CuratorWatcher;
-import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode;
-import org.apache.curator.framework.recipes.cache.TreeCache;
-import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
-import org.apache.curator.framework.recipes.cache.TreeCacheListener;
-import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException.NoNodeException;
-import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,131 +70,43 @@ public class PALDirectory implements AutoCloseable {
   private static final String LOGS_DIR = "logs";
   private static final String INTERCEPTS_DIR = "intercepts";
 
-  // absolute path of kafka broker nodes
-  private static final String BROKERS_PATH = "/brokers/ids";
-
-  // TODO load from config
-  private static final int BASE_SLEEP_TIME_MS = 1000;
-  private static final int MAX_RETRIES = 3;
-  private static final int CONNECTION_TIMEOUT_MS = 6000;
-  private static final int SESSION_TIMEOUT_MS = 15000;
-
   private static final String KEYVALUE_SEP = "|";
   private static Charset loadedCharset;
 
   private final String directoryUrl;
-  private final CuratorFramework curator;
+  private final Client client;
+  private final KV kvClient;
   private final String namespace;
-  private Set<KafkaBrokerInfo> brokerInfoSet;
-  private boolean brokersInfoLoaded;
-  private PathChildrenCache peersCache;
-  private TreeCache interceptsCache;
+  private Map<Object, Object> peersCache;
+  private Map<Object, Object> interceptsCache;
   private ExecutorService cachingExecutor;
   private final List<InterceptNodeListener> interceptListeners = new ArrayList<>();
 
-  private class TreeToInterceptsCacheListener implements TreeCacheListener {
-
-    /**
-     * @param type
-     * @param path
-     * @return new intercept event </br> null if length of split path != 4 or unparseable UUIDs
-     */
-    private InterceptEvent createInterceptEvent(InterceptEvent.Type type, String path) {
-      String[] parts =
-          Arrays.stream(path.split("\\/")).filter(s -> s.length() > 0).toArray(String[]::new);
-      if (parts.length == 4) {
-        try {
-          final UUID peerUuid = UUID.fromString(parts[2]);
-          final UUID interceptUuid = UUID.fromString(parts[3]);
-          return new InterceptEvent(type, path, peerUuid, interceptUuid);
-        } catch (IllegalArgumentException e) {
-          logger.warn("Invalid UUID or unexpected path of len=4: {}", path);
-        }
-      }
-      return null;
-    }
-
-    @Override
-    public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent treeCacheEvent) {
-      logger.debug("tree event: {}", treeCacheEvent);
-      switch (treeCacheEvent.getType()) {
-        case NODE_ADDED:
-          String path = treeCacheEvent.getData().getPath();
-          InterceptEvent interceptEvent = createInterceptEvent(Type.INTERCEPT_ADDED, path);
-          if (interceptEvent != null) {
-            interceptListeners.forEach(l -> l.interceptEvent(interceptEvent));
-          }
-          break;
-        case NODE_REMOVED:
-          path = treeCacheEvent.getData().getPath();
-          interceptEvent = createInterceptEvent(Type.INTERCEPT_REMOVED, path);
-          if (interceptEvent != null) {
-            interceptListeners.forEach(l -> l.interceptEvent(interceptEvent));
-          }
-          break;
-        case NODE_UPDATED:
-        case CONNECTION_SUSPENDED:
-        case CONNECTION_RECONNECTED:
-        case CONNECTION_LOST:
-        case INITIALIZED:
-        default: // NOP
-      }
-    }
-  }
-
   public PALDirectory(String connectionString) {
-    this(connectionString, null, true, false);
+    this(connectionString, null, false);
   }
 
-  public PALDirectory(
-      String connectionString, String namespace, boolean withCaching, boolean syncConnect) {
-    this.curator = newCuratorInstance(connectionString);
-    logger.info("Will connect to zookeeper@{}", connectionString);
-    /* we can't set the namespace on the Curator instance, as we need access to
-      kafka's namespace (for /brokers), so we will handle it manually
-    */
+  public PALDirectory(List<URI> endpoints) {
+    this(endpoints.stream().map(URI::toString).collect(Collectors.joining(",")), null, false);
+  }
+
+  public PALDirectory(String endpoints, String namespace, boolean withCaching) {
+    this.directoryUrl = endpoints;
+    logger.info("Will connect to etcd endpoints: {}", endpoints);
+    this.client = Client.builder().target(endpoints).build();
+    this.kvClient = client.getKVClient();
     this.namespace = namespace != null ? namespace : DEFAULT_PAL_NAMESPACE;
-    this.directoryUrl = connectionString;
-    curator.start();
-    if (syncConnect) {
-      try {
-        curator.blockUntilConnected();
-      } catch (InterruptedException e) {
-        logger.error("Error while waiting for connection to be established", e);
-        throw new RuntimeException(e);
-      }
-    }
+
+    // TODO is this required now with etcd??
     try {
       createSubPaths();
     } catch (Exception e) {
       logger.error("Error creating subpaths", e);
     }
-    // start and build caches
+    // build caches
     if (withCaching) {
-      cachingExecutor = Executors.newSingleThreadExecutor();
-      startPeersCache();
-      startInterceptsCache();
-    }
-  }
-
-  private void startPeersCache() {
-    peersCache = new PathChildrenCache(curator, getPeersPath(), true, false, cachingExecutor);
-    try {
-      peersCache.start(StartMode.NORMAL);
-      logger.info("Initialized peers cache");
-    } catch (Exception e) {
-      logger.error("Error building peers cache", e);
-    }
-  }
-
-  private void startInterceptsCache() {
-    interceptsCache = new TreeCache(curator, getInterceptsPath());
-    interceptsCache.getListenable().addListener(new TreeToInterceptsCacheListener());
-    try {
-      interceptsCache.start();
-      logger.info("Initialized intercepts cache");
-    } catch (Exception e) {
-      logger.error("Error building intercepts cache", e);
+      logger.warn("Caching is disabled (missing etcd implementation)");
+      throw new UnsupportedOperationException("Caching not implemented");
     }
   }
 
@@ -213,24 +115,36 @@ public class PALDirectory implements AutoCloseable {
   }
 
   // <editor-fold desc="Peer methods">
-  public boolean peerExists(UUID peerUuid) throws Exception {
+  public boolean peerExists(UUID peerUuid) throws ExecutionException, InterruptedException {
     if (peersCache == null) {
-      return curator.checkExists().forPath(getPeerPath(peerUuid)) != null;
+      return kvClient
+              .get(ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset())))
+              .get()
+              .getCount()
+          != 0;
     } else {
-      return peersCache.getCurrentData(getPeerPath(peerUuid)) != null;
+      // TODO
+      throw new UnsupportedOperationException("Caching not implemented");
     }
   }
 
-  public void registerPeer(UUID peerUuid, Properties peerProperties) throws Exception {
-    byte[] peerData = peerPropsToData(peerProperties);
-    if (!peerExists(peerUuid)) {
-      curator.create().withMode(CreateMode.EPHEMERAL).forPath(getPeerPath(peerUuid), peerData);
-      logger.info("Registered peer with uuid: {} and properties: {}", peerUuid, peerProperties);
-    } else {
+  public PutResponse registerPeer(UUID peerUuid, Properties peerProperties)
+      throws ExecutionException, InterruptedException {
+    final ByteSequence peerData = peerPropsToByteSequence(peerProperties);
+    if (peerExists(peerUuid)) {
       logger.info(
           "Skipping registration of existing peer with uuid: {} and properties: {}",
           peerUuid,
           peerProperties);
+      return null;
+    } else {
+      final PutResponse putResponse =
+          kvClient
+              .put(
+                  ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset())), peerData)
+              .get();
+      logger.info("Registered peer with uuid: {} and properties: {}", peerUuid, peerProperties);
+      return putResponse;
     }
   }
 
@@ -246,64 +160,70 @@ public class PALDirectory implements AutoCloseable {
     }
   }
 
-  public PeerInfo getPeerInfo(UUID peerUuid) throws Exception {
+  public PeerInfo getPeerInfo(UUID peerUuid) throws ExecutionException, InterruptedException {
     if (!peerExists(peerUuid)) {
-      throw new NoPeerInfoNodeException(format("Node for peer: %s does not exist", peerUuid));
+      logger.warn("Node for peer w/uuid: {} does not exist", peerUuid);
+      return null;
     }
+
     final Properties props = getProperties(getPeerPath(peerUuid), peersCache);
     final PeerInfo peerInfo = new PeerInfo(peerUuid);
-    final Stat stat;
-    if (peersCache == null) {
-      stat = curator.checkExists().forPath(getPeerPath(peerUuid));
-    } else {
-      stat = peersCache.getCurrentData(getPeerPath(peerUuid)).getStat();
-    }
     // set bean fields reflectively
     Stream.of("name", "reqAddress", "pubAddress", "jmxAddress")
         .forEach(fldName -> setFieldValueUnlessNull(peerInfo, fldName, props.getProperty(fldName)));
-    peerInfo.setCtime(stat.getCtime());
-    peerInfo.setMtime(stat.getMtime());
+
+    // TODO fill time values
     return peerInfo;
   }
 
-  private List<String> getAllPeerUUIDs() throws Exception {
-    if (peersCache == null) {
-      return curator.getChildren().forPath(getPeersPath());
-    } else {
-      return peersCache.getCurrentData().stream()
-          .map(childData -> getPathLeaf(childData.getPath()))
-          .collect(Collectors.toList());
-    }
-  }
-
-  public Set<PeerInfo> getAllPeers() throws Exception {
+  public Set<PeerInfo> getAllPeers() throws ExecutionException, InterruptedException {
+    final GetResponse response =
+        kvClient
+            .get(
+                getPeersPathKey(),
+                GetOption.newBuilder()
+                    .withSortField(GetOption.SortTarget.CREATE)
+                    .withSortOrder(GetOption.SortOrder.ASCEND)
+                    .isPrefix(true)
+                    .build())
+            .get();
     final Set<PeerInfo> allPeers = new TreeSet<>();
-    for (String uuid : getAllPeerUUIDs()) {
-      try {
-        allPeers.add(getPeerInfo(UUID.fromString(uuid)));
-      } catch (NoPeerInfoNodeException e) {
-        logger.error("Error retrieving PeerInfo, peer node {} is gone", uuid, e);
+    for (KeyValue kv : response.getKvs()) {
+      final String peerUuid = Strings.stringAfterLast(kv.getValue().toString(), "/");
+      // TODO allPeers.add(PeerInfo.fromJSON(kv.getValue().toString()));
+      PeerInfo peerInfo = getPeerInfo(UUID.fromString(peerUuid));
+      if (peerInfo != null) {
+        allPeers.add(peerInfo);
       }
     }
     return allPeers;
   }
 
-  public void unregisterAllPeers() throws Exception {
-    for (String uuid : getAllPeerUUIDs()) {
-      unregisterPeer(UUID.fromString(uuid));
-    }
+  public DeleteResponse unregisterAllPeers() throws ExecutionException, InterruptedException {
+    final DeleteResponse deleteResponse =
+        kvClient.delete(getPeersPathKey(), DeleteOption.newBuilder().isPrefix(true).build()).get();
+    logger.info("Unregistered {} peers", deleteResponse.getDeleted());
+    return deleteResponse;
   }
 
-  public void unregisterPeer(UUID peerUuid) throws Exception {
-    if (peerExists(peerUuid)) {
-      curator.delete().forPath(getPeerPath(peerUuid));
+  public DeleteResponse unregisterPeer(UUID peerUuid)
+      throws ExecutionException, InterruptedException {
+    DeleteResponse deleteResponse =
+        kvClient
+            .delete(ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset())))
+            .get();
+    if (deleteResponse.getDeleted() == 1) {
       logger.info("Unregistered peer with uuid: {}", peerUuid);
+    } else {
+      logger.info("Could not unregister peer with uuid: {}, peer does not exist!", peerUuid);
     }
+    return deleteResponse;
   }
   // </editor-fold>
 
   // <editor-fold desc="Intercept request methods">
-  public void registerIntercept(InterceptRequest interceptRequest) throws Exception {
+  public PutResponse registerIntercept(InterceptRequest interceptRequest)
+      throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
     if (!peerExists(interceptRequest.getPeer())) {
       throw new NoPeerInfoNodeException(
           format("Peer w/uuid %s does not exist", interceptRequest.getPeer()));
@@ -313,21 +233,23 @@ public class PALDirectory implements AutoCloseable {
         format(
             "%s/%s",
             getInterceptsPathForPeer(interceptRequest.getPeer()), interceptRequest.getUuid());
-    curator
-        .create()
-        .creatingParentsIfNeeded()
-        .withMode(CreateMode.EPHEMERAL)
-        .forPath(interceptPath, interceptData);
+    final PutResponse putResponse =
+        kvClient
+            .put(
+                ByteSequence.from(interceptPath.getBytes(getEncodingCharset())),
+                ByteSequence.from(interceptData))
+            .get();
     if (logger.isDebugEnabled()) {
       logger.debug(
           "created new node for intercept request: {} at path: {}",
           interceptRequest,
           interceptPath);
     }
+    return putResponse;
   }
 
-  public void registerInterceptAsync(InterceptRequest interceptRequest, BackgroundCallback callback)
-      throws Exception {
+  public CompletableFuture<PutResponse> registerInterceptAsync(InterceptRequest interceptRequest)
+      throws NoPeerInfoNodeException, ExecutionException, InterruptedException {
     if (!peerExists(interceptRequest.getPeer())) {
       throw new NoPeerInfoNodeException(
           format("Peer w/uuid %s does not exist", interceptRequest.getPeer()));
@@ -337,56 +259,45 @@ public class PALDirectory implements AutoCloseable {
         format(
             "%s/%s",
             getInterceptsPathForPeer(interceptRequest.getPeer()), interceptRequest.getUuid());
-    curator
-        .create()
-        .creatingParentsIfNeeded()
-        .withMode(CreateMode.EPHEMERAL)
-        .inBackground(callback)
-        .forPath(interceptPath, interceptData);
-    if (logger.isDebugEnabled()) {
-      logger.debug(
-          "Async-created new node for intercept request: {} at path: {}",
-          interceptRequest,
-          interceptPath);
-    }
+    return kvClient.put(
+        ByteSequence.from(interceptPath.getBytes(getEncodingCharset())),
+        ByteSequence.from(interceptData));
   }
 
-  public void registerInterceptAsync(InterceptRequest interceptRequest) throws Exception {
-    registerInterceptAsync(interceptRequest, null);
-  }
-
-  public Set<InterceptRequest> getPeerInterceptRequests(UUID peerUuid) throws Exception {
-    Set<InterceptRequest> interceptRequests = new HashSet<>();
+  public Set<InterceptRequest> getPeerInterceptRequests(UUID peerUuid)
+      throws ExecutionException, InterruptedException {
+    final Set<InterceptRequest> interceptRequests = new HashSet<>();
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
+    final ByteSequence peerInterceptsPathKey =
+        ByteSequence.from(peerInterceptsPath.getBytes(getEncodingCharset()));
     if (interceptsCache == null) {
-      try {
-        for (String interceptNode : curator.getChildren().forPath(peerInterceptsPath)) {
-          final String interceptPath = format("%s/%s", peerInterceptsPath, interceptNode);
-          interceptRequests.add(getInterceptRequest(interceptPath));
-        }
-      } catch (NoNodeException e) {
-        // so no intercepts
+      final GetResponse response =
+          kvClient.get(peerInterceptsPathKey, GetOption.newBuilder().isPrefix(true).build()).get();
+      for (KeyValue kv : response.getKvs()) {
+        final String interceptPath =
+            format("%s/%s", peerInterceptsPath, kv.getKey().toString(getEncodingCharset()));
+        interceptRequests.add(getInterceptRequest(interceptPath));
       }
     } else {
-      Map<String, ChildData> children = interceptsCache.getCurrentChildren(peerInterceptsPath);
-      if (children != null) {
-        for (ChildData child : children.values()) {
-          if (logger.isDebugEnabled()) {
-            logger.debug("getting cached intercept from path: {}", child.getPath());
-          }
-          interceptRequests.add(getInterceptRequest(child.getPath()));
-        }
-      }
+      throw new UnsupportedOperationException("Caching not implemented");
     }
     return interceptRequests;
   }
 
-  public InterceptRequest getInterceptRequest(String interceptPath) throws Exception {
+  public InterceptRequest getInterceptRequest(String interceptPath)
+      throws ExecutionException, InterruptedException {
     final byte[] data;
     if (interceptsCache == null) {
-      data = curator.getData().forPath(interceptPath);
+      data =
+          kvClient
+              .get(ByteSequence.from(interceptPath.getBytes(getEncodingCharset())))
+              .get()
+              .getKvs()
+              .get(0)
+              .getValue()
+              .getBytes();
     } else {
-      data = interceptsCache.getCurrentData(interceptPath).getData();
+      throw new UnsupportedOperationException("Caching not implemented");
     }
     if (data != null) {
       return InterceptRequest.fromBytes(data, getEncodingCharset());
@@ -399,32 +310,23 @@ public class PALDirectory implements AutoCloseable {
     interceptListeners.add(listener);
   }
 
-  public void unregisterPeerInterceptRequests(UUID peerUuid) throws Exception {
+  public DeleteResponse unregisterPeerInterceptRequests(UUID peerUuid) throws Exception {
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
-    int reqsDeleted = 0;
     if (interceptsCache == null) {
-      try {
-        for (String interceptNode : curator.getChildren().forPath(peerInterceptsPath)) {
-          final String interceptPath = format("%s/%s", peerInterceptsPath, interceptNode);
-          curator.delete().forPath(interceptPath);
-          reqsDeleted++;
-        }
-      } catch (NoNodeException e) {
-        // so no intercepts
-      }
+      final DeleteResponse deleteResponse =
+          kvClient
+              .delete(
+                  ByteSequence.from(peerInterceptsPath.getBytes(getEncodingCharset())),
+                  DeleteOption.newBuilder().isPrefix(true).build())
+              .get();
+      logger.info(
+          "Unregistered {} intercept request(s) for peer w/uuid: {}",
+          deleteResponse.getDeleted(),
+          peerUuid);
+      return deleteResponse;
     } else {
-      Map<String, ChildData> children = interceptsCache.getCurrentChildren(peerInterceptsPath);
-      if (children != null) {
-        for (ChildData child : children.values()) {
-          if (logger.isDebugEnabled()) {
-            logger.debug("getting cached intercept from path: {}", child.getPath());
-          }
-          curator.delete().forPath(child.getPath());
-          reqsDeleted++;
-        }
-      }
+      throw new UnsupportedOperationException("Caching not implemented");
     }
-    logger.info("Unregistered {} intercept request(s) for peer w/uuid: {}", reqsDeleted, peerUuid);
   }
 
   // </editor-fold>
@@ -432,72 +334,110 @@ public class PALDirectory implements AutoCloseable {
   // <editor-fold desc="Log methods">
   public LogInfo registerLog(String logName) throws Exception {
     UUID newLogUuid = UUID.randomUUID();
-    String createdNode =
-        curator
-            .create()
-            .creatingParentsIfNeeded()
-            .withMode(CreateMode.PERSISTENT)
-            .forPath(getLogPath(logName), logPropsToData(newLogUuid));
-
-    String registeredLogName = Strings.stringAfterLast(createdNode, "/");
-    // assert registeredLogName == logName
-    LogInfo newLogInfo = getLogInfo(registeredLogName);
-    logger.info("Registered given log node: {} with uuid: {}", registeredLogName, newLogUuid);
-    return newLogInfo;
+    if (!logExists(logName)) {
+      final ByteSequence logKey =
+          ByteSequence.from(getLogPath(logName).getBytes(getEncodingCharset()));
+      kvClient.put(logKey, logPropsToByteSequence(newLogUuid)).get();
+      logger.info("Registered given log node: {} with uuid: {}", logName, newLogUuid);
+    } else {
+      logger.info(
+          "Skipping registration of existing log with name: {} and uuid: {}", logName, newLogUuid);
+    }
+    return getLogInfo(logName);
   }
 
   public LogInfo newLog(String logNamePrefix) throws Exception {
-    UUID newLogUuid = UUID.randomUUID();
-    String createdNode =
-        curator
-            .create()
-            .creatingParentsIfNeeded()
-            .withMode(CreateMode.PERSISTENT_SEQUENTIAL)
-            .forPath(getLogPath(logNamePrefix), logPropsToData(newLogUuid));
+    final UUID newLogUuid = UUID.randomUUID();
+    final LogInfo lastLogWithPrefix = getLastLogWithPrefix(logNamePrefix);
+    final String newLogName;
 
-    String createdLogName = Strings.stringAfterLast(createdNode, "/");
-    LogInfo newLogInfo = getLogInfo(createdLogName);
-    logger.info("Created new log node: {} with uuid: {}", createdLogName, newLogUuid);
+    // generate name of new log with given prefix and monotonically increasing counter
+    if (lastLogWithPrefix == null) {
+      newLogName = String.format("%s%010d", logNamePrefix, 1);
+    } else {
+      String lastLogIdxStr = Strings.stringAfter(lastLogWithPrefix.getName(), logNamePrefix);
+      newLogName = String.format("%s%010d", logNamePrefix, Long.parseLong(lastLogIdxStr) + 1);
+    }
+
+    // create the KV entry
+    final ByteSequence newLogKey =
+        ByteSequence.from(getLogPath(newLogName).getBytes(getEncodingCharset()));
+    kvClient.put(newLogKey, logPropsToByteSequence(newLogUuid)).get();
+    LogInfo newLogInfo = getLogInfo(newLogName);
+    logger.info("Created new log node: {} with uuid: {}", newLogName, newLogUuid);
     return newLogInfo;
   }
 
-  public LogInfo getLogInfo(String logName) throws Exception {
+  public LogInfo getLogInfo(String logName) throws ExecutionException, InterruptedException {
     if (!logExists(logName)) {
-      throw new NoLogInfoNodeException(format("Node for log: %s does not exist", logName));
+      return null;
     }
     final Properties props = getProperties(getLogPath(logName), null);
     final UUID uuid = UUID.fromString(props.getProperty("uuid"));
-    final Stat stat = curator.checkExists().forPath(getLogPath(logName));
-    final LogInfo logInfo = new LogInfo(logName, getKafkaBrokers(), uuid);
-    logInfo.setCtime(stat.getCtime());
-    logInfo.setMtime(stat.getMtime());
-    return logInfo;
+
+    // TODO fill time values
+    return new LogInfo(logName, uuid);
   }
 
-  public boolean logExists(String logName) throws Exception {
-    return curator.checkExists().forPath(getLogPath(logName)) != null;
+  public boolean logExists(String logName) throws ExecutionException, InterruptedException {
+    return kvClient
+            .get(ByteSequence.from(getLogPath(logName).getBytes(getEncodingCharset())))
+            .get()
+            .getCount()
+        != 0;
   }
 
   public Set<LogInfo> getAllLogs() throws Exception {
+    final GetResponse getResponse =
+        kvClient
+            .get(
+                getLogsPathKey(),
+                GetOption.newBuilder()
+                    .withSortField(GetOption.SortTarget.CREATE)
+                    .withSortOrder(GetOption.SortOrder.ASCEND)
+                    .isPrefix(true)
+                    .build())
+            .get();
     final Set<LogInfo> allLogs = new TreeSet<>();
-    for (String logName : curator.getChildren().forPath(getLogsPath())) {
+    for (KeyValue kv : getResponse.getKvs()) {
+      final String logName = Strings.stringAfterLast(kv.getValue().toString(), "/");
+      // TODO allPeers.add(PeerInfo.fromJSON(kv.getValue().toString()));
       allLogs.add(getLogInfo(logName));
     }
     return allLogs;
   }
 
-  public LogInfo getLastLog(String logNamePrefix) throws Exception {
-    List<String> logs =
-        curator.getChildren().forPath(getLogsPath()).stream()
+  private Set<String> getAllLogNames() throws Exception {
+    final GetResponse getResponse =
+        kvClient
+            .get(
+                getLogsPathKey(),
+                GetOption.newBuilder()
+                    .withSortField(GetOption.SortTarget.CREATE)
+                    .withSortOrder(GetOption.SortOrder.ASCEND)
+                    .isPrefix(true)
+                    .build())
+            .get();
+    final Set<String> allLogNames = new TreeSet<>();
+    for (KeyValue kv : getResponse.getKvs()) {
+      final String logName = Strings.stringAfterLast(kv.getValue().toString(), "/");
+      allLogNames.add(logName);
+    }
+    return allLogNames;
+  }
+
+  public LogInfo getLastLogWithPrefix(String logNamePrefix) throws Exception {
+    final List<String> logNames =
+        getAllLogNames().stream()
             .filter(l -> l.startsWith(logNamePrefix))
             .collect(Collectors.toList());
 
     long maxLogIndex = -1;
     String lastLog = null;
-    for (String log : logs) {
+    for (String log : logNames) {
       // parse index in log names and set max
       String logIdxStr = Strings.stringAfter(log, logNamePrefix);
-      Long logIdx = Long.valueOf(logIdxStr);
+      long logIdx = Long.parseLong(logIdxStr);
       if (logIdx > maxLogIndex) {
         maxLogIndex = logIdx;
         lastLog = log;
@@ -508,182 +448,47 @@ public class PALDirectory implements AutoCloseable {
   }
 
   public int getLogCount(String logNamePrefix) throws Exception {
-    int count = 0;
-    for (String log : curator.getChildren().forPath(getLogsPath())) {
-      if (log.startsWith(logNamePrefix)) {
-        count++;
-      }
-    }
-    return count;
+    return (int) getAllLogNames().stream().filter(l -> l.startsWith(logNamePrefix)).count();
   }
 
-  public void unregisterLog(String logName) throws Exception {
-    if (logExists(logName)) {
-      curator.delete().deletingChildrenIfNeeded().forPath(getLogPath(logName));
+  public DeleteResponse unregisterLog(String logName) throws Exception {
+    DeleteResponse deleteResp =
+        kvClient
+            .delete(ByteSequence.from(getLogPath(logName).getBytes(getEncodingCharset())))
+            .get();
+    if (deleteResp.getDeleted() == 1) {
       logger.info("Unregistered (i.e. deleted) log node: {}", logName);
+    } else {
+      logger.info("Could not unregister log with name: {}, peer does not exist!", logName);
     }
+    return deleteResp;
   }
 
-  public void unregisterLogs(String logNamePrefix) throws Exception {
-    List<String> logs =
-        curator.getChildren().forPath(getLogsPath()).stream()
+  public int unregisterLogs(String logNamePrefix) throws Exception {
+    final List<String> logNames =
+        getAllLogNames().stream()
             .filter(l -> l.startsWith(logNamePrefix))
             .collect(Collectors.toList());
+
     int deleted = 0;
-    for (String logName : logs) {
+    for (String logName : logNames) {
       unregisterLog(logName);
       deleted++;
     }
     logger.info("Unregistered {} logs with prefix: {}", deleted, logNamePrefix);
+    return deleted;
   }
 
-  public void unregisterAllLogs() throws Exception {
-    for (String logName : curator.getChildren().forPath(getLogsPath())) {
-      unregisterLog(logName);
-    }
-  }
-  // </editor-fold>
-
-  // <editor-fold desc="Log requests">
-  public boolean logRequestExistsAsync(
-      String logName, UUID requestUuid, BackgroundCallback callback, CuratorWatcher watcher)
-      throws Exception {
-    String requestNode = format("%s/%s", getLogPath(logName), requestUuid);
-    return curator.checkExists().usingWatcher(watcher).inBackground(callback).forPath(requestNode)
-        != null;
-  }
-
-  public void addLogRequestAsync(String logName, LogRequest logRequest, BackgroundCallback callback)
-      throws Exception {
-    String newRequestNode = format("%s/%s", getLogPath(logName), logRequest.getUuid());
-    if (!logExists(logName)) {
-      throw new NoLogInfoNodeException(format("Node for log: %s does not exist", logName));
-    }
-
-    curator.create().inBackground(callback).forPath(newRequestNode);
-    if (logger.isDebugEnabled()) {
-      logger.debug(
-          "Async-created new request node uuid: {} for log: {}", logRequest.getUuid(), logName);
-    }
-  }
-
-  /**
-   * NOTE: background operation has no callback
-   *
-   * @param logName
-   * @param logRequest
-   * @throws Exception
-   */
-  public void deleteLogRequestAsync(String logName, LogRequest logRequest) throws Exception {
-    String requestNode = format("%s/%s", getLogPath(logName), logRequest.getUuid());
-    int replyNodes = 0;
-    // delete all reply nodes
-    for (String replyNode : curator.getChildren().forPath(requestNode)) {
-      curator.delete().inBackground().forPath(requestNode + "/" + replyNode);
-      replyNodes++;
-    }
-
-    curator.delete().inBackground().forPath(requestNode);
-    logger.info(
-        "Async-deleted w/o guarantee request node {} and its {} reply nodes, for log: {}",
-        logRequest.getUuid(),
-        replyNodes,
-        logName);
-  }
-
-  public int getLogRequestsCount(String logName) throws Exception {
-    if (!logExists(logName)) {
-      throw new NoLogInfoNodeException(format("Node for log: %s does not exist", logName));
-    }
-    return curator.getChildren().forPath(getLogPath(logName)).size();
-  }
-
-  public List<String> getRequestNodeChildrenAsyncWithWatch(
-      String logName,
-      UUID requestUuid,
-      BackgroundCallback backgroundCallback,
-      CuratorWatcher curatorWatcher)
-      throws Exception {
-    String requestNode = format("%s/%s", getLogPath(logName), requestUuid);
-    if (logger.isDebugEnabled()) {
-      logger.debug("Setting watch on children of request node: {}", requestNode);
-    }
-    return curator
-        .getChildren()
-        .usingWatcher(curatorWatcher)
-        .inBackground(backgroundCallback)
-        .forPath(requestNode);
-  }
-
-  // </editor-fold>
-
-  // <editor-fold desc="Log replies">
-  public void addLogReplyAsync(String logName, LogReply logReply, BackgroundCallback callback)
-      throws Exception {
-    UUID requestUuid = logReply.getIsReplyTo();
-    String requestNode = format("%s/%s", getLogPath(logName), requestUuid);
-    String newReplyNode = format("%s/%s", requestNode, logReply.getUuid());
-    if (curator.checkExists().forPath(requestNode) != null) {
-      String sb =
-          "from"
-              + KEYVALUE_SEP
-              + logReply.getPeerUuid()
-              + '\n'
-              + "offset"
-              + KEYVALUE_SEP
-              + logReply.getOffset()
-              + '\n';
-      curator
-          .create()
-          .inBackground(callback)
-          .forPath(newReplyNode, sb.getBytes(getEncodingCharset()));
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            "Async-created new reply node uuid: {} for request: {}, log: {}",
-            logReply.getUuid(),
-            requestUuid,
-            logName);
-      }
-    } else {
-      if (!logExists(logName)) {
-        throw new NoLogInfoNodeException(format("Node for log: %s does not exist", logName));
-      } else {
-        throw new NoLogRequestNodeException(
-            format("Request node %s for log: %s does not exist", requestUuid, logName));
-      }
-    }
-  }
-
-  public Set<LogReply> getRepliesTo(String logName, LogRequest logRequest) throws Exception {
-    if (!logExists(logName)) {
-      throw new NoLogInfoNodeException(format("Node for log: %s does not exist", logName));
-    }
-
-    String requestNode = format("%s/%s", getLogPath(logName), logRequest.getUuid());
-    if (curator.checkExists().forPath(requestNode) == null) {
-      throw new NoLogRequestNodeException(
-          format("Request node %s for log: %s does not exist", logRequest, logName));
-    }
-
-    Set<LogReply> replies = new TreeSet<>();
-    // get all reply nodes
-    for (String replyNode : curator.getChildren().forPath(requestNode)) {
-      Properties props = getProperties(requestNode + "/" + replyNode, null);
-      replies.add(
-          new LogReply(
-              UUID.fromString(replyNode),
-              props.getProperty("from") == null ? null : UUID.fromString(props.getProperty("from")),
-              logRequest.getUuid(),
-              Long.parseLong(props.getProperty("offset"))));
-    }
-    return replies;
+  public DeleteResponse unregisterAllLogs() throws Exception {
+    DeleteResponse deleteResponse =
+        kvClient.delete(getLogsPathKey(), DeleteOption.newBuilder().isPrefix(true).build()).get();
+    logger.info("Unregistered {} logs", deleteResponse.getDeleted());
+    return deleteResponse;
   }
   // </editor-fold>
 
   // <editor-fold desc="Misc methods">
-
   public void close() {
-    logger.info("Closing zookeeper connection to {}", directoryUrl);
     if (cachingExecutor != null) {
       cachingExecutor.shutdown();
       try {
@@ -693,30 +498,26 @@ public class PALDirectory implements AutoCloseable {
       }
     }
     if (peersCache != null) {
-      try {
-        peersCache.close();
-      } catch (IOException e) {
-        logger.warn("Error stopping peers cache");
-      }
+      peersCache.clear();
     }
     if (interceptsCache != null) {
-      try {
-        interceptsCache.close();
-      } catch (Exception e) {
-        logger.warn("Error stopping intercepts cache");
-      }
+      interceptsCache.clear();
     }
-    curator.close();
+    logger.info("Closing etcd client to {}", directoryUrl);
+    kvClient.close();
+    client.close();
   }
   // </editor-fold>
 
   // <editor-fold desc="private helpers">
-  private Properties getProperties(String node, PathChildrenCache cache) throws Exception {
+  private Properties getProperties(String node, Map<Object, Object> cache)
+      throws ExecutionException, InterruptedException {
     final byte[] data;
     if (cache != null) {
-      data = cache.getCurrentData(node).getData();
+      throw new UnsupportedOperationException("Caching not implemented");
     } else {
-      data = curator.getData().forPath(node);
+      final ByteSequence dataKey = ByteSequence.from(node.getBytes(getEncodingCharset()));
+      data = kvClient.get(dataKey).get().getKvs().get(0).getValue().getBytes();
     }
     Properties properties = new Properties();
     if (data != null) {
@@ -731,13 +532,12 @@ public class PALDirectory implements AutoCloseable {
     return properties;
   }
 
-  private byte[] logPropsToData(UUID logUuid) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("uuid").append(KEYVALUE_SEP).append(logUuid).append('\n');
-    return sb.toString().getBytes(getEncodingCharset());
+  private ByteSequence logPropsToByteSequence(UUID logUuid) {
+    return ByteSequence.from(
+        ("uuid" + KEYVALUE_SEP + logUuid + '\n').getBytes(getEncodingCharset()));
   }
 
-  private byte[] peerPropsToData(Properties peerProperties) {
+  private ByteSequence peerPropsToByteSequence(Properties peerProperties) {
     byte[] data = null;
     if (peerProperties != null && !peerProperties.isEmpty()) {
       StringBuilder sb = new StringBuilder();
@@ -752,7 +552,10 @@ public class PALDirectory implements AutoCloseable {
       }
       data = sb.toString().getBytes(getEncodingCharset());
     }
-    return data;
+    if (data != null) {
+      return ByteSequence.from(data);
+    }
+    return null;
   }
 
   private static Charset getEncodingCharset() {
@@ -767,42 +570,6 @@ public class PALDirectory implements AutoCloseable {
     return loadedCharset;
   }
 
-  // TODO SHOLD NOT BE PUBLIC / INTERFACE
-  public Set<KafkaBrokerInfo> getKafkaBrokers() {
-    if (!brokersInfoLoaded) {
-      loadBrokerInfoSet();
-    }
-    return brokerInfoSet;
-  }
-
-  /**
-   * Since we use the same Zookeeper node as Kafka does, we can directly peek into Kafka brokers
-   * info
-   */
-  private void loadBrokerInfoSet() {
-    String brokerInfoPath;
-    if (brokerInfoSet == null) {
-      brokerInfoSet = new HashSet<>();
-    } else {
-      brokerInfoSet.clear();
-    }
-    try {
-      for (String brokerId : curator.getChildren().forPath(BROKERS_PATH)) {
-        brokerInfoPath = BROKERS_PATH + "/" + brokerId;
-        String nodeData =
-            new String(curator.getData().forPath(brokerInfoPath), getEncodingCharset());
-        if (logger.isDebugEnabled()) {
-          logger.debug("Read registered broker info data: {}", nodeData);
-        }
-        brokerInfoSet.add(KafkaBrokerInfo.parseFromJSON(nodeData));
-      }
-    } catch (Exception e) {
-      logger.error("Error reading registered kafka brokers info", e);
-    } finally {
-      brokersInfoLoaded = true;
-    }
-  }
-
   private String getPeerPath(UUID peerUuid) {
     return format("%s/%s", getPeersPath(), peerUuid);
   }
@@ -815,8 +582,16 @@ public class PALDirectory implements AutoCloseable {
     return format("/%s/%s", namespace, PEERS_DIR);
   }
 
+  private ByteSequence getPeersPathKey() {
+    return ByteSequence.from(getPeersPath().getBytes(getEncodingCharset()));
+  }
+
   private String getLogsPath() {
     return format("/%s/%s", namespace, LOGS_DIR);
+  }
+
+  private ByteSequence getLogsPathKey() {
+    return ByteSequence.from(getLogsPath().getBytes(getEncodingCharset()));
   }
 
   private String getInterceptsPath() {
@@ -827,34 +602,20 @@ public class PALDirectory implements AutoCloseable {
     return format("%s/%s", getInterceptsPath(), peerUuid);
   }
 
-  private static String getPathLeaf(String path) {
-    return Strings.stringAfterLast(path, "/");
-  }
-
-  private void createSubPaths() throws Exception {
-    if (curator.checkExists().forPath(getLogsPath()) == null) {
-      curator.create().creatingParentsIfNeeded().forPath(getLogsPath());
-      logger.debug("Created subpath: {}", getLogsPath());
-    }
-    if (curator.checkExists().forPath(getPeersPath()) == null) {
-      curator.create().creatingParentsIfNeeded().forPath(getPeersPath());
-      logger.debug("Created subpath: {}", getPeersPath());
-    }
-    if (curator.checkExists().forPath(getInterceptsPath()) == null) {
-      curator.create().creatingParentsIfNeeded().forPath(getInterceptsPath());
-      logger.debug("Created subpath: {}", getInterceptsPath());
-    }
-  }
-
-  private static CuratorFramework newCuratorInstance(String connectionString) {
-    ExponentialBackoffRetry retryPolicy =
-        new ExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_RETRIES);
-    return CuratorFrameworkFactory.builder()
-        .connectString(connectionString)
-        .retryPolicy(retryPolicy)
-        .connectionTimeoutMs(CONNECTION_TIMEOUT_MS)
-        .sessionTimeoutMs(SESSION_TIMEOUT_MS)
-        .build();
+  private void createSubPaths() {
+    Stream.of(getLogsPath(), getPeersPath(), getInterceptsPath())
+        .forEach(
+            (path) -> {
+              final ByteSequence key = ByteSequence.from(path.getBytes(getEncodingCharset()));
+              try {
+                if (kvClient.get(key).get().getCount() == 0) {
+                  final ByteSequence value = ByteSequence.from("".getBytes(getEncodingCharset()));
+                  kvClient.put(key, value).get();
+                }
+              } catch (Exception e) {
+                throw new RuntimeException(e);
+              }
+            });
   }
   // </editor-fold>
 }

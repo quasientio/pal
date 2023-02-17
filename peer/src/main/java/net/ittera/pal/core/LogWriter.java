@@ -246,21 +246,7 @@ class LogWriter extends ConnectedService {
     }
     ProducerRecord<String, byte[]> newRecord =
         new ProducerRecord<>(outLog.getName(), 0, fromPeer.toString(), message, headers);
-    if (publishOffsets || (writeReplyNodes && directoryConnectionProvider.get().isPresent())) {
-      producer.send(
-          newRecord,
-          new MessageOffsetInformer(
-              messageUuid,
-              followingUuid,
-              publishOffsets,
-              writeReplyNodes,
-              offsetPublisher,
-              directoryConnectionProvider.get().orElse(null),
-              inLog,
-              peerUuid));
-    } else {
-      producer.send(newRecord);
-    }
+    producer.send(newRecord);
     messagesSent.getAndIncrement();
     if (logger.isDebugEnabled()) {
       logger.debug(

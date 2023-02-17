@@ -108,7 +108,7 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
   private ExecMessage sendAndReceive(ExecMessage message) throws Exception {
     ExecMessage reply;
     try {
-      reply = thinPeer.sendAndReceive(message, true);
+      reply = thinPeer.sendAndReceive(message);
     } catch (Exception e) {
       logger.error(
           "Exception sending/receiving message with uuid: {}\n{}",

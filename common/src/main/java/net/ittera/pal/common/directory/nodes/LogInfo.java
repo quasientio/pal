@@ -19,23 +19,17 @@
 
 package net.ittera.pal.common.directory.nodes;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import com.alibaba.fastjson.JSON;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nonnull;
-import net.ittera.pal.common.directory.kafka.KafkaBrokerEndpoint;
-import net.ittera.pal.common.directory.kafka.KafkaBrokerInfo;
 import net.ittera.pal.common.util.ByteSizeConverter;
 
 public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
 
-  // name of node in zk
+  // acts as key in etcd
   @Nonnull private final String name;
 
-  // in zk node data
   private UUID uuid;
 
   // to be filled from (kafka) mbeans via jmx
@@ -57,13 +51,8 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
     setBootstrapServers(bootstrapServers);
   }
 
-  public LogInfo(String name, Set<KafkaBrokerInfo> brokerInfoSet) {
+  public LogInfo(String name, UUID uuid) {
     this(name);
-    setBrokerInfoSet(brokerInfoSet);
-  }
-
-  public LogInfo(String name, Set<KafkaBrokerInfo> brokerInfoSet, UUID uuid) {
-    this(name, brokerInfoSet);
     this.uuid = uuid;
   }
 
@@ -86,22 +75,6 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
 
   public void setBootstrapServers(String bootstrapServers) {
     this.bootstrapServers = bootstrapServers;
-  }
-
-  public void setBrokerInfoSet(Set<KafkaBrokerInfo> brokerInfoSet) {
-
-    // assign bootstrap servers
-    if (brokerInfoSet == null) {
-      this.bootstrapServers = null;
-    } else {
-      List<String> urlList = new ArrayList<>();
-      for (KafkaBrokerInfo brokerInfo : brokerInfoSet) {
-        Arrays.stream(brokerInfo.getEndpoints())
-            .map(KafkaBrokerEndpoint::toURL)
-            .forEach(urlList::add);
-      }
-      this.bootstrapServers = String.join(",", urlList);
-    }
   }
 
   public String getHumanReadableByteSize() {
@@ -141,7 +114,7 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
     this.exists = exists;
   }
 
-  // log names are unique in zookeeper, so no need to compare anything else if sorting by name
+  // log names are unique in etcd, so no need to compare anything else if sorting by name
   @Override
   public int compareTo(LogInfo o) {
     return getName().compareTo(o.getName());
@@ -166,14 +139,23 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
 
   @Override
   public String toString() {
-    return "Log {name="
-        + getName()
-        + ", bootstrapServers="
-        + getBootstrapServers()
+    return "LogInfo{"
+        + "name='"
+        + name
+        + '\''
+        + ", uuid="
+        + uuid
+        + ", bootstrapServers='"
+        + bootstrapServers
+        + '\''
         + ", ctime="
         + getCTime()
         + ", mtime="
         + getMTime()
-        + "}";
+        + '}';
+  }
+
+  public static LogInfo fromJSON(String repr) {
+    return JSON.parseObject(repr, LogInfo.class);
   }
 }

@@ -28,13 +28,8 @@ import static org.junit.Assert.*;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import net.ittera.pal.common.directory.kafka.KafkaBrokerEndpoint;
-import net.ittera.pal.common.directory.kafka.KafkaBrokerInfo;
 import net.ittera.pal.common.util.ByteSizeConverter;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
@@ -51,16 +46,6 @@ public class LogInfoTest {
   }
 
   @Test
-  public void logInfo_nameAndBrokers() {
-    String logName = "another_log";
-    KafkaBrokerEndpoint endpoint1 = new KafkaBrokerEndpoint("plain://", "kafka_host:6091");
-    KafkaBrokerEndpoint endpoint2 = new KafkaBrokerEndpoint("ssl://", "kafka_host:9073");
-    LogInfo myLogInfo = new LogInfo(logName, createKafkaBrokerInfoSet(endpoint1, endpoint2));
-    verifyBootstrapServersForEndpoints(myLogInfo, endpoint1, endpoint2);
-    assertThat(myLogInfo.getName(), is(logName));
-  }
-
-  @Test
   public void logInfo_nameAndBootstrapServers() {
     final String logName = "another_log";
     final String bootstrapServers = "localhost:9092,a.second.host:9092";
@@ -70,59 +55,14 @@ public class LogInfoTest {
   }
 
   @Test
-  public void logInfo_nameBrokersAndUuid() {
-    String logName = "another_log";
-    KafkaBrokerEndpoint endpoint1 = new KafkaBrokerEndpoint("plain://", "kafka_host:6091");
-    KafkaBrokerEndpoint endpoint2 = new KafkaBrokerEndpoint("ssl://", "kafka_host:9073");
-    UUID uuid = UUID.randomUUID();
-    LogInfo myLogInfo = new LogInfo(logName, createKafkaBrokerInfoSet(endpoint1, endpoint2), uuid);
-    verifyBootstrapServersForEndpoints(myLogInfo, endpoint1, endpoint2);
-    assertThat(myLogInfo.getName(), is(logName));
-    assertThat(myLogInfo.getUuid(), is(uuid));
-  }
-
-  @Test
   public void getName() {
     assertEquals(name, logInfo.getName());
-  }
-
-  @Test
-  public void setBrokerInfoSet_null() {
-    logInfo.setBrokerInfoSet(null);
-    assertThat(logInfo.getBootstrapServers(), is(nullValue()));
   }
 
   @Test
   public void setBootstrapServers_null() {
     logInfo.setBootstrapServers(null);
     assertThat(logInfo.getBootstrapServers(), is(nullValue()));
-  }
-
-  private static Set<KafkaBrokerInfo> createKafkaBrokerInfoSet(
-      KafkaBrokerEndpoint endpoint1, KafkaBrokerEndpoint endpoint2) {
-    Set<KafkaBrokerInfo> brokerInfoSet = new HashSet<>();
-    brokerInfoSet.add(
-        new KafkaBrokerInfo(
-            1, "aHost", 3000, 3001, new KafkaBrokerEndpoint[] {endpoint1, endpoint2}, "20:20:02"));
-    return brokerInfoSet;
-  }
-
-  private static void verifyBootstrapServersForEndpoints(
-      LogInfo aLogInfo, KafkaBrokerEndpoint endpoint1, KafkaBrokerEndpoint endpoint2) {
-    assertThat(
-        aLogInfo.getBootstrapServers(),
-        is(
-            Stream.of(endpoint1, endpoint2)
-                .map(KafkaBrokerEndpoint::toURL)
-                .collect(Collectors.joining(","))));
-  }
-
-  @Test
-  public void setBrokerInfoSet() {
-    KafkaBrokerEndpoint endpoint1 = new KafkaBrokerEndpoint("plain://", "kafka_server:9091");
-    KafkaBrokerEndpoint endpoint2 = new KafkaBrokerEndpoint("ssl://", "kafka_server:9093");
-    logInfo.setBrokerInfoSet(createKafkaBrokerInfoSet(endpoint1, endpoint2));
-    verifyBootstrapServersForEndpoints(logInfo, endpoint1, endpoint2);
   }
 
   @Test
@@ -211,10 +151,15 @@ public class LogInfoTest {
     assertThat(
         logInfo.toString(),
         is(
-            "Log {name="
+            "LogInfo{name="
+                + "'"
                 + logInfo.getName()
+                + "'"
+                + ", uuid=null"
                 + ", bootstrapServers="
+                + "'"
                 + logInfo.getBootstrapServers()
+                + "'"
                 + ", ctime="
                 + OffsetDateTime.ofInstant(Instant.ofEpochMilli(ctime), ZoneOffset.UTC)
                 + ", mtime="

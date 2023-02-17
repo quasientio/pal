@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 import net.ittera.pal.common.cli.PALCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
-import net.ittera.pal.cxn.NoLogInfoNodeException;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.DeleteTopicsOptions;
 import org.slf4j.Logger;
@@ -303,15 +302,14 @@ public class Remove extends AbstractPALSubcommand {
               final Set<LogInfo> allLogs = getPalDirectory().getAllLogs();
               allLogs.stream().filter(l -> l.getName().startsWith(arg)).forEach(this::deleteLog);
             } else {
-              final LogInfo log;
-              try {
-                log = getPalDirectory().getLogInfo(arg);
-              } catch (NoLogInfoNodeException e) {
-                logger.error("Cannot find log named '{}' in directory", arg, e);
+              final LogInfo log = getPalDirectory().getLogInfo(arg);
+              if (log == null) {
+                logger.error("Cannot find log named '{}' in directory", arg);
                 errors++;
                 continue;
+              } else {
+                deleteLog(log);
               }
-              deleteLog(log);
             }
           }
         }

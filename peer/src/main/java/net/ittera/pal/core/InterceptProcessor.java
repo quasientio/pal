@@ -21,6 +21,7 @@ package net.ittera.pal.core;
 
 import static java.lang.String.format;
 
+import io.etcd.jetcd.kv.PutResponse;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -40,7 +41,6 @@ import net.ittera.pal.common.lang.intercept.InterceptableFieldOp;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
-import org.apache.curator.framework.api.CuratorEventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -143,23 +143,8 @@ public class InterceptProcessor {
   private void register(InterceptRequest interceptRequest) {
     try {
       Optional<PALDirectory> directory = directoryConnectionProvider.get();
-      if (directory.isPresent()) {
-        directory
-            .get()
-            .registerInterceptAsync(
-                interceptRequest,
-                (curatorFramework, curatorEvent) -> {
-                  if (curatorEvent.getType().equals(CuratorEventType.CREATE)
-                      && curatorEvent.getResultCode() == 0) {
-                    if (logger.isDebugEnabled()) {
-                      logger.debug("Successfully registered new intercept request in directory");
-                    }
-                  } else {
-                    logger.warn(
-                        "Wrong event or result code when trying to register intercept request");
-                  }
-                });
-      }
+      PutResponse putResponse = directory.get().registerInterceptAsync(interceptRequest).get();
+      logger.debug("Successfully registered new intercept request in directory");
     } catch (Exception e) {
       logger.error("Error registering intercept request", e);
     }

@@ -63,8 +63,7 @@ public class DirectoryConnectionProvider implements Provider<Optional<PALDirecto
     }
 
     if (palDirectoryInstance == null) {
-      palDirectoryInstance =
-          new PALDirectory(connectionString, namespace, withCaching, syncConnect);
+      palDirectoryInstance = new PALDirectory(connectionString, namespace, withCaching);
     }
 
     return Optional.of(palDirectoryInstance);

@@ -20,7 +20,6 @@
 package net.ittera.pal.cxn;
 
 import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.startsWith;
@@ -33,22 +32,14 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import net.ittera.pal.common.directory.events.InterceptEvent.Type;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
-import net.ittera.pal.common.directory.nodes.LogReply;
-import net.ittera.pal.common.directory.nodes.LogRequest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
-import org.apache.curator.framework.api.BackgroundCallback;
-import org.apache.curator.framework.api.CuratorEventType;
-import org.apache.curator.test.TestingServer;
-import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,20 +54,17 @@ public class PALDirectoryTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
 
-  private static final int TEST_PORT = 2182;
+  private static final String ETCD_ENDPOINT = "ip://localhost:2379";
   private static final int CACHE_UPDATE_DELAY = 100;
-  private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
 
   private static final Set<UUID> createdPeers = new HashSet<>();
   private static final Set<String> createdLogs = new HashSet<>();
 
   private PALDirectory palDirectory;
-  private TestingServer testingServer;
 
   @Before
   public void setup() throws Exception {
-    testingServer = new TestingServer(TEST_PORT, true);
-    palDirectory = new PALDirectory(CONNECTION_STR);
+    palDirectory = new PALDirectory(ETCD_ENDPOINT);
   }
 
   @After
@@ -90,7 +78,6 @@ public class PALDirectoryTest {
       logger.info("Cleaned up created log: {}", log);
     }
     palDirectory.close();
-    testingServer.close();
   }
 
   @Test
@@ -123,15 +110,8 @@ public class PALDirectoryTest {
 
     UUID peerUuid = UUID.randomUUID();
 
-    // pre-assertions
     assertThat(palDirectory.peerExists(peerUuid), is(false));
-
-    try {
-      palDirectory.getPeerInfo(peerUuid);
-      fail();
-    } catch (NoPeerInfoNodeException e) {
-      // OK
-    }
+    assertThat(palDirectory.getPeerInfo(peerUuid), is(null));
   }
 
   @Test
@@ -290,16 +270,8 @@ public class PALDirectoryTest {
   @Test
   public void getLogInfo_noSuchLog_exception() throws Exception {
     String logName = "test.strange_topic";
-
-    // pre-assertions
     assertThat(palDirectory.logExists(logName), is(false));
-
-    try {
-      palDirectory.getLogInfo(logName);
-      fail();
-    } catch (NoLogInfoNodeException e) {
-      // OK
-    }
+    assertThat(palDirectory.getLogInfo(logName), is(null));
   }
 
   @Test
@@ -377,7 +349,7 @@ public class PALDirectoryTest {
       createdLogs.add(lastCreated);
     }
 
-    assertThat(palDirectory.getLastLog(logNamePrefix).getName(), is(lastCreated));
+    assertThat(palDirectory.getLastLogWithPrefix(logNamePrefix).getName(), is(lastCreated));
   }
 
   @Test
@@ -444,345 +416,6 @@ public class PALDirectoryTest {
   }
 
   @Test
-  public void addLogRequestAsync_newLogRequest_reqNodeCreated() throws Exception {
-    String logNamePrefix = "test.topic";
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
-    String createdLogName = newLogInfo.getName();
-    createdLogs.add(createdLogName);
-
-    LogRequest someRequest = new LogRequest(UUID.randomUUID());
-    CountDownLatch latch = new CountDownLatch(1);
-
-    BackgroundCallback callback =
-        (curatorFramework, curatorEvent) -> {
-          if (curatorEvent.getType().equals(CuratorEventType.CREATE)) {
-            if (KeeperException.Code.get(curatorEvent.getResultCode()) == KeeperException.Code.OK) {
-              latch.countDown();
-            }
-          }
-        };
-
-    // pre-assertions
-    assertThat(palDirectory.getLogRequestsCount(createdLogName), is(0));
-
-    palDirectory.addLogRequestAsync(createdLogName, someRequest, callback);
-    if (!latch.await(3, TimeUnit.SECONDS)) {
-      fail("Timeout awaiting latch downcount - node not created?");
-    }
-
-    // verify
-    assertThat(palDirectory.getLogRequestsCount(createdLogName), is(1));
-  }
-
-  @Test
-  public void addLogRequestAsync_noLog_noLogInfoNodeException() throws Exception {
-    String logName = "someRandomLogName";
-    UUID someRequestUuid = UUID.randomUUID();
-
-    // pre-assertions
-    assertThat(palDirectory.logExists(logName), is(false));
-
-    try {
-      palDirectory.addLogRequestAsync(
-          logName,
-          new LogRequest(someRequestUuid),
-          (curatorFramework, curatorEvent) -> fail("we shouldn't be here"));
-      fail();
-    } catch (NoLogInfoNodeException nne) {
-      // OK
-    }
-
-    // verify -> count method should fail with same Exception
-    try {
-      palDirectory.getLogRequestsCount(logName);
-    } catch (NoLogInfoNodeException nne) {
-      // OK
-    }
-  }
-
-  @Test
-  public void addLogReplyAsync_noLog_noLogInfoNodeException() throws Exception {
-    String logName = "someRandomLogName";
-    UUID someRequestUuid = UUID.randomUUID();
-    UUID somePeerUuid = UUID.randomUUID();
-    long someOffset = 32384893;
-    LogReply logReply = new LogReply(UUID.randomUUID(), somePeerUuid, someRequestUuid, someOffset);
-
-    // pre-assertions
-    assertThat(palDirectory.logExists(logName), is(false));
-
-    try {
-      palDirectory.addLogReplyAsync(
-          logName, logReply, (curatorFramework, curatorEvent) -> fail("we shouldn't be here"));
-      fail();
-    } catch (NoLogInfoNodeException nne) {
-      // OK
-    }
-  }
-
-  @Test
-  public void addLogReplyAsync_noReq_noLogRequestNodeException() throws Exception {
-    String logNamePrefix = "test.topic";
-    long someOffset = 32384893;
-
-    // create log
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
-    String createdLogName = newLogInfo.getName();
-    createdLogs.add(createdLogName);
-
-    // we DON'T create any req node
-    UUID someRequestUuid = UUID.randomUUID();
-    UUID somePeerUuid = UUID.randomUUID();
-
-    // pre-assertions
-    assertThat(palDirectory.logExists(createdLogName), is(true));
-    assertThat(palDirectory.getLogRequestsCount(createdLogName), is(0));
-
-    LogReply logReply = new LogReply(UUID.randomUUID(), somePeerUuid, someRequestUuid, someOffset);
-    // now try to create rep node
-    try {
-      palDirectory.addLogReplyAsync(
-          createdLogName,
-          logReply,
-          (curatorFramework, curatorEvent) -> fail("we shouldn't be here"));
-      fail();
-    } catch (NoLogRequestNodeException nne) {
-      // OK
-    }
-  }
-
-  @Test
-  public void getReplies_noLog_noLogInfoNodeException() throws Exception {
-    String logName = "someRandomLogName";
-    LogRequest someRequest = new LogRequest(UUID.randomUUID());
-
-    // get replies to req
-    try {
-      palDirectory.getRepliesTo(logName, someRequest);
-      fail();
-    } catch (NoLogInfoNodeException nne) {
-      // OK
-    }
-  }
-
-  @Test
-  public void getReplies_noReq_noLogRequestNodeException() throws Exception {
-    String logNamePrefix = "someRandomLogName";
-
-    // create log
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
-    String createdLogName = newLogInfo.getName();
-    createdLogs.add(createdLogName);
-
-    // we DON'T create req node
-    LogRequest someRequest = new LogRequest(UUID.randomUUID());
-
-    // pre-assertions
-    assertThat(palDirectory.logExists(createdLogName), is(true));
-    assertThat(palDirectory.getLogRequestsCount(createdLogName), is(0));
-
-    // get replies to req
-    try {
-      palDirectory.getRepliesTo(createdLogName, someRequest);
-      fail();
-    } catch (NoLogRequestNodeException nne) {
-      // OK
-    }
-  }
-
-  @Test
-  public void getReplies_noRepsExist_emptySet() throws Exception {
-    String logNamePrefix = "test.topic";
-
-    // create log
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
-    String createdLogName = newLogInfo.getName();
-    createdLogs.add(createdLogName);
-
-    // create req node
-    LogRequest someRequest = new LogRequest(UUID.randomUUID());
-    CountDownLatch countDownLatch = new CountDownLatch(1);
-    palDirectory.addLogRequestAsync(
-        createdLogName,
-        someRequest,
-        (curatorFramework, curatorEvent) -> countDownLatch.countDown());
-    // wait
-    if (!countDownLatch.await(3, TimeUnit.SECONDS)) {
-      fail("Timeout awaiting latch downcount - node not created?");
-    }
-
-    // pre-assertions
-    assertThat(palDirectory.logExists(createdLogName), is(true));
-    assertThat(palDirectory.getLogRequestsCount(createdLogName), is(1));
-
-    // get replies to req
-    Set<LogReply> replies = palDirectory.getRepliesTo(createdLogName, someRequest);
-
-    assertThat(replies.isEmpty(), is(true));
-  }
-
-  @Test
-  public void getReplies_replyExists_nonEmptySet() throws Exception {
-    String logNamePrefix = "test.topic";
-    long someOffset = 32384893;
-
-    // create log
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
-    String createdLogName = newLogInfo.getName();
-    createdLogs.add(createdLogName);
-
-    // create req node
-    LogRequest someRequest = new LogRequest(UUID.randomUUID());
-    CountDownLatch countDownLatch = new CountDownLatch(1);
-    palDirectory.addLogRequestAsync(
-        createdLogName,
-        someRequest,
-        (curatorFramework, curatorEvent) -> countDownLatch.countDown());
-    // wait
-    if (!countDownLatch.await(3, TimeUnit.SECONDS)) {
-      fail("Timeout awaiting latch downcount - node not created?");
-    }
-
-    // create rep node
-    CountDownLatch latch = new CountDownLatch(1);
-    UUID replyUuid = UUID.randomUUID();
-    LogReply logReply =
-        new LogReply(replyUuid, UUID.randomUUID(), someRequest.getUuid(), someOffset);
-    palDirectory.addLogReplyAsync(
-        createdLogName, logReply, (curatorFramework, curatorEvent) -> latch.countDown());
-    // wait
-    if (!latch.await(3, TimeUnit.SECONDS)) {
-      fail("Timeout awaiting latch downcount - node not created?");
-    }
-
-    // pre-assertions
-    assertThat(palDirectory.logExists(createdLogName), is(true));
-    assertThat(palDirectory.getLogRequestsCount(createdLogName), is(1));
-
-    // get replies to req
-    Set<LogReply> replies = palDirectory.getRepliesTo(createdLogName, someRequest);
-
-    // verify
-    assertThat(replies.isEmpty(), is(false));
-    assertThat(replies.iterator().next().getUuid(), is(replyUuid));
-  }
-
-  @Test
-  public void deleteRequest_reqAndRepliesExist_deleted() throws Exception {
-    String logNamePrefix = "test.topic";
-    long someOffset = 32384893;
-
-    // create log
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
-    String createdLogName = newLogInfo.getName();
-    createdLogs.add(createdLogName);
-
-    // create req node
-    LogRequest someRequest = new LogRequest(UUID.randomUUID());
-    CountDownLatch countDownLatch = new CountDownLatch(1);
-    palDirectory.addLogRequestAsync(
-        createdLogName,
-        someRequest,
-        (curatorFramework, curatorEvent) -> countDownLatch.countDown());
-    // wait
-    if (!countDownLatch.await(3, TimeUnit.SECONDS)) {
-      fail("Timeout awaiting latch downcount - node not created?");
-    }
-
-    // create 3 rep nodes
-    int repNodesToCreate = 3;
-    Set<LogReply> logRepliesCreated = new TreeSet<>();
-    for (int i = 0; i < repNodesToCreate; i++) {
-      CountDownLatch latch = new CountDownLatch(1);
-      LogReply logReply =
-          new LogReply(UUID.randomUUID(), UUID.randomUUID(), someRequest.getUuid(), someOffset + i);
-      logRepliesCreated.add(logReply);
-      palDirectory.addLogReplyAsync(
-          createdLogName, logReply, (curatorFramework, curatorEvent) -> latch.countDown());
-      // wait
-      if (!latch.await(3, TimeUnit.SECONDS)) {
-        fail("Timeout awaiting latch downcount - node not created?");
-      }
-    }
-
-    // pre-assertions
-    assertThat(palDirectory.logExists(createdLogName), is(true));
-    assertThat(palDirectory.getLogRequestsCount(createdLogName), is(1));
-    assertThat(palDirectory.getRepliesTo(createdLogName, someRequest).size(), is(repNodesToCreate));
-
-    palDirectory.deleteLogRequestAsync(createdLogName, someRequest);
-
-    // delete has no callback - give it some time
-    Thread.sleep(500);
-
-    // verify
-    assertThat(palDirectory.logExists(createdLogName), is(true));
-    assertThat(palDirectory.getLogRequestsCount(createdLogName), is(0));
-  }
-
-  @Test
-  public void getReplies_multipleRepliesExist_allRepsSortedByOffset() throws Exception {
-
-    String logNamePrefix = "test.topic";
-    long smallOffset = 39483;
-    long largeOffset = 32384893;
-
-    // create log
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
-    String createdLogName = newLogInfo.getName();
-    createdLogs.add(createdLogName);
-
-    // create req node
-    LogRequest someRequest = new LogRequest(UUID.randomUUID());
-    UUID somePeerUuid = UUID.randomUUID();
-    CountDownLatch latch1 = new CountDownLatch(1);
-    palDirectory.addLogRequestAsync(
-        createdLogName, someRequest, (curatorFramework, curatorEvent) -> latch1.countDown());
-    // wait
-    if (!latch1.await(3, TimeUnit.SECONDS)) {
-      fail("Timeout awaiting latch downcount - node not created?");
-    }
-
-    // pre-assertions
-    assertThat(palDirectory.logExists(createdLogName), is(true));
-    assertThat(palDirectory.getLogRequestsCount(createdLogName), is(1));
-
-    // create rep node #1
-    CountDownLatch latch2 = new CountDownLatch(1);
-    LogReply logReply =
-        new LogReply(UUID.randomUUID(), somePeerUuid, someRequest.getUuid(), largeOffset);
-    palDirectory.addLogReplyAsync(
-        createdLogName, logReply, (curatorFramework, curatorEvent) -> latch2.countDown());
-    // wait
-    if (!latch2.await(3, TimeUnit.SECONDS)) {
-      fail("Timeout awaiting latch downcount - node not created?");
-    }
-    assertThat(palDirectory.getRepliesTo(createdLogName, someRequest).size(), is(1));
-
-    // create rep node #2 with lower offset than first reply
-    CountDownLatch latch3 = new CountDownLatch(1);
-    logReply = new LogReply(UUID.randomUUID(), somePeerUuid, someRequest.getUuid(), smallOffset);
-    palDirectory.addLogReplyAsync(
-        createdLogName, logReply, (curatorFramework, curatorEvent) -> latch3.countDown());
-    // wait
-    if (!latch3.await(3, TimeUnit.SECONDS)) {
-      fail("Timeout awaiting latch downcount - node not created?");
-    }
-
-    // get replies to req
-    Set<LogReply> replies = palDirectory.getRepliesTo(createdLogName, someRequest);
-
-    // verify
-    assertThat(replies.size(), is(2));
-    // assert that replies are sorted by increasing offset
-    long lastOffset = 0;
-    for (LogReply reply : replies) {
-      assertThat(reply.getOffset(), greaterThan(lastOffset));
-      lastOffset = reply.getOffset();
-    }
-  }
-
-  @Test
   public void registerInterceptAsync_noSuchPeer_exception() throws Exception {
     InterceptRequest req =
         new InterceptRequest<>(
@@ -796,10 +429,7 @@ public class PALDirectoryTest {
                 "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
 
     try {
-      palDirectory.registerInterceptAsync(
-          req,
-          (curatorFramework, curatorEvent) ->
-              System.out.println("processResult event: " + curatorEvent));
+      palDirectory.registerInterceptAsync(req);
       fail("Should have raised NoPeerInfoNodeException");
     } catch (NoPeerInfoNodeException e) {
       // ok
@@ -834,16 +464,7 @@ public class PALDirectoryTest {
                 "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
 
     // register it
-    final CountDownLatch latch = new CountDownLatch(1);
-    palDirectory.registerInterceptAsync(
-        req,
-        (curatorFramework, evt) -> {
-          logger.debug("received event: {}", evt);
-          if (evt.getType().equals(CuratorEventType.CREATE) && evt.getResultCode() == 0) {
-            latch.countDown();
-          }
-        });
-    latch.await();
+    palDirectory.registerInterceptAsync(req).get();
 
     Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(1));

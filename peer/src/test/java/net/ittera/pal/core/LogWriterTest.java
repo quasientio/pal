@@ -45,7 +45,6 @@ import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
-import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.Cluster;
@@ -63,27 +62,14 @@ public class LogWriterTest extends ZmqEnabledTest {
   private ZContext zmqContext;
   private LogWriter logWriter;
   private UUID peerUuid = UUID.randomUUID();
-  private PALDirectory palDirectory;
-  private TestingServer testingServer;
   private ServiceManager manager;
   private MockProducer<String, byte[]> producer;
   private LogInfo log;
   private ZMQ.Socket pubSocket;
   private final String OUT_PUB_ADDR = "inproc://pub";
   private final String OFFSET_PUB_ADDR = "inproc://offsets";
-  private static final Set<String> createdLogs = new HashSet<>();
   private final MessageBuilder msgBuilder = new MessageBuilder();
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
-
-  private static final int TEST_PORT = 2182;
-  private static final String CONNECTION_STR = String.format("localhost:%d", TEST_PORT);
-
-  private void deleteCreatedLogs() throws Exception {
-    for (String log : createdLogs) {
-      palDirectory.unregisterLog(log);
-      logger.debug("Cleaned up left over log: {}", log);
-    }
-  }
 
   @After
   public void cleanup() throws Exception {
@@ -91,18 +77,12 @@ public class LogWriterTest extends ZmqEnabledTest {
     manager.stopAsync().awaitStopped();
     logger.trace("services stopped");
     logger.trace("exec service shut down");
-    deleteCreatedLogs();
-    palDirectory.close();
-    logger.trace("PAL dir closed");
-    testingServer.close();
-    logger.trace("testing zk server closed");
   }
 
   @Before
   public void setup() throws Exception {
-    testingServer = new TestingServer(TEST_PORT, true);
     DirectoryConnectionProvider directoryConnectionProvider =
-        new DirectoryConnectionProvider(CONNECTION_STR);
+        new DirectoryConnectionProvider(PALDirectory.NO_URL);
     zmqContext = this.createContext();
     producer = new MockProducer<>(Cluster.empty(), true, null, null, null);
     logWriter =
@@ -118,9 +98,7 @@ public class LogWriterTest extends ZmqEnabledTest {
             producer,
             directoryConnectionProvider);
     // configure log
-    palDirectory = directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
-    log = palDirectory.newLog("testapp");
-    createdLogs.add(log.getName());
+    log = new LogInfo("testapp", "localhost:9092");
     logWriter.writeToLog(log, log, false);
     // start services
     final Set<Service> services = new HashSet<>(Arrays.asList(this.logWriter));

@@ -23,13 +23,12 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import org.apache.curator.test.TestingServer;
 import org.junit.After;
 import org.junit.Test;
 
 public class DirectoryConnectionProviderTest {
 
-  private TestingServer testingServer;
+  private static final String ETCD_ENDPOINT = "ip://localhost:2379";
   private PALDirectory palDirectory;
 
   @After
@@ -37,11 +36,6 @@ public class DirectoryConnectionProviderTest {
     if (palDirectory != null) {
       palDirectory.close();
       palDirectory = null;
-    }
-
-    if (testingServer != null) {
-      testingServer.close();
-      testingServer = null;
     }
   }
 
@@ -54,11 +48,7 @@ public class DirectoryConnectionProviderTest {
 
   @Test
   public void getConnection() throws Exception {
-    final int paldirPort = 2182;
-    final String paldirUrl = String.format("localhost:%d", paldirPort);
-    DirectoryConnectionProvider connectionFactory = new DirectoryConnectionProvider(paldirUrl);
-    testingServer = new TestingServer(paldirPort, true);
-
+    DirectoryConnectionProvider connectionFactory = new DirectoryConnectionProvider(ETCD_ENDPOINT);
     assertThat(connectionFactory.get().isPresent(), is(true));
   }
 }
