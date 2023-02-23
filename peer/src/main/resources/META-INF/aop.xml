@@ -35,13 +35,6 @@
         <exclude within="org.zeromq..*"/>
         <exclude within="zmq..*"/>
 
-        <!-- zookeeper -->
-        <exclude within="org.apache.log4j..*"/>
-        <exclude within="org.apache.jute..*"/>
-        <exclude within="org.apache.zookeeper..*"/>
-        <exclude within="jline..*"/>
-        <exclude within="org.jboss.netty..*"/>
-
         <!-- other -->
         <exclude within="com.sun..*"/>
 

@@ -24,6 +24,10 @@ import static org.junit.Assert.*;
 
 import java.util.UUID;
 import net.ittera.pal.common.directory.events.InterceptEvent.Type;
+import net.ittera.pal.common.directory.nodes.InterceptRequest;
+import net.ittera.pal.common.lang.FieldOpType;
+import net.ittera.pal.common.lang.intercept.InterceptType;
+import net.ittera.pal.common.lang.intercept.InterceptableFieldOp;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,6 +38,7 @@ public class InterceptEventTest {
   private String interceptPath;
   private UUID peerUUID;
   private UUID interceptUUID;
+  private InterceptRequest interceptRequest;
   InterceptEvent interceptEvent;
 
   @Before
@@ -42,7 +47,22 @@ public class InterceptEventTest {
     interceptPath = "/a/mysterious/path";
     peerUUID = UUID.randomUUID();
     interceptUUID = UUID.randomUUID();
-    interceptEvent = new InterceptEvent(type, interceptPath, peerUUID, interceptUUID);
+    interceptRequest = createInterceptRequest();
+    interceptEvent =
+        new InterceptEvent(type, interceptPath, peerUUID, interceptUUID, interceptRequest);
+  }
+
+  private InterceptRequest createInterceptRequest() {
+    UUID uuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptType type = InterceptType.BEFORE;
+    String clazz = "com.dummy.Class";
+    String callbackClass = "com.dummy.CallbackClass";
+    String callbackMethod = "MyCallback";
+    InterceptableFieldOp interceptableFieldOp =
+        new InterceptableFieldOp("myField", FieldOpType.GET);
+    return new InterceptRequest<>(
+        uuid, peer, type, clazz, callbackClass, callbackMethod, interceptableFieldOp);
   }
 
   @Test
@@ -71,6 +91,11 @@ public class InterceptEventTest {
   }
 
   @Test
+  public void getInterceptRequest() {
+    assertEquals(interceptRequest, interceptEvent.getInterceptRequest());
+  }
+
+  @Test
   public void testToString() {
     assertThat(
         interceptEvent.toString(),
@@ -85,6 +110,9 @@ public class InterceptEventTest {
                 + peerUUID
                 + ", interceptUUID="
                 + interceptUUID
+                + ", interceptRequest='"
+                + interceptRequest
+                + '\''
                 + '}'));
   }
 }

@@ -21,10 +21,7 @@ package net.ittera.pal.core.exec;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -49,12 +46,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
+import org.zeromq.ZMQException;
 
 public class InterceptInformerTest extends ZmqEnabledTest {
 
@@ -88,8 +85,10 @@ public class InterceptInformerTest extends ZmqEnabledTest {
             requestsToUnregister.add(interceptEvtMsg.getInterceptMsgUUID());
           }
           repSocket.send("0");
+        } catch (ZMQException e) {
+          break;
         } catch (Exception e) {
-          e.printStackTrace();
+          logger.debug("Exception caught in recv loop", e);
           break;
         }
       }
@@ -120,19 +119,15 @@ public class InterceptInformerTest extends ZmqEnabledTest {
 
   @Test
   public void interceptRequestFromRemotePeer() throws Exception {
-    // stub getInterceptRequest call
-    when(palDirectory.getInterceptRequest(any()))
-        .thenAnswer(
-            (Answer)
-                invocation ->
-                    new InterceptRequest<>(
-                        UUID.randomUUID(),
-                        UUID.randomUUID(), // remote peer
-                        InterceptType.BEFORE,
-                        "java.io.PrintStream",
-                        "org.package.Callback",
-                        "callMe",
-                        new InterceptableMethodCall("println", null)));
+    InterceptRequest interceptRequest =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            UUID.randomUUID(), // remote peer
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "org.package.Callback",
+            "callMe",
+            new InterceptableMethodCall("println", null));
 
     // simulate Intercepts registration endpoint
     execService.submit(new InterceptsStub());
@@ -148,11 +143,9 @@ public class InterceptInformerTest extends ZmqEnabledTest {
             Type.INTERCEPT_ADDED,
             "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-uuid",
             remotePeerUuid,
-            interceptUuid);
+            interceptUuid,
+            interceptRequest);
     interceptInformer.interceptEvent(interceptEvent);
-
-    // verify that palDirectory.getInterceptRequest is invoked
-    verify(palDirectory, times(1)).getInterceptRequest(any());
 
     // verify that intercept messages were sent
     assertThat(interceptRequestMessages.size(), is(1));
@@ -160,19 +153,15 @@ public class InterceptInformerTest extends ZmqEnabledTest {
 
   @Test
   public void unregisterRequestFromRemotePeer() throws Exception {
-    // stub getInterceptRequest call
-    when(palDirectory.getInterceptRequest(any()))
-        .thenAnswer(
-            (Answer)
-                invocation ->
-                    new InterceptRequest<>(
-                        UUID.randomUUID(),
-                        UUID.randomUUID(), // remote peer
-                        InterceptType.BEFORE,
-                        "java.io.PrintStream",
-                        "org.package.Callback",
-                        "callMe",
-                        new InterceptableMethodCall("println", null)));
+    InterceptRequest interceptRequest =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            UUID.randomUUID(), // remote peer
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "org.package.Callback",
+            "callMe",
+            new InterceptableMethodCall("println", null));
 
     // simulate Intercepts registration endpoint
     execService.submit(new InterceptsStub());
@@ -188,11 +177,9 @@ public class InterceptInformerTest extends ZmqEnabledTest {
             Type.INTERCEPT_ADDED,
             "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-uuid",
             remotePeerUuid,
-            interceptUuid);
+            interceptUuid,
+            interceptRequest);
     interceptInformer.interceptEvent(interceptEvent);
-
-    // verify that palDirectory.getInterceptRequest is invoked
-    verify(palDirectory, times(1)).getInterceptRequest(any());
 
     // verify that intercept messages were sent
     assertThat(interceptRequestMessages.size(), is(1));
@@ -203,7 +190,8 @@ public class InterceptInformerTest extends ZmqEnabledTest {
             Type.INTERCEPT_REMOVED,
             "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-uuid",
             remotePeerUuid,
-            interceptUuid);
+            interceptUuid,
+            interceptRequest);
     interceptInformer.interceptEvent(interceptEvent);
 
     // verify that unregister messages were sent
@@ -212,19 +200,15 @@ public class InterceptInformerTest extends ZmqEnabledTest {
 
   @Test
   public void interceptRequestFromThisPeer() throws Exception {
-    // stub getInterceptRequest call
-    when(palDirectory.getInterceptRequest(any()))
-        .thenAnswer(
-            (Answer)
-                invocation ->
-                    new InterceptRequest<>(
-                        UUID.randomUUID(),
-                        peerUuid, // this peer (self)
-                        InterceptType.BEFORE,
-                        "java.io.PrintStream",
-                        "org.package.Callback",
-                        "callMe",
-                        new InterceptableMethodCall("println", null)));
+    InterceptRequest interceptRequest =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerUuid, // this peer (self)
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "org.package.Callback",
+            "callMe",
+            new InterceptableMethodCall("println", null));
 
     // simulate Intercepts registration endpoint
     execService.submit(new InterceptsStub());
@@ -239,11 +223,9 @@ public class InterceptInformerTest extends ZmqEnabledTest {
             Type.INTERCEPT_ADDED,
             "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-uuid",
             peerUuid,
-            interceptUuid);
+            interceptUuid,
+            interceptRequest);
     interceptInformer.interceptEvent(interceptEvent);
-
-    // verify that palDirectory.getInterceptRequest is NOT invoked
-    verify(palDirectory, times(0)).getInterceptRequest(any());
 
     // verify that NO intercept messages were sent
     assertThat(interceptRequestMessages.size(), is(0));

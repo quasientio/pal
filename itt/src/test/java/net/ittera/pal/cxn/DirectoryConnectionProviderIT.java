@@ -26,7 +26,7 @@ import java.io.IOException;
 import org.junit.After;
 import org.junit.Test;
 
-public class DirectoryConnectionProviderTest {
+public class DirectoryConnectionProviderIT {
 
   private static final String ETCD_ENDPOINT = "ip://localhost:2379";
   private PALDirectory palDirectory;

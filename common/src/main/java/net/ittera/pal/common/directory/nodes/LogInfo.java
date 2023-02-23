@@ -56,6 +56,11 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
     this.uuid = uuid;
   }
 
+  public LogInfo(String name, UUID uuid, String bootstrapServers) {
+    this(name, uuid);
+    this.bootstrapServers = bootstrapServers;
+  }
+
   @Nonnull
   public String getName() {
     return name;

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+pal run \
+  --dir localhost:2379 \
+  --name peer-for-itt \
+  --tcp-req 5656 \
+  --kafka-servers localhost:9092 \
+  --log auto \
+  --interceptable \
+  --tcp-req-threads 3 \
+  --classpath $PAL_HOME/itt-apps/target/itt-apps-1.0.0-SNAPSHOT.jar

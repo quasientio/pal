@@ -32,11 +32,11 @@
 
 	<!-- LOGGERS -->
 
-	<logger name="tests" level="trace" additivity="false">
+	<logger name="tests" level="debug" additivity="false">
 		<appender-ref ref="tests"/>
 	</logger>
 
-	<logger name="net.ittera.pal" level="trace" additivity="false">
+	<logger name="net.ittera.pal" level="debug" additivity="false">
 		<appender-ref ref="tests"/>
 	</logger>
 

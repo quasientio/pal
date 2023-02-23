@@ -800,6 +800,15 @@ public class ThinPeer {
       logger.info("Consumer executor service shut down");
     }
 
+    // unregister self
+    if (getPalDirectory() != null) {
+      try {
+        getPalDirectory().unregisterPeer(this.peerUuid);
+      } catch (Exception e) {
+        logger.error("Error unregistering self from pal directory.", e);
+      }
+    }
+
     // close directory
     if (!directoryGiven && getPalDirectory() != null) {
       getPalDirectory().close();

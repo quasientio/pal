@@ -140,8 +140,10 @@
                 <configuration>
                     <filesets>
                         <fileset>
-                            <directory>logs</directory>
                             <directory>lib</directory>
+                        </fileset>
+                        <fileset>
+                            <directory>logs</directory>
                         </fileset>
                     </filesets>
                 </configuration>
@@ -370,22 +372,22 @@
         <module>installer</module>
     </modules>
 
-		<repositories>
-			<repository>
-				<id>gitlab-maven</id>
-				<url>https://gitlab.com/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
-			</repository>
-		</repositories>
+    <repositories>
+      <repository>
+        <id>gitlab-maven</id>
+        <url>https://gitlab.com/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
+      </repository>
+     </repositories>
 
-		<distributionManagement>
-			<repository>
-				<id>gitlab-maven</id>
-				<url>https://gitlab.com/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
-			</repository>
-			<snapshotRepository>
-				<id>gitlab-maven</id>
-				<url>https://gitlab.com/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
-			</snapshotRepository>
-		</distributionManagement>
+    <distributionManagement>
+      <repository>
+        <id>gitlab-maven</id>
+        <url>https://gitlab.com/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
+      </repository>
+      <snapshotRepository>
+        <id>gitlab-maven</id>
+        <url>https://gitlab.com/api/v4/projects/${env.CI_PROJECT_ID}/packages/maven</url>
+      </snapshotRepository>
+    </distributionManagement>
 
 </project>

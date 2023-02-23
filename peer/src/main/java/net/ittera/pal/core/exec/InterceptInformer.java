@@ -124,20 +124,11 @@ public class InterceptInformer implements InterceptNodeListener {
     }
     switch (event.getType()) {
       case INTERCEPT_ADDED:
-        final String interceptPath = event.getInterceptPath();
-        final InterceptRequest interceptRequest;
+        final InterceptRequest interceptRequest = event.getInterceptRequest();
         if (event.getPeerUUID().equals(peerUuid)) {
           if (logger.isDebugEnabled()) {
-            logger.debug("Ignoring self-produced intercept request");
+            logger.debug("Ignoring self-produced intercept request: {}", interceptRequest);
           }
-          return;
-        }
-        try {
-          final PALDirectory palDirectory =
-              directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
-          interceptRequest = palDirectory.getInterceptRequest(interceptPath);
-        } catch (Exception e) {
-          logger.warn("Error getting intercept request from directory", e);
           return;
         }
         InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
@@ -146,7 +137,9 @@ public class InterceptInformer implements InterceptNodeListener {
       case INTERCEPT_REMOVED:
         if (event.getPeerUUID().equals(peerUuid)) {
           if (logger.isDebugEnabled()) {
-            logger.debug("Ignoring unregistration of self-produced intercept");
+            logger.debug(
+                "Ignoring unregistration of self-produced intercept request: {}",
+                event.getInterceptRequest());
           }
           return;
         }

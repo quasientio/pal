@@ -21,35 +21,34 @@ package net.ittera.pal.cxn;
 
 import static java.lang.String.format;
 
-import io.etcd.jetcd.ByteSequence;
-import io.etcd.jetcd.Client;
-import io.etcd.jetcd.KV;
-import io.etcd.jetcd.KeyValue;
+import io.etcd.jetcd.*;
 import io.etcd.jetcd.kv.DeleteResponse;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.kv.PutResponse;
 import io.etcd.jetcd.options.DeleteOption;
 import io.etcd.jetcd.options.GetOption;
+import io.etcd.jetcd.options.WatchOption;
+import io.etcd.jetcd.watch.WatchEvent;
+import io.etcd.jetcd.watch.WatchResponse;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
+import net.ittera.pal.common.directory.events.InterceptEvent;
 import net.ittera.pal.common.directory.events.InterceptNodeListener;
+import net.ittera.pal.common.directory.nodes.InfoNode;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
@@ -75,7 +74,9 @@ public class PALDirectory implements AutoCloseable {
 
   private final String directoryUrl;
   private final Client client;
+  private static final Duration ETCD_KEEP_ALIVE_TIME_SECS = Duration.of(30, ChronoUnit.SECONDS);
   private final KV kvClient;
+  private final Watch watchClient;
   private final String namespace;
   private Map<Object, Object> peersCache;
   private Map<Object, Object> interceptsCache;
@@ -93,8 +94,14 @@ public class PALDirectory implements AutoCloseable {
   public PALDirectory(String endpoints, String namespace, boolean withCaching) {
     this.directoryUrl = endpoints;
     logger.info("Will connect to etcd endpoints: {}", endpoints);
-    this.client = Client.builder().target(endpoints).build();
+    this.client =
+        Client.builder()
+            .target(endpoints)
+            //            .keepaliveTime(ETCD_KEEP_ALIVE_TIME_SECS)
+            //            .keepaliveWithoutCalls(true)
+            .build();
     this.kvClient = client.getKVClient();
+    this.watchClient = client.getWatchClient();
     this.namespace = namespace != null ? namespace : DEFAULT_PAL_NAMESPACE;
 
     // TODO is this required now with etcd??
@@ -103,15 +110,17 @@ public class PALDirectory implements AutoCloseable {
     } catch (Exception e) {
       logger.error("Error creating subpaths", e);
     }
+
+    watchClient.watch(
+        getInterceptsPathKey(),
+        WatchOption.newBuilder().isPrefix(true).build(),
+        this::interceptEventConsumer);
+
     // build caches
     if (withCaching) {
       logger.warn("Caching is disabled (missing etcd implementation)");
       throw new UnsupportedOperationException("Caching not implemented");
     }
-  }
-
-  public String getDirectoryUrl() {
-    return directoryUrl;
   }
 
   // <editor-fold desc="Peer methods">
@@ -130,7 +139,6 @@ public class PALDirectory implements AutoCloseable {
 
   public PutResponse registerPeer(UUID peerUuid, Properties peerProperties)
       throws ExecutionException, InterruptedException {
-    final ByteSequence peerData = peerPropsToByteSequence(peerProperties);
     if (peerExists(peerUuid)) {
       logger.info(
           "Skipping registration of existing peer with uuid: {} and properties: {}",
@@ -138,6 +146,10 @@ public class PALDirectory implements AutoCloseable {
           peerProperties);
       return null;
     } else {
+      final Instant now = Instant.now();
+      peerProperties.setProperty("ctime", String.valueOf(now.toEpochMilli()));
+      peerProperties.setProperty("mtime", String.valueOf(now.toEpochMilli()));
+      final ByteSequence peerData = propertiesToByteSequence(peerProperties);
       final PutResponse putResponse =
           kvClient
               .put(
@@ -154,6 +166,9 @@ public class PALDirectory implements AutoCloseable {
         Field field = PeerInfo.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
+        if (logger.isDebugEnabled()) {
+          logger.debug("Reflectively set field: {} with value: {}", field, value);
+        }
       } catch (IllegalAccessException | NoSuchFieldException e) {
         logger.error("Error setting field value in object", e);
       }
@@ -172,25 +187,21 @@ public class PALDirectory implements AutoCloseable {
     Stream.of("name", "reqAddress", "pubAddress", "jmxAddress")
         .forEach(fldName -> setFieldValueUnlessNull(peerInfo, fldName, props.getProperty(fldName)));
 
-    // TODO fill time values
+    fillTimeValuesFromProperties(peerInfo, props);
     return peerInfo;
   }
 
   public Set<PeerInfo> getAllPeers() throws ExecutionException, InterruptedException {
     final GetResponse response =
-        kvClient
-            .get(
-                getPeersPathKey(),
-                GetOption.newBuilder()
-                    .withSortField(GetOption.SortTarget.CREATE)
-                    .withSortOrder(GetOption.SortOrder.ASCEND)
-                    .isPrefix(true)
-                    .build())
-            .get();
+        kvClient.get(getPeersPathKey(), GetOption.newBuilder().isPrefix(true).build()).get();
     final Set<PeerInfo> allPeers = new TreeSet<>();
     for (KeyValue kv : response.getKvs()) {
-      final String peerUuid = Strings.stringAfterLast(kv.getValue().toString(), "/");
-      // TODO allPeers.add(PeerInfo.fromJSON(kv.getValue().toString()));
+      // skip root peers path
+      if (kv.getKey().equals(getPeersPathKey())) {
+        continue;
+      }
+      final String peerUuid =
+          Strings.stringAfterLast(kv.getKey().toString(getEncodingCharset()), "/");
       PeerInfo peerInfo = getPeerInfo(UUID.fromString(peerUuid));
       if (peerInfo != null) {
         allPeers.add(peerInfo);
@@ -199,11 +210,30 @@ public class PALDirectory implements AutoCloseable {
     return allPeers;
   }
 
-  public DeleteResponse unregisterAllPeers() throws ExecutionException, InterruptedException {
-    final DeleteResponse deleteResponse =
-        kvClient.delete(getPeersPathKey(), DeleteOption.newBuilder().isPrefix(true).build()).get();
-    logger.info("Unregistered {} peers", deleteResponse.getDeleted());
-    return deleteResponse;
+  public long unregisterAllPeersWithExcludes(@Nullable Set<UUID> excludePeers)
+      throws ExecutionException, InterruptedException {
+    long deleted = 0;
+    if (excludePeers != null && !excludePeers.isEmpty()) {
+      for (UUID peerUuid :
+          getAllPeers().stream().map(PeerInfo::getUuid).collect(Collectors.toSet())) {
+        if (!excludePeers.contains(peerUuid)) {
+          unregisterPeer(peerUuid);
+          deleted++;
+        }
+      }
+    } else {
+      final DeleteResponse deleteResponse =
+          kvClient
+              .delete(getPeersPathKey(), DeleteOption.newBuilder().isPrefix(true).build())
+              .get();
+      deleted = deleteResponse.getDeleted();
+    }
+    logger.info("Unregistered {} peers", deleted);
+    return deleted;
+  }
+
+  public long unregisterAllPeers() throws ExecutionException, InterruptedException {
+    return unregisterAllPeersWithExcludes(null);
   }
 
   public DeleteResponse unregisterPeer(UUID peerUuid)
@@ -222,6 +252,67 @@ public class PALDirectory implements AutoCloseable {
   // </editor-fold>
 
   // <editor-fold desc="Intercept request methods">
+
+  private InterceptEvent createInterceptEvent(WatchEvent event) {
+    final InterceptEvent.Type type;
+    switch (event.getEventType()) {
+      case PUT:
+        type = InterceptEvent.Type.INTERCEPT_ADDED;
+        break;
+      case DELETE:
+        type = InterceptEvent.Type.INTERCEPT_REMOVED;
+        break;
+      default:
+        logger.error("Unexpected event of type: {}", event.getEventType().name());
+        return null;
+    }
+    String path = event.getKeyValue().getKey().toString(getEncodingCharset());
+    String[] parts =
+        Arrays.stream(path.split("\\/")).filter(s -> s.length() > 0).toArray(String[]::new);
+    if (parts.length == 4) {
+      try {
+        final UUID peerUuid = UUID.fromString(parts[2]);
+        final UUID interceptUuid = UUID.fromString(parts[3]);
+        final byte[] data = event.getKeyValue().getValue().getBytes();
+        return new InterceptEvent(
+            type,
+            path,
+            peerUuid,
+            interceptUuid,
+            InterceptRequest.fromBytes(data, getEncodingCharset()));
+      } catch (IllegalArgumentException e) {
+        logger.warn("Invalid UUID or unexpected path of len=4: {}", path);
+      }
+    }
+    return null;
+  }
+
+  private void interceptEventConsumer(WatchResponse watchResponse) {
+    for (WatchEvent event : watchResponse.getEvents()) {
+      switch (event.getEventType()) {
+        case PUT:
+        case DELETE:
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "New intercepts {} -> key:{} - value:{}",
+                event.getEventType().name(),
+                event.getKeyValue().getKey().toString(),
+                event.getKeyValue().getValue().toString());
+          }
+          final InterceptEvent interceptEvent = createInterceptEvent(event);
+          if (interceptEvent != null) {
+            interceptListeners.forEach(l -> l.interceptEvent(interceptEvent));
+          }
+          break;
+        case UNRECOGNIZED:
+          logger.warn(
+              "New intercepts UNRECOGNIZED event -> key:{} - value:{}",
+              event.getKeyValue().getKey().toString(),
+              event.getKeyValue().getValue().toString());
+      }
+    }
+  }
+
   public PutResponse registerIntercept(InterceptRequest interceptRequest)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
     if (!peerExists(interceptRequest.getPeer())) {
@@ -274,8 +365,7 @@ public class PALDirectory implements AutoCloseable {
       final GetResponse response =
           kvClient.get(peerInterceptsPathKey, GetOption.newBuilder().isPrefix(true).build()).get();
       for (KeyValue kv : response.getKvs()) {
-        final String interceptPath =
-            format("%s/%s", peerInterceptsPath, kv.getKey().toString(getEncodingCharset()));
+        final String interceptPath = kv.getKey().toString(getEncodingCharset());
         interceptRequests.add(getInterceptRequest(interceptPath));
       }
     } else {
@@ -288,29 +378,30 @@ public class PALDirectory implements AutoCloseable {
       throws ExecutionException, InterruptedException {
     final byte[] data;
     if (interceptsCache == null) {
-      data =
+      List<KeyValue> kvs =
           kvClient
               .get(ByteSequence.from(interceptPath.getBytes(getEncodingCharset())))
               .get()
-              .getKvs()
-              .get(0)
-              .getValue()
-              .getBytes();
-    } else {
-      throw new UnsupportedOperationException("Caching not implemented");
-    }
-    if (data != null) {
+              .getKvs();
+      if (kvs.size() == 0) {
+        return null;
+      }
+      data = kvs.get(0).getValue().getBytes();
       return InterceptRequest.fromBytes(data, getEncodingCharset());
     } else {
-      return null;
+      throw new UnsupportedOperationException("Caching not implemented");
     }
   }
 
   public void addInterceptNodeListener(InterceptNodeListener listener) {
     interceptListeners.add(listener);
+    if (logger.isDebugEnabled()) {
+      logger.debug("Added intercept node listener of class: {}", listener.getClass().getName());
+    }
   }
 
-  public DeleteResponse unregisterPeerInterceptRequests(UUID peerUuid) throws Exception {
+  public DeleteResponse unregisterPeerInterceptRequests(UUID peerUuid)
+      throws ExecutionException, InterruptedException {
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
     if (interceptsCache == null) {
       final DeleteResponse deleteResponse =
@@ -329,24 +420,54 @@ public class PALDirectory implements AutoCloseable {
     }
   }
 
+  public DeleteResponse unregisterPeerInterceptRequest(UUID peerUuid, UUID interceptRequestUuid)
+      throws ExecutionException, InterruptedException {
+    final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
+    if (interceptsCache == null) {
+      final DeleteResponse deleteResponse =
+          kvClient
+              .delete(
+                  ByteSequence.from(
+                      format("%s/%s", peerInterceptsPath, interceptRequestUuid.toString())
+                          .getBytes(getEncodingCharset())))
+              .get();
+      logger.info(
+          "Unregistered intercept request w/uuid: {} for peer w/uuid: {}",
+          interceptRequestUuid,
+          peerUuid);
+      return deleteResponse;
+    } else {
+      throw new UnsupportedOperationException("Caching not implemented");
+    }
+  }
+
   // </editor-fold>
 
   // <editor-fold desc="Log methods">
-  public LogInfo registerLog(String logName) throws Exception {
-    UUID newLogUuid = UUID.randomUUID();
+  public LogInfo registerLog(String logName, String logServers)
+      throws ExecutionException, InterruptedException {
+    Objects.requireNonNull(logName, logServers);
     if (!logExists(logName)) {
+      UUID newLogUuid = UUID.randomUUID();
+      final Properties logProperties = new Properties();
+      logProperties.setProperty("uuid", newLogUuid.toString());
+      logProperties.setProperty("servers", logServers);
+      final Instant now = Instant.now();
+      logProperties.setProperty("ctime", String.valueOf(now.toEpochMilli()));
+      logProperties.setProperty("mtime", String.valueOf(now.toEpochMilli()));
       final ByteSequence logKey =
           ByteSequence.from(getLogPath(logName).getBytes(getEncodingCharset()));
-      kvClient.put(logKey, logPropsToByteSequence(newLogUuid)).get();
+      kvClient.put(logKey, propertiesToByteSequence(logProperties)).get();
       logger.info("Registered given log node: {} with uuid: {}", logName, newLogUuid);
     } else {
-      logger.info(
-          "Skipping registration of existing log with name: {} and uuid: {}", logName, newLogUuid);
+      logger.info("Skipping registration of existing log with name: {}", logName);
     }
     return getLogInfo(logName);
   }
 
-  public LogInfo newLog(String logNamePrefix) throws Exception {
+  public LogInfo newLog(String logNamePrefix, String logServers)
+      throws ExecutionException, InterruptedException {
+    Objects.requireNonNull(logNamePrefix, logServers);
     final UUID newLogUuid = UUID.randomUUID();
     final LogInfo lastLogWithPrefix = getLastLogWithPrefix(logNamePrefix);
     final String newLogName;
@@ -362,9 +483,15 @@ public class PALDirectory implements AutoCloseable {
     // create the KV entry
     final ByteSequence newLogKey =
         ByteSequence.from(getLogPath(newLogName).getBytes(getEncodingCharset()));
-    kvClient.put(newLogKey, logPropsToByteSequence(newLogUuid)).get();
+    final Properties logProperties = new Properties();
+    logProperties.setProperty("uuid", newLogUuid.toString());
+    logProperties.setProperty("servers", logServers);
+    final Instant now = Instant.now();
+    logProperties.setProperty("ctime", String.valueOf(now.toEpochMilli()));
+    logProperties.setProperty("mtime", String.valueOf(now.toEpochMilli()));
+    kvClient.put(newLogKey, propertiesToByteSequence(logProperties)).get();
     LogInfo newLogInfo = getLogInfo(newLogName);
-    logger.info("Created new log node: {} with uuid: {}", newLogName, newLogUuid);
+    logger.info("Created new log: {} with uuid: {}", newLogName, newLogUuid);
     return newLogInfo;
   }
 
@@ -374,9 +501,11 @@ public class PALDirectory implements AutoCloseable {
     }
     final Properties props = getProperties(getLogPath(logName), null);
     final UUID uuid = UUID.fromString(props.getProperty("uuid"));
+    final String logServers = props.getProperty("servers");
 
-    // TODO fill time values
-    return new LogInfo(logName, uuid);
+    final LogInfo logInfo = new LogInfo(logName, uuid, logServers);
+    fillTimeValuesFromProperties(logInfo, props);
+    return logInfo;
   }
 
   public boolean logExists(String logName) throws ExecutionException, InterruptedException {
@@ -387,51 +516,60 @@ public class PALDirectory implements AutoCloseable {
         != 0;
   }
 
-  public Set<LogInfo> getAllLogs() throws Exception {
+  public Set<LogInfo> getAllLogsWithPrefix(String logNamePrefix)
+      throws ExecutionException, InterruptedException {
     final GetResponse getResponse =
         kvClient
             .get(
-                getLogsPathKey(),
+                ByteSequence.from(
+                    format("%s/%s", getLogsPath(), logNamePrefix).getBytes(getEncodingCharset())),
                 GetOption.newBuilder()
                     .withSortField(GetOption.SortTarget.CREATE)
                     .withSortOrder(GetOption.SortOrder.ASCEND)
                     .isPrefix(true)
                     .build())
             .get();
+    final Set<LogInfo> logs = new TreeSet<>();
+    for (KeyValue kv : getResponse.getKvs()) {
+      final String logName =
+          Strings.stringAfterLast(kv.getKey().toString(getEncodingCharset()), "/");
+      logs.add(getLogInfo(logName));
+    }
+    if (logger.isDebugEnabled()) {
+      logger.debug("returning from getAllLogsWithPrefix: {}", logs);
+    }
+    return logs;
+  }
+
+  public Set<LogInfo> getAllLogs() throws ExecutionException, InterruptedException {
+    final GetResponse getResponse =
+        kvClient.get(getLogsPathKey(), GetOption.newBuilder().isPrefix(true).build()).get();
     final Set<LogInfo> allLogs = new TreeSet<>();
     for (KeyValue kv : getResponse.getKvs()) {
-      final String logName = Strings.stringAfterLast(kv.getValue().toString(), "/");
-      // TODO allPeers.add(PeerInfo.fromJSON(kv.getValue().toString()));
+      // skip root logs path
+      if (kv.getKey().equals(getLogsPathKey())) {
+        continue;
+      }
+      final String logName =
+          Strings.stringAfterLast(kv.getKey().toString(getEncodingCharset()), "/");
       allLogs.add(getLogInfo(logName));
+    }
+    if (logger.isDebugEnabled()) {
+      logger.debug("returning from getAllLogs: {}", allLogs);
     }
     return allLogs;
   }
 
-  private Set<String> getAllLogNames() throws Exception {
-    final GetResponse getResponse =
-        kvClient
-            .get(
-                getLogsPathKey(),
-                GetOption.newBuilder()
-                    .withSortField(GetOption.SortTarget.CREATE)
-                    .withSortOrder(GetOption.SortOrder.ASCEND)
-                    .isPrefix(true)
-                    .build())
-            .get();
-    final Set<String> allLogNames = new TreeSet<>();
-    for (KeyValue kv : getResponse.getKvs()) {
-      final String logName = Strings.stringAfterLast(kv.getValue().toString(), "/");
-      allLogNames.add(logName);
-    }
-    return allLogNames;
+  private Set<String> getAllLogNames() throws ExecutionException, InterruptedException {
+    return getAllLogs().stream().map(LogInfo::getName).collect(Collectors.toSet());
   }
 
-  public LogInfo getLastLogWithPrefix(String logNamePrefix) throws Exception {
+  public LogInfo getLastLogWithPrefix(String logNamePrefix)
+      throws ExecutionException, InterruptedException {
     final List<String> logNames =
-        getAllLogNames().stream()
-            .filter(l -> l.startsWith(logNamePrefix))
+        getAllLogsWithPrefix(logNamePrefix).stream()
+            .map(LogInfo::getName)
             .collect(Collectors.toList());
-
     long maxLogIndex = -1;
     String lastLog = null;
     for (String log : logNames) {
@@ -447,43 +585,59 @@ public class PALDirectory implements AutoCloseable {
     return getLogInfo(lastLog);
   }
 
-  public int getLogCount(String logNamePrefix) throws Exception {
-    return (int) getAllLogNames().stream().filter(l -> l.startsWith(logNamePrefix)).count();
+  public int getLogCount(String logNamePrefix) throws ExecutionException, InterruptedException {
+    return getAllLogsWithPrefix(logNamePrefix).size();
   }
 
-  public DeleteResponse unregisterLog(String logName) throws Exception {
+  public DeleteResponse unregisterLog(String logName)
+      throws ExecutionException, InterruptedException {
     DeleteResponse deleteResp =
         kvClient
             .delete(ByteSequence.from(getLogPath(logName).getBytes(getEncodingCharset())))
             .get();
     if (deleteResp.getDeleted() == 1) {
-      logger.info("Unregistered (i.e. deleted) log node: {}", logName);
+      logger.info("Unregistered (i.e. deleted) log: {}", logName);
     } else {
       logger.info("Could not unregister log with name: {}, peer does not exist!", logName);
     }
     return deleteResp;
   }
 
-  public int unregisterLogs(String logNamePrefix) throws Exception {
-    final List<String> logNames =
-        getAllLogNames().stream()
-            .filter(l -> l.startsWith(logNamePrefix))
-            .collect(Collectors.toList());
+  public long unregisterLogs(String logNamePrefix) throws ExecutionException, InterruptedException {
+    final DeleteResponse deleteResponse =
+        kvClient
+            .delete(
+                ByteSequence.from(
+                    format("%s/%s", getLogsPath(), logNamePrefix).getBytes(getEncodingCharset())),
+                DeleteOption.newBuilder().isPrefix(true).build())
+            .get();
 
-    int deleted = 0;
-    for (String logName : logNames) {
-      unregisterLog(logName);
-      deleted++;
-    }
+    long deleted = deleteResponse.getDeleted();
     logger.info("Unregistered {} logs with prefix: {}", deleted, logNamePrefix);
     return deleted;
   }
 
-  public DeleteResponse unregisterAllLogs() throws Exception {
-    DeleteResponse deleteResponse =
-        kvClient.delete(getLogsPathKey(), DeleteOption.newBuilder().isPrefix(true).build()).get();
-    logger.info("Unregistered {} logs", deleteResponse.getDeleted());
-    return deleteResponse;
+  public long unregisterAllLogsWithExcludes(@Nullable Set<UUID> excludeLogs)
+      throws ExecutionException, InterruptedException {
+    long deleted = 0;
+    if (excludeLogs != null && !excludeLogs.isEmpty()) {
+      for (LogInfo log : getAllLogs()) {
+        if (!excludeLogs.contains(log.getUuid())) {
+          unregisterLog(log.getName());
+          deleted++;
+        }
+      }
+    } else {
+      DeleteResponse deleteResponse =
+          kvClient.delete(getLogsPathKey(), DeleteOption.newBuilder().isPrefix(true).build()).get();
+      deleted = deleteResponse.getDeleted();
+    }
+    logger.info("Unregistered {} logs", deleted);
+    return deleted;
+  }
+
+  public long unregisterAllLogs() throws ExecutionException, InterruptedException {
+    return unregisterAllLogsWithExcludes(null);
   }
   // </editor-fold>
 
@@ -510,6 +664,15 @@ public class PALDirectory implements AutoCloseable {
   // </editor-fold>
 
   // <editor-fold desc="private helpers">
+  private void fillTimeValuesFromProperties(InfoNode infoNode, Properties properties) {
+    if (properties.containsKey("ctime")) {
+      infoNode.setCtime(Instant.ofEpochMilli(Long.parseLong(properties.getProperty("ctime"))));
+    }
+    if (properties.containsKey("mtime")) {
+      infoNode.setMtime(Instant.ofEpochMilli(Long.parseLong(properties.getProperty("mtime"))));
+    }
+  }
+
   private Properties getProperties(String node, Map<Object, Object> cache)
       throws ExecutionException, InterruptedException {
     final byte[] data;
@@ -526,27 +689,25 @@ public class PALDirectory implements AutoCloseable {
       for (String line : lines) {
         String key = Strings.stringBefore(line, KEYVALUE_SEP);
         String value = Strings.stringAfter(line, KEYVALUE_SEP);
-        properties.put(key, value);
+        properties.setProperty(key, value);
       }
+    }
+    if (logger.isDebugEnabled()) {
+      logger.debug("Returning loaded properties for node: {}, \n{}", node, properties);
     }
     return properties;
   }
 
-  private ByteSequence logPropsToByteSequence(UUID logUuid) {
-    return ByteSequence.from(
-        ("uuid" + KEYVALUE_SEP + logUuid + '\n').getBytes(getEncodingCharset()));
-  }
-
-  private ByteSequence peerPropsToByteSequence(Properties peerProperties) {
+  private ByteSequence propertiesToByteSequence(Properties properties) {
     byte[] data = null;
-    if (peerProperties != null && !peerProperties.isEmpty()) {
+    if (properties != null && !properties.isEmpty()) {
       StringBuilder sb = new StringBuilder();
       int propIdx = 1;
-      for (String propKey : peerProperties.stringPropertyNames()) {
+      for (String propKey : properties.stringPropertyNames()) {
         sb.append(propKey.trim())
             .append(KEYVALUE_SEP)
-            .append(peerProperties.getProperty(propKey).trim());
-        if (propIdx++ < peerProperties.size()) {
+            .append(properties.getProperty(propKey).trim());
+        if (propIdx++ < properties.size()) {
           sb.append('\n');
         }
       }
@@ -596,6 +757,10 @@ public class PALDirectory implements AutoCloseable {
 
   private String getInterceptsPath() {
     return format("/%s/%s", namespace, INTERCEPTS_DIR);
+  }
+
+  private ByteSequence getInterceptsPathKey() {
+    return ByteSequence.from(getInterceptsPath().getBytes(getEncodingCharset()));
   }
 
   private String getInterceptsPathForPeer(UUID peerUuid) {

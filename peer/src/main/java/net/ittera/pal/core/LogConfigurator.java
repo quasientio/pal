@@ -37,7 +37,7 @@ class LogConfigurator {
   private final Properties appProps;
   private final boolean noPaldir;
   private final Injector injector;
-  private final String kafkaBootstrapServers;
+  private final String kafkaServers;
 
   LogConfigurator(
       String inLogName,
@@ -52,10 +52,9 @@ class LogConfigurator {
     this.injector = injector;
     final String givenPaldirUrl = appProps.getProperty("paldir_url");
     noPaldir = givenPaldirUrl == null || givenPaldirUrl.equals(PALDirectory.NO_URL);
-    kafkaBootstrapServers = appProps.getProperty("kafka.bootstrap.servers");
-    if (noPaldir && kafkaBootstrapServers == null) {
-      throw new IllegalArgumentException(
-          "No 'paldir_url' nor 'kafka.bootstrap.servers' in properties.");
+    kafkaServers = appProps.getProperty("kafka.bootstrap.servers");
+    if (kafkaServers == null) {
+      throw new IllegalArgumentException("No kafka servers given.");
     }
   }
 
@@ -65,7 +64,7 @@ class LogConfigurator {
             .getInstance(DirectoryConnectionProvider.class)
             .get()
             .orElseThrow(RuntimeException::new);
-    return palDirectory.newLog(appProps.getProperty("kafkaTopic"));
+    return palDirectory.newLog(appProps.getProperty("kafkaTopicPrefix"), kafkaServers);
   }
 
   private LogInfo getOrRegisterGivenLog(String logName) throws Exception {
@@ -81,7 +80,7 @@ class LogConfigurator {
     if (palDirectory.logExists(logName)) {
       logInfo = palDirectory.getLogInfo(logName);
     } else {
-      logInfo = palDirectory.registerLog(logName);
+      logInfo = palDirectory.registerLog(logName, kafkaServers);
     }
 
     return logInfo;
@@ -114,29 +113,23 @@ class LogConfigurator {
 
     if ("auto".equalsIgnoreCase(inLogName)) {
       if (noPaldir) {
-        inLog = new LogInfo(inLogName, kafkaBootstrapServers);
+        inLog = new LogInfo(inLogName, kafkaServers);
       } else {
         inLog = registerNewLog();
         newLog = inLog;
       }
     } else if (inLogName != null) {
-      inLog =
-          noPaldir
-              ? new LogInfo(inLogName, kafkaBootstrapServers)
-              : getOrRegisterGivenLog(inLogName);
+      inLog = noPaldir ? new LogInfo(inLogName, kafkaServers) : getOrRegisterGivenLog(inLogName);
     }
 
     if ("auto".equalsIgnoreCase(outLogName)) {
       if (noPaldir) {
-        outLog = new LogInfo(outLogName, kafkaBootstrapServers);
+        outLog = new LogInfo(outLogName, kafkaServers);
       } else {
         outLog = newLog != null ? newLog : registerNewLog();
       }
     } else if (outLogName != null) {
-      outLog =
-          noPaldir
-              ? new LogInfo(outLogName, kafkaBootstrapServers)
-              : getOrRegisterGivenLog(outLogName);
+      outLog = noPaldir ? new LogInfo(outLogName, kafkaServers) : getOrRegisterGivenLog(outLogName);
     }
 
     // init log reader

@@ -40,7 +40,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ThinPeerTest {
+public class ThinPeerIT {
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
@@ -50,6 +50,7 @@ public class ThinPeerTest {
   private PALDirectory palDirectory;
   private DirectoryConnectionProvider directoryConnectionProvider;
   private static final String PAL_DIR_URL = "ip://localhost:2379";
+  private static final String KAFKA_SERVERS = "localhost:9092";
 
   // mock Kafka producer & consumer
   private MockProducer<String, byte[]> producer;
@@ -89,12 +90,11 @@ public class ThinPeerTest {
       palDirectory.unregisterLog(log);
       logger.info("Cleaned up created log: {}", log);
     }
-    // close PAL Directory
     palDirectory.close();
   }
 
   private LogInfo createLog(String name) throws Exception {
-    LogInfo log = palDirectory.registerLog("testlog");
+    LogInfo log = palDirectory.registerLog("testlog", KAFKA_SERVERS);
     createdLogs.add(log);
     return log;
   }
@@ -118,6 +118,7 @@ public class ThinPeerTest {
             .withLog(createLog("testlog"))
             .init();
     assertThat(thinPeer.isLogIOEnabled(), is(true));
+    thinPeer.close();
   }
 
   @Test
@@ -129,6 +130,7 @@ public class ThinPeerTest {
             .withLog(createLog("testlog"))
             .init();
     assertThat(thinPeer.isLogIOEnabled(), is(true));
+    thinPeer.close();
   }
 
   @Test
@@ -141,6 +143,7 @@ public class ThinPeerTest {
             .withLog(createLog("testlog"))
             .init();
     assertThat(thinPeer.isLogIOEnabled(), is(false));
+    thinPeer.close();
   }
 
   @Test
@@ -153,6 +156,7 @@ public class ThinPeerTest {
             .withLog(createLog("testlog"))
             .init();
     assertThat(thinPeer.isLogIOEnabled(), is(false));
+    thinPeer.close();
   }
 
   @Test

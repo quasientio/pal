@@ -72,7 +72,7 @@ public class IndexingService implements Callable<Integer> {
 
   @Option(
       names = {"--pal-directory"},
-      defaultValue = "localhost:2181",
+      defaultValue = "localhost:2379",
       required = true,
       paramLabel = "DIRECTORY_ADDRESS",
       description = "get log info from directory")

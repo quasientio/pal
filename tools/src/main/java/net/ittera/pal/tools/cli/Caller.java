@@ -184,7 +184,7 @@ public class Caller extends AbstractPALSubcommand {
       properties.load(stream);
     }
     final String pollDurationProp = properties.getProperty("pollDuration");
-    final String logPrefixProp = properties.getProperty("kafkaTopic");
+    final String logPrefixProp = properties.getProperty("kafkaTopicPrefix");
     if (pollDurationProp != null && !pollDurationProp.trim().isEmpty()) {
       pollDuration = Long.parseLong(pollDurationProp.trim());
     }

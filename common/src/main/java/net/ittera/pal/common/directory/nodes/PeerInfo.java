@@ -25,17 +25,16 @@ import java.util.UUID;
 
 public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
 
-  // name of node in zk
+  // part of the key/path in directory
   private UUID uuid;
 
   // BEWARE bean-like fields are set reflectively by PALDirectory: DO NOT include any logic in
   // setters
 
-  // in zk node data
+  // value/data
   private String reqAddress;
   private String pubAddress;
   private String jmxAddress;
-
   private String name;
 
   public PeerInfo(UUID uuid) {

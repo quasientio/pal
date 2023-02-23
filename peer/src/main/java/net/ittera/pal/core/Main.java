@@ -44,12 +44,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import net.ittera.pal.common.cli.PALCommand;
 import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.core.exec.InterceptInformer;
@@ -144,9 +139,10 @@ public class Main implements Callable<Integer> {
   private String outLog; // corresponding ENV var: OUT_LOG
 
   @Option(
-      names = {"-k", "--kafka"},
+      names = {"-k", "--kafka-servers"},
       paramLabel = "bootstrap_servers",
-      description = "connect to given kafka servers when running with no <pal_directory>")
+      description =
+          "connect to given kafka servers (required with -l/--log, -i/--in-log and -o/--out-log)")
   private String kafkaServers; // corresponding ENV var: KAFKA_SERVERS
 
   @Option(
@@ -392,6 +388,10 @@ public class Main implements Callable<Integer> {
       }
     } else {
       runOptions.add(RunOptions.WITH_PALDIR);
+    }
+
+    if (kafkaServers == null && (log != null || inLog != null || outLog != null)) {
+      fatalExit(null, PeerException.FatalCode.ERROR_NO_KAFKA_SERVERS_GIVEN);
     }
 
     if (log != null) {
@@ -695,11 +695,19 @@ public class Main implements Callable<Integer> {
         logger.info("Done shutting down log threads");
       }
 
-      // close connection to paldir
+      // unregister self and close connection to paldir
       if (runOptions.contains(RunOptions.WITH_PALDIR)) {
         final Optional<PALDirectory> palDirectory =
             injector.getInstance(DirectoryConnectionProvider.class).get();
-        palDirectory.ifPresent(PALDirectory::close);
+        palDirectory.ifPresent(
+            dir -> {
+              try {
+                dir.unregisterPeer(this.uuid);
+              } catch (Exception e) {
+                logger.warn("Error unregistering self from PAL directory.", e);
+              }
+              dir.close();
+            });
       }
 
       // close sockets that aren't automatically closed

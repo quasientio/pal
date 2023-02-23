@@ -97,7 +97,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
   @Option(
       names = {"-d", "--dir-address"},
       paramLabel = "PAL_DIR_ADDRESS",
-      defaultValue = "localhost:2181",
+      defaultValue = "localhost:2379",
       description = "address of PAL directory (default: ${DEFAULT-VALUE})")
   private String palDirAddress;
 

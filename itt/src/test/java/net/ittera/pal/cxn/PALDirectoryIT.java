@@ -19,21 +19,15 @@
 
 package net.ittera.pal.cxn;
 
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Properties;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 import net.ittera.pal.common.directory.events.InterceptEvent.Type;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
@@ -50,21 +44,29 @@ import org.slf4j.LoggerFactory;
  * Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior TODO: Tests should not use
  * the cache -> sleep()'s introduce brittleness.
  */
-public class PALDirectoryTest {
+public class PALDirectoryIT {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
 
   private static final String ETCD_ENDPOINT = "ip://localhost:2379";
-  private static final int CACHE_UPDATE_DELAY = 100;
+  private static final int CACHE_UPDATE_DELAY = 10;
+  private static final String KAFKA_SERVERS = "kafka1:9092,kafka2:9094";
 
   private static final Set<UUID> createdPeers = new HashSet<>();
   private static final Set<String> createdLogs = new HashSet<>();
+  private static Set<UUID> preExistingPeers;
+  private static Set<UUID> preExistingLogs;
+  private static final Map<UUID, List<UUID>> createdInterceptRequests = new HashMap<>();
 
   private PALDirectory palDirectory;
 
   @Before
   public void setup() throws Exception {
     palDirectory = new PALDirectory(ETCD_ENDPOINT);
+    preExistingPeers =
+        palDirectory.getAllPeers().stream().map(PeerInfo::getUuid).collect(Collectors.toSet());
+    preExistingLogs =
+        palDirectory.getAllLogs().stream().map(LogInfo::getUuid).collect(Collectors.toSet());
   }
 
   @After
@@ -77,7 +79,21 @@ public class PALDirectoryTest {
       palDirectory.unregisterLog(log);
       logger.info("Cleaned up created log: {}", log);
     }
+    for (Map.Entry<UUID, List<UUID>> entry : createdInterceptRequests.entrySet()) {
+      UUID peerUuid = entry.getKey();
+      List<UUID> peerIntercepts = entry.getValue();
+      for (UUID interceptReq : peerIntercepts) {
+        palDirectory.unregisterPeerInterceptRequest(peerUuid, interceptReq);
+        logger.info("Cleaned up created intercept request: {}", interceptReq);
+      }
+    }
     palDirectory.close();
+  }
+
+  private void addInterceptRequestToCreated(UUID peerUuid, UUID interceptReqUuid) {
+    List<UUID> peerIntercepts =
+        createdInterceptRequests.computeIfAbsent(peerUuid, k -> new ArrayList<>());
+    peerIntercepts.add(interceptReqUuid);
   }
 
   @Test
@@ -106,12 +122,12 @@ public class PALDirectoryTest {
   }
 
   @Test
-  public void getPeerInfo_noSuchPeer_exception() throws Exception {
+  public void getPeerInfo_noSuchPeer_null() throws Exception {
 
     UUID peerUuid = UUID.randomUUID();
 
     assertThat(palDirectory.peerExists(peerUuid), is(false));
-    assertThat(palDirectory.getPeerInfo(peerUuid), is(null));
+    assertThat(palDirectory.getPeerInfo(peerUuid), is(nullValue()));
   }
 
   @Test
@@ -189,22 +205,31 @@ public class PALDirectoryTest {
     }
 
     // verify
-    assertThat(palDirectory.getAllPeers().size(), is(peersToCreate));
+    assertThat(
+        palDirectory.getAllPeers().stream()
+            .filter(p -> !preExistingPeers.contains(p.getUuid()))
+            .collect(Collectors.toSet())
+            .size(),
+        is(peersToCreate));
 
-    // unregister all
-    palDirectory.unregisterAllPeers();
+    // unregister all - exclude pre-existing
+    palDirectory.unregisterAllPeersWithExcludes(preExistingPeers);
 
     Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
 
-    // verify
-    assertThat(palDirectory.getAllPeers(), is(empty()));
+    assertThat(palDirectory.getAllPeers().size(), is(preExistingPeers.size()));
   }
 
   @Test
   public void getAllPeers_noPeers_emptySet() throws Exception {
     Set<PeerInfo> allPeers = palDirectory.getAllPeers();
     // verify
-    assertThat(allPeers.isEmpty(), is(true));
+    assertThat(
+        allPeers.stream()
+            .filter(p -> !preExistingPeers.contains(p.getUuid()))
+            .collect(Collectors.toSet())
+            .isEmpty(),
+        is(true));
   }
 
   @Test
@@ -221,7 +246,12 @@ public class PALDirectoryTest {
     }
 
     // verify
-    assertThat(palDirectory.getAllPeers().size(), is(peersToCreate));
+    assertThat(
+        palDirectory.getAllPeers().stream()
+            .filter(p -> !preExistingPeers.contains(p.getUuid()))
+            .collect(Collectors.toSet())
+            .size(),
+        is(peersToCreate));
   }
 
   @Test
@@ -236,7 +266,7 @@ public class PALDirectoryTest {
 
     String logNamePrefix = "test.topic";
 
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
+    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, KAFKA_SERVERS);
     String createdLogName = newLogInfo.getName();
     createdLogs.add(createdLogName);
 
@@ -256,7 +286,7 @@ public class PALDirectoryTest {
     assertThat(palDirectory.logExists(logName), is(false));
 
     // register
-    LogInfo newLogInfo = palDirectory.registerLog(logName);
+    LogInfo newLogInfo = palDirectory.registerLog(logName, KAFKA_SERVERS);
     String createdLogName = newLogInfo.getName();
     createdLogs.add(createdLogName);
 
@@ -271,7 +301,7 @@ public class PALDirectoryTest {
   public void getLogInfo_noSuchLog_exception() throws Exception {
     String logName = "test.strange_topic";
     assertThat(palDirectory.logExists(logName), is(false));
-    assertThat(palDirectory.getLogInfo(logName), is(null));
+    assertThat(palDirectory.getLogInfo(logName), is(nullValue()));
   }
 
   @Test
@@ -279,7 +309,7 @@ public class PALDirectoryTest {
     String logName = "test.topic";
 
     // register logInfo
-    LogInfo newLogInfo = palDirectory.registerLog(logName);
+    LogInfo newLogInfo = palDirectory.registerLog(logName, KAFKA_SERVERS);
     String createdLogName = newLogInfo.getName();
     createdLogs.add(createdLogName);
 
@@ -300,18 +330,33 @@ public class PALDirectoryTest {
   }
 
   @Test
-  public void getAllLogs_someLogsExist_all() throws Exception {
+  public void getAllLogs_someLogsCreated_all() throws Exception {
     String logNamePrefix = "test.topic";
 
     // create N logs
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, KAFKA_SERVERS);
       createdLogs.add(newLogInfo.getName());
     }
 
     // verify
-    assertThat(palDirectory.getAllLogs().size(), is(logsToCreate));
+    assertThat(palDirectory.getAllLogs().size(), is(preExistingLogs.size() + logsToCreate));
+  }
+
+  @Test
+  public void getAllLogsWithPrefix_someLogsExist_all() throws Exception {
+    String logNamePrefix = "test.topic";
+
+    // create N logs
+    int logsToCreate = 10;
+    for (int i = 0; i < logsToCreate; i++) {
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, KAFKA_SERVERS);
+      createdLogs.add(newLogInfo.getName());
+    }
+
+    // verify
+    assertThat(palDirectory.getAllLogsWithPrefix(logNamePrefix).size(), is(logsToCreate));
   }
 
   @Test
@@ -326,7 +371,7 @@ public class PALDirectoryTest {
     // create  a few logs
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, KAFKA_SERVERS);
       createdLogs.add(newLogInfo.getName());
     }
     assertThat(palDirectory.getLogCount(logNamePrefix), is(logsToCreate));
@@ -334,17 +379,13 @@ public class PALDirectoryTest {
 
   @Test
   public void getLastLog_someLogsMatch_last() throws Exception {
-
     String logNamePrefix = "test.topic";
-
-    // pre-assertions
-    assertThat(palDirectory.getAllLogs().size(), is(0));
 
     // create  a few logs
     int logsToCreate = 10;
     String lastCreated = null;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, KAFKA_SERVERS);
       lastCreated = newLogInfo.getName();
       createdLogs.add(lastCreated);
     }
@@ -359,13 +400,13 @@ public class PALDirectoryTest {
     // create  a few with the prefix
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, KAFKA_SERVERS);
       createdLogs.add(newLogInfo.getName());
     }
 
     // create a few with another prefix
     for (int i = 0; i < 3; i++) {
-      LogInfo newLogInfo = palDirectory.newLog("some.other.prefix");
+      LogInfo newLogInfo = palDirectory.newLog("some.other.prefix", KAFKA_SERVERS);
       createdLogs.add(newLogInfo.getName());
     }
 
@@ -380,31 +421,33 @@ public class PALDirectoryTest {
   }
 
   @Test
-  public void deleteAllLogs_existingLogs_allLogsDeleted() throws Exception {
+  public void unregisterAllLogs_existingLogs_allLogsDeleted() throws Exception {
+    Set<LogInfo> preExistingLogs = palDirectory.getAllLogs();
     String logNamePrefix = "test.topic";
 
     // create a few with the prefix
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, KAFKA_SERVERS);
       createdLogs.add(newLogInfo.getName());
     }
 
     // pre-assertions
-    assertThat(palDirectory.getAllLogs().size(), is(logsToCreate));
+    assertThat(palDirectory.getAllLogs().size(), is(preExistingLogs.size() + logsToCreate));
 
     // delete all
-    palDirectory.unregisterAllLogs();
+    palDirectory.unregisterAllLogsWithExcludes(
+        preExistingLogs.stream().map(LogInfo::getUuid).collect(Collectors.toSet()));
 
     // verify
-    assertThat(palDirectory.getAllLogs(), is(empty()));
+    assertThat(palDirectory.getAllLogs().size(), is(preExistingLogs.size()));
   }
 
   @Test
   public void deleteLog_existingLog_logDeleted() throws Exception {
     String logNamePrefix = "test.topic";
 
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix);
+    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, KAFKA_SERVERS);
     String createdLogName = newLogInfo.getName();
     // pre-assertions
     assertThat(palDirectory.logExists(createdLogName), is(true));
@@ -465,6 +508,7 @@ public class PALDirectoryTest {
 
     // register it
     palDirectory.registerInterceptAsync(req).get();
+    addInterceptRequestToCreated(peerUuid, req.getUuid());
 
     Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(1));
@@ -499,8 +543,47 @@ public class PALDirectoryTest {
 
     // register it
     palDirectory.registerIntercept(req);
+    addInterceptRequestToCreated(peerUuid, req.getUuid());
     Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(1));
+  }
+
+  public void unregisterIntercept_interceptExists_unregistered() throws Exception {
+    // create peer
+    UUID peerUuid = UUID.randomUUID();
+    String peerName = "testing peer";
+    Properties peerProps = new Properties();
+    peerProps.put("name", peerName);
+    palDirectory.registerPeer(peerUuid, peerProps);
+    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
+    createdPeers.add(peerUuid);
+
+    // pre-assertions
+    assertThat(palDirectory.peerExists(peerUuid), is(true));
+    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(0));
+
+    // create intercept request
+    InterceptRequest req =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerUuid,
+            InterceptType.BEFORE,
+            "java.io.PrintStream",
+            "org.package.Callback",
+            "callMe",
+            new InterceptableMethodCall(
+                "println", Arrays.asList("java.lang.String", "java.lang.Integer")));
+
+    // register it
+    palDirectory.registerIntercept(req);
+    addInterceptRequestToCreated(peerUuid, req.getUuid());
+    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
+    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(1));
+
+    // now unregister
+    palDirectory.unregisterPeerInterceptRequest(peerUuid, req.getUuid());
+    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
+    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(0));
   }
 
   @Test
@@ -565,6 +648,7 @@ public class PALDirectoryTest {
     // register them
     for (InterceptRequest interceptRequest : requests) {
       palDirectory.registerInterceptAsync(interceptRequest);
+      addInterceptRequestToCreated(peerUuid, interceptRequest.getUuid());
     }
 
     // wait for all listener events

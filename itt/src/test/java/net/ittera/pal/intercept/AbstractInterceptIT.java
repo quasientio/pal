@@ -122,7 +122,7 @@ public class AbstractInterceptIT implements ExecMessageAssertions {
     final String palDirectoryURL = System.getenv("PAL_DIRECTORY");
     if (palDirectoryURL == null) {
       throw new RuntimeException(
-          "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2181)");
+          "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2379)");
     }
     final boolean withCaching = false;
     final boolean syncConnect = false;

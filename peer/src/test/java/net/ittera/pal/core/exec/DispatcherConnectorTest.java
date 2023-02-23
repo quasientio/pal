@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -43,6 +44,7 @@ import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.messages.SessionCmdMsg;
 import net.ittera.pal.core.messages.SessionReplyMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
+import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
@@ -52,6 +54,7 @@ import net.ittera.pal.messages.types.SessionStatusType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -173,12 +176,16 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   private DirectoryConnectionProvider directoryConnectionProvider;
   private List<ExecMessage> messagesToMatchReceived;
 
+  private PALDirectory mockDirectory;
+
   @Before
   public void setup() throws Exception {
     this.WRITE_AHEAD_HEADER = msgBuilder.buildWriteAheadHeader(peerUuid);
     this.context = createContext();
     this.execService = Executors.newCachedThreadPool();
-    directoryConnectionProvider = new DirectoryConnectionProvider(ETCD_ENDPOINT);
+    this.mockDirectory = mock(PALDirectory.class);
+    directoryConnectionProvider = mock(DirectoryConnectionProvider.class);
+    when(directoryConnectionProvider.get()).thenReturn(Optional.of(mockDirectory));
     messagesToMatchReceived = new ArrayList<>();
     interceptMatcher = mock(InterceptMatcher.class);
     when(interceptMatcher.getMatchingIntercepts(any(), any()))
@@ -265,12 +272,12 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     logger.trace("leaving sendExecMessage");
   }
 
-  //  @Test
+  @Test
   public void sendExecMessage() throws Exception {
     sendExecMessage(true, true);
   }
 
-  //  @Test
+  @Test
   public void sendExecMessageNoPublishing() throws Exception {
     sendExecMessage(false, true);
   }
@@ -313,12 +320,12 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     logger.trace("leaving sendExecMessageMany");
   }
 
-  //  @Test
+  @Test
   public void sendExecMessageMany() throws Exception {
     sendExecMessageMany(true, true);
   }
 
-  //  @Test
+  @Test
   public void sendExecMessageManyNoPublishing() throws Exception {
     sendExecMessageMany(false, true);
   }
@@ -350,17 +357,17 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     logger.debug("test writeAhead done (publishing={})", withPublishing);
   }
 
-  //  @Test
+  @Test
   public void writeAhead() throws Exception {
     writeAhead(true, true);
   }
 
-  //  @Test
+  @Test
   public void writeAheadNoPublishing() throws Exception {
     writeAhead(false, true);
   }
 
-  //  @Test
+  @Test
   public void sendMessagesToSessionService() throws Exception {
     logger.trace("entering sendMessageToSessionService");
     this.dispatcherConnector = initDispatcherConnector(false, false);

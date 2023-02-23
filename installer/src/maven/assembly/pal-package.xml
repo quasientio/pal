@@ -40,10 +40,14 @@
       <includes>
         <include>pal</include>
         <include>dpal</include>
-        <include>start_zk</include>
-        <include>start_zk_and_kafka</include>
-        <include>stop_zk</include>
-        <include>stop_zk_and_kafka</include>
+        <include>start_etcd</include>
+        <include>setup_kafka</include>
+        <include>start_kafka</include>
+        <include>dstart_etcd</include>
+        <include>dstart_kafka</include>
+        <include>dstop_etcd</include>
+        <include>dstart_etcd_and_kafka</include>
+        <include>dstop_etcd_and_kafka</include>
       </includes>
     </fileSet>
   </fileSets>

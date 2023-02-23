@@ -45,7 +45,7 @@ public class DirectoryConnectionProvider implements Provider<Optional<PALDirecto
 
   @Inject
   public DirectoryConnectionProvider(@Named("paldir_url") String connectionString) {
-    this(connectionString, null, true, false);
+    this(connectionString, null, false, false);
   }
 
   public DirectoryConnectionProvider(

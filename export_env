@@ -6,7 +6,7 @@ export JMX_PORT=9012
 # The following properties can be given as args to the `pal` command.
 # In production you'll probably want these in a file.
 #
-export PAL_DIRECTORY=localhost:2181
+export PAL_DIRECTORY=localhost:2379
 # export CLASSPATH=
 # export PEER_NAME=
 # export PEER_UUID=

@@ -1,0 +1,49 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ITTs" type="JUnit" factoryName="JUnit">
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="net.ittera.pal.rmi.explicit.*" />
+        <option name="ENABLED" value="false" />
+      </pattern>
+      <pattern>
+        <option name="PATTERN" value="net.ittera.pal.cxn.*" />
+        <option name="ENABLED" value="false" />
+      </pattern>
+      <pattern>
+        <option name="PATTERN" value="net.ittera.pal.intercept.*" />
+        <option name="ENABLED" value="false" />
+      </pattern>
+    </extension>
+    <option name="PACKAGE_NAME" value="net.ittera.pal.rmi.explicit" />
+    <option name="MAIN_CLASS_NAME" value="" />
+    <option name="METHOD_NAME" value="" />
+    <option name="TEST_OBJECT" value="pattern" />
+    <option name="TEST_SEARCH_SCOPE">
+      <value defaultName="wholeProject" />
+    </option>
+    <envs>
+      <env name="PAL_DIRECTORY" value="localhost:2379" />
+    </envs>
+    <patterns>
+      <pattern testClass="net.ittera.pal.rmi.explicit.ConstructorMessageIT" />
+      <pattern testClass="net.ittera.pal.rmi.explicit.GetArrayVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rmi.explicit.GetClassVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rmi.explicit.GetInstanceVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rmi.explicit.NonVoidClassMethodMessageIT" />
+      <pattern testClass="net.ittera.pal.rmi.explicit.NonVoidInstanceMethodMessageIT" />
+      <pattern testClass="net.ittera.pal.rmi.explicit.SetClassVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rmi.explicit.SetInstanceVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rmi.explicit.VoidClassMethodMessageIT" />
+      <pattern testClass="net.ittera.pal.rmi.explicit.VoidInstanceMethodMessageIT" />
+      <pattern testClass="net.ittera.pal.rmi.PeerSessionIT" />
+      <pattern testClass="net.ittera.pal.cxn.DirectoryConnectionProviderIT" />
+      <pattern testClass="net.ittera.pal.cxn.EtcdIT" />
+      <pattern testClass="net.ittera.pal.cxn.PALDirectoryIT" />
+      <pattern testClass="net.ittera.pal.cxn.ThinPeerIT" />
+      <pattern testClass="net.ittera.pal.intercept.MethodInterceptIT" />
+    </patterns>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
