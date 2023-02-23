@@ -124,10 +124,8 @@ public class AbstractInterceptIT implements ExecMessageAssertions {
       throw new RuntimeException(
           "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2379)");
     }
-    final boolean withCaching = false;
-    final boolean syncConnect = false;
     DirectoryConnectionProvider directoryConnectionProvider =
-        new DirectoryConnectionProvider(palDirectoryURL, null, withCaching, syncConnect);
+        new DirectoryConnectionProvider(palDirectoryURL, null);
     this.palDirectory =
         directoryConnectionProvider
             .get()

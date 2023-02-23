@@ -41,8 +41,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -78,20 +76,17 @@ public class PALDirectory implements AutoCloseable {
   private final KV kvClient;
   private final Watch watchClient;
   private final String namespace;
-  private Map<Object, Object> peersCache;
-  private Map<Object, Object> interceptsCache;
-  private ExecutorService cachingExecutor;
   private final List<InterceptNodeListener> interceptListeners = new ArrayList<>();
 
   public PALDirectory(String connectionString) {
-    this(connectionString, null, false);
+    this(connectionString, null);
   }
 
   public PALDirectory(List<URI> endpoints) {
-    this(endpoints.stream().map(URI::toString).collect(Collectors.joining(",")), null, false);
+    this(endpoints.stream().map(URI::toString).collect(Collectors.joining(",")), null);
   }
 
-  public PALDirectory(String endpoints, String namespace, boolean withCaching) {
+  public PALDirectory(String endpoints, String namespace) {
     this.directoryUrl = endpoints;
     logger.info("Will connect to etcd endpoints: {}", endpoints);
     this.client =
@@ -115,26 +110,15 @@ public class PALDirectory implements AutoCloseable {
         getInterceptsPathKey(),
         WatchOption.newBuilder().isPrefix(true).build(),
         this::interceptEventConsumer);
-
-    // build caches
-    if (withCaching) {
-      logger.warn("Caching is disabled (missing etcd implementation)");
-      throw new UnsupportedOperationException("Caching not implemented");
-    }
   }
 
   // <editor-fold desc="Peer methods">
   public boolean peerExists(UUID peerUuid) throws ExecutionException, InterruptedException {
-    if (peersCache == null) {
-      return kvClient
-              .get(ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset())))
-              .get()
-              .getCount()
-          != 0;
-    } else {
-      // TODO
-      throw new UnsupportedOperationException("Caching not implemented");
-    }
+    return kvClient
+            .get(ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset())))
+            .get()
+            .getCount()
+        != 0;
   }
 
   public PutResponse registerPeer(UUID peerUuid, Properties peerProperties)
@@ -181,7 +165,7 @@ public class PALDirectory implements AutoCloseable {
       return null;
     }
 
-    final Properties props = getProperties(getPeerPath(peerUuid), peersCache);
+    final Properties props = getProperties(getPeerPath(peerUuid));
     final PeerInfo peerInfo = new PeerInfo(peerUuid);
     // set bean fields reflectively
     Stream.of("name", "reqAddress", "pubAddress", "jmxAddress")
@@ -361,15 +345,11 @@ public class PALDirectory implements AutoCloseable {
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
     final ByteSequence peerInterceptsPathKey =
         ByteSequence.from(peerInterceptsPath.getBytes(getEncodingCharset()));
-    if (interceptsCache == null) {
-      final GetResponse response =
-          kvClient.get(peerInterceptsPathKey, GetOption.newBuilder().isPrefix(true).build()).get();
-      for (KeyValue kv : response.getKvs()) {
-        final String interceptPath = kv.getKey().toString(getEncodingCharset());
-        interceptRequests.add(getInterceptRequest(interceptPath));
-      }
-    } else {
-      throw new UnsupportedOperationException("Caching not implemented");
+    final GetResponse response =
+        kvClient.get(peerInterceptsPathKey, GetOption.newBuilder().isPrefix(true).build()).get();
+    for (KeyValue kv : response.getKvs()) {
+      final String interceptPath = kv.getKey().toString(getEncodingCharset());
+      interceptRequests.add(getInterceptRequest(interceptPath));
     }
     return interceptRequests;
   }
@@ -377,20 +357,16 @@ public class PALDirectory implements AutoCloseable {
   public InterceptRequest getInterceptRequest(String interceptPath)
       throws ExecutionException, InterruptedException {
     final byte[] data;
-    if (interceptsCache == null) {
-      List<KeyValue> kvs =
-          kvClient
-              .get(ByteSequence.from(interceptPath.getBytes(getEncodingCharset())))
-              .get()
-              .getKvs();
-      if (kvs.size() == 0) {
-        return null;
-      }
-      data = kvs.get(0).getValue().getBytes();
-      return InterceptRequest.fromBytes(data, getEncodingCharset());
-    } else {
-      throw new UnsupportedOperationException("Caching not implemented");
+    List<KeyValue> kvs =
+        kvClient
+            .get(ByteSequence.from(interceptPath.getBytes(getEncodingCharset())))
+            .get()
+            .getKvs();
+    if (kvs.size() == 0) {
+      return null;
     }
+    data = kvs.get(0).getValue().getBytes();
+    return InterceptRequest.fromBytes(data, getEncodingCharset());
   }
 
   public void addInterceptNodeListener(InterceptNodeListener listener) {
@@ -403,42 +379,34 @@ public class PALDirectory implements AutoCloseable {
   public DeleteResponse unregisterPeerInterceptRequests(UUID peerUuid)
       throws ExecutionException, InterruptedException {
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
-    if (interceptsCache == null) {
-      final DeleteResponse deleteResponse =
-          kvClient
-              .delete(
-                  ByteSequence.from(peerInterceptsPath.getBytes(getEncodingCharset())),
-                  DeleteOption.newBuilder().isPrefix(true).build())
-              .get();
-      logger.info(
-          "Unregistered {} intercept request(s) for peer w/uuid: {}",
-          deleteResponse.getDeleted(),
-          peerUuid);
-      return deleteResponse;
-    } else {
-      throw new UnsupportedOperationException("Caching not implemented");
-    }
+    final DeleteResponse deleteResponse =
+        kvClient
+            .delete(
+                ByteSequence.from(peerInterceptsPath.getBytes(getEncodingCharset())),
+                DeleteOption.newBuilder().isPrefix(true).build())
+            .get();
+    logger.info(
+        "Unregistered {} intercept request(s) for peer w/uuid: {}",
+        deleteResponse.getDeleted(),
+        peerUuid);
+    return deleteResponse;
   }
 
   public DeleteResponse unregisterPeerInterceptRequest(UUID peerUuid, UUID interceptRequestUuid)
       throws ExecutionException, InterruptedException {
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
-    if (interceptsCache == null) {
-      final DeleteResponse deleteResponse =
-          kvClient
-              .delete(
-                  ByteSequence.from(
-                      format("%s/%s", peerInterceptsPath, interceptRequestUuid.toString())
-                          .getBytes(getEncodingCharset())))
-              .get();
-      logger.info(
-          "Unregistered intercept request w/uuid: {} for peer w/uuid: {}",
-          interceptRequestUuid,
-          peerUuid);
-      return deleteResponse;
-    } else {
-      throw new UnsupportedOperationException("Caching not implemented");
-    }
+    final DeleteResponse deleteResponse =
+        kvClient
+            .delete(
+                ByteSequence.from(
+                    format("%s/%s", peerInterceptsPath, interceptRequestUuid.toString())
+                        .getBytes(getEncodingCharset())))
+            .get();
+    logger.info(
+        "Unregistered intercept request w/uuid: {} for peer w/uuid: {}",
+        interceptRequestUuid,
+        peerUuid);
+    return deleteResponse;
   }
 
   // </editor-fold>
@@ -499,7 +467,7 @@ public class PALDirectory implements AutoCloseable {
     if (!logExists(logName)) {
       return null;
     }
-    final Properties props = getProperties(getLogPath(logName), null);
+    final Properties props = getProperties(getLogPath(logName));
     final UUID uuid = UUID.fromString(props.getProperty("uuid"));
     final String logServers = props.getProperty("servers");
 
@@ -643,20 +611,6 @@ public class PALDirectory implements AutoCloseable {
 
   // <editor-fold desc="Misc methods">
   public void close() {
-    if (cachingExecutor != null) {
-      cachingExecutor.shutdown();
-      try {
-        cachingExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
-      } catch (InterruptedException e) {
-        logger.warn("Error waiting for caching executor service to terminate", e);
-      }
-    }
-    if (peersCache != null) {
-      peersCache.clear();
-    }
-    if (interceptsCache != null) {
-      interceptsCache.clear();
-    }
     logger.info("Closing etcd client to {}", directoryUrl);
     kvClient.close();
     client.close();
@@ -673,15 +627,10 @@ public class PALDirectory implements AutoCloseable {
     }
   }
 
-  private Properties getProperties(String node, Map<Object, Object> cache)
-      throws ExecutionException, InterruptedException {
+  private Properties getProperties(String node) throws ExecutionException, InterruptedException {
     final byte[] data;
-    if (cache != null) {
-      throw new UnsupportedOperationException("Caching not implemented");
-    } else {
-      final ByteSequence dataKey = ByteSequence.from(node.getBytes(getEncodingCharset()));
-      data = kvClient.get(dataKey).get().getKvs().get(0).getValue().getBytes();
-    }
+    final ByteSequence dataKey = ByteSequence.from(node.getBytes(getEncodingCharset()));
+    data = kvClient.get(dataKey).get().getKvs().get(0).getValue().getBytes();
     Properties properties = new Properties();
     if (data != null) {
       String nodeData = new String(data, getEncodingCharset());

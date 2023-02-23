@@ -40,16 +40,12 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior TODO: Tests should not use
- * the cache -> sleep()'s introduce brittleness.
- */
+/** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior */
 public class PALDirectoryIT {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
 
   private static final String ETCD_ENDPOINT = "ip://localhost:2379";
-  private static final int CACHE_UPDATE_DELAY = 10;
   private static final String KAFKA_SERVERS = "kafka1:9092,kafka2:9094";
 
   private static final Set<UUID> createdPeers = new HashSet<>();
@@ -114,7 +110,6 @@ public class PALDirectoryIT {
 
     // register
     palDirectory.registerPeer(peerUuid, peerProps);
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // verify
@@ -140,7 +135,6 @@ public class PALDirectoryIT {
     peerProps.put("jmxAddress", "localhost:9012");
     peerProps.put("name", peerName);
     palDirectory.registerPeer(peerUuid, peerProps);
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // pre-assertions
@@ -175,7 +169,6 @@ public class PALDirectoryIT {
     // create
     UUID peerUuid = UUID.randomUUID();
     palDirectory.registerPeer(peerUuid, peerProps);
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // pre-assertions
@@ -183,7 +176,6 @@ public class PALDirectoryIT {
 
     // unregister
     palDirectory.unregisterPeer(peerUuid);
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
 
     // verify
     assertThat(palDirectory.peerExists(peerUuid), is(false));
@@ -200,7 +192,6 @@ public class PALDirectoryIT {
       Properties peerProps = new Properties();
       peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
       palDirectory.registerPeer(peerUuid, peerProps);
-      Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
       createdPeers.add(peerUuid);
     }
 
@@ -214,8 +205,6 @@ public class PALDirectoryIT {
 
     // unregister all - exclude pre-existing
     palDirectory.unregisterAllPeersWithExcludes(preExistingPeers);
-
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
 
     assertThat(palDirectory.getAllPeers().size(), is(preExistingPeers.size()));
   }
@@ -241,7 +230,6 @@ public class PALDirectoryIT {
       Properties peerProps = new Properties();
       peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
       palDirectory.registerPeer(peerUuid, peerProps);
-      Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
       createdPeers.add(peerUuid);
     }
 
@@ -487,7 +475,6 @@ public class PALDirectoryIT {
     Properties peerProps = new Properties();
     peerProps.put("name", peerName);
     palDirectory.registerPeer(peerUuid, peerProps);
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // pre-assertions
@@ -510,7 +497,6 @@ public class PALDirectoryIT {
     palDirectory.registerInterceptAsync(req).get();
     addInterceptRequestToCreated(peerUuid, req.getUuid());
 
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(1));
   }
 
@@ -522,7 +508,6 @@ public class PALDirectoryIT {
     Properties peerProps = new Properties();
     peerProps.put("name", peerName);
     palDirectory.registerPeer(peerUuid, peerProps);
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // pre-assertions
@@ -544,7 +529,6 @@ public class PALDirectoryIT {
     // register it
     palDirectory.registerIntercept(req);
     addInterceptRequestToCreated(peerUuid, req.getUuid());
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(1));
   }
 
@@ -555,7 +539,6 @@ public class PALDirectoryIT {
     Properties peerProps = new Properties();
     peerProps.put("name", peerName);
     palDirectory.registerPeer(peerUuid, peerProps);
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // pre-assertions
@@ -577,12 +560,10 @@ public class PALDirectoryIT {
     // register it
     palDirectory.registerIntercept(req);
     addInterceptRequestToCreated(peerUuid, req.getUuid());
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(1));
 
     // now unregister
     palDirectory.unregisterPeerInterceptRequest(peerUuid, req.getUuid());
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(0));
   }
 
@@ -594,7 +575,6 @@ public class PALDirectoryIT {
     Properties peerProps = new Properties();
     peerProps.put("name", peerName);
     palDirectory.registerPeer(peerUuid, peerProps);
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // pre-assertions
@@ -611,7 +591,6 @@ public class PALDirectoryIT {
     Properties peerProps = new Properties();
     peerProps.put("name", peerName);
     palDirectory.registerPeer(peerUuid, peerProps);
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // pre-assertions
@@ -636,8 +615,6 @@ public class PALDirectoryIT {
     final CountDownLatch latch = new CountDownLatch(totalPeerIntercepts);
 
     // set listener
-    // TODO : make this conditional, since we may be testing WITHOUT CACHING
-    // if no caching, then call 'registerInterceptAsync' with a callback object
     palDirectory.addInterceptNodeListener(
         event -> {
           if (event.getType().equals(Type.INTERCEPT_ADDED)) {
@@ -666,7 +643,6 @@ public class PALDirectoryIT {
     Properties peerProps = new Properties();
     peerProps.put("name", peerName);
     palDirectory.registerPeer(peerUuid, peerProps);
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     createdPeers.add(peerUuid);
 
     // pre-assertions
@@ -687,12 +663,10 @@ public class PALDirectoryIT {
                   "println", Arrays.asList("java.lang.String", "java.lang.Integer"))));
     }
 
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(totalPeerIntercepts));
 
     // unregister them
     palDirectory.unregisterPeerInterceptRequests(peerUuid);
-    Thread.sleep(CACHE_UPDATE_DELAY); // allow some time for cache to get updated
     assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(0));
   }
 }

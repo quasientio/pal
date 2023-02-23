@@ -43,10 +43,8 @@ public abstract class AbstractPALSubcommand extends AbstractTool implements Call
   }
 
   protected final void initializeDirectoryConnectionProvider(String paldirConnectionString) {
-    final boolean withCaching = false;
-    final boolean syncConnect = false;
     this.directoryConnectionProvider =
-        new DirectoryConnectionProvider(paldirConnectionString, null, withCaching, syncConnect);
+        new DirectoryConnectionProvider(paldirConnectionString, null);
   }
 
   protected static boolean optionGiven(String option) {
