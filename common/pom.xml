@@ -27,17 +27,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <artifactId>maven-clean-plugin</artifactId>
-                <version>${maven.plugin.clean}</version>
-                <configuration>
-                    <filesets>
-                        <fileset>
-                            <directory>${logs.dir}</directory>
-                        </fileset>
-                    </filesets>
-                </configuration>
-            </plugin>
             <!-- coverage -->
             <plugin>
                 <groupId>org.jacoco</groupId>

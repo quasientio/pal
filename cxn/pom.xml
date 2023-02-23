@@ -29,18 +29,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- extra clean tasks -->
-            <plugin>
-                <version>${maven.plugin.clean}</version>
-                <artifactId>maven-clean-plugin</artifactId>
-                <configuration>
-                    <filesets>
-                        <fileset>
-                            <directory>logs</directory>
-                        </fileset>
-                    </filesets>
-                </configuration>
-            </plugin>
             <!-- coverage -->
             <plugin>
                 <groupId>org.jacoco</groupId>
