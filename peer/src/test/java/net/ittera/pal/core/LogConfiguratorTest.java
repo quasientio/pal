@@ -152,7 +152,7 @@ public class LogConfiguratorTest {
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
-    verify(mockedPalDirectory, never()).registerLog(inLogName, KAFKA_SERVERS);
+    verify(mockedPalDirectory, never()).registerLog(any(LogInfo.class));
     verify(mockedPalDirectory, never()).newLog(any(), any());
     verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, inLogOffset);
     verify(mockedLogWriter)

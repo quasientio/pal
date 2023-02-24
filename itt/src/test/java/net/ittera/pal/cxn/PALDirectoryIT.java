@@ -100,85 +100,75 @@ public class PALDirectoryIT {
 
   @Test
   public void registerPeer_newPeer_peerCreated() throws Exception {
-
-    UUID peerUuid = UUID.randomUUID();
-    Properties peerProps = new Properties();
-    peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setReqAddress("tcp://127.0.0.1:5671");
 
     // pre-assertions
-    assertThat(palDirectory.peerExists(peerUuid), is(false));
+    assertThat(palDirectory.peerExists(peerInfo.getUuid()), is(false));
 
     // register
-    palDirectory.registerPeer(peerUuid, peerProps);
-    createdPeers.add(peerUuid);
+    palDirectory.registerPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
     // verify
-    assertThat(palDirectory.peerExists(peerUuid), is(true));
+    assertThat(palDirectory.peerExists(peerInfo.getUuid()), is(true));
   }
 
   @Test
   public void getPeerInfo_noSuchPeer_null() throws Exception {
-
     UUID peerUuid = UUID.randomUUID();
-
     assertThat(palDirectory.peerExists(peerUuid), is(false));
     assertThat(palDirectory.getPeerInfo(peerUuid), is(nullValue()));
   }
 
   @Test
   public void getPeerInfo_peerExists_peerInfo() throws Exception {
-    UUID peerUuid = UUID.randomUUID();
-    String peerName = "testing peer";
-    Properties peerProps = new Properties();
-    peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
-    peerProps.put("pubAddress", "tcp://localhost:7777");
-    peerProps.put("jmxAddress", "localhost:9012");
-    peerProps.put("name", peerName);
-    palDirectory.registerPeer(peerUuid, peerProps);
-    createdPeers.add(peerUuid);
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
+    peerInfo.setReqAddress("tcp://127.0.0.1:5671");
+    peerInfo.setPubAddress("tcp://localhost:7777");
+    peerInfo.setJmxAddress("localhost:9012");
+    palDirectory.registerPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
-    assertThat(palDirectory.peerExists(peerUuid), is(true));
+    assertThat(palDirectory.peerExists(peerInfo.getUuid()), is(true));
 
-    PeerInfo peerInfo = palDirectory.getPeerInfo(peerUuid);
+    PeerInfo retrievedPeerInfo = palDirectory.getPeerInfo(peerInfo.getUuid());
 
     // verify
-    assertThat(peerInfo.getUuid(), is(peerUuid));
-    assertThat(peerInfo.getName(), is(peerName));
-    assertThat(peerInfo.getReqAddress(), is(notNullValue()));
-    assertThat(peerInfo.getPubAddress(), is(notNullValue()));
-    assertThat(peerInfo.getJmxAddress(), is(notNullValue()));
-    assertThat(peerInfo.getReqAddress(), is(peerProps.get("reqAddress")));
-    assertThat(peerInfo.getPubAddress(), is(peerProps.get("pubAddress")));
-    assertThat(peerInfo.getJmxAddress(), is(peerProps.get("jmxAddress")));
+    assertThat(retrievedPeerInfo.getUuid(), is(peerInfo.getUuid()));
+    assertThat(retrievedPeerInfo.getName(), is(peerInfo.getName()));
+    assertThat(retrievedPeerInfo.getReqAddress(), is(notNullValue()));
+    assertThat(retrievedPeerInfo.getPubAddress(), is(notNullValue()));
+    assertThat(retrievedPeerInfo.getJmxAddress(), is(notNullValue()));
+    assertThat(retrievedPeerInfo.getReqAddress(), is(peerInfo.getReqAddress()));
+    assertThat(retrievedPeerInfo.getPubAddress(), is(peerInfo.getPubAddress()));
+    assertThat(retrievedPeerInfo.getJmxAddress(), is(peerInfo.getJmxAddress()));
 
     // verify ctime and mtime (which are in UTC) are within last second
     OffsetDateTime now = OffsetDateTime.now();
-    assertThat(peerInfo.getCTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
-    assertThat(peerInfo.getCTime().isBefore(now), is(true));
-    assertThat(peerInfo.getMTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
-    assertThat(peerInfo.getMTime().isBefore(now), is(true));
+    assertThat(retrievedPeerInfo.getCTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
+    assertThat(retrievedPeerInfo.getCTime().isBefore(now), is(true));
+    assertThat(retrievedPeerInfo.getMTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
+    assertThat(retrievedPeerInfo.getMTime().isBefore(now), is(true));
   }
 
   @Test
   public void unregisterPeer_existingPeer_peerDeleted() throws Exception {
-
-    Properties peerProps = new Properties();
-    peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
-
     // create
-    UUID peerUuid = UUID.randomUUID();
-    palDirectory.registerPeer(peerUuid, peerProps);
-    createdPeers.add(peerUuid);
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setReqAddress("tcp://127.0.0.1:5671");
+    palDirectory.registerPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
-    assertThat(palDirectory.peerExists(peerUuid), is(true));
+    assertThat(palDirectory.peerExists(peerInfo.getUuid()), is(true));
 
     // unregister
-    palDirectory.unregisterPeer(peerUuid);
+    palDirectory.unregisterPeer(peerInfo.getUuid());
 
     // verify
-    assertThat(palDirectory.peerExists(peerUuid), is(false));
+    assertThat(palDirectory.peerExists(peerInfo.getUuid()), is(false));
   }
 
   @Test
@@ -188,11 +178,10 @@ public class PALDirectoryIT {
     int peersToCreate = 5;
     for (int i = 0; i < peersToCreate; i++) {
       // create a peer
-      UUID peerUuid = UUID.randomUUID();
-      Properties peerProps = new Properties();
-      peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
-      palDirectory.registerPeer(peerUuid, peerProps);
-      createdPeers.add(peerUuid);
+      final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+      peerInfo.setReqAddress("tcp://127.0.0.1:5671");
+      palDirectory.registerPeer(peerInfo);
+      createdPeers.add(peerInfo.getUuid());
     }
 
     // verify
@@ -226,11 +215,10 @@ public class PALDirectoryIT {
     int peersToCreate = 2;
     for (int i = 0; i < peersToCreate; i++) {
       // create a peer
-      UUID peerUuid = UUID.randomUUID();
-      Properties peerProps = new Properties();
-      peerProps.put("reqAddress", "tcp://127.0.0.1:5671");
-      palDirectory.registerPeer(peerUuid, peerProps);
-      createdPeers.add(peerUuid);
+      final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+      peerInfo.setReqAddress("tcp://127.0.0.1:5671");
+      palDirectory.registerPeer(peerInfo);
+      createdPeers.add(peerInfo.getUuid());
     }
 
     // verify
@@ -274,15 +262,15 @@ public class PALDirectoryIT {
     assertThat(palDirectory.logExists(logName), is(false));
 
     // register
-    LogInfo newLogInfo = palDirectory.registerLog(logName, KAFKA_SERVERS);
-    String createdLogName = newLogInfo.getName();
-    createdLogs.add(createdLogName);
+    LogInfo newLogInfo = new LogInfo(logName, KAFKA_SERVERS);
+    palDirectory.registerLog(newLogInfo);
+    createdLogs.add(logName);
 
     // verify
-    assertThat(logName, is(createdLogName));
-    assertThat(newLogInfo.getBootstrapServers(), notNullValue());
-    assertThat(palDirectory.logExists(createdLogName), is(true));
-    assertThat(newLogInfo.getUuid(), notNullValue());
+    LogInfo retrievedLogInfo = palDirectory.getLogInfo(logName);
+    assertThat(palDirectory.logExists(logName), is(true));
+    assertThat(retrievedLogInfo, is(newLogInfo));
+    assertThat(retrievedLogInfo.getUuid(), notNullValue());
   }
 
   @Test
@@ -297,24 +285,23 @@ public class PALDirectoryIT {
     String logName = "test.topic";
 
     // register logInfo
-    LogInfo newLogInfo = palDirectory.registerLog(logName, KAFKA_SERVERS);
-    String createdLogName = newLogInfo.getName();
-    createdLogs.add(createdLogName);
-
-    // pre-assertions
+    LogInfo newLogInfo = new LogInfo(logName, KAFKA_SERVERS);
+    palDirectory.registerLog(newLogInfo);
+    createdLogs.add(logName);
     assertThat(palDirectory.logExists(logName), is(true));
 
-    LogInfo returnedLogInfo = palDirectory.getLogInfo(logName);
+    LogInfo retrievedLogInfo = palDirectory.getLogInfo(logName);
 
     // verify returned logInfo
-    assertThat(returnedLogInfo, is(newLogInfo));
+    assertThat(retrievedLogInfo, is(newLogInfo));
+    assertThat(retrievedLogInfo.getUuid(), notNullValue());
 
     // verify ctime and mtime (which are in UTC) are within last second
     OffsetDateTime now = OffsetDateTime.now();
-    assertThat(returnedLogInfo.getCTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
-    assertThat(returnedLogInfo.getCTime().isBefore(now), is(true));
-    assertThat(returnedLogInfo.getMTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
-    assertThat(returnedLogInfo.getMTime().isBefore(now), is(true));
+    assertThat(retrievedLogInfo.getCTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
+    assertThat(retrievedLogInfo.getCTime().isBefore(now), is(true));
+    assertThat(retrievedLogInfo.getMTime().isAfter(now.minus(1, ChronoUnit.SECONDS)), is(true));
+    assertThat(retrievedLogInfo.getMTime().isBefore(now), is(true));
   }
 
   @Test
@@ -470,22 +457,19 @@ public class PALDirectoryIT {
   @Test
   public void registerInterceptAsync_peerExists_registered() throws Exception {
     // create peer
-    UUID peerUuid = UUID.randomUUID();
-    String peerName = "testing peer";
-    Properties peerProps = new Properties();
-    peerProps.put("name", peerName);
-    palDirectory.registerPeer(peerUuid, peerProps);
-    createdPeers.add(peerUuid);
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
+    palDirectory.registerPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
-    assertThat(palDirectory.peerExists(peerUuid), is(true));
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(0));
+    assertThat(palDirectory.peerExists(peerInfo.getUuid()), is(true));
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size(), is(0));
 
     // create intercept request
     InterceptRequest req =
         new InterceptRequest<>(
             UUID.randomUUID(),
-            peerUuid,
+            peerInfo.getUuid(),
             InterceptType.BEFORE,
             "java.io.PrintStream",
             "org.package.Callback",
@@ -495,30 +479,27 @@ public class PALDirectoryIT {
 
     // register it
     palDirectory.registerInterceptAsync(req).get();
-    addInterceptRequestToCreated(peerUuid, req.getUuid());
+    addInterceptRequestToCreated(peerInfo.getUuid(), req.getUuid());
 
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(1));
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size(), is(1));
   }
 
   @Test
   public void registerIntercept_peerExists_registered() throws Exception {
     // create peer
-    UUID peerUuid = UUID.randomUUID();
-    String peerName = "testing peer";
-    Properties peerProps = new Properties();
-    peerProps.put("name", peerName);
-    palDirectory.registerPeer(peerUuid, peerProps);
-    createdPeers.add(peerUuid);
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
+    palDirectory.registerPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
-    assertThat(palDirectory.peerExists(peerUuid), is(true));
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(0));
+    assertThat(palDirectory.peerExists(peerInfo.getUuid()), is(true));
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size(), is(0));
 
     // create intercept request
     InterceptRequest req =
         new InterceptRequest<>(
             UUID.randomUUID(),
-            peerUuid,
+            peerInfo.getUuid(),
             InterceptType.BEFORE,
             "java.io.PrintStream",
             "org.package.Callback",
@@ -528,28 +509,25 @@ public class PALDirectoryIT {
 
     // register it
     palDirectory.registerIntercept(req);
-    addInterceptRequestToCreated(peerUuid, req.getUuid());
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(1));
+    addInterceptRequestToCreated(peerInfo.getUuid(), req.getUuid());
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size(), is(1));
   }
 
   public void unregisterIntercept_interceptExists_unregistered() throws Exception {
     // create peer
-    UUID peerUuid = UUID.randomUUID();
-    String peerName = "testing peer";
-    Properties peerProps = new Properties();
-    peerProps.put("name", peerName);
-    palDirectory.registerPeer(peerUuid, peerProps);
-    createdPeers.add(peerUuid);
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
+    palDirectory.registerPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
-    assertThat(palDirectory.peerExists(peerUuid), is(true));
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(0));
+    assertThat(palDirectory.peerExists(peerInfo.getUuid()), is(true));
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size(), is(0));
 
     // create intercept request
     InterceptRequest req =
         new InterceptRequest<>(
             UUID.randomUUID(),
-            peerUuid,
+            peerInfo.getUuid(),
             InterceptType.BEFORE,
             "java.io.PrintStream",
             "org.package.Callback",
@@ -559,43 +537,36 @@ public class PALDirectoryIT {
 
     // register it
     palDirectory.registerIntercept(req);
-    addInterceptRequestToCreated(peerUuid, req.getUuid());
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(1));
+    addInterceptRequestToCreated(peerInfo.getUuid(), req.getUuid());
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size(), is(1));
 
     // now unregister
-    palDirectory.unregisterPeerInterceptRequest(peerUuid, req.getUuid());
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(0));
+    palDirectory.unregisterPeerInterceptRequest(peerInfo.getUuid(), req.getUuid());
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size(), is(0));
   }
 
   @Test
   public void getPeerInterceptRequests_noRequests_emptyList() throws Exception {
-    // create peer
-    UUID peerUuid = UUID.randomUUID();
-    String peerName = "testing peer";
-    Properties peerProps = new Properties();
-    peerProps.put("name", peerName);
-    palDirectory.registerPeer(peerUuid, peerProps);
-    createdPeers.add(peerUuid);
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
+    palDirectory.registerPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
-    assertThat(palDirectory.peerExists(peerUuid), is(true));
+    assertThat(palDirectory.peerExists(peerInfo.getUuid()), is(true));
 
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid), is(empty()));
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()), is(empty()));
   }
 
   @Test
   public void getPeerInterceptRequests_requestsExist_requestList() throws Exception {
     // create peer
-    UUID peerUuid = UUID.randomUUID();
-    String peerName = "testing peer";
-    Properties peerProps = new Properties();
-    peerProps.put("name", peerName);
-    palDirectory.registerPeer(peerUuid, peerProps);
-    createdPeers.add(peerUuid);
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
+    palDirectory.registerPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
-    assertThat(palDirectory.peerExists(peerUuid), is(true));
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid), is(empty()));
+    assertThat(palDirectory.peerExists(peerInfo.getUuid()), is(true));
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()), is(empty()));
 
     // create 2 intercept requests
     Set<InterceptRequest> requests = new HashSet<>();
@@ -604,7 +575,7 @@ public class PALDirectoryIT {
       requests.add(
           new InterceptRequest<>(
               UUID.randomUUID(),
-              peerUuid,
+              peerInfo.getUuid(),
               InterceptType.BEFORE,
               "java.io.PrintStream",
               "org.package.Callback",
@@ -625,28 +596,25 @@ public class PALDirectoryIT {
     // register them
     for (InterceptRequest interceptRequest : requests) {
       palDirectory.registerInterceptAsync(interceptRequest);
-      addInterceptRequestToCreated(peerUuid, interceptRequest.getUuid());
+      addInterceptRequestToCreated(peerInfo.getUuid(), interceptRequest.getUuid());
     }
 
     // wait for all listener events
     latch.await();
 
     // now retrieve and compare
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid), is(requests));
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()), is(requests));
   }
 
   @Test
   public void unregisterPeerInterceptRequests_requestsExist_unregistered() throws Exception {
     // create peer
-    UUID peerUuid = UUID.randomUUID();
-    String peerName = "testing peer";
-    Properties peerProps = new Properties();
-    peerProps.put("name", peerName);
-    palDirectory.registerPeer(peerUuid, peerProps);
-    createdPeers.add(peerUuid);
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
+    palDirectory.registerPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
 
     // pre-assertions
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(0));
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size(), is(0));
 
     // create and register some intercept requests
     final int totalPeerIntercepts = 3;
@@ -654,7 +622,7 @@ public class PALDirectoryIT {
       palDirectory.registerIntercept(
           new InterceptRequest<>(
               UUID.randomUUID(),
-              peerUuid,
+              peerInfo.getUuid(),
               InterceptType.BEFORE,
               "java.io.PrintStream",
               "org.package.Callback",
@@ -663,10 +631,11 @@ public class PALDirectoryIT {
                   "println", Arrays.asList("java.lang.String", "java.lang.Integer"))));
     }
 
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(totalPeerIntercepts));
+    assertThat(
+        palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size(), is(totalPeerIntercepts));
 
     // unregister them
-    palDirectory.unregisterPeerInterceptRequests(peerUuid);
-    assertThat(palDirectory.getPeerInterceptRequests(peerUuid).size(), is(0));
+    palDirectory.unregisterPeerInterceptRequests(peerInfo.getUuid());
+    assertThat(palDirectory.getPeerInterceptRequests(peerInfo.getUuid()).size(), is(0));
   }
 }

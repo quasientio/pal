@@ -30,7 +30,6 @@ import io.etcd.jetcd.options.GetOption;
 import io.etcd.jetcd.options.WatchOption;
 import io.etcd.jetcd.watch.WatchEvent;
 import io.etcd.jetcd.watch.WatchResponse;
-import java.lang.reflect.Field;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -46,7 +45,6 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.directory.events.InterceptEvent;
 import net.ittera.pal.common.directory.events.InterceptNodeListener;
-import net.ittera.pal.common.directory.nodes.InfoNode;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
@@ -121,58 +119,36 @@ public class PALDirectory implements AutoCloseable {
         != 0;
   }
 
-  public PutResponse registerPeer(UUID peerUuid, Properties peerProperties)
+  public PutResponse registerPeer(PeerInfo peerInfo)
       throws ExecutionException, InterruptedException {
-    if (peerExists(peerUuid)) {
-      logger.info(
-          "Skipping registration of existing peer with uuid: {} and properties: {}",
-          peerUuid,
-          peerProperties);
+    if (peerExists(peerInfo.getUuid())) {
+      logger.warn("Skipping registration of existing peer with uuid: {}", peerInfo.getUuid());
       return null;
-    } else {
-      final Instant now = Instant.now();
-      peerProperties.setProperty("ctime", String.valueOf(now.toEpochMilli()));
-      peerProperties.setProperty("mtime", String.valueOf(now.toEpochMilli()));
-      final ByteSequence peerData = propertiesToByteSequence(peerProperties);
-      final PutResponse putResponse =
-          kvClient
-              .put(
-                  ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset())), peerData)
-              .get();
-      logger.info("Registered peer with uuid: {} and properties: {}", peerUuid, peerProperties);
-      return putResponse;
     }
-  }
-
-  private static void setFieldValueUnlessNull(Object target, String fieldName, Object value) {
-    if (value != null) {
-      try {
-        Field field = PeerInfo.class.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
-        if (logger.isDebugEnabled()) {
-          logger.debug("Reflectively set field: {} with value: {}", field, value);
-        }
-      } catch (IllegalAccessException | NoSuchFieldException e) {
-        logger.error("Error setting field value in object", e);
-      }
+    final Instant now = Instant.now();
+    if (peerInfo.getCTime() == null) {
+      peerInfo.setCtime(now.toEpochMilli());
     }
+    if (peerInfo.getMTime() == null) {
+      peerInfo.setMtime(now.toEpochMilli());
+    }
+    final ByteSequence peerKey =
+        ByteSequence.from(getPeerPath(peerInfo.getUuid()).getBytes(getEncodingCharset()));
+    final ByteSequence peerData =
+        ByteSequence.from(peerInfo.toJSONString().getBytes(getEncodingCharset()));
+    final PutResponse putResponse = kvClient.put(peerKey, peerData).get();
+    logger.info("Registered peer w/uuid: {}, {}", peerInfo.getUuid(), peerInfo);
+    return putResponse;
   }
 
   public PeerInfo getPeerInfo(UUID peerUuid) throws ExecutionException, InterruptedException {
-    if (!peerExists(peerUuid)) {
+    final GetResponse getResponse =
+        kvClient.get(ByteSequence.from(getPeerPath(peerUuid).getBytes(getEncodingCharset()))).get();
+    if (getResponse.getCount() == 0) {
       logger.warn("Node for peer w/uuid: {} does not exist", peerUuid);
       return null;
     }
-
-    final Properties props = getProperties(getPeerPath(peerUuid));
-    final PeerInfo peerInfo = new PeerInfo(peerUuid);
-    // set bean fields reflectively
-    Stream.of("name", "reqAddress", "pubAddress", "jmxAddress")
-        .forEach(fldName -> setFieldValueUnlessNull(peerInfo, fldName, props.getProperty(fldName)));
-
-    fillTimeValuesFromProperties(peerInfo, props);
-    return peerInfo;
+    return PeerInfo.fromJSON(getResponse.getKvs().get(0).getValue().toString(getEncodingCharset()));
   }
 
   public Set<PeerInfo> getAllPeers() throws ExecutionException, InterruptedException {
@@ -184,12 +160,7 @@ public class PALDirectory implements AutoCloseable {
       if (kv.getKey().equals(getPeersPathKey())) {
         continue;
       }
-      final String peerUuid =
-          Strings.stringAfterLast(kv.getKey().toString(getEncodingCharset()), "/");
-      PeerInfo peerInfo = getPeerInfo(UUID.fromString(peerUuid));
-      if (peerInfo != null) {
-        allPeers.add(peerInfo);
-      }
+      allPeers.add(PeerInfo.fromJSON(kv.getValue().toString(getEncodingCharset())));
     }
     return allPeers;
   }
@@ -236,7 +207,6 @@ public class PALDirectory implements AutoCloseable {
   // </editor-fold>
 
   // <editor-fold desc="Intercept request methods">
-
   private InterceptEvent createInterceptEvent(WatchEvent event) {
     final InterceptEvent.Type type;
     switch (event.getEventType()) {
@@ -412,68 +382,73 @@ public class PALDirectory implements AutoCloseable {
   // </editor-fold>
 
   // <editor-fold desc="Log methods">
-  public LogInfo registerLog(String logName, String logServers)
-      throws ExecutionException, InterruptedException {
-    Objects.requireNonNull(logName, logServers);
-    if (!logExists(logName)) {
-      UUID newLogUuid = UUID.randomUUID();
-      final Properties logProperties = new Properties();
-      logProperties.setProperty("uuid", newLogUuid.toString());
-      logProperties.setProperty("servers", logServers);
-      final Instant now = Instant.now();
-      logProperties.setProperty("ctime", String.valueOf(now.toEpochMilli()));
-      logProperties.setProperty("mtime", String.valueOf(now.toEpochMilli()));
-      final ByteSequence logKey =
-          ByteSequence.from(getLogPath(logName).getBytes(getEncodingCharset()));
-      kvClient.put(logKey, propertiesToByteSequence(logProperties)).get();
-      logger.info("Registered given log node: {} with uuid: {}", logName, newLogUuid);
-    } else {
-      logger.info("Skipping registration of existing log with name: {}", logName);
+  public PutResponse registerLog(LogInfo logInfo) throws ExecutionException, InterruptedException {
+    Objects.requireNonNull(logInfo, logInfo.getBootstrapServers());
+    GetResponse getResponse =
+        kvClient
+            .get(ByteSequence.from(getLogPath(logInfo.getName()).getBytes(getEncodingCharset())))
+            .get();
+    if (getResponse.getCount() != 0) {
+      logger.info("Skipping registration of existing log with name: {}", logInfo.getName());
+      return null;
     }
-    return getLogInfo(logName);
+    if (logInfo.getUuid() == null) {
+      logInfo.setUuid(UUID.randomUUID());
+    }
+    final Instant now = Instant.now();
+    if (logInfo.getCTime() == null) {
+      logInfo.setCtime(now.toEpochMilli());
+    }
+    if (logInfo.getMTime() == null) {
+      logInfo.setMtime(now.toEpochMilli());
+    }
+    final ByteSequence logKey =
+        ByteSequence.from(getLogPath(logInfo.getName()).getBytes(getEncodingCharset()));
+    final ByteSequence logData =
+        ByteSequence.from(logInfo.toJSONString().getBytes(getEncodingCharset()));
+    final PutResponse putResponse = kvClient.put(logKey, logData).get();
+    logger.info(
+        "Registered given log node: {} with uuid: {}", logInfo.getName(), logInfo.getUuid());
+    return putResponse;
   }
 
   public LogInfo newLog(String logNamePrefix, String logServers)
       throws ExecutionException, InterruptedException {
     Objects.requireNonNull(logNamePrefix, logServers);
-    final UUID newLogUuid = UUID.randomUUID();
     final LogInfo lastLogWithPrefix = getLastLogWithPrefix(logNamePrefix);
-    final String newLogName;
 
     // generate name of new log with given prefix and monotonically increasing counter
+    final String newLogName;
     if (lastLogWithPrefix == null) {
       newLogName = String.format("%s%010d", logNamePrefix, 1);
     } else {
       String lastLogIdxStr = Strings.stringAfter(lastLogWithPrefix.getName(), logNamePrefix);
       newLogName = String.format("%s%010d", logNamePrefix, Long.parseLong(lastLogIdxStr) + 1);
     }
-
-    // create the KV entry
+    // create and save new LogInfo
+    final LogInfo newLogInfo = new LogInfo(newLogName);
+    newLogInfo.setUuid(UUID.randomUUID());
+    newLogInfo.setBootstrapServers(logServers);
+    final Instant now = Instant.now();
+    newLogInfo.setCtime(now.toEpochMilli());
+    newLogInfo.setMtime(now.toEpochMilli());
     final ByteSequence newLogKey =
         ByteSequence.from(getLogPath(newLogName).getBytes(getEncodingCharset()));
-    final Properties logProperties = new Properties();
-    logProperties.setProperty("uuid", newLogUuid.toString());
-    logProperties.setProperty("servers", logServers);
-    final Instant now = Instant.now();
-    logProperties.setProperty("ctime", String.valueOf(now.toEpochMilli()));
-    logProperties.setProperty("mtime", String.valueOf(now.toEpochMilli()));
-    kvClient.put(newLogKey, propertiesToByteSequence(logProperties)).get();
-    LogInfo newLogInfo = getLogInfo(newLogName);
-    logger.info("Created new log: {} with uuid: {}", newLogName, newLogUuid);
+    final ByteSequence newLogData =
+        ByteSequence.from(newLogInfo.toJSONString().getBytes(getEncodingCharset()));
+    kvClient.put(newLogKey, newLogData).get();
+    logger.info("Created new log: {} with uuid: {}", newLogName, newLogInfo.getUuid());
     return newLogInfo;
   }
 
   public LogInfo getLogInfo(String logName) throws ExecutionException, InterruptedException {
-    if (!logExists(logName)) {
+    final GetResponse getResponse =
+        kvClient.get(ByteSequence.from(getLogPath(logName).getBytes(getEncodingCharset()))).get();
+    if (getResponse.getCount() == 0) {
+      logger.warn("Node for log w/name: {} does not exist", logName);
       return null;
     }
-    final Properties props = getProperties(getLogPath(logName));
-    final UUID uuid = UUID.fromString(props.getProperty("uuid"));
-    final String logServers = props.getProperty("servers");
-
-    final LogInfo logInfo = new LogInfo(logName, uuid, logServers);
-    fillTimeValuesFromProperties(logInfo, props);
-    return logInfo;
+    return LogInfo.fromJSON(getResponse.getKvs().get(0).getValue().toString(getEncodingCharset()));
   }
 
   public boolean logExists(String logName) throws ExecutionException, InterruptedException {
@@ -499,9 +474,7 @@ public class PALDirectory implements AutoCloseable {
             .get();
     final Set<LogInfo> logs = new TreeSet<>();
     for (KeyValue kv : getResponse.getKvs()) {
-      final String logName =
-          Strings.stringAfterLast(kv.getKey().toString(getEncodingCharset()), "/");
-      logs.add(getLogInfo(logName));
+      logs.add(LogInfo.fromJSON(kv.getValue().toString(getEncodingCharset())));
     }
     if (logger.isDebugEnabled()) {
       logger.debug("returning from getAllLogsWithPrefix: {}", logs);
@@ -518,18 +491,12 @@ public class PALDirectory implements AutoCloseable {
       if (kv.getKey().equals(getLogsPathKey())) {
         continue;
       }
-      final String logName =
-          Strings.stringAfterLast(kv.getKey().toString(getEncodingCharset()), "/");
-      allLogs.add(getLogInfo(logName));
+      allLogs.add(LogInfo.fromJSON(kv.getValue().toString(getEncodingCharset())));
     }
     if (logger.isDebugEnabled()) {
       logger.debug("returning from getAllLogs: {}", allLogs);
     }
     return allLogs;
-  }
-
-  private Set<String> getAllLogNames() throws ExecutionException, InterruptedException {
-    return getAllLogs().stream().map(LogInfo::getName).collect(Collectors.toSet());
   }
 
   public LogInfo getLastLogWithPrefix(String logNamePrefix)
@@ -566,7 +533,7 @@ public class PALDirectory implements AutoCloseable {
     if (deleteResp.getDeleted() == 1) {
       logger.info("Unregistered (i.e. deleted) log: {}", logName);
     } else {
-      logger.info("Could not unregister log with name: {}, peer does not exist!", logName);
+      logger.info("Could not unregister log with name: {}, log does not exist!", logName);
     }
     return deleteResp;
   }
@@ -618,56 +585,6 @@ public class PALDirectory implements AutoCloseable {
   // </editor-fold>
 
   // <editor-fold desc="private helpers">
-  private void fillTimeValuesFromProperties(InfoNode infoNode, Properties properties) {
-    if (properties.containsKey("ctime")) {
-      infoNode.setCtime(Instant.ofEpochMilli(Long.parseLong(properties.getProperty("ctime"))));
-    }
-    if (properties.containsKey("mtime")) {
-      infoNode.setMtime(Instant.ofEpochMilli(Long.parseLong(properties.getProperty("mtime"))));
-    }
-  }
-
-  private Properties getProperties(String node) throws ExecutionException, InterruptedException {
-    final byte[] data;
-    final ByteSequence dataKey = ByteSequence.from(node.getBytes(getEncodingCharset()));
-    data = kvClient.get(dataKey).get().getKvs().get(0).getValue().getBytes();
-    Properties properties = new Properties();
-    if (data != null) {
-      String nodeData = new String(data, getEncodingCharset());
-      String[] lines = nodeData.split("\n");
-      for (String line : lines) {
-        String key = Strings.stringBefore(line, KEYVALUE_SEP);
-        String value = Strings.stringAfter(line, KEYVALUE_SEP);
-        properties.setProperty(key, value);
-      }
-    }
-    if (logger.isDebugEnabled()) {
-      logger.debug("Returning loaded properties for node: {}, \n{}", node, properties);
-    }
-    return properties;
-  }
-
-  private ByteSequence propertiesToByteSequence(Properties properties) {
-    byte[] data = null;
-    if (properties != null && !properties.isEmpty()) {
-      StringBuilder sb = new StringBuilder();
-      int propIdx = 1;
-      for (String propKey : properties.stringPropertyNames()) {
-        sb.append(propKey.trim())
-            .append(KEYVALUE_SEP)
-            .append(properties.getProperty(propKey).trim());
-        if (propIdx++ < properties.size()) {
-          sb.append('\n');
-        }
-      }
-      data = sb.toString().getBytes(getEncodingCharset());
-    }
-    if (data != null) {
-      return ByteSequence.from(data);
-    }
-    return null;
-  }
-
   private static Charset getEncodingCharset() {
     if (loadedCharset == null) {
       try {

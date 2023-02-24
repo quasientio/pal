@@ -94,7 +94,8 @@ public class ThinPeerIT {
   }
 
   private LogInfo createLog(String name) throws Exception {
-    LogInfo log = palDirectory.registerLog("testlog", KAFKA_SERVERS);
+    LogInfo log = new LogInfo(name, KAFKA_SERVERS);
+    palDirectory.registerLog(log);
     createdLogs.add(log);
     return log;
   }

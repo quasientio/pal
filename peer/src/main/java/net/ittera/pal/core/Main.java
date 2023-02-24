@@ -46,6 +46,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.*;
 import net.ittera.pal.common.cli.PALCommand;
+import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.core.exec.InterceptInformer;
 import net.ittera.pal.core.exec.LogMessageExecutor;
@@ -592,25 +593,25 @@ public class Main implements Callable<Integer> {
 
     // register self as new peer
     try {
-      final Properties peerProperties = new Properties();
+      final PeerInfo self = new PeerInfo(uuid);
       // public listening interfaces
       if (runOptions.contains(RunOptions.WITH_TCP_REQ)) {
-        peerProperties.put("reqAddress", properties.getProperty("in.req.tcp"));
+        self.setReqAddress(properties.getProperty("in.req.tcp"));
       }
       if (properties
           .getProperty(ZMQProps.OUT_PUB_CHANNEL)
           .startsWith("tcp://")) { // only register PUB addr if over TCP
-        peerProperties.put("pubAddress", properties.getProperty(ZMQProps.OUT_PUB_CHANNEL));
+        self.setPubAddress(properties.getProperty(ZMQProps.OUT_PUB_CHANNEL));
       }
       String jmxAddress = getJMXAddress();
       if (jmxAddress != null) {
-        peerProperties.put("jmxAddress", jmxAddress);
+        self.setJmxAddress(jmxAddress);
       }
       // other info
       if (name != null) {
-        peerProperties.put("name", name);
+        self.setName(name);
       }
-      palDirectory.registerPeer(uuid, peerProperties);
+      palDirectory.registerPeer(self);
     } catch (Exception ex) {
       fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_PEER);
     }

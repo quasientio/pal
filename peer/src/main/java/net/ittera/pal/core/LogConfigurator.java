@@ -80,7 +80,8 @@ class LogConfigurator {
     if (palDirectory.logExists(logName)) {
       logInfo = palDirectory.getLogInfo(logName);
     } else {
-      logInfo = palDirectory.registerLog(logName, kafkaServers);
+      logInfo = new LogInfo(logName, kafkaServers);
+      palDirectory.registerLog(logInfo);
     }
 
     return logInfo;

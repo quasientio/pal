@@ -238,14 +238,14 @@ public class ThinPeer {
     // register self as peer
     if (getPalDirectory() != null) {
       try {
-        final Properties peerProperties = new Properties();
+        final PeerInfo self = new PeerInfo(peerUuid);
         if (this.peerName != null) {
-          peerProperties.put("name", peerName);
+          self.setName(peerName);
         }
         if (this.reqAddress != null) {
-          peerProperties.put("reqAddress", reqAddress);
+          self.setReqAddress(reqAddress);
         }
-        getPalDirectory().registerPeer(peerUuid, peerProperties);
+        getPalDirectory().registerPeer(self);
       } catch (Exception ex) {
         logger.error("Error registering peer", ex);
       }
