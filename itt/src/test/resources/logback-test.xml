@@ -34,9 +34,15 @@
 
 	<logger name="tests" level="debug" additivity="false">
 		<appender-ref ref="tests"/>
+		<appender-ref ref="stdout"/>
 	</logger>
 
 	<logger name="net.ittera.pal" level="debug" additivity="false">
+		<appender-ref ref="tests"/>
+		<appender-ref ref="stdout"/>
+	</logger>
+
+	<logger name="net.ittera.pal.common.objects.ObjectLookupStoreBackgroundProcessor" level="warn" additivity="false">
 		<appender-ref ref="tests"/>
 	</logger>
 

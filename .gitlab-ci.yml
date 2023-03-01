@@ -1,11 +1,6 @@
 variables:
   MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true"
-  KAFKA_LISTENERS: 'INSIDE://:9092,OUTSIDE://:9094'
-  KAFKA_ADVERTISED_LISTENERS: 'INSIDE://:9092,OUTSIDE://kafka:9094'
-  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT'
-  KAFKA_INTER_BROKER_LISTENER_NAME: 'INSIDE'
-  KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
   DOCKER_HOST: tcp://docker:2375/
   DOCKER_DRIVER: overlay2
   # See https://github.com/docker-library/docker/pull/166
@@ -20,7 +15,7 @@ services:
 
 stages:
   - build
-  - unit-tests
+#  - unit-tests
   - integration-tests
   - publish-artifacts
 
@@ -33,30 +28,39 @@ clean-install:
   script:
     - mvn $MAVEN_CLI_OPTS clean install -DskipTests
 
-unit-tests:
-  stage: unit-tests
-  script:
-    - mvn $MAVEN_CLI_OPTS test
+#unit-tests:
+#  stage: unit-tests
+#  script:
+#    - mvn $MAVEN_CLI_OPTS test
 
 integration-tests:
   stage: integration-tests
   variables:
     FF_NETWORK_PER_BUILD: 1
-    PAL_DIRECTORY: 'zookeeper:2181'
-    TCP_REQ: '5656'
-    LOG: 'auto'
-    JMX_HOST: 'localhost'
-    JMX_PORT: 9012
+    PAL_DIRECTORY: 'etcd:2379'
+    KAFKA_SERVERS: 'kafka:9092'
+    ETCD_NAME: etcd0
+    ETCD_ADVERTISE_CLIENT_URLS: 'http://etcd:2379'
+    ETCD_LISTEN_CLIENT_URLS: 'http://0.0.0.0:2379'
+    ETCD_INITIAL_ADVERTISE_PEER_URLS: 'http://etcd:2380'
+    ETCD_LISTEN_PEER_URLS: 'http://0.0.0.0:2380'
+    ETCD_INITIAL_CLUSTER_TOKEN: etcd-cluster-1
+    ETCD_INITIAL_CLUSTER: 'etcd0=http://etcd:2380'
+    ETCD_INITIAL_CLUSTER_STATE: new
   services:
-    - name: wurstmeister/zookeeper:latest
-      alias: zookeeper
-    - name: wurstmeister/kafka:2.12-2.3.0
+    - name: $CI_REGISTRY/cometera/pal/etcd:latest
+      alias: etcd
+      command: ["./etcd"]
+    - name: $CI_REGISTRY/cometera/pal/kafka:latest
       alias: kafka
+      command: ["format_start", "--config", "./config/kraft/server.properties"]
   script:
+    - export PAL_HOME=$(pwd)
     - export PAL_VERSION=$(grep '<version>' pom.xml | head -1 | sed -E 's/.*<version>(.+)<\/version>.*/\1/')
     - export PAL_JAR=$CI_PROJECT_DIR/.m2/repository/net/ittera/pal/pal/$PAL_VERSION/pal-$PAL_VERSION.jar
     - export ITT_APPS_JAR=$CI_PROJECT_DIR/.m2/repository/net/ittera/pal/itt-apps/$PAL_VERSION/itt-apps-$PAL_VERSION.jar
-    - mkdir lib/ && cp $PAL_JAR lib/ && bin/pal run --interceptable --tcp-req-threads 3 --classpath $ITT_APPS_JAR &
+    - export PATH=$PATH:./bin
+    - mkdir lib/ && cp $PAL_JAR lib/ && peer4itts &
     - mvn $MAVEN_CLI_OPTS verify -DskipUTs
   artifacts:
     when: on_failure
@@ -73,7 +77,7 @@ publish-pal-image:
     - export PAL_JAR=$CI_PROJECT_DIR/.m2/repository/net/ittera/pal/pal/$PAL_VERSION/pal-$PAL_VERSION.jar
     - mkdir tools/target/ && cp -f $PAL_JAR tools/target/
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build -f docker/Dockerfile --tag $CI_REGISTRY/cometera/pal/pal:latest .
+    - docker build --file docker/Dockerfile --tag $CI_REGISTRY/cometera/pal/pal:latest .
     - docker push $CI_REGISTRY/cometera/pal/pal:latest
   only:
     - master

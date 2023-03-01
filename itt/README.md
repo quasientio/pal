@@ -6,7 +6,7 @@ instructions in the next section to download our docker images for the correspon
 
 If you have etcd and/or kafka installed on your machine or an accessible host, then skip to
 [Running the tests](#Running the tests). If either `etcd` or `kafka` are not listening on localhost or their standard
-ports (2379 and 9092 respectively), then adjust the ports in the scripts or commands used.
+ports (2379 and 9092 respectively), then adjust the ports in the `export_env` file.
 
 __NOTE__: if you added `$PAL_HOME/bin` to your PATH variable, you may omit `bin/` from the instructions following.
 
@@ -20,33 +20,38 @@ _These images are based on alpine and are relatively small. You may, of course, 
 images, in which case you may need to modify the parameters or variables in the scripts under bin/._
 
 ## Run the tests
-1. Open a terminal, and start the etcd and kafka containers
+1. Open a terminal and export the ENV variables required to run the tests
+    ```bash
+    source export_env
+    ```
+2. Start the etcd and kafka containers
     ```bash
     bin/dstart_etcd_and_kafka
     ```
    If you're using a local installation of etcd and kafka you may want to adapt and use the `start_etcd` and
 `start_kafka` scripts found under the bin/ folder.
-2. Launch a peer loading the classes in itt-apps
+3. Launch a peer loading the classes in itt-apps
     ```bash
    bin/peer4itts
    
    # Or edit and run the command yourself (note that **tcp-req** may be any available port number)
    pal run \
-   --dir localhost:2379 \
+   --dir $PAL_DIRECTORY \
    --name peer-for-itt \
    --tcp-req 5656 \
-   --kafka-servers localhost:9092 \
+   --kafka-servers $KAFKA_SERVERS \
    --log auto \
    --interceptable \
    --tcp-req-threads 3 \
    --classpath $PAL_HOME/itt-apps/target/itt-apps-1.0.0-SNAPSHOT.jar
     ```
-3. In another terminal, run `mvn verify` from the itt subdirectory to kick off the integrationt tests
+4. In a new terminal, export the ENV variables and run the integration tests
     ```bash
-    cd itt; PAL_DIRECTORY=localhost:2379 mvn verify
+    source export_env
+    cd itt; mvn verify
     ```
-4. Stop etcd and kafka docker containers.
+5. Stop etcd and kafka docker containers.
     ```bash
     bin/dstop_etcd_and_kafka
     ```
-5. Stop the running peer (bin/peer4itts) with ctrl^c
+6. Stop the running peer (bin/peer4itts) with Ctrl-C

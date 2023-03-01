@@ -235,7 +235,7 @@ public class PALDirectory implements AutoCloseable {
             interceptUuid,
             InterceptRequest.fromBytes(data, getEncodingCharset()));
       } catch (IllegalArgumentException e) {
-        logger.warn("Invalid UUID or unexpected path of len=4: {}", path);
+        logger.warn("Invalid UUID or unexpected path of len=4: {}", path, e);
       }
     }
     return null;

@@ -28,8 +28,6 @@ import org.slf4j.LoggerFactory;
 public class EtcdIT {
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
-
-  private static final String ENDPOINT = "ip://localhost:2379";
   private final String LOGS_PATH = "/pal/logs";
   private final String PEERS_PATH = "/pal/peers";
   private final String INTERCEPTS_PATH = "/pal/intercepts";
@@ -45,7 +43,12 @@ public class EtcdIT {
 
   @Before
   public void setup() {
-    etcdClient = Client.builder().target(ENDPOINT).build();
+    final String palDirectoryURL = System.getenv("PAL_DIRECTORY");
+    if (palDirectoryURL == null || palDirectoryURL.isEmpty()) {
+      throw new RuntimeException(
+          "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2379)");
+    }
+    etcdClient = Client.builder().target(palDirectoryURL).build();
     kvClient = etcdClient.getKVClient();
     watchClient = etcdClient.getWatchClient();
     logsCreated = new ArrayList<>();

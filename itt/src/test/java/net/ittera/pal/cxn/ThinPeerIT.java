@@ -49,13 +49,12 @@ public class ThinPeerIT {
   // PAL directory
   private PALDirectory palDirectory;
   private DirectoryConnectionProvider directoryConnectionProvider;
-  private static final String PAL_DIR_URL = "ip://localhost:2379";
-  private static final String KAFKA_SERVERS = "localhost:9092";
 
   // mock Kafka producer & consumer
   private MockProducer<String, byte[]> producer;
   private MockConsumer<String, byte[]> consumer;
 
+  private String kafkaServers;
   private static final Set<UUID> createdPeers = new HashSet<>();
   private static final Set<LogInfo> createdLogs = new HashSet<>();
   private ThinPeer thinPeer;
@@ -63,10 +62,20 @@ public class ThinPeerIT {
   @Before
   public void setUp() throws Exception {
     // init PALDirectory
-    directoryConnectionProvider = new DirectoryConnectionProvider(PAL_DIR_URL);
+    final String palDirectoryURL = System.getenv("PAL_DIRECTORY");
+    if (palDirectoryURL == null) {
+      throw new RuntimeException(
+          "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2379)");
+    }
+    directoryConnectionProvider = new DirectoryConnectionProvider(palDirectoryURL);
     palDirectory = directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
 
-    // init kafka producer & consumer
+    // init kafka
+    kafkaServers = System.getenv("KAFKA_SERVERS");
+    if (kafkaServers == null || kafkaServers.isEmpty()) {
+      throw new RuntimeException(
+          "Please set the environment variable KAFKA_SERVERS (eg. KAFKA_SERVERS=localhost:9092)");
+    }
     producer = new MockProducer<>(Cluster.empty(), true, null, null, null);
     consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
   }
@@ -94,7 +103,7 @@ public class ThinPeerIT {
   }
 
   private LogInfo createLog(String name) throws Exception {
-    LogInfo log = new LogInfo(name, KAFKA_SERVERS);
+    LogInfo log = new LogInfo(name, kafkaServers);
     palDirectory.registerLog(log);
     createdLogs.add(log);
     return log;

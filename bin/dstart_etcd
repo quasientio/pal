@@ -5,10 +5,10 @@ HOST=$(docker info | grep '^ *Name:' | tr -d ' ' | cut -d ':' -f 2)
 
 if ($(docker network ls | grep pal &> /dev/null ))
 then
-  echo 'pal network exists'
+  echo '`pal` network already exists - skipping creation'
 else
   docker network create pal --driver bridge
-  echo 'new network created: pal' 
+  echo 'new `pal` network created'
 fi
 
 docker container rm --volumes etcd
@@ -18,11 +18,15 @@ docker run \
   --publish ${ETCD_PEER_PORT}:${ETCD_PEER_PORT} \
   --name etcd \
   --detach \
-  etcd ./etcd -name etcd0 \
- -advertise-client-urls http://${HOST}:${ETCD_CLIENT_PORT}\
- -listen-client-urls http://0.0.0.0:${ETCD_CLIENT_PORT} \
- -initial-advertise-peer-urls http://${HOST}:${ETCD_PEER_PORT} \
- -listen-peer-urls http://0.0.0.0:${ETCD_PEER_PORT} \
- -initial-cluster-token etcd-cluster-1 \
- -initial-cluster etcd0=http://${HOST}:${ETCD_PEER_PORT} \
- -initial-cluster-state new
+  --env ETCD_NAME=etcd0 \
+  --env ETCD_ADVERTISE_CLIENT_URLS=http://${HOST}:${ETCD_CLIENT_PORT} \
+  --env ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:${ETCD_CLIENT_PORT} \
+  --env ETCD_INITIAL_ADVERTISE_PEER_URLS=http://${HOST}:${ETCD_PEER_PORT} \
+  --env ETCD_LISTEN_PEER_URLS=http://0.0.0.0:${ETCD_PEER_PORT} \
+  --env ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster-1 \
+  --env ETCD_INITIAL_CLUSTER=etcd0=http://${HOST}:${ETCD_PEER_PORT} \
+  --env ETCD_INITIAL_CLUSTER_STATE=new \
+  --env ETCD_GRPC_KEEPALIVE_MIN_TIME=6s \
+  --env ETCD_GRPC_KEEPALIVE_INTERVAL=0 \
+  --env ETCD_GRPC_KEEPALIVE_TIMEOUT=0 \
+  etcd ./etcd
