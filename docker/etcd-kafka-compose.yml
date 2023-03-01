@@ -33,6 +33,10 @@ services:
       - pal
     ports:
       - '9092:9092'
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 1024
     volumes:
       - type: bind
         source: $PAL_HOME/config/kafka

@@ -2,9 +2,12 @@
 # Dockerfile for etcd, based on alpine image.
 #
 # Build:
-#    build          docker build --tag registry.gitlab.com/cometera/pal/etcd:latest --tag etcd:latest .
+#    build          docker build \
+#                     --tag registry.gitlab.com/cometera/pal/etcd:3.5.7 \
+#                     --tag registry.gitlab.com/cometera/pal/etcd:latest \
+#                     --tag etcd:latest .
 #    push           docker login registry.gitlab.com
-#                   docker push registry.gitlab.com/cometera/pal/etcd:latest
+#                   docker push --all-tags registry.gitlab.com/cometera/pal/etcd
 #
 # Build Args:
 #                   ETCD_VERSION

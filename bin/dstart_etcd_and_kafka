@@ -5,4 +5,4 @@ export HOST=$(docker info | grep '^ *Name:' | tr -d ' ' | cut -d ':' -f 2)
 compose="docker-compose --project-directory $PAL_HOME -f $PAL_HOME/docker/etcd-kafka-compose.yml"
 
 $compose rm -f
-$compose up --build
+$compose up --build --detach

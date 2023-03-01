@@ -1,37 +1,52 @@
-### How to run the Integration Tests
+# Running PAL's integration tests
 
-#### Download Zookeeper and Kafka docker images
-The following instructions assume you have Docker installed and running.
-The first time you run `start_zk_and_kafka`, the docker images for Zookeeper and Kafka will be downloaded.
-You may want to download the images prior to running the tests:
+PAL's integration tests depend on a running instance or cluster of __etcd__ and __kafka__. For convenience, we provide
+docker images and launch scripts for both, so all you need is __Docker installed and running__. Follow the
+instructions in the next section to download our docker images for the corresponding binaries.
+
+If you have etcd and/or kafka installed on your machine or an accessible host, then skip to
+[Running the tests](#Running the tests). If either `etcd` or `kafka` are not listening on localhost or their standard
+ports (2379 and 9092 respectively), then adjust the ports in the scripts or commands used.
+
+__NOTE__: if you added `$PAL_HOME/bin` to your PATH variable, you may omit `bin/` from the instructions following.
+
+## Download Etcd and Kafka docker images
+Pull and tag the provided images for etcd and kafka from the gitlab.com registry:
 ```bash
-docker pull wurstmeister/zookeeper:latest
-docker pull wurstmeister/kafka:2.12-2.3.0
+docker pull registry.gitlab.com/cometera/pal/etcd:latest && docker tag registry.gitlab.com/cometera/pal/etcd etcd:latest
+docker pull registry.gitlab.com/cometera/pal/kafka:latest && docker tag registry.gitlab.com/cometera/pal/kafka:latest kafka:latest
 ```
-(You may be running locally installed ZK and Kafka binaries, in which case the `start_zk_and_kafka` and
-`stop_zk_and_kafka` commands in the below instructions do not apply).
+_These images are based on alpine and are relatively small. You may, of course, use your own or any other public
+images, in which case you may need to modify the parameters or variables in the scripts under bin/._
 
-#### Running the tests
-1. Open a terminal, start Zookeeper and Kafka
+## Run the tests
+1. Open a terminal, and start the etcd and kafka containers
     ```bash
-    start_zk_and_kafka &> /dev/null &
+    bin/dstart_etcd_and_kafka
     ```
-2. Launch a peer loading classes the in itt-apps (**tcp-req** may be any available port number)
+   If you're using a local installation of etcd and kafka you may want to adapt and use the `start_etcd` and
+`start_kafka` scripts found under the bin/ folder.
+2. Launch a peer loading the classes in itt-apps
     ```bash
-    pal run \
-    --dir localhost:2181 \
-    --tcp-req 5656 \
-    --log auto \
-    --interceptable \
-    --tcp-req-threads 3 \
-    --classpath itt-apps/target/itt-apps-1.0.0-SNAPSHOT.jar
+   bin/peer4itts
+   
+   # Or edit and run the command yourself (note that **tcp-req** may be any available port number)
+   pal run \
+   --dir localhost:2379 \
+   --name peer-for-itt \
+   --tcp-req 5656 \
+   --kafka-servers localhost:9092 \
+   --log auto \
+   --interceptable \
+   --tcp-req-threads 3 \
+   --classpath $PAL_HOME/itt-apps/target/itt-apps-1.0.0-SNAPSHOT.jar
     ```
-3. Open a second terminal and run mvn verify from the itt subdirectory
+3. In another terminal, run `mvn verify` from the itt subdirectory to kick off the integrationt tests
     ```bash
-    cd itt; PAL_DIRECTORY=localhost:2181 mvn verify
+    cd itt; PAL_DIRECTORY=localhost:2379 mvn verify
     ```
-4. Stop zookeeper and kafka
+4. Stop etcd and kafka docker containers.
     ```bash
-    stop_zk_and_kafka
+    bin/dstop_etcd_and_kafka
     ```
-5. Stop the running peer with ctrl^c
+5. Stop the running peer (bin/peer4itts) with ctrl^c

@@ -2,9 +2,13 @@
 # Dockerfile for Kafka in Kraft mode, based on openjdk alpine image.
 #
 # Build:
-#    build          docker build --tag registry.gitlab.com/cometera/pal/kafka:latest --tag kafka:latest .
+#    build          docker build \
+#                     --tag registry.gitlab.com/cometera/pal/kafka:3.4.0 \
+#                     --tag registry.gitlab.com/cometera/pal/kafka:latest \
+#                     --tag kafka:latest .
+#
 #    push           docker login registry.gitlab.com
-#                   docker push registry.gitlab.com/cometera/pal/kafka:latest
+#                   docker push --all-tags registry.gitlab.com/cometera/pal/kafka
 #
 # Build Args:
 #                   SCALA_VERSION
