@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.api.rmi.ConstructorCall;
 import net.ittera.pal.common.api.rmi.InstanceFieldGet;
 import net.ittera.pal.common.api.rmi.InstanceMethodCall;
@@ -69,7 +70,7 @@ import org.zeromq.ZMQ.Socket;
  *
  * </pre>
  */
-public class AbstractInterceptIT implements ExecMessageAssertions {
+public class AbstractInterceptIT extends AbstractIntegrationTest implements ExecMessageAssertions {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
   protected static final long INTERCEPT_REGISTRATION_MAX_DELAY_MS = 100;
@@ -119,13 +120,8 @@ public class AbstractInterceptIT implements ExecMessageAssertions {
 
   @Before
   public void setUp() throws Exception {
-    final String palDirectoryURL = System.getenv("PAL_DIRECTORY");
-    if (palDirectoryURL == null) {
-      throw new RuntimeException(
-          "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2379)");
-    }
     DirectoryConnectionProvider directoryConnectionProvider =
-        new DirectoryConnectionProvider(palDirectoryURL, null);
+        new DirectoryConnectionProvider(getPALDirectoryURL(), null);
     this.palDirectory =
         directoryConnectionProvider
             .get()

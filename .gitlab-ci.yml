@@ -15,7 +15,7 @@ services:
 
 stages:
   - build
-#  - unit-tests
+  - unit-tests
   - integration-tests
   - publish-artifacts
 
@@ -28,10 +28,10 @@ clean-install:
   script:
     - mvn $MAVEN_CLI_OPTS clean install -DskipTests
 
-#unit-tests:
-#  stage: unit-tests
-#  script:
-#    - mvn $MAVEN_CLI_OPTS test
+unit-tests:
+  stage: unit-tests
+  script:
+    - mvn $MAVEN_CLI_OPTS test
 
 integration-tests:
   stage: integration-tests
@@ -53,7 +53,10 @@ integration-tests:
       command: ["./etcd"]
     - name: $CI_REGISTRY/cometera/pal/kafka:latest
       alias: kafka
-      command: ["format_start", "--config", "./config/kraft/server.properties"]
+      command: ["format_start",
+                "--config", "./config/kraft/server.properties",
+                "--override", "controller.quorum.voters=1@kafka:9093",
+                "--override", "advertised.listeners=PLAINTEXT://kafka:9092"]
   script:
     - export PAL_HOME=$(pwd)
     - export PAL_VERSION=$(grep '<version>' pom.xml | head -1 | sed -E 's/.*<version>(.+)<\/version>.*/\1/')

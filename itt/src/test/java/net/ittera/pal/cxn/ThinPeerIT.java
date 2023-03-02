@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -40,7 +41,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ThinPeerIT {
+public class ThinPeerIT extends AbstractIntegrationTest {
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
@@ -54,28 +55,14 @@ public class ThinPeerIT {
   private MockProducer<String, byte[]> producer;
   private MockConsumer<String, byte[]> consumer;
 
-  private String kafkaServers;
   private static final Set<UUID> createdPeers = new HashSet<>();
   private static final Set<LogInfo> createdLogs = new HashSet<>();
   private ThinPeer thinPeer;
 
   @Before
-  public void setUp() throws Exception {
-    // init PALDirectory
-    final String palDirectoryURL = System.getenv("PAL_DIRECTORY");
-    if (palDirectoryURL == null) {
-      throw new RuntimeException(
-          "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2379)");
-    }
-    directoryConnectionProvider = new DirectoryConnectionProvider(palDirectoryURL);
+  public void setUp() {
+    directoryConnectionProvider = new DirectoryConnectionProvider(getPALDirectoryURL());
     palDirectory = directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
-
-    // init kafka
-    kafkaServers = System.getenv("KAFKA_SERVERS");
-    if (kafkaServers == null || kafkaServers.isEmpty()) {
-      throw new RuntimeException(
-          "Please set the environment variable KAFKA_SERVERS (eg. KAFKA_SERVERS=localhost:9092)");
-    }
     producer = new MockProducer<>(Cluster.empty(), true, null, null, null);
     consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
   }
@@ -103,7 +90,7 @@ public class ThinPeerIT {
   }
 
   private LogInfo createLog(String name) throws Exception {
-    LogInfo log = new LogInfo(name, kafkaServers);
+    LogInfo log = new LogInfo(name, getKafkaServers());
     palDirectory.registerLog(log);
     createdLogs.add(log);
     return log;

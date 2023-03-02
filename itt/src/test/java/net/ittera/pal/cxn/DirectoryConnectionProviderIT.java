@@ -23,12 +23,11 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import net.ittera.pal.AbstractIntegrationTest;
 import org.junit.After;
 import org.junit.Test;
 
-public class DirectoryConnectionProviderIT {
-
-  private static final String ETCD_ENDPOINT = "ip://localhost:2379";
+public class DirectoryConnectionProviderIT extends AbstractIntegrationTest {
   private PALDirectory palDirectory;
 
   @After
@@ -48,7 +47,8 @@ public class DirectoryConnectionProviderIT {
 
   @Test
   public void getConnection() throws Exception {
-    DirectoryConnectionProvider connectionFactory = new DirectoryConnectionProvider(ETCD_ENDPOINT);
+    DirectoryConnectionProvider connectionFactory =
+        new DirectoryConnectionProvider(getPALDirectoryURL());
     assertThat(connectionFactory.get().isPresent(), is(true));
   }
 }

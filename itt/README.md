@@ -5,7 +5,7 @@ docker images and launch scripts for both, so all you need is __Docker installed
 instructions in the next section to download our docker images for the corresponding binaries.
 
 If you have etcd and/or kafka installed on your machine or an accessible host, then skip to
-[Running the tests](#Running the tests). If either `etcd` or `kafka` are not listening on localhost or their standard
+[Running the tests](#Run the tests). If either `etcd` or `kafka` are not listening on localhost or their standard
 ports (2379 and 9092 respectively), then adjust the ports in the `export_env` file.
 
 __NOTE__: if you added `$PAL_HOME/bin` to your PATH variable, you may omit `bin/` from the instructions following.

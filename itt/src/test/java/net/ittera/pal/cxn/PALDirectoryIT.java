@@ -28,6 +28,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
+import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.directory.events.InterceptEvent.Type;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
@@ -41,7 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior */
-public class PALDirectoryIT {
+public class PALDirectoryIT extends AbstractIntegrationTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
   private static final Set<UUID> createdPeers = new HashSet<>();
@@ -49,23 +50,11 @@ public class PALDirectoryIT {
   private static Set<UUID> preExistingPeers;
   private static Set<UUID> preExistingLogs;
   private static final Map<UUID, List<UUID>> createdInterceptRequests = new HashMap<>();
-
-  private String kafkaServers;
   private PALDirectory palDirectory;
 
   @Before
   public void setup() throws Exception {
-    final String palDirectoryURL = System.getenv("PAL_DIRECTORY");
-    if (palDirectoryURL == null || palDirectoryURL.isEmpty()) {
-      throw new RuntimeException(
-          "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2379)");
-    }
-    palDirectory = new PALDirectory(palDirectoryURL);
-    kafkaServers = System.getenv("KAFKA_SERVERS");
-    if (kafkaServers == null || kafkaServers.isEmpty()) {
-      throw new RuntimeException(
-          "Please set the environment variable KAFKA_SERVERS (eg. KAFKA_SERVERS=localhost:9092)");
-    }
+    palDirectory = new PALDirectory(getPALDirectoryURL());
     preExistingPeers =
         palDirectory.getAllPeers().stream().map(PeerInfo::getUuid).collect(Collectors.toSet());
     preExistingLogs =
@@ -249,7 +238,7 @@ public class PALDirectoryIT {
 
     String logNamePrefix = "test.topic";
 
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, kafkaServers);
+    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
     String createdLogName = newLogInfo.getName();
     createdLogs.add(createdLogName);
 
@@ -269,7 +258,7 @@ public class PALDirectoryIT {
     assertThat(palDirectory.logExists(logName), is(false));
 
     // register
-    LogInfo newLogInfo = new LogInfo(logName, kafkaServers);
+    LogInfo newLogInfo = new LogInfo(logName, getKafkaServers());
     palDirectory.registerLog(newLogInfo);
     createdLogs.add(logName);
 
@@ -292,7 +281,7 @@ public class PALDirectoryIT {
     String logName = "test.topic";
 
     // register logInfo
-    LogInfo newLogInfo = new LogInfo(logName, kafkaServers);
+    LogInfo newLogInfo = new LogInfo(logName, getKafkaServers());
     palDirectory.registerLog(newLogInfo);
     createdLogs.add(logName);
     assertThat(palDirectory.logExists(logName), is(true));
@@ -318,7 +307,7 @@ public class PALDirectoryIT {
     // create N logs
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, kafkaServers);
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
 
@@ -333,7 +322,7 @@ public class PALDirectoryIT {
     // create N logs
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, kafkaServers);
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
 
@@ -353,7 +342,7 @@ public class PALDirectoryIT {
     // create  a few logs
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, kafkaServers);
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
     assertThat(palDirectory.getLogCount(logNamePrefix), is(logsToCreate));
@@ -367,7 +356,7 @@ public class PALDirectoryIT {
     int logsToCreate = 10;
     String lastCreated = null;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, kafkaServers);
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
       lastCreated = newLogInfo.getName();
       createdLogs.add(lastCreated);
     }
@@ -382,13 +371,13 @@ public class PALDirectoryIT {
     // create  a few with the prefix
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, kafkaServers);
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
 
     // create a few with another prefix
     for (int i = 0; i < 3; i++) {
-      LogInfo newLogInfo = palDirectory.newLog("some.other.prefix", kafkaServers);
+      LogInfo newLogInfo = palDirectory.newLog("some.other.prefix", getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
 
@@ -410,7 +399,7 @@ public class PALDirectoryIT {
     // create a few with the prefix
     int logsToCreate = 10;
     for (int i = 0; i < logsToCreate; i++) {
-      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, kafkaServers);
+      LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
       createdLogs.add(newLogInfo.getName());
     }
 
@@ -429,7 +418,7 @@ public class PALDirectoryIT {
   public void deleteLog_existingLog_logDeleted() throws Exception {
     String logNamePrefix = "test.topic";
 
-    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, kafkaServers);
+    LogInfo newLogInfo = palDirectory.newLog(logNamePrefix, getKafkaServers());
     String createdLogName = newLogInfo.getName();
     // pre-assertions
     assertThat(palDirectory.logExists(createdLogName), is(true));

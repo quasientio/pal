@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: format|start|format_start --config/-c server.properties" 1>&2; exit 1;
+  echo "Usage: format|start|format_start --config/-c server.properties [--override property=value]*" 1>&2; exit 1;
 }
 
 while :
@@ -45,14 +45,14 @@ case $COMMAND in
     exit 0
     ;;
   start)
-    bin/kafka-server-start.sh $CONFIG_FILE
+    bin/kafka-server-start.sh $CONFIG_FILE $@
     exit 0
     ;;
   format_start)
     KAFKA_CLUSTER_ID="$(bin/kafka-storage.sh random-uuid)"
     bin/kafka-storage.sh format -t $KAFKA_CLUSTER_ID -c $CONFIG_FILE
     echo "kafka storage formatted with KAFKA_CLUSTER_ID=$KAFKA_CLUSTER_ID"
-    bin/kafka-server-start.sh $CONFIG_FILE
+    bin/kafka-server-start.sh $CONFIG_FILE $@
     exit 0
     ;;
 esac

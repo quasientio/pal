@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
+import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
@@ -25,7 +26,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class EtcdIT {
+public class EtcdIT extends AbstractIntegrationTest {
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final String LOGS_PATH = "/pal/logs";
@@ -43,12 +44,7 @@ public class EtcdIT {
 
   @Before
   public void setup() {
-    final String palDirectoryURL = System.getenv("PAL_DIRECTORY");
-    if (palDirectoryURL == null || palDirectoryURL.isEmpty()) {
-      throw new RuntimeException(
-          "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2379)");
-    }
-    etcdClient = Client.builder().target(palDirectoryURL).build();
+    etcdClient = Client.builder().target(getPALDirectoryURL()).build();
     kvClient = etcdClient.getKVClient();
     watchClient = etcdClient.getWatchClient();
     logsCreated = new ArrayList<>();

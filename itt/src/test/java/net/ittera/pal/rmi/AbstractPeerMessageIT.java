@@ -33,6 +33,7 @@ import com.google.inject.name.Names;
 import java.io.InputStream;
 import java.util.Properties;
 import java.util.UUID;
+import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -48,7 +49,8 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
+public abstract class AbstractPeerMessageIT extends AbstractIntegrationTest
+    implements ExecMessageAssertions {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
 
@@ -91,15 +93,10 @@ public abstract class AbstractPeerMessageIT implements ExecMessageAssertions {
         AbstractPeerMessageIT.class.getResourceAsStream(PRODUCER_PROPERTIES_PATH)) {
       producerProperties.load(stream);
     }
-    final String palDirectoryURL = System.getenv("PAL_DIRECTORY");
-    if (palDirectoryURL == null) {
-      throw new RuntimeException(
-          "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2379)");
-    }
     thinPeer =
         new ThinPeer()
             .withUUID(clientId)
-            .withDirectoryURL(palDirectoryURL)
+            .withDirectoryURL(getPALDirectoryURL())
             .withConsumerProperties(consumerProperties)
             .withProducerProperties(producerProperties)
             .init();
