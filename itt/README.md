@@ -6,9 +6,9 @@ instructions in the next section to download our docker images for the correspon
 
 If you have etcd and/or kafka installed on your machine or an accessible host, then skip to
 [Running the tests](#Run the tests). If either `etcd` or `kafka` are not listening on localhost or their standard
-ports (2379 and 9092 respectively), then adjust the ports in the `export_env` file.
+ports (2379 and 9092 respectively), then adjust the corresponding variables in the `export_env` file.
 
-__NOTE__: if you added `$PAL_HOME/bin` to your PATH variable, you may omit `bin/` from the instructions following.
+__NOTE__: if you already added `$PAL_HOME/bin` to your PATH variable, you may omit `bin/` from the instructions following.
 
 ## Download Etcd and Kafka docker images
 Pull and tag the provided images for etcd and kafka from the gitlab.com registry:
@@ -50,8 +50,8 @@ images, in which case you may need to modify the parameters or variables in the 
     source export_env
     cd itt; mvn verify
     ```
-5. Stop etcd and kafka docker containers.
+5. Stop the etcd and kafka containers.
     ```bash
     bin/dstop_etcd_and_kafka
     ```
-6. Stop the running peer (bin/peer4itts) with Ctrl-C
+6. Stop the running peer (launched with `bin/peer4itts`) typing Ctrl-C
