@@ -41,7 +41,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.directory.events.InterceptEvent;
 import net.ittera.pal.common.directory.events.InterceptNodeListener;
@@ -96,13 +95,6 @@ public class PALDirectory implements AutoCloseable {
     this.kvClient = client.getKVClient();
     this.watchClient = client.getWatchClient();
     this.namespace = namespace != null ? namespace : DEFAULT_PAL_NAMESPACE;
-
-    // TODO is this required now with etcd??
-    try {
-      createSubPaths();
-    } catch (Exception e) {
-      logger.error("Error creating subpaths", e);
-    }
 
     watchClient.watch(
         getInterceptsPathKey(),
@@ -631,22 +623,6 @@ public class PALDirectory implements AutoCloseable {
 
   private String getInterceptsPathForPeer(UUID peerUuid) {
     return format("%s/%s", getInterceptsPath(), peerUuid);
-  }
-
-  private void createSubPaths() {
-    Stream.of(getLogsPath(), getPeersPath(), getInterceptsPath())
-        .forEach(
-            (path) -> {
-              final ByteSequence key = ByteSequence.from(path.getBytes(getEncodingCharset()));
-              try {
-                if (kvClient.get(key).get().getCount() == 0) {
-                  final ByteSequence value = ByteSequence.from("".getBytes(getEncodingCharset()));
-                  kvClient.put(key, value).get();
-                }
-              } catch (Exception e) {
-                throw new RuntimeException(e);
-              }
-            });
   }
   // </editor-fold>
 }
