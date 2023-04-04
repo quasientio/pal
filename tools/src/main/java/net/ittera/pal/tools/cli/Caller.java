@@ -222,7 +222,7 @@ public class Caller extends AbstractPALSubcommand {
       parameters[0] = argList.toArray(new String[0]);
     }
 
-    ThinPeer thinPeer;
+    final ThinPeer thinPeer;
     ExecMessage requestMsg;
     int reqsSent;
     long start;
@@ -238,11 +238,17 @@ public class Caller extends AbstractPALSubcommand {
             peerAddress.startsWith("tcp://") ? peerAddress : "tcp://" + peerAddress;
         peerInfo = new PeerInfo(peerReqAddress);
       }
+
+      boolean uuidGiven = uuid != null;
+      if (!uuidGiven) {
+        uuid = UUID.randomUUID();
+      }
       // create ThinPeer
       thinPeer =
           new ThinPeer()
-              .withUUID(uuid == null ? UUID.randomUUID() : uuid)
+              .withUUID(uuid)
               .withDirectoryURL(palDirectoryURL)
+              .withSelfRegistration(uuidGiven)
               .withInitialPeer(peerInfo)
               .init();
       start = System.currentTimeMillis();
@@ -269,11 +275,16 @@ public class Caller extends AbstractPALSubcommand {
       LogInfo inLog = inLogName == null ? null : new LogInfo(inLogName);
       LogInfo outLog = outLogName == null ? null : new LogInfo(outLogName);
 
+      boolean uuidGiven = uuid != null;
+      if (!uuidGiven) {
+        uuid = UUID.randomUUID();
+      }
       // create ThinPeer
       thinPeer =
           new ThinPeer()
-              .withUUID(uuid == null ? UUID.randomUUID() : uuid)
+              .withUUID(uuid)
               .withDirectoryURL(palDirectoryURL)
+              .withSelfRegistration(uuidGiven)
               .withInLog(inLog)
               .withOutLog(outLog)
               .withConsumerProperties(consumerProperties)
@@ -335,11 +346,17 @@ public class Caller extends AbstractPALSubcommand {
     }
     LogInfo inLog = inLogName == null ? null : new LogInfo(inLogName);
     LogInfo outLog = outLogName == null ? null : new LogInfo(outLogName);
+
+    boolean uuidGiven = uuid != null;
+    if (!uuidGiven) {
+      uuid = UUID.randomUUID();
+    }
     // create ThinPeer
     thinPeer =
         new ThinPeer()
-            .withUUID(uuid == null ? UUID.randomUUID() : uuid)
+            .withUUID(uuid)
             .withDirectoryURL(palDirectoryURL)
+            .withSelfRegistration(uuidGiven)
             .withInLog(inLog)
             .withOutLog(outLog)
             .withConsumerProperties(consumerProperties)

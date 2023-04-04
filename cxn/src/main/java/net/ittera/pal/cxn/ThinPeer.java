@@ -114,6 +114,7 @@ public class ThinPeer {
   private DirectoryConnectionProvider directoryConnectionProvider;
   private boolean directoryGiven;
   private String palDirectoryUrl;
+  private boolean registerSelf = true;
 
   public ThinPeer() {
     // TODO use factory method instead of empty constructor
@@ -214,6 +215,11 @@ public class ThinPeer {
     return this;
   }
 
+  public ThinPeer withSelfRegistration(boolean registerSelf) {
+    this.registerSelf = registerSelf;
+    return this;
+  }
+
   public ThinPeer init() throws Exception {
     // if not given, create random UUID for this peer
     if (this.peerUuid == null) {
@@ -236,7 +242,7 @@ public class ThinPeer {
     }
 
     // register self as peer
-    if (getPalDirectory() != null) {
+    if (registerSelf && getPalDirectory() != null) {
       try {
         final PeerInfo self = new PeerInfo(peerUuid);
         if (this.peerName != null) {
