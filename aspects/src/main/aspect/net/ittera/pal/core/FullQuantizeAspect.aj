@@ -43,7 +43,7 @@ aspect FullQuantizeAspect {
 
 	/** POINTCUT DEFINITIONS **/
 
-	pointcut allClasses(): !within(FullQuantizeAspect);
+	pointcut allClasses(): !within(FullQuantizeAspect) && !within(is(EnumType));
 
 	pointcut voidInstanceMethods(): allClasses() && call(!static void *(..));
 
