@@ -50,8 +50,8 @@ images, in which case you may need to modify the parameters or variables in the 
     source export_env
     cd itt; mvn verify
     ```
-5. Stop the etcd and kafka containers.
+5. Stop the running peer (launched with `bin/peer4itts`) typing Ctrl-C
+6. Stop the etcd and kafka containers.
     ```bash
     bin/dstop_etcd_and_kafka
     ```
-6. Stop the running peer (launched with `bin/peer4itts`) typing Ctrl-C
