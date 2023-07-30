@@ -24,7 +24,7 @@ into communication (via messages), and enabling a set of standard external inter
 out of the box.
 
 ### What PAL isn't
-* It's not a new programming language. New languages are cool, but don't we have enough of them already?
+* It's not a new programming language.
 * It's not a new programming model. PAL intends to make object-oriented code run as it was meant to :)
 * It's not an actor model implementation, although it shares with Akka (or Erlang) many benefits of the loose 
   coupling derived from a messaging approach. As opposed to Akka, PAL does not require the programmer to step outside
