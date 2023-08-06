@@ -180,6 +180,18 @@
                             </excludes>
                         </filter>
                         <filter>
+                            <artifact>info.picocli:picocli</artifact>
+                            <excludes>
+                                <exclude>META-INF/versions/**</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
+                            <artifact>com.alibaba.fastjson2:fastjson2</artifact>
+                            <excludes>
+                                <exclude>META-INF/versions/**</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
                             <artifact>*:*</artifact>
                             <excludes>
                                 <!-- TODO we MUST INCLUDE NOTICE files : licenses (eg. Apache) requires them to be included) -->
