@@ -35,13 +35,13 @@
         <guice.version>5.1.0</guice.version>
         <javax.inject.version>1</javax.inject.version>
         <mockito.version>3.6.28</mockito.version>
-        <kafka.clients.version>2.3.0</kafka.clients.version>
-        <kafka.streams.version>2.3.0</kafka.streams.version>
         <logback.classic.version>1.2.11</logback.classic.version>
         <commons.lang3.version>3.9</commons.lang3.version>
         <picocli.version>4.6.1</picocli.version>
         <jeromq.version>0.5.3</jeromq.version>
         <jetcd.version>0.7.6</jetcd.version>
+        <kafka.clients.version>3.4.0</kafka.clients.version>
+        <kafka.streams.version>3.4.0</kafka.streams.version>
         <org.json.version>20230227</org.json.version>
         <fastjson.version>2.0.23</fastjson.version>
         <google.format.version>2.9</google.format.version>

@@ -21,4 +21,6 @@ package net.ittera.pal.messages.colfer;
 
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 
-public final class KafkaSerializer extends ByteArraySerializer {}
+public final class KafkaSerializer extends ByteArraySerializer {
+  public KafkaSerializer() {}
+}

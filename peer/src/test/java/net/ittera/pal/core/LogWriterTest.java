@@ -42,6 +42,8 @@ import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
+import net.ittera.pal.messages.colfer.KafkaKeySerializer;
+import net.ittera.pal.messages.colfer.KafkaSerializer;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -84,7 +86,9 @@ public class LogWriterTest extends ZmqEnabledTest {
     DirectoryConnectionProvider directoryConnectionProvider =
         new DirectoryConnectionProvider(PALDirectory.NO_URL);
     zmqContext = this.createContext();
-    producer = new MockProducer<>(Cluster.empty(), true, null, null, null);
+    producer =
+        new MockProducer<>(
+            Cluster.empty(), true, null, new KafkaKeySerializer(), new KafkaSerializer());
     logWriter =
         new LogWriter(
             UUID.randomUUID(),
