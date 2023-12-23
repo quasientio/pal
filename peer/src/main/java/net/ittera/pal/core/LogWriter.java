@@ -63,8 +63,8 @@ class LogWriter extends ConnectedService {
   private final Properties producerProperties = new Properties();
 
   // zmq stuff
-  private Socket subscriber;
-  private Socket offsetPublisher;
+  private Socket subscriberSocket;
+  private Socket offsetPublisherSocket;
   private final String outPubAddress;
   private final String offsetPubAddress;
 
@@ -142,13 +142,13 @@ class LogWriter extends ConnectedService {
   @Override
   protected void openConnections() {
     // start subscriber
-    this.subscriber = zmqContext.createSocket(SocketType.SUB);
-    subscriber.connect(outPubAddress);
-    subscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
+    this.subscriberSocket = zmqContext.createSocket(SocketType.SUB);
+    subscriberSocket.connect(outPubAddress);
+    subscriberSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
     // start offsets publisher
     if (publishOffsets) {
-      this.offsetPublisher = zmqContext.createSocket(SocketType.PUB);
-      offsetPublisher.bind(offsetPubAddress);
+      this.offsetPublisherSocket = zmqContext.createSocket(SocketType.PUB);
+      offsetPublisherSocket.bind(offsetPubAddress);
     }
     logger.info("connections open - except kafka producer");
     // create and store immutable headers (instead of creating with every send)
@@ -183,7 +183,7 @@ class LogWriter extends ConnectedService {
     while (!Thread.interrupted() && !socketError) {
       OutboundMsg msg = null;
       try {
-        msg = OutboundMsg.recvMsg(subscriber, true);
+        msg = OutboundMsg.recvMsg(subscriberSocket, true);
         if (logger.isDebugEnabled()) {
           logger.debug(
               "Received new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
@@ -271,7 +271,7 @@ class LogWriter extends ConnectedService {
   @Override
   protected void closeConnections() {
     close(producer, 300, ChronoUnit.MILLIS, "Error closing producer");
-    closeConnection(subscriber, "Error closing subscriber");
-    closeConnection(offsetPublisher, "Error offset publisher");
+    closeConnection(subscriberSocket, "Error closing subscriber");
+    closeConnection(offsetPublisherSocket, "Error offset publisher");
   }
 }

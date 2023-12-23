@@ -71,8 +71,8 @@ public class LogReader extends ConnectedService {
   private volatile boolean acceptingRequests = false;
 
   // zmq stuff
-  private Socket logDealer;
-  private Socket offsetSubscriber;
+  private Socket logDealerSocket;
+  private Socket offsetSubscriberSocket;
   private final String inLogAddress;
   private final String offsetPubAddress;
 
@@ -237,14 +237,14 @@ public class LogReader extends ConnectedService {
         consumer.seek(topicPartition, initialOffset);
       }
     }
-    this.logDealer = zmqContext.createSocket(SocketType.DEALER);
-    logDealer.bind(inLogAddress);
+    this.logDealerSocket = zmqContext.createSocket(SocketType.DEALER);
+    logDealerSocket.bind(inLogAddress);
     // subscriber to get the offsets written by the message writer
     if (skipWrittenOffsets) {
-      this.offsetSubscriber = zmqContext.createSocket(SocketType.SUB);
-      offsetSubscriber.connect(offsetPubAddress);
-      offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
-      new OffsetUpdater(offsetSubscriber).start();
+      this.offsetSubscriberSocket = zmqContext.createSocket(SocketType.SUB);
+      offsetSubscriberSocket.connect(offsetPubAddress);
+      offsetSubscriberSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
+      new OffsetUpdater(offsetSubscriberSocket).start();
     }
   }
 
@@ -294,7 +294,7 @@ public class LogReader extends ConnectedService {
         if (!recordProducedOrDispatchingBySelf(record.headers())) {
           // send request to DEALER socket
           InboundLogMsg msg = new InboundLogMsg(messageOffset, (byte[]) record.value());
-          msg.send(logDealer);
+          msg.send(logDealerSocket);
           if (logger.isDebugEnabled()) {
             logger.debug("Dealt new log message with offset: {}", messageOffset);
           }
@@ -348,8 +348,8 @@ public class LogReader extends ConnectedService {
   @Override
   protected void closeConnections() {
     close(consumer, 300, ChronoUnit.MILLIS, "Error closing consumer");
-    closeConnection(logDealer, "Error closing dealer");
-    closeConnection(offsetSubscriber, "Error closing offset subscriber");
+    closeConnection(logDealerSocket, "Error closing dealer");
+    closeConnection(offsetSubscriberSocket, "Error closing offset subscriber");
     // TODO: send uncommitted offset, etc.
   }
 

@@ -81,13 +81,13 @@ public abstract class ConnectedService extends AbstractService {
 
   private void signalReady() {
     // signal Main that we're ready
-    ZMQ.Socket sender = zmqContext.createSocket(SocketType.PUSH);
-    sender.connect(syncSocketAddress);
+    ZMQ.Socket senderSocket = zmqContext.createSocket(SocketType.PUSH);
+    senderSocket.connect(syncSocketAddress);
     try {
-      sender.send("go!");
+      senderSocket.send("go!");
     } finally {
       try {
-        sender.close();
+        senderSocket.close();
       } catch (Exception exception) {
         // ignore; probably closed by receiver
       }
