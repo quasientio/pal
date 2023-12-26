@@ -35,6 +35,8 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -243,12 +245,38 @@ public class Main implements Callable<Integer> {
     JoranConfigurator configurator = new JoranConfigurator();
     configurator.setContext(context);
     context.reset();
+
+    // look for a property named pal.logging in the System properties and use it as configuration if
+    // the file exists
+    final String palLogging = System.getProperty("pal.logging");
+    if (palLogging != null && !palLogging.trim().isEmpty()) {
+      boolean givenFileExists = false;
+      try {
+        if (Files.exists(Paths.get(palLogging))) {
+          givenFileExists = true;
+        }
+      } catch (Exception ex) {
+        ex.printStackTrace(System.err);
+      }
+      if (givenFileExists) {
+        try {
+          configurator.doConfigure(palLogging);
+        } catch (Exception ex) {
+          System.err.printf("Error loading logging configuration from %s%n", palLogging);
+          // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
+          ex.printStackTrace();
+        }
+        return;
+      }
+    }
+
+    // fall back to our default logging configuration
     try (final InputStream stream = Main.class.getResourceAsStream(LOGGING_CONFIG)) {
       configurator.doConfigure(stream);
-    } catch (Exception ie) {
+    } catch (Exception ex) {
       System.err.printf("Error loading logging configuration from %s%n", LOGGING_CONFIG);
       // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
-      ie.printStackTrace();
+      ex.printStackTrace();
     }
   }
 

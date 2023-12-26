@@ -4,6 +4,7 @@ MAIN_ARGS="$@"
 RUN_JMX_PROPS=""
 JVM_OPTS=""
 JMX_PROPS=""
+PAL_PROPS="-Dpal.logging=$PAL_HOME/.local/conf/peer-logging.xml"
 
 # Enable JMX for 'run' command only if ENV variables JMX_HOST and JMX_PORT are set.
 if [ -n "$JMX_HOST" ] && [ -n "$JMX_PORT" ]; then
@@ -36,4 +37,4 @@ else
   PAL_JAR=lib/pal-*.jar
 fi
 
-java $JVM_OPTS $JMX_PROPS -jar $PAL_JAR $MAIN_ARGS
+java $JVM_OPTS $JMX_PROPS $PAL_PROPS -jar $PAL_JAR $MAIN_ARGS
