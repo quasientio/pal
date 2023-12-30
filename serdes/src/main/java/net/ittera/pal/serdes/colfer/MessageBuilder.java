@@ -150,9 +150,15 @@ public final class MessageBuilder {
 
   private Parameter[] createNamedParameters(
       String[] parameterTypes, Object[] args, ObjectRef[] argObjRefs) {
-    final int paramsLen = parameterTypes == null ? 0 : parameterTypes.length;
-    final Parameter[] params = new Parameter[paramsLen];
-    for (int i = 0; i < paramsLen; i++) {
+    final int paramsTypesLength = parameterTypes == null ? 0 : parameterTypes.length;
+    final int argsLength = args == null ? 0 : args.length;
+    final int argsObjRefsLength = argObjRefs == null ? 0 : argObjRefs.length;
+    if (paramsTypesLength < argsLength || paramsTypesLength < argsObjRefsLength) {
+      throw new IllegalArgumentException(
+          "parameterTypes must be of same length as args and argObjRefs");
+    }
+    final Parameter[] params = new Parameter[paramsTypesLength];
+    for (int i = 0; i < paramsTypesLength; i++) {
       if (argObjRefs[i] != null) { // parameter is an objectref
         params[i] = createParameter(parameterTypes[i], null, argObjRefs[i]);
       } else if (args[i] != null) { // parameter is string, primitive or wrapper
@@ -275,7 +281,7 @@ public final class MessageBuilder {
       if (includeSourceContext) {
         constructorCall.setContext(getWrappedContext(context, sender, senderObjRef));
       }
-      constructorCall.setClazz(getWrappedClass(codeSignature.getDeclaringTypeName()));
+      constructorCall.setClazz(getWrappedClass(codeSignature.getName()));
     } else {
       constructorCall.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
       constructorCall.setClazz(getWrappedClass(className));

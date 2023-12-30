@@ -402,9 +402,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     double d2 = 8293;
     double d3 = 137193;
     double d4 = 8287193;
-    double[] varargs = {d1, d2, d3, d4};
-    Object[] args = {varargs};
-    ObjectRef[] argObjRefs = {null, null, null, null};
+    Object[] args = {new double[] {d1, d2, d3, d4}};
+    ObjectRef[] argObjRefs = {null};
 
     ExecMessage incomingMessage =
         messageBuilder.buildClassMethod(

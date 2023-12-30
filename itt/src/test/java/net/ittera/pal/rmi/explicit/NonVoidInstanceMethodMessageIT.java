@@ -125,7 +125,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
           listObjRef,
           new String[] {"java.lang.Integer"},
           new Object[] {someInt},
-          new ObjectRef[someInts.length]);
+          new ObjectRef[] {null});
     }
 
     // create new instance

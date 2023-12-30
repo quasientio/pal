@@ -94,7 +94,7 @@ public class NonVoidClassMethodMessageIT extends AbstractPeerMessageIT {
           listObjRef,
           new String[] {"java.lang.Integer"},
           new Object[] {someInt},
-          new ObjectRef[someInts.length]);
+          new ObjectRef[] {null});
     }
 
     // call method

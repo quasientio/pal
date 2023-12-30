@@ -104,7 +104,7 @@ public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
           listObjRef,
           new String[] {"java.lang.Integer"},
           new Object[] {someInt},
-          new ObjectRef[someInts.length]);
+          new ObjectRef[] {null});
     }
 
     String[] parameterTypes = {"java.util.ArrayList"};
