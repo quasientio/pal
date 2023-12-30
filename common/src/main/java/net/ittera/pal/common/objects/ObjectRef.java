@@ -37,6 +37,10 @@ public final class ObjectRef {
     return new ObjectRef(ref);
   }
 
+  public static ObjectRef randomRef() {
+    return new ObjectRef(String.valueOf((int) (Math.random() * 100000)));
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {

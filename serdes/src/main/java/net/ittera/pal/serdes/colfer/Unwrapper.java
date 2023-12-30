@@ -242,13 +242,29 @@ public class Unwrapper {
           array[idx++] = Double.parseDouble(strObj.getValue());
         }
         return array;
-
+      } else if (Wrapper.reconstructableCharSeqClasses.contains(clazz.getComponentType())) {
+        switch (clazz.getComponentType().getName()) {
+          case "java.lang.StringBuilder":
+            final StringBuilder[] sbArray = new StringBuilder[arrayValues.length];
+            int sbIdx = 0;
+            for (Obj strObj : arrayValues) {
+              sbArray[sbIdx++] = new StringBuilder(strObj.getValue());
+            }
+            return sbArray;
+          case "java.lang.StringBuffer":
+            final StringBuffer[] sbfArray = new StringBuffer[arrayValues.length];
+            int sbfIdx = 0;
+            for (Obj strObj : arrayValues) {
+              sbfArray[sbfIdx++] = new StringBuffer(strObj.getValue());
+            }
+            return sbfArray;
+          default:
+            throw new IllegalArgumentException(
+                "Unsupported char seq array type:" + clazz.getName());
+        }
       } else {
-        // TODO finish all primitive types
         throw new IllegalArgumentException("Unsupported array type:" + clazz.getName());
       }
-
-      // is String
     } else if (clazz == String.class) {
       // no casting needed
       return object.getValue();

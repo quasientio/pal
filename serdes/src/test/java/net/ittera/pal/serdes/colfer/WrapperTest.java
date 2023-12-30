@@ -20,29 +20,31 @@
 package net.ittera.pal.serdes.colfer;
 
 import static java.util.stream.Collectors.toList;
-import static org.hamcrest.Matchers.emptyString;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 
+import java.awt.Dimension;
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import net.ittera.pal.common.lang.reflect.FieldSignature;
+import net.ittera.pal.common.lang.reflect.Signature;
+import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.serdes.NonWrappableObjectException;
 import net.ittera.pal.serdes.WrappingTestBase;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior */
 public class WrapperTest extends WrappingTestBase {
 
+  private static final Logger logger = LoggerFactory.getLogger("tests");
   private static List<Class> allPrimitiveAndLangClasses;
 
   @BeforeClass
@@ -177,6 +179,19 @@ public class WrapperTest extends WrappingTestBase {
   }
 
   @Test
+  public void getWrappedClass_nullClassName_wrappedOk() {
+
+    net.ittera.pal.messages.colfer.Class wrappedClass;
+    wrappedClass = Wrapper.getWrappedClass((String) null);
+
+    assertNotNull(wrappedClass);
+    assertTrue(wrappedClass.getUnknown());
+
+    // name is set and correctly
+    assert (wrappedClass.getName().isEmpty());
+  }
+
+  @Test
   public void getWrappedClass_javaLangOrPrimitiveClassName_wrappedOk() {
 
     List<String> classNames =
@@ -230,6 +245,14 @@ public class WrapperTest extends WrappingTestBase {
   }
 
   @Test
+  public void wrapField_ValidField_wrappedField() throws NoSuchFieldException {
+    Field field = Dimension.class.getDeclaredField("height");
+    net.ittera.pal.messages.colfer.Field wrappedField = Wrapper.getWrappedField(field);
+    assertNotNull(wrappedField);
+    assertEquals(field.getName(), wrappedField.getName());
+  }
+
+  @Test
   public void getWrappedField_fieldAndClassName_wrappedOk() {
     String className = Integer.class.getName();
     String fieldName = "height";
@@ -244,12 +267,32 @@ public class WrapperTest extends WrappingTestBase {
 
   // <editor-fold defaultstate="collapsed" desc="getWrappedObject tests">
 
+  @Test(expected = NullPointerException.class)
+  public void getWrappedObject_NullClass_nullPointerException() {
+    Wrapper.getWrappedObject(new Object(), null, ObjectRef.randomRef());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void getWrappedObject_InvalidObjectType_illegalArgumentException() {
+    Wrapper.getWrappedObject(new Object(), 238923, ObjectRef.randomRef());
+  }
+
   @Test
-  public void getWrappedObject_nonWrappableObj_nonWrappableExceptionThrown() {
+  public void getWrappedObject_EmptyArray_wrappedArrayWithZeroLength() {
+    Integer[] emptyArray = new Integer[0];
+    Obj wrapped = Wrapper.getWrappedObject(emptyArray, emptyArray.getClass(), null);
+    assertNotNull(wrapped);
+    assertEquals(0, wrapped.getArrayValues().length);
+  }
+
+  @Test
+  public void getWrappedObject_nonWrappableObj_nonWrappableException() {
 
     for (Object obj : someNonWrappableObjects) {
       try {
-        Obj wrappedObj = Wrapper.getWrappedObject(obj, obj.getClass(), null);
+        logger.debug(
+            "Calling Wrapper.getWrappedObject with " + obj + " and class " + obj.getClass());
+        Wrapper.getWrappedObject(obj, obj.getClass(), null);
         fail("Should have thrown an exception");
       } catch (NonWrappableObjectException ex) {
         // all good
@@ -268,14 +311,18 @@ public class WrapperTest extends WrappingTestBase {
 
     for (Object obj : valuedWrappableObjs) {
       Obj wrappedObj = Wrapper.getWrappedObject(obj, obj.getClass(), null);
-
       assertNotNull(wrappedObj);
       assertNotNull(wrappedObj.getClazz());
       assertNotNull(wrappedObj.getClazz().getName());
 
       assertThat(wrappedObj.getRef(), is(emptyString()));
       assertFalse(wrappedObj.getIsNull());
-      assertThat(wrappedObj.getValue(), is(not(emptyString())));
+      if (wrappedObj.isArray) {
+        assertNotNull(wrappedObj.getArrayValues());
+      } else {
+        assertThat(wrappedObj.getValue(), is(not(emptyString())));
+        assertThat(wrappedObj.getArrayValues(), is(emptyArray()));
+      }
       assertFalse(wrappedObj.getIsVoid());
     }
   }
@@ -324,6 +371,33 @@ public class WrapperTest extends WrappingTestBase {
     assertTrue(wrappedObj.getIsNull());
     assertThat(wrappedObj.getValue(), is(emptyString()));
     assertFalse(wrappedObj.getIsVoid());
+  }
+
+  @Test
+  public void getWrappedObject_ObjectWithObjectRef_wrappedObjectWithRef() {
+    ObjectRef objectRef = ObjectRef.randomRef();
+    Object object = new ArrayList<String>();
+    Obj wrapped = Wrapper.getWrappedObject(object, object.getClass(), objectRef);
+    assertNotNull(wrapped);
+    assertEquals(String.valueOf(objectRef.getRef()), wrapped.getRef());
+  }
+
+  // </editor-fold>
+
+  // <editor-fold defaultstate="collapsed" desc="getWrappedContext tests">
+  @Test
+  public void wrapContext_VariousContexts_wrappedContext() throws NoSuchFieldException {
+    Signature signature = new FieldSignature(java.awt.Dimension.class.getDeclaredField("width"));
+    String sourceFile = "SomeJavaClass.java";
+    int lineNumber = 16;
+    Class withinType = java.awt.Dimension.class;
+    Context context = new Context(sourceFile, lineNumber, withinType, signature);
+    net.ittera.pal.messages.colfer.Context wrappedContext =
+        Wrapper.getWrappedContext(context, this, ObjectRef.randomRef());
+    assertNotNull(wrappedContext);
+    assertEquals(sourceFile, wrappedContext.getSourceLocationFile());
+    assertEquals(lineNumber, wrappedContext.getSourceLocationLine());
+    assertEquals(withinType.getName(), wrappedContext.getSourceLocationType());
   }
   // </editor-fold>
 }

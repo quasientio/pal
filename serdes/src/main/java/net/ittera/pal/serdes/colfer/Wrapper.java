@@ -48,20 +48,34 @@ public final class Wrapper {
     // avoid instantiation
   }
 
-  static boolean isWrappableCharSeqClass(Class clazz) {
+  public static boolean isWrappableCharSeqClass(Class clazz) {
     return reconstructableCharSeqClasses.contains(clazz);
   }
 
   /**
-   * Wrappable objects: - null, void.class, Void.class - all primitive types - all wrapper types -
-   * reconstructable char sequence types: String, StringBuilder, StringBuffer
+   * Helper method for getWrappedObject() that does the actual wrapping work. It is recursive and
+   * will be called for each element of an array/collection.
    *
-   * @param wrappedObject
-   * @param object
-   * @param t
-   * @param objectRef
-   * @param <T>
-   * @return
+   * <p>
+   *
+   * <pre>
+   * Wrappable objects:
+   *  - null
+   *  - void.class, Void.class
+   *  - all primitive types
+   *  - all primitive wrapper types
+   *  - reconstructable char sequence types: String, StringBuilder, StringBuffer
+   *  - arrays of all of the above
+   * </pre>
+   *
+   * @param wrappedObject the object to wrap into
+   * @param object the object to wrap
+   * @param t the class of the object to wrap
+   * @param objectRef the object reference, if any
+   * @param <T> the type of the object to wrap
+   * @return a Colfer Obj (object) instance
+   * @throws NullPointerException if t is null
+   * @throws IllegalArgumentException if t is not a Class nor a String
    */
   private static <T> Obj getWrappedObjectAux(
       Obj wrappedObject, java.lang.Object object, T t, ObjectRef objectRef) {
@@ -124,7 +138,7 @@ public final class Wrapper {
       } else {
         // nothing we can do but leave a trace
         if (logger.isTraceEnabled()) {
-          logger.trace("Don't know what to do to wrap object: {} of class: {}", object, t);
+          logger.warn("Don't know what to do to wrap object: {} of class: {}", object, t);
         }
       }
     }
@@ -162,11 +176,15 @@ public final class Wrapper {
   }
 
   /**
-   * @param object
-   * @param t
-   * @param objectRef
-   * @param <T>
-   * @return
+   * Wraps objects into a Colfer Obj(ect), which can be later unwrapped into the original object.
+   * See getWrappedObjectAux() for a list of valid wrappable types.
+   *
+   * @param object the object to wrap
+   * @param t the class of the object to wrap
+   * @param objectRef the object reference, if any
+   * @param <T> the type of the object to wrap
+   * @return a Colfer Obj (object) instance
+   * @throws NonWrappableObjectException if the object is not wrappable
    */
   static <T> Obj getWrappedObject(java.lang.Object object, T t, ObjectRef objectRef) {
     if (logger.isTraceEnabled()) {

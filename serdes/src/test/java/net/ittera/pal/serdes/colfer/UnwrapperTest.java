@@ -20,13 +20,14 @@
 package net.ittera.pal.serdes.colfer;
 
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.util.List;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.serdes.WrappingTestBase;
 import org.junit.Test;
 
+/** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior */
 public class UnwrapperTest extends WrappingTestBase {
 
   @Test
@@ -82,17 +83,28 @@ public class UnwrapperTest extends WrappingTestBase {
     List<Object> valuedWrappableObjs =
         wrappableObjects.stream()
             .filter(o -> o != null && o != void.class && o != Void.class)
-            .filter(o -> !Wrapper.reconstructableCharSeqClasses.contains(o.getClass()))
             .collect(toList());
 
     for (Object wrappable : valuedWrappableObjs) {
       Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass(), null);
       Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
-      // compare class and value
+      // compare class and value(s)
       assertEquals(wrappable.getClass(), unwrapped.getClass());
-      assertEquals(wrappable, unwrapped);
+      if (wrappable.getClass().isArray()) {
+        myAssertArrayEquals(wrappable, unwrapped);
+      } else if (wrappable instanceof CharSequence) {
+        assertEquals(wrappable.toString(), unwrapped.toString());
+      } else {
+        assertEquals(wrappable, unwrapped);
+      }
     }
   }
 
-  // TODO Arrays (include array of null's and void's)
+  @Test(expected = IllegalArgumentException.class)
+  public void unwrapObject_TypeIsArrayButWrappedObjectIsNot_illegalArgumentException() {
+    Obj wrappedObj = new Obj();
+    Class arrayClass = int[].class;
+    wrappedObj.setIsArray(false);
+    Unwrapper.unwrapObject(wrappedObj, arrayClass);
+  }
 }
