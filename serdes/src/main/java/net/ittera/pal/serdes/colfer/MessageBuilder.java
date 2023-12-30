@@ -253,10 +253,6 @@ public final class MessageBuilder {
         .withValue(peerUuid.toString());
   }
 
-  public InternalHeader buildIncomingInterceptRequestHeader() {
-    return buildInternalHeaderMessage(InternalHeaderType.INCOMING_INTERCEPT_REQ);
-  }
-
   // </editor-fold>
 
   // <editor-fold desc="Constructor messages">

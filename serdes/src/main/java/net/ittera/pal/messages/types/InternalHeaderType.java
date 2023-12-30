@@ -25,5 +25,4 @@ public enum InternalHeaderType {
    * peer, not the producer.
    */
   WRITE_AHEAD,
-  INCOMING_INTERCEPT_REQ,
 }
