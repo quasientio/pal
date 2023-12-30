@@ -289,7 +289,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
                 msg.toString());
           } else if (jsonOutput) {
             System.out.printf(
-                "offset: %d,%nmessage: %s%n", ctxt.getOffset(), ColferUtils.toJSON(msg));
+                "offset: %d,%nmessage: %s%n", ctxt.getOffset(), ColferUtils.toJSON(msg, true));
           } else { // compact format (default)
             System.out.printf(
                 "offset=%d uuid=%s key=%s type=%s%n",
@@ -396,7 +396,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
                 if (fullOutput) {
                   System.out.printf("%s%n", msg.toString());
                 } else if (jsonOutput) {
-                  System.out.printf("%s%n", ColferUtils.toJSON(msg));
+                  System.out.printf("%s%n", ColferUtils.toJSON(msg, true));
                 } else { // compact format (default)
                   System.out.printf("uuid=%s type=%s%n", getMessageType(msg), getMessageType(msg));
                 }

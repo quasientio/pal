@@ -158,9 +158,9 @@ public class ColferUtils {
 
   public static String toJSON(Marshallable message, boolean prettyPrint) {
     if (prettyPrint) {
-      return jsonPrinter.toJson(message);
+      return jsonPrettyPrinter.toJson(message);
     }
-    return jsonPrettyPrinter.toJson(message);
+    return jsonPrinter.toJson(message);
   }
 
   /**
