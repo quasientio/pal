@@ -41,8 +41,8 @@ type InstanceMethodCall struct {
 	parameters []Parameter
 	context    Context
 
-	//TO DO:  annotations
-	//TO DO:  exception types?
+	//TODO:  annotations
+	//TODO:  exception types?
 }
 
 type ClInitCall struct {
@@ -61,6 +61,6 @@ type ClassMethodCall struct {
 	parameters     []Parameter
 	context        Context
 
-	//TO DO:  annotations
-	//TO DO:  exception types?
+	//TODO:  annotations
+	//TODO:  exception types?
 }

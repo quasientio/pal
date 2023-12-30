@@ -27,8 +27,8 @@ type Throwable struct {
 }
 
 type RaisedThrowable struct {
-	//TO DO: Reference ID or hash to the constructor or method message that caused it
-	//TO DO: more context, i.e. args, etc.
+	//TODO: Reference ID or hash to the constructor or method message that caused it
+	//TODO: more context, i.e. args, etc.
 
 	clazz Class
 
