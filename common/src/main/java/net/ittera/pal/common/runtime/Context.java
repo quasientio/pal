@@ -29,7 +29,7 @@ import net.ittera.pal.common.lang.reflect.Signature;
 import org.aspectj.lang.JoinPoint;
 
 /**
- * This class (and the ones under .reflect subpackage) partly hold info that will be extracted from
+ * This class and the ones under .reflect subpackage partly hold info that will be extracted from
  * aspectj's JoinPoint.StaticPart, allowing us to construct instances for unit-testing, and adding
  * more useful contextual information.
  */

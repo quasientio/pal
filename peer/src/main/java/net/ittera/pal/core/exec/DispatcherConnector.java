@@ -192,7 +192,7 @@ public class DispatcherConnector {
 
     // deal with intercepts
     final ExecMessage returnValue;
-    // for now we only care about the first intercept request
+    // TODO: deal with all possible intercepts (now we only care about the first intercept request)
     InterceptMessage interceptMessage = matchingIntercepts.get(0);
     ExecMessage callbackMessage =
         messageBuilder.buildCallbackForInterceptRequest(peerUuid, execMessage, interceptMessage);

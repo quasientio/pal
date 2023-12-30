@@ -119,7 +119,7 @@ Commands:
 Run 'pal COMMAND --help' or 'pal help COMMAND' for more information on a command.
 ```
 
-Next, checkout the [HelloWorld](https://gitlab.com/cometera/pal-examples/-/tree/master/helloworld) and the [Spring
+Next, check out the [HelloWorld](https://gitlab.com/cometera/pal-examples/-/tree/master/helloworld) and the [Spring
 PetClinic](https://gitlab.com/cometera/pal-examples/-/tree/master/spring-petclinic) example apps.
 
 ## Contributing
