@@ -604,6 +604,7 @@ public final class MessageBuilder {
             new InstanceFieldGet()
                 .withClazz(clazz)
                 .withObject(targetObj)
+                .withObjectRef(String.valueOf(targetObjRef.getRef()))
                 .withField(field)
                 .withModifiers(modifiers)
                 .withContext(ctxt));
@@ -613,6 +614,7 @@ public final class MessageBuilder {
             new InstanceFieldPut()
                 .withClazz(clazz)
                 .withObject(targetObj)
+                .withObjectRef(String.valueOf(targetObjRef.getRef()))
                 .withField(field)
                 .withValueObject(
                     getWrappedObject(arg, fieldSignature.getFieldType().getName(), argObjRef))

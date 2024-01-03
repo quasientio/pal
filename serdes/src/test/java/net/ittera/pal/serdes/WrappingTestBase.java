@@ -100,7 +100,7 @@ public abstract class WrappingTestBase {
           34L,
           Short.parseShort("10"),
           /** char sequences * */
-          String.valueOf("hello"),
+          "hello",
           new StringBuilder("world"),
           new StringBuffer("!!"),
           /** primitive wrappers * */
