@@ -3,8 +3,11 @@ package net.ittera.pal.serdes.colfer;
 import static net.ittera.pal.messages.types.ExecMessageType.*;
 import static org.junit.Assert.*;
 
+import java.lang.reflect.AccessibleObject;
 import java.util.*;
+import net.ittera.pal.common.api.rmi.InstanceFieldGet;
 import net.ittera.pal.common.api.rmi.InstanceMethodCall;
+import net.ittera.pal.common.api.rmi.StaticFieldGet;
 import net.ittera.pal.common.api.rmi.StaticMethodCall;
 import net.ittera.pal.common.lang.reflect.ConstructorSignature;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
@@ -23,6 +26,8 @@ import org.junit.Test;
 
 class DummyClassForTest {
   int anInt;
+  static String aStaticField;
+  Object anObject;
 
   DummyClassForTest() {}
 
@@ -31,6 +36,8 @@ class DummyClassForTest {
   public void dummyMethodJustPrimitiveArgs(String str1, int number, Boolean myboo) {}
 
   public void dummyMethod(String str1, int number, List someList) {}
+
+  public static void dummyStaticMethod(String str1, String str2, boolean myboo) {}
 }
 
 /** Naming convention to use: methodName_stateUnderTest_expectedBehavior */
@@ -48,7 +55,7 @@ public class MessageBuilderTest {
   private net.ittera.pal.common.runtime.Context createContextForConstructor() throws Exception {
     ConstructorSignature constructorSignature =
         new ConstructorSignature(
-            DummyClassForTest.class.getDeclaredConstructor(new Class[] {String.class, int.class}));
+            DummyClassForTest.class.getDeclaredConstructor(String.class, int.class));
     String sourceFile = "MessageBuilderTest.java";
     int lineNumber = 17;
     Class withinType = DummyClassForTest.class;
@@ -60,7 +67,7 @@ public class MessageBuilderTest {
     MethodSignature methodSignature =
         new MethodSignature(
             DummyClassForTest.class.getDeclaredMethod(
-                "dummyMethod", new Class[] {String.class, int.class, List.class}));
+                "dummyMethod", String.class, int.class, List.class));
     String sourceFile = "MessageBuilderTest.java";
     int lineNumber = 20;
     Class withinType = DummyClassForTest.class;
@@ -68,12 +75,9 @@ public class MessageBuilderTest {
         sourceFile, lineNumber, withinType, methodSignature);
   }
 
-  private net.ittera.pal.common.runtime.Context createContextForClassMethod() throws Exception {
-    // Arrays.deepEquals(Object[] a1, Object[] a2)
-    MethodSignature methodSignature =
-        new MethodSignature(
-            Arrays.class.getDeclaredMethod(
-                "deepEquals", new Class[] {Object[].class, Object[].class}));
+  private net.ittera.pal.common.runtime.Context createContextForClassMethod(
+      MethodSignature methodSignature) throws Exception {
+
     String sourceFile = "Arrays.java";
     int lineNumber = 2000;
     Class withinType = Arrays.class;
@@ -133,8 +137,24 @@ public class MessageBuilderTest {
         extractedFieldOpMessageInfo.className =
             fieldOpMessage.getStaticFieldPut().getClazz().getName();
         break;
+      case PUT_FIELD_DONE:
+        assertNotNull(fieldOpMessage.getInstanceFieldPutDone());
+        extractedFieldOpMessageInfo.fieldName =
+            fieldOpMessage.getInstanceFieldPutDone().getField().getName();
+        extractedFieldOpMessageInfo.className =
+            fieldOpMessage.getInstanceFieldPutDone().getClazz().getName();
+        break;
+      case PUT_STATIC_DONE:
+        assertNotNull(fieldOpMessage.getStaticFieldPutDone());
+        extractedFieldOpMessageInfo.fieldName =
+            fieldOpMessage.getStaticFieldPutDone().getField().getName();
+        extractedFieldOpMessageInfo.className =
+            fieldOpMessage.getStaticFieldPutDone().getClazz().getName();
+        break;
       default:
-        fail("Unexpected ExecMessageType: " + fieldOpMessage.getExecMessageType());
+        fail(
+            "Unexpected ExecMessageType: "
+                + ExecMessageType.values()[fieldOpMessage.getExecMessageType()]);
     }
     return extractedFieldOpMessageInfo;
   }
@@ -385,7 +405,8 @@ public class MessageBuilderTest {
 
   // <editor-fold desc="Class method messages">
   @Test
-  public void buildClassMethod_validParams_classMethodMessage() throws ClassNotFoundException {
+  public void buildClassMethod_withArgsAndNullObjectRefs_classMethodMessage()
+      throws ClassNotFoundException {
     UUID peerUuid = UUID.randomUUID();
     String className = "java.util.Arrays";
     String methodName = "binarySearch"; // binarySearch(float[] a, float key)
@@ -433,18 +454,51 @@ public class MessageBuilderTest {
         0f);
   }
 
+  @Test
+  public void buildClassMethod_withContextAndPrimitiveArgs_classMethodMessage() throws Exception {
+    UUID peerUuid = UUID.randomUUID();
+    Context context =
+        createContextForClassMethod(
+            new MethodSignature(
+                DummyClassForTest.class.getDeclaredMethod(
+                    "dummyStaticMethod", String.class, String.class, boolean.class)));
+    Object sender = this;
+    ObjectRef senderObjRef = ObjectRef.randomRef();
+    Object[] args = new Object[] {"arg1", "arg2", true};
+    ObjectRef[] argObjRefs = new ObjectRef[] {null, null, null};
+    ExecMessage execMessage =
+        messageBuilderWithContext.buildClassMethod(
+            peerUuid, context, sender, senderObjRef, args, argObjRefs);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals((byte) ExecMessageType.CLASS_METHOD.ordinal(), execMessage.execMessageType);
+    assertNotNull(execMessage.getClassMethodCall());
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals(
+        DummyClassForTest.class.getName(), execMessage.getClassMethodCall().getClazz().getName());
+    assertEquals("dummyStaticMethod", execMessage.getClassMethodCall().getName());
+    assertNotNull(execMessage.getClassMethodCall().getContext());
+  }
+
   @Ignore(
       "TODO: enable and complete once we implement wrapping of Object arrays in the Wrapper class")
   @Test
-  public void buildClassMethod_withContext_classMethodMessage() throws Exception {
+  public void buildClassMethod_withContextAndObjectArrayArgs_classMethodMessage() throws Exception {
     UUID peerUuid = UUID.randomUUID();
-    Context context = createContextForClassMethod();
+    // Arrays.deepEquals(Object[] a1, Object[] a2)
+    Context context =
+        createContextForClassMethod(
+            new MethodSignature(
+                Arrays.class.getDeclaredMethod(
+                    "deepEquals", new Class[] {Object[].class, Object[].class})));
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     Object[] args = new Object[] {new Object[] {4.5f, 54.2f}, new Object[] {"float1", "float2"}};
     ObjectRef[] argObjRefs = new ObjectRef[] {null, null};
     ExecMessage execMessage =
-        messageBuilder.buildClassMethod(peerUuid, context, sender, senderObjRef, args, argObjRefs);
+        messageBuilderWithContext.buildClassMethod(
+            peerUuid, context, sender, senderObjRef, args, argObjRefs);
 
     // assert expected values of ExecMessage
     // TODO
@@ -465,7 +519,7 @@ public class MessageBuilderTest {
     ExecMessage execMessage =
         messageBuilder.buildClassMethod(peerUuid, sender, senderObjRef, staticMethodCall);
 
-    // assert expected properties of ExecMessage
+    // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals((byte) ExecMessageType.CLASS_METHOD.ordinal(), execMessage.execMessageType);
     assertNotNull(execMessage.getClassMethodCall());
@@ -495,7 +549,7 @@ public class MessageBuilderTest {
 
   // <editor-fold desc="Field Ops generic">
   @Test
-  public void buildFieldOp_allFourOps_newFieldOpMessages() throws Exception {
+  public void buildFieldOp_allFourOps_fieldOpMessages() throws Exception {
 
     // common args for all 4 ops
     UUID peerUuid = UUID.randomUUID();
@@ -556,9 +610,9 @@ public class MessageBuilderTest {
               arg,
               argObjRef);
 
+      assertNotNull(execMessage);
       assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
       assertEquals((byte) execMessageType.ordinal(), execMessage.execMessageType);
-      assertNotNull(execMessage);
       ExtractedFieldOpMessageInfo extractedFieldOpMessageInfo =
           extractedFieldOpMessageInfo(execMessage);
       assertEquals(targetClass.getName(), extractedFieldOpMessageInfo.className);
@@ -572,7 +626,7 @@ public class MessageBuilderTest {
           context.getWithinType().getName(),
           extractedFieldOpMessageInfo.context.getSourceLocationType());
 
-      // for non-static field ops, assert that the sender and target are in the message
+      // for non-static field ops, assert that the target object and objectref are in the message
       if (extractedFieldOpMessageInfo.targetObject != null) {
         assertEquals(
             targetClass.getName(), extractedFieldOpMessageInfo.targetObject.getClazz().getName());
@@ -583,6 +637,287 @@ public class MessageBuilderTest {
     }
   }
 
+  @Test
+  public void buildFieldOpDone_putFieldDone_fieldPutDoneMessage() throws Exception {
+    MessageBuilder builder = new MessageBuilder();
+    UUID peerUuid = UUID.randomUUID();
+    Class targetClass = DummyClassForTest.class;
+    String fieldName = "anInt";
+    Context context = createContextForFieldOp(targetClass, fieldName);
+    AccessibleObject field = targetClass.getDeclaredField("anInt");
+    ExecMessageType type = PUT_FIELD_DONE;
+
+    ExecMessage execMessage = builder.buildFieldOpDone(peerUuid, field, context, type);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) type.ordinal(), execMessage.execMessageType);
+    ExtractedFieldOpMessageInfo extractedFieldOpMessageInfo =
+        extractedFieldOpMessageInfo(execMessage);
+    assertEquals(targetClass.getName(), extractedFieldOpMessageInfo.className);
+    assertEquals(fieldName, extractedFieldOpMessageInfo.fieldName);
+    assertNull(extractedFieldOpMessageInfo.context);
+  }
+
+  @Test
+  public void buildFieldOpDone_putStaticDone_staticFieldPutDoneMessage() throws Exception {
+    MessageBuilder builder = new MessageBuilder();
+    UUID peerUuid = UUID.randomUUID();
+    Class targetClass = DummyClassForTest.class;
+    String fieldName = "anInt";
+    Context context = createContextForFieldOp(targetClass, fieldName);
+    AccessibleObject field = targetClass.getDeclaredField(fieldName);
+    ExecMessageType type = PUT_STATIC_DONE;
+
+    ExecMessage execMessage = builder.buildFieldOpDone(peerUuid, field, context, type);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) type.ordinal(), execMessage.execMessageType);
+    ExtractedFieldOpMessageInfo extractedFieldOpMessageInfo =
+        extractedFieldOpMessageInfo(execMessage);
+    assertEquals(targetClass.getName(), extractedFieldOpMessageInfo.className);
+    assertEquals(fieldName, extractedFieldOpMessageInfo.fieldName);
+    assertNull(extractedFieldOpMessageInfo.context);
+  }
+
   // </editor-fold>
 
+  // <editor-fold desc="Static field get messages">
+  @Test
+  public void buildGetStatic_withClassNameAndFieldName_staticFieldGetMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    String className = DummyClassForTest.class.getName();
+    String fieldName = "aStaticField";
+
+    ExecMessage execMessage = messageBuilder.buildGetStatic(peerUuid, className, fieldName);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) ExecMessageType.GET_STATIC.ordinal(), execMessage.execMessageType);
+    assertNotNull(execMessage.getStaticFieldGet());
+    assertEquals(className, execMessage.getStaticFieldGet().getClazz().getName());
+    assertEquals(fieldName, execMessage.getStaticFieldGet().getField().getName());
+    assertNull(execMessage.getStaticFieldGet().getContext());
+  }
+
+  @Test
+  public void buildGetStatic_withStaticFieldGet_staticFieldGetMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    StaticFieldGet staticFieldGet = new StaticFieldGet(DummyClassForTest.class, "aStaticField");
+    ExecMessage execMessage = messageBuilder.buildGetStatic(peerUuid, staticFieldGet);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) ExecMessageType.GET_STATIC.ordinal(), execMessage.execMessageType);
+    assertNotNull(execMessage.getStaticFieldGet());
+    assertEquals(
+        DummyClassForTest.class.getName(), execMessage.getStaticFieldGet().getClazz().getName());
+    assertEquals("aStaticField", execMessage.getStaticFieldGet().getField().getName());
+    assertNull(execMessage.getStaticFieldGet().getContext());
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Instance field get messages">
+  @Test
+  public void buildGetObject_withInstanceObjRef_instanceFieldGetMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    String className = DummyClassForTest.class.getName();
+    String fieldName = "anInt";
+    ObjectRef targetObjRef = ObjectRef.randomRef();
+
+    ExecMessage execMessage =
+        messageBuilder.buildGetObject(peerUuid, className, fieldName, targetObjRef);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) ExecMessageType.GET_FIELD.ordinal(), execMessage.execMessageType);
+    assertNotNull(execMessage.getInstanceFieldGet());
+    assertEquals(className, execMessage.getInstanceFieldGet().getClazz().getName());
+    assertEquals(fieldName, execMessage.getInstanceFieldGet().getField().getName());
+    assertEquals(targetObjRef, ObjectRef.from(execMessage.getInstanceFieldGet().getObjectRef()));
+    assertNull(execMessage.getInstanceFieldGet().getContext());
+  }
+
+  @Test
+  public void buildGetObject_withInstanceFieldGet_instanceFieldGetMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    String className = DummyClassForTest.class.getName();
+    String fieldName = "anInt";
+    ObjectRef instanceObjRef = ObjectRef.randomRef();
+    InstanceFieldGet instanceFieldGet =
+        new InstanceFieldGet(className, "anInt").withInstance(instanceObjRef);
+    ExecMessage execMessage = messageBuilder.buildGetObject(peerUuid, instanceFieldGet);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) ExecMessageType.GET_FIELD.ordinal(), execMessage.execMessageType);
+    assertNotNull(execMessage.getInstanceFieldGet());
+    assertEquals(className, execMessage.getInstanceFieldGet().getClazz().getName());
+    assertEquals(fieldName, execMessage.getInstanceFieldGet().getField().getName());
+    assertEquals(instanceObjRef, ObjectRef.from(execMessage.getInstanceFieldGet().getObjectRef()));
+    assertNull(execMessage.getInstanceFieldGet().getContext());
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Static field put messages">
+  @Test
+  public void buildPutStatic_withClassAndValue_staticFieldPutMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    String className = DummyClassForTest.class.getName();
+    String fieldName = "aStaticField";
+    String valueClassName = String.class.getName();
+    Object value = "a str value";
+
+    ExecMessage execMessage =
+        messageBuilder.buildPutStatic(peerUuid, className, fieldName, valueClassName, value);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) ExecMessageType.PUT_STATIC.ordinal(), execMessage.execMessageType);
+    assertNotNull(execMessage.getStaticFieldPut());
+    assertEquals(className, execMessage.getStaticFieldPut().getClazz().getName());
+    assertEquals(fieldName, execMessage.getStaticFieldPut().getField().getName());
+    assertEquals(
+        valueClassName, execMessage.getStaticFieldPut().getValueObject().getClazz().getName());
+    assertEquals(value, execMessage.getStaticFieldPut().getValueObject().getValue());
+    assertNull(execMessage.getStaticFieldPut().getContext());
+  }
+
+  @Test
+  public void buildPutStatic_withObjectRefValue_staticFieldPutMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    String className = DummyClassForTest.class.getName();
+    String fieldName = "aStaticField";
+    ObjectRef valueObjectRef = ObjectRef.randomRef();
+
+    ExecMessage execMessage =
+        messageBuilder.buildPutStatic(peerUuid, className, fieldName, valueObjectRef);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) ExecMessageType.PUT_STATIC.ordinal(), execMessage.execMessageType);
+    assertNotNull(execMessage.getStaticFieldPut());
+    assertEquals(className, execMessage.getStaticFieldPut().getClazz().getName());
+    assertEquals(fieldName, execMessage.getStaticFieldPut().getField().getName());
+    assertEquals(
+        valueObjectRef.getRef(),
+        Integer.parseInt(execMessage.getStaticFieldPut().getValueObjectRef()));
+    assertNull(execMessage.getStaticFieldPut().getContext());
+  }
+
+  @Test
+  public void buildPutStaticDone_withAccessibleObject_staticFieldPutDoneMessage()
+      throws NoSuchFieldException {
+    UUID peerUuid = UUID.randomUUID();
+    Class targetClass = DummyClassForTest.class;
+    String fieldName = "aStaticField";
+    AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
+    String staticFieldPutUuid = UUID.randomUUID().toString();
+    String followingUuid = UUID.randomUUID().toString();
+
+    ExecMessage execMessage =
+        messageBuilder.buildPutStaticDone(
+            peerUuid, accessibleObject, staticFieldPutUuid, followingUuid);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) ExecMessageType.PUT_STATIC_DONE.ordinal(), execMessage.execMessageType);
+    assertNotNull(execMessage.getStaticFieldPutDone());
+    assertEquals(targetClass.getName(), execMessage.getStaticFieldPutDone().getClazz().getName());
+    assertEquals(fieldName, execMessage.getStaticFieldPutDone().getField().getName());
+    assertEquals(staticFieldPutUuid, execMessage.getStaticFieldPutDone().getStaticFieldPutUuid());
+    assertEquals(followingUuid, execMessage.getFollowingUuid());
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Instance field put messages">
+  @Test
+  public void buildPutObject_withObjectValue_instanceFieldPutMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    String className = DummyClassForTest.class.getName();
+    String fieldName = "anInt";
+    ObjectRef targetObjRef = ObjectRef.randomRef();
+    String valueClassName = int.class.getName();
+    Object value = "4";
+
+    ExecMessage execMessage =
+        messageBuilder.buildPutObject(
+            peerUuid, className, fieldName, targetObjRef, valueClassName, value);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) ExecMessageType.PUT_FIELD.ordinal(), execMessage.execMessageType);
+    assertNotNull(execMessage.getInstanceFieldPut());
+    assertEquals(className, execMessage.getInstanceFieldPut().getClazz().getName());
+    assertEquals(fieldName, execMessage.getInstanceFieldPut().getField().getName());
+    assertEquals(targetObjRef, ObjectRef.from(execMessage.getInstanceFieldPut().getObjectRef()));
+    assertEquals(
+        valueClassName, execMessage.getInstanceFieldPut().getValueObject().getClazz().getName());
+    assertEquals(value, execMessage.getInstanceFieldPut().getValueObject().getValue());
+    assertNull(execMessage.getInstanceFieldPut().getContext());
+  }
+
+  @Test
+  public void buildPutObject_withObjectRefValue_instanceFieldPutMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    String className = DummyClassForTest.class.getName();
+    String fieldName = "anObject";
+    ObjectRef targetObjRef = ObjectRef.randomRef();
+    ObjectRef valueObjectRef = ObjectRef.randomRef();
+
+    ExecMessage execMessage =
+        messageBuilder.buildPutObject(peerUuid, className, fieldName, targetObjRef, valueObjectRef);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) ExecMessageType.PUT_FIELD.ordinal(), execMessage.execMessageType);
+    assertNotNull(execMessage.getInstanceFieldPut());
+    assertEquals(className, execMessage.getInstanceFieldPut().getClazz().getName());
+    assertEquals(fieldName, execMessage.getInstanceFieldPut().getField().getName());
+    assertEquals(targetObjRef, ObjectRef.from(execMessage.getInstanceFieldPut().getObjectRef()));
+    assertEquals(
+        valueObjectRef.getRef(),
+        Integer.parseInt(execMessage.getInstanceFieldPut().getValueObjectRef()));
+    assertNull(execMessage.getInstanceFieldPut().getContext());
+  }
+
+  @Test
+  public void buildPutObjectDone_withAccessibleAndInstanceFieldPutUuid_instanceFieldPutDoneMessage()
+      throws NoSuchFieldException {
+    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    UUID peerUuid = UUID.randomUUID();
+    Class targetClass = DummyClassForTest.class;
+    String fieldName = "anObject";
+    AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
+    String instanceFieldPutUuid = UUID.randomUUID().toString();
+    String followingUuid = UUID.randomUUID().toString();
+
+    ExecMessage execMessage =
+        builder.buildPutObjectDone(peerUuid, accessibleObject, instanceFieldPutUuid, followingUuid);
+
+    // assert expected values of ExecMessage
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) ExecMessageType.PUT_FIELD_DONE.ordinal(), execMessage.execMessageType);
+    assertNotNull(execMessage.getInstanceFieldPutDone());
+    assertEquals(targetClass.getName(), execMessage.getInstanceFieldPutDone().getClazz().getName());
+    assertEquals(fieldName, execMessage.getInstanceFieldPutDone().getField().getName());
+    assertEquals(
+        instanceFieldPutUuid, execMessage.getInstanceFieldPutDone().getInstanceFieldPutUuid());
+    assertEquals(followingUuid, execMessage.getFollowingUuid());
+  }
+  // </editor-fold>
 }
