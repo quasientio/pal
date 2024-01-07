@@ -129,7 +129,7 @@ public final class Wrapper {
         // NOTE: we iterate using reflection (Array) because the array type is unknown
         for (int i = 0; i < length; i++) {
           final java.lang.Object arrayElem = Array.get(object, i);
-          // wrap and all array elements -- recursive
+          // wrap all array elements -- recursive
           arrayElems[i] = getWrappedObject(arrayElem, arrayElem.getClass(), null);
         }
         wrappedObject.setArrayValues(arrayElems);
@@ -194,6 +194,10 @@ public final class Wrapper {
     final Obj obj = new Obj();
     if (objectRef == null && !isWrappable(object)) {
       throw new NonWrappableObjectException(object);
+    }
+    if (object instanceof Obj) {
+      throw new NonWrappableObjectException(
+          "Unexpected instance of Obj. Cannot wrap an already wrapped object", object);
     }
     return getWrappedObjectAux(obj, object, t, objectRef);
   }

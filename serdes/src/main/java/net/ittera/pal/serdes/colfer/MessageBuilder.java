@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -112,9 +113,10 @@ public final class MessageBuilder {
 
   // <editor-fold desc="Private Auxiliary methods">
   private Parameter createParameter(String parameterType, Object arg, ObjectRef argObjRef) {
+    Object argValue = arg instanceof Obj ? ((Obj) arg).getValue() : arg;
     return new Parameter()
         .withType(getWrappedClass(parameterType))
-        .withValue(getWrappedObject(arg, parameterType, argObjRef));
+        .withValue(getWrappedObject(argValue, parameterType, argObjRef));
   }
 
   private Parameter createNamedParameter(
@@ -524,8 +526,6 @@ public final class MessageBuilder {
 
     final ClassMethodCall classMethodCall = new ClassMethodCall();
     final String fieldParamType;
-    Obj object;
-    String objectRef;
     final ExecMessageType otherMessageType =
         ExecMessageType.values()[otherMessage.getExecMessageType()];
     switch (otherMessageType) {
@@ -539,19 +539,33 @@ public final class MessageBuilder {
         classMethodCall.setParameters(otherMessage.getClassMethodCall().getParameters());
         break;
       case PUT_STATIC:
-        // Q: is this right? Or should we use valueObject.class.name if present?
         fieldParamType = otherMessage.getStaticFieldPut().getField().getClazz().getName();
-        object = otherMessage.getStaticFieldPut().getValueObject();
-        objectRef = otherMessage.getStaticFieldPut().getValueObjectRef();
+        Obj valueObj = otherMessage.getStaticFieldPut().getValueObject();
+        String valueObjectRef;
+        if (valueObj != null && !valueObj.getRef().isEmpty()) {
+          valueObjectRef = valueObj.getRef();
+        } else {
+          // fallback to the ObjectRef set in the message
+          valueObjectRef = otherMessage.getStaticFieldPut().getValueObjectRef();
+        }
         classMethodCall.setParameters(
-            new Parameter[] {createParameter(fieldParamType, object, ObjectRef.from(objectRef))});
+            new Parameter[] {
+              createParameter(fieldParamType, valueObj, ObjectRef.from(valueObjectRef))
+            });
         break;
       case PUT_FIELD:
         fieldParamType = otherMessage.getInstanceFieldPut().getField().getClazz().getName();
-        object = otherMessage.getInstanceFieldPut().getValueObject();
-        objectRef = otherMessage.getInstanceFieldPut().getValueObjectRef();
+        valueObj = otherMessage.getInstanceFieldPut().getValueObject();
+        if (valueObj != null && !valueObj.getRef().isEmpty()) {
+          valueObjectRef = valueObj.getRef();
+        } else {
+          // fallback to the ObjectRef set in the message
+          valueObjectRef = otherMessage.getInstanceFieldPut().getValueObjectRef();
+        }
         classMethodCall.setParameters(
-            new Parameter[] {createParameter(fieldParamType, object, ObjectRef.from(objectRef))});
+            new Parameter[] {
+              createParameter(fieldParamType, valueObj, ObjectRef.from(valueObjectRef))
+            });
         break;
       case GET_STATIC:
         fieldParamType = otherMessage.getStaticFieldGet().getField().getClazz().getName();
@@ -810,7 +824,7 @@ public final class MessageBuilder {
   // <editor-fold desc="Throwable messages">
   public ExecMessage buildAccessibleObjectThrowable(
       UUID peerUuid,
-      Optional<AccessibleObject> accessibleObject,
+      @Nonnull Optional<AccessibleObject> accessibleObject,
       ExecutableObjectType executableObjectType,
       Throwable exception,
       String followingUuid) {
@@ -830,7 +844,8 @@ public final class MessageBuilder {
       } else {
         throw new UnsupportedOperationException(
             String.format(
-                "Unsupported accessibleObject type: %s", accessibleObject.getClass().getName()));
+                "Unsupported accessibleObject type: %s",
+                accessibleObject.get().getClass().getName()));
       }
     } else {
       switch (executableObjectType) {
@@ -1037,7 +1052,7 @@ public final class MessageBuilder {
         new ControlMessage()
             .withFromPeer(fromPeer.toString())
             .withMessageUuid(UUID.randomUUID().toString())
-            .withCommand((byte) ControlCommandType.DELETE_OBJECT.ordinal());
+            .withCommand(ControlCommandType.DELETE_OBJECT.toByte());
 
     if (body != null && !body.isEmpty()) {
       controlMessage.setBody(body);
@@ -1049,7 +1064,7 @@ public final class MessageBuilder {
     return new ControlMessage()
         .withFromPeer(fromPeer.toString())
         .withMessageUuid(UUID.randomUUID().toString())
-        .withCommand((byte) ControlCommandType.DELETE_SESSION.ordinal());
+        .withCommand(ControlCommandType.DELETE_SESSION.toByte());
   }
 
   public ControlMessage buildControlMessage(
@@ -1058,7 +1073,7 @@ public final class MessageBuilder {
         new ControlMessage()
             .withFromPeer(fromPeerUuid.toString())
             .withMessageUuid(UUID.randomUUID().toString())
-            .withStatus((byte) statusType.ordinal());
+            .withStatus(statusType.toByte());
 
     if (body != null && !body.isEmpty()) {
       controlMessage.setBody(body);
@@ -1074,31 +1089,31 @@ public final class MessageBuilder {
   // <editor-fold desc="Message Wrapper">
   public Message wrap(ExecMessage execMessage) {
     return new Message()
-        .withMessageType((byte) MessageType.EXEC_MESSAGE.ordinal())
+        .withMessageType(MessageType.EXEC_MESSAGE.toByte())
         .withExecMessage(execMessage);
   }
 
   public Message wrap(InterceptMessage interceptMessage) {
     return new Message()
-        .withMessageType((byte) MessageType.INTERCEPT_MESSAGE.ordinal())
+        .withMessageType(MessageType.INTERCEPT_MESSAGE.toByte())
         .withInterceptMessage(interceptMessage);
   }
 
   public Message wrap(InterceptKeyMessage interceptKeyMessage) {
     return new Message()
-        .withMessageType((byte) MessageType.INTERCEPT_KEY.ordinal())
+        .withMessageType(MessageType.INTERCEPT_KEY.toByte())
         .withInterceptKeyMessage(interceptKeyMessage);
   }
 
   public Message wrap(InterceptReply interceptReply) {
     return new Message()
-        .withMessageType((byte) MessageType.INTERCEPT_REPLY.ordinal())
+        .withMessageType(MessageType.INTERCEPT_REPLY.toByte())
         .withInterceptReply(interceptReply);
   }
 
   public Message wrap(ControlMessage controlMessage) {
     return new Message()
-        .withMessageType((byte) MessageType.CONTROL_MESSAGE.ordinal())
+        .withMessageType(MessageType.CONTROL_MESSAGE.toByte())
         .withControlMessage(controlMessage);
   }
   // </editor-fold>

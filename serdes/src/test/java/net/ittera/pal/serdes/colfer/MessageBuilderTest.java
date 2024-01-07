@@ -4,22 +4,36 @@ import static net.ittera.pal.messages.types.ExecMessageType.*;
 import static org.junit.Assert.*;
 
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
+import java.util.stream.Collectors;
 import net.ittera.pal.common.api.rmi.InstanceFieldGet;
 import net.ittera.pal.common.api.rmi.InstanceMethodCall;
 import net.ittera.pal.common.api.rmi.StaticFieldGet;
 import net.ittera.pal.common.api.rmi.StaticMethodCall;
+import net.ittera.pal.common.directory.nodes.InterceptRequest;
+import net.ittera.pal.common.lang.FieldOpType;
+import net.ittera.pal.common.lang.intercept.InterceptType;
+import net.ittera.pal.common.lang.intercept.InterceptableFieldOp;
+import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
 import net.ittera.pal.common.lang.reflect.ConstructorSignature;
+import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
+import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InterceptKeyMessage;
+import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.messages.colfer.InterceptReply;
 import net.ittera.pal.messages.colfer.InternalHeader;
+import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
-import net.ittera.pal.messages.types.ExecMessageType;
-import net.ittera.pal.messages.types.InternalHeaderType;
+import net.ittera.pal.messages.types.*;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -29,13 +43,17 @@ class DummyClassForTest {
   static String aStaticField;
   Object anObject;
 
-  DummyClassForTest() {}
+  public DummyClassForTest() {}
 
-  DummyClassForTest(String str1, int number) {}
+  public DummyClassForTest(String str1, int number) {}
 
   public void dummyMethodJustPrimitiveArgs(String str1, int number, Boolean myboo) {}
 
   public void dummyMethod(String str1, int number, List someList) {}
+
+  public int addInts(int x, int y) {
+    return x + y;
+  }
 
   public static void dummyStaticMethod(String str1, String str2, boolean myboo) {}
 }
@@ -52,25 +70,24 @@ public class MessageBuilderTest {
   }
   // <editor-fold desc="Helper methods">
 
-  private net.ittera.pal.common.runtime.Context createContextForConstructor() throws Exception {
+  private net.ittera.pal.common.runtime.Context createContextForConstructor(
+      Class constructorClass, Class... constructorArgTypes) throws Exception {
     ConstructorSignature constructorSignature =
-        new ConstructorSignature(
-            DummyClassForTest.class.getDeclaredConstructor(String.class, int.class));
+        new ConstructorSignature(constructorClass.getDeclaredConstructor(constructorArgTypes));
     String sourceFile = "MessageBuilderTest.java";
     int lineNumber = 17;
-    Class withinType = DummyClassForTest.class;
+    Class withinType = constructorClass;
     return new net.ittera.pal.common.runtime.Context(
         sourceFile, lineNumber, withinType, constructorSignature);
   }
 
-  private net.ittera.pal.common.runtime.Context createContextForInstanceMethod() throws Exception {
+  private net.ittera.pal.common.runtime.Context createContextForInstanceMethod(
+      Class clazz, String method, Class... methodArgTypes) throws Exception {
     MethodSignature methodSignature =
-        new MethodSignature(
-            DummyClassForTest.class.getDeclaredMethod(
-                "dummyMethod", String.class, int.class, List.class));
+        new MethodSignature(clazz.getDeclaredMethod(method, methodArgTypes));
     String sourceFile = "MessageBuilderTest.java";
     int lineNumber = 20;
-    Class withinType = DummyClassForTest.class;
+    Class withinType = clazz;
     return new net.ittera.pal.common.runtime.Context(
         sourceFile, lineNumber, withinType, methodSignature);
   }
@@ -162,15 +179,11 @@ public class MessageBuilderTest {
 
   private MessageBuilder messageBuilder;
   private MessageBuilder messageBuilderWithContext;
-  private net.ittera.pal.common.runtime.Context constructorContext;
-  private net.ittera.pal.common.runtime.Context instanceMethodContext;
 
   @Before
   public void setUp() throws Exception {
     messageBuilder = new MessageBuilder();
     messageBuilderWithContext = new MessageBuilder(Boolean.toString(true));
-    constructorContext = createContextForConstructor();
-    instanceMethodContext = createContextForInstanceMethod();
   }
 
   @Test
@@ -184,6 +197,33 @@ public class MessageBuilderTest {
     MessageBuilder messageBuilder = new MessageBuilder(Boolean.toString(false));
     assertNotNull(messageBuilder);
   }
+
+  // <editor-fold desc="Thread-local sequence stamping methods">
+  @Test
+  public void resetThreadLocalSequence() {
+    UUID peerUuid = UUID.randomUUID();
+    String className = this.getClass().getName();
+    int expectedDispatchSeq = 1;
+    int expectedBuilderSeq = 1;
+
+    // create 2 messages, and assert that only builder sequence is incremented
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+    assertEquals(expectedBuilderSeq++, execMessage.getBuilderSeq());
+    assertEquals(expectedDispatchSeq, execMessage.getDispatchSeq());
+
+    execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+    assertEquals(expectedBuilderSeq++, execMessage.getBuilderSeq());
+    assertEquals(expectedDispatchSeq, execMessage.getDispatchSeq());
+
+    messageBuilder.resetThreadLocalSequence();
+    expectedDispatchSeq += 1;
+    expectedBuilderSeq = 1;
+
+    execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+    assertEquals(expectedBuilderSeq, execMessage.getBuilderSeq());
+    assertEquals(expectedDispatchSeq, execMessage.getDispatchSeq());
+  }
+  // </editor-fold>
 
   // <editor-fold desc="Header messages">
   @Test
@@ -230,12 +270,14 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void buildConstructor_withContext_constructorMessage() {
+  public void buildConstructor_withContext_constructorMessage() throws Exception {
     UUID peerUuid = UUID.randomUUID();
+    Class clazz = DummyClassForTest.class;
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     Object[] args = {"test", 123};
     ObjectRef[] argObjRefs = {null, null};
+    Context constructorContext = createContextForConstructor(clazz, String.class, int.class);
     ExecMessage execMessage =
         messageBuilderWithContext.buildConstructor(
             peerUuid, constructorContext, sender, senderObjRef, args, argObjRefs);
@@ -243,8 +285,7 @@ public class MessageBuilderTest {
     assertEquals((byte) ExecMessageType.CONSTRUCTOR.ordinal(), execMessage.execMessageType);
     assertNotNull(execMessage.getConstructorCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(
-        DummyClassForTest.class.getName(), execMessage.getConstructorCall().getClazz().getName());
+    assertEquals(clazz.getName(), execMessage.getConstructorCall().getClazz().getName());
     assertNotNull(execMessage.getConstructorCall().getContext());
 
     // verify Context
@@ -337,14 +378,18 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void buildInstanceMethod_withContext_instanceMethodCallMessage() {
+  public void buildInstanceMethod_withContext_instanceMethodCallMessage() throws Exception {
     UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
+    Class clazz = DummyClassForTest.class;
+    String methodName = "dummyMethod";
     Object target = new DummyClassForTest();
     ObjectRef targetObjRef = ObjectRef.randomRef();
     Object[] args = {"test", 123, new ArrayList()};
     ObjectRef[] argObjRefs = {null, null, ObjectRef.randomRef()};
+    Context instanceMethodContext =
+        createContextForInstanceMethod(clazz, methodName, String.class, int.class, List.class);
     ExecMessage execMessage =
         messageBuilderWithContext.buildInstanceMethod(
             peerUuid,
@@ -573,9 +618,9 @@ public class MessageBuilderTest {
               {
                 put("messageType", PUT_FIELD);
                 put("target", new Object());
-                put("targetObjectRef", ObjectRef.randomRef());
+                put("targetObjectRef", ObjectRef.from("492849"));
                 put("arg", "an argument");
-                put("argObjRef", ObjectRef.randomRef());
+                put("argObjRef", ObjectRef.from("234987"));
               }
             },
             new HashMap<String, Object>() {
@@ -587,7 +632,7 @@ public class MessageBuilderTest {
               {
                 put("messageType", PUT_STATIC);
                 put("arg", "an argument");
-                put("argObjRef", ObjectRef.randomRef());
+                put("argObjRef", ObjectRef.from("8702347"));
               }
             });
 
@@ -918,6 +963,852 @@ public class MessageBuilderTest {
     assertEquals(
         instanceFieldPutUuid, execMessage.getInstanceFieldPutDone().getInstanceFieldPutUuid());
     assertEquals(followingUuid, execMessage.getFollowingUuid());
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Intercept messages">
+  @Test
+  public void buildInterceptMessage_forMethod_interceptMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    InterceptType type = InterceptType.BEFORE;
+    String className = DummyClassForTest.class.getName();
+    String methodName = "dummyMethod";
+    List<String> parameterTypes = Arrays.asList("String", "int");
+    String callbackClassName = this.getClass().getName();
+    String callbackMethodName = "callbackMethod";
+
+    InterceptMessage interceptMessage =
+        messageBuilder.buildInterceptMessage(
+            peerUuid,
+            type,
+            className,
+            methodName,
+            parameterTypes,
+            callbackClassName,
+            callbackMethodName);
+
+    assertNotNull(interceptMessage);
+    assertEquals(peerUuid.toString(), interceptMessage.getPeerUuid());
+    assertNotNull(interceptMessage.getMessageUuid());
+    assertEquals((byte) type.ordinal(), interceptMessage.interceptType);
+    assertEquals(className, interceptMessage.getClazz());
+    assertEquals(methodName, interceptMessage.getMethod().getName());
+    assertEquals(
+        parameterTypes,
+        Arrays.stream(interceptMessage.getMethod().getParameterTypes())
+            .collect(Collectors.toList()));
+    assertEquals(callbackClassName, interceptMessage.getCallbackClass());
+    assertEquals(callbackMethodName, interceptMessage.getCallbackMethod());
+  }
+
+  @Test
+  public void buildInterceptMessage_forField_interceptMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    InterceptType type = InterceptType.AFTER;
+    String className = DummyClassForTest.class.getName();
+    String fieldName = "anInt";
+    FieldOpType fieldOpType = FieldOpType.GET;
+    String callbackClassName = this.getClass().getName();
+    String callbackMethodName = "fakeCallbackMethod";
+
+    InterceptMessage interceptMessage =
+        messageBuilder.buildInterceptMessage(
+            peerUuid,
+            type,
+            className,
+            fieldName,
+            fieldOpType,
+            callbackClassName,
+            callbackMethodName);
+
+    assertNotNull(interceptMessage);
+    assertEquals(peerUuid.toString(), interceptMessage.getPeerUuid());
+    assertNotNull(interceptMessage.getMessageUuid());
+    assertEquals((byte) type.ordinal(), interceptMessage.interceptType);
+    assertEquals(className, interceptMessage.getClazz());
+    assertNotNull(interceptMessage.getField());
+    assertEquals(fieldName, interceptMessage.getField().getName());
+    assertEquals((byte) fieldOpType.ordinal(), interceptMessage.getField().getFieldOpType());
+    assertEquals(callbackClassName, interceptMessage.getCallbackClass());
+    assertEquals(callbackMethodName, interceptMessage.getCallbackMethod());
+  }
+
+  @Test
+  public void buildInterceptMessage_afterFieldGetInterceptRequest_interceptMessage() {
+    UUID interceptRequestUuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptType type = InterceptType.AFTER;
+    Class clazz = DummyClassForTest.class;
+    Class callbackClass = this.getClass();
+    String callbackMethod = "fakeCallbackMethod";
+    String fieldName = "anInt";
+    InterceptableFieldOp interceptableFieldOp =
+        new InterceptableFieldOp(fieldName, FieldOpType.GET);
+    InterceptRequest interceptRequest =
+        new InterceptRequest<>(
+            interceptRequestUuid,
+            peer,
+            type,
+            clazz.getName(),
+            callbackClass.getName(),
+            callbackMethod,
+            interceptableFieldOp);
+    InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
+
+    assertNotNull(interceptMessage);
+    assertEquals(peer.toString(), interceptMessage.getPeerUuid());
+    assertEquals(interceptRequestUuid.toString(), interceptMessage.getMessageUuid());
+    assertEquals((byte) type.ordinal(), interceptMessage.interceptType);
+    assertEquals(clazz.getName(), interceptMessage.getClazz());
+    assertNotNull(interceptMessage.getField());
+    assertEquals(fieldName, interceptMessage.getField().getName());
+    assertEquals(
+        (byte) interceptableFieldOp.getFieldOpType().ordinal(),
+        interceptMessage.getField().getFieldOpType());
+    assertEquals(callbackClass.getName(), interceptMessage.getCallbackClass());
+    assertEquals(callbackMethod, interceptMessage.getCallbackMethod());
+  }
+
+  @Test
+  public void buildInterceptMessage_beforeMethodCallInterceptRequest_interceptMessage() {
+    UUID interceptRequestUuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptType type = InterceptType.BEFORE;
+    Class clazz = DummyClassForTest.class;
+    Class callbackClass = this.getClass();
+    String callbackMethod = "fakeCallbackMethod";
+    String method = "dummyMethod";
+    List<String> parameterTypes = Arrays.asList("String", "int", "java.util.List");
+    InterceptableMethodCall interceptableMethodCall =
+        new InterceptableMethodCall(method, parameterTypes);
+    InterceptRequest interceptRequest =
+        new InterceptRequest<>(
+            interceptRequestUuid,
+            peer,
+            type,
+            clazz.getName(),
+            callbackClass.getName(),
+            callbackMethod,
+            interceptableMethodCall);
+    InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
+
+    assertNotNull(interceptMessage);
+    assertEquals(peer.toString(), interceptMessage.getPeerUuid());
+    assertEquals(interceptRequestUuid.toString(), interceptMessage.getMessageUuid());
+    assertEquals((byte) type.ordinal(), interceptMessage.interceptType);
+    assertEquals(clazz.getName(), interceptMessage.getClazz());
+    assertNotNull(interceptMessage.getMethod());
+    assertEquals(method, interceptMessage.getMethod().getName());
+    assertEquals(
+        parameterTypes,
+        Arrays.stream(interceptMessage.getMethod().getParameterTypes())
+            .collect(Collectors.toList()));
+    assertEquals(callbackClass.getName(), interceptMessage.getCallbackClass());
+    assertEquals(callbackMethod, interceptMessage.getCallbackMethod());
+  }
+
+  @Test
+  public void buildInterceptReply_uuidFollowingUuidResult_validInterceptReply() {
+    UUID peerUuid = UUID.randomUUID();
+    UUID followingUuid = UUID.randomUUID();
+    boolean result = true;
+
+    InterceptReply interceptReply =
+        messageBuilder.buildInterceptReply(peerUuid, followingUuid, result);
+
+    assertNotNull(interceptReply);
+    assertEquals(peerUuid.toString(), interceptReply.getPeerUuid());
+    assertEquals(followingUuid.toString(), interceptReply.getFollowingUuid());
+    assertEquals(result, interceptReply.getResult());
+  }
+
+  @Test
+  public void buildInterceptKey_instanceMethodCall_interceptKeyMessage() throws Exception {
+
+    // create an ExecMessage that we can use to build an InterceptKeyMessage
+    UUID peerUuid = UUID.randomUUID();
+    Object sender = this;
+    ObjectRef senderObjRef = ObjectRef.randomRef();
+    Class clazz = DummyClassForTest.class;
+    Object target = new DummyClassForTest();
+    ObjectRef targetObjRef = ObjectRef.randomRef();
+    Object[] args = {"test", 123, new ArrayList()};
+    ObjectRef[] argObjRefs = {null, null, ObjectRef.randomRef()};
+    Context instanceMethodContext =
+        createContextForInstanceMethod(clazz, "dummyMethod", String.class, int.class, List.class);
+    ExecMessage execMessage =
+        messageBuilderWithContext.buildInstanceMethod(
+            peerUuid,
+            instanceMethodContext,
+            sender,
+            senderObjRef,
+            target,
+            targetObjRef,
+            args,
+            argObjRefs);
+    InterceptKeyMessage interceptKeyMessage = messageBuilder.buildInterceptKey(execMessage);
+
+    assertNotNull(interceptKeyMessage);
+    assertEquals(target.getClass().getName(), interceptKeyMessage.getClazz());
+    assertEquals(target.getClass().getName(), interceptKeyMessage.getClazz());
+    assertEquals(execMessage.getExecMessageType(), interceptKeyMessage.getExecMsgType());
+    assertEquals(
+        execMessage.getInstanceMethodCall().getName(), interceptKeyMessage.getExecutableName());
+    assertEquals(
+        execMessage.getInstanceMethodCall().getParameters().length,
+        interceptKeyMessage.getParameterTypes().length);
+    assertEquals(
+        execMessage.getInstanceMethodCall().getParameters()[0].getType().getName(),
+        interceptKeyMessage.getParameterTypes()[0]);
+    assertEquals(
+        execMessage.getInstanceMethodCall().getParameters()[1].getType().getName(),
+        interceptKeyMessage.getParameterTypes()[1]);
+    assertEquals(
+        execMessage.getInstanceMethodCall().getParameters()[2].getType().getName(),
+        interceptKeyMessage.getParameterTypes()[2]);
+  }
+
+  @Test
+  public void buildCallbackForInterceptRequest_constructorToBeIntercepted_callbackExecMessage()
+      throws Exception {
+    // create an ExecMessage out of a Constructor that we can use as interceptedMessage
+    UUID peerUuid = UUID.randomUUID();
+    Object sender = this;
+    ObjectRef senderObjRef = ObjectRef.randomRef();
+    Object target = new DummyClassForTest();
+    Object[] args = {"test", 123};
+    ObjectRef[] argObjRefs = {null, null};
+    Context context = createContextForConstructor(target.getClass(), String.class, int.class);
+    ExecMessage interceptedExecMessage =
+        messageBuilder.buildConstructor(peerUuid, context, sender, senderObjRef, args, argObjRefs);
+
+    // create an InterceptMessage from which the callback will be built
+    String callbackClassName = "SomeClassWithCallbackMethod";
+    String callbackMethodName = "callbackMethod";
+    InterceptMessage interceptMessage =
+        messageBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.AFTER,
+            target.getClass().getName(),
+            "new",
+            Arrays.asList("String", "int"),
+            callbackClassName,
+            callbackMethodName);
+
+    ExecMessage callbackExecMessage =
+        messageBuilder.buildCallbackForInterceptRequest(
+            peerUuid, interceptedExecMessage, interceptMessage);
+
+    assertNotNull(callbackExecMessage);
+    assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
+    assertEquals(
+        (byte) ExecMessageType.CLASS_METHOD.ordinal(), callbackExecMessage.getExecMessageType());
+    assertNotNull(callbackExecMessage.getClassMethodCall());
+    assertEquals(callbackClassName, callbackExecMessage.getClassMethodCall().getClazz().getName());
+    assertEquals(callbackMethodName, callbackExecMessage.getClassMethodCall().getName());
+    assertEquals(
+        interceptedExecMessage.getConstructorCall().getParameters().length,
+        callbackExecMessage.getClassMethodCall().getParameters().length);
+    assertEquals(
+        interceptedExecMessage.getConstructorCall().getParameters()[0].getType().getName(),
+        callbackExecMessage.getClassMethodCall().getParameters()[0].getType().getName());
+    assertEquals(
+        interceptedExecMessage.getConstructorCall().getParameters()[1].getType().getName(),
+        callbackExecMessage.getClassMethodCall().getParameters()[1].getType().getName());
+  }
+
+  @Test
+  public void buildCallbackForInterceptRequest_classMethodToBeIntercepted_callbackExecMessage()
+      throws Exception {
+    // create an ExecMessage out of a ClassMethod that we can use as interceptedMessage
+    UUID peerUuid = UUID.randomUUID();
+    Object sender = this;
+    ObjectRef senderObjRef = ObjectRef.randomRef();
+    Object target = new DummyClassForTest();
+    String methodName = "dummyStaticMethod";
+    String[] parameterTypes = new String[] {"String", "String", "boolean"};
+    Object[] args = {"str1", "str2", true};
+    ObjectRef[] argObjRefs = {null, null, null};
+    ExecMessage interceptedExecMessage =
+        messageBuilder.buildClassMethod(
+            peerUuid,
+            target.getClass().getName(),
+            methodName,
+            parameterTypes,
+            sender,
+            senderObjRef,
+            args,
+            argObjRefs);
+
+    // create an InterceptMessage from which the callback will be built
+    String callbackClassName = "SomeClassWithCallbackMethod";
+    String callbackMethodName = "callbackMethod";
+    InterceptMessage interceptMessage =
+        messageBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.AFTER,
+            target.getClass().getName(),
+            methodName,
+            Arrays.asList(parameterTypes),
+            callbackClassName,
+            callbackMethodName);
+
+    ExecMessage callbackExecMessage =
+        messageBuilder.buildCallbackForInterceptRequest(
+            peerUuid, interceptedExecMessage, interceptMessage);
+
+    assertNotNull(callbackExecMessage);
+    assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
+    assertEquals(
+        (byte) ExecMessageType.CLASS_METHOD.ordinal(), callbackExecMessage.getExecMessageType());
+    assertNotNull(callbackExecMessage.getClassMethodCall());
+    assertEquals(callbackClassName, callbackExecMessage.getClassMethodCall().getClazz().getName());
+    assertEquals(callbackMethodName, callbackExecMessage.getClassMethodCall().getName());
+    assertEquals(
+        interceptedExecMessage.getClassMethodCall().getParameters().length,
+        callbackExecMessage.getClassMethodCall().getParameters().length);
+    assertEquals(
+        interceptedExecMessage.getClassMethodCall().getParameters()[0].getType().getName(),
+        callbackExecMessage.getClassMethodCall().getParameters()[0].getType().getName());
+    assertEquals(
+        interceptedExecMessage.getClassMethodCall().getParameters()[1].getType().getName(),
+        callbackExecMessage.getClassMethodCall().getParameters()[1].getType().getName());
+  }
+
+  @Test
+  public void buildCallbackForInterceptRequest_instanceMethodToBeIntercepted_callbackExecMessage()
+      throws Exception {
+    // create an ExecMessage out of an InstanceMethod that we can use as interceptedMessage
+    UUID peerUuid = UUID.randomUUID();
+    Object sender = this;
+    ObjectRef senderObjRef = ObjectRef.randomRef();
+    Object target = new DummyClassForTest();
+    ObjectRef targetObjRef = ObjectRef.randomRef();
+    String methodName = "dummyMethod";
+    Object[] args = {"test", 123, new ArrayList()};
+    ObjectRef[] argObjRefs = {null, null, ObjectRef.randomRef()};
+    Context context =
+        createContextForInstanceMethod(
+            target.getClass(), methodName, String.class, int.class, List.class);
+    ExecMessage interceptedExecMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid, context, sender, senderObjRef, target, targetObjRef, args, argObjRefs);
+
+    // create an InterceptMessage from which the callback will be built
+    String callbackClassName = "SomeClassWithCallbackMethod";
+    String callbackMethodName = "callbackMethod";
+    InterceptMessage interceptMessage =
+        messageBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.AFTER,
+            target.getClass().getName(),
+            methodName,
+            Arrays.asList("String", "int", "java.util.List"),
+            callbackClassName,
+            callbackMethodName);
+
+    ExecMessage callbackExecMessage =
+        messageBuilder.buildCallbackForInterceptRequest(
+            peerUuid, interceptedExecMessage, interceptMessage);
+
+    assertNotNull(callbackExecMessage);
+    assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
+    assertEquals(
+        (byte) ExecMessageType.CLASS_METHOD.ordinal(), callbackExecMessage.getExecMessageType());
+    assertNotNull(callbackExecMessage.getClassMethodCall());
+    assertEquals(callbackClassName, callbackExecMessage.getClassMethodCall().getClazz().getName());
+    assertEquals(callbackMethodName, callbackExecMessage.getClassMethodCall().getName());
+    assertEquals(
+        interceptedExecMessage.getInstanceMethodCall().getParameters().length,
+        callbackExecMessage.getClassMethodCall().getParameters().length);
+    assertEquals(
+        interceptedExecMessage.getInstanceMethodCall().getParameters()[0].getType().getName(),
+        callbackExecMessage.getClassMethodCall().getParameters()[0].getType().getName());
+    assertEquals(
+        interceptedExecMessage.getInstanceMethodCall().getParameters()[1].getType().getName(),
+        callbackExecMessage.getClassMethodCall().getParameters()[1].getType().getName());
+    assertEquals(
+        interceptedExecMessage.getInstanceMethodCall().getParameters()[2].getType().getName(),
+        callbackExecMessage.getClassMethodCall().getParameters()[2].getType().getName());
+  }
+
+  @Test
+  public void buildCallbackForInterceptRequest_fieldOpsToBeIntercepted_callbackExecMessages()
+      throws Exception {
+
+    // common for all four field ops
+    UUID peerUuid = UUID.randomUUID();
+    Object sender = this;
+    ObjectRef senderObjRef = ObjectRef.randomRef();
+    String fieldName = "anInt";
+
+    // create a list of specific args for each of the four field op types
+    List<Map<String, Object>> listOfFieldOpArgs =
+        Arrays.asList(
+            new HashMap<String, Object>() {
+              {
+                put("messageType", GET_FIELD);
+                put("fieldOpType", FieldOpType.GET);
+                put("target", new DummyClassForTest());
+                put("targetObjectRef", ObjectRef.randomRef());
+              }
+            },
+            new HashMap<String, Object>() {
+              {
+                put("messageType", PUT_FIELD);
+                put("fieldOpType", FieldOpType.PUT);
+                put("target", new DummyClassForTest());
+                put("targetObjectRef", ObjectRef.from("734524"));
+                put("arg", "87");
+                put("argObjRef", ObjectRef.from("2872346"));
+              }
+            },
+            new HashMap<String, Object>() {
+              {
+                put("fieldOpType", FieldOpType.GET);
+                put("messageType", GET_STATIC);
+              }
+            },
+            new HashMap<String, Object>() {
+              {
+                put("fieldOpType", FieldOpType.PUT);
+                put("messageType", PUT_STATIC);
+                put("arg", "378");
+                put("argObjRef", ObjectRef.from("2987234"));
+              }
+            });
+
+    // call buildFieldOp for each of the four field op types
+    for (Map<String, Object> map : listOfFieldOpArgs) {
+      ExecMessageType execMessageType = (ExecMessageType) map.get("messageType");
+      FieldOpType fieldOpType = (FieldOpType) map.get("fieldOpType");
+      Class targetClass = DummyClassForTest.class;
+      Object target = map.get("target");
+      ObjectRef targetObjRef = (ObjectRef) map.get("targetObjectRef");
+      Object arg = map.get("arg");
+      ObjectRef argObjRef = (ObjectRef) map.get("argObjRef");
+      Context context = createContextForFieldOp(targetClass, fieldName);
+      ExecMessage interceptedExecMessage =
+          messageBuilderWithContext.buildFieldOp(
+              peerUuid,
+              context,
+              execMessageType,
+              sender,
+              senderObjRef,
+              target,
+              targetObjRef,
+              arg,
+              argObjRef);
+
+      // create an InterceptMessage from which the callback will be built
+      String callbackClassName = "SomeClassWithCallbackMethod";
+      String callbackMethodName = "callbackMethod";
+      InterceptMessage interceptMessage =
+          messageBuilder.buildInterceptMessage(
+              peerUuid,
+              InterceptType.AFTER,
+              targetClass.getName(),
+              fieldName,
+              fieldOpType,
+              callbackClassName,
+              callbackMethodName);
+
+      ExecMessage callbackExecMessage =
+          messageBuilder.buildCallbackForInterceptRequest(
+              peerUuid, interceptedExecMessage, interceptMessage);
+
+      assertNotNull(callbackExecMessage);
+      assertEquals(peerUuid.toString(), callbackExecMessage.getPeerUuid());
+      assertEquals(
+          (byte) ExecMessageType.CLASS_METHOD.ordinal(), callbackExecMessage.getExecMessageType());
+      assertNotNull(callbackExecMessage.getClassMethodCall());
+      assertEquals(
+          callbackClassName, callbackExecMessage.getClassMethodCall().getClazz().getName());
+      assertEquals(callbackMethodName, callbackExecMessage.getClassMethodCall().getName());
+
+      // compare argument values
+      switch (execMessageType) {
+        case GET_FIELD:
+          break;
+        case PUT_FIELD:
+          assertEquals(
+              interceptedExecMessage.getInstanceFieldPut().getValueObject().getValue(),
+              callbackExecMessage.getClassMethodCall().getParameters()[0].getValue().getValue());
+          break;
+        case GET_STATIC:
+          break;
+        case PUT_STATIC:
+          assertEquals(
+              interceptedExecMessage.getStaticFieldPut().getValueObject().getValue(),
+              callbackExecMessage.getClassMethodCall().getParameters()[0].getValue().getValue());
+          break;
+        default:
+          fail("Unexpected ExecMessageType: " + execMessageType);
+      }
+    }
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Throwable messages">
+  @Test
+  public void buildAccessibleObjectThrowable_withConstructor_raisedThrowableMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    String throwableMessage = "my throwable message";
+    Throwable throwable = new Throwable(throwableMessage);
+    String followingUuid = UUID.randomUUID().toString();
+
+    List<AccessibleObject> accessibleObjects =
+        new ArrayList() {
+          {
+            add(DummyClassForTest.class.getDeclaredConstructors()[0]);
+            add(DummyClassForTest.class.getDeclaredMethods()[0]);
+            add(DummyClassForTest.class.getDeclaredFields()[0]);
+            add(new AccessibleObject() {}); // anonymous class to check for unsupported types
+          }
+        };
+
+    for (AccessibleObject accessibleObject : accessibleObjects) {
+      ExecMessage execMessage = null;
+      try {
+        execMessage =
+            messageBuilder.buildAccessibleObjectThrowable(
+                peerUuid, Optional.of(accessibleObject), null, throwable, followingUuid);
+      } catch (UnsupportedOperationException e) {
+        assertTrue(e.getMessage().contains("Unsupported accessibleObject type:"));
+        continue;
+      }
+
+      assertNotNull(execMessage);
+      assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+      assertEquals((byte) THROWABLE.ordinal(), execMessage.getExecMessageType());
+      assertNotNull(execMessage.getRaisedThrowable());
+      if (accessibleObject instanceof Method) {
+        assertEquals(
+            ((Method) accessibleObject).getModifiers(),
+            execMessage.getRaisedThrowable().getModifiers());
+        assertEquals(
+            ((Method) accessibleObject).getName(), execMessage.getRaisedThrowable().getMethod());
+      } else if (accessibleObject instanceof Constructor) {
+        assertEquals(
+            ((Constructor) accessibleObject).getModifiers(),
+            execMessage.getRaisedThrowable().getModifiers());
+        assertEquals(
+            ((Constructor) accessibleObject).getDeclaringClass().getName(),
+            execMessage.getRaisedThrowable().getConstructor());
+      } else if (accessibleObject instanceof Field) {
+        assertEquals(
+            ((Field) accessibleObject).getModifiers(),
+            execMessage.getRaisedThrowable().getModifiers());
+        assertEquals(
+            ((Field) accessibleObject).getName(), execMessage.getRaisedThrowable().getField());
+      } else {
+        fail("Unexpected AccessibleObject: " + accessibleObject);
+      }
+      assertNotNull(execMessage.getRaisedThrowable().getThrowable());
+      assertEquals(
+          throwable.getClass().getName(), execMessage.getRaisedThrowable().getClazz().getName());
+      assertEquals(
+          throwable.getClass().getName(),
+          execMessage.getRaisedThrowable().getThrowable().getType());
+      assertEquals(throwableMessage, execMessage.getRaisedThrowable().getThrowable().getMessage());
+      assertNotNull(execMessage.getRaisedThrowable().getThrowable().getStackTraceElements());
+      assertNull(execMessage.getRaisedThrowable().getThrowable().getCause());
+      assertEquals(followingUuid, execMessage.getFollowingUuid());
+    }
+  }
+
+  @Test
+  public void
+      buildAccessibleObjectThrowable_withAllExecutableObjectTypes_raisedThrowableMessages() {
+    UUID peerUuid = UUID.randomUUID();
+    String throwableMessage = "my throwable message";
+    Throwable throwable = new Throwable(throwableMessage);
+    String followingUuid = UUID.randomUUID().toString();
+
+    Arrays.asList(ExecutableObjectType.values()).stream()
+        .forEach(
+            executableObjectType -> {
+              ExecMessage execMessage =
+                  messageBuilder.buildAccessibleObjectThrowable(
+                      peerUuid, Optional.empty(), executableObjectType, throwable, followingUuid);
+
+              assertNotNull(execMessage);
+              assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+              assertEquals((byte) THROWABLE.ordinal(), execMessage.getExecMessageType());
+              assertNotNull(execMessage.getRaisedThrowable());
+              switch (executableObjectType) {
+                case METHOD:
+                  assertEquals(
+                      "<info not available>", execMessage.getRaisedThrowable().getMethod());
+                  break;
+                case CONSTRUCTOR:
+                  assertEquals(
+                      "<info not available>", execMessage.getRaisedThrowable().getConstructor());
+                  break;
+                case FIELD:
+                  assertEquals("<info not available>", execMessage.getRaisedThrowable().getField());
+                  break;
+                default:
+                  fail("Unexpected ExecutableObjectType: " + executableObjectType);
+              }
+              assertNotNull(execMessage.getRaisedThrowable().getThrowable());
+              assertEquals(
+                  throwable.getClass().getName(),
+                  execMessage.getRaisedThrowable().getThrowable().getType());
+              assertEquals(
+                  throwableMessage, execMessage.getRaisedThrowable().getThrowable().getMessage());
+              assertNotNull(
+                  execMessage.getRaisedThrowable().getThrowable().getStackTraceElements());
+              assertNull(execMessage.getRaisedThrowable().getThrowable().getCause());
+              assertEquals(followingUuid, execMessage.getFollowingUuid());
+            });
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Return value messages">
+  @Test
+  public void buildReturnValue_withConstructor_returnValueMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    Constructor constructor = DummyClassForTest.class.getConstructors()[0];
+    Object returnValue = new DummyClassForTest();
+    ObjectRef returnValueObjRef = ObjectRef.randomRef();
+    String followingUuid = UUID.randomUUID().toString();
+
+    ExecMessage execMessage =
+        messageBuilder.buildReturnValue(
+            peerUuid, returnValue, constructor, returnValueObjRef, false, followingUuid);
+
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) RETURN_VALUE.ordinal(), execMessage.getExecMessageType());
+    assertNotNull(execMessage.getReturnValue());
+    assertEquals(
+        constructor.toGenericString(),
+        execMessage.getReturnValue().getFrom().getConstructor().getRepr());
+    assertEquals(
+        returnValue.getClass().getName(),
+        execMessage.getReturnValue().getObject().getClazz().getName());
+    assertEquals(
+        returnValueObjRef.getRef(),
+        Integer.parseInt(execMessage.getReturnValue().getObject().getRef()));
+    assertEquals(followingUuid, execMessage.getFollowingUuid());
+  }
+
+  @Test
+  public void buildReturnValue_withMethod_returnValueMessage() throws NoSuchMethodException {
+    UUID peerUuid = UUID.randomUUID();
+    Method method = DummyClassForTest.class.getMethod("addInts", int.class, int.class);
+    ObjectRef returnValueObjRef = ObjectRef.randomRef();
+    int returnValue = 4;
+    String followingUuid = UUID.randomUUID().toString();
+
+    ExecMessage execMessage =
+        messageBuilder.buildReturnValue(
+            peerUuid,
+            returnValue,
+            method,
+            returnValueObjRef,
+            method.getReturnType() == void.class,
+            followingUuid);
+
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) RETURN_VALUE.ordinal(), execMessage.getExecMessageType());
+    assertNotNull(execMessage.getReturnValue());
+    assertEquals(
+        method.toGenericString(), execMessage.getReturnValue().getFrom().getMethod().getRepr());
+    assertEquals("int", execMessage.getReturnValue().getObject().getClazz().getName());
+    assertEquals(
+        returnValueObjRef.getRef(),
+        Integer.parseInt(execMessage.getReturnValue().getObject().getRef()));
+    assertEquals(followingUuid, execMessage.getFollowingUuid());
+  }
+
+  @Test
+  public void buildReturnValue_withGetField_returnValueMessage() throws NoSuchFieldException {
+    UUID peerUuid = UUID.randomUUID();
+    Field field = DummyClassForTest.class.getDeclaredField("anObject");
+    ObjectRef returnValueObjRef = ObjectRef.randomRef();
+    Object returnValue = new Object();
+    String followingUuid = UUID.randomUUID().toString();
+
+    ExecMessage execMessage =
+        messageBuilder.buildReturnValue(
+            peerUuid, returnValue, field, returnValueObjRef, false, followingUuid);
+
+    assertNotNull(execMessage);
+    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
+    assertEquals((byte) RETURN_VALUE.ordinal(), execMessage.getExecMessageType());
+    assertNotNull(execMessage.getReturnValue());
+    assertEquals(
+        field.toGenericString(), execMessage.getReturnValue().getFrom().getField().getRepr());
+    assertEquals(
+        returnValue.getClass().getName(),
+        execMessage.getReturnValue().getObject().getClazz().getName());
+    assertEquals(
+        returnValueObjRef.getRef(),
+        Integer.parseInt(execMessage.getReturnValue().getObject().getRef()));
+    assertEquals(followingUuid, execMessage.getFollowingUuid());
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Control messages">
+  @Test
+  public void buildDeleteObjectControlMessage_withBody_deleteControlMessage() {
+    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    UUID fromPeer = UUID.randomUUID();
+    String body = "someBody";
+    ControlMessage controlMessage = builder.buildDeleteObjectControlMessage(fromPeer, body);
+
+    assertNotNull(controlMessage);
+    assertNotNull(controlMessage.getMessageUuid());
+    assertEquals(fromPeer.toString(), controlMessage.getFromPeer());
+    assertEquals(body, controlMessage.getBody());
+    assertEquals(ControlCommandType.DELETE_OBJECT.toByte(), controlMessage.getCommand());
+  }
+
+  @Test
+  public void buildDeleteObjectControlMessage_withNoBody_deleteControlMessage() {
+    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    UUID fromPeer = UUID.randomUUID();
+    String body = null;
+    ControlMessage controlMessage = builder.buildDeleteObjectControlMessage(fromPeer, body);
+
+    assertNotNull(controlMessage);
+    assertNotNull(controlMessage.getMessageUuid());
+    assertEquals(fromPeer.toString(), controlMessage.getFromPeer());
+    assertEquals("", controlMessage.getBody());
+    assertEquals(ControlCommandType.DELETE_OBJECT.toByte(), controlMessage.getCommand());
+  }
+
+  @Test
+  public void buildDeleteSessionControlMessage_fromPeer_deleteSessionControlMessage() {
+    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    UUID fromPeer = UUID.randomUUID();
+
+    ControlMessage controlMessage = builder.buildDeleteSessionControlMessage(fromPeer);
+
+    assertNotNull(controlMessage);
+    assertNotNull(controlMessage.getMessageUuid());
+    assertEquals(fromPeer.toString(), controlMessage.getFromPeer());
+    assertEquals("", controlMessage.getBody());
+    assertEquals(ControlCommandType.DELETE_SESSION.toByte(), controlMessage.getCommand());
+  }
+
+  @Test
+  public void buildControlMessage_withStatusTypeAndBody_controlMessage() {
+    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    UUID fromPeerUuid = UUID.randomUUID();
+    ControlStatusType statusType = ControlStatusType.OK;
+    String body = "someBody";
+
+    ControlMessage controlMessage = builder.buildControlMessage(fromPeerUuid, statusType, body);
+
+    assertNotNull(controlMessage);
+    assertNotNull(controlMessage.getMessageUuid());
+    assertEquals(fromPeerUuid.toString(), controlMessage.getFromPeer());
+    assertEquals(body, controlMessage.getBody());
+    assertEquals(statusType.toByte(), controlMessage.getStatus());
+  }
+
+  @Test
+  public void buildControlMessage_withStatusTypeAndNoBody_controlMessage() {
+    MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
+    UUID fromPeerUuid = UUID.randomUUID();
+    ControlStatusType statusType = ControlStatusType.NO_SUCH_SESSION;
+
+    ControlMessage controlMessage = builder.buildControlMessage(fromPeerUuid, statusType);
+
+    assertNotNull(controlMessage);
+    assertNotNull(controlMessage.getMessageUuid());
+    assertEquals(fromPeerUuid.toString(), controlMessage.getFromPeer());
+    assertEquals("", controlMessage.getBody());
+    assertEquals(statusType.toByte(), controlMessage.getStatus());
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Message Wrapper">
+  @Test
+  public void wrap_execMessage_wrappedExecMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    String className = DummyClassForTest.class.getName();
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+
+    Message wrappedMessage = messageBuilder.wrap(execMessage);
+
+    assertNotNull(wrappedMessage);
+    assertEquals(MessageType.EXEC_MESSAGE.toByte(), wrappedMessage.getMessageType());
+    assertEquals(execMessage, wrappedMessage.getExecMessage());
+  }
+
+  @Test
+  public void wrap_interceptMessage_wrappedInterceptMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    String className = DummyClassForTest.class.getName();
+    String fieldName = "anInt";
+    String callbackClass = this.getClass().getName();
+    String callbackMethod = "callbackMethod";
+    InterceptMessage interceptMessage =
+        messageBuilder.buildInterceptMessage(
+            peerUuid,
+            InterceptType.BEFORE,
+            className,
+            fieldName,
+            FieldOpType.GET,
+            callbackClass,
+            callbackMethod);
+
+    Message wrappedMessage = messageBuilder.wrap(interceptMessage);
+
+    assertNotNull(wrappedMessage);
+    assertEquals(MessageType.INTERCEPT_MESSAGE.toByte(), wrappedMessage.getMessageType());
+    assertEquals(interceptMessage, wrappedMessage.getInterceptMessage());
+  }
+
+  @Test
+  public void wrap_interceptKeyMessage_wrappedInterceptKeyMessage() {
+    UUID peerUuid = UUID.randomUUID();
+    String className = DummyClassForTest.class.getName();
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
+
+    InterceptKeyMessage interceptKeyMessage = messageBuilder.buildInterceptKey(execMessage);
+
+    Message wrappedMessage = messageBuilder.wrap(interceptKeyMessage);
+
+    assertNotNull(wrappedMessage);
+    assertEquals(MessageType.INTERCEPT_KEY.toByte(), wrappedMessage.getMessageType());
+    assertEquals(interceptKeyMessage, wrappedMessage.getInterceptKeyMessage());
+  }
+
+  @Test
+  public void wrap_interceptReply_wrappedInterceptReply() {
+    UUID peerUuid = UUID.randomUUID();
+    UUID followingUuid = UUID.randomUUID();
+    boolean result = true;
+
+    InterceptReply interceptReply =
+        messageBuilder.buildInterceptReply(peerUuid, followingUuid, result);
+
+    Message wrappedInterceptReply = messageBuilder.wrap(interceptReply);
+
+    assertNotNull(wrappedInterceptReply);
+    assertEquals(MessageType.INTERCEPT_REPLY.toByte(), wrappedInterceptReply.getMessageType());
+    assertEquals(interceptReply, wrappedInterceptReply.getInterceptReply());
+  }
+
+  @Test
+  public void wrap_controlMessage_wrappedControlMessage() {
+    UUID fromPeerUuid = UUID.randomUUID();
+    ControlStatusType statusType = ControlStatusType.OK;
+    ControlMessage controlMessage = messageBuilder.buildControlMessage(fromPeerUuid, statusType);
+
+    Message wrappedMessage = messageBuilder.wrap(controlMessage);
+
+    assertNotNull(wrappedMessage);
+    assertEquals(MessageType.CONTROL_MESSAGE.toByte(), wrappedMessage.getMessageType());
+    assertEquals(controlMessage, wrappedMessage.getControlMessage());
   }
   // </editor-fold>
 }

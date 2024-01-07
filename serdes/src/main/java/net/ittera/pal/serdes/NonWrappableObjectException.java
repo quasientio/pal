@@ -27,6 +27,11 @@ public class NonWrappableObjectException extends RuntimeException {
     this.nonWrappableObject = nonWrappableObject;
   }
 
+  public NonWrappableObjectException(String message, Object nonWrappableObject) {
+    super(message);
+    this.nonWrappableObject = nonWrappableObject;
+  }
+
   public Object getNonWrappableObject() {
     return nonWrappableObject;
   }
