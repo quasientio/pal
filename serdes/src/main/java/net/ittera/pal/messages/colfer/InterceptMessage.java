@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -933,5 +935,48 @@ public class InterceptMessage implements Serializable, net.ittera.pal.messages.M
         && (this.callbackMethod == null
             ? o.callbackMethod == null
             : this.callbackMethod.equals(o.callbackMethod));
+  }
+
+  @Override
+  public InterceptMessage fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("peerUuid")) {
+        this.peerUuid = json.get("peerUuid").getAsString();
+      }
+
+      if (json.has("messageUuid")) {
+        this.messageUuid = json.get("messageUuid").getAsString();
+      }
+
+      if (json.has("interceptType")) {
+        this.interceptType = json.get("interceptType").getAsByte();
+      }
+
+      if (json.has("clazz")) {
+        this.clazz = json.get("clazz").getAsString();
+      }
+
+      if (json.has("field")) {
+        JsonObject jsonObj = json.getAsJsonObject("field");
+        this.field = new InterceptableField().fromJson(jsonObj);
+      }
+
+      if (json.has("method")) {
+        JsonObject jsonObj = json.getAsJsonObject("method");
+        this.method = new InterceptableMethod().fromJson(jsonObj);
+      }
+
+      if (json.has("callbackClass")) {
+        this.callbackClass = json.get("callbackClass").getAsString();
+      }
+
+      if (json.has("callbackMethod")) {
+        this.callbackMethod = json.get("callbackMethod").getAsString();
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

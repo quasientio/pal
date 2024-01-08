@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -677,5 +679,34 @@ public class ControlMessage implements Serializable, net.ittera.pal.messages.Mar
         && this.command == o.command
         && this.status == o.status
         && (this.body == null ? o.body == null : this.body.equals(o.body));
+  }
+
+  @Override
+  public ControlMessage fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("fromPeer")) {
+        this.fromPeer = json.get("fromPeer").getAsString();
+      }
+
+      if (json.has("messageUuid")) {
+        this.messageUuid = json.get("messageUuid").getAsString();
+      }
+
+      if (json.has("command")) {
+        this.command = json.get("command").getAsByte();
+      }
+
+      if (json.has("status")) {
+        this.status = json.get("status").getAsByte();
+      }
+
+      if (json.has("body")) {
+        this.body = json.get("body").getAsString();
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

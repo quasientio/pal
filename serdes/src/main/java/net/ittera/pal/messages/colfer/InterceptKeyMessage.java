@@ -7,6 +7,9 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -684,5 +687,33 @@ public class InterceptKeyMessage implements Serializable, net.ittera.pal.message
             ? o.executableName == null
             : this.executableName.equals(o.executableName))
         && java.util.Arrays.equals(this.parameterTypes, o.parameterTypes);
+  }
+
+  @Override
+  public InterceptKeyMessage fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("clazz")) {
+        this.clazz = json.get("clazz").getAsString();
+      }
+
+      if (json.has("execMsgType")) {
+        this.execMsgType = json.get("execMsgType").getAsByte();
+      }
+
+      if (json.has("executableName")) {
+        this.executableName = json.get("executableName").getAsString();
+      }
+
+      if (json.has("parameterTypes")) {
+        JsonArray jsonArray = json.getAsJsonArray("parameterTypes");
+        this.parameterTypes = new String[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          this.parameterTypes[i] = jsonArray.get(i).getAsString();
+        }
+      }
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

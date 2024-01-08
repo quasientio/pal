@@ -7,6 +7,9 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -891,5 +894,55 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
         && (this.ref == null ? o.ref == null : this.ref.equals(o.ref))
         && this.isNull == o.isNull
         && this.isVoid == o.isVoid;
+  }
+
+  @Override
+  public Obj fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("value")) {
+        this.value = json.get("value").getAsString();
+      }
+
+      if (json.has("hash")) {
+        this.hash = json.get("hash").getAsInt();
+      }
+
+      if (json.has("identityHash")) {
+        this.identityHash = json.get("identityHash").getAsInt();
+      }
+
+      if (json.has("clazz")) {
+        JsonObject jsonObj = json.getAsJsonObject("clazz");
+        this.clazz = new Class().fromJson(jsonObj);
+      }
+
+      if (json.has("isArray")) {
+        this.isArray = json.get("isArray").getAsBoolean();
+      }
+
+      if (json.has("arrayValues")) {
+        JsonArray jsonArray = json.getAsJsonArray("arrayValues");
+        this.arrayValues = new Obj[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          JsonObject jsonObj = jsonArray.get(i).getAsJsonObject();
+          this.arrayValues[i] = new Obj().fromJson(jsonObj);
+        }
+      }
+      if (json.has("ref")) {
+        this.ref = json.get("ref").getAsString();
+      }
+
+      if (json.has("isNull")) {
+        this.isNull = json.get("isNull").getAsBoolean();
+      }
+
+      if (json.has("isVoid")) {
+        this.isVoid = json.get("isVoid").getAsBoolean();
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

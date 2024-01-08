@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -497,5 +499,37 @@ public class ReturnValue implements Serializable, net.ittera.pal.messages.Marsha
         && (this.object == null ? o.object == null : this.object.equals(o.object))
         && (this.from == null ? o.from == null : this.from.equals(o.from))
         && (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz));
+  }
+
+  @Override
+  public ReturnValue fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("isVoid")) {
+        this.isVoid = json.get("isVoid").getAsBoolean();
+      }
+
+      if (json.has("isClass")) {
+        this.isClass = json.get("isClass").getAsBoolean();
+      }
+
+      if (json.has("object")) {
+        JsonObject jsonObj = json.getAsJsonObject("object");
+        this.object = new Obj().fromJson(jsonObj);
+      }
+
+      if (json.has("from")) {
+        JsonObject jsonObj = json.getAsJsonObject("from");
+        this.from = new Reflectable().fromJson(jsonObj);
+      }
+
+      if (json.has("clazz")) {
+        JsonObject jsonObj = json.getAsJsonObject("clazz");
+        this.clazz = new Class().fromJson(jsonObj);
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

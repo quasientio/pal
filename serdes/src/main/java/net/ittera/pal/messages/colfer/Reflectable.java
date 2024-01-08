@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -410,5 +412,29 @@ public class Reflectable implements Serializable, net.ittera.pal.messages.Marsha
             : this.constructor.equals(o.constructor))
         && (this.method == null ? o.method == null : this.method.equals(o.method))
         && (this.field == null ? o.field == null : this.field.equals(o.field));
+  }
+
+  @Override
+  public Reflectable fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("constructor")) {
+        JsonObject jsonObj = json.getAsJsonObject("constructor");
+        this.constructor = new Constructor().fromJson(jsonObj);
+      }
+
+      if (json.has("method")) {
+        JsonObject jsonObj = json.getAsJsonObject("method");
+        this.method = new Method().fromJson(jsonObj);
+      }
+
+      if (json.has("field")) {
+        JsonObject jsonObj = json.getAsJsonObject("field");
+        this.field = new Field().fromJson(jsonObj);
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

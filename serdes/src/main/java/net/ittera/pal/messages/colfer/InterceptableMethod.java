@@ -7,6 +7,9 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -530,5 +533,25 @@ public class InterceptableMethod implements Serializable, net.ittera.pal.message
 
     return (this.name == null ? o.name == null : this.name.equals(o.name))
         && java.util.Arrays.equals(this.parameterTypes, o.parameterTypes);
+  }
+
+  @Override
+  public InterceptableMethod fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("name")) {
+        this.name = json.get("name").getAsString();
+      }
+
+      if (json.has("parameterTypes")) {
+        JsonArray jsonArray = json.getAsJsonArray("parameterTypes");
+        this.parameterTypes = new String[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          this.parameterTypes[i] = jsonArray.get(i).getAsString();
+        }
+      }
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

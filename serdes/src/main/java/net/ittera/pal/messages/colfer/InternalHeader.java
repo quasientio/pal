@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -421,5 +423,22 @@ public class InternalHeader implements Serializable, net.ittera.pal.messages.Mar
 
     return this.headerType == o.headerType
         && (this.value == null ? o.value == null : this.value.equals(o.value));
+  }
+
+  @Override
+  public InternalHeader fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("headerType")) {
+        this.headerType = json.get("headerType").getAsByte();
+      }
+
+      if (json.has("value")) {
+        this.value = json.get("value").getAsString();
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -782,5 +784,51 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
             : this.valueObjectRef.equals(o.valueObjectRef))
         && this.modifiers == o.modifiers
         && (this.context == null ? o.context == null : this.context.equals(o.context));
+  }
+
+  @Override
+  public InstanceFieldPut fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("clazz")) {
+        JsonObject jsonObj = json.getAsJsonObject("clazz");
+        this.clazz = new Class().fromJson(jsonObj);
+      }
+
+      if (json.has("object")) {
+        JsonObject jsonObj = json.getAsJsonObject("object");
+        this.object = new Obj().fromJson(jsonObj);
+      }
+
+      if (json.has("objectRef")) {
+        this.objectRef = json.get("objectRef").getAsString();
+      }
+
+      if (json.has("field")) {
+        JsonObject jsonObj = json.getAsJsonObject("field");
+        this.field = new Field().fromJson(jsonObj);
+      }
+
+      if (json.has("valueObject")) {
+        JsonObject jsonObj = json.getAsJsonObject("valueObject");
+        this.valueObject = new Obj().fromJson(jsonObj);
+      }
+
+      if (json.has("valueObjectRef")) {
+        this.valueObjectRef = json.get("valueObjectRef").getAsString();
+      }
+
+      if (json.has("modifiers")) {
+        this.modifiers = json.get("modifiers").getAsInt();
+      }
+
+      if (json.has("context")) {
+        JsonObject jsonObj = json.getAsJsonObject("context");
+        this.context = new Context().fromJson(jsonObj);
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

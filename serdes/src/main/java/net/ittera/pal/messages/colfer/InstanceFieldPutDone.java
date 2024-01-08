@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -472,5 +474,28 @@ public class InstanceFieldPutDone implements Serializable, net.ittera.pal.messag
         && (this.instanceFieldPutUuid == null
             ? o.instanceFieldPutUuid == null
             : this.instanceFieldPutUuid.equals(o.instanceFieldPutUuid));
+  }
+
+  @Override
+  public InstanceFieldPutDone fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("clazz")) {
+        JsonObject jsonObj = json.getAsJsonObject("clazz");
+        this.clazz = new Class().fromJson(jsonObj);
+      }
+
+      if (json.has("field")) {
+        JsonObject jsonObj = json.getAsJsonObject("field");
+        this.field = new Field().fromJson(jsonObj);
+      }
+
+      if (json.has("instanceFieldPutUuid")) {
+        this.instanceFieldPutUuid = json.get("instanceFieldPutUuid").getAsString();
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

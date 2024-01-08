@@ -7,6 +7,9 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -726,5 +729,48 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
         && java.util.Arrays.equals(this.exceptionTypes, o.exceptionTypes)
         && java.util.Arrays.equals(this.parameters, o.parameters)
         && (this.context == null ? o.context == null : this.context.equals(o.context));
+  }
+
+  @Override
+  public ClassMethodCall fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("clazz")) {
+        JsonObject jsonObj = json.getAsJsonObject("clazz");
+        this.clazz = new Class().fromJson(jsonObj);
+      }
+
+      if (json.has("name")) {
+        this.name = json.get("name").getAsString();
+      }
+
+      if (json.has("modifiers")) {
+        this.modifiers = json.get("modifiers").getAsInt();
+      }
+
+      if (json.has("exceptionTypes")) {
+        JsonArray jsonArray = json.getAsJsonArray("exceptionTypes");
+        this.exceptionTypes = new Class[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          JsonObject jsonObj = jsonArray.get(i).getAsJsonObject();
+          this.exceptionTypes[i] = new Class().fromJson(jsonObj);
+        }
+      }
+      if (json.has("parameters")) {
+        JsonArray jsonArray = json.getAsJsonArray("parameters");
+        this.parameters = new Parameter[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          JsonObject jsonObj = jsonArray.get(i).getAsJsonObject();
+          this.parameters[i] = new Parameter().fromJson(jsonObj);
+        }
+      }
+      if (json.has("context")) {
+        JsonObject jsonObj = json.getAsJsonObject("context");
+        this.context = new Context().fromJson(jsonObj);
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

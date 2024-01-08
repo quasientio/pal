@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -648,5 +650,36 @@ public class Context implements Serializable, net.ittera.pal.messages.Marshallab
         && (this.sourceLocationType == null
             ? o.sourceLocationType == null
             : this.sourceLocationType.equals(o.sourceLocationType));
+  }
+
+  @Override
+  public Context fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("senderClass")) {
+        JsonObject jsonObj = json.getAsJsonObject("senderClass");
+        this.senderClass = new Class().fromJson(jsonObj);
+      }
+
+      if (json.has("sender")) {
+        JsonObject jsonObj = json.getAsJsonObject("sender");
+        this.sender = new Obj().fromJson(jsonObj);
+      }
+
+      if (json.has("sourceLocationFile")) {
+        this.sourceLocationFile = json.get("sourceLocationFile").getAsString();
+      }
+
+      if (json.has("sourceLocationLine")) {
+        this.sourceLocationLine = json.get("sourceLocationLine").getAsInt();
+      }
+
+      if (json.has("sourceLocationType")) {
+        this.sourceLocationType = json.get("sourceLocationType").getAsString();
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

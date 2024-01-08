@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -431,5 +433,28 @@ public class ClInitCall implements Serializable, net.ittera.pal.messages.Marshal
     return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
         && this.modifiers == o.modifiers
         && (this.context == null ? o.context == null : this.context.equals(o.context));
+  }
+
+  @Override
+  public ClInitCall fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("clazz")) {
+        JsonObject jsonObj = json.getAsJsonObject("clazz");
+        this.clazz = new Class().fromJson(jsonObj);
+      }
+
+      if (json.has("modifiers")) {
+        this.modifiers = json.get("modifiers").getAsInt();
+      }
+
+      if (json.has("context")) {
+        JsonObject jsonObj = json.getAsJsonObject("context");
+        this.context = new Context().fromJson(jsonObj);
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

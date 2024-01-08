@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -524,5 +526,26 @@ public class InterceptReply implements Serializable, net.ittera.pal.messages.Mar
             ? o.followingUuid == null
             : this.followingUuid.equals(o.followingUuid))
         && this.result == o.result;
+  }
+
+  @Override
+  public InterceptReply fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("peerUuid")) {
+        this.peerUuid = json.get("peerUuid").getAsString();
+      }
+
+      if (json.has("followingUuid")) {
+        this.followingUuid = json.get("followingUuid").getAsString();
+      }
+
+      if (json.has("result")) {
+        this.result = json.get("result").getAsBoolean();
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

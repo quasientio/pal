@@ -21,9 +21,10 @@ package net.ittera.pal.serdes.colfer;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import net.ittera.pal.messages.Marshallable;
 import net.ittera.pal.messages.colfer.ClInitCall;
-import net.ittera.pal.messages.colfer.Class;
 import net.ittera.pal.messages.colfer.ClassMethodCall;
 import net.ittera.pal.messages.colfer.Constructor;
 import net.ittera.pal.messages.colfer.ConstructorCall;
@@ -119,7 +120,7 @@ public class ColferUtils {
             .registerTypeAdapter(InterceptMessage.class, new InterceptMessageSerializer())
             .registerTypeAdapter(InterceptKeyMessage.class, new InterceptKeyMessageSerializer())
             .registerTypeAdapter(InterceptReply.class, new InterceptReplySerializer())
-            .registerTypeAdapter(Class.class, new ClassSerializer())
+            .registerTypeAdapter(net.ittera.pal.messages.colfer.Class.class, new ClassSerializer())
             .registerTypeAdapter(Obj.class, new ObjSerializer())
             .registerTypeAdapter(Field.class, new FieldSerializer())
             .registerTypeAdapter(Method.class, new MethodSerializer())
@@ -161,6 +162,19 @@ public class ColferUtils {
       return jsonPrettyPrinter.toJson(message);
     }
     return jsonPrinter.toJson(message);
+  }
+
+  public static Marshallable fromJSON(String json, Class<? extends Marshallable> messageClass)
+      throws JsonParseException {
+    Gson gson = new Gson();
+    JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
+    try {
+      Marshallable messageInstance = messageClass.getDeclaredConstructor().newInstance();
+      return messageInstance.fromJson(jsonObject);
+    } catch (Exception e) {
+      throw new JsonParseException(
+          "Error instantiating or deserializing class: " + e.getMessage(), e);
+    }
   }
 
   /**

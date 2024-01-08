@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -793,5 +795,44 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
         && (this.field == null ? o.field == null : this.field.equals(o.field))
         && this.modifiers == o.modifiers
         && (this.throwable == null ? o.throwable == null : this.throwable.equals(o.throwable));
+  }
+
+  @Override
+  public RaisedThrowable fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("clazz")) {
+        JsonObject jsonObj = json.getAsJsonObject("clazz");
+        this.clazz = new Class().fromJson(jsonObj);
+      }
+
+      if (json.has("inInitializer")) {
+        this.inInitializer = json.get("inInitializer").getAsBoolean();
+      }
+
+      if (json.has("constructor")) {
+        this.constructor = json.get("constructor").getAsString();
+      }
+
+      if (json.has("method")) {
+        this.method = json.get("method").getAsString();
+      }
+
+      if (json.has("field")) {
+        this.field = json.get("field").getAsString();
+      }
+
+      if (json.has("modifiers")) {
+        this.modifiers = json.get("modifiers").getAsInt();
+      }
+
+      if (json.has("throwable")) {
+        JsonObject jsonObj = json.getAsJsonObject("throwable");
+        this.throwable = new Throwable().fromJson(jsonObj);
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

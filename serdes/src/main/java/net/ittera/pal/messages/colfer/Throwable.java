@@ -7,6 +7,9 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -680,5 +683,34 @@ public class Throwable implements Serializable, net.ittera.pal.messages.Marshall
         && (this.message == null ? o.message == null : this.message.equals(o.message))
         && java.util.Arrays.equals(this.stackTraceElements, o.stackTraceElements)
         && (this.cause == null ? o.cause == null : this.cause.equals(o.cause));
+  }
+
+  @Override
+  public Throwable fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("Type")) {
+        this.Type = json.get("Type").getAsString();
+      }
+
+      if (json.has("message")) {
+        this.message = json.get("message").getAsString();
+      }
+
+      if (json.has("stackTraceElements")) {
+        JsonArray jsonArray = json.getAsJsonArray("stackTraceElements");
+        this.stackTraceElements = new String[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          this.stackTraceElements[i] = jsonArray.get(i).getAsString();
+        }
+      }
+      if (json.has("cause")) {
+        JsonObject jsonObj = json.getAsJsonObject("cause");
+        this.cause = new Throwable().fromJson(jsonObj);
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

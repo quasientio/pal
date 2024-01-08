@@ -19,7 +19,12 @@
 
 package net.ittera.pal.messages;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+
 public interface Marshallable {
+  Marshallable fromJson(JsonObject json) throws JsonParseException;
+
   int marshal(byte[] buf, int offset);
 
   int marshalFit();

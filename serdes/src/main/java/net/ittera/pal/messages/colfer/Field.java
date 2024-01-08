@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -521,5 +523,27 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
     return (this.name == null ? o.name == null : this.name.equals(o.name))
         && (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
         && (this.repr == null ? o.repr == null : this.repr.equals(o.repr));
+  }
+
+  @Override
+  public Field fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("name")) {
+        this.name = json.get("name").getAsString();
+      }
+
+      if (json.has("clazz")) {
+        JsonObject jsonObj = json.getAsJsonObject("clazz");
+        this.clazz = new Class().fromJson(jsonObj);
+      }
+
+      if (json.has("repr")) {
+        this.repr = json.get("repr").getAsString();
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

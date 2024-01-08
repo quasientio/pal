@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -576,5 +578,36 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
         && this.modifiers == o.modifiers
         && (this.Type == null ? o.Type == null : this.Type.equals(o.Type))
         && this.isVarArgs == o.isVarArgs;
+  }
+
+  @Override
+  public Parameter fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("name")) {
+        this.name = json.get("name").getAsString();
+      }
+
+      if (json.has("value")) {
+        JsonObject jsonObj = json.getAsJsonObject("value");
+        this.value = new Obj().fromJson(jsonObj);
+      }
+
+      if (json.has("modifiers")) {
+        this.modifiers = json.get("modifiers").getAsInt();
+      }
+
+      if (json.has("Type")) {
+        JsonObject jsonObj = json.getAsJsonObject("Type");
+        this.Type = new Class().fromJson(jsonObj);
+      }
+
+      if (json.has("isVarArgs")) {
+        this.isVarArgs = json.get("isVarArgs").getAsBoolean();
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

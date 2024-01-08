@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -552,5 +554,43 @@ public class Message implements Serializable, net.ittera.pal.messages.Marshallab
         && (this.interceptReply == null
             ? o.interceptReply == null
             : this.interceptReply.equals(o.interceptReply));
+  }
+
+  @Override
+  public Message fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("messageType")) {
+        this.messageType = json.get("messageType").getAsByte();
+      }
+
+      if (json.has("controlMessage")) {
+        JsonObject jsonObj = json.getAsJsonObject("controlMessage");
+        this.controlMessage = new ControlMessage().fromJson(jsonObj);
+      }
+
+      if (json.has("execMessage")) {
+        JsonObject jsonObj = json.getAsJsonObject("execMessage");
+        this.execMessage = new ExecMessage().fromJson(jsonObj);
+      }
+
+      if (json.has("interceptMessage")) {
+        JsonObject jsonObj = json.getAsJsonObject("interceptMessage");
+        this.interceptMessage = new InterceptMessage().fromJson(jsonObj);
+      }
+
+      if (json.has("interceptKeyMessage")) {
+        JsonObject jsonObj = json.getAsJsonObject("interceptKeyMessage");
+        this.interceptKeyMessage = new InterceptKeyMessage().fromJson(jsonObj);
+      }
+
+      if (json.has("interceptReply")) {
+        JsonObject jsonObj = json.getAsJsonObject("interceptReply");
+        this.interceptReply = new InterceptReply().fromJson(jsonObj);
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }

@@ -7,6 +7,8 @@ package net.ittera.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -1542,5 +1544,106 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         && (this.returnValue == null
             ? o.returnValue == null
             : this.returnValue.equals(o.returnValue));
+  }
+
+  @Override
+  public ExecMessage fromJson(JsonObject json) throws JsonParseException {
+    try {
+      if (json.has("peerUuid")) {
+        this.peerUuid = json.get("peerUuid").getAsString();
+      }
+
+      if (json.has("messageUuid")) {
+        this.messageUuid = json.get("messageUuid").getAsString();
+      }
+
+      if (json.has("execMessageType")) {
+        this.execMessageType = json.get("execMessageType").getAsByte();
+      }
+
+      if (json.has("threadName")) {
+        this.threadName = json.get("threadName").getAsString();
+      }
+
+      if (json.has("currentTime")) {
+        this.currentTime = json.get("currentTime").getAsString();
+      }
+
+      if (json.has("dispatchSeq")) {
+        this.dispatchSeq = json.get("dispatchSeq").getAsInt();
+      }
+
+      if (json.has("builderSeq")) {
+        this.builderSeq = json.get("builderSeq").getAsInt();
+      }
+
+      if (json.has("followingUuid")) {
+        this.followingUuid = json.get("followingUuid").getAsString();
+      }
+
+      if (json.has("constructorCall")) {
+        JsonObject jsonObj = json.getAsJsonObject("constructorCall");
+        this.constructorCall = new ConstructorCall().fromJson(jsonObj);
+      }
+
+      if (json.has("instanceMethodCall")) {
+        JsonObject jsonObj = json.getAsJsonObject("instanceMethodCall");
+        this.instanceMethodCall = new InstanceMethodCall().fromJson(jsonObj);
+      }
+
+      if (json.has("classMethodCall")) {
+        JsonObject jsonObj = json.getAsJsonObject("classMethodCall");
+        this.classMethodCall = new ClassMethodCall().fromJson(jsonObj);
+      }
+
+      if (json.has("clinitCall")) {
+        JsonObject jsonObj = json.getAsJsonObject("clinitCall");
+        this.clinitCall = new ClInitCall().fromJson(jsonObj);
+      }
+
+      if (json.has("staticFieldGet")) {
+        JsonObject jsonObj = json.getAsJsonObject("staticFieldGet");
+        this.staticFieldGet = new StaticFieldGet().fromJson(jsonObj);
+      }
+
+      if (json.has("staticFieldPut")) {
+        JsonObject jsonObj = json.getAsJsonObject("staticFieldPut");
+        this.staticFieldPut = new StaticFieldPut().fromJson(jsonObj);
+      }
+
+      if (json.has("instanceFieldGet")) {
+        JsonObject jsonObj = json.getAsJsonObject("instanceFieldGet");
+        this.instanceFieldGet = new InstanceFieldGet().fromJson(jsonObj);
+      }
+
+      if (json.has("instanceFieldPut")) {
+        JsonObject jsonObj = json.getAsJsonObject("instanceFieldPut");
+        this.instanceFieldPut = new InstanceFieldPut().fromJson(jsonObj);
+      }
+
+      if (json.has("staticFieldPutDone")) {
+        JsonObject jsonObj = json.getAsJsonObject("staticFieldPutDone");
+        this.staticFieldPutDone = new StaticFieldPutDone().fromJson(jsonObj);
+      }
+
+      if (json.has("instanceFieldPutDone")) {
+        JsonObject jsonObj = json.getAsJsonObject("instanceFieldPutDone");
+        this.instanceFieldPutDone = new InstanceFieldPutDone().fromJson(jsonObj);
+      }
+
+      if (json.has("raisedThrowable")) {
+        JsonObject jsonObj = json.getAsJsonObject("raisedThrowable");
+        this.raisedThrowable = new RaisedThrowable().fromJson(jsonObj);
+      }
+
+      if (json.has("returnValue")) {
+        JsonObject jsonObj = json.getAsJsonObject("returnValue");
+        this.returnValue = new ReturnValue().fromJson(jsonObj);
+      }
+
+    } catch (Exception e) {
+      throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
+    }
+    return this;
   }
 }
