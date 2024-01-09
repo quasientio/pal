@@ -1,7 +1,9 @@
+#!/usr/bin/env python
+
 import os
+import sys
 import re
 import javalang
-from pprint import pprint
 
 
 all_classes = {}
@@ -154,7 +156,8 @@ def generate_fromjson_for_field(field):
 
 def generate_fromjson_code(class_info):
     class_name, fields = class_info['class'], class_info['fields']
-    method_code  = f'  @Override\n'
+    method_code = f'\n'
+    method_code += f'  @Override\n'
     method_code += f'  public {class_name} fromJson(JsonObject json) throws JsonParseException {{\n'
     method_code += '    try {\n'
     for field in fields:
@@ -167,24 +170,18 @@ def generate_fromjson_code(class_info):
     return method_code
 
 
-def insert_fromjson_method(java_file_path, fromjson_code):
-    with open(java_file_path, 'r') as file:
-        content = file.read()
-        
-    # Insert required imports
-    content = insert_imports(content, required_imports)
-
+def insert_fromjson_method(content, fromjson_code):
     insertion_index = content.rfind('}')
-    modified_content = content[:insertion_index] + fromjson_code + content[insertion_index:]
-
-    with open(java_file_path, 'w') as file:
-        file.write(modified_content)
-
+    return content[:insertion_index] + fromjson_code + content[insertion_index:]
 
 
 # Base path to the Java classes
-java_classes_base_path = '/home/libre/code/cometa/pal/serdes/src/main/java/net/ittera/pal/messages/colfer'
-
+pal_home = os.environ.get('PAL_HOME')
+if not pal_home:
+  print("PAL_HOME is not defined. Aborting.")
+  sys.exit(1)
+  
+java_classes_base_path = f'{pal_home}/serdes/src/main/java/net/ittera/pal/messages/colfer'
 # parse all classes to extract class and fields info
 for filename in os.listdir(java_classes_base_path):
     java_file_path = os.path.join(java_classes_base_path, filename)
@@ -194,10 +191,22 @@ for filename in os.listdir(java_classes_base_path):
     all_classes[class_name] = class_info
 
 
-# now go through all classes, generating and inserting the fromJson code
-# Note that we cannot do both the above and this in one pass, because generate_fromjson_code()
-# needs all_classes to be already loaded
+"""
+Go through all classes, generating and inserting:
+- the imports
+- the fromJson() method code
+
+Note that we cannot do both the above and this in one pass, because generate_fromjson_code()
+needs all_classes to be already loaded
+"""
 for class_info in all_classes.values():
-    # generate fromJson code for all
+    # generate fromJson
     fromjson_method_code = generate_fromjson_code(class_info)
-    insert_fromjson_method(class_info['file_path'], fromjson_method_code)
+    java_file_path = class_info['file_path']
+
+    with open(java_file_path, 'r') as file:
+        content = file.read()
+        content = insert_imports(content, required_imports)
+        content = insert_fromjson_method(content, fromjson_method_code)
+    with open(java_file_path, 'w') as file:
+        file.write(content)
