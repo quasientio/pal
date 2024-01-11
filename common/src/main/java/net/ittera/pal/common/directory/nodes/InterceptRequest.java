@@ -30,6 +30,8 @@ import net.ittera.pal.common.lang.intercept.Interceptable;
 import net.ittera.pal.common.lang.intercept.Interceptable.InterceptableType;
 import net.ittera.pal.common.lang.intercept.InterceptableFieldOp;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Encapsulates information and provides serialization methods for intercept requests so they can be
@@ -39,6 +41,7 @@ import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
  */
 public final class InterceptRequest<T extends Interceptable> extends InfoNode {
 
+  private static final Logger logger = LoggerFactory.getLogger(InterceptRequest.class);
   private static final String LINE_SEP = "##";
   @Nonnull private final UUID uuid;
   @Nonnull private final UUID peer;
@@ -122,6 +125,12 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
 
   @SuppressWarnings("rawtypes")
   public static InterceptRequest fromBytes(byte[] serialized, Charset charset) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Deserializing intercept request from bytes (len={}): {}",
+          serialized.length,
+          new String(serialized, charset));
+    }
     final String[] parts = new String(serialized, charset).split(LINE_SEP);
     final UUID uuid = UUID.fromString(parts[0]);
     final UUID peer = UUID.fromString(parts[1]);
