@@ -220,6 +220,10 @@ public class PALDirectory implements AutoCloseable {
         final UUID peerUuid = UUID.fromString(parts[2]);
         final UUID interceptUuid = UUID.fromString(parts[3]);
         final byte[] data = event.getKeyValue().getValue().getBytes();
+        logger.debug(
+            "Creating intercept event from path: '{}' with value: '{}'",
+            path,
+            new String(data, getEncodingCharset()));
         return new InterceptEvent(
             type,
             path,
@@ -340,6 +344,9 @@ public class PALDirectory implements AutoCloseable {
 
   public DeleteResponse unregisterPeerInterceptRequests(UUID peerUuid)
       throws ExecutionException, InterruptedException {
+    if (logger.isDebugEnabled()) {
+      logger.debug("Unregistering all intercept requests for peer w/uuid: {}", peerUuid);
+    }
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
     final DeleteResponse deleteResponse =
         kvClient
