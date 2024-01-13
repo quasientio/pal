@@ -3,5 +3,7 @@ lib/
 logs/
 .idea/
 .local/
+/classes_info.txt
+/*/classes_info.txt
 *.iml
 Dockerfile
