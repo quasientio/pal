@@ -161,7 +161,7 @@ public class DispatcherConnector {
             ? null
             : UUID.fromString(execMessage.getFollowingUuid());
 
-    ExecMessageType execMessageType = ExecMessageType.values()[execMessage.getExecMessageType()];
+    ExecMessageType execMessageType = ExecMessageType.fromByte(execMessage.getExecMessageType());
     List<InterceptMessage> matchingIntercepts = null;
 
     if (runOptions.contains(RunOptions.WITH_INTERCEPTS) && isInterceptableType(execMessageType)) {
@@ -198,7 +198,7 @@ public class DispatcherConnector {
         messageBuilder.buildCallbackForInterceptRequest(peerUuid, execMessage, interceptMessage);
     UUID interceptor = UUID.fromString(interceptMessage.getPeerUuid());
     final byte[] reply;
-    InterceptType interceptType = InterceptType.values()[interceptMessage.getInterceptType()];
+    InterceptType interceptType = InterceptType.fromByte(interceptMessage.getInterceptType());
     try {
       if (interceptType.equals(InterceptType.BEFORE_ASYNC)
           || interceptType.equals(InterceptType.AFTER_ASYNC)) {

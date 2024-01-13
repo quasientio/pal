@@ -239,7 +239,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
                 ExecMessage execMessage = m.getExecMessage();
                 return execMessage != null
                     && msgTypes.contains(
-                        ExecMessageType.values()[execMessage.getExecMessageType()].toString());
+                        ExecMessageType.fromByte(execMessage.getExecMessageType()).toString());
               });
     }
 

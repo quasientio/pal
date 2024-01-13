@@ -121,7 +121,7 @@ public class OutboundMsg extends BaseMsg {
     size = 0;
     byte[] buff;
     // type of message
-    buff = String.valueOf(messageType.ordinal()).getBytes(ZMQ.CHARSET);
+    buff = String.valueOf(messageType.toByte()).getBytes(ZMQ.CHARSET);
     size += buff.length;
     try {
       if (!socket.send(buff, ZMQ.SNDMORE)) {
@@ -133,7 +133,7 @@ public class OutboundMsg extends BaseMsg {
     }
 
     // execution phase
-    buff = String.valueOf(execPhase.ordinal()).getBytes(ZMQ.CHARSET);
+    buff = String.valueOf(execPhase.toByte()).getBytes(ZMQ.CHARSET);
     size += buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
@@ -195,12 +195,12 @@ public class OutboundMsg extends BaseMsg {
     // type of message
     int msgSize = buff.length;
     final MessageType messageType =
-        MessageType.values()[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
+        MessageType.fromByte(Byte.parseByte(new String(buff, ZMQ.CHARSET)));
     // execution phase
     final ExecPhase execPhase;
     buff = socket.recv();
     msgSize += buff.length;
-    execPhase = ExecPhase.values()[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
+    execPhase = ExecPhase.fromByte(Byte.parseByte(new String(buff, ZMQ.CHARSET)));
 
     // # of headers to follow
     buff = socket.recv();

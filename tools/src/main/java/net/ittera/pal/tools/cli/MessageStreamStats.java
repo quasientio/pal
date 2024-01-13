@@ -252,7 +252,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
 
     String className, methodName, fieldName, classFieldKey;
     final ExecMessageType execMessageType =
-        ExecMessageType.values()[execMessage.getExecMessageType()];
+        ExecMessageType.fromByte(execMessage.getExecMessageType());
     switch (execMessageType) {
         // objects created by class
       case CONSTRUCTOR:
@@ -384,7 +384,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
                 ExecMessage execMessage = m.getExecMessage();
                 return execMessage != null
                     && msgTypes.contains(
-                        ExecMessageType.values()[execMessage.getExecMessageType()].toString());
+                        ExecMessageType.fromByte(execMessage.getExecMessageType()).toString());
               });
     }
 

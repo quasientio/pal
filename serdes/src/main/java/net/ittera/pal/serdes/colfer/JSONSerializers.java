@@ -118,7 +118,7 @@ class JSONSerializers {
     @Override
     public JsonElement serialize(
         ExecMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
-      ExecMessageType execMessageType = ExecMessageType.values()[message.getExecMessageType()];
+      ExecMessageType execMessageType = ExecMessageType.fromByte(message.getExecMessageType());
       final JsonObject jsonElement = new JsonObject();
 
       if (notEmpty(message.peerUuid)) {
@@ -540,7 +540,7 @@ class JSONSerializers {
     @Override
     public JsonElement serialize(
         InternalHeader message, Type type, JsonSerializationContext jsonSerializationContext) {
-      final InternalHeaderType headerType = InternalHeaderType.values()[message.headerType];
+      final InternalHeaderType headerType = InternalHeaderType.fromByte(message.headerType);
       final JsonObject jsonElement = new JsonObject();
       jsonElement.addProperty("header_type", headerType.name());
       if (notEmpty(message.value)) {
@@ -576,7 +576,7 @@ class JSONSerializers {
       if (notEmpty(message.name)) {
         jsonElement.addProperty("name", message.name);
       }
-      final FieldOpType fieldOpType = FieldOpType.values()[message.fieldOpType];
+      final FieldOpType fieldOpType = FieldOpType.fromByte(message.fieldOpType);
       jsonElement.addProperty("fieldop_type", fieldOpType.name());
       return jsonElement;
     }
@@ -594,7 +594,7 @@ class JSONSerializers {
         jsonElement.addProperty("message_uuid", message.messageUuid);
       }
 
-      final InterceptType interceptType = InterceptType.values()[message.interceptType];
+      final InterceptType interceptType = InterceptType.fromByte(message.interceptType);
       jsonElement.addProperty("intercept_type", interceptType.name());
       if (notEmpty(message.clazz)) {
         jsonElement.addProperty("class", message.clazz);
@@ -623,7 +623,7 @@ class JSONSerializers {
       if (notEmpty(message.clazz)) {
         jsonElement.addProperty("class", message.clazz);
       }
-      final ExecMessageType execMessageType = ExecMessageType.values()[message.execMsgType];
+      final ExecMessageType execMessageType = ExecMessageType.fromByte(message.execMsgType);
       jsonElement.addProperty("exec_message_type", execMessageType.name());
       if (notEmpty(message.executableName)) {
         jsonElement.addProperty("executable_name", message.executableName);
@@ -809,11 +809,11 @@ class JSONSerializers {
         jsonElement.addProperty("message_uuid", message.messageUuid);
       }
       if (notEmpty(message.command)) {
-        ControlCommandType commandType = ControlCommandType.values()[message.getCommand()];
+        ControlCommandType commandType = ControlCommandType.fromByte(message.getCommand());
         jsonElement.addProperty("command", commandType.name());
       }
       if (notEmpty(message.status)) {
-        ControlStatusType statusType = ControlStatusType.values()[message.getStatus()];
+        ControlStatusType statusType = ControlStatusType.fromByte(message.getStatus());
         jsonElement.addProperty("status", statusType.name());
       }
       if (notEmpty(message.body)) {
@@ -828,7 +828,7 @@ class JSONSerializers {
     public JsonElement serialize(
         Message message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      final MessageType messageType = MessageType.values()[message.messageType];
+      final MessageType messageType = MessageType.fromByte(message.messageType);
       jsonElement.addProperty("type", messageType.name());
       switch (messageType) {
         case CONTROL_MESSAGE:

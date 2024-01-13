@@ -27,7 +27,15 @@ public abstract class Interceptable {
 
   public enum InterceptableType {
     METHOD_CALL,
-    FIELD_OP,
+    FIELD_OP;
+
+    public static InterceptableType fromByte(byte typeAsByte) {
+      return InterceptableType.values()[typeAsByte - 1];
+    }
+
+    public byte toByte() {
+      return (byte) (this.ordinal() + 1);
+    }
   }
 
   @Nonnull private final String name;

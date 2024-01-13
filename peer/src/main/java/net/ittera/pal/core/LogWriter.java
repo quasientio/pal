@@ -221,7 +221,7 @@ class LogWriter extends ConnectedService {
     boolean isWriteAhead = false;
     if (internalHeaders != null) {
       for (InternalHeader ih : internalHeaders) {
-        if (ih.getHeaderType() == InternalHeaderType.WRITE_AHEAD.ordinal()) {
+        if (ih.getHeaderType() == InternalHeaderType.WRITE_AHEAD.toByte()) {
           isWriteAhead = true;
           logHeaders.add(HEADERS.get("SELF_DISPATCHING_HEADER"));
           break;

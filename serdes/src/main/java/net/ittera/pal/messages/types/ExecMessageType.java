@@ -32,5 +32,13 @@ public enum ExecMessageType {
   PUT_STATIC_DONE,
   PUT_FIELD_DONE,
   THROWABLE,
-  RETURN_VALUE,
+  RETURN_VALUE;
+
+  public static ExecMessageType fromByte(byte typeAsByte) {
+    return ExecMessageType.values()[typeAsByte - 1];
+  }
+
+  public byte toByte() {
+    return (byte) (this.ordinal() + 1);
+  }
 }

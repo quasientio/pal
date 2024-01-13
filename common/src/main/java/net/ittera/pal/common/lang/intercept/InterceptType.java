@@ -24,5 +24,13 @@ public enum InterceptType {
   AFTER,
   AROUND,
   BEFORE_ASYNC,
-  AFTER_ASYNC,
+  AFTER_ASYNC;
+
+  public static InterceptType fromByte(byte typeAsByte) {
+    return InterceptType.values()[typeAsByte - 1];
+  }
+
+  public byte toByte() {
+    return (byte) (this.ordinal() + 1);
+  }
 }

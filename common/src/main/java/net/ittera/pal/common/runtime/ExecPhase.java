@@ -22,5 +22,13 @@ package net.ittera.pal.common.runtime;
 public enum ExecPhase {
   BEFORE,
   AFTER,
-  UNDEFINED,
+  UNDEFINED;
+
+  public static ExecPhase fromByte(byte typeAsByte) {
+    return ExecPhase.values()[typeAsByte - 1];
+  }
+
+  public byte toByte() {
+    return (byte) (this.ordinal() + 1);
+  }
 }

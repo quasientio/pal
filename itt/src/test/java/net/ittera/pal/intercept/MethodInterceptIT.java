@@ -152,10 +152,10 @@ public class MethodInterceptIT extends AbstractInterceptIT {
     callbacks.forEach(
         callback -> {
           assertThat(callback, is(not(nullValue())));
-          assertThat(callback.getMessageType(), is((byte) MessageType.EXEC_MESSAGE.ordinal()));
+          assertThat(callback.getMessageType(), is(MessageType.EXEC_MESSAGE.toByte()));
           assertThat(
               callback.getExecMessage().getExecMessageType(),
-              is((byte) ExecMessageType.CLASS_METHOD.ordinal()));
+              is(ExecMessageType.CLASS_METHOD.toByte()));
           assertThat(
               callback.getExecMessage().getClassMethodCall().getClazz().getName(),
               is(callbackClass));

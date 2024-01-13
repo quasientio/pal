@@ -71,7 +71,7 @@ class InterceptRequests {
 
   List<InterceptMessage> getMatchingIntercepts(ExecMessage execMessage) {
     final ExecMessageType execMessageType =
-        ExecMessageType.values()[execMessage.getExecMessageType()];
+        ExecMessageType.fromByte(execMessage.getExecMessageType());
     switch (execMessageType) {
       case CONSTRUCTOR:
         return getMatchingIntercepts(execMessage, constructorIntercepts);
@@ -117,7 +117,7 @@ class InterceptRequests {
     }
 
     if (interceptableField != null) {
-      FieldOpType fieldOpType = FieldOpType.values()[interceptableField.getFieldOpType()];
+      FieldOpType fieldOpType = FieldOpType.fromByte(interceptableField.getFieldOpType());
       if (fieldOpType.equals(FieldOpType.GET)) {
         fieldGetIntercepts = cloneListWithNewRequest(fieldGetIntercepts, interceptRequestEntry);
         if (logger.isDebugEnabled()) {

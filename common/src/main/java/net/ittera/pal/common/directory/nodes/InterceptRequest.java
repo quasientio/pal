@@ -114,11 +114,11 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
                 "%s", // 7. interceptable
             uuid,
             peer,
-            type.ordinal(),
+            type.toByte(),
             clazz,
             callbackClass,
             callbackMethod,
-            interceptable.getType().ordinal(),
+            interceptable.getType().toByte(),
             interceptable.toSerializedString());
     return s.getBytes(charset);
   }
@@ -134,12 +134,12 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
     final String[] parts = new String(serialized, charset).split(LINE_SEP);
     final UUID uuid = UUID.fromString(parts[0]);
     final UUID peer = UUID.fromString(parts[1]);
-    final InterceptType type = InterceptType.values()[Integer.parseInt(parts[2])];
+    final InterceptType type = InterceptType.fromByte(Byte.parseByte(parts[2]));
     final String clazz = parts[3];
     final String callbackClass = parts[4];
     final String callbackMethod = parts[5];
     final InterceptableType interceptableType =
-        InterceptableType.values()[Integer.parseInt(parts[6])];
+        InterceptableType.fromByte(Byte.parseByte(parts[6]));
     final Interceptable interceptable;
     switch (interceptableType) {
       case METHOD_CALL:

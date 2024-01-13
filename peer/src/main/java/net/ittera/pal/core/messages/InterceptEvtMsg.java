@@ -46,6 +46,14 @@ public class InterceptEvtMsg extends BaseMsg {
     REGISTER,
     UNREGISTER;
     static final Type[] values = values();
+
+    public static Type fromByte(byte typeAsByte) {
+      return Type.values()[typeAsByte - 1];
+    }
+
+    public byte toByte() {
+      return (byte) (this.ordinal() + 1);
+    }
   }
 
   // fields
@@ -94,7 +102,7 @@ public class InterceptEvtMsg extends BaseMsg {
       throw new IllegalArgumentException("Socket is null");
     }
     size = 0;
-    byte[] buff = String.valueOf(type.ordinal()).getBytes(ZMQ.CHARSET);
+    byte[] buff = String.valueOf(type.toByte()).getBytes(ZMQ.CHARSET);
     size += buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
@@ -131,7 +139,7 @@ public class InterceptEvtMsg extends BaseMsg {
 
     // type
     int msgSize = buff.length;
-    Type type = Type.values[Integer.parseInt(new String(buff, ZMQ.CHARSET))];
+    Type type = Type.fromByte(Byte.parseByte(new String(buff, ZMQ.CHARSET)));
 
     // body | msgUUID
     buff = socket.recv();

@@ -178,7 +178,7 @@ public final class MessageBuilder {
         new ExecMessage()
             .withPeerUuid(peerUuid.toString())
             .withMessageUuid(UUID.randomUUID().toString())
-            .withExecMessageType((byte) msgType.ordinal())
+            .withExecMessageType(msgType.toByte())
             .withThreadName(Thread.currentThread().getName())
             .withDispatchSeq(threadDispatchSequence.get().intValue())
             .withBuilderSeq(threadBuilderSequence.get().getAndIncrement())
@@ -253,7 +253,7 @@ public final class MessageBuilder {
 
   // <editor-fold desc="Header messages">
   private InternalHeader buildInternalHeaderMessage(InternalHeaderType headerType) {
-    return new InternalHeader().withHeaderType((byte) headerType.ordinal());
+    return new InternalHeader().withHeaderType(headerType.toByte());
   }
 
   public InternalHeader buildWriteAheadHeader(UUID peerUuid) {
@@ -527,7 +527,7 @@ public final class MessageBuilder {
     final ClassMethodCall classMethodCall = new ClassMethodCall();
     final String fieldParamType;
     final ExecMessageType otherMessageType =
-        ExecMessageType.values()[otherMessage.getExecMessageType()];
+        ExecMessageType.fromByte(otherMessage.getExecMessageType());
     switch (otherMessageType) {
       case CONSTRUCTOR:
         classMethodCall.setParameters(otherMessage.getConstructorCall().getParameters());
@@ -943,7 +943,7 @@ public final class MessageBuilder {
 
     return new InterceptMessage()
         .withPeerUuid(peerUuid.toString())
-        .withInterceptType((byte) type.ordinal())
+        .withInterceptType(type.toByte())
         .withMessageUuid(UUID.randomUUID().toString())
         .withClazz(className)
         .withMethod(
@@ -965,13 +965,13 @@ public final class MessageBuilder {
 
     return new InterceptMessage()
         .withPeerUuid(peerUuid.toString())
-        .withInterceptType((byte) type.ordinal())
+        .withInterceptType(type.toByte())
         .withMessageUuid(UUID.randomUUID().toString())
         .withClazz(className)
         .withField(
             new net.ittera.pal.messages.colfer.InterceptableField()
                 .withName(fieldName)
-                .withFieldOpType((byte) fieldOpType.ordinal()))
+                .withFieldOpType(fieldOpType.toByte()))
         .withCallbackClass(callbackClassName)
         .withCallbackMethod(callbackMethodName);
   }
@@ -984,7 +984,7 @@ public final class MessageBuilder {
       InterceptRequest<InterceptableMethodCall> methodIntercept = intercept;
       return new InterceptMessage()
           .withPeerUuid(intercept.getPeer().toString())
-          .withInterceptType((byte) intercept.getType().ordinal())
+          .withInterceptType(intercept.getType().toByte())
           .withMessageUuid(intercept.getUuid().toString())
           .withClazz(intercept.getClazz())
           .withMethod(
@@ -1002,14 +1002,13 @@ public final class MessageBuilder {
     InterceptRequest<InterceptableFieldOp> fieldIntercept = intercept;
     return new InterceptMessage()
         .withPeerUuid(intercept.getPeer().toString())
-        .withInterceptType((byte) intercept.getType().ordinal())
+        .withInterceptType(intercept.getType().toByte())
         .withMessageUuid(intercept.getUuid().toString())
         .withClazz(intercept.getClazz())
         .withField(
             new net.ittera.pal.messages.colfer.InterceptableField()
                 .withName(intercept.getInterceptable().getName())
-                .withFieldOpType(
-                    (byte) fieldIntercept.getInterceptable().getFieldOpType().ordinal()))
+                .withFieldOpType(fieldIntercept.getInterceptable().getFieldOpType().toByte()))
         .withCallbackClass(intercept.getCallbackClass())
         .withCallbackMethod(intercept.getCallbackMethod());
   }

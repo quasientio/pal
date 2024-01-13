@@ -63,7 +63,7 @@ public class IncomingMessageDispatcher {
       throws UnsupportedMessageException {
 
     final ExecMessageType execMessageType =
-        ExecMessageType.values()[execMessage.getExecMessageType()];
+        ExecMessageType.fromByte(execMessage.getExecMessageType());
     switch (execMessageType) {
       case CONSTRUCTOR:
         return constructorDispatcher.dispatchIncoming(execMessage, isDirect);
@@ -89,7 +89,7 @@ public class IncomingMessageDispatcher {
 
   public ControlMessage incomingControlMessage(ControlMessage controlMessage)
       throws UnsupportedMessageException {
-    final ControlCommandType commandType = ControlCommandType.values()[controlMessage.getCommand()];
+    final ControlCommandType commandType = ControlCommandType.fromByte(controlMessage.getCommand());
     switch (commandType) {
       case DELETE_OBJECT:
       case DELETE_SESSION:

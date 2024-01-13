@@ -52,7 +52,7 @@ public class SessionsMessageDispatcher {
 
     // for clarity - a peer can only delete an object in its own session
     final UUID sessionId = remotePeerUuid;
-    final ControlCommandType commandType = ControlCommandType.values()[controlMessage.getCommand()];
+    final ControlCommandType commandType = ControlCommandType.fromByte(controlMessage.getCommand());
     SessionReplyMsg sessionReplyMsg;
     switch (commandType) {
       case DELETE_OBJECT:

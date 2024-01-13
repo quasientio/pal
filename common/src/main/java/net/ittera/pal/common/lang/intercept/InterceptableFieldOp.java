@@ -74,13 +74,13 @@ public final class InterceptableFieldOp extends Interceptable {
 
   @Override
   public String toSerializedString() {
-    return format("%s" + FIELD_SEP + "%d", getName(), fieldOpType.ordinal());
+    return format("%s" + FIELD_SEP + "%d", getName(), fieldOpType.toByte());
   }
 
   public static InterceptableFieldOp fromSerializedString(String serialized) {
     final String[] parts = serialized.split(FIELD_SEP);
     final String name = parts[0];
-    final FieldOpType type = FieldOpType.values()[Integer.parseInt(parts[1])];
+    final FieldOpType type = FieldOpType.fromByte(Byte.parseByte(parts[1]));
     return new InterceptableFieldOp(name, type);
   }
 }

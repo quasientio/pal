@@ -47,7 +47,7 @@ public class AbstractTool {
   }
 
   protected static String getPeerUuid(Message msg) {
-    final MessageType messageType = MessageType.values()[msg.getMessageType()];
+    final MessageType messageType = MessageType.fromByte(msg.getMessageType());
     switch (messageType) {
       case EXEC_MESSAGE:
         return msg.getExecMessage().getPeerUuid();
@@ -59,7 +59,7 @@ public class AbstractTool {
   }
 
   protected static String getMessageUuid(Message msg) {
-    final MessageType messageType = MessageType.values()[msg.getMessageType()];
+    final MessageType messageType = MessageType.fromByte(msg.getMessageType());
     switch (messageType) {
       case EXEC_MESSAGE:
         return msg.getExecMessage().getMessageUuid();
@@ -71,11 +71,11 @@ public class AbstractTool {
   }
 
   protected static String getMessageType(Message msg) {
-    final MessageType messageType = MessageType.values()[msg.getMessageType()];
+    final MessageType messageType = MessageType.fromByte(msg.getMessageType());
     switch (messageType) {
       case EXEC_MESSAGE:
         ExecMessageType execMessageType =
-            ExecMessageType.values()[msg.getExecMessage().getExecMessageType()];
+            ExecMessageType.fromByte(msg.getExecMessage().getExecMessageType());
         return execMessageType.name();
       case INTERCEPT_MESSAGE:
         return "InterceptMessage";

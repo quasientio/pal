@@ -716,7 +716,7 @@ public class ThinPeer {
     final String sessionId = peerUuid.toString();
     ControlMessage msg = msgBuilder.buildDeleteSessionControlMessage(peerUuid);
     ControlMessage replyMsg = sendToPeer(msg);
-    ControlStatusType statusType = ControlStatusType.values()[replyMsg.getStatus()];
+    ControlStatusType statusType = ControlStatusType.fromByte(replyMsg.getStatus());
     if (Objects.requireNonNull(statusType) == ControlStatusType.OK) {
       logger.info("Session w/uuid {} was deleted.", sessionId);
     } else {
@@ -727,7 +727,7 @@ public class ThinPeer {
   public void sendDeleteObjectRequest(ObjectRef objectRef) throws Exception {
     ControlMessage msg = msgBuilder.buildDeleteObjectControlMessage(peerUuid, objectRef.asString());
     ControlMessage replyMsg = sendToPeer(msg);
-    ControlStatusType statusType = ControlStatusType.values()[replyMsg.getStatus()];
+    ControlStatusType statusType = ControlStatusType.fromByte(replyMsg.getStatus());
     if (Objects.requireNonNull(statusType) == ControlStatusType.OK) {
       logger.info("Object w/ref {} was deleted.", objectRef);
       return;

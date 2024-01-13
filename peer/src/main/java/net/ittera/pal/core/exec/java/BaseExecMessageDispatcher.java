@@ -253,7 +253,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     List<Parameter> parameterList = getParameterList(execMessage);
 
     final ExecMessageType execMessageType =
-        ExecMessageType.values()[execMessage.getExecMessageType()];
+        ExecMessageType.fromByte(execMessage.getExecMessageType());
     if (execMessageType.equals(ExecMessageType.CONSTRUCTOR)
         || execMessageType.equals(ExecMessageType.CLASS_METHOD)
         || execMessageType.equals(ExecMessageType.INSTANCE_METHOD)) {

@@ -88,7 +88,7 @@ public class InterceptMatcher extends ConnectedService {
   private void registerInterceptRequest(InterceptMessage incomingInterceptMessage)
       throws DuplicateInterceptException {
     InterceptRequests registeredIntercepts =
-        allIntercepts.get(InterceptType.values()[incomingInterceptMessage.getInterceptType()]);
+        allIntercepts.get(InterceptType.fromByte(incomingInterceptMessage.getInterceptType()));
     registeredIntercepts.registerInterceptRequest(incomingInterceptMessage);
     if (logger.isDebugEnabled()) {
       logger.debug(

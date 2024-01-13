@@ -21,5 +21,13 @@ package net.ittera.pal.common.lang;
 
 public enum FieldOpType {
   GET,
-  PUT,
+  PUT;
+
+  public static FieldOpType fromByte(byte typeAsByte) {
+    return FieldOpType.values()[typeAsByte - 1];
+  }
+
+  public byte toByte() {
+    return (byte) (this.ordinal() + 1);
+  }
 }

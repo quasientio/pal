@@ -26,8 +26,8 @@ public enum SessionStatusType {
   NO_SUCH_SESSION,
   NO_SUCH_OBJECT;
 
-  public static SessionStatusType fromByte(byte messageTypeAsByte) {
-    return SessionStatusType.values()[messageTypeAsByte - 1];
+  public static SessionStatusType fromByte(byte typeAsByte) {
+    return SessionStatusType.values()[typeAsByte - 1];
   }
 
   public byte toByte() {

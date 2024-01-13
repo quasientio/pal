@@ -30,7 +30,7 @@ import net.ittera.pal.messages.types.ExecMessageType;
 public class MessageUtils {
 
   public static String getClassname(ExecMessage execMessage) {
-    final ExecMessageType msgType = ExecMessageType.values()[execMessage.getExecMessageType()];
+    final ExecMessageType msgType = ExecMessageType.fromByte(execMessage.getExecMessageType());
     switch (msgType) {
       case CONSTRUCTOR:
         return execMessage.getConstructorCall().getClazz().getName();
@@ -54,7 +54,7 @@ public class MessageUtils {
 
   public static String getExecutableName(ExecMessage execMessage) {
     final ExecMessageType execMessageType =
-        ExecMessageType.values()[execMessage.getExecMessageType()];
+        ExecMessageType.fromByte(execMessage.getExecMessageType());
     switch (execMessageType) {
       case CONSTRUCTOR:
         return "new";
@@ -82,7 +82,7 @@ public class MessageUtils {
    */
   public static List<String> getParameterTypes(ExecMessage execMessage) {
     final ExecMessageType execMessageType =
-        ExecMessageType.values()[execMessage.getExecMessageType()];
+        ExecMessageType.fromByte(execMessage.getExecMessageType());
     Parameter[] params;
     switch (execMessageType) {
       case CONSTRUCTOR:

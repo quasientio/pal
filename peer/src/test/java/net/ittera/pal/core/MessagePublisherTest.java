@@ -165,7 +165,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
     // verify header and msg as expected
     assertThat(
         publishedOutMsg.getHeaders().get(0).getHeaderType(),
-        is((byte) InternalHeaderType.WRITE_AHEAD.ordinal()));
+        is(InternalHeaderType.WRITE_AHEAD.toByte()));
     assertThat(publishedOutMsg.getHeaders().get(0).getValue(), is(peerUuid.toString()));
     assertThat(publishedMsg.getExecMessage(), is(msg));
   }

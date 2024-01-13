@@ -105,7 +105,7 @@ class MessageIndexer {
   }
 
   private static String getMessageUuid(Message msg) {
-    final MessageType messageType = MessageType.values()[msg.getMessageType()];
+    final MessageType messageType = MessageType.fromByte(msg.getMessageType());
     switch (messageType) {
       case EXEC_MESSAGE:
         return msg.getExecMessage().getMessageUuid();
@@ -117,7 +117,7 @@ class MessageIndexer {
   }
 
   private String printMessage(Message msg) {
-    final MessageType messageType = MessageType.values()[msg.getMessageType()];
+    final MessageType messageType = MessageType.fromByte(msg.getMessageType());
     switch (messageType) {
       case EXEC_MESSAGE:
         return toJSON(msg.getExecMessage(), true);
