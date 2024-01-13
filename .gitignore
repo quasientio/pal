@@ -3,6 +3,7 @@ lib/
 logs/
 .idea/
 .local/
+venv/
 /classes_info.txt
 /*/classes_info.txt
 *.iml

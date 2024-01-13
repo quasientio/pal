@@ -1,4 +1,22 @@
-#!/bin/sh
+#!/bin/bash
 
+if [ -z "$PAL_HOME" ]; then
+  echo "PAL_HOME is undefined."
+  exit 1
+fi
 
-colf-linux -f -b src/main/java -p net.ittera.pal.messages -i net.ittera.pal.messages.Marshallable Java src/main/colfer/*.colf
+# activate the py venv so we can import javalang
+source $PAL_HOME/venv/bin/activate
+
+# colf-linux must be run from the serdes root path (ie. $PAL_HOME/serdes)
+cd $PAL_HOME/serdes
+
+# re-compile all schemas
+colf-linux -f \
+ -b src/main/java \
+ -p net.ittera.pal.messages \
+ -i net.ittera.pal.messages.Marshallable \
+  Java src/main/colfer/*.colf
+
+# add the fromJson() method to all generated classes
+bin/generate_fromjson.py
