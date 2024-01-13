@@ -101,9 +101,8 @@ public class InterceptEvtMsg extends BaseMsg {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
-    size = 0;
-    byte[] buff = String.valueOf(type.toByte()).getBytes(ZMQ.CHARSET);
-    size += buff.length;
+    byte[] buff = new byte[] {type.toByte()};
+    size = 1;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
     }
@@ -139,7 +138,7 @@ public class InterceptEvtMsg extends BaseMsg {
 
     // type
     int msgSize = buff.length;
-    Type type = Type.fromByte(Byte.parseByte(new String(buff, ZMQ.CHARSET)));
+    Type type = Type.fromByte(buff[0]);
 
     // body | msgUUID
     buff = socket.recv();

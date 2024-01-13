@@ -118,11 +118,9 @@ public class OutboundMsg extends BaseMsg {
       throw new IllegalArgumentException("Socket is null");
     }
 
-    size = 0;
-    byte[] buff;
     // type of message
-    buff = String.valueOf(messageType.toByte()).getBytes(ZMQ.CHARSET);
-    size += buff.length;
+    byte[] buff = new byte[] {messageType.toByte()};
+    size = 1;
     try {
       if (!socket.send(buff, ZMQ.SNDMORE)) {
         return false;
@@ -133,8 +131,8 @@ public class OutboundMsg extends BaseMsg {
     }
 
     // execution phase
-    buff = String.valueOf(execPhase.toByte()).getBytes(ZMQ.CHARSET);
-    size += buff.length;
+    buff = new byte[] {execPhase.toByte()};
+    size++;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
     }
@@ -194,13 +192,12 @@ public class OutboundMsg extends BaseMsg {
 
     // type of message
     int msgSize = buff.length;
-    final MessageType messageType =
-        MessageType.fromByte(Byte.parseByte(new String(buff, ZMQ.CHARSET)));
+    final MessageType messageType = MessageType.fromByte(buff[0]);
     // execution phase
     final ExecPhase execPhase;
     buff = socket.recv();
     msgSize += buff.length;
-    execPhase = ExecPhase.fromByte(Byte.parseByte(new String(buff, ZMQ.CHARSET)));
+    execPhase = ExecPhase.fromByte(buff[0]);
 
     // # of headers to follow
     buff = socket.recv();
