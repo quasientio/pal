@@ -150,6 +150,7 @@ public final class MessageBuilder {
     return params;
   }
 
+  // TODO we should be calling createNamedParameter instead of createParameter
   private Parameter[] createNamedParameters(
       String[] parameterTypes, Object[] args, ObjectRef[] argObjRefs) {
     final int paramsTypesLength = parameterTypes == null ? 0 : parameterTypes.length;
@@ -329,47 +330,78 @@ public final class MessageBuilder {
         peerUuid, null, context, sender, senderObjRef, null, args, argObjRefs);
   }
 
+  /**
+   * Convenience method for building a constructor method message packing all arguments in a single
+   * array, regardless of type (ObjectRef or not). TODO: other build methods should pack all
+   * arguments and objRefs in a single array as well
+   */
   public ExecMessage buildConstructor(
       UUID peerUuid,
+      String className,
+      String[] parameterTypes,
+      Object[] args,
       Object sender,
-      ObjectRef senderObjRef,
-      net.ittera.pal.common.api.rmi.ConstructorCall constructorCall) {
-    Object[] args = null;
-    ObjectRef[] argObjRefs = null;
-    Object[] constructorCallArgs = constructorCall.getArgs();
-    if (constructorCall.getArgs() != null) {
-      args = new Object[constructorCall.getArgs().length];
-      argObjRefs = new ObjectRef[constructorCall.getArgs().length];
+      ObjectRef senderObjRef) {
+
+    Object[] nonObjRefArgs = null;
+    ObjectRef[] objRefArgs = null;
+    if (args != null) {
+      nonObjRefArgs = new Object[args.length];
+      objRefArgs = new ObjectRef[args.length];
       for (int i = 0; i < args.length; i++) {
-        Object arg = constructorCallArgs[i];
+        Object arg = args[i];
         if (arg instanceof ObjectRef) {
-          argObjRefs[i] = (ObjectRef) arg;
+          objRefArgs[i] = (ObjectRef) arg;
         } else {
-          args[i] = arg;
+          nonObjRefArgs[i] = arg;
         }
       }
     }
 
     return buildConstructorMessage(
-        peerUuid,
-        constructorCall.getClassname(),
-        null,
-        sender,
-        senderObjRef,
-        constructorCall.getParameterTypes(),
-        args,
-        argObjRefs);
+        peerUuid, className, null, sender, senderObjRef, parameterTypes, nonObjRefArgs, objRefArgs);
   }
 
   // </editor-fold>
 
   // <editor-fold desc="Instance method messages">
 
+  /**
+   * Convenience method for building an instance method message packing all arguments in a single
+   * array, regardless of type (ObjectRef or not). TODO: other build methods should pack all
+   * arguments and objRefs in a single array as well
+   */
   public ExecMessage buildInstanceMethod(
       UUID peerUuid,
       String className,
       String methodName,
-      Object target,
+      ObjectRef targetObjRef,
+      String[] parameterTypes,
+      Object[] args) {
+
+    Object[] nonObjRefArgs = null;
+    ObjectRef[] objRefArgs = null;
+    if (args != null) {
+      nonObjRefArgs = new Object[args.length];
+      objRefArgs = new ObjectRef[args.length];
+      for (int i = 0; i < args.length; i++) {
+        Object arg = args[i];
+        if (arg instanceof ObjectRef) {
+          objRefArgs[i] = (ObjectRef) arg;
+        } else {
+          nonObjRefArgs[i] = arg;
+        }
+      }
+    }
+
+    return buildInstanceMethod(
+        peerUuid, className, methodName, targetObjRef, parameterTypes, nonObjRefArgs, objRefArgs);
+  }
+
+  public ExecMessage buildInstanceMethod(
+      UUID peerUuid,
+      String className,
+      String methodName,
       ObjectRef targetObjRef,
       String[] parameterTypes,
       Object[] args,
@@ -411,35 +443,6 @@ public final class MessageBuilder {
 
     return newWrapper(ExecMessageType.INSTANCE_METHOD, peerUuid)
         .withInstanceMethodCall(instanceMethodCall);
-  }
-
-  public ExecMessage buildInstanceMethod(
-      UUID peerUuid, net.ittera.pal.common.api.rmi.InstanceMethodCall instanceMethodCall) {
-    Object[] args = null;
-    ObjectRef[] argObjRefs = null;
-    Object[] methodCallArgs = instanceMethodCall.getArgs();
-    if (instanceMethodCall.getArgs() != null) {
-      args = new Object[instanceMethodCall.getArgs().length];
-      argObjRefs = new ObjectRef[instanceMethodCall.getArgs().length];
-      for (int i = 0; i < args.length; i++) {
-        Object arg = methodCallArgs[i];
-        if (arg instanceof ObjectRef) {
-          argObjRefs[i] = (ObjectRef) arg;
-        } else {
-          args[i] = arg;
-        }
-      }
-    }
-
-    return buildInstanceMethod(
-        peerUuid,
-        instanceMethodCall.getClassname(),
-        instanceMethodCall.getMethod(),
-        null,
-        instanceMethodCall.getInstance(),
-        instanceMethodCall.getParameterTypes(),
-        args,
-        argObjRefs);
   }
 
   // </editor-fold>
@@ -487,37 +490,44 @@ public final class MessageBuilder {
     return newWrapper(ExecMessageType.CLASS_METHOD, peerUuid).withClassMethodCall(classMethodCall);
   }
 
+  /**
+   * Convenience method for building an instance method message packing all arguments in a single
+   * array, regardless of type (ObjectRef or not). TODO: other build methods should pack all
+   * arguments and objRefs in a single array as well
+   */
   public ExecMessage buildClassMethod(
       UUID peerUuid,
+      String className,
+      String methodName,
+      String[] parameterTypes,
       Object sender,
       ObjectRef senderObjRef,
-      net.ittera.pal.common.api.rmi.StaticMethodCall staticMethodCall) {
+      Object[] args) {
 
-    Object[] args = null;
-    ObjectRef[] argObjRefs = null;
-    Object[] methodCallArgs = staticMethodCall.getArgs();
-    if (staticMethodCall.getArgs() != null) {
-      args = new Object[staticMethodCall.getArgs().length];
-      argObjRefs = new ObjectRef[staticMethodCall.getArgs().length];
+    Object[] noObjRefArgs = null;
+    ObjectRef[] objectRefArgs = null;
+    if (args != null) {
+      noObjRefArgs = new Object[args.length];
+      objectRefArgs = new ObjectRef[args.length];
       for (int i = 0; i < args.length; i++) {
-        Object arg = methodCallArgs[i];
+        Object arg = args[i];
         if (arg instanceof ObjectRef) {
-          argObjRefs[i] = (ObjectRef) arg;
+          objectRefArgs[i] = (ObjectRef) arg;
         } else {
-          args[i] = arg;
+          noObjRefArgs[i] = arg;
         }
       }
     }
 
     return buildClassMethod(
         peerUuid,
-        staticMethodCall.getClassname(),
-        staticMethodCall.getMethod(),
-        staticMethodCall.getParameterTypes(),
+        className,
+        methodName,
+        parameterTypes,
         sender,
         senderObjRef,
-        args,
-        argObjRefs);
+        noObjRefArgs,
+        objectRefArgs);
   }
 
   // build ClassMethodCall with another message's parameter list
@@ -694,17 +704,6 @@ public final class MessageBuilder {
                 .withClazz(getWrappedClass(className))
                 .withField(getWrappedField(className, fieldName)));
   }
-
-  public ExecMessage buildGetStatic(
-      UUID peerUuid, net.ittera.pal.common.api.rmi.StaticFieldGet staticFieldGet) {
-
-    return newWrapper(ExecMessageType.GET_STATIC, peerUuid)
-        .withStaticFieldGet(
-            new StaticFieldGet()
-                .withClazz(getWrappedClass(staticFieldGet.getClassname()))
-                .withField(
-                    getWrappedField(staticFieldGet.getClassname(), staticFieldGet.getField())));
-  }
   // </editor-fold>
 
   // <editor-fold desc="Instance field get messages">
@@ -717,17 +716,6 @@ public final class MessageBuilder {
                 .withClazz(getWrappedClass(className))
                 .withObjectRef(String.valueOf(targetObjRef.getRef()))
                 .withField(getWrappedField((String) null, fieldName)));
-  }
-
-  public ExecMessage buildGetObject(
-      UUID peerUuid, net.ittera.pal.common.api.rmi.InstanceFieldGet instanceFieldGet) {
-
-    return newWrapper(ExecMessageType.GET_FIELD, peerUuid)
-        .withInstanceFieldGet(
-            new InstanceFieldGet()
-                .withClazz(getWrappedClass(instanceFieldGet.getClassname()))
-                .withObjectRef(String.valueOf(instanceFieldGet.getInstance().getRef()))
-                .withField(getWrappedField((String) null, instanceFieldGet.getField())));
   }
 
   // </editor-fold>

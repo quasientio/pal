@@ -120,7 +120,6 @@ public class InterceptRequestEntryTest {
             UUID.randomUUID(),
             "java.io.PrintStream",
             "println",
-            target,
             targetObjRef,
             new String[0],
             new Object[0],

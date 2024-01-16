@@ -28,10 +28,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import net.ittera.pal.AbstractIntegrationTest;
-import net.ittera.pal.common.api.rmi.ConstructorCall;
-import net.ittera.pal.common.api.rmi.InstanceFieldGet;
-import net.ittera.pal.common.api.rmi.InstanceMethodCall;
-import net.ittera.pal.common.api.rmi.StaticMethodCall;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.lang.intercept.InterceptType;
@@ -207,22 +203,12 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
         .findFirst();
   }
 
-  protected ExecMessage invoke(ConstructorCall constructorCall) {
-    return thinPeer.sendToPeer(
-        messageBuilder.buildConstructor(myPeerUuid, null, null, constructorCall));
+  protected ExecMessage invoke(ExecMessage execMessage) {
+    return thinPeer.sendToPeer(execMessage);
   }
 
-  protected ExecMessage invoke(StaticMethodCall staticMethodCall) {
-    return thinPeer.sendToPeer(
-        messageBuilder.buildClassMethod(myPeerUuid, null, null, staticMethodCall));
-  }
-
-  protected ExecMessage invoke(InstanceMethodCall instanceMethodCall) {
-    return thinPeer.sendToPeer(messageBuilder.buildInstanceMethod(myPeerUuid, instanceMethodCall));
-  }
-
-  protected ExecMessage invoke(InstanceFieldGet instanceFieldGet, ThinPeer thinPeerToUse) {
-    return thinPeerToUse.sendToPeer(messageBuilder.buildGetObject(myPeerUuid, instanceFieldGet));
+  protected ExecMessage invoke(ExecMessage execMessage, ThinPeer withThinPeer) {
+    return withThinPeer.sendToPeer(execMessage);
   }
 
   protected void closeContext() throws InterruptedException {

@@ -9,10 +9,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
-import net.ittera.pal.common.api.rmi.InstanceFieldGet;
-import net.ittera.pal.common.api.rmi.InstanceMethodCall;
-import net.ittera.pal.common.api.rmi.StaticFieldGet;
-import net.ittera.pal.common.api.rmi.StaticMethodCall;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;
@@ -303,45 +299,31 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void buildConstructor_constructorCallWithNoArgs_constructorMessage() {
-    UUID peerUuid = UUID.randomUUID();
-    Object sender = this;
-    ObjectRef senderObjRef = ObjectRef.randomRef();
-    Class clazz = ArrayList.class;
-    net.ittera.pal.common.api.rmi.ConstructorCall constructorCall =
-        new net.ittera.pal.common.api.rmi.ConstructorCall(clazz);
-    ExecMessage execMessage =
-        messageBuilder.buildConstructor(peerUuid, sender, senderObjRef, constructorCall);
-    assertNotNull(execMessage);
-    assertEquals(ExecMessageType.CONSTRUCTOR.toByte(), execMessage.execMessageType);
-    assertNotNull(execMessage.getConstructorCall());
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(clazz.getName(), execMessage.constructorCall.getClazz().getName());
-    assertNull(execMessage.getConstructorCall().getContext());
-    assertEquals(0, execMessage.getConstructorCall().getParameters().length);
-  }
-
-  @Test
-  public void buildConstructor_constructorCallWithArgs_constructorMessage() {
+  public void buildConstructor_withMixedArgs_constructorMessage() throws ClassNotFoundException {
     UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     Class clazz = ArrayList.class;
     int arrayListInitialCapacity = 23;
+    String[] parameterTypes = new String[] {"int"};
     Object[] args = {arrayListInitialCapacity};
-    net.ittera.pal.common.api.rmi.ConstructorCall constructorCall =
-        new net.ittera.pal.common.api.rmi.ConstructorCall(clazz)
-            .withArgs(args)
-            .withParameterTypes(new String[] {"int"});
     ExecMessage execMessage =
-        messageBuilder.buildConstructor(peerUuid, sender, senderObjRef, constructorCall);
+        messageBuilder.buildConstructor(
+            peerUuid, clazz.getName(), parameterTypes, args, sender, senderObjRef);
+
     assertNotNull(execMessage);
     assertEquals(ExecMessageType.CONSTRUCTOR.toByte(), execMessage.execMessageType);
     assertNotNull(execMessage.getConstructorCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(clazz.getName(), execMessage.constructorCall.getClazz().getName());
+    assertEquals(clazz.getName(), execMessage.getConstructorCall().getClazz().getName());
     assertNull(execMessage.getConstructorCall().getContext());
     assertEquals(args.length, execMessage.getConstructorCall().getParameters().length);
+    // compare parameter types and args
+    for (int i = 0; i < execMessage.getConstructorCall().getParameters().length; i++) {
+      Parameter parameter = execMessage.getConstructorCall().getParameters()[i];
+      assertEquals(parameterTypes[i], parameter.getType().getName());
+      assertEquals(args[i], Unwrapper.unwrapObject(parameter.getValue()));
+    }
   }
   // </editor-fold>
 
@@ -359,14 +341,7 @@ public class MessageBuilderTest {
     ObjectRef[] argObjRefs = {null, null};
     ExecMessage execMessage =
         messageBuilder.buildInstanceMethod(
-            peerUuid,
-            className,
-            methodName,
-            target,
-            targetObjRef,
-            parameterTypes,
-            args,
-            argObjRefs);
+            peerUuid, className, methodName, targetObjRef, parameterTypes, args, argObjRefs);
     assertNotNull(execMessage);
     assertEquals(ExecMessageType.INSTANCE_METHOD.toByte(), execMessage.execMessageType);
     assertNotNull(execMessage.getInstanceMethodCall());
@@ -419,16 +394,21 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void buildInstanceMethod_instanceMethodCall_instanceMethodCallMessage()
+  public void buildInstanceMethod_mixedArgs_instanceMethodCallMessage()
       throws ClassNotFoundException {
     UUID peerUuid = UUID.randomUUID();
     final String methodToCall = "dummyMethodJustPrimitiveArgs";
-    InstanceMethodCall instanceMethodCall =
-        new InstanceMethodCall(DummyClassForTest.class, methodToCall)
-            .withInstance(ObjectRef.randomRef())
-            .withParameterTypes(new String[] {"java.lang.String", "int", "java.lang.Boolean"})
-            .withArgs(new Object[] {"test", 123, Boolean.FALSE});
-    ExecMessage execMessage = messageBuilder.buildInstanceMethod(peerUuid, instanceMethodCall);
+    String[] parameterTypes = new String[] {"java.lang.String", "int", "java.lang.Boolean"};
+    Object[] args = new Object[] {"test", 123, Boolean.FALSE};
+    ExecMessage execMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid,
+            DummyClassForTest.class.getName(),
+            methodToCall,
+            ObjectRef.randomRef(),
+            parameterTypes,
+            args);
+
     assertNotNull(execMessage);
     assertEquals(ExecMessageType.INSTANCE_METHOD.toByte(), execMessage.execMessageType);
     assertNotNull(execMessage.getInstanceMethodCall());
@@ -439,11 +419,11 @@ public class MessageBuilderTest {
     assertEquals(methodToCall, execMessage.getInstanceMethodCall().getName());
     assertNull(execMessage.getInstanceMethodCall().getContext());
     assertEquals(3, execMessage.getInstanceMethodCall().getParameters().length);
-    // compare parameters
+    // compare parameter types and args
     for (int i = 0; i < execMessage.getInstanceMethodCall().getParameters().length; i++) {
       Parameter parameter = execMessage.getInstanceMethodCall().getParameters()[i];
-      assertEquals(instanceMethodCall.getParameterTypes()[i], parameter.getType().getName());
-      assertEquals(instanceMethodCall.getArgs()[i], Unwrapper.unwrapObject(parameter.getValue()));
+      assertEquals(parameterTypes[i], parameter.getType().getName());
+      assertEquals(args[i], Unwrapper.unwrapObject(parameter.getValue()));
     }
   }
   // </editor-fold>
@@ -556,39 +536,36 @@ public class MessageBuilderTest {
     ObjectRef senderObjRef = ObjectRef.randomRef();
     // Arrays.fill(boolean[] a, boolean val)
     String method = "fill";
-    StaticMethodCall staticMethodCall =
-        new StaticMethodCall(Arrays.class, method)
-            .withParameterTypes(new String[] {"[Z", "boolean"})
-            .withArgs(new Object[] {new boolean[] {false, false, false}, true});
+    Class clazz = Arrays.class;
+    String[] parameterTypes = new String[] {"[Z", "boolean"};
+    Object[] args = new Object[] {new boolean[] {false, false, false}, true};
 
     ExecMessage execMessage =
-        messageBuilder.buildClassMethod(peerUuid, sender, senderObjRef, staticMethodCall);
+        messageBuilder.buildClassMethod(
+            peerUuid, clazz.getName(), method, parameterTypes, sender, senderObjRef, args);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
     assertEquals(ExecMessageType.CLASS_METHOD.toByte(), execMessage.execMessageType);
     assertNotNull(execMessage.getClassMethodCall());
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(Arrays.class.getName(), execMessage.getClassMethodCall().getClazz().getName());
+    assertEquals(clazz.getName(), execMessage.getClassMethodCall().getClazz().getName());
     assertEquals(method, execMessage.getClassMethodCall().getName());
     assertNull(execMessage.getClassMethodCall().getContext());
-    assertEquals(
-        staticMethodCall.getParameterTypes().length,
-        execMessage.getClassMethodCall().getParameters().length);
-    // compare parameter types
+    assertEquals(parameterTypes.length, execMessage.getClassMethodCall().getParameters().length);
+    // compare parameter types and values
     for (int i = 0; i < execMessage.getClassMethodCall().getParameters().length; i++) {
       Parameter parameter = execMessage.getClassMethodCall().getParameters()[i];
-      assertEquals(staticMethodCall.getParameterTypes()[i], parameter.getType().getName());
+      assertEquals(parameterTypes[i], parameter.getType().getName());
     }
     // compare parameter values
     assertArrayEquals(
-        (boolean[]) staticMethodCall.getArgs()[0],
+        (boolean[]) args[0],
         (boolean[])
             Unwrapper.unwrapObject(execMessage.getClassMethodCall().getParameters()[0].getValue()));
     assertEquals(
-        (boolean) staticMethodCall.getArgs()[1],
-        (boolean)
-            Unwrapper.unwrapObject(execMessage.getClassMethodCall().getParameters()[1].getValue()));
+        args[1],
+        Unwrapper.unwrapObject(execMessage.getClassMethodCall().getParameters()[1].getValue()));
   }
   // </editor-fold>
 
@@ -748,23 +725,6 @@ public class MessageBuilderTest {
     assertEquals(fieldName, execMessage.getStaticFieldGet().getField().getName());
     assertNull(execMessage.getStaticFieldGet().getContext());
   }
-
-  @Test
-  public void buildGetStatic_withStaticFieldGet_staticFieldGetMessage() {
-    UUID peerUuid = UUID.randomUUID();
-    StaticFieldGet staticFieldGet = new StaticFieldGet(DummyClassForTest.class, "aStaticField");
-    ExecMessage execMessage = messageBuilder.buildGetStatic(peerUuid, staticFieldGet);
-
-    // assert expected values of ExecMessage
-    assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(ExecMessageType.GET_STATIC.toByte(), execMessage.execMessageType);
-    assertNotNull(execMessage.getStaticFieldGet());
-    assertEquals(
-        DummyClassForTest.class.getName(), execMessage.getStaticFieldGet().getClazz().getName());
-    assertEquals("aStaticField", execMessage.getStaticFieldGet().getField().getName());
-    assertNull(execMessage.getStaticFieldGet().getContext());
-  }
   // </editor-fold>
 
   // <editor-fold desc="Instance field get messages">
@@ -788,28 +748,6 @@ public class MessageBuilderTest {
     assertEquals(targetObjRef, ObjectRef.from(execMessage.getInstanceFieldGet().getObjectRef()));
     assertNull(execMessage.getInstanceFieldGet().getContext());
   }
-
-  @Test
-  public void buildGetObject_withInstanceFieldGet_instanceFieldGetMessage() {
-    UUID peerUuid = UUID.randomUUID();
-    String className = DummyClassForTest.class.getName();
-    String fieldName = "anInt";
-    ObjectRef instanceObjRef = ObjectRef.randomRef();
-    InstanceFieldGet instanceFieldGet =
-        new InstanceFieldGet(className, "anInt").withInstance(instanceObjRef);
-    ExecMessage execMessage = messageBuilder.buildGetObject(peerUuid, instanceFieldGet);
-
-    // assert expected values of ExecMessage
-    assertNotNull(execMessage);
-    assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
-    assertEquals(ExecMessageType.GET_FIELD.toByte(), execMessage.execMessageType);
-    assertNotNull(execMessage.getInstanceFieldGet());
-    assertEquals(className, execMessage.getInstanceFieldGet().getClazz().getName());
-    assertEquals(fieldName, execMessage.getInstanceFieldGet().getField().getName());
-    assertEquals(instanceObjRef, ObjectRef.from(execMessage.getInstanceFieldGet().getObjectRef()));
-    assertNull(execMessage.getInstanceFieldGet().getContext());
-  }
-
   // </editor-fold>
 
   // <editor-fold desc="Static field put messages">

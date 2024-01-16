@@ -30,14 +30,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Future;
 import net.ittera.pal.apps.intercept.InterceptableApp;
-import net.ittera.pal.common.api.rmi.ConstructorCall;
-import net.ittera.pal.common.api.rmi.InstanceFieldGet;
-import net.ittera.pal.common.api.rmi.InstanceMethodCall;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.types.ExecMessageType;
@@ -75,9 +71,14 @@ public class MethodInterceptIT extends AbstractInterceptIT {
     Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
 
     // create app instance
-    ExecMessage constructorReturn = invoke(new ConstructorCall(InterceptableApp.class));
     ObjectRef interceptableAppInstance =
-        ObjectRef.from(constructorReturn.getReturnValue().getObject().getRef());
+        ObjectRef.from(
+            invoke(
+                    messageBuilder.buildEmptyConstructor(
+                        myPeerUuid, InterceptableApp.class.getName()))
+                .getReturnValue()
+                .getObject()
+                .getRef());
 
     // receive callbacks and verify class/object state in separate thread
     List<Message> callbacks = new ArrayList<>();
@@ -89,9 +90,11 @@ public class MethodInterceptIT extends AbstractInterceptIT {
                       () -> {
                         ReturnValue retValue =
                             invoke(
-                                    new InstanceFieldGet(
-                                            InterceptableApp.class.getName(), "counter")
-                                        .withInstance(interceptableAppInstance),
+                                    messageBuilder.buildGetObject(
+                                        myPeerUuid,
+                                        InterceptableApp.class.getName(),
+                                        "counter",
+                                        interceptableAppInstance),
                                     verifierThinPeer)
                                 .getReturnValue();
 
@@ -116,12 +119,13 @@ public class MethodInterceptIT extends AbstractInterceptIT {
                       () -> {
                         ReturnValue retValue =
                             invoke(
-                                    new InstanceFieldGet(
-                                            InterceptableApp.class.getName(), "counter")
-                                        .withInstance(interceptableAppInstance),
+                                    messageBuilder.buildGetObject(
+                                        myPeerUuid,
+                                        InterceptableApp.class.getName(),
+                                        "counter",
+                                        interceptableAppInstance),
                                     verifierThinPeer)
                                 .getReturnValue();
-
                         assertValueIsObjectOfType(retValue, "java.lang.Integer");
                         Object unwrappedObj;
                         try {
@@ -141,10 +145,13 @@ public class MethodInterceptIT extends AbstractInterceptIT {
 
     // call a method that triggers N calls to the method we intercept, so we expect N callbacks
     invoke(
-        new InstanceMethodCall(InterceptableApp.class, "multiplyCounterNTimesBy")
-            .withInstance(interceptableAppInstance)
-            .withParameterTypes(new String[] {"java.lang.Integer", "java.lang.Integer"})
-            .withArgs(new Object[] {N, factor}));
+        messageBuilder.buildInstanceMethod(
+            myPeerUuid,
+            InterceptableApp.class.getName(),
+            "multiplyCounterNTimesBy",
+            interceptableAppInstance,
+            new String[] {"java.lang.Integer", "java.lang.Integer"},
+            new Object[] {N, factor}));
 
     future.get();
 
