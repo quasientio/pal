@@ -80,7 +80,7 @@ class PeerWiring extends AbstractModule {
     // use underscore in names to better filter service-related traces
     properties.setProperty("LogReader.service", "Log_Reader");
     properties.setProperty("LogWriter.service", "Log_Writer");
-    properties.setProperty("DirectRequestDispatcher.service", "Direct_Request_Dispatcher");
+    properties.setProperty("RPCRequestDispatcher.service", "RPC_Request_Dispatcher");
     properties.setProperty("MessagePublisher.service", "Message_Publisher");
     properties.setProperty("Intercepts.service", "Intercepts_Processor");
     properties.setProperty("Sessions.service", "Sessions_Service");

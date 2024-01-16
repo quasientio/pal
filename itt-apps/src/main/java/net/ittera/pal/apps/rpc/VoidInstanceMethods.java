@@ -17,16 +17,34 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.apps.rmi.explicit;
+package net.ittera.pal.apps.rpc;
 
-public class InstanceVars {
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
-  public Integer anInt = 4;
-  Integer anotherInt = 1;
-  private Integer aNullInt;
-  protected String someString = "I'm not blank";
-  public String aNullStr;
-  Boolean aNullBool;
-  public boolean aBool = true;
-  private final short someShort = 233;
+public class VoidInstanceMethods {
+
+  void doSomething() {
+    int chars = 19;
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < chars; i++) {
+      sb.append(i);
+    }
+    if (sb.toString().length() != 28) {
+      throw new RuntimeException("OMG not 28?!!");
+    }
+  }
+
+  private void testArg(String arg) {
+    System.out.println(arg);
+  }
+
+  private void testNonNullArg(String arg) {
+    System.out.println(arg.concat("and stuff"));
+  }
+
+  protected void printDate() {
+    LocalDate date = LocalDate.now();
+    System.out.println(date.format(DateTimeFormatter.ISO_LOCAL_DATE));
+  }
 }

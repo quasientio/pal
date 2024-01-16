@@ -52,7 +52,7 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-public class DirectRequestDispatcherTest extends ZmqEnabledTest {
+public class RPCRequestDispatcherTest extends ZmqEnabledTest {
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
@@ -109,17 +109,17 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
     private final UUID peerUuid = UUID.randomUUID();
     private Socket socket;
     private ZContext context;
-    private String routerAddress;
+    private String rpcRouterAddress;
     private List<String> msgsToSend;
     private final CountDownLatch shutdownLatch;
 
     Client(
         ZContext context,
-        String routerAddress,
+        String rpcRouterAddress,
         List<String> msgsToSend,
         CountDownLatch shutdownLatch) {
       this.context = context;
-      this.routerAddress = routerAddress;
+      this.rpcRouterAddress = rpcRouterAddress;
       this.msgsToSend = msgsToSend;
       this.socket = this.context.createSocket(SocketType.REQ);
       this.shutdownLatch = shutdownLatch;
@@ -130,7 +130,7 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
       // connect to router
       logger.debug("new client with identity: {}", peerUuid.toString());
       this.socket.setIdentity(peerUuid.toString().getBytes(ZMQ.CHARSET));
-      this.socket.connect(this.routerAddress);
+      this.socket.connect(this.rpcRouterAddress);
 
       final List<String> replies = new ArrayList<>();
 
@@ -154,7 +154,7 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
     }
   }
 
-  private final String ROUTER_ADDR = "tcp://0.0.0.0:5671";
+  private final String RPC_ROUTER_ADDR = "tcp://0.0.0.0:5671";
   private final String DEALER_ADDR = "inproc://deal";
   private ZContext context;
   private List<Worker> workers;
@@ -162,24 +162,24 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
   private ServiceManager manager;
   private ExecutorService execService;
   private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
-  private DirectRequestDispatcher directRequestDispatcher;
+  private RPCRequestDispatcher rpcRequestDispatcher;
 
   @Before
   public void setup() {
     this.context = createContext();
     this.execService = Executors.newCachedThreadPool();
-    this.directRequestDispatcher =
-        new DirectRequestDispatcher(
+    this.rpcRequestDispatcher =
+        new RPCRequestDispatcher(
             UUID.randomUUID(),
             context,
             SYNC_SOCKET_ADDRESS,
             servicesThreadGroup,
-            "DirectRequestTest-Service",
-            ROUTER_ADDR,
+            "RPCRequestTest-Service",
+            RPC_ROUTER_ADDR,
             DEALER_ADDR);
     initWorkers(3);
 
-    final Set<Service> services = new HashSet<>(Arrays.asList(this.directRequestDispatcher));
+    final Set<Service> services = new HashSet<>(Arrays.asList(this.rpcRequestDispatcher));
     this.manager = new ServiceManager(services);
     manager.startAsync().awaitHealthy();
     collectGoSignals(services.size(), context);
@@ -205,7 +205,7 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
 
   @Test
   public void clientsSendReqsGetWorkersRep() throws Exception {
-    assertThat(directRequestDispatcher.isRunning(), is(true));
+    assertThat(rpcRequestDispatcher.isRunning(), is(true));
 
     // init clients
     clients = new ArrayList<>();
@@ -214,7 +214,8 @@ public class DirectRequestDispatcherTest extends ZmqEnabledTest {
     final CountDownLatch shutdownLatch = new CountDownLatch(numberOfClients);
     for (int i = 0; i < numberOfClients; i++) {
       clients.add(
-          new Client(remoteCtxt, ROUTER_ADDR, Arrays.asList("Hello", "World", "!"), shutdownLatch));
+          new Client(
+              remoteCtxt, RPC_ROUTER_ADDR, Arrays.asList("Hello", "World", "!"), shutdownLatch));
     }
 
     // run clients and store Future replies

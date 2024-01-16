@@ -34,7 +34,7 @@ public class PeerException extends Exception {
     ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST(7, "JAR not found or missing MANIFEST"),
     ERROR_NO_MAINCLASS_IN_JAR_MANIFEST(8, "No Main-Class in MANIFEST"),
     ERROR_FINDING_RND_PORT(9, "Error finding local random port for socket"),
-    ERROR_PARSING_REQ_PORT_NUMBER(10, "Invalid TCP_REQ port");
+    ERROR_PARSING_RPC_PORT_NUMBER(10, "Invalid RPC port");
 
     private final int code;
     private final String message;

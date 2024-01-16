@@ -31,27 +31,27 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 @Singleton
-class DirectRequestDispatcher extends ConnectedService {
+class RPCRequestDispatcher extends ConnectedService {
 
-  private static final Logger logger = LoggerFactory.getLogger(DirectRequestDispatcher.class);
+  private static final Logger logger = LoggerFactory.getLogger(RPCRequestDispatcher.class);
 
   // zmq stuff
   private final String routerAddress;
   private final String dealerAddress;
   private static final String PROXY_CTRL_ADDR = "inproc://rdprxyctrl";
 
-  private Socket routerSocket;
+  private Socket rpcRouterSocket;
   private Socket dealerSocket;
   private Socket ctrlSocket;
 
   @Inject
-  public DirectRequestDispatcher(
+  public RPCRequestDispatcher(
       UUID peerUuid,
       ZContext context,
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
-      @Named("DirectRequestDispatcher.service") String serviceName,
-      @Named("in.req.tcp") String routerAddress,
+      @Named("RPCRequestDispatcher.service") String serviceName,
+      @Named("in.rpc") String routerAddress,
       @Named("in.dealer") String dealerAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.routerAddress = routerAddress;
@@ -61,8 +61,8 @@ class DirectRequestDispatcher extends ConnectedService {
   @Override
   protected void openConnections() {
     // to get requests for dispatchers
-    this.routerSocket = zmqContext.createSocket(SocketType.ROUTER);
-    routerSocket.bind(routerAddress);
+    this.rpcRouterSocket = zmqContext.createSocket(SocketType.ROUTER);
+    rpcRouterSocket.bind(routerAddress);
     // to send requests to dispatchers
     this.dealerSocket = zmqContext.createSocket(SocketType.DEALER);
     dealerSocket.bind(dealerAddress);
@@ -74,12 +74,12 @@ class DirectRequestDispatcher extends ConnectedService {
   @Override
   public final void run() {
     // create router-dealer proxy
-    ZMQ.proxy(routerSocket, dealerSocket, null, ctrlSocket);
+    ZMQ.proxy(rpcRouterSocket, dealerSocket, null, ctrlSocket);
   }
 
   @Override
   protected void closeConnections() {
-    closeConnection(routerSocket, "Error closing router");
+    closeConnection(rpcRouterSocket, "Error closing router");
     closeConnection(dealerSocket, "Error closing dealer");
     closeConnection(ctrlSocket, "Error closing ctrl socket");
   }

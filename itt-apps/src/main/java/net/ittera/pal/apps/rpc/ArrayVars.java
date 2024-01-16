@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.apps.rmi.explicit;
+package net.ittera.pal.apps.rpc;
 
 /** NOTE THAT INTEGRATION TESTS are dependant on this class */
 public class ArrayVars {

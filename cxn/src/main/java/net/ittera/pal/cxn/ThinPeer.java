@@ -106,7 +106,7 @@ public class ThinPeer {
   private ZContext zmqContext;
   private Socket peerSocket;
   private PeerInfo currentPeer;
-  private String reqAddress;
+  private String rpcAddress;
   private boolean talkingToPeer;
   private boolean zmqContextGiven;
 
@@ -130,8 +130,8 @@ public class ThinPeer {
     return this;
   }
 
-  public ThinPeer withReqAddress(String reqAddress) {
-    this.reqAddress = reqAddress;
+  public ThinPeer withRPCAddress(String rpcAddress) {
+    this.rpcAddress = rpcAddress;
     return this;
   }
 
@@ -248,8 +248,8 @@ public class ThinPeer {
         if (this.peerName != null) {
           self.setName(peerName);
         }
-        if (this.reqAddress != null) {
-          self.setReqAddress(reqAddress);
+        if (this.rpcAddress != null) {
+          self.setRpcAddress(rpcAddress);
         }
         getPalDirectory().registerPeer(self);
       } catch (Exception ex) {
@@ -337,14 +337,14 @@ public class ThinPeer {
       }
       this.peerSocket = zmqContext.createSocket(SocketType.REQ);
       if (currentPeer != null) {
-        if (currentPeer.getReqAddress() != null) {
+        if (currentPeer.getRpcAddress() != null) {
           connectToPeer(currentPeer);
         } else if (currentPeer.getUuid() != null) {
           connectToPeer(currentPeer.getUuid());
         } else {
           throw new RuntimeException(
               format(
-                  "Cannot connect to peer without its UUID or listening (i.e. REQ) address. Peer -> %s",
+                  "Cannot connect to peer without its UUID or listening (i.e. RPC) address. Peer -> %s",
                   currentPeer));
         }
       }
@@ -353,8 +353,8 @@ public class ThinPeer {
     initialized = true;
     logger.info(
         format(
-            "Initialized ThinPeer with:%n uuid: %s,%n name: %s,%n reqAddress: %s,%n directory: %s,%n initialPeer: %s,%n inLog: %s,%n outLog: %s",
-            peerUuid, peerName, reqAddress, palDirectoryUrl, currentPeer, inLog, outLog));
+            "Initialized ThinPeer with:%n uuid: %s,%n name: %s,%n rpcAddress: %s,%n directory: %s,%n initialPeer: %s,%n inLog: %s,%n outLog: %s",
+            peerUuid, peerName, rpcAddress, palDirectoryUrl, currentPeer, inLog, outLog));
 
     return this;
   }
@@ -368,7 +368,7 @@ public class ThinPeer {
 
   private void connectSocket() {
     peerSocket.setIdentity(("Dual-Peer-" + peerUuid.toString()).getBytes(ZMQ.CHARSET));
-    peerSocket.connect(currentPeer.getReqAddress());
+    peerSocket.connect(currentPeer.getRpcAddress());
     isSocketConnected = true;
   }
 

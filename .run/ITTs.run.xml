@@ -2,7 +2,7 @@
   <configuration default="false" name="ITTs" type="JUnit" factoryName="JUnit">
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="net.ittera.pal.rmi.explicit.*" />
+        <option name="PATTERN" value="net.ittera.pal.rpc.basic.*" />
         <option name="ENABLED" value="false" />
       </pattern>
       <pattern>
@@ -14,7 +14,7 @@
         <option name="ENABLED" value="false" />
       </pattern>
     </extension>
-    <option name="PACKAGE_NAME" value="net.ittera.pal.rmi.explicit" />
+    <option name="PACKAGE_NAME" value="net.ittera.pal.rpc.basic" />
     <option name="MAIN_CLASS_NAME" value="" />
     <option name="METHOD_NAME" value="" />
     <option name="TEST_OBJECT" value="pattern" />
@@ -25,17 +25,17 @@
       <env name="PAL_DIRECTORY" value="localhost:2379" />
     </envs>
     <patterns>
-      <pattern testClass="net.ittera.pal.rmi.explicit.ConstructorMessageIT" />
-      <pattern testClass="net.ittera.pal.rmi.explicit.GetArrayVariableMessageIT" />
-      <pattern testClass="net.ittera.pal.rmi.explicit.GetClassVariableMessageIT" />
-      <pattern testClass="net.ittera.pal.rmi.explicit.GetInstanceVariableMessageIT" />
-      <pattern testClass="net.ittera.pal.rmi.explicit.NonVoidClassMethodMessageIT" />
-      <pattern testClass="net.ittera.pal.rmi.explicit.NonVoidInstanceMethodMessageIT" />
-      <pattern testClass="net.ittera.pal.rmi.explicit.SetClassVariableMessageIT" />
-      <pattern testClass="net.ittera.pal.rmi.explicit.SetInstanceVariableMessageIT" />
-      <pattern testClass="net.ittera.pal.rmi.explicit.VoidClassMethodMessageIT" />
-      <pattern testClass="net.ittera.pal.rmi.explicit.VoidInstanceMethodMessageIT" />
-      <pattern testClass="net.ittera.pal.rmi.PeerSessionIT" />
+      <pattern testClass="net.ittera.pal.rpc.basic.ConstructorMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.basic.GetArrayVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.basic.GetClassVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.basic.GetInstanceVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.basic.NonVoidClassMethodMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.basic.NonVoidInstanceMethodMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.basic.SetClassVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.basic.SetInstanceVariableMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.basic.VoidClassMethodMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.basic.VoidInstanceMethodMessageIT" />
+      <pattern testClass="net.ittera.pal.rpc.PeerSessionIT" />
       <pattern testClass="net.ittera.pal.cxn.DirectoryConnectionProviderIT" />
       <pattern testClass="net.ittera.pal.cxn.EtcdIT" />
       <pattern testClass="net.ittera.pal.cxn.PALDirectoryIT" />

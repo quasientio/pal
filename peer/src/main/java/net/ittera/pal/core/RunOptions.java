@@ -21,7 +21,7 @@ package net.ittera.pal.core;
 
 public enum RunOptions {
   WITH_PALDIR, // Connect to PAL directory
-  WITH_TCP_REQ, // Listen to requests over TCP
+  WITH_RPC, // Listen to RPC requests
   WITH_TCP_PUB, // Publish messages
   WITH_INTERCEPTS, // Allow message interception
   WITH_INLOG, // Read messages from LOG

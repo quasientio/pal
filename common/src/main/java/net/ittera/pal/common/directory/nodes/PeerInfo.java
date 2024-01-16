@@ -32,7 +32,7 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
   // setters
 
   // value/data
-  private String reqAddress;
+  private String rpcAddress;
   private String pubAddress;
   private String jmxAddress;
   private String name;
@@ -46,8 +46,8 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
     setName(name);
   }
 
-  public PeerInfo(String reqAddress) {
-    setReqAddress(reqAddress);
+  public PeerInfo(String rpcAddress) {
+    setRpcAddress(rpcAddress);
   }
 
   public UUID getUuid() {
@@ -58,12 +58,12 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
     this.uuid = uuid;
   }
 
-  public String getReqAddress() {
-    return reqAddress;
+  public String getRpcAddress() {
+    return rpcAddress;
   }
 
-  public void setReqAddress(String reqAddress) {
-    this.reqAddress = reqAddress;
+  public void setRpcAddress(String rpcAddress) {
+    this.rpcAddress = rpcAddress;
   }
 
   public String getPubAddress() {
@@ -104,12 +104,12 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
       return false;
     }
     PeerInfo peerInfo = (PeerInfo) o;
-    return Objects.equals(uuid, peerInfo.uuid) && Objects.equals(reqAddress, peerInfo.reqAddress);
+    return Objects.equals(uuid, peerInfo.uuid) && Objects.equals(rpcAddress, peerInfo.rpcAddress);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(uuid, reqAddress);
+    return Objects.hash(uuid, rpcAddress);
   }
 
   @Override
@@ -120,8 +120,8 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
         + ", name='"
         + name
         + '\''
-        + ", reqAddress='"
-        + reqAddress
+        + ", rpcAddress='"
+        + rpcAddress
         + '\''
         + ", pubAddress='"
         + pubAddress

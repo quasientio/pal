@@ -67,7 +67,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   public void setup() throws Exception {
     this.context = createContext();
     this.execService = Executors.newCachedThreadPool();
-    // simulate DirectRequestDispatcher's DEALER socket
+    // simulate RPCRequestDispatcher's DEALER socket
     this.dealerSocket = context.createSocket(SocketType.DEALER);
     dealerSocket.bind(DEALER_ADDR);
 

@@ -122,7 +122,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
       }
 
       if (logger.isDebugEnabled()) {
-        logger.debug("Received req message with uuid: {}", getMessageUuid(requestMsg));
+        logger.debug("Received RPC message with uuid: {}", getMessageUuid(requestMsg));
       }
 
       // dispatch
@@ -136,7 +136,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
           final long took = System.currentTimeMillis() - started;
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Dispatched and sent direct message w/uuid: {} in reply to request w/uuid: {} in {} ms",
+                "Dispatched and sent message w/uuid: {} in reply to RPC request w/uuid: {} in {} ms",
                 getMessageUuid(replyMsg),
                 getMessageUuid(requestMsg),
                 took);

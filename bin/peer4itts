@@ -16,9 +16,9 @@ fi
 pal run \
   --dir $PAL_DIRECTORY \
   --name peer-for-itt \
-  --tcp-req 5656 \
-  --kafka-servers $KAFKA_SERVERS \
+  --rpc 5656 \
+  --rpc-threads 3 \
   --log auto \
+  --kafka-servers $KAFKA_SERVERS \
   --interceptable \
-  --tcp-req-threads 3 \
   --classpath $PAL_HOME/itt-apps/target/itt-apps-1.0.0-SNAPSHOT.jar

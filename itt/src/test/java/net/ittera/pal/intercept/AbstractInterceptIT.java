@@ -37,7 +37,7 @@ import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.rmi.ExecMessageAssertions;
+import net.ittera.pal.rpc.ExecMessageAssertions;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
@@ -56,7 +56,7 @@ import org.zeromq.ZMQ.Socket;
  *   and a second one to send messages to the peer before/after callbacks in
  *   order to verify state object/class values.
  * - The peer against which we run the tests must be started with at least two
- *   REQ threads (--tcp-req-core-threads=2), one to receive the method/fieldop
+ *   RPC threads (--rpc-threads=2), one to receive the method/fieldop
  *   invocation, and another one to get requests that verify state.
  * - Verification of object/class values cannot fail() or throw assertion
  *   errors since these verifications happen in a separate thread (via an
@@ -70,7 +70,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
   protected static final long INTERCEPT_REGISTRATION_MAX_DELAY_MS = 100;
-  private static final String REQ_ADDRESS = "tcp://localhost:7890";
+  private static final String RPC_ADDRESS = "tcp://localhost:7890";
 
   protected MessageBuilder messageBuilder;
   protected final UUID myPeerUuid = UUID.randomUUID();
@@ -95,8 +95,8 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
         @Override
         protected Socket initialValue() {
           Socket callbackSocket = zmqContext.createSocket(SocketType.REP);
-          callbackSocket.bind(REQ_ADDRESS);
-          logger.debug("Created and connected REP new socket to address: {}", REQ_ADDRESS);
+          callbackSocket.bind(RPC_ADDRESS);
+          logger.debug("Created and connected REP new socket to address: {}", RPC_ADDRESS);
           threadRepSocketCreated.set(true);
           return callbackSocket;
         }
@@ -129,7 +129,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
         new ThinPeer()
             .withUUID(myPeerUuid)
             .withName("InterceptTestClient")
-            .withReqAddress(REQ_ADDRESS)
+            .withRPCAddress(RPC_ADDRESS)
             .withInitialPeer(interceptablePeer)
             .withDirectoryProvider(directoryConnectionProvider)
             .init();
@@ -199,7 +199,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
 
   private Optional<PeerInfo> findRegisteredPeerListening() throws Exception {
     return palDirectory.getAllPeers().stream()
-        .filter(peer -> !myPeerUuid.equals(peer.getUuid()) && peer.getReqAddress() != null)
+        .filter(peer -> !myPeerUuid.equals(peer.getUuid()) && peer.getRpcAddress() != null)
         .findFirst();
   }
 

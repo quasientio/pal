@@ -97,7 +97,7 @@ public class Caller extends AbstractPALSubcommand {
   @Option(
       names = {"-p", "--peer"},
       paramLabel = "uuid|HOST:PORT",
-      description = "talk to peer with given UUID or REQ address")
+      description = "talk to peer with given UUID or RPC address")
   private String peerIdentifier;
 
   @Option(
@@ -234,9 +234,9 @@ public class Caller extends AbstractPALSubcommand {
       if (peerUuid != null) {
         peerInfo = new PeerInfo(peerUuid);
       } else {
-        String peerReqAddress =
+        String peerRpcAddress =
             peerAddress.startsWith("tcp://") ? peerAddress : "tcp://" + peerAddress;
-        peerInfo = new PeerInfo(peerReqAddress);
+        peerInfo = new PeerInfo(peerRpcAddress);
       }
 
       boolean uuidGiven = uuid != null;

@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.rmi;
+package net.ittera.pal.rpc;
 
 import javax.annotation.Nullable;
 import net.ittera.pal.common.objects.ObjectRef;

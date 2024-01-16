@@ -155,17 +155,17 @@ public class Main implements Callable<Integer> {
   private String tcpPub; // corresponding ENV var: TCP_PUB
 
   @Option(
-      names = {"-r", "--tcp-req"},
+      names = {"-r", "--rpc"},
       paramLabel = "[HOST:]PORT|auto",
-      description = "listen for requests on TCP socket (auto = localhost:random_port)")
-  private String tcpReq; // corresponding ENV var: TCP_REQ
+      description = "listen for RPC requests on TCP socket (auto = localhost:random_port)")
+  private String rpc; // corresponding ENV var: RPC
 
   @Option(
-      names = {"--tcp-req-threads"},
+      names = {"--rpc-threads"},
       defaultValue = "1",
       paramLabel = "num_threads",
-      description = "number of threads for tcp requests (default: ${DEFAULT-VALUE})")
-  private Integer tcpReqThreads;
+      description = "number of threads for RPC requests (default: ${DEFAULT-VALUE})")
+  private Integer rpcThreads;
 
   @Option(
       names = {"--interceptable"},
@@ -236,7 +236,7 @@ public class Main implements Callable<Integer> {
     }
 
     private static final String DEFAULT_PUB_HOSTNAME = "localhost";
-    private static final String DEFAULT_REQ_HOSTNAME = "localhost";
+    private static final String DEFAULT_RPC_HOSTNAME = "localhost";
   }
 
   private void initLogging() {
@@ -364,7 +364,7 @@ public class Main implements Callable<Integer> {
     log = getParameter("LOG", log);
     inLog = getParameter("IN_LOG", inLog);
     outLog = getParameter("OUT_LOG", outLog);
-    tcpReq = getParameter("TCP_REQ", tcpReq);
+    rpc = getParameter("RPC", rpc);
     tcpPub = getParameter("TCP_PUB", tcpPub);
 
     // if not given as option to this CMD, check if it was given as option to parent (Pal) command
@@ -453,8 +453,8 @@ public class Main implements Callable<Integer> {
       runOptions.add(RunOptions.WITH_INTERCEPTS);
     }
 
-    if (tcpReq != null) {
-      runOptions.add(RunOptions.WITH_TCP_REQ);
+    if (rpc != null) {
+      runOptions.add(RunOptions.WITH_RPC);
     }
 
     logger.info("Running with options: {}", runOptions);
@@ -524,35 +524,35 @@ public class Main implements Callable<Integer> {
           ZMQProps.OUT_PUB_CHANNEL, ZMQProps.inprocChannels.getProperty("out.pub.inproc"));
     }
 
-    // are we listening for requests over TCP
-    if (tcpReq != null) {
-      String hostname = ZMQProps.DEFAULT_REQ_HOSTNAME;
+    // are we listening for RPC requests
+    if (rpc != null) {
+      String hostname = ZMQProps.DEFAULT_RPC_HOSTNAME;
       int port = 0;
-      if (tcpReq.equalsIgnoreCase("auto")) {
+      if (rpc.equalsIgnoreCase("auto")) {
         try {
           port = findOpenPort();
         } catch (IOException e) {
           fatalExit(
               null,
               PeerException.FatalCode.ERROR_FINDING_RND_PORT,
-              "Could not find random port for REQ");
+              "Could not find random port for RPC");
         }
       } else {
         final String portStr;
-        if (tcpReq.contains(":")) {
-          hostname = Strings.stringBefore(tcpReq, ":");
-          portStr = Strings.stringAfter(tcpReq, ":");
+        if (rpc.contains(":")) {
+          hostname = Strings.stringBefore(rpc, ":");
+          portStr = Strings.stringAfter(rpc, ":");
         } else {
-          portStr = tcpReq;
+          portStr = rpc;
         }
         try {
           port = Integer.parseInt(portStr);
         } catch (NumberFormatException e) {
-          fatalExit(e, PeerException.FatalCode.ERROR_PARSING_REQ_PORT_NUMBER);
+          fatalExit(e, PeerException.FatalCode.ERROR_PARSING_RPC_PORT_NUMBER);
         }
       }
-      properties.setProperty("in.req.tcp", format("tcp://%s:%d", hostname, port));
-      properties.setProperty("peer.threadPoolSize", String.valueOf(tcpReqThreads));
+      properties.setProperty("in.rpc", format("tcp://%s:%d", hostname, port));
+      properties.setProperty("peer.threadPoolSize", String.valueOf(rpcThreads));
     }
 
     // message content options
@@ -623,8 +623,8 @@ public class Main implements Callable<Integer> {
     try {
       final PeerInfo self = new PeerInfo(uuid);
       // public listening interfaces
-      if (runOptions.contains(RunOptions.WITH_TCP_REQ)) {
-        self.setReqAddress(properties.getProperty("in.req.tcp"));
+      if (runOptions.contains(RunOptions.WITH_RPC)) {
+        self.setRpcAddress(properties.getProperty("in.rpc"));
       }
       if (properties
           .getProperty(ZMQProps.OUT_PUB_CHANNEL)
@@ -660,8 +660,8 @@ public class Main implements Callable<Integer> {
     if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
       services.add(injector.getInstance(MessagePublisher.class));
     }
-    if (runOptions.contains(RunOptions.WITH_TCP_REQ)) {
-      services.add(injector.getInstance(DirectRequestDispatcher.class));
+    if (runOptions.contains(RunOptions.WITH_RPC)) {
+      services.add(injector.getInstance(RPCRequestDispatcher.class));
       sessionRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
@@ -711,7 +711,7 @@ public class Main implements Callable<Integer> {
       }
 
       // stop peer executor (interrupts all peer exec threads)
-      if (runOptions.contains(RunOptions.WITH_TCP_REQ)) {
+      if (runOptions.contains(RunOptions.WITH_RPC)) {
         final ThreadPool peerMessageExecutor = injector.getInstance(PeerMessageExecutor.class);
         peerMessageExecutor.shutdown();
         logger.info("Done shutting down peer threads");
@@ -896,7 +896,7 @@ public class Main implements Callable<Integer> {
     }
 
     // prestart threads to create the REP sockets; this must be done after DEALER
-    if (runOptions.contains(RunOptions.WITH_TCP_REQ)) {
+    if (runOptions.contains(RunOptions.WITH_RPC)) {
       injector.getInstance(PeerMessageExecutor.class).startAllThreads();
     }
 

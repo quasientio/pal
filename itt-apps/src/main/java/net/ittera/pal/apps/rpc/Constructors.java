@@ -17,32 +17,37 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.apps.rmi.explicit;
+package net.ittera.pal.apps.rpc;
 
-import java.util.ArrayList;
+public class Constructors {
 
-public class VoidStaticMethods {
+  private Constructors innerInstance;
 
-  private static void testVoidStatic(String arg) {
-    System.out.println(arg);
+  public Constructors() {}
+
+  public Constructors(Integer anInt) {}
+
+  public Constructors(String someString) {
+    Integer integer = Integer.parseInt(someString);
   }
 
-  private static void printArg(int argIdx, String arg) {
-    System.out.println(String.format("Argument #%d to printArg: %s", argIdx, arg));
+  Constructors(String msg, Integer times) {
+
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < times; i++) {
+      sb.append(msg).append(",");
+    }
   }
 
-  static void doSomethingStatically() {
-    System.out.println("whatever");
+  private Constructors(String[] aStringArrayParam) {
+
+    StringBuilder sb = new StringBuilder();
+    for (String anAStringArrayParam : aStringArrayParam) {
+      sb.append(anAStringArrayParam).append(",");
+    }
   }
 
-  static void throwRuntimeException() {
-    throw new RuntimeException("Bastards threw me out!");
+  protected Constructors(Constructors aConstructor) {
+    this.innerInstance = aConstructor;
   }
-
-  public static void sumUpList(ArrayList<Integer> listOfInts) {
-    int sum = listOfInts.stream().reduce(0, Integer::sum);
-    System.out.println(String.format("The sum of ints = %d", sum));
-  }
-
-  public static void main(String[] args) {}
 }

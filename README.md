@@ -20,7 +20,7 @@ As Alan Kay, father of object-oriented programming, [once said](https://en.wikip
 
 PAL is an embodiment of this realization, an exploration into _the big idea_. PAL implements this concept in Java,
 empowering programs with message-passing capabilities, by translating control (via direct invocations)
-into communication (via messages), and enabling a set of standard external interfaces (RMI, REST, PUB/SUB, etc)
+into communication (via messages), and enabling a set of standard external interfaces (RPC, REST, PUB/SUB, etc)
 out of the box.
 
 ### What PAL isn't

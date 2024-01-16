@@ -34,15 +34,15 @@ images, in which case you may need to modify the parameters or variables in the 
     ```bash
    bin/peer4itts
    
-   # Or edit and run the command yourself (note that **tcp-req** may be any available port number)
+   # Or edit and run the command yourself (note that --rpc may be any available port number)
    pal run \
    --dir $PAL_DIRECTORY \
    --name peer-for-itt \
-   --tcp-req 5656 \
-   --kafka-servers $KAFKA_SERVERS \
+   --rpc 5656 \
+   --rpc-threads 3 \
    --log auto \
+   --kafka-servers $KAFKA_SERVERS \
    --interceptable \
-   --tcp-req-threads 3 \
    --classpath $PAL_HOME/itt-apps/target/itt-apps-1.0.0-SNAPSHOT.jar
     ```
 4. In a new terminal, export the ENV variables and run the integration tests
