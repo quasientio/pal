@@ -117,9 +117,9 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     }
   }
   /*
-  Sessions service stub
+  SessionService stub
    */
-  private final class SessionsStub implements Runnable {
+  private final class SessionServiceStub implements Runnable {
     List<SessionCmdMsg> messagesReceived = new ArrayList<>();
     private volatile boolean stopRequested;
 
@@ -154,13 +154,13 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
           logger.error("Error parsing received message", e);
         }
       }
-      logger.debug("SessionsStub: exiting");
+      logger.debug("SessionServiceStub: exiting");
     }
   }
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private static final String MSG_PUBLISHER_ADDR = "inproc://cell";
-  private static final String SESSION_SERVICE_REQ_ADDR = "inproc://sessions";
+  private static final String SESSION_SERVICE_REQ_ADDR = "inproc://session";
 
   private static final String ETCD_ENDPOINT = "ip://localhost:2379";
 
@@ -171,7 +171,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
   private DispatcherConnector dispatcherConnector;
   private final MessageBuilder msgBuilder = new MessageBuilder();
   private MessagePublisherStub messagePublisherStub;
-  private SessionsStub sessionsStub;
+  private SessionServiceStub sessionServiceStub;
   private InternalHeader WRITE_AHEAD_HEADER;
   private DirectoryConnectionProvider directoryConnectionProvider;
   private List<ExecMessage> messagesToMatchReceived;
@@ -200,9 +200,9 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
 
     // start stub services
     messagePublisherStub = new MessagePublisherStub();
-    sessionsStub = new SessionsStub();
+    sessionServiceStub = new SessionServiceStub();
     execService.submit(messagePublisherStub);
-    execService.submit(sessionsStub);
+    execService.submit(sessionServiceStub);
   }
 
   @After
@@ -210,7 +210,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     logger.trace("entering cleanup");
     messagesToMatchReceived.clear();
     messagePublisherStub.requestStop();
-    sessionsStub.requestStop();
+    sessionServiceStub.requestStop();
     dispatcherConnector.closeThreadLocalSockets();
     directoryConnectionProvider.get().get().close();
     closeContext(context);
@@ -387,10 +387,10 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
     assertThat(returnedMsg1.getStatus(), is(SessionStatusType.OK));
     assertThat(returnedMsg2.getStatus(), is(SessionStatusType.OK));
 
-    // verify messages received by Sessions service
-    assertThat(sessionsStub.messagesReceived.size(), is(2));
-    assertThat(sessionsStub.messagesReceived.get(0), is(sessionCmdMsg1));
-    assertThat(sessionsStub.messagesReceived.get(1), is(sessionCmdMsg2));
+    // verify messages received by SessionService service
+    assertThat(sessionServiceStub.messagesReceived.size(), is(2));
+    assertThat(sessionServiceStub.messagesReceived.get(0), is(sessionCmdMsg1));
+    assertThat(sessionServiceStub.messagesReceived.get(1), is(sessionCmdMsg2));
 
     logger.trace("leaving sendMessageToSessionService");
   }

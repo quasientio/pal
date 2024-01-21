@@ -21,7 +21,7 @@ package net.ittera.pal.core.exec.java;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import net.ittera.pal.core.SessionsMessageDispatcher;
+import net.ittera.pal.core.SessionMessageDispatcher;
 import net.ittera.pal.core.exec.UnsupportedMessageException;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
@@ -52,7 +52,7 @@ public class IncomingMessageDispatcher {
   @Inject private SetInstanceVariableDispatcher setInstanceVariableDispatcher;
 
   // control message dispatchers
-  @Inject private SessionsMessageDispatcher sessionsMessageDispatcher;
+  @Inject private SessionMessageDispatcher sessionMessageDispatcher;
 
   /**
    * @param execMessage Message to invoke
@@ -93,7 +93,7 @@ public class IncomingMessageDispatcher {
     switch (commandType) {
       case DELETE_OBJECT:
       case DELETE_SESSION:
-        return sessionsMessageDispatcher.incomingControlMessage(controlMessage);
+        return sessionMessageDispatcher.incomingControlMessage(controlMessage);
       default:
         throw new UnsupportedMessageException(
             String.format(

@@ -44,9 +44,9 @@ import zmq.ZError;
 
 /** The remote peer's UUID is used as its sessionId */
 @Singleton
-public class Sessions extends ConnectedService {
+public class SessionService extends ConnectedService {
 
-  private static final Logger logger = LoggerFactory.getLogger(Sessions.class);
+  private static final Logger logger = LoggerFactory.getLogger(SessionService.class);
 
   // one objectRef -> object map for each peer
   private final Map<UUID, HashMap<ObjectRef, Object>> sessionsMap;
@@ -55,13 +55,13 @@ public class Sessions extends ConnectedService {
   private Socket repSocket;
 
   @Inject
-  public Sessions(
+  public SessionService(
       UUID peerUuid,
       ZContext context,
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
-      @Named("Sessions.service") String serviceName,
-      @Named("sessions.svc") String repAddress,
+      @Named("Session.service") String serviceName,
+      @Named("session.svc") String repAddress,
       ObjectLookupStore objectLookupStore) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.repAddress = repAddress;

@@ -232,7 +232,7 @@ public class Main implements Callable<Integer> {
       inprocChannels.put("offset.pub", "inproc://offsets");
       inprocChannels.put("sync.ready", "inproc://sync_ready");
       inprocChannels.put("intercepts.reg", "inproc://intcept_reg");
-      inprocChannels.put("sessions.svc", "inproc://sessions");
+      inprocChannels.put("session.svc", "inproc://session");
     }
 
     private static final String DEFAULT_PUB_HOSTNAME = "localhost";
@@ -668,7 +668,7 @@ public class Main implements Callable<Integer> {
       services.add(injector.getInstance(InterceptMatcher.class));
     }
     if (sessionRequired) {
-      services.add(injector.getInstance(Sessions.class));
+      services.add(injector.getInstance(SessionService.class));
     }
     return services;
   }

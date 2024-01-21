@@ -46,11 +46,11 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
 
-public class SessionsTest extends ZmqEnabledTest {
+public class SessionServiceTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
-  private static final String SESSIONS_SERVICE_ADDR = "inproc://sessions.svc";
+  private static final String SESSION_SERVICE_ADDR = "inproc://session.svc";
   private UUID peerUuid;
-  private Sessions sessionService;
+  private SessionService sessionService;
   private ZContext context;
   private Socket socket;
   private ServiceManager manager;
@@ -62,13 +62,13 @@ public class SessionsTest extends ZmqEnabledTest {
     peerUuid = UUID.randomUUID();
     context = createContext();
     sessionService =
-        new Sessions(
+        new SessionService(
             peerUuid,
             context,
             SYNC_SOCKET_ADDRESS,
             servicesThreadGroup,
             "Session_Service",
-            SESSIONS_SERVICE_ADDR,
+            SESSION_SERVICE_ADDR,
             objectLookupStore);
     final Set<Service> services = new HashSet<>(Collections.singletonList(sessionService));
     manager = new ServiceManager(services);
@@ -76,7 +76,7 @@ public class SessionsTest extends ZmqEnabledTest {
     manager.startAsync().awaitHealthy();
     collectGoSignals(services.size(), context);
     socket = context.createSocket(SocketType.REQ);
-    socket.connect(SESSIONS_SERVICE_ADDR);
+    socket.connect(SESSION_SERVICE_ADDR);
   }
 
   @Test

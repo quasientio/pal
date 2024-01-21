@@ -38,14 +38,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Singleton
-public class SessionsMessageDispatcher {
+public class SessionMessageDispatcher {
   @Inject private DispatcherConnector dispatcherConnector;
   @Inject private ObjectLookupStore objectLookupStore;
   @Inject private MessageBuilder messageBuilder;
 
   @Inject private UUID peerUuid;
 
-  private static final Logger logger = LoggerFactory.getLogger(SessionsMessageDispatcher.class);
+  private static final Logger logger = LoggerFactory.getLogger(SessionMessageDispatcher.class);
 
   public ControlMessage incomingControlMessage(ControlMessage controlMessage) {
     final UUID remotePeerUuid = UUID.fromString(controlMessage.getFromPeer());

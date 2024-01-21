@@ -128,7 +128,7 @@ public class DispatcherConnector {
       Set<RunOptions> runOptions,
       InterceptMatcher interceptMatcher,
       @Named("out.cell") String msgPublisherAddress,
-      @Named("sessions.svc") String sessionServiceAddress) {
+      @Named("session.svc") String sessionServiceAddress) {
     this.zmqContext = zmqContext;
     this.peerUuid = peerUuid;
     this.messageBuilder = messageBuilder;
@@ -428,7 +428,7 @@ public class DispatcherConnector {
       if (socket != null) {
         socket.close();
         if (logger.isDebugEnabled()) {
-          logger.debug("Thread local REQ socket for sessions service closed");
+          logger.debug("Thread local REQ socket for session service closed");
         }
       }
       threadSessionsSocket.remove();
