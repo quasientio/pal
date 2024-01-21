@@ -45,14 +45,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Singleton
-public class InterceptProcessor {
+public class InterceptAnnotationProcessor {
 
-  private static final Logger logger = LoggerFactory.getLogger(InterceptProcessor.class);
+  private static final Logger logger = LoggerFactory.getLogger(InterceptAnnotationProcessor.class);
   private final UUID peerUuid;
   private final DirectoryConnectionProvider directoryConnectionProvider;
 
   @Inject
-  InterceptProcessor(UUID peerUuid, DirectoryConnectionProvider directoryConnectionProvider) {
+  InterceptAnnotationProcessor(
+      UUID peerUuid, DirectoryConnectionProvider directoryConnectionProvider) {
     this.peerUuid = peerUuid;
     this.directoryConnectionProvider = directoryConnectionProvider;
   }

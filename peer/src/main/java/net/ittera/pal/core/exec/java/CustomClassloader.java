@@ -22,14 +22,14 @@ package net.ittera.pal.core.exec.java;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
-import net.ittera.pal.core.InterceptProcessor;
+import net.ittera.pal.core.InterceptAnnotationProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CustomClassloader extends URLClassLoader {
 
   private static final Logger logger = LoggerFactory.getLogger(CustomClassloader.class);
-  private InterceptProcessor interceptProcessor;
+  private InterceptAnnotationProcessor interceptAnnotationProcessor;
 
   public CustomClassloader(URL[] urls, ClassLoader parent) {
     super(urls, parent);
@@ -39,11 +39,11 @@ public class CustomClassloader extends URLClassLoader {
   @Override
   protected Class<?> findClass(String name) throws ClassNotFoundException {
     Class clazz = super.findClass(name);
-    interceptProcessor.process(clazz);
+    interceptAnnotationProcessor.process(clazz);
     return clazz;
   }
 
-  public void setInterceptProcessor(InterceptProcessor interceptProcessor) {
-    this.interceptProcessor = interceptProcessor;
+  public void setInterceptProcessor(InterceptAnnotationProcessor interceptAnnotationProcessor) {
+    this.interceptAnnotationProcessor = interceptAnnotationProcessor;
   }
 }

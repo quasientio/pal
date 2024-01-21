@@ -824,7 +824,8 @@ public class Main implements Callable<Integer> {
     final Injector injector =
         Guice.createInjector(new PeerWiring(properties, runOptions, zmqContext, customClassloader));
     // circular dependency must be resolved explicitly
-    customClassloader.setInterceptProcessor(injector.getInstance(InterceptProcessor.class));
+    customClassloader.setInterceptProcessor(
+        injector.getInstance(InterceptAnnotationProcessor.class));
 
     // register peer async
     final CountDownLatch selfRegistrationLatch = new CountDownLatch(1);

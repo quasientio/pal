@@ -51,11 +51,11 @@ class App {
   public static void printlnAndStop(String line) {}
 }
 
-public class InterceptProcessorTest {
+public class InterceptAnnotationProcessorTest {
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private PALDirectory palDirectory;
-  private InterceptProcessor interceptProcessor;
+  private InterceptAnnotationProcessor interceptAnnotationProcessor;
   private final UUID peerUuid = UUID.randomUUID();
   private List<InterceptRequest> requests;
 
@@ -76,7 +76,8 @@ public class InterceptProcessorTest {
     DirectoryConnectionProvider directoryConnectionProvider =
         mock(DirectoryConnectionProvider.class);
     when(directoryConnectionProvider.get()).thenReturn(Optional.of(palDirectory));
-    interceptProcessor = new InterceptProcessor(peerUuid, directoryConnectionProvider);
+    interceptAnnotationProcessor =
+        new InterceptAnnotationProcessor(peerUuid, directoryConnectionProvider);
   }
 
   @After
@@ -86,7 +87,7 @@ public class InterceptProcessorTest {
 
   @Test
   public void processClassWithBeforeAnnotation() throws Exception {
-    interceptProcessor.process(App.class);
+    interceptAnnotationProcessor.process(App.class);
 
     // ensure register() called
     verify(palDirectory, times(1)).registerInterceptAsync(any());
