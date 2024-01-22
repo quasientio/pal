@@ -151,14 +151,20 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"-p", "--tcp-pub"},
       paramLabel = "[HOST:]PORT|auto",
-      description = "publish messages to TCP socket (auto = localhost:random_port)")
+      description = "publish messages to ZeroMQ socket (auto = localhost:random_port)")
   private String tcpPub; // corresponding ENV var: TCP_PUB
 
   @Option(
       names = {"-r", "--rpc"},
       paramLabel = "[HOST:]PORT|auto",
-      description = "listen for RPC requests on TCP socket (auto = localhost:random_port)")
+      description = "listen for RPC requests on ZeroMQ socket (auto = localhost:random_port)")
   private String rpc; // corresponding ENV var: RPC
+
+  @Option(
+      names = {"-j", "--json-rpc"},
+      paramLabel = "[HOST:]PORT|auto",
+      description = "listen for JSONRPC requests on WebSocket (auto = localhost:random_port)")
+  private String jsonRpc; // corresponding ENV var: JSON_RPC
 
   @Option(
       names = {"--rpc-threads"},
@@ -243,6 +249,7 @@ public class Main implements Callable<Integer> {
 
     private static final String DEFAULT_PUB_HOSTNAME = "localhost";
     private static final String DEFAULT_RPC_HOSTNAME = "localhost";
+    private static final String DEFAULT_JSONRPC_HOSTNAME = "localhost";
   }
 
   private void initLogging() {
@@ -371,6 +378,7 @@ public class Main implements Callable<Integer> {
     inLog = getParameter("IN_LOG", inLog);
     outLog = getParameter("OUT_LOG", outLog);
     rpc = getParameter("RPC", rpc);
+    jsonRpc = getParameter("JSON_RPC", jsonRpc);
     tcpPub = getParameter("TCP_PUB", tcpPub);
 
     // if not given as option to this CMD, check if it was given as option to parent (Pal) command
@@ -552,6 +560,37 @@ public class Main implements Callable<Integer> {
         }
       }
       properties.setProperty("in.rpc", format("tcp://%s:%d", hostname, port));
+      properties.setProperty("peer.threadPoolSize", String.valueOf(rpcThreads));
+    }
+
+    // are we listening for JSONRPC requests
+    if (jsonRpc != null) {
+      String hostname = ZMQProps.DEFAULT_JSONRPC_HOSTNAME;
+      int port = 0;
+      if (jsonRpc.equalsIgnoreCase("auto")) {
+        try {
+          port = findOpenPort();
+        } catch (IOException e) {
+          fatalExit(
+              null,
+              PeerException.FatalCode.ERROR_FINDING_RND_PORT,
+              "Could not find random port for JSONRPC");
+        }
+      } else {
+        final String portStr;
+        if (jsonRpc.contains(":")) {
+          hostname = Strings.stringBefore(jsonRpc, ":");
+          portStr = Strings.stringAfter(jsonRpc, ":");
+        } else {
+          portStr = jsonRpc;
+        }
+        try {
+          port = Integer.parseInt(portStr);
+        } catch (NumberFormatException e) {
+          fatalExit(e, PeerException.FatalCode.ERROR_PARSING_JSONRPC_PORT_NUMBER);
+        }
+      }
+      properties.setProperty("in.websocket", format("%s:%d", hostname, port));
       properties.setProperty("peer.threadPoolSize", String.valueOf(rpcThreads));
     }
 

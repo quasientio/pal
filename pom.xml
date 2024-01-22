@@ -51,6 +51,7 @@
         <jacoco.version>0.8.2</jacoco.version>
         <equalsverifier.version>3.5</equalsverifier.version>
         <jsr305.version>3.0.2</jsr305.version>
+        <java-websocket.version>1.5.4</java-websocket.version>
 
         <!-- LOGGING -->
         <logs.dir>logs</logs.dir>
@@ -343,6 +344,13 @@
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
                 <version>${jsr305.version}</version>
+            </dependency>
+
+            <!-- java-websocket -->
+            <dependency>
+                <groupId>org.java-websocket</groupId>
+                <artifactId>Java-WebSocket</artifactId>
+                <version>${java-websocket.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
