@@ -39,7 +39,8 @@ public class PeerMessageExecutor extends ThreadPool {
   public PeerMessageExecutor(
       @Named("peer.threadPoolSize") String threadPoolSize,
       ZContext zmqContext,
-      @Named("in.dealer") String zmqSocketAddress,
+      @Named("in.dealer") String rpcDealerAddress,
+      @Named("json.in.dealer") String jsonrpcDealerAddress,
       MessageBuilder messageBuilder,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
@@ -48,9 +49,10 @@ public class PeerMessageExecutor extends ThreadPool {
 
     super(
         Integer.parseInt(threadPoolSize),
-        new ExecThreadFactory(
+        new PeerExecThreadFactory(
             zmqContext,
-            zmqSocketAddress,
+            rpcDealerAddress,
+            jsonrpcDealerAddress,
             messageBuilder,
             incomingMessageDispatcher,
             dispatcherConnector,

@@ -39,7 +39,7 @@ public class LogMessageExecutor extends ThreadPool {
   public LogMessageExecutor(
       @Named("log.threadPoolSize") String threadPoolSize,
       ZContext zmqContext,
-      @Named("in.log") String zmqSocketAddress,
+      @Named("in.log") String logDealerAddress,
       MessageBuilder messageBuilder,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
@@ -48,9 +48,9 @@ public class LogMessageExecutor extends ThreadPool {
 
     super(
         Integer.parseInt(threadPoolSize),
-        new ExecThreadFactory(
+        new LogExecThreadFactory(
             zmqContext,
-            zmqSocketAddress,
+            logDealerAddress,
             messageBuilder,
             incomingMessageDispatcher,
             dispatcherConnector,

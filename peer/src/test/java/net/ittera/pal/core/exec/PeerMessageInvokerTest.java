@@ -55,7 +55,8 @@ import org.zeromq.ZMQ.Socket;
 public class PeerMessageInvokerTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
-  private final String DEALER_ADDR = "inproc://deal";
+  private final String RPC_DEALER_ADDR = "inproc://deal";
+  private final String JSONRPC_DEALER_ADDR = "inproc://json.deal";
   private ZContext context;
   private Socket dealerSocket;
   private ExecutorService execService;
@@ -69,7 +70,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
     this.execService = Executors.newCachedThreadPool();
     // simulate RPCRequestDispatcher's DEALER socket
     this.dealerSocket = context.createSocket(SocketType.DEALER);
-    dealerSocket.bind(DEALER_ADDR);
+    dealerSocket.bind(RPC_DEALER_ADDR);
 
     /* mock incomingMessageDispatcher */
     incomingMessageDispatcher = mock(IncomingMessageDispatcher.class);
@@ -100,7 +101,12 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
 
     this.peerMessageInvoker =
         new PeerMessageInvoker(
-            context, msgBuilder, DEALER_ADDR, incomingMessageDispatcher, peerUuid);
+            context,
+            msgBuilder,
+            RPC_DEALER_ADDR,
+            JSONRPC_DEALER_ADDR,
+            incomingMessageDispatcher,
+            peerUuid);
   }
 
   @After

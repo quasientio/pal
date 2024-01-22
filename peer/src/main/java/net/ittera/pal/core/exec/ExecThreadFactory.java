@@ -31,12 +31,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 
-public class ExecThreadFactory implements ThreadFactory {
+public abstract class ExecThreadFactory implements ThreadFactory {
 
   private final List<Thread> createdThreads = new ArrayList<>();
 
-  private final ThreadGroup threadGroup;
-  private final AtomicInteger threadCounter = new AtomicInteger(0);
+  protected ThreadGroup threadGroup;
+  protected final AtomicInteger threadCounter = new AtomicInteger(0);
 
   private static final int THREAD_GROUP_MAX_PRIORITY = Thread.NORM_PRIORITY;
   private static final int THREAD_PRIORITY = Thread.NORM_PRIORITY;
@@ -45,17 +45,15 @@ public class ExecThreadFactory implements ThreadFactory {
 
   private static final Logger logger = LoggerFactory.getLogger(ExecThreadFactory.class);
 
-  private final ExecChannelType execChannelType;
-  private final MessageBuilder messageBuilder;
-  private final DispatcherConnector dispatcherConnector;
-  private final IncomingMessageDispatcher incomingMessageDispatcher;
+  private ExecChannelType execChannelType;
+  protected MessageBuilder messageBuilder;
+  protected DispatcherConnector dispatcherConnector;
+  protected IncomingMessageDispatcher incomingMessageDispatcher;
 
   // zmq stuff
-  private final ZContext zmqContext;
-  private final String zmqSocketAddress;
-
-  private final UUID peerUuid;
-  private final ClassLoader classLoader;
+  protected ZContext zmqContext;
+  protected UUID peerUuid;
+  private ClassLoader classLoader;
 
   enum ExecChannelType {
     PEER("peer"),
@@ -68,22 +66,19 @@ public class ExecThreadFactory implements ThreadFactory {
     }
   }
 
-  public ExecThreadFactory(
+  protected void init(
       ZContext zmqContext,
-      String zmqSocketAddress,
       MessageBuilder messageBuilder,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
       ExecChannelType execChannelType,
       ClassLoader classLoader,
       UUID peerUuid) {
-
     this.execChannelType = execChannelType;
     threadGroup = new ThreadGroup(getThreadGroupName());
     threadGroup.setDaemon(THREAD_GROUP_IS_DAEMON);
     threadGroup.setMaxPriority(THREAD_GROUP_MAX_PRIORITY);
     this.zmqContext = zmqContext;
-    this.zmqSocketAddress = zmqSocketAddress;
     this.messageBuilder = messageBuilder;
     this.dispatcherConnector = dispatcherConnector;
     this.incomingMessageDispatcher = incomingMessageDispatcher;
@@ -96,38 +91,12 @@ public class ExecThreadFactory implements ThreadFactory {
         THREAD_GROUP_MAX_PRIORITY);
   }
 
+  protected abstract AbstractMessageInvokerThread createInvokerThread(String threadName);
+
   @Override
   public Thread newThread(Runnable r) {
     final String newThreadName = getThreadBaseName() + ' ' + threadCounter.getAndIncrement();
-    final Thread thread;
-    switch (execChannelType) {
-      case LOG:
-        thread =
-            new LogMessageInvoker(
-                threadGroup,
-                newThreadName,
-                zmqContext,
-                messageBuilder,
-                zmqSocketAddress,
-                incomingMessageDispatcher,
-                dispatcherConnector,
-                peerUuid);
-        break;
-      case PEER:
-        thread =
-            new PeerMessageInvoker(
-                threadGroup,
-                newThreadName,
-                zmqContext,
-                messageBuilder,
-                zmqSocketAddress,
-                incomingMessageDispatcher,
-                dispatcherConnector,
-                peerUuid);
-        break;
-      default:
-        throw new IllegalArgumentException("Unknown ExecChannelType: " + execChannelType);
-    }
+    final Thread thread = createInvokerThread(newThreadName);
     thread.setContextClassLoader(classLoader);
     thread.setPriority(THREAD_PRIORITY);
     thread.setDaemon(THREAD_IS_DAEMON);
@@ -157,7 +126,7 @@ public class ExecThreadFactory implements ThreadFactory {
     createdThreads.add(t);
   }
 
-  private String getThreadBaseName() {
+  protected String getThreadBaseName() {
     return String.format("%s Executor", Strings.capitalize(execChannelType.name));
   }
 

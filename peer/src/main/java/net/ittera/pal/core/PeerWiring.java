@@ -81,6 +81,7 @@ class PeerWiring extends AbstractModule {
     properties.setProperty("LogReader.service", "Log_Reader");
     properties.setProperty("LogWriter.service", "Log_Writer");
     properties.setProperty("RPCRequestDispatcher.service", "RPC_Request_Dispatcher");
+    properties.setProperty("JSONRPCRequestDispatcher.service", "JSONRPC_Request_Dispatcher");
     properties.setProperty("MessagePublisher.service", "Message_Publisher");
     properties.setProperty("Intercepts.service", "Intercepts_Processor");
     properties.setProperty("Session.service", "Session_Service");

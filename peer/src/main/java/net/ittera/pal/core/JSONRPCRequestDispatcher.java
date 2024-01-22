@@ -28,7 +28,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import net.ittera.pal.common.util.Strings;
-import net.ittera.pal.common.util.UUIDUtils;
+import net.ittera.pal.core.messages.InboundJSONRPCMsg;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
@@ -71,12 +70,12 @@ class JSONRPCRequestDispatcher extends ConnectedService {
 
   @Override
   protected void openConnections() {
-    // to get requests for dispatchers
+    // to get remote requests
     String hostname = Strings.stringBefore(websocketAddress, ":");
     int port = Integer.parseInt(Strings.stringAfter(websocketAddress, ":"));
     webSocketServer = new InternalWebSocketServer(new InetSocketAddress(hostname, port));
 
-    // to send requests to dispatchers
+    // to send the requests to the dispatcher threads
     this.dealerSocket = zmqContext.createSocket(SocketType.DEALER);
     dealerSocket.bind(dealerAddress);
   }
@@ -126,14 +125,15 @@ class JSONRPCRequestDispatcher extends ConnectedService {
       logger.error("Error closing WebSocket server", e);
     }
 
-    closeConnection(dealerSocket, "Error closing JSONRPC dealer socket");
+    closeConnection(dealerSocket, "Error closing JSON-RPC dealer socket");
   }
 
   private void sendMessageToDispatchers(UUID clientId, String message) {
-    byte[] buff = UUIDUtils.toBytes(clientId);
-    dealerSocket.send(buff, ZMQ.SNDMORE);
-    buff = message.getBytes();
-    dealerSocket.send(buff, 0);
+    InboundJSONRPCMsg inboundJSONRPCMsg = new InboundJSONRPCMsg(clientId, message);
+    boolean sent = inboundJSONRPCMsg.send(dealerSocket);
+    if (!sent) {
+      logger.error("Error sending message to dispatchers: {}", inboundJSONRPCMsg);
+    }
   }
 
   private WebSocket getClientSocketFromId(String clientId) {
@@ -160,14 +160,18 @@ class JSONRPCRequestDispatcher extends ConnectedService {
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-      // TODO
-      // Assign unique ID and add to mapping
+      logger.debug(
+          "New connection from: {}", conn.getRemoteSocketAddress().getAddress().getHostAddress());
+      UUID clientId = UUID.randomUUID();
+      webSocketClientMapping.put(conn, clientId);
     }
 
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-      // TODO
-      // Remove client from mapping
+      logger.debug(
+          "Closed connection from: {}",
+          conn.getRemoteSocketAddress().getAddress().getHostAddress());
+      webSocketClientMapping.remove(conn);
     }
 
     @Override
@@ -179,12 +183,12 @@ class JSONRPCRequestDispatcher extends ConnectedService {
 
     @Override
     public void onError(WebSocket conn, Exception ex) {
-      // Handle errors
+      logger.error("Error on WebSocket connection", ex);
     }
 
     @Override
     public void onStart() {
-      // Server started
+      logger.info("WebSocket server started on: {}", websocketAddress);
     }
   }
 }

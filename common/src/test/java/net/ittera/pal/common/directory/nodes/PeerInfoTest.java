@@ -38,6 +38,7 @@ public class PeerInfoTest {
   private final UUID peerUuid = UUID.randomUUID();
   private final String peerName = "peer-ab";
   private final String rpcAddress = "localhost:2991";
+  private final String jsonRpcAddress = "localhost:8993";
   private final String pubAddress = "localhost:2992";
   private final String jmxAddress = "localhost:2993";
 
@@ -45,6 +46,7 @@ public class PeerInfoTest {
   public void setUp() {
     peerInfo = new PeerInfo(peerUuid, peerName);
     peerInfo.setRpcAddress(rpcAddress);
+    peerInfo.setJsonrpcAddress(jsonRpcAddress);
     peerInfo.setPubAddress(pubAddress);
     peerInfo.setJmxAddress(jmxAddress);
   }
@@ -62,9 +64,11 @@ public class PeerInfoTest {
   @Test
   public void getRPCAddress() {
     assertEquals(rpcAddress, peerInfo.getRpcAddress());
+  }
 
-    String anotherAddress = "somehost:3003";
-    assertEquals(anotherAddress, new PeerInfo(anotherAddress).getRpcAddress());
+  @Test
+  public void getJsonRPCAddress() {
+    assertEquals(jsonRpcAddress, peerInfo.getJsonrpcAddress());
   }
 
   @Test
@@ -115,6 +119,9 @@ public class PeerInfoTest {
                 + '\''
                 + ", rpcAddress='"
                 + rpcAddress
+                + '\''
+                + ", jsonRpcAddress='"
+                + jsonRpcAddress
                 + '\''
                 + ", pubAddress='"
                 + pubAddress

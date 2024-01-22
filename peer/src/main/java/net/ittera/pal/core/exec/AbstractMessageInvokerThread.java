@@ -33,7 +33,6 @@ import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
 
 /** Base class for Log and Peer Invoker threads */
 public abstract class AbstractMessageInvokerThread extends Thread {
@@ -45,8 +44,6 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
   // zmq stuff
   protected final ZContext zmqContext;
-  protected final String dealerAddress;
-  protected ZMQ.Socket socket;
 
   private final UUID peerUuid;
   private final IncomingMessageDispatcher incomingMessageDispatcher;
@@ -58,22 +55,17 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       String name,
       ZContext zmqContext,
       MessageBuilder messageBuilder,
-      String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
       UUID peerUuid) {
     super(group, null, name);
     this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
-    this.dealerAddress = dealerAddress;
     this.incomingMessageDispatcher = incomingMessageDispatcher;
     this.dispatcherConnector = dispatcherConnector;
     this.peerUuid = peerUuid;
     if (logger.isDebugEnabled()) {
-      logger.debug(
-          "Initialized message invoker thread named: {} with dealerAddress: {}",
-          name,
-          dealerAddress);
+      logger.debug("Initialized message invoker thread named: {}", name);
     }
   }
 
@@ -84,17 +76,15 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   AbstractMessageInvokerThread(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
-      String dealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       UUID peerUuid) {
     this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
-    this.dealerAddress = dealerAddress;
     this.incomingMessageDispatcher = incomingMessageDispatcher;
     this.dispatcherConnector = null;
     this.peerUuid = peerUuid;
     if (logger.isDebugEnabled()) {
-      logger.debug("Initialized message invoker thread with dealerAddress: {}", dealerAddress);
+      logger.debug("Initialized new message invoker thread");
     }
   }
 
@@ -113,12 +103,6 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   }
 
   protected void closeConnections() {
-    try {
-      socket.close();
-    } catch (Exception e) {
-      logger.debug("Error closing socket", e);
-    }
-
     if (dispatcherConnector != null) {
       try {
         dispatcherConnector.closeThreadLocalSockets();

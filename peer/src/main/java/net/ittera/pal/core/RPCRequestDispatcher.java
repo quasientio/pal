@@ -79,9 +79,9 @@ class RPCRequestDispatcher extends ConnectedService {
 
   @Override
   protected void closeConnections() {
-    closeConnection(rpcRouterSocket, "Error closing router");
-    closeConnection(dealerSocket, "Error closing dealer");
-    closeConnection(ctrlSocket, "Error closing ctrl socket");
+    closeConnection(rpcRouterSocket, "Error closing RPC router socket");
+    closeConnection(dealerSocket, "Error closing RPC dealer socket");
+    closeConnection(ctrlSocket, "Error closing RPC ctrl socket");
   }
 
   private void sendProxyTermCmd() {

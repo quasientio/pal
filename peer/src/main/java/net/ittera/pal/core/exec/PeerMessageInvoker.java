@@ -19,24 +19,34 @@
 
 package net.ittera.pal.core.exec;
 
+import java.util.Arrays;
 import java.util.UUID;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
+import net.ittera.pal.core.messages.InboundJSONRPCMsg;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
+import org.zeromq.ZMQ.Poller;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
 class PeerMessageInvoker extends AbstractMessageInvokerThread {
+
+  private final String rpcDealerAddress;
+  private ZMQ.Socket rpcSocket;
+  private final String jsonrpcDealerAddress;
+  private ZMQ.Socket jsonrpcSocket;
 
   public PeerMessageInvoker(
       ThreadGroup group,
       String name,
       ZContext zmqContext,
       MessageBuilder messageBuilder,
-      String dealerAddress,
+      String rpcDealerAddress,
+      String jsonrpcDealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
       UUID peerUuid) {
@@ -45,32 +55,44 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
         name,
         zmqContext,
         messageBuilder,
-        dealerAddress,
         incomingMessageDispatcher,
         dispatcherConnector,
         peerUuid);
+    this.rpcDealerAddress = rpcDealerAddress;
+    this.jsonrpcDealerAddress = jsonrpcDealerAddress;
   }
 
   // Constructor for unit-testing
   PeerMessageInvoker(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
-      String dealerAddress,
+      String rpcDealerAddress,
+      String jsonrpcDealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       UUID peerUuid) {
-    super(zmqContext, messageBuilder, dealerAddress, incomingMessageDispatcher, peerUuid);
+    super(zmqContext, messageBuilder, incomingMessageDispatcher, peerUuid);
+    this.rpcDealerAddress = rpcDealerAddress;
+    this.jsonrpcDealerAddress = jsonrpcDealerAddress;
   }
 
   @Override
   public void run() {
 
-    // create REP socket
-    socket = zmqContext.createSocket(SocketType.REP);
-    socket.connect(dealerAddress);
+    // create and connect REP socket for RPC
+    rpcSocket = zmqContext.createSocket(SocketType.REP);
+    rpcSocket.connect(rpcDealerAddress);
+
+    // create and connect REP socket for JSON-RPC
+    jsonrpcSocket = zmqContext.createSocket(SocketType.REP);
+    jsonrpcSocket.connect(jsonrpcDealerAddress);
+
+    Poller poller = zmqContext.createPoller(2);
+    poller.register(rpcSocket, Poller.POLLIN);
+    poller.register(jsonrpcSocket, Poller.POLLIN);
 
     Message requestMsg;
     Message replyMsg;
-    byte[] req;
+    byte[] rpcReq;
 
     if (logger.isDebugEnabled()) {
       logger.debug("Start getting requests from socket");
@@ -78,14 +100,25 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
 
     boolean socketError = false;
     while (!interrupted() && !socketError) {
-      req = null;
+      rpcReq = null;
+      InboundJSONRPCMsg jsonrpcMsg = null;
 
-      // receive req
       if (logger.isDebugEnabled()) {
-        logger.debug("Ready and reading from socket...");
+        logger.debug("Ready and polling from sockets...");
       }
+
+      poller.poll();
+
       try {
-        req = socket.recv(0);
+        // got a RPC request
+        if (poller.pollin(0)) {
+          rpcReq = rpcSocket.recv(0);
+        }
+
+        // got a JSON-RPC request
+        if (poller.pollin(1)) {
+          jsonrpcMsg = InboundJSONRPCMsg.recvMsg(jsonrpcSocket, true);
+        }
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
         if (errorCode == ZError.ETERM) {
@@ -106,46 +139,103 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
         }
       }
 
-      if (req == null) {
-        continue;
-      }
+      // parse and dispatch new RPC req
+      if (rpcReq != null) {
 
-      final long started = System.currentTimeMillis();
-      requestMsg = new Message();
+        final long started = System.currentTimeMillis();
+        requestMsg = new Message();
+        boolean unmarshalError = false;
 
-      // parse req
-      try {
-        requestMsg.unmarshal(req, 0);
-      } catch (Exception e) {
-        logger.error("Caught exception parsing message", e);
-        continue;
-      }
-
-      if (logger.isDebugEnabled()) {
-        logger.debug("Received RPC message with uuid: {}", getMessageUuid(requestMsg));
-      }
-
-      // dispatch
-      try {
-        replyMsg = dispatch(requestMsg);
-
-        // send reply
-        socket.send(ColferUtils.toBytes(replyMsg));
-
-        if (logger.isDebugEnabled()) {
-          final long took = System.currentTimeMillis() - started;
+        try {
+          requestMsg.unmarshal(rpcReq, 0);
           if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Dispatched and sent message w/uuid: {} in reply to RPC request w/uuid: {} in {} ms",
-                getMessageUuid(replyMsg),
-                getMessageUuid(requestMsg),
-                took);
+            logger.debug("Received RPC message with uuid: {}", getMessageUuid(requestMsg));
+          }
+        } catch (Exception e) {
+          logger.error("Caught exception parsing message", e);
+          unmarshalError = true;
+        }
+
+        // dispatch
+        if (!unmarshalError) {
+          try {
+            replyMsg = dispatch(requestMsg);
+
+            // send reply
+            rpcSocket.send(ColferUtils.toBytes(replyMsg));
+
+            if (logger.isDebugEnabled()) {
+              final long took = System.currentTimeMillis() - started;
+              if (logger.isDebugEnabled()) {
+                logger.debug(
+                    "Dispatched and sent message w/uuid: {} in reply to RPC request w/uuid: {} in {} ms",
+                    getMessageUuid(replyMsg),
+                    getMessageUuid(requestMsg),
+                    took);
+              }
+            }
+          } catch (Exception e) {
+            logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
           }
         }
-      } catch (Exception e) {
-        logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
+      }
+
+      // parse and dispatch new JSON-RPC req
+      if (jsonrpcMsg != null) {
+        final long started = System.currentTimeMillis();
+        requestMsg = new Message();
+        boolean unmarshalError = false;
+
+        try {
+          //            requestMsg.unmarshal(jsonrpcMsg.getMessage().getBytes(ZMQ.CHARSET), 0);
+          if (logger.isDebugEnabled()) {
+            logger.debug("Received JSON-RPC message with uuid: {}", getMessageUuid(requestMsg));
+          }
+        } catch (Exception e) {
+          logger.error("Caught exception parsing message", e);
+          unmarshalError = true;
+        }
+
+        // dispatch
+        if (!unmarshalError) {
+          try {
+            replyMsg = dispatch(requestMsg);
+
+            // send reply
+            //              jsonrpcMsg.send(jsonrpcSocket);
+
+            if (logger.isDebugEnabled()) {
+              final long took = System.currentTimeMillis() - started;
+              if (logger.isDebugEnabled()) {
+                logger.debug(
+                    "Dispatched and sent message w/uuid: {} in reply to JSON-RPC request w/uuid: {} in {} ms",
+                    getMessageUuid(replyMsg),
+                    getMessageUuid(requestMsg),
+                    took);
+              }
+            }
+          } catch (Exception e) {
+            logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
+          }
+        }
       }
     }
     closeConnections();
+  }
+
+  @Override
+  protected void closeConnections() {
+    Arrays.stream(new ZMQ.Socket[] {rpcSocket, jsonrpcSocket})
+        .forEach(
+            s -> {
+              if (s != null) {
+                try {
+                  s.close();
+                } catch (Exception e) {
+                  logger.debug("Error closing socket", e);
+                }
+              }
+            });
+    super.closeConnections();
   }
 }

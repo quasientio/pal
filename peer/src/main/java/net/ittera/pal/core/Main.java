@@ -234,17 +234,18 @@ public class Main implements Callable<Integer> {
     private static final String OUT_PUB_CHANNEL = "out.pub";
 
     // internal ZMQ channel names
-    private static final Properties inprocChannels = new Properties();
+    private static final Properties inprocEndpoints = new Properties();
 
     static {
-      inprocChannels.put("in.log", "inproc://inlog");
-      inprocChannels.put("in.dealer", "inproc://deal");
-      inprocChannels.put("out.cell", "inproc://cell");
-      inprocChannels.put("out.pub.inproc", "inproc://pub");
-      inprocChannels.put("offset.pub", "inproc://offsets");
-      inprocChannels.put("sync.ready", "inproc://sync_ready");
-      inprocChannels.put("intercepts.reg", "inproc://intcept_reg");
-      inprocChannels.put("session.svc", "inproc://session");
+      inprocEndpoints.put("in.log", "inproc://inlog");
+      inprocEndpoints.put("in.dealer", "inproc://dealrpc");
+      inprocEndpoints.put("json.in.dealer", "inproc://dealjsonrpc");
+      inprocEndpoints.put("out.cell", "inproc://cell");
+      inprocEndpoints.put("out.pub.inproc", "inproc://pub");
+      inprocEndpoints.put("offset.pub", "inproc://offsets");
+      inprocEndpoints.put("sync.ready", "inproc://sync_ready");
+      inprocEndpoints.put("intercepts.reg", "inproc://intcept_reg");
+      inprocEndpoints.put("session.svc", "inproc://session");
     }
 
     private static final String DEFAULT_PUB_HOSTNAME = "localhost";
@@ -318,7 +319,7 @@ public class Main implements Callable<Integer> {
 
     // start ready socket
     syncSocket = zmqContext.createSocket(SocketType.PULL);
-    syncSocket.bind(ZMQProps.inprocChannels.getProperty("sync.ready"));
+    syncSocket.bind(ZMQProps.inprocEndpoints.getProperty("sync.ready"));
   }
 
   private void closeZmqContext() {
@@ -471,6 +472,10 @@ public class Main implements Callable<Integer> {
       runOptions.add(RunOptions.WITH_RPC);
     }
 
+    if (jsonRpc != null) {
+      runOptions.add(RunOptions.WITH_JSONRPC);
+    }
+
     logger.info("Running with options: {}", runOptions);
   }
 
@@ -529,7 +534,7 @@ public class Main implements Callable<Integer> {
       properties.setProperty(ZMQProps.OUT_PUB_CHANNEL, format("tcp://%s:%d", hostname, port));
     } else {
       properties.setProperty(
-          ZMQProps.OUT_PUB_CHANNEL, ZMQProps.inprocChannels.getProperty("out.pub.inproc"));
+          ZMQProps.OUT_PUB_CHANNEL, ZMQProps.inprocEndpoints.getProperty("out.pub.inproc"));
     }
 
     // are we listening for RPC requests
@@ -668,6 +673,9 @@ public class Main implements Callable<Integer> {
       if (runOptions.contains(RunOptions.WITH_RPC)) {
         self.setRpcAddress(properties.getProperty("in.rpc"));
       }
+      if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
+        self.setJsonrpcAddress(properties.getProperty("in.websocket"));
+      }
       if (properties
           .getProperty(ZMQProps.OUT_PUB_CHANNEL)
           .startsWith("tcp://")) { // only register PUB addr if over TCP
@@ -704,6 +712,10 @@ public class Main implements Callable<Integer> {
     }
     if (runOptions.contains(RunOptions.WITH_RPC)) {
       services.add(injector.getInstance(RPCRequestDispatcher.class));
+      sessionRequired = true;
+    }
+    if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
+      services.add(injector.getInstance(JSONRPCRequestDispatcher.class));
       sessionRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
@@ -854,7 +866,7 @@ public class Main implements Callable<Integer> {
     initZContext();
 
     // add zmq channel names to properties
-    properties.putAll(ZMQProps.inprocChannels);
+    properties.putAll(ZMQProps.inprocEndpoints);
 
     // add misc variables to app props
     addMiscProperties();

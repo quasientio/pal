@@ -236,7 +236,8 @@ public class Caller extends AbstractPALSubcommand {
       } else {
         String peerRpcAddress =
             peerAddress.startsWith("tcp://") ? peerAddress : "tcp://" + peerAddress;
-        peerInfo = new PeerInfo(peerRpcAddress);
+        peerInfo = new PeerInfo();
+        peerInfo.setRpcAddress(peerRpcAddress);
       }
 
       boolean uuidGiven = uuid != null;

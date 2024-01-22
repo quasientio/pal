@@ -26,17 +26,21 @@ import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
 class LogMessageInvoker extends AbstractMessageInvokerThread {
+
+  private final String logDealerAddress;
+  private ZMQ.Socket socket;
 
   public LogMessageInvoker(
       ThreadGroup group,
       String name,
       ZContext zmqContext,
       MessageBuilder messageBuilder,
-      String dealerAddress,
+      String logDealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       DispatcherConnector dispatcherConnector,
       UUID peerUuid) {
@@ -45,19 +49,20 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
         name,
         zmqContext,
         messageBuilder,
-        dealerAddress,
         incomingMessageDispatcher,
         dispatcherConnector,
         peerUuid);
+    this.logDealerAddress = logDealerAddress;
   }
 
   LogMessageInvoker(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
-      String dealerAddress,
+      String logDealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       UUID peerUuid) {
-    super(zmqContext, messageBuilder, dealerAddress, incomingMessageDispatcher, peerUuid);
+    super(zmqContext, messageBuilder, incomingMessageDispatcher, peerUuid);
+    this.logDealerAddress = logDealerAddress;
   }
 
   @Override
@@ -65,7 +70,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 
     // create REP socket
     socket = zmqContext.createSocket(SocketType.REP);
-    socket.connect(dealerAddress);
+    socket.connect(logDealerAddress);
 
     if (logger.isDebugEnabled()) {
       logger.debug("Start getting requests from socket");
@@ -125,13 +130,21 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
         final long took = System.currentTimeMillis() - started;
         if (logger.isDebugEnabled()) {
           logger.debug(
-              "Dispatched log message with uuid: {} in {} millisecs",
-              getMessageUuid(requestMsg),
-              took);
+              "Dispatched log message with uuid: {} in {} ms", getMessageUuid(requestMsg), took);
         }
       }
     }
 
     closeConnections();
+  }
+
+  @Override
+  protected void closeConnections() {
+    try {
+      socket.close();
+    } catch (Exception e) {
+      logger.debug("Error closing socket", e);
+    }
+    super.closeConnections();
   }
 }
