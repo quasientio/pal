@@ -7,29 +7,32 @@ import org.junit.Test;
 public class JsonRpcRequestTest {
 
   @Test
-  public void testConstructorCallWithNewSuffix() {
+  public void testConstructorCall() {
     JsonRpcRequest request = new JsonRpcRequest();
-    String method = "net.ittera.pal.core.exec.PeerMessageInvoker.new";
+    String method = "new:net.ittera.pal.core.exec.PeerMessageInvoker";
     request.setMethod(method);
+    request.processMethodParts();
+    assertEquals("PeerMessageInvoker", request.getClassName());
     assertEquals(
         "net.ittera.pal.core.exec.PeerMessageInvoker", request.getFullyQualifiedClassName());
-    assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.CONSTRUCTOR, request.getExecMessageType());
     assertNull(request.getObjectRef());
-    assertEquals("new", request.getMethodName());
-    assertTrue(request.isConstructorCall());
+    assertNull(request.getMethodName());
+    assertNull(request.getFieldName());
   }
 
   @Test
-  public void testConstructorCallWithoutNewSuffix() {
+  public void testConstructorCallUnnamedPackage() {
     JsonRpcRequest request = new JsonRpcRequest();
-    String method = "net.ittera.pal.core.exec.PeerMessageInvoker";
+    String method = "new:PeerMessageInvoker";
     request.setMethod(method);
-    assertEquals(
-        "net.ittera.pal.core.exec.PeerMessageInvoker", request.getFullyQualifiedClassName());
+    request.processMethodParts();
     assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals("PeerMessageInvoker", request.getFullyQualifiedClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.CONSTRUCTOR, request.getExecMessageType());
     assertNull(request.getObjectRef());
-    assertEquals("new", request.getMethodName());
-    assertTrue(request.isConstructorCall());
+    assertNull(request.getMethodName());
+    assertNull(request.getFieldName());
   }
 
   @Test
@@ -37,12 +40,28 @@ public class JsonRpcRequestTest {
     JsonRpcRequest request = new JsonRpcRequest();
     String method = "net.ittera.pal.core.exec.PeerMessageInvoker.getPeerUuid";
     request.setMethod(method);
+    request.processMethodParts();
     assertEquals(
         "net.ittera.pal.core.exec.PeerMessageInvoker", request.getFullyQualifiedClassName());
     assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.CLASS_METHOD, request.getExecMessageType());
     assertNull(request.getObjectRef());
     assertEquals("getPeerUuid", request.getMethodName());
-    assertFalse(request.isConstructorCall());
+    assertNull(request.getFieldName());
+  }
+
+  @Test
+  public void testStaticCallUnnamedPackage() {
+    JsonRpcRequest request = new JsonRpcRequest();
+    String method = "PeerMessageInvoker.getPeerUuid";
+    request.setMethod(method);
+    request.processMethodParts();
+    assertEquals("PeerMessageInvoker", request.getFullyQualifiedClassName());
+    assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.CLASS_METHOD, request.getExecMessageType());
+    assertNull(request.getObjectRef());
+    assertEquals("getPeerUuid", request.getMethodName());
+    assertNull(request.getFieldName());
   }
 
   @Test
@@ -50,11 +69,143 @@ public class JsonRpcRequestTest {
     JsonRpcRequest request = new JsonRpcRequest();
     String method = "net.ittera.pal.core.exec.PeerMessageInvoker.1234.getPeerUuid";
     request.setMethod(method);
+    request.processMethodParts();
     assertEquals(
         "net.ittera.pal.core.exec.PeerMessageInvoker", request.getFullyQualifiedClassName());
     assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.INSTANCE_METHOD, request.getExecMessageType());
     assertEquals("1234", request.getObjectRef());
     assertEquals("getPeerUuid", request.getMethodName());
-    assertFalse(request.isConstructorCall());
+    assertNull(request.getFieldName());
+  }
+
+  @Test
+  public void testNonStaticCallUnnamedPackage() {
+    JsonRpcRequest request = new JsonRpcRequest();
+    String method = "PeerMessageInvoker.1234.getPeerUuid";
+    request.setMethod(method);
+    request.processMethodParts();
+    assertEquals("PeerMessageInvoker", request.getFullyQualifiedClassName());
+    assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.INSTANCE_METHOD, request.getExecMessageType());
+    assertEquals("1234", request.getObjectRef());
+    assertEquals("getPeerUuid", request.getMethodName());
+    assertNull(request.getFieldName());
+  }
+
+  @Test
+  public void testStaticFieldGet() {
+    JsonRpcRequest request = new JsonRpcRequest();
+    String method = "get:net.ittera.pal.core.exec.PeerMessageInvoker.myClassField";
+    request.setMethod(method);
+    request.processMethodParts();
+    assertEquals(
+        "net.ittera.pal.core.exec.PeerMessageInvoker", request.getFullyQualifiedClassName());
+    assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.GET_STATIC, request.getExecMessageType());
+    assertNull(request.getObjectRef());
+    assertNull(request.getMethodName());
+    assertEquals("myClassField", request.getFieldName());
+  }
+
+  @Test
+  public void testStaticFieldGetUnnamedPackage() {
+    JsonRpcRequest request = new JsonRpcRequest();
+    String method = "get:PeerMessageInvoker.myClassField";
+    request.setMethod(method);
+    request.processMethodParts();
+    assertEquals("PeerMessageInvoker", request.getFullyQualifiedClassName());
+    assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.GET_STATIC, request.getExecMessageType());
+    assertNull(request.getObjectRef());
+    assertNull(request.getMethodName());
+    assertEquals("myClassField", request.getFieldName());
+  }
+
+  @Test
+  public void testInstanceFieldGet() {
+    JsonRpcRequest request = new JsonRpcRequest();
+    String method = "get:net.ittera.pal.core.exec.PeerMessageInvoker.738476.myField";
+    request.setMethod(method);
+    request.processMethodParts();
+    assertEquals(
+        "net.ittera.pal.core.exec.PeerMessageInvoker", request.getFullyQualifiedClassName());
+    assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.GET_INSTANCE_FIELD, request.getExecMessageType());
+    assertEquals("738476", request.getObjectRef());
+    assertNull(request.getMethodName());
+    assertEquals("myField", request.getFieldName());
+  }
+
+  @Test
+  public void testInstanceFieldGetUnnamedPackage() {
+    JsonRpcRequest request = new JsonRpcRequest();
+    String method = "get:PeerMessageInvoker.738476.myField";
+    request.setMethod(method);
+    request.processMethodParts();
+    assertEquals("PeerMessageInvoker", request.getFullyQualifiedClassName());
+    assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.GET_INSTANCE_FIELD, request.getExecMessageType());
+    assertEquals("738476", request.getObjectRef());
+    assertNull(request.getMethodName());
+    assertEquals("myField", request.getFieldName());
+  }
+
+  @Test
+  public void testStaticFieldPut() {
+    JsonRpcRequest request = new JsonRpcRequest();
+    String method = "put:net.ittera.pal.core.exec.PeerMessageInvoker.myClassField";
+    request.setMethod(method);
+    request.processMethodParts();
+    assertEquals(
+        "net.ittera.pal.core.exec.PeerMessageInvoker", request.getFullyQualifiedClassName());
+    assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.PUT_STATIC, request.getExecMessageType());
+    assertNull(request.getObjectRef());
+    assertNull(request.getMethodName());
+    assertEquals("myClassField", request.getFieldName());
+  }
+
+  @Test
+  public void testStaticFieldPutUnnamedPackage() {
+    JsonRpcRequest request = new JsonRpcRequest();
+    String method = "put:PeerMessageInvoker.myClassField";
+    request.setMethod(method);
+    request.processMethodParts();
+    assertEquals("PeerMessageInvoker", request.getFullyQualifiedClassName());
+    assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.PUT_STATIC, request.getExecMessageType());
+    assertNull(request.getObjectRef());
+    assertNull(request.getMethodName());
+    assertEquals("myClassField", request.getFieldName());
+  }
+
+  @Test
+  public void testInstanceFieldPut() {
+    JsonRpcRequest request = new JsonRpcRequest();
+    String method = "put:net.ittera.pal.core.exec.PeerMessageInvoker.738476.myField";
+    request.setMethod(method);
+    request.processMethodParts();
+    assertEquals(
+        "net.ittera.pal.core.exec.PeerMessageInvoker", request.getFullyQualifiedClassName());
+    assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.PUT_INSTANCE_FIELD, request.getExecMessageType());
+    assertEquals("738476", request.getObjectRef());
+    assertNull(request.getMethodName());
+    assertEquals("myField", request.getFieldName());
+  }
+
+  @Test
+  public void testInstanceFieldPutUnnamedPackage() {
+    JsonRpcRequest request = new JsonRpcRequest();
+    String method = "put:PeerMessageInvoker.738476.myField";
+    request.setMethod(method);
+    request.processMethodParts();
+    assertEquals("PeerMessageInvoker", request.getFullyQualifiedClassName());
+    assertEquals("PeerMessageInvoker", request.getClassName());
+    assertEquals(JsonRpcRequest.ExecMessageType.PUT_INSTANCE_FIELD, request.getExecMessageType());
+    assertEquals("738476", request.getObjectRef());
+    assertNull(request.getMethodName());
+    assertEquals("myField", request.getFieldName());
   }
 }
