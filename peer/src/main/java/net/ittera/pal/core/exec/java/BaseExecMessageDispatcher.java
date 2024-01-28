@@ -154,7 +154,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // Loading phase
     try {
       // 1. Extract and load parameter types from message
-      List<Class> parameterTypes = getParameterTypesFromMessage(incomingCall);
+      List<Class<?>> parameterTypes = getParameterTypesFromMessage(incomingCall);
 
       // 2. Unwrap and load arguments
       args = getArgsFromMessage(incomingCall, parameterTypes);
@@ -246,10 +246,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    *     constructor/method.
    * @throws ClassNotFoundException
    */
-  private List<Class> getParameterTypesFromMessage(ExecMessage execMessage)
+  private List<Class<?>> getParameterTypesFromMessage(ExecMessage execMessage)
       throws ClassNotFoundException {
 
-    final List<Class> paramClasses = new ArrayList<>();
+    final List<Class<?>> paramClasses = new ArrayList<>();
     List<Parameter> parameterList = getParameterList(execMessage);
 
     final ExecMessageType execMessageType =
@@ -258,7 +258,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         || execMessageType.equals(ExecMessageType.CLASS_METHOD)
         || execMessageType.equals(ExecMessageType.INSTANCE_METHOD)) {
       for (Parameter param : parameterList) {
-        Class paramClass = Classes.getClassForPrimitive(param.getType().getName());
+        Class<?> paramClass = Classes.getClassForPrimitive(param.getType().getName());
         if (paramClass == null) { // ie. not a primitive
           paramClass =
               Class.forName(
@@ -273,7 +273,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     return paramClasses;
   }
 
-  private List<Object> getArgsFromMessage(ExecMessage execMessage, List<Class> parameterTypes) {
+  private List<Object> getArgsFromMessage(ExecMessage execMessage, List<Class<?>> parameterTypes) {
 
     final List<Object> args = new ArrayList<>();
     final List<Parameter> parameterList = getParameterList(execMessage);
@@ -407,11 +407,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   /**
    * @param execMessage
    * @param parameterTypes Used only by constructor and method dispatchers
-   * @param args Used only by method dispatchers
+   * @param args
    * @return
    * @throws ReflectiveOperationException
    */
   protected abstract AccessibleObject loadAccessibleObject(
-      ExecMessage execMessage, List<Class> parameterTypes, List<Object> args)
-      throws ReflectiveOperationException;
+      ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)
+      throws ReflectiveOperationException, AmbiguousCallException;
 }

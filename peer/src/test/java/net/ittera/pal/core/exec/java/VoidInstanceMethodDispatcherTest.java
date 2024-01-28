@@ -22,10 +22,10 @@ package net.ittera.pal.core.exec.java;
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromClass.comesFromClass;
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable.comesFrom;
 import static net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -38,6 +38,7 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.messages.colfer.ExecMessage;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -84,11 +85,11 @@ class ClassForVoidInstanceMethodTest {
 @RunWith(MockitoJUnitRunner.class)
 public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
-  private Dispatcher dispatcher =
+  private final Dispatcher dispatcher =
       new InstanceMethodDispatcher(
-          peerUuid, messageBuilder, dispatcherConnector, objectLookupStore);
+          peerUuid, messageBuilder, dispatcherConnector, reflectionHelper, objectLookupStore);
 
-  private Class targetClass = ClassForVoidInstanceMethodTest.class;
+  private final Class<?> targetClass = ClassForVoidInstanceMethodTest.class;
 
   private final String sourceFilename = "NotARealClass.java";
 
@@ -98,7 +99,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // signature
     String methodName = "addHelloWorld";
-    Class[] parameterTypes = {};
+    Class<?>[] parameterTypes = {};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -127,7 +128,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "addHelloWorld";
-    Class[] parameterTypes = {};
+    Class<?>[] parameterTypes = {};
     ObjectRef[] argObjRefs = {};
     Object[] args = {};
 
@@ -161,7 +162,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // signature
     String methodName = "addWord";
-    Class[] parameterTypes = {String.class};
+    Class<?>[] parameterTypes = {String.class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -190,7 +191,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "addWord";
-    Class[] parameterTypes = {String.class};
+    Class<?>[] parameterTypes = {String.class};
     Object[] args = {"hello"};
     ObjectRef[] argObjRefs = {null};
 
@@ -224,7 +225,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   public void dispatch_withPrimitiveArgs_ok() throws Throwable {
     // signature
     String methodName = "addWords";
-    Class[] parameterTypes = {int.class};
+    Class<?>[] parameterTypes = {int.class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -253,7 +254,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "addWords";
-    Class[] parameterTypes = {int.class};
+    Class<?>[] parameterTypes = {int.class};
     int numberOfWordsToAdd = 15;
     Object[] args = {numberOfWordsToAdd};
     ObjectRef[] argObjRefs = {null};
@@ -291,7 +292,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "addWordList";
-    Class[] parameterTypes = {List.class};
+    Class<?>[] parameterTypes = {List.class};
     List<String> wordList = Arrays.asList("the", "truth", "is", "out", "there");
     ObjectRef listObjRef = objectLookupStore.storeObject(wordList);
     Object[] args = {null};
@@ -329,7 +330,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "addWord";
-    Class[] parameterTypes = {List.class};
+    Class<?>[] parameterTypes = {List.class};
     Object[] args = {null};
     ObjectRef[] argObjRefs = {null};
 
@@ -363,7 +364,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // signature
     String methodName = "addWords";
-    Class[] parameterTypes = {String[].class};
+    Class<?>[] parameterTypes = {String[].class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -393,7 +394,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "addWords";
-    Class[] parameterTypes = {String[].class};
+    Class<?>[] parameterTypes = {String[].class};
     String[] words = {"hey", "there", "!", "whats", "up", "?"};
     Object[] args = {words};
     ObjectRef[] argObjRefs = {null};
@@ -428,7 +429,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // signature
     String methodName = "addWord";
-    Class[] parameterTypes = {String.class};
+    Class<?>[] parameterTypes = {String.class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -458,7 +459,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "addWord";
-    Class[] parameterTypes = {String.class};
+    Class<?>[] parameterTypes = {String.class};
     Object[] args = {","};
     ObjectRef[] argObjRefs = {null};
 
@@ -483,5 +484,47 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.IllegalArgumentException"));
+  }
+
+  @Ignore
+  @Test
+  @Override
+  public void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown() throws Exception {}
+
+  @Override
+  @Test
+  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() throws Exception {
+
+    // create and store new instance
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    // we use a method name that exists but with wrong parameter types
+    String methodName = "addWord";
+    Class<?>[] parameterTypes = {Integer.class};
+    Object[] args = {"489"};
+    ObjectRef[] argObjRefs = {null};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            targetObjRef,
+            toNames(parameterTypes),
+            args,
+            argObjRefs);
+
+    // dispatch
+    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+
+    // expect
+    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(objectLookupStore.size(), is(1L));
+    assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
   }
 }

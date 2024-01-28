@@ -62,7 +62,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
 
   @Override
   protected AccessibleObject loadAccessibleObject(
-      ExecMessage execMessage, List<Class> parameterTypes, List<Object> args)
+      ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)
       throws ReflectiveOperationException {
 
     Class clazz =

@@ -1,0 +1,119 @@
+package net.ittera.pal.core.exec.java.reflect;
+
+/** This class is used for testing ReflectionHelper.lookupConstructor() */
+public class ClassForTestingConstructorLookup {
+  private String param;
+
+  public String getParam() {
+    return param;
+  }
+
+  // <editor-fold desc="Basic string N-param testing">
+  public ClassForTestingConstructorLookup() {
+    this.param = "noParams";
+  }
+  // </editor-fold>
+
+  public ClassForTestingConstructorLookup(String param1) {
+    this.param = "stringParam";
+  }
+
+  public ClassForTestingConstructorLookup(String param1, String param2) {
+    this.param = "twoStringParams";
+  }
+
+  // <editor-fold desc="Primitive type testing">
+  public ClassForTestingConstructorLookup(char param1) {
+    this.param = "charParam";
+  }
+
+  public ClassForTestingConstructorLookup(boolean param1) {
+    this.param = "booleanParam";
+  }
+
+  public ClassForTestingConstructorLookup(byte param1) {
+    this.param = "byteParam";
+  }
+
+  public ClassForTestingConstructorLookup(short param1) {
+    this.param = "shortParam";
+  }
+
+  public ClassForTestingConstructorLookup(int param1) {
+    this.param = "intParam";
+  }
+
+  public ClassForTestingConstructorLookup(long param1) {
+    this.param = "longParam";
+  }
+
+  public ClassForTestingConstructorLookup(float param1) {
+    this.param = "floatParam";
+  }
+
+  public ClassForTestingConstructorLookup(double param1) {
+    this.param = "doubleParam";
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Wrapper type testing">
+  public ClassForTestingConstructorLookup(Character param1) {
+    this.param = "CharacterParam";
+  }
+
+  public ClassForTestingConstructorLookup(Boolean param1) {
+    this.param = "BooleanParam";
+  }
+
+  public ClassForTestingConstructorLookup(Byte param1) {
+    this.param = "ByteParam";
+  }
+
+  public ClassForTestingConstructorLookup(Short param1) {
+    this.param = "ShortParam";
+  }
+
+  public ClassForTestingConstructorLookup(Integer param1) {
+    this.param = "IntegerParam";
+  }
+
+  public ClassForTestingConstructorLookup(Long param1) {
+    this.param = "LongParam";
+  }
+
+  public ClassForTestingConstructorLookup(Float param1) {
+    this.param = "FloatParam";
+  }
+
+  public ClassForTestingConstructorLookup(Double param1) {
+    this.param = "DoubleParam";
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Object type testing">
+  public ClassForTestingConstructorLookup(Object param1) {
+    this.param = "ObjectParam";
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Cache testing">
+
+  public ClassForTestingConstructorLookup(Integer i, Float f, String s) {
+    this.param = "IntegerFloatStringParams";
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Ambiguous call testing">
+
+  public ClassForTestingConstructorLookup(Object param1, Number param2) {
+    this.param = "ObjectNumberParams";
+  }
+
+  public ClassForTestingConstructorLookup(Object param1, Integer param2) {
+    this.param = "ObjectIntegerParams";
+  }
+
+  // </editor-fold>
+}

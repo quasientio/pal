@@ -23,6 +23,7 @@ import java.util.UUID;
 import javax.inject.Inject;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
+import net.ittera.pal.core.exec.java.reflect.ReflectionHelper;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,7 @@ abstract class AbstractDispatcher {
   protected UUID peerUuid;
   protected MessageBuilder messageBuilder;
   protected ObjectLookupStore objectLookupStore;
+  protected ReflectionHelper reflectionHelper;
   protected DispatcherConnector connector;
 
   @Inject
@@ -53,5 +55,10 @@ abstract class AbstractDispatcher {
   @Inject
   final void setConnector(DispatcherConnector connector) {
     this.connector = connector;
+  }
+
+  @Inject
+  final void setReflectionHelper(ReflectionHelper reflectionHelper) {
+    this.reflectionHelper = reflectionHelper;
   }
 }

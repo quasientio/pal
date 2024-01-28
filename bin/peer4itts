@@ -18,6 +18,7 @@ pal run \
   --name peer-for-itt \
   --rpc 5656 \
   --rpc-threads 3 \
+  --rpc-allow-nonpublic \
   --log auto \
   --kafka-servers $KAFKA_SERVERS \
   --interceptable \

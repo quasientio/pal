@@ -46,4 +46,10 @@ public abstract class AbstractMethodDispatcherTest extends AbstractDispatcherTes
   public abstract void dispatch_throwsException_exceptionThrown() throws Throwable;
 
   public abstract void dispatchIncoming_throwsException_exceptionThrown() throws Exception;
+
+  public abstract void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown()
+      throws Exception;
+
+  public abstract void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown()
+      throws Exception;
 }

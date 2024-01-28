@@ -168,6 +168,12 @@ public class Main implements Callable<Integer> {
   private Integer rpcThreads;
 
   @Option(
+      names = {"--rpc-allow-nonpublic"},
+      defaultValue = "false",
+      description = "allow invocation of nonpublic methods and fields (default: ${DEFAULT-VALUE})")
+  private boolean rpcAllowNonPublic;
+
+  @Option(
       names = {"--interceptable"},
       description = "allow message interception")
   private boolean interceptable = false;
@@ -470,12 +476,6 @@ public class Main implements Callable<Integer> {
   }
 
   private void addMiscProperties() {
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("Environment variables:");
-      System.getenv().entrySet().forEach(e -> logger.debug("{}={}", e.getKey(), e.getValue()));
-    }
-
     // set this peer's UUID if given from param or ENV, otherwise create random UUID
     if (uuid == null) {
       final String envUuid = System.getenv("PEER_UUID");
@@ -557,6 +557,9 @@ public class Main implements Callable<Integer> {
 
     // message content options
     properties.setProperty("messages.with_src_context", String.valueOf(includeSourceContext));
+
+    // rpc options
+    properties.setProperty("rpc.allow_nonpublic", String.valueOf(rpcAllowNonPublic));
   }
 
   private String getJMXAddress() {

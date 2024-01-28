@@ -22,12 +22,12 @@ package net.ittera.pal.core.exec.java;
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromClass.comesFromClass;
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable.comesFrom;
 import static net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -41,6 +41,7 @@ import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -74,8 +75,8 @@ class ClassForVoidClassMethodTest {
   static void add(List<Long> sumContainer, long... parts) {
     // add it manually, (use streams for verification)
     long sum = 0;
-    for (int i = 0; i < parts.length; i++) {
-      sum += parts[i];
+    for (long part : parts) {
+      sum += part;
     }
     sumContainer.add(sum);
   }
@@ -90,17 +91,18 @@ class ClassForVoidClassMethodTest {
   static void __resetStaticVars() {
     verified = "blah";
     slept = false;
-    millisSlept = 0l;
+    millisSlept = 0L;
   }
 }
 
 @RunWith(MockitoJUnitRunner.class)
 public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
-  private Dispatcher dispatcher =
-      new ClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectLookupStore);
+  private final Dispatcher dispatcher =
+      new ClassMethodDispatcher(
+          peerUuid, messageBuilder, dispatcherConnector, reflectionHelper, objectLookupStore);
 
-  private Class targetClass = ClassForVoidClassMethodTest.class;
+  private final Class<?> targetClass = ClassForVoidClassMethodTest.class;
 
   @After
   public void resetTestClassVariables() {
@@ -115,7 +117,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // signature
     String methodName = "sleep";
-    Class[] parameterTypes = {};
+    Class<?>[] parameterTypes = {};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -140,7 +142,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   public void dispatchIncoming_noArgs_ok() {
 
     String methodName = "sleep";
-    Class[] parameterTypes = {};
+    Class<?>[] parameterTypes = {};
     ObjectRef[] argObjRefs = {};
     Object[] args = {};
 
@@ -176,7 +178,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // signature
     String methodName = "sleep";
-    Class[] parameterTypes = {Long.class};
+    Class<?>[] parameterTypes = {Long.class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -204,7 +206,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   public void dispatchIncoming_withArgs_ok() {
 
     String methodName = "sleep";
-    Class[] parameterTypes = {Long.class};
+    Class<?>[] parameterTypes = {Long.class};
     ObjectRef[] argObjRefs = {null};
     Long millisToSleep = 5L;
     Object[] args = {millisToSleep};
@@ -241,7 +243,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   public void dispatch_withPrimitiveArgs_ok() throws Throwable {
     // signature
     String methodName = "sleepUnboxed";
-    Class[] parameterTypes = {long.class};
+    Class<?>[] parameterTypes = {long.class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -267,7 +269,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   @Override
   public void dispatchIncoming_withPrimitiveArgs_ok() {
     String methodName = "sleep";
-    Class[] parameterTypes = {long.class};
+    Class<?>[] parameterTypes = {long.class};
     ObjectRef[] argObjRefs = {null};
     long millisToSleep = 5L;
     Object[] args = {millisToSleep};
@@ -304,8 +306,8 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   public void dispatchIncoming_withObjectRefArgs_ok() {
 
     String methodName = "sleep";
-    Class[] parameterTypes = {Long.class};
-    Long millisToSleep = 5l;
+    Class<?>[] parameterTypes = {Long.class};
+    Long millisToSleep = 5L;
     ObjectRef objRef = objectLookupStore.storeObject(millisToSleep);
     Object[] args = {null};
     ObjectRef[] argObjRefs = {objRef};
@@ -342,7 +344,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   public void dispatchIncoming_withNullArgs_ok() {
 
     String methodName = "verify";
-    Class[] parameterTypes = {Object.class};
+    Class<?>[] parameterTypes = {Object.class};
     Object[] args = {null};
     ObjectRef[] argObjRefs = {null};
 
@@ -378,7 +380,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   public void dispatch_varargs_ok() throws Throwable {
     // signature
     String methodName = "add";
-    Class[] parameterTypes = {List.class, long[].class};
+    Class<?>[] parameterTypes = {List.class, long[].class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -387,7 +389,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // args
     long[] someNumbers = {10L, 20L, 30L};
-    List<Long> sumContainer = new ArrayList();
+    List<Long> sumContainer = new ArrayList<>();
     Object[] args = {sumContainer, someNumbers};
 
     // dispatch
@@ -405,9 +407,9 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   public void dispatchIncoming_varargs_ok() {
 
     String methodName = "add";
-    Class[] parameterTypes = {List.class, long[].class};
+    Class<?>[] parameterTypes = {List.class, long[].class};
     long[] someNumbers = {10L, 20L, 30L};
-    List<Long> sumContainer = new ArrayList();
+    List<Long> sumContainer = new ArrayList<>();
     Object[] args = {null, someNumbers};
     ObjectRef[] argObjRefs = {objectLookupStore.storeObject(sumContainer), null};
 
@@ -442,7 +444,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // signature
     String methodName = "addPositive";
-    Class[] parameterTypes = {List.class, long.class};
+    Class<?>[] parameterTypes = {List.class, long.class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -467,9 +469,8 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   @Test
   @Override
   public void dispatchIncoming_throwsException_exceptionThrown() {
-
     String methodName = "addPositive";
-    Class[] parameterTypes = {List.class, long.class};
+    Class<?>[] parameterTypes = {List.class, long.class};
     List<Long> aList = null;
     Object[] args = {aList, 2};
     ObjectRef[] argObjRefs = {null, null};
@@ -495,5 +496,41 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NullPointerException"));
+  }
+
+  @Ignore
+  @Test
+  @Override
+  public void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown() throws Exception {}
+
+  @Override
+  @Test
+  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() throws Exception {
+    String methodName = "idontexist";
+    Class<?>[] parameterTypes = {};
+    Object[] args = {};
+    ObjectRef[] argObjRefs = {};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildClassMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            toNames(parameterTypes),
+            this,
+            null,
+            args,
+            argObjRefs);
+
+    // dispatch
+    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+
+    // expect
+    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(objectLookupStore.size(), is(0L));
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
   }
 }

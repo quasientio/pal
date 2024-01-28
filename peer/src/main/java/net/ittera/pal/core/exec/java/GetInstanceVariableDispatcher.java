@@ -94,7 +94,7 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
 
   @Override
   protected AccessibleObject loadAccessibleObject(
-      ExecMessage execMessage, List<Class> parameterTypes, List<Object> args)
+      ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)
       throws ReflectiveOperationException {
 
     Class clazz =

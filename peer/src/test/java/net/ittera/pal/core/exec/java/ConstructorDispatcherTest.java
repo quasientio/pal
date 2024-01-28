@@ -20,12 +20,12 @@
 package net.ittera.pal.core.exec.java;
 
 import static java.util.stream.Collectors.joining;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -41,6 +41,7 @@ import net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import org.hamcrest.Matchers;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -77,10 +78,11 @@ class ClassForConstructorTest {
 @RunWith(MockitoJUnitRunner.class)
 public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
-  private Dispatcher dispatcher =
-      new ConstructorDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectLookupStore);
+  private final Dispatcher dispatcher =
+      new ConstructorDispatcher(
+          peerUuid, messageBuilder, dispatcherConnector, reflectionHelper, objectLookupStore);
 
-  private Class targetClass = ClassForConstructorTest.class;
+  private final Class<?> targetClass = ClassForConstructorTest.class;
 
   private final String sourceFilename = "NotARealClass.java";
 
@@ -89,8 +91,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   public void dispatch_noArgs_ok() throws Throwable {
 
     // signature
-    Class[] parameterTypes = {};
-    Constructor constructor = targetClass.getDeclaredConstructor(parameterTypes);
+    Class<?>[] parameterTypes = {};
+    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
     Signature signature = new ConstructorSignature(constructor);
 
     // ctxt
@@ -143,8 +145,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   public void dispatch_withArgs_ok() throws Throwable {
 
     // signature
-    Class[] parameterTypes = {Integer.class};
-    Constructor constructor = targetClass.getDeclaredConstructor(parameterTypes);
+    Class<?>[] parameterTypes = {Integer.class};
+    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
     Signature signature = new ConstructorSignature(constructor);
 
     // ctxt
@@ -167,7 +169,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatchIncoming_withArgs_ok() {
 
-    Class[] parameterTypes = {Integer.class};
+    Class<?>[] parameterTypes = {Integer.class};
     Object[] args = {459};
     ObjectRef[] argRefs = {null};
 
@@ -202,15 +204,15 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatch_withPrimitiveArgs_ok() throws Throwable {
     // signature
-    Class[] parameterTypes = {boolean.class, long.class};
-    Constructor constructor = targetClass.getDeclaredConstructor(parameterTypes);
+    Class<?>[] parameterTypes = {boolean.class, long.class};
+    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
     Signature signature = new ConstructorSignature(constructor);
 
     // ctxt
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
-    Object[] args = {true, 983309835l};
+    Object[] args = {true, 983309835L};
 
     // dispatch
     Object returned = dispatcher.dispatch(ctxt, this, null, args);
@@ -225,8 +227,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Test
   @Override
   public void dispatchIncoming_withPrimitiveArgs_ok() {
-    Class[] parameterTypes = {boolean.class, long.class};
-    Object[] args = {true, 983309835l};
+    Class<?>[] parameterTypes = {boolean.class, long.class};
+    Object[] args = {true, 983309835L};
     ObjectRef[] argRefs = {null, null};
 
     ExecMessage incomingMessage =
@@ -258,8 +260,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatchIncoming_withObjectRefArgs_ok() {
 
-    Class[] parameterTypes = {Integer.class};
-    Integer arg = new Integer(459);
+    Class<?>[] parameterTypes = {Integer.class};
+    Integer arg = 459;
     ObjectRef objRef = objectLookupStore.storeObject(arg);
     Object[] args = {};
     ObjectRef[] argRefs = {objRef};
@@ -292,7 +294,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatchIncoming_withNullArgs_ok() {
 
-    Class[] parameterTypes = {Integer.class};
+    Class<?>[] parameterTypes = {Integer.class};
     Object[] args = {null};
     ObjectRef[] argRefs = {null};
 
@@ -321,33 +323,39 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
             ComesFromReflectable.comesFrom(targetClass.getName())));
   }
 
-  /**
-   * previous test but para type changed to primitive , failing now @Test public void
-   * dispatchIncoming_withArgs_ok() {
-   *
-   * <p>Class targetClass = ClassForConstructorTest.class; Class[] parameterTypes = {int.class};
-   * Object[] args = {459}; ObjectRef[] argRefs = {null};
-   *
-   * <p>String[] parameterTypesNamesArray = Arrays.stream(parameterTypes).map(p ->
-   * p.getName()).collect(toList()). toArray(new String[0]);
-   *
-   * <p>ExecMessage incomingMessage = messageBuilder.buildNonEmptyConstructor(peerUuid,
-   * targetClass.getName(), parameterTypesNamesArray, args, argRefs);
-   *
-   * <p>// dispatch ExecMessage replyMsg = dispatcher.dispatchIncoming(incomingMessage);
-   *
-   * <p>// expect verifyDispatcherCalledOnce(); assertThat(replyMessage.getFollowingUuid(),
-   * is(incomingMessage.getMessageUuid())); assertThat(objectLookupStore.size(), is(1));
-   * assertTrue(objectLookupStore.containsObjectRef(replyMsg.getReturnValue().getObject().getRef()));
-   * assertThat(objectLookupStore.lookupObject(replyMsg.getReturnValue().getObject().getRef()),
-   * instanceOf(targetClass)); }
-   */
+  @Test
+  public void dispatchIncoming_withNullArgsPrimitiveTypes_ok() {
+    Class<?> targetClass = ClassForConstructorTest.class;
+    Class<?>[] parameterTypes = {int.class};
+    Object[] args = {459};
+    ObjectRef[] argRefs = {null};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildNonEmptyConstructor(
+            peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
+
+    // dispatch
+    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+
+    // expect
+    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(objectLookupStore.size(), is(1L));
+    assertTrue(
+        objectLookupStore.containsObjectRef(
+            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())));
+    assertThat(
+        objectLookupStore.lookupObject(
+            ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
+        instanceOf(targetClass));
+  }
+
   @Test
   @Override
   public void dispatch_varargs_ok() throws Throwable {
     // signature
-    Class[] parameterTypes = {String[].class};
-    Constructor constructor = targetClass.getDeclaredConstructor(parameterTypes);
+    Class<?>[] parameterTypes = {String[].class};
+    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
     Signature signature = new ConstructorSignature(constructor);
 
     // ctxt
@@ -372,7 +380,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatchIncoming_varargs_ok() {
 
-    Class[] parameterTypes = {String[].class};
+    Class<?>[] parameterTypes = {String[].class};
     Object[] args = new Object[1];
     args[0] =
         new String[] {"hello ", "world", "!"}; // varargs must be wrapped in array of expected type
@@ -404,8 +412,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatch_throwsException_exceptionThrown() throws Throwable {
     // signature
-    Class[] parameterTypes = {String.class};
-    Constructor constructor = targetClass.getDeclaredConstructor(parameterTypes);
+    Class<?>[] parameterTypes = {String.class};
+    Constructor<?> constructor = targetClass.getDeclaredConstructor(parameterTypes);
     Signature signature = new ConstructorSignature(constructor);
 
     // ctxt
@@ -429,7 +437,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   public void dispatchIncoming_throwsException_exceptionThrown() {
 
-    Class[] parameterTypes = {String.class};
+    Class<?>[] parameterTypes = {String.class};
     Object[] args = {"49385InvalidNumber1001"};
     ObjectRef[] argRefs = {null};
 
@@ -447,5 +455,33 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NumberFormatException"));
+  }
+
+  @Ignore
+  @Test
+  @Override
+  public void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown() throws Exception {}
+
+  @Override
+  @Test
+  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() throws Exception {
+    Class<?>[] parameterTypes = {Character.TYPE, Character.TYPE};
+    Object[] args = {'a', 'b'};
+    ObjectRef[] argRefs = {null, null};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildNonEmptyConstructor(
+            peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
+
+    // dispatch
+    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+
+    // expect
+    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(objectLookupStore.size(), is(0L));
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
   }
 }

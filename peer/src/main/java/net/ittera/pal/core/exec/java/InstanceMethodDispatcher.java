@@ -36,6 +36,7 @@ import net.ittera.pal.common.objects.ObjectNotFoundException;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.core.exec.DispatcherConnector;
+import net.ittera.pal.core.exec.java.reflect.ReflectionHelper;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
@@ -51,10 +52,12 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
+      ReflectionHelper reflectionHelper,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
+    setReflectionHelper(reflectionHelper);
     setObjectLookupStore(objectLookupStore);
   }
 
@@ -172,23 +175,22 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
    */
   @Override
   protected AccessibleObject loadAccessibleObject(
-      ExecMessage execMessage, List<Class> parameterTypes, List<Object> args)
-      throws ReflectiveOperationException {
+      ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)
+      throws ReflectiveOperationException, AmbiguousCallException {
     Class clazz =
         Class.forName(
             execMessage.getInstanceMethodCall().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
     AccessibleObject accessibleObject =
-        ReflectionHelper.getMethodToInvoke(
+        reflectionHelper.lookupMethod(
             clazz,
             args.toArray(),
             Stream.of(execMessage.getInstanceMethodCall().getParameters())
-                .map(Parameter::getValue)
+                .map(p -> p.getType().getName())
                 .collect(Collectors.toList()),
             execMessage.getInstanceMethodCall().getName());
     if (accessibleObject == null) {
-      // TODO perhaps this should be thrown by ReflectionHelper instead
       throw new NoSuchMethodException(
           String.format(
               "Can't find method:%s in class:%s with given parameter types",

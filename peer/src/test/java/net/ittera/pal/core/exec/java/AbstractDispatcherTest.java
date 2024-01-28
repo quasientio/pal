@@ -20,8 +20,8 @@
 package net.ittera.pal.core.exec.java;
 
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -33,6 +33,7 @@ import java.util.UUID;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
+import net.ittera.pal.core.exec.java.reflect.ReflectionHelper;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.Before;
 import org.mockito.AdditionalAnswers;
@@ -44,6 +45,9 @@ public abstract class AbstractDispatcherTest {
   protected ObjectLookupStore objectLookupStore = new ConcurrentHashMapObjectLookupStore();
 
   protected MessageBuilder messageBuilder = new MessageBuilder();
+
+  protected ReflectionHelper reflectionHelper =
+      new ReflectionHelper(true); // allow access to private, protected and package private methods
 
   protected DispatcherConnector dispatcherConnector;
 
@@ -68,7 +72,7 @@ public abstract class AbstractDispatcherTest {
 
   protected String[] toNames(Class[] types) {
     return Arrays.stream(types)
-        .map(p -> p.getName())
+        .map(Class::getName)
         .collect(toList())
         .toArray(new String[types.length]);
   }

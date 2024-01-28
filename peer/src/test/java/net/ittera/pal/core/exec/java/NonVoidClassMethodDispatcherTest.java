@@ -19,12 +19,12 @@
 
 package net.ittera.pal.core.exec.java;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -41,13 +41,14 @@ import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.hamcrest.Matchers;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
 // auxiliary class
 class ClassForNonVoidClassMethodTest {
-  private static Random random = new Random();
+  private static final Random random = new Random();
 
   static short getRandomMinute() {
     return (short) random.nextInt(60);
@@ -83,10 +84,11 @@ class ClassForNonVoidClassMethodTest {
 @RunWith(MockitoJUnitRunner.class)
 public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
-  private Dispatcher dispatcher =
-      new ClassMethodDispatcher(peerUuid, messageBuilder, dispatcherConnector, objectLookupStore);
+  private final Dispatcher dispatcher =
+      new ClassMethodDispatcher(
+          peerUuid, messageBuilder, dispatcherConnector, reflectionHelper, objectLookupStore);
 
-  private Class targetClass = ClassForNonVoidClassMethodTest.class;
+  private final Class<?> targetClass = ClassForNonVoidClassMethodTest.class;
 
   private final String sourceFilename = "NotARealClass.java";
 
@@ -96,7 +98,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // signature
     String methodName = "getRandomMinute";
-    Class[] parameterTypes = {};
+    Class<?>[] parameterTypes = {};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -120,7 +122,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   public void dispatchIncoming_noArgs_ok() throws Exception {
 
     String methodName = "getRandomMinute";
-    Class[] parameterTypes = {};
+    Class<?>[] parameterTypes = {};
     ObjectRef[] argObjRefs = {};
     Object[] args = {};
 
@@ -159,7 +161,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // signature
     String methodName = "max";
-    Class[] parameterTypes = {Double.class, Double.class};
+    Class<?>[] parameterTypes = {Double.class, Double.class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -167,8 +169,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
-    Double smallDouble = 8378d;
-    Double bigDouble = 827193d;
+    double smallDouble = 8378d;
+    double bigDouble = 827193d;
     Object[] args = {smallDouble, bigDouble};
 
     // dispatch
@@ -184,9 +186,9 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   public void dispatchIncoming_withArgs_ok() throws Exception {
 
     String methodName = "max";
-    Class[] parameterTypes = {Double.class, Double.class};
-    Double smallDouble = 8378d;
-    Double bigDouble = 827193d;
+    Class<?>[] parameterTypes = {Double.class, Double.class};
+    double smallDouble = 8378d;
+    double bigDouble = 827193d;
     Object[] args = {smallDouble, bigDouble};
     ObjectRef[] argObjRefs = {null, null};
 
@@ -224,7 +226,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   public void dispatch_withPrimitiveArgs_ok() throws Throwable {
     // signature
     String methodName = "min";
-    Class[] parameterTypes = {double.class, double.class};
+    Class<?>[] parameterTypes = {double.class, double.class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -248,7 +250,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   @Override
   public void dispatchIncoming_withPrimitiveArgs_ok() throws Exception {
     String methodName = "min";
-    Class[] parameterTypes = {double.class, double.class};
+    Class<?>[] parameterTypes = {double.class, double.class};
     double smallDouble = 8378;
     double bigDouble = 827193;
     Object[] args = {smallDouble, bigDouble};
@@ -288,7 +290,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   public void dispatchIncoming_withObjectRefArgs_ok() throws Exception {
 
     String methodName = "max";
-    Class[] parameterTypes = {double.class, double.class};
+    Class<?>[] parameterTypes = {double.class, double.class};
     double smallDouble = 8378;
     double bigDouble = 827193;
     Object[] args = {null, null};
@@ -331,7 +333,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     String methodName = "add";
     Integer realNumber = 6565;
-    Class[] parameterTypes = {Integer.class, Integer.class};
+    Class<?>[] parameterTypes = {Integer.class, Integer.class};
     Object[] args = {null, realNumber};
     ObjectRef[] argObjRefs = {null, null};
 
@@ -369,7 +371,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   public void dispatch_varargs_ok() throws Throwable {
     // signature
     String methodName = "max";
-    Class[] parameterTypes = {double[].class};
+    Class<?>[] parameterTypes = {double[].class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -397,7 +399,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   public void dispatchIncoming_varargs_ok() throws Exception {
 
     String methodName = "max";
-    Class[] parameterTypes = {double[].class};
+    Class<?>[] parameterTypes = {double[].class};
     double d1 = 837;
     double d2 = 8293;
     double d3 = 137193;
@@ -440,7 +442,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // signature
     String methodName = "divBy";
-    Class[] parameterTypes = {int.class, int.class};
+    Class<?>[] parameterTypes = {int.class, int.class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -467,7 +469,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   public void dispatchIncoming_throwsException_exceptionThrown() {
 
     String methodName = "divBy";
-    Class[] parameterTypes = {int.class, int.class};
+    Class<?>[] parameterTypes = {int.class, int.class};
     int number = 8378;
     int divisor = 0;
     Object[] args = {number, divisor};
@@ -495,5 +497,43 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.ArithmeticException"));
+  }
+
+  @Ignore
+  @Test
+  @Override
+  public void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown() throws Exception {}
+
+  @Override
+  @Test
+  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() throws Exception {
+
+    String methodName = "phantomMethod";
+    Class<?>[] parameterTypes = {int.class, int.class};
+    Object[] args = {34, 56};
+    ObjectRef[] argObjRefs = {null, null};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildClassMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            toNames(parameterTypes),
+            this,
+            null,
+            args,
+            argObjRefs);
+
+    // dispatch
+    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+
+    // expect
+    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(objectLookupStore.size(), is(0L));
+    assertThat(replyMsg.getReturnValue(), is(nullValue()));
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
   }
 }

@@ -19,17 +19,15 @@
 
 package net.ittera.pal.core.exec.java;
 
-import static java.util.stream.Collectors.joining;
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromClass.comesFromClass;
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable.comesFrom;
 import static net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import java.util.Arrays;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -37,6 +35,7 @@ import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.serdes.colfer.Unwrapper;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -67,18 +66,18 @@ class ClassForNonVoidInstanceMethodTest {
   }
 
   String join(String joiner, String... values) {
-    return Arrays.stream(values).collect(joining(joiner));
+    return String.join(joiner, values);
   }
 }
 
 @RunWith(MockitoJUnitRunner.class)
 public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTest {
 
-  private Dispatcher dispatcher =
+  private final Dispatcher dispatcher =
       new InstanceMethodDispatcher(
-          peerUuid, messageBuilder, dispatcherConnector, objectLookupStore);
+          peerUuid, messageBuilder, dispatcherConnector, reflectionHelper, objectLookupStore);
 
-  private Class targetClass = ClassForNonVoidInstanceMethodTest.class;
+  private final Class<?> targetClass = ClassForNonVoidInstanceMethodTest.class;
 
   private final String sourceFilename = "NotARealClass.java";
 
@@ -88,7 +87,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
     // signature
     String methodName = "toUpperCase";
-    Class[] parameterTypes = {};
+    Class<?>[] parameterTypes = {};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -118,7 +117,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "toUpperCase";
-    Class[] parameterTypes = {};
+    Class<?>[] parameterTypes = {};
     ObjectRef[] argObjRefs = {};
     Object[] args = {};
 
@@ -152,7 +151,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
     // signature
     String methodName = "append";
-    Class[] parameterTypes = {String.class};
+    Class<?>[] parameterTypes = {String.class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -182,7 +181,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "append";
-    Class[] parameterTypes = {String.class};
+    Class<?>[] parameterTypes = {String.class};
     ObjectRef[] argObjRefs = {null};
     Object[] args = {"et"};
 
@@ -216,7 +215,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
     // signature
     String methodName = "floatAsString";
-    Class[] parameterTypes = {float.class};
+    Class<?>[] parameterTypes = {float.class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -244,7 +243,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "floatAsString";
-    Class[] parameterTypes = {float.class};
+    Class<?>[] parameterTypes = {float.class};
     float floatArg = 238923.32f;
     Object[] args = {floatArg};
     ObjectRef[] argObjRefs = {null};
@@ -283,7 +282,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "append";
-    Class[] parameterTypes = {String.class};
+    Class<?>[] parameterTypes = {String.class};
     Object[] args = {null};
     ObjectRef etObjRef = objectLookupStore.storeObject("et");
     ObjectRef[] argObjRefs = {etObjRef};
@@ -322,7 +321,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "append";
-    Class[] parameterTypes = {String.class};
+    Class<?>[] parameterTypes = {String.class};
     Object[] args = {null};
     ObjectRef[] argObjRefs = {null};
 
@@ -356,7 +355,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
     // signature
     String methodName = "join";
-    Class[] parameterTypes = {String.class, String[].class};
+    Class<?>[] parameterTypes = {String.class, String[].class};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -386,7 +385,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "join";
-    Class[] parameterTypes = {String.class, String[].class};
+    Class<?>[] parameterTypes = {String.class, String[].class};
     String[] parts = {"package", "class", "method"};
     String joiner = "::";
     Object[] args = {joiner, parts};
@@ -422,7 +421,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
     // signature
     String methodName = "toUpperCase";
-    Class[] parameterTypes = {};
+    Class<?>[] parameterTypes = {};
     Signature signature =
         new MethodSignature(targetClass.getDeclaredMethod(methodName, parameterTypes));
 
@@ -452,7 +451,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     ObjectRef targetObjRef = objectLookupStore.storeObject(target);
 
     String methodName = "toUpperCase";
-    Class[] parameterTypes = {};
+    Class<?>[] parameterTypes = {};
     Object[] args = {};
     ObjectRef[] argObjRefs = {};
 
@@ -476,5 +475,46 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NullPointerException"));
+  }
+
+  @Ignore
+  @Test
+  @Override
+  public void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown() throws Exception {}
+
+  @Override
+  @Test
+  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() throws Exception {
+
+    // create and store new instance
+    ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    // we use a method that exists, but with the wrong number of parameters
+    String methodName = "toUpperCase";
+    Class<?>[] parameterTypes = {java.lang.String.class};
+    Object[] args = {"et alia"};
+    ObjectRef[] argObjRefs = {null};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            targetObjRef,
+            toNames(parameterTypes),
+            args,
+            argObjRefs);
+
+    // dispatch
+    ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+
+    // expect
+    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(objectLookupStore.size(), is(1L));
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
   }
 }

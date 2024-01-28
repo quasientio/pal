@@ -27,6 +27,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.ittera.pal.common.lang.reflect.ConstructorSignature;
@@ -35,6 +37,7 @@ import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.core.exec.DispatcherConnector;
+import net.ittera.pal.core.exec.java.reflect.ReflectionHelper;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
 import net.ittera.pal.messages.types.ExecMessageType;
@@ -48,10 +51,12 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
+      ReflectionHelper reflectionHelper,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
+    setReflectionHelper(reflectionHelper);
     setObjectLookupStore(objectLookupStore);
   }
 
@@ -119,7 +124,8 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
           target,
           Arrays.toString(args));
     }
-    final Constructor constructor = ((ConstructorSignature) ctxt.getSignature()).getConstructor();
+    final Constructor<?> constructor =
+        ((ConstructorSignature) ctxt.getSignature()).getConstructor();
     Object newObject;
     constructor.setAccessible(true);
     try {
@@ -147,7 +153,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
           args,
           value);
     }
-    Constructor constructor = (Constructor) accessibleObject.get();
+    Constructor<?> constructor = (Constructor<?>) accessibleObject.get();
     return constructor.newInstance(args.toArray(new Object[0]));
   }
 
@@ -173,14 +179,18 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
 
   @Override
   protected AccessibleObject loadAccessibleObject(
-      ExecMessage execMessage, List<Class> parameterTypes, List<Object> args)
-      throws ReflectiveOperationException {
-    // TODO why are we not using ReflectionHelper to get the constructor?
-    Class clazz =
+      ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)
+      throws ReflectiveOperationException, AmbiguousCallException {
+    Class<?> clazz =
         forName(
             execMessage.getConstructorCall().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
-    return clazz.getDeclaredConstructor(parameterTypes.toArray(new Class[0]));
+
+    List<String> parameterTypeNames =
+        Stream.of(execMessage.getConstructorCall().getParameters())
+            .map(p -> p.getType().getName())
+            .collect(Collectors.toList());
+    return reflectionHelper.lookupConstructor(clazz, args.toArray(), parameterTypeNames);
   }
 }
