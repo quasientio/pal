@@ -355,20 +355,20 @@ public class ReflectionHelperLookupConstructorTest {
               return returnedConstructor;
             })
         .when(spyReflectionHelper)
-        .lookupInCache(clazz, paramTypes);
+        .lookupInCache(clazz, null, paramTypes, Constructor.class);
 
     // call lookupConstructor using the spy
     Constructor<?> constructor = spyReflectionHelper.lookupConstructor(clazz, args, paramTypes);
     assertNotNull(constructor);
     assertEquals("IntegerFloatStringParams", invoke(constructor, args));
-    verify(spyReflectionHelper, times(1)).lookupInCache(clazz, paramTypes);
+    verify(spyReflectionHelper, times(1)).lookupInCache(clazz, null, paramTypes, Constructor.class);
     assertEquals(0, cacheHits.get());
 
     // 2nd call to lookupConstructor - this time the constructor should be retrieved from the cache
     constructor = spyReflectionHelper.lookupConstructor(clazz, args, paramTypes);
     assertNotNull(constructor);
     assertEquals("IntegerFloatStringParams", invoke(constructor, args));
-    verify(spyReflectionHelper, times(2)).lookupInCache(clazz, paramTypes);
+    verify(spyReflectionHelper, times(2)).lookupInCache(clazz, null, paramTypes, Constructor.class);
 
     // verify that the cache was hit once
     assertEquals(1, cacheHits.get());

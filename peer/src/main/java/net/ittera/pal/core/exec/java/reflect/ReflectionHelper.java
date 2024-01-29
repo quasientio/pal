@@ -20,6 +20,7 @@
 package net.ittera.pal.core.exec.java.reflect;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -117,29 +119,15 @@ public class ReflectionHelper {
 
     // trace params
     if (logger.isTraceEnabled()) {
-      if (parameters.length == 0) {
-        logger.trace("params of length=0");
-      } else {
-        final StringBuilder stringBuilder = new StringBuilder();
-        for (int i = 0; i < parameters.length; i++) {
-          stringBuilder
-              .append("params[")
-              .append(i)
-              .append("]=")
-              .append(parameters[i])
-              .append(" type:")
-              .append(parameterTypeNames.get(i))
-              .append('\n');
-        }
-        logger.trace(stringBuilder.toString());
-      }
+      traceParameters(parameters, parameterTypeNames);
     }
 
     // convert short type names to fully qualified names
     List<String> fullyQualifiedParamTypeNames = shortTypeNamesToCanonical(parameterTypeNames);
 
     // lookup in cache
-    Method cached = lookupInCache(clazz, methodName, fullyQualifiedParamTypeNames);
+    Method cached =
+        (Method) lookupInCache(clazz, methodName, fullyQualifiedParamTypeNames, Method.class);
     if (cached != null) {
       if (logger.isDebugEnabled()) {
         logger.debug("Got cached method with signature in step0: {}", cached.toGenericString());
@@ -270,29 +258,16 @@ public class ReflectionHelper {
 
     // trace params
     if (logger.isTraceEnabled()) {
-      if (parameters.length == 0) {
-        logger.trace("params of length=0");
-      } else {
-        final StringBuilder stringBuilder = new StringBuilder();
-        for (int i = 0; i < parameters.length; i++) {
-          stringBuilder
-              .append("params[")
-              .append(i)
-              .append("]=")
-              .append(parameters[i])
-              .append(" type:")
-              .append(parameterTypeNames.get(i))
-              .append('\n');
-        }
-        logger.trace(stringBuilder.toString());
-      }
+      traceParameters(parameters, parameterTypeNames);
     }
 
     // convert short type names to fully qualified names
     List<String> fullyQualifiedParamTypeNames = shortTypeNamesToCanonical(parameterTypeNames);
 
     // lookup in cache
-    Constructor<?> cached = lookupInCache(clazz, fullyQualifiedParamTypeNames);
+    Constructor<?> cached =
+        (Constructor<?>)
+            lookupInCache(clazz, null, fullyQualifiedParamTypeNames, Constructor.class);
     if (cached != null) {
       if (logger.isDebugEnabled()) {
         logger.debug(
@@ -328,7 +303,7 @@ public class ReflectionHelper {
           throw e; // rethrow so we can catch it below
         }
       }
-      cache(clazz, fullyQualifiedParamTypeNames, constructorFound);
+      cache(clazz, null, fullyQualifiedParamTypeNames, constructorFound);
       if (logger.isDebugEnabled()) {
         logger.debug(
             "Got constructor with signature in step1: {}", constructorFound.toGenericString());
@@ -362,7 +337,7 @@ public class ReflectionHelper {
             clazz.getName(), fullyQualifiedParamTypeNames, matchingConstructors);
       }
       Constructor<?> constructor = matchingConstructors.get(0);
-      cache(clazz, fullyQualifiedParamTypeNames, constructor);
+      cache(clazz, null, fullyQualifiedParamTypeNames, constructor);
       if (logger.isDebugEnabled()) {
         logger.debug("Got constructor with signature in step2: {}", constructor.toGenericString());
       }
@@ -394,7 +369,7 @@ public class ReflectionHelper {
               clazz.getName(), fullyQualifiedParamTypeNames, matchingConstructors);
         }
         Constructor<?> constructor = matchingConstructors.get(0);
-        cache(clazz, fullyQualifiedParamTypeNames, constructor);
+        cache(clazz, null, fullyQualifiedParamTypeNames, constructor);
         if (logger.isDebugEnabled()) {
           logger.debug(
               "Got constructor with signature in step3: {}", constructor.toGenericString());
@@ -409,38 +384,32 @@ public class ReflectionHelper {
   }
 
   private void cache(
-      Class<?> clazz, String methodName, List<String> parameterTypeNames, Method method) {
-    String key = buildMethodKey(clazz, methodName, parameterTypeNames);
-    matchedMethodsCache.put(key, method);
+      Class<?> clazz, String memberName, List<String> parameterTypeNames, Member member) {
+    String key = buildKey(clazz, memberName, parameterTypeNames);
+    if (member instanceof Method) {
+      matchedMethodsCache.put(key, (Method) member);
+    } else if (member instanceof Constructor) {
+      matchedConstructorsCache.put(key, (Constructor<?>) member);
+    }
   }
 
-  private void cache(Class<?> clazz, List<String> parameterTypeNames, Constructor<?> constructor) {
-    String key = buildConstructorKey(clazz, parameterTypeNames);
-    matchedConstructorsCache.put(key, constructor);
+  Member lookupInCache(
+      Class<?> clazz,
+      String memberName,
+      List<String> parameterTypeNames,
+      Class<? extends Member> memberType) {
+    String key = buildKey(clazz, memberName, parameterTypeNames);
+    if (memberType == Method.class) {
+      return matchedMethodsCache.get(key);
+    } else if (memberType == Constructor.class) {
+      return matchedConstructorsCache.get(key);
+    }
+    return null;
   }
 
-  Method lookupInCache(Class<?> clazz, String methodName, List<String> parameterTypeNames) {
-    String key = buildMethodKey(clazz, methodName, parameterTypeNames);
-    return matchedMethodsCache.get(key);
-  }
-
-  Constructor<?> lookupInCache(Class<?> clazz, List<String> parameterTypeNames) {
-    String key = buildConstructorKey(clazz, parameterTypeNames);
-    return matchedConstructorsCache.get(key);
-  }
-
-  private String buildMethodKey(
-      Class<?> clazz, String methodName, List<String> parameterTypeNames) {
-    StringBuilder keyBuilder = new StringBuilder(methodName);
-    ClassLoader cl = clazz.getClassLoader();
-    keyBuilder.append(cl == null ? "bootstrapCL" : cl.toString());
-    keyBuilder.append(clazz.getName());
-    parameterTypeNames.forEach(keyBuilder::append);
-    return keyBuilder.toString();
-  }
-
-  private String buildConstructorKey(Class<?> clazz, List<String> parameterTypeNames) {
-    StringBuilder keyBuilder = new StringBuilder();
+  private String buildKey(
+      Class<?> clazz, @Nullable String memberName, List<String> parameterTypeNames) {
+    StringBuilder keyBuilder = new StringBuilder(memberName == null ? "" : memberName);
     ClassLoader cl = clazz.getClassLoader();
     keyBuilder.append(cl == null ? "bootstrapCL" : cl.toString());
     keyBuilder.append(clazz.getName());
@@ -453,6 +422,25 @@ public class ReflectionHelper {
       return !clazz.isPrimitive();
     } else {
       return ClassUtils.isAssignable(object.getClass(), clazz);
+    }
+  }
+
+  private void traceParameters(Object[] parameters, List<String> parameterTypeNames) {
+    if (parameters.length == 0) {
+      logger.trace("params of length=0");
+    } else {
+      final StringBuilder stringBuilder = new StringBuilder();
+      for (int i = 0; i < parameters.length; i++) {
+        stringBuilder
+            .append("params[")
+            .append(i)
+            .append("]=")
+            .append(parameters[i])
+            .append(" type:")
+            .append(parameterTypeNames.get(i))
+            .append('\n');
+      }
+      logger.trace(stringBuilder.toString());
     }
   }
 }

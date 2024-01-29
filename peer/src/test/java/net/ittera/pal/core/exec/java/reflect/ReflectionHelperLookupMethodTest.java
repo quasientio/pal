@@ -409,20 +409,22 @@ public class ReflectionHelperLookupMethodTest {
               return returnedMethod;
             })
         .when(spyReflectionHelper)
-        .lookupInCache(clazz, methodName, paramTypes);
+        .lookupInCache(clazz, methodName, paramTypes, Method.class);
 
     // call lookupMethod using the spy
     Method method = spyReflectionHelper.lookupMethod(clazz, args, paramTypes, methodName);
     assertNotNull(method);
     assertEquals("methodForCacheTest", invoke(method, args));
-    verify(spyReflectionHelper, times(1)).lookupInCache(clazz, methodName, paramTypes);
+    verify(spyReflectionHelper, times(1))
+        .lookupInCache(clazz, methodName, paramTypes, Method.class);
     assertEquals(0, cacheHits.get());
 
     // 2nd call to lookupMethod - this time the method should be retrieved from the cache
     method = spyReflectionHelper.lookupMethod(clazz, args, paramTypes, methodName);
     assertNotNull(method);
     assertEquals("methodForCacheTest", invoke(method, args));
-    verify(spyReflectionHelper, times(2)).lookupInCache(clazz, methodName, paramTypes);
+    verify(spyReflectionHelper, times(2))
+        .lookupInCache(clazz, methodName, paramTypes, Method.class);
 
     // verify cache was hit once
     assertEquals(1, cacheHits.get());
