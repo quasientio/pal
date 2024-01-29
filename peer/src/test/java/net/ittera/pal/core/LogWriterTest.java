@@ -123,12 +123,12 @@ public class LogWriterTest extends ZmqEnabledTest {
     throw new IllegalArgumentException(format("Unsupported message type: %s", msg));
   }
 
-  private UUID getFollowingUuid(Message msg) {
+  private UUID getResponseToUuid(Message msg) {
     ExecMessage execMessage = msg.getExecMessage();
     if (execMessage != null) {
-      String followingUuid = execMessage.getFollowingUuid();
-      if (followingUuid != null && !followingUuid.isEmpty()) {
-        return UUID.fromString(followingUuid);
+      String responseToUuid = execMessage.getResponseToUuid();
+      if (responseToUuid != null && !responseToUuid.isEmpty()) {
+        return UUID.fromString(responseToUuid);
       }
     }
     return null;
@@ -185,7 +185,7 @@ public class LogWriterTest extends ZmqEnabledTest {
                   execPhase,
                   null,
                   UUID.fromString(getMessageUuid(msg)),
-                  getFollowingUuid(msg),
+                  getResponseToUuid(msg),
                   msg);
           outMsg.send(pubSocket);
         });
@@ -232,7 +232,7 @@ public class LogWriterTest extends ZmqEnabledTest {
                       ExecPhase.BEFORE,
                       headers,
                       UUID.fromString(getMessageUuid(msg)),
-                      getFollowingUuid(msg),
+                      getResponseToUuid(msg),
                       msg);
               outMsg.send(pubSocket);
             });

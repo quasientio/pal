@@ -61,7 +61,7 @@ type InterceptKeyMessage struct {
 }
 
 type InterceptReply struct {
-	peerUuid      text
-	followingUuid text
-	result        bool
+	peerUuid       text
+	responseToUuid text
+	result         bool
 }

@@ -124,7 +124,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
@@ -174,7 +174,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
@@ -226,7 +226,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
@@ -276,7 +276,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
@@ -326,7 +326,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
@@ -377,7 +377,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
@@ -426,7 +426,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
@@ -475,7 +475,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));

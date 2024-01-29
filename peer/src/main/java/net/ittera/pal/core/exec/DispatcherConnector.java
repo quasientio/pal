@@ -155,11 +155,11 @@ public class DispatcherConnector {
           headers);
     }
 
-    final String followingUuidStr = execMessage.getFollowingUuid();
-    UUID followingUuid =
-        followingUuidStr == null || followingUuidStr.isEmpty()
+    final String responseToUuidStr = execMessage.getResponseToUuid();
+    UUID responseToUuid =
+        responseToUuidStr == null || responseToUuidStr.isEmpty()
             ? null
-            : UUID.fromString(execMessage.getFollowingUuid());
+            : UUID.fromString(execMessage.getResponseToUuid());
 
     ExecMessageType execMessageType = ExecMessageType.fromByte(execMessage.getExecMessageType());
     List<InterceptMessage> matchingIntercepts = null;
@@ -177,7 +177,7 @@ public class DispatcherConnector {
               execPhase,
               headers,
               UUID.fromString(execMessage.getMessageUuid()),
-              followingUuid,
+              responseToUuid,
               messageBuilder.wrap(execMessage));
       publishMessage(msg);
     }
@@ -263,18 +263,18 @@ public class DispatcherConnector {
       return;
     }
 
-    final String followingUuidStr = message.getFollowingUuid();
-    UUID followingUuid =
-        followingUuidStr == null || followingUuidStr.isEmpty()
+    final String responseToUuidStr = message.getResponseToUuid();
+    UUID responseToUuid =
+        responseToUuidStr == null || responseToUuidStr.isEmpty()
             ? null
-            : UUID.fromString(message.getFollowingUuid());
+            : UUID.fromString(message.getResponseToUuid());
     final OutboundMsg msg =
         new OutboundMsg(
             MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             WRITE_AHEAD_HEADERS,
             UUID.fromString(message.getMessageUuid()),
-            followingUuid,
+            responseToUuid,
             messageBuilder.wrap(message));
 
     // no intercept matching, just publish it

@@ -806,11 +806,11 @@ public class MessageBuilderTest {
     String fieldName = "aStaticField";
     AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
     String staticFieldPutUuid = UUID.randomUUID().toString();
-    String followingUuid = UUID.randomUUID().toString();
+    String responseToUuid = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
         messageBuilder.buildPutStaticDone(
-            peerUuid, accessibleObject, staticFieldPutUuid, followingUuid);
+            peerUuid, accessibleObject, staticFieldPutUuid, responseToUuid);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
@@ -820,7 +820,7 @@ public class MessageBuilderTest {
     assertEquals(targetClass.getName(), execMessage.getStaticFieldPutDone().getClazz().getName());
     assertEquals(fieldName, execMessage.getStaticFieldPutDone().getField().getName());
     assertEquals(staticFieldPutUuid, execMessage.getStaticFieldPutDone().getStaticFieldPutUuid());
-    assertEquals(followingUuid, execMessage.getFollowingUuid());
+    assertEquals(responseToUuid, execMessage.getResponseToUuid());
   }
   // </editor-fold>
 
@@ -886,10 +886,11 @@ public class MessageBuilderTest {
     String fieldName = "anObject";
     AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
     String instanceFieldPutUuid = UUID.randomUUID().toString();
-    String followingUuid = UUID.randomUUID().toString();
+    String responseToUuid = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
-        builder.buildPutObjectDone(peerUuid, accessibleObject, instanceFieldPutUuid, followingUuid);
+        builder.buildPutObjectDone(
+            peerUuid, accessibleObject, instanceFieldPutUuid, responseToUuid);
 
     // assert expected values of ExecMessage
     assertNotNull(execMessage);
@@ -900,7 +901,7 @@ public class MessageBuilderTest {
     assertEquals(fieldName, execMessage.getInstanceFieldPutDone().getField().getName());
     assertEquals(
         instanceFieldPutUuid, execMessage.getInstanceFieldPutDone().getInstanceFieldPutUuid());
-    assertEquals(followingUuid, execMessage.getFollowingUuid());
+    assertEquals(responseToUuid, execMessage.getResponseToUuid());
   }
   // </editor-fold>
 
@@ -1046,17 +1047,17 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void buildInterceptReply_uuidFollowingUuidResult_validInterceptReply() {
+  public void buildInterceptReply_uuidResponseToUuidResult_validInterceptReply() {
     UUID peerUuid = UUID.randomUUID();
-    UUID followingUuid = UUID.randomUUID();
+    UUID responseToUuid = UUID.randomUUID();
     boolean result = true;
 
     InterceptReply interceptReply =
-        messageBuilder.buildInterceptReply(peerUuid, followingUuid, result);
+        messageBuilder.buildInterceptReply(peerUuid, responseToUuid, result);
 
     assertNotNull(interceptReply);
     assertEquals(peerUuid.toString(), interceptReply.getPeerUuid());
-    assertEquals(followingUuid.toString(), interceptReply.getFollowingUuid());
+    assertEquals(responseToUuid.toString(), interceptReply.getResponseToUuid());
     assertEquals(result, interceptReply.getResult());
   }
 
@@ -1390,7 +1391,7 @@ public class MessageBuilderTest {
     UUID peerUuid = UUID.randomUUID();
     String throwableMessage = "my throwable message";
     Throwable throwable = new Throwable(throwableMessage);
-    String followingUuid = UUID.randomUUID().toString();
+    String responseToUuid = UUID.randomUUID().toString();
 
     List<AccessibleObject> accessibleObjects =
         new ArrayList() {
@@ -1407,7 +1408,7 @@ public class MessageBuilderTest {
       try {
         execMessage =
             messageBuilder.buildAccessibleObjectThrowable(
-                peerUuid, Optional.of(accessibleObject), null, throwable, followingUuid);
+                peerUuid, Optional.of(accessibleObject), null, throwable, responseToUuid);
       } catch (UnsupportedOperationException e) {
         assertTrue(e.getMessage().contains("Unsupported accessibleObject type:"));
         continue;
@@ -1448,7 +1449,7 @@ public class MessageBuilderTest {
       assertEquals(throwableMessage, execMessage.getRaisedThrowable().getThrowable().getMessage());
       assertNotNull(execMessage.getRaisedThrowable().getThrowable().getStackTraceElements());
       assertNull(execMessage.getRaisedThrowable().getThrowable().getCause());
-      assertEquals(followingUuid, execMessage.getFollowingUuid());
+      assertEquals(responseToUuid, execMessage.getResponseToUuid());
     }
   }
 
@@ -1458,14 +1459,14 @@ public class MessageBuilderTest {
     UUID peerUuid = UUID.randomUUID();
     String throwableMessage = "my throwable message";
     Throwable throwable = new Throwable(throwableMessage);
-    String followingUuid = UUID.randomUUID().toString();
+    String responseToUuid = UUID.randomUUID().toString();
 
     Arrays.asList(ExecutableObjectType.values()).stream()
         .forEach(
             executableObjectType -> {
               ExecMessage execMessage =
                   messageBuilder.buildAccessibleObjectThrowable(
-                      peerUuid, Optional.empty(), executableObjectType, throwable, followingUuid);
+                      peerUuid, Optional.empty(), executableObjectType, throwable, responseToUuid);
 
               assertNotNull(execMessage);
               assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
@@ -1495,7 +1496,7 @@ public class MessageBuilderTest {
               assertNotNull(
                   execMessage.getRaisedThrowable().getThrowable().getStackTraceElements());
               assertNull(execMessage.getRaisedThrowable().getThrowable().getCause());
-              assertEquals(followingUuid, execMessage.getFollowingUuid());
+              assertEquals(responseToUuid, execMessage.getResponseToUuid());
             });
   }
   // </editor-fold>
@@ -1507,11 +1508,11 @@ public class MessageBuilderTest {
     Constructor constructor = DummyClassForTest.class.getConstructors()[0];
     Object returnValue = new DummyClassForTest();
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
-    String followingUuid = UUID.randomUUID().toString();
+    String responseToUuid = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            peerUuid, returnValue, constructor, returnValueObjRef, false, followingUuid);
+            peerUuid, returnValue, constructor, returnValueObjRef, false, responseToUuid);
 
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
@@ -1526,7 +1527,7 @@ public class MessageBuilderTest {
     assertEquals(
         returnValueObjRef.getRef(),
         Integer.parseInt(execMessage.getReturnValue().getObject().getRef()));
-    assertEquals(followingUuid, execMessage.getFollowingUuid());
+    assertEquals(responseToUuid, execMessage.getResponseToUuid());
   }
 
   @Test
@@ -1535,7 +1536,7 @@ public class MessageBuilderTest {
     Method method = DummyClassForTest.class.getMethod("addInts", int.class, int.class);
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
     int returnValue = 4;
-    String followingUuid = UUID.randomUUID().toString();
+    String responseToUuid = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
@@ -1544,7 +1545,7 @@ public class MessageBuilderTest {
             method,
             returnValueObjRef,
             method.getReturnType() == void.class,
-            followingUuid);
+            responseToUuid);
 
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
@@ -1556,7 +1557,7 @@ public class MessageBuilderTest {
     assertEquals(
         returnValueObjRef.getRef(),
         Integer.parseInt(execMessage.getReturnValue().getObject().getRef()));
-    assertEquals(followingUuid, execMessage.getFollowingUuid());
+    assertEquals(responseToUuid, execMessage.getResponseToUuid());
   }
 
   @Test
@@ -1565,11 +1566,11 @@ public class MessageBuilderTest {
     Field field = DummyClassForTest.class.getDeclaredField("anObject");
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
     Object returnValue = new Object();
-    String followingUuid = UUID.randomUUID().toString();
+    String responseToUuid = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
-            peerUuid, returnValue, field, returnValueObjRef, false, followingUuid);
+            peerUuid, returnValue, field, returnValueObjRef, false, responseToUuid);
 
     assertNotNull(execMessage);
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
@@ -1583,7 +1584,7 @@ public class MessageBuilderTest {
     assertEquals(
         returnValueObjRef.getRef(),
         Integer.parseInt(execMessage.getReturnValue().getObject().getRef()));
-    assertEquals(followingUuid, execMessage.getFollowingUuid());
+    assertEquals(responseToUuid, execMessage.getResponseToUuid());
   }
   // </editor-fold>
 
@@ -1719,11 +1720,11 @@ public class MessageBuilderTest {
   @Test
   public void wrap_interceptReply_wrappedInterceptReply() {
     UUID peerUuid = UUID.randomUUID();
-    UUID followingUuid = UUID.randomUUID();
+    UUID responseToUuid = UUID.randomUUID();
     boolean result = true;
 
     InterceptReply interceptReply =
-        messageBuilder.buildInterceptReply(peerUuid, followingUuid, result);
+        messageBuilder.buildInterceptReply(peerUuid, responseToUuid, result);
 
     Message wrappedInterceptReply = messageBuilder.wrap(interceptReply);
 

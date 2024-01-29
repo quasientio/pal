@@ -27,7 +27,7 @@ type ExecMessage struct {
 	currentTime     text
 	dispatchSeq     uint32
 	builderSeq      uint32
-	followingUuid   text
+	responseToUuid  text
 
 	// oneof
 	constructorCall      ConstructorCall

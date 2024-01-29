@@ -163,7 +163,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertTrue(ClassForVoidClassMethodTest.slept);
@@ -229,7 +229,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
@@ -292,7 +292,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
@@ -330,7 +330,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
@@ -366,7 +366,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.verified, is(nullValue()));
@@ -429,7 +429,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(sumContainer.get(0), is(LongStream.of(someNumbers).sum()));
@@ -491,7 +491,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),
@@ -527,7 +527,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),

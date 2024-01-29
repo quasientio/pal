@@ -61,7 +61,7 @@ public class OutboundMsgTest {
     List<InternalHeader> headers = null;
     ExecPhase execPhase = ExecPhase.BEFORE;
 
-    // with null headers and followingUuid
+    // with null headers and responseToUuid
     OutboundMsg msgOut =
         new OutboundMsg(
             MessageType.EXEC_MESSAGE,
@@ -76,7 +76,7 @@ public class OutboundMsgTest {
     assertThat(msgOut.getExecPhase(), is(execPhase));
     assertThat(msgOut.getHeaders(), is(nullValue()));
     assertThat(msgOut.getMessageUuid(), is(execMessageUuid));
-    assertThat(msgOut.getFollowingUuid(), is(nullValue()));
+    assertThat(msgOut.getResponseToUuid(), is(nullValue()));
     assertThat(msgOut.getBody(), is(body));
 
     // send
@@ -121,7 +121,7 @@ public class OutboundMsgTest {
     assertThat(msgOut.getHeaders().size(), is(1));
     assertThat(msgOut.getHeaders().get(0), is(writeAhead));
     assertThat(msgOut.getMessageUuid(), is(interceptMessageUuid));
-    assertThat(msgOut.getFollowingUuid(), is(followingMessageUuid));
+    assertThat(msgOut.getResponseToUuid(), is(followingMessageUuid));
     assertThat(msgOut.getBody(), is(body));
 
     // send
@@ -259,7 +259,7 @@ public class OutboundMsgTest {
             body),
         is(not(msg1)));
 
-    // different followingUuid
+    // different responseToUuid
     assertThat(
         new OutboundMsg(
             MessageType.EXEC_MESSAGE,

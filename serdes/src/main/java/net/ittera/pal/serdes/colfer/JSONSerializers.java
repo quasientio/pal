@@ -147,8 +147,8 @@ class JSONSerializers {
         jsonElement.addProperty("builder_seq", message.builderSeq);
       }
 
-      if (notEmpty(message.followingUuid)) {
-        jsonElement.addProperty("following_uuid", message.followingUuid);
+      if (notEmpty(message.responseToUuid)) {
+        jsonElement.addProperty("following_uuid", message.responseToUuid);
       }
 
       switch (execMessageType) {
@@ -644,8 +644,8 @@ class JSONSerializers {
       if (notEmpty(message.peerUuid)) {
         jsonElement.addProperty("peer_uuid", message.peerUuid);
       }
-      if (notEmpty(message.followingUuid)) {
-        jsonElement.addProperty("following_uuid", message.followingUuid);
+      if (notEmpty(message.responseToUuid)) {
+        jsonElement.addProperty("following_uuid", message.responseToUuid);
       }
       jsonElement.addProperty("result", message.result);
       return jsonElement;

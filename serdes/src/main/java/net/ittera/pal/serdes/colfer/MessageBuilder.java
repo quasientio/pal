@@ -174,7 +174,7 @@ public final class MessageBuilder {
     return params;
   }
 
-  private ExecMessage newWrapper(ExecMessageType msgType, UUID peerUuid, String followingUuid) {
+  private ExecMessage newWrapper(ExecMessageType msgType, UUID peerUuid, String responseToUuid) {
     ExecMessage msgWrapper =
         new ExecMessage()
             .withPeerUuid(peerUuid.toString())
@@ -185,8 +185,8 @@ public final class MessageBuilder {
             .withBuilderSeq(threadBuilderSequence.get().getAndIncrement())
             .withCurrentTime(dtf.format(ZonedDateTime.now()));
 
-    if (followingUuid != null && !followingUuid.isEmpty()) {
-      msgWrapper.setFollowingUuid(followingUuid);
+    if (responseToUuid != null && !responseToUuid.isEmpty()) {
+      msgWrapper.setResponseToUuid(responseToUuid);
     }
 
     return msgWrapper;
@@ -747,9 +747,9 @@ public final class MessageBuilder {
       UUID peerUuid,
       AccessibleObject accessibleObject,
       String staticFieldPutUuid,
-      String followingUuid) {
+      String responseToUuid) {
 
-    return newWrapper(ExecMessageType.PUT_STATIC_DONE, peerUuid, followingUuid)
+    return newWrapper(ExecMessageType.PUT_STATIC_DONE, peerUuid, responseToUuid)
         .withStaticFieldPutDone(
             new StaticFieldPutDone()
                 .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
@@ -797,9 +797,9 @@ public final class MessageBuilder {
       UUID peerUuid,
       AccessibleObject accessibleObject,
       String instanceFieldPutUuid,
-      String followingUuid) {
+      String responseToUuid) {
 
-    return newWrapper(ExecMessageType.PUT_FIELD_DONE, peerUuid, followingUuid)
+    return newWrapper(ExecMessageType.PUT_FIELD_DONE, peerUuid, responseToUuid)
         .withInstanceFieldPutDone(
             new InstanceFieldPutDone()
                 .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
@@ -815,7 +815,7 @@ public final class MessageBuilder {
       @Nonnull Optional<AccessibleObject> accessibleObject,
       ExecutableObjectType executableObjectType,
       Throwable exception,
-      String followingUuid) {
+      String responseToUuid) {
 
     final RaisedThrowable raisedThrowable = new RaisedThrowable();
     if (accessibleObject.isPresent()) {
@@ -849,7 +849,7 @@ public final class MessageBuilder {
       }
     }
 
-    return newWrapper(ExecMessageType.THROWABLE, peerUuid, followingUuid)
+    return newWrapper(ExecMessageType.THROWABLE, peerUuid, responseToUuid)
         .withRaisedThrowable(
             raisedThrowable
                 .withClazz(getWrappedClass(exception.getClass().getName()))
@@ -865,7 +865,7 @@ public final class MessageBuilder {
       AccessibleObject accessibleObject,
       ObjectRef objectRef,
       boolean isVoid,
-      String followingUuid) {
+      String responseToUuid) {
 
     final ReturnValue valueMessage = new ReturnValue();
 
@@ -913,7 +913,7 @@ public final class MessageBuilder {
     }
 
     // set class and isVoid
-    return newWrapper(ExecMessageType.RETURN_VALUE, peerUuid, followingUuid)
+    return newWrapper(ExecMessageType.RETURN_VALUE, peerUuid, responseToUuid)
         .withReturnValue(
             valueMessage.withIsVoid(isVoid).withClazz(getWrappedClass(declaringClass)));
   }
@@ -1001,10 +1001,10 @@ public final class MessageBuilder {
         .withCallbackMethod(intercept.getCallbackMethod());
   }
 
-  public InterceptReply buildInterceptReply(UUID peerUuid, UUID followingUuid, boolean result) {
+  public InterceptReply buildInterceptReply(UUID peerUuid, UUID responseToUuid, boolean result) {
     return new InterceptReply()
         .withPeerUuid(peerUuid.toString())
-        .withFollowingUuid(followingUuid.toString())
+        .withResponseToUuid(responseToUuid.toString())
         .withResult(result);
   }
 

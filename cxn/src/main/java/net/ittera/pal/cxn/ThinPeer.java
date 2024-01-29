@@ -597,10 +597,10 @@ public class ThinPeer {
         rcvdMsg.unmarshal(record.value(), 0);
         long receivedMsgOffset = record.offset();
         final ExecMessage execMessage = rcvdMsg.getExecMessage();
-        final String followingUuid = execMessage == null ? null : execMessage.getFollowingUuid();
+        final String responseToUuid = execMessage == null ? null : execMessage.getResponseToUuid();
         if (execMessage != null
-            && followingUuid != null
-            && message.getMessageUuid().equals(followingUuid)) {
+            && responseToUuid != null
+            && message.getMessageUuid().equals(responseToUuid)) {
           if (logger.isDebugEnabled()) {
             logger.debug(
                 "Got reply with offset {} and uuid {} ",

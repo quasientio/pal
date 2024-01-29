@@ -147,7 +147,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(2));
@@ -211,7 +211,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
 
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(1));
@@ -274,7 +274,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(numberOfWordsToAdd));
@@ -313,7 +313,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(2L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(wordList.size()));
@@ -349,7 +349,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(0));
@@ -414,7 +414,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(4));
@@ -478,7 +478,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(
@@ -520,7 +520,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getFollowingUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(

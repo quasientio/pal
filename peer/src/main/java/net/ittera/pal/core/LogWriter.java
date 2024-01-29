@@ -211,7 +211,7 @@ class LogWriter extends ConnectedService {
         List<Header> logHeaders = fromInternalToLog(msg.getHeaders());
         // send to kafka immediately
         sendToKafka(
-            msg.getBody(), msg.getMessageUuid(), msg.getFollowingUuid(), peerUuid, logHeaders);
+            msg.getBody(), msg.getMessageUuid(), msg.getResponseToUuid(), peerUuid, logHeaders);
       }
     }
   }
@@ -238,7 +238,7 @@ class LogWriter extends ConnectedService {
   private void sendToKafka(
       byte[] message,
       UUID messageUuid,
-      UUID followingUuid,
+      UUID responseToUuid,
       UUID fromPeer,
       Iterable<Header> headers) {
     if (logger.isDebugEnabled()) {
@@ -252,7 +252,7 @@ class LogWriter extends ConnectedService {
       logger.debug(
           "new message sent with uuid: {} replying to message uuid: {} ({} bytes)",
           messageUuid,
-          followingUuid,
+          responseToUuid,
           message.length);
     }
   }

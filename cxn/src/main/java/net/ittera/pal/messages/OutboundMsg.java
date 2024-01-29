@@ -51,7 +51,7 @@ public class OutboundMsg extends BaseMsg {
    * 3. headers to follow  : int
    * 4. [headers]          : byte[]* (InternalHeader)
    * 5. message uuid       : byte[]
-   * 6. followingUuid      : byte[]
+   * 6. responseToUuid      : byte[]
    * 7. message body       : byte[]
    * </pre>
    */
@@ -62,7 +62,7 @@ public class OutboundMsg extends BaseMsg {
   private final ExecPhase execPhase;
   @Nullable private final List<InternalHeader> headers;
   private final UUID messageUuid;
-  @Nullable private final UUID followingUuid;
+  @Nullable private final UUID responseToUuid;
   private final byte[] body;
 
   /** Only used by unit test */
@@ -71,7 +71,7 @@ public class OutboundMsg extends BaseMsg {
       ExecPhase execPhase,
       @Nullable List<InternalHeader> headers,
       UUID messageUuid,
-      @Nullable UUID followingUuid,
+      @Nullable UUID responseToUuid,
       byte[] body) {
 
     Stream.of(messageType, execPhase, messageUuid, body).forEach(Objects::requireNonNull);
@@ -79,7 +79,7 @@ public class OutboundMsg extends BaseMsg {
     this.execPhase = execPhase;
     this.headers = headers;
     this.messageUuid = messageUuid;
-    this.followingUuid = followingUuid;
+    this.responseToUuid = responseToUuid;
     this.body = body;
   }
 
@@ -88,7 +88,7 @@ public class OutboundMsg extends BaseMsg {
       ExecPhase execPhase,
       @Nullable List<InternalHeader> headers,
       UUID messageUuid,
-      @Nullable UUID followingUuid,
+      @Nullable UUID responseToUuid,
       @Nullable Marshallable marshallable) {
 
     Stream.of(messageType, execPhase, messageUuid, marshallable).forEach(Objects::requireNonNull);
@@ -96,7 +96,7 @@ public class OutboundMsg extends BaseMsg {
     this.execPhase = execPhase;
     this.headers = headers;
     this.messageUuid = messageUuid;
-    this.followingUuid = followingUuid;
+    this.responseToUuid = responseToUuid;
     this.body = toBytes(marshallable);
   }
 
@@ -105,10 +105,10 @@ public class OutboundMsg extends BaseMsg {
       ExecPhase execPhase,
       @Nullable List<InternalHeader> headers,
       UUID messageUuid,
-      @Nullable UUID followingUuid,
+      @Nullable UUID responseToUuid,
       byte[] body,
       int size) {
-    this(messageType, execPhase, headers, messageUuid, followingUuid, body);
+    this(messageType, execPhase, headers, messageUuid, responseToUuid, body);
     this.size = size;
   }
 
@@ -163,11 +163,11 @@ public class OutboundMsg extends BaseMsg {
       return false;
     }
 
-    // followingUuid
+    // responseToUuid
     buff =
-        followingUuid == null
+        responseToUuid == null
             ? String.valueOf(0).getBytes(ZMQ.CHARSET)
-            : UUIDUtils.toBytes(followingUuid);
+            : UUIDUtils.toBytes(responseToUuid);
     size += buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
@@ -223,14 +223,14 @@ public class OutboundMsg extends BaseMsg {
     msgSize += buff.length;
     final UUID messageUuid = UUIDUtils.fromBytes(buff);
 
-    // followingUuid
+    // responseToUuid
     buff = socket.recv();
     msgSize += buff.length;
-    final UUID followingUuid;
+    final UUID responseToUuid;
     if (!"0".equals(new String(buff, ZMQ.CHARSET))) {
-      followingUuid = UUIDUtils.fromBytes(buff);
+      responseToUuid = UUIDUtils.fromBytes(buff);
     } else {
-      followingUuid = null;
+      responseToUuid = null;
     }
 
     // message body
@@ -238,7 +238,7 @@ public class OutboundMsg extends BaseMsg {
     msgSize += body.length;
 
     return new OutboundMsg(
-        messageType, execPhase, headers, messageUuid, followingUuid, body, msgSize);
+        messageType, execPhase, headers, messageUuid, responseToUuid, body, msgSize);
   }
 
   // default is non-blocking
@@ -255,13 +255,13 @@ public class OutboundMsg extends BaseMsg {
         && execPhase.equals(that.execPhase)
         && Objects.equals(headers, that.headers)
         && messageUuid.equals(that.messageUuid)
-        && Objects.equals(followingUuid, that.followingUuid)
+        && Objects.equals(responseToUuid, that.responseToUuid)
         && Arrays.equals(body, that.body);
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(messageType, execPhase, headers, messageUuid, followingUuid);
+    int result = Objects.hash(messageType, execPhase, headers, messageUuid, responseToUuid);
     result = 31 * result + Arrays.hashCode(body);
     return result;
   }
@@ -277,8 +277,8 @@ public class OutboundMsg extends BaseMsg {
         + headers
         + ", messageUuid="
         + messageUuid
-        + ", followingUuid="
-        + followingUuid
+        + ", responseToUuid="
+        + responseToUuid
         + ", body="
         + Arrays.toString(body)
         + ", size="
@@ -304,8 +304,8 @@ public class OutboundMsg extends BaseMsg {
   }
 
   @Nullable
-  public UUID getFollowingUuid() {
-    return followingUuid;
+  public UUID getResponseToUuid() {
+    return responseToUuid;
   }
 
   public byte[] getBody() {

@@ -135,7 +135,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     assertThat(execMessageReplies.size(), is(1));
 
     // assert reply msg followsUuid of original
-    assertThat(execMessageReplies.get(0).getFollowingUuid(), is(invokable.getMessageUuid()));
+    assertThat(execMessageReplies.get(0).getResponseToUuid(), is(invokable.getMessageUuid()));
   }
 
   @Test
@@ -168,7 +168,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     // assert reply msg followsUuid of original
     for (int i = 0; i < msgCount; i++) {
       assertThat(
-          execMessageReplies.get(i).getFollowingUuid(), is(msgsToInvoke.get(i).getMessageUuid()));
+          execMessageReplies.get(i).getResponseToUuid(), is(msgsToInvoke.get(i).getMessageUuid()));
     }
   }
 }

@@ -132,7 +132,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
 
     // assert reply msg followsUuid of original
-    assertThat(reply.getFollowingUuid(), is(invokable.getMessageUuid()));
+    assertThat(reply.getResponseToUuid(), is(invokable.getMessageUuid()));
   }
 
   @Test
@@ -166,7 +166,8 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
 
     // assert reply msg followsUuid of original
     for (int i = 0; i < msgCount; i++) {
-      assertThat(replyMessages.get(i).getFollowingUuid(), is(msgsToInvoke.get(i).getMessageUuid()));
+      assertThat(
+          replyMessages.get(i).getResponseToUuid(), is(msgsToInvoke.get(i).getMessageUuid()));
     }
   }
 }
