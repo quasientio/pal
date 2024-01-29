@@ -459,12 +459,16 @@ public final class MessageBuilder {
       Object[] args,
       ObjectRef[] argObjRefs) {
 
-    return newWrapper(ExecMessageType.CLASS_METHOD, peerUuid)
-        .withClassMethodCall(
-            new ClassMethodCall()
-                .withParameters(createNamedParameters(parameterTypes, args, argObjRefs))
-                .withClazz(getWrappedClass(className))
-                .withName(methodName));
+    final ClassMethodCall classMethodCall =
+        new ClassMethodCall()
+            .withParameters(createNamedParameters(parameterTypes, args, argObjRefs))
+            .withClazz(getWrappedClass(className))
+            .withName(methodName);
+
+    if (includeSourceContext) {
+      classMethodCall.setContext(getWrappedContext(null, sender, senderObjRef));
+    }
+    return newWrapper(ExecMessageType.CLASS_METHOD, peerUuid).withClassMethodCall(classMethodCall);
   }
 
   public ExecMessage buildClassMethod(

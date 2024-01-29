@@ -23,6 +23,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
+import javax.annotation.Nullable;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.util.Classes;
@@ -250,24 +251,29 @@ public final class Wrapper {
   }
 
   static net.ittera.pal.messages.colfer.Context getWrappedContext(
-      Context context, java.lang.Object sender, ObjectRef senderObjRef) {
+      @Nullable Context context, java.lang.Object sender, ObjectRef senderObjRef) {
 
     final net.ittera.pal.messages.colfer.Context wrappedCtxt =
         new net.ittera.pal.messages.colfer.Context();
 
-    wrappedCtxt.setSenderClass(getWrappedClass(context.getWithinType()));
-    if (sender != null) {
-      wrappedCtxt.setSender(getWrappedObject(sender, context.getWithinType(), senderObjRef));
-    }
+    if (context != null) {
+      wrappedCtxt.setSenderClass(getWrappedClass(context.getWithinType()));
+      if (sender != null) {
+        wrappedCtxt.setSender(getWrappedObject(sender, context.getWithinType(), senderObjRef));
+      }
 
-    if (context.getSourceFilename() != null) {
-      wrappedCtxt.setSourceLocationFile(context.getSourceFilename());
-    }
+      if (context.getSourceFilename() != null) {
+        wrappedCtxt.setSourceLocationFile(context.getSourceFilename());
+      }
 
-    wrappedCtxt.setSourceLocationLine(context.getSourceLine());
+      wrappedCtxt.setSourceLocationLine(context.getSourceLine());
 
-    if (context.getWithinType() != null) {
-      wrappedCtxt.setSourceLocationType(context.getWithinType().getName());
+      if (context.getWithinType() != null) {
+        wrappedCtxt.setSourceLocationType(context.getWithinType().getName());
+      }
+    } else {
+      wrappedCtxt.setSenderClass(getWrappedClass(sender.getClass()));
+      wrappedCtxt.setSender(getWrappedObject(sender, sender.getClass(), senderObjRef));
     }
 
     return wrappedCtxt;
