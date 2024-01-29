@@ -55,11 +55,10 @@ type ClassMethodCall struct {
 	clazz Class
 
 	//method name
-	name           text
-	modifiers      uint32
-	exceptionTypes []Class
-	parameters     []Parameter
-	context        Context
+	name       text
+	modifiers  uint32
+	parameters []Parameter
+	context    Context
 
 	//TODO:  annotations
 	//TODO:  exception types?

@@ -43,8 +43,6 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
 
   public int modifiers;
 
-  public Class[] exceptionTypes;
-
   public Parameter[] parameters;
 
   public Context context;
@@ -54,13 +52,11 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
     init();
   }
 
-  private static final Class[] _zeroExceptionTypes = new Class[0];
   private static final Parameter[] _zeroParameters = new Parameter[0];
 
   /** Colfer zero values. */
   private void init() {
     name = "";
-    exceptionTypes = _zeroExceptionTypes;
     parameters = _zeroParameters;
   }
 
@@ -158,12 +154,8 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.name.length() * 3 + 5 + 6 + 6;
+    long n = 1L + 6 + (long) this.name.length() * 3 + 5 + 6;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
-    for (Class o : this.exceptionTypes) {
-      if (o == null) n++;
-      else n += o.marshalFit();
-    }
     for (Parameter o : this.parameters) {
       if (o == null) n++;
       else n += o.marshalFit();
@@ -174,9 +166,8 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
   }
 
   /**
-   * Serializes the object. All {@code null} elements in {@link #exceptionTypes} will be replaced
-   * with a {@code new} value. All {@code null} elements in {@link #parameters} will be replaced
-   * with a {@code new} value.
+   * Serializes the object. All {@code null} elements in {@link #parameters} will be replaced with a
+   * {@code new} value.
    *
    * @param out the data destination.
    * @param buf the initial buffer or {@code null}.
@@ -202,9 +193,8 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
   }
 
   /**
-   * Serializes the object. All {@code null} elements in {@link #exceptionTypes} will be replaced
-   * with a {@code new} value. All {@code null} elements in {@link #parameters} will be replaced
-   * with a {@code new} value.
+   * Serializes the object. All {@code null} elements in {@link #parameters} will be replaced with a
+   * {@code new} value.
    *
    * @param buf the data destination.
    * @param offset the initial index for {@code buf}, inclusive.
@@ -287,34 +277,8 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
         buf[i++] = (byte) x;
       }
 
-      if (this.exceptionTypes.length != 0) {
-        buf[i++] = (byte) 3;
-        Class[] a = this.exceptionTypes;
-
-        int x = a.length;
-        if (x > ClassMethodCall.colferListMax)
-          throw new IllegalStateException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.ClassMethodCall.exceptionTypes length %d exceeds %d elements",
-                  x, ClassMethodCall.colferListMax));
-        while (x > 0x7f) {
-          buf[i++] = (byte) (x | 0x80);
-          x >>>= 7;
-        }
-        buf[i++] = (byte) x;
-
-        for (int ai = 0; ai < a.length; ai++) {
-          Class o = a[ai];
-          if (o == null) {
-            o = new Class();
-            a[ai] = o;
-          }
-          i = o.marshal(buf, i);
-        }
-      }
-
       if (this.parameters.length != 0) {
-        buf[i++] = (byte) 4;
+        buf[i++] = (byte) 3;
         Parameter[] a = this.parameters;
 
         int x = a.length;
@@ -340,7 +304,7 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
       }
 
       if (this.context != null) {
-        buf[i++] = (byte) 5;
+        buf[i++] = (byte) 4;
         i = this.context.marshal(buf, i);
       }
 
@@ -444,29 +408,6 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
         if (length < 0 || length > ClassMethodCall.colferListMax)
           throw new SecurityException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.ClassMethodCall.exceptionTypes length %d exceeds %d elements",
-                  length, ClassMethodCall.colferListMax));
-
-        Class[] a = new Class[length];
-        for (int ai = 0; ai < length; ai++) {
-          Class o = new Class();
-          i = o.unmarshal(buf, i, end);
-          a[ai] = o;
-        }
-        this.exceptionTypes = a;
-        header = buf[i++];
-      }
-
-      if (header == (byte) 4) {
-        int length = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          length |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        if (length < 0 || length > ClassMethodCall.colferListMax)
-          throw new SecurityException(
-              format(
                   "colfer: net.ittera.pal.messages/colfer.ClassMethodCall.parameters length %d exceeds %d elements",
                   length, ClassMethodCall.colferListMax));
 
@@ -480,7 +421,7 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
         header = buf[i++];
       }
 
-      if (header == (byte) 5) {
+      if (header == (byte) 4) {
         this.context = new Context();
         i = this.context.unmarshal(buf, i, end);
         header = buf[i++];
@@ -503,7 +444,7 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 6L;
+  private static final long serialVersionUID = 5L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -616,35 +557,6 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.ClassMethodCall.exceptionTypes.
-   *
-   * @return the value.
-   */
-  public Class[] getExceptionTypes() {
-    return this.exceptionTypes;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.ClassMethodCall.exceptionTypes.
-   *
-   * @param value the replacement.
-   */
-  public void setExceptionTypes(Class[] value) {
-    this.exceptionTypes = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.ClassMethodCall.exceptionTypes.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public ClassMethodCall withExceptionTypes(Class[] value) {
-    this.exceptionTypes = value;
-    return this;
-  }
-
-  /**
    * Gets net.ittera.pal.messages/colfer.ClassMethodCall.parameters.
    *
    * @return the value.
@@ -708,7 +620,6 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     if (this.name != null) h = 31 * h + this.name.hashCode();
     h = 31 * h + this.modifiers;
-    for (Class o : this.exceptionTypes) h = 31 * h + (o == null ? 0 : o.hashCode());
     for (Parameter o : this.parameters) h = 31 * h + (o == null ? 0 : o.hashCode());
     if (this.context != null) h = 31 * h + this.context.hashCode();
     return h;
@@ -726,7 +637,6 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
     return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
         && (this.name == null ? o.name == null : this.name.equals(o.name))
         && this.modifiers == o.modifiers
-        && java.util.Arrays.equals(this.exceptionTypes, o.exceptionTypes)
         && java.util.Arrays.equals(this.parameters, o.parameters)
         && (this.context == null ? o.context == null : this.context.equals(o.context));
   }
@@ -747,14 +657,6 @@ public class ClassMethodCall implements Serializable, net.ittera.pal.messages.Ma
         this.modifiers = json.get("modifiers").getAsInt();
       }
 
-      if (json.has("exceptionTypes")) {
-        JsonArray jsonArray = json.getAsJsonArray("exceptionTypes");
-        this.exceptionTypes = new Class[jsonArray.size()];
-        for (int i = 0; i < jsonArray.size(); i++) {
-          JsonObject jsonObj = jsonArray.get(i).getAsJsonObject();
-          this.exceptionTypes[i] = new Class().fromJson(jsonObj);
-        }
-      }
       if (json.has("parameters")) {
         JsonArray jsonArray = json.getAsJsonArray("parameters");
         this.parameters = new Parameter[jsonArray.size()];

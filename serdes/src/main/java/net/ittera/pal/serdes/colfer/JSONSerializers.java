@@ -292,10 +292,6 @@ class JSONSerializers {
       if (notEmpty(message.modifiers)) {
         jsonElement.addProperty("modifiers", message.modifiers);
       }
-      if (notEmpty(message.exceptionTypes)) {
-        jsonElement.add(
-            "exception_types", jsonSerializationContext.serialize(message.exceptionTypes));
-      }
       if (notEmpty(message.parameters)) {
         jsonElement.add("parameters", jsonSerializationContext.serialize(message.parameters));
       }
