@@ -27,7 +27,6 @@ import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InterceptReply;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
 import net.ittera.pal.messages.types.*;
 import org.junit.Before;
@@ -59,7 +58,6 @@ public class MessageBuilderTest {
 
   static class ExtractedFieldOpMessageInfo {
     ObjectRef targetObjectRef;
-    Obj targetObject;
     net.ittera.pal.messages.colfer.Context context;
     String className;
     String fieldName;
@@ -114,7 +112,6 @@ public class MessageBuilderTest {
     switch (execMessageType) {
       case GET_FIELD:
         assertNotNull(fieldOpMessage.getInstanceFieldGet());
-        extractedFieldOpMessageInfo.targetObject = fieldOpMessage.getInstanceFieldGet().getObject();
         extractedFieldOpMessageInfo.targetObjectRef =
             ObjectRef.from(fieldOpMessage.getInstanceFieldGet().getObjectRef());
         extractedFieldOpMessageInfo.context = fieldOpMessage.getInstanceFieldGet().getContext();
@@ -125,7 +122,6 @@ public class MessageBuilderTest {
         break;
       case PUT_FIELD:
         assertNotNull(fieldOpMessage.getInstanceFieldPut());
-        extractedFieldOpMessageInfo.targetObject = fieldOpMessage.getInstanceFieldPut().getObject();
         extractedFieldOpMessageInfo.targetObjectRef =
             ObjectRef.from(fieldOpMessage.getInstanceFieldPut().getObjectRef());
         extractedFieldOpMessageInfo.context = fieldOpMessage.getInstanceFieldPut().getContext();
@@ -627,7 +623,6 @@ public class MessageBuilderTest {
               execMessageType,
               sender,
               senderObjRef,
-              target,
               targetObjRef,
               arg,
               argObjRef);
@@ -648,11 +643,6 @@ public class MessageBuilderTest {
           context.getWithinType().getName(),
           extractedFieldOpMessageInfo.context.getSourceLocationType());
 
-      // for non-static field ops, assert that the target object and objectref are in the message
-      if (extractedFieldOpMessageInfo.targetObject != null) {
-        assertEquals(
-            targetClass.getName(), extractedFieldOpMessageInfo.targetObject.getClazz().getName());
-      }
       if (extractedFieldOpMessageInfo.targetObjectRef != null) {
         assertEquals(targetObjRef, extractedFieldOpMessageInfo.targetObjectRef);
       }
@@ -1331,7 +1321,6 @@ public class MessageBuilderTest {
               execMessageType,
               sender,
               senderObjRef,
-              target,
               targetObjRef,
               arg,
               argObjRef);

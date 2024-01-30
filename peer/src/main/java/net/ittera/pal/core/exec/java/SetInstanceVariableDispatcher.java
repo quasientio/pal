@@ -66,28 +66,19 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
       ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
       throws NullPointerException {
     Object target;
-    Obj fieldPutObject = execMessage.getInstanceFieldPut().getObject();
-    if (fieldPutObject != null) {
-      Class fieldType = ((Field) accessibleObject.get()).getType();
-      target = Unwrapper.unwrapObject(fieldPutObject, fieldType);
-      if (logger.isTraceEnabled()) {
-        logger.trace("Unwrapped target: {}", target);
-      }
+    ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceFieldPut().getObjectRef());
+    if (objectLookupStore.containsObjectRef(targetObjRef)) {
+      target = objectLookupStore.lookupObject(targetObjRef);
     } else {
-      ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceFieldPut().getObjectRef());
-      if (objectLookupStore.containsObjectRef(targetObjRef)) {
-        target = objectLookupStore.lookupObject(targetObjRef);
-      } else {
-        Exception onfe =
-            new ObjectNotFoundException(
-                String.format("No object found with objRef: %d", targetObjRef.getRef()));
-        NullPointerException npe = new NullPointerException(onfe.getMessage());
-        npe.initCause(onfe);
-        throw npe;
-      }
-      if (logger.isTraceEnabled()) {
-        logger.trace("Loaded target: {}", target);
-      }
+      Exception onfe =
+          new ObjectNotFoundException(
+              String.format("No object found with objRef: %d", targetObjRef.getRef()));
+      NullPointerException npe = new NullPointerException(onfe.getMessage());
+      npe.initCause(onfe);
+      throw npe;
+    }
+    if (logger.isTraceEnabled()) {
+      logger.trace("Loaded target: {}", target);
     }
     return target;
   }

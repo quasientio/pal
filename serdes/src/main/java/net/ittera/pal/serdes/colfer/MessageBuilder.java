@@ -609,7 +609,6 @@ public final class MessageBuilder {
       ExecMessageType execMessageType,
       Object sender,
       ObjectRef senderObjRef,
-      Object target,
       ObjectRef targetObjRef,
       Object arg,
       ObjectRef argObjRef) {
@@ -617,7 +616,6 @@ public final class MessageBuilder {
     final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
 
     net.ittera.pal.messages.colfer.Class clazz = getWrappedClass(fieldSignature.getDeclaringType());
-    Obj targetObj = getWrappedObject(target, fieldSignature.getDeclaringType(), targetObjRef);
     net.ittera.pal.messages.colfer.Field field =
         getWrappedField(fieldSignature.getFieldType(), fieldSignature.getName());
     int modifiers = fieldSignature.getModifiers();
@@ -631,7 +629,6 @@ public final class MessageBuilder {
         execMessage.setInstanceFieldGet(
             new InstanceFieldGet()
                 .withClazz(clazz)
-                .withObject(targetObj)
                 .withObjectRef(String.valueOf(targetObjRef.getRef()))
                 .withField(field)
                 .withModifiers(modifiers)
@@ -641,7 +638,6 @@ public final class MessageBuilder {
         execMessage.setInstanceFieldPut(
             new InstanceFieldPut()
                 .withClazz(clazz)
-                .withObject(targetObj)
                 .withObjectRef(String.valueOf(targetObjRef.getRef()))
                 .withField(field)
                 .withValueObject(

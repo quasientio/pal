@@ -34,8 +34,6 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
 
   public Class clazz;
 
-  public Obj object;
-
   public String objectRef;
 
   public Field field;
@@ -160,7 +158,6 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
             + (long) this.valueObjectRef.length() * 3
             + 5;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
-    if (this.object != null) n += 1 + (long) this.object.marshalFit();
     if (this.field != null) n += 1 + (long) this.field.marshalFit();
     if (this.valueObject != null) n += 1 + (long) this.valueObject.marshalFit();
     if (this.context != null) n += 1 + (long) this.context.marshalFit();
@@ -211,13 +208,8 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
         i = this.clazz.marshal(buf, i);
       }
 
-      if (this.object != null) {
-        buf[i++] = (byte) 1;
-        i = this.object.marshal(buf, i);
-      }
-
       if (!this.objectRef.isEmpty()) {
-        buf[i++] = (byte) 2;
+        buf[i++] = (byte) 1;
         int start = ++i;
 
         String s = this.objectRef;
@@ -265,17 +257,17 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
       }
 
       if (this.field != null) {
-        buf[i++] = (byte) 3;
+        buf[i++] = (byte) 2;
         i = this.field.marshal(buf, i);
       }
 
       if (this.valueObject != null) {
-        buf[i++] = (byte) 4;
+        buf[i++] = (byte) 3;
         i = this.valueObject.marshal(buf, i);
       }
 
       if (!this.valueObjectRef.isEmpty()) {
-        buf[i++] = (byte) 5;
+        buf[i++] = (byte) 4;
         int start = ++i;
 
         String s = this.valueObjectRef;
@@ -325,12 +317,12 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
       if (this.modifiers != 0) {
         int x = this.modifiers;
         if ((x & ~((1 << 21) - 1)) != 0) {
-          buf[i++] = (byte) (6 | 0x80);
+          buf[i++] = (byte) (5 | 0x80);
           buf[i++] = (byte) (x >>> 24);
           buf[i++] = (byte) (x >>> 16);
           buf[i++] = (byte) (x >>> 8);
         } else {
-          buf[i++] = (byte) 6;
+          buf[i++] = (byte) 5;
           while (x > 0x7f) {
             buf[i++] = (byte) (x | 0x80);
             x >>>= 7;
@@ -340,7 +332,7 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
       }
 
       if (this.context != null) {
-        buf[i++] = (byte) 7;
+        buf[i++] = (byte) 6;
         i = this.context.marshal(buf, i);
       }
 
@@ -396,12 +388,6 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
       }
 
       if (header == (byte) 1) {
-        this.object = new Obj();
-        i = this.object.unmarshal(buf, i, end);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 2) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -420,19 +406,19 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
         header = buf[i++];
       }
 
-      if (header == (byte) 3) {
+      if (header == (byte) 2) {
         this.field = new Field();
         i = this.field.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 4) {
+      if (header == (byte) 3) {
         this.valueObject = new Obj();
         i = this.valueObject.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 5) {
+      if (header == (byte) 4) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -451,7 +437,7 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
         header = buf[i++];
       }
 
-      if (header == (byte) 6) {
+      if (header == (byte) 5) {
         int x = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -460,7 +446,7 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
         }
         this.modifiers = x;
         header = buf[i++];
-      } else if (header == (byte) (6 | 0x80)) {
+      } else if (header == (byte) (5 | 0x80)) {
         this.modifiers =
             (buf[i++] & 0xff) << 24
                 | (buf[i++] & 0xff) << 16
@@ -469,7 +455,7 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
         header = buf[i++];
       }
 
-      if (header == (byte) 7) {
+      if (header == (byte) 6) {
         this.context = new Context();
         i = this.context.unmarshal(buf, i, end);
         header = buf[i++];
@@ -492,7 +478,7 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 8L;
+  private static final long serialVersionUID = 7L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -543,35 +529,6 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
    */
   public InstanceFieldPut withClazz(Class value) {
     this.clazz = value;
-    return this;
-  }
-
-  /**
-   * Gets net.ittera.pal.messages/colfer.InstanceFieldPut.object.
-   *
-   * @return the value.
-   */
-  public Obj getObject() {
-    return this.object;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.InstanceFieldPut.object.
-   *
-   * @param value the replacement.
-   */
-  public void setObject(Obj value) {
-    this.object = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.InstanceFieldPut.object.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public InstanceFieldPut withObject(Obj value) {
-    this.object = value;
     return this;
   }
 
@@ -753,7 +710,6 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
   public final int hashCode() {
     int h = 1;
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
-    if (this.object != null) h = 31 * h + this.object.hashCode();
     if (this.objectRef != null) h = 31 * h + this.objectRef.hashCode();
     if (this.field != null) h = 31 * h + this.field.hashCode();
     if (this.valueObject != null) h = 31 * h + this.valueObject.hashCode();
@@ -773,7 +729,6 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
     if (o == this) return true;
 
     return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
-        && (this.object == null ? o.object == null : this.object.equals(o.object))
         && (this.objectRef == null ? o.objectRef == null : this.objectRef.equals(o.objectRef))
         && (this.field == null ? o.field == null : this.field.equals(o.field))
         && (this.valueObject == null
@@ -792,11 +747,6 @@ public class InstanceFieldPut implements Serializable, net.ittera.pal.messages.M
       if (json.has("clazz")) {
         JsonObject jsonObj = json.getAsJsonObject("clazz");
         this.clazz = new Class().fromJson(jsonObj);
-      }
-
-      if (json.has("object")) {
-        JsonObject jsonObj = json.getAsJsonObject("object");
-        this.object = new Obj().fromJson(jsonObj);
       }
 
       if (json.has("objectRef")) {

@@ -456,9 +456,6 @@ class JSONSerializers {
       if (notEmpty(message.clazz)) {
         jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
       }
-      if (notEmpty(message.object)) {
-        jsonElement.add("object", jsonSerializationContext.serialize(message.object));
-      }
       if (notEmpty(message.objectRef)) {
         jsonElement.addProperty("objectref", message.objectRef);
       }
@@ -484,9 +481,6 @@ class JSONSerializers {
       final JsonObject jsonElement = new JsonObject();
       if (notEmpty(message.clazz)) {
         jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
-      }
-      if (notEmpty(message.object)) {
-        jsonElement.add("object", jsonSerializationContext.serialize(message.object));
       }
       if (notEmpty(message.objectRef)) {
         jsonElement.addProperty("objectref", message.objectRef);

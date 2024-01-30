@@ -47,7 +47,6 @@ type StaticFieldPutDone struct {
 
 type InstanceFieldGet struct {
 	clazz     Class
-	object    Obj
 	objectRef text
 	field     Field
 	modifiers uint32
@@ -56,7 +55,6 @@ type InstanceFieldGet struct {
 
 type InstanceFieldPut struct {
 	clazz          Class
-	object         Obj
 	objectRef      text
 	field          Field
 	valueObject    Obj

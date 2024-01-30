@@ -20,7 +20,6 @@
 package net.ittera.pal.core.exec.java;
 
 import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,10 +30,8 @@ import net.ittera.pal.common.objects.ObjectNotFoundException;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
-import net.ittera.pal.serdes.colfer.Unwrapper;
 
 @Singleton
 public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
@@ -66,28 +63,19 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
       ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
       throws NullPointerException {
     Object target;
-    Obj fieldGetObject = execMessage.getInstanceFieldGet().getObject();
-    if (fieldGetObject != null) {
-      Class fieldType = ((Field) accessibleObject.get()).getType();
-      target = Unwrapper.unwrapObject(fieldGetObject, fieldType);
-      if (logger.isTraceEnabled()) {
-        logger.trace("Unwrapped target: {}", target);
-      }
+    ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceFieldGet().getObjectRef());
+    if (objectLookupStore.containsObjectRef(targetObjRef)) {
+      target = objectLookupStore.lookupObject(targetObjRef);
     } else {
-      ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceFieldGet().getObjectRef());
-      if (objectLookupStore.containsObjectRef(targetObjRef)) {
-        target = objectLookupStore.lookupObject(targetObjRef);
-      } else {
-        Exception onfe =
-            new ObjectNotFoundException(
-                String.format("No object found with objRef: %d", targetObjRef.getRef()));
-        NullPointerException npe = new NullPointerException(onfe.getMessage());
-        npe.initCause(onfe);
-        throw npe;
-      }
-      if (logger.isTraceEnabled()) {
-        logger.trace("Loaded target: {}", target);
-      }
+      Exception onfe =
+          new ObjectNotFoundException(
+              String.format("No object found with objRef: %d", targetObjRef.getRef()));
+      NullPointerException npe = new NullPointerException(onfe.getMessage());
+      npe.initCause(onfe);
+      throw npe;
+    }
+    if (logger.isTraceEnabled()) {
+      logger.trace("Loaded target: {}", target);
     }
     return target;
   }

@@ -41,7 +41,6 @@ public class ColferUtilsTest {
     Marshallable message =
         new InstanceFieldGet()
             .withClazz(clazz)
-            .withObject(targetObj)
             .withField(field)
             .withModifiers(modifiers)
             .withContext(ctxt);
