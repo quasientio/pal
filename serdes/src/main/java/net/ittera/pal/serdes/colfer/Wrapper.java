@@ -193,12 +193,12 @@ public final class Wrapper {
           "in getWrappedObject with object: {}, class: {}, objectRef: {}", object, t, objectRef);
     }
     final Obj obj = new Obj();
-    if (objectRef == null && !isWrappable(object)) {
-      throw new NonWrappableObjectException(object);
-    }
     if (object instanceof Obj) {
       throw new NonWrappableObjectException(
           "Unexpected instance of Obj. Cannot wrap an already wrapped object", object);
+    }
+    if (objectRef == null && !isWrappable(object)) {
+      throw new NonWrappableObjectException(object);
     }
     return getWrappedObjectAux(obj, object, t, objectRef);
   }

@@ -19,7 +19,7 @@
 
 package net.ittera.pal.serdes;
 
-public class NonWrappableObjectException extends RuntimeException {
+public class NonWrappableObjectException extends IllegalArgumentException {
 
   private final transient Object nonWrappableObject;
 
