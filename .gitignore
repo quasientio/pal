@@ -7,4 +7,5 @@ venv/
 /*classes_info.txt
 /*/*classes_info.txt
 *.iml
+.attach_pid*
 Dockerfile
