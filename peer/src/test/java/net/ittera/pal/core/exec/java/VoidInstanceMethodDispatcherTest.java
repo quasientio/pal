@@ -36,8 +36,8 @@ import net.ittera.pal.common.lang.reflect.MethodSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
-import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.messages.colfer.ExecMessage;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -84,14 +84,30 @@ class ClassForVoidInstanceMethodTest {
 
 @RunWith(MockitoJUnitRunner.class)
 public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTest {
-
-  private final Dispatcher dispatcher =
-      new InstanceMethodDispatcher(
-          peerUuid, messageBuilder, dispatcherConnector, reflectionHelper, objectLookupStore);
-
   private final Class<?> targetClass = ClassForVoidInstanceMethodTest.class;
 
   private final String sourceFilename = "NotARealClass.java";
+
+  @Before
+  public void setUp() {
+    super.setUp();
+    dispatcher =
+        new InstanceMethodDispatcher(
+            peerUuid,
+            messageBuilder,
+            dispatcherConnector,
+            Boolean.TRUE.toString(),
+            reflectionHelper,
+            objectLookupStore);
+    onlyPublicDispatcher =
+        new InstanceMethodDispatcher(
+            peerUuid,
+            messageBuilder,
+            dispatcherConnector,
+            Boolean.FALSE.toString(),
+            onlyPublicReflectionHelper,
+            objectLookupStore);
+  }
 
   @Test
   @Override
@@ -527,4 +543,19 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
         replyMsg.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
   }
+
+  @Override
+  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {}
+
+  @Override
+  public void dispatchIncoming_packagePrivateAccessibleObject_reflectiveOperationException()
+      throws Throwable {}
+
+  @Override
+  public void dispatchIncoming_protectedAccessibleObject_reflectiveOperationException()
+      throws Throwable {}
+
+  @Override
+  public void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
+      throws Throwable {}
 }

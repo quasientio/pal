@@ -32,11 +32,16 @@ import java.util.Arrays;
 import java.util.UUID;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectLookupStore;
+import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.core.exec.java.reflect.ReflectionHelper;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import org.junit.After;
 import org.junit.Before;
 import org.mockito.AdditionalAnswers;
+import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractDispatcherTest {
 
@@ -49,14 +54,14 @@ public abstract class AbstractDispatcherTest {
   protected ReflectionHelper reflectionHelper =
       new ReflectionHelper(true); // allow access to private, protected and package private methods
 
-  protected DispatcherConnector dispatcherConnector;
+  protected ReflectionHelper onlyPublicReflectionHelper = new ReflectionHelper();
 
-  protected AbstractDispatcherTest() {
-    // set up mock dispatcher so it returns always the sent message (for ExecMessages)
-    dispatcherConnector = mock(DispatcherConnector.class);
-    when(dispatcherConnector.sendExecMessage(any(), any()))
-        .then(AdditionalAnswers.returnsFirstArg());
-  }
+  protected DispatcherConnector dispatcherConnector;
+  protected Dispatcher dispatcher;
+  protected Dispatcher onlyPublicDispatcher;
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+  protected AbstractDispatcherTest() {}
 
   private void verifyDispatcherConnectorSendExecMessageCalledTimes(int n) {
     verify(dispatcherConnector, times(n)).sendExecMessage(any(), any());
@@ -78,8 +83,31 @@ public abstract class AbstractDispatcherTest {
   }
 
   @Before
-  public void clearStuff() {
+  public void setUp() {
+    assertThat(objectLookupStore.size(), is(0L));
+    dispatcherConnector = mock(DispatcherConnector.class);
+    when(dispatcherConnector.sendExecMessage(any(), any()))
+        .then(AdditionalAnswers.returnsFirstArg());
+    when(dispatcherConnector.sendMessageToSessionService(any())).thenReturn(null);
+  }
+
+  @After
+  public void resetStuff() {
     objectLookupStore.clear();
     assertThat(objectLookupStore.size(), is(0L));
+    Mockito.reset(dispatcherConnector);
   }
+
+  // Stubs for accessibility tests
+  public abstract void dispatchIncoming_publicAccessibleObject_noException() throws Throwable;
+
+  public abstract void
+      dispatchIncoming_packagePrivateAccessibleObject_reflectiveOperationException()
+          throws Throwable;
+
+  public abstract void dispatchIncoming_protectedAccessibleObject_reflectiveOperationException()
+      throws Throwable;
+
+  public abstract void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
+      throws Throwable;
 }

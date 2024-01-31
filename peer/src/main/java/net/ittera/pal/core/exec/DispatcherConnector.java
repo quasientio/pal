@@ -336,7 +336,7 @@ public class DispatcherConnector {
     sendCallbackMessageToPeer(interceptor, message, false);
   }
 
-  public final SessionReplyMsg sendMessageToSessionService(SessionCmdMsg sessionCmdMsg) {
+  public SessionReplyMsg sendMessageToSessionService(SessionCmdMsg sessionCmdMsg) {
     SessionReplyMsg replyMsg = null;
     final Socket sessionServiceSocket = threadSessionsSocket.get();
     final boolean msgSent = sessionCmdMsg.send(sessionServiceSocket);

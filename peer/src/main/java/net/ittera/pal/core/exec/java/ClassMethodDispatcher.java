@@ -28,6 +28,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
@@ -49,11 +50,13 @@ public class ClassMethodDispatcher extends MethodDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
+      @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ReflectionHelper reflectionHelper,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
+    setAllowNonPublicAccess(allowNonPublicAccess);
     setReflectionHelper(reflectionHelper);
     setObjectLookupStore(objectLookupStore);
   }
@@ -138,7 +141,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
       ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)
       throws ReflectiveOperationException, AmbiguousCallException {
 
-    Class clazz =
+    Class<?> clazz =
         Class.forName(
             execMessage.getClassMethodCall().getClazz().getName(),
             true,
@@ -147,17 +150,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
         Stream.of(execMessage.getClassMethodCall().getParameters())
             .map(p -> p.getType().getName())
             .collect(Collectors.toList());
-    AccessibleObject accessibleObject =
-        reflectionHelper.lookupMethod(
-            clazz, args.toArray(), parameterTypeNames, execMessage.getClassMethodCall().getName());
-    if (accessibleObject == null) {
-      throw new NoSuchMethodException(
-          String.format(
-              "Can't find method:%s in class:%s with parameter types: (%s)",
-              execMessage.getClassMethodCall().getName(),
-              clazz.getName(),
-              String.join(",", parameterTypeNames)));
-    }
-    return accessibleObject;
+    return reflectionHelper.lookupMethod(
+        clazz, args.toArray(), parameterTypeNames, execMessage.getClassMethodCall().getName());
   }
 }

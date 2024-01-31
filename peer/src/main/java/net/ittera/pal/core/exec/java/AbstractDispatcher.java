@@ -21,6 +21,7 @@ package net.ittera.pal.core.exec.java;
 
 import java.util.UUID;
 import javax.inject.Inject;
+import javax.inject.Named;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.core.exec.java.reflect.ReflectionHelper;
@@ -36,6 +37,7 @@ abstract class AbstractDispatcher {
   protected ObjectLookupStore objectLookupStore;
   protected ReflectionHelper reflectionHelper;
   protected DispatcherConnector connector;
+  protected boolean allowNonPublicAccess;
 
   @Inject
   final void setPeerUuid(UUID peerUuid) {
@@ -60,5 +62,10 @@ abstract class AbstractDispatcher {
   @Inject
   final void setReflectionHelper(ReflectionHelper reflectionHelper) {
     this.reflectionHelper = reflectionHelper;
+  }
+
+  @Inject
+  final void setAllowNonPublicAccess(@Named("rpc.allow_nonpublic") String allowNonPublicAccess) {
+    this.allowNonPublicAccess = Boolean.parseBoolean(allowNonPublicAccess);
   }
 }

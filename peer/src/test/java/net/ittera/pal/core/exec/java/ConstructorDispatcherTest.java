@@ -25,9 +25,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
@@ -35,12 +33,12 @@ import net.ittera.pal.common.lang.reflect.ConstructorSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
-import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromClass;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import org.hamcrest.Matchers;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -69,22 +67,45 @@ class ClassForConstructorTest {
   ClassForConstructorTest(String... args) {
     this.joinedVarArgs = Arrays.stream(args).collect(joining());
   }
+
+  /** for visibility tests */
+  public ClassForConstructorTest(int i) {}
+
+  protected ClassForConstructorTest(int i, int j) {}
+
+  private ClassForConstructorTest(int i, int j, int k) {}
 }
 
 /**
- * TODO: - with remoteArgs - with with objectRefs - use ExecMessageAssertions for dispatchIncoming*
- * tests
+ * TODO: - with remoteArgs - with objectRefs - use ExecMessageAssertions for dispatchIncoming* tests
  */
 @RunWith(MockitoJUnitRunner.class)
 public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
-  private final Dispatcher dispatcher =
-      new ConstructorDispatcher(
-          peerUuid, messageBuilder, dispatcherConnector, reflectionHelper, objectLookupStore);
-
   private final Class<?> targetClass = ClassForConstructorTest.class;
 
   private final String sourceFilename = "NotARealClass.java";
+
+  @Before
+  public void setUp() {
+    super.setUp();
+    dispatcher =
+        new ConstructorDispatcher(
+            peerUuid,
+            messageBuilder,
+            dispatcherConnector,
+            Boolean.TRUE.toString(),
+            reflectionHelper,
+            objectLookupStore);
+    onlyPublicDispatcher =
+        new ConstructorDispatcher(
+            peerUuid,
+            messageBuilder,
+            dispatcherConnector,
+            Boolean.FALSE.toString(),
+            onlyPublicReflectionHelper,
+            objectLookupStore);
+  }
 
   @Test
   @Override
@@ -465,9 +486,9 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   @Override
   @Test
   public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() throws Exception {
-    Class<?>[] parameterTypes = {Character.TYPE, Character.TYPE};
-    Object[] args = {'a', 'b'};
-    ObjectRef[] argRefs = {null, null};
+    Class<?>[] parameterTypes = {java.lang.String.class, Boolean.TYPE, java.lang.Integer.class};
+    Object[] args = {"woiwefoj", true, 459};
+    ObjectRef[] argRefs = {null, null, null};
 
     ExecMessage incomingMessage =
         messageBuilder.buildNonEmptyConstructor(
@@ -483,5 +504,92 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     assertThat(
         replyMsg.getRaisedThrowable().getThrowable().getType(),
         is("java.lang.NoSuchMethodException"));
+  }
+
+  @Override
+  @Test
+  public void dispatchIncoming_packagePrivateAccessibleObject_reflectiveOperationException()
+      throws Throwable {
+    ExecMessage incomingMessage =
+        messageBuilder.buildEmptyConstructor(peerUuid, targetClass.getName());
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  @Override
+  @Test
+  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {
+    Class<?>[] parameterTypes = {Integer.TYPE};
+    Object[] args = {459};
+    ObjectRef[] argRefs = {null};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildNonEmptyConstructor(
+            peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
+
+    // dispatch with the onlyPublicDispatcher - expect no exception
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  @Override
+  @Test
+  public void dispatchIncoming_protectedAccessibleObject_reflectiveOperationException()
+      throws Throwable {
+    Class<?>[] parameterTypes = {Integer.TYPE, Integer.TYPE};
+    Object[] args = {459, 459};
+    ObjectRef[] argRefs = {null, null};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildNonEmptyConstructor(
+            peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  @Override
+  public void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
+      throws Throwable {
+    Class<?>[] parameterTypes = {Integer.TYPE, Integer.TYPE, Integer.TYPE};
+    Object[] args = {459, 459, 459};
+    ObjectRef[] argRefs = {null, null, null};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildNonEmptyConstructor(
+            peerUuid, targetClass.getName(), toNames(parameterTypes), args, argRefs);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertNull(replyMsg.getRaisedThrowable());
   }
 }

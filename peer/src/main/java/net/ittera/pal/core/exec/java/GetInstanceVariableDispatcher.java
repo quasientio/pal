@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectNotFoundException;
@@ -41,10 +42,12 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
+      @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
+    setAllowNonPublicAccess(allowNonPublicAccess);
     setObjectLookupStore(objectLookupStore);
   }
 
@@ -85,11 +88,20 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
       ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)
       throws ReflectiveOperationException {
 
-    Class clazz =
+    Class<?> clazz =
         Class.forName(
             execMessage.getInstanceFieldGet().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
-    return clazz.getDeclaredField(execMessage.getInstanceFieldGet().getField().getName());
+
+    final String fieldName = execMessage.getInstanceFieldGet().getField().getName();
+    try {
+      return clazz.getField(fieldName);
+    } catch (NoSuchFieldException e) {
+      if (allowNonPublicAccess) {
+        return clazz.getDeclaredField(fieldName);
+      }
+      throw e;
+    }
   }
 }

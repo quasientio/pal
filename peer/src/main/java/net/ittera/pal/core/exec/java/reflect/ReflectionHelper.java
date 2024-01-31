@@ -46,10 +46,11 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class ReflectionHelper {
   private static final Logger logger = LoggerFactory.getLogger(ReflectionHelper.class);
+  private static final boolean ALLOW_NON_PUBLIC_DEFAULT = false;
   private final boolean allowNonPublic;
 
   public ReflectionHelper() {
-    this(true);
+    this(ALLOW_NON_PUBLIC_DEFAULT);
   }
 
   public ReflectionHelper(boolean allowNonPublic) {

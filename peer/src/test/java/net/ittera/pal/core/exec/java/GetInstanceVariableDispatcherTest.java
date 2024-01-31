@@ -19,23 +19,25 @@
 
 package net.ittera.pal.core.exec.java;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.List;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
-import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromClass;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.hamcrest.Matchers;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -46,22 +48,36 @@ class ClassForGetFieldTest {
   byte[] bytes;
   Integer someInteger;
   String aString = "I am a normal string";
-  java.util.List anObject = new java.util.ArrayList();
+  List<?> anObject = new ArrayList<>();
   Object[] objects = {1, "a", false};
   Throwable lastError = new Error("dummy error");
-  Class aNullClass;
+  Class<?> aNullClass;
 }
 
 @RunWith(MockitoJUnitRunner.class)
 public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
-
-  private Dispatcher dispatcher =
-      new GetInstanceVariableDispatcher(
-          peerUuid, messageBuilder, dispatcherConnector, objectLookupStore);
-
-  private Class targetClass = ClassForGetFieldTest.class;
+  private final Class<?> targetClass = ClassForGetFieldTest.class;
 
   private final String sourceFilename = "NotARealClass.java";
+
+  @Before
+  public void setUp() {
+    super.setUp();
+    dispatcher =
+        new GetInstanceVariableDispatcher(
+            peerUuid,
+            messageBuilder,
+            dispatcherConnector,
+            Boolean.TRUE.toString(),
+            objectLookupStore);
+    onlyPublicDispatcher =
+        new GetInstanceVariableDispatcher(
+            peerUuid,
+            messageBuilder,
+            dispatcherConnector,
+            Boolean.FALSE.toString(),
+            objectLookupStore);
+  }
 
   @Override
   @Test
@@ -467,4 +483,19 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         Matchers.allOf(
             ComesFromClass.comesFromClass(targetClass), ComesFromReflectable.comesFrom(fieldName)));
   }
+
+  @Override
+  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {}
+
+  @Override
+  public void dispatchIncoming_packagePrivateAccessibleObject_reflectiveOperationException()
+      throws Throwable {}
+
+  @Override
+  public void dispatchIncoming_protectedAccessibleObject_reflectiveOperationException()
+      throws Throwable {}
+
+  @Override
+  public void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
+      throws Throwable {}
 }

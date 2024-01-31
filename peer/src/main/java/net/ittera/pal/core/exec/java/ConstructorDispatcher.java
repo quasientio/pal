@@ -30,6 +30,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 import net.ittera.pal.common.lang.reflect.ConstructorSignature;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
@@ -51,11 +52,13 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
       UUID peerUuid,
       MessageBuilder messageBuilder,
       DispatcherConnector connector,
+      @Named("rpc.allow_nonpublic") String allowNonPublicAccess,
       ReflectionHelper reflectionHelper,
       ObjectLookupStore objectLookupStore) {
     setPeerUuid(peerUuid);
     setMessageBuilder(messageBuilder);
     setConnector(connector);
+    setAllowNonPublicAccess(allowNonPublicAccess);
     setReflectionHelper(reflectionHelper);
     setObjectLookupStore(objectLookupStore);
   }

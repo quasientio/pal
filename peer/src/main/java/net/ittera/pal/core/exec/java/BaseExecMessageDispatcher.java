@@ -44,9 +44,6 @@ import net.ittera.pal.serdes.colfer.Unwrapper;
 abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     implements Dispatcher, ExecMessageDispatcher {
 
-  // TODO load from config
-  private static final boolean ENFORCE_JAVALANG_ACCESS = false;
-
   @Override
   public final Object dispatch(Context ctxt, Object sender, Object target, Object[] args)
       throws Throwable {
@@ -129,7 +126,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     }
 
     /**
-     * TODO: Verify that message is invokable: - Class can be loaded/found - Method or field can be
+     * TODO: Verify that message is invokable:- Class can be loaded/found - Method or field can be
      * found in class - Params can be unwrapped or loaded (if refs). What if they are remote?
      */
 
@@ -169,7 +166,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       value = getValueFromMessage(incomingCall, accessibleObject);
 
       // 6. (Optionally) Set field/method accessible, allowing to break Java access rules
-      if (!ENFORCE_JAVALANG_ACCESS) {
+      if (allowNonPublicAccess) { // extra-check, since already checked in loadAccessibleObject
         accessibleObject.ifPresent(aobj -> aobj.setAccessible(true));
       }
     } catch (Exception ex) {

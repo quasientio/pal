@@ -22,6 +22,7 @@ package net.ittera.pal.core.exec.java;
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromClass.comesFromClass;
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable.comesFrom;
 import static net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -29,16 +30,17 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
-import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -54,7 +56,7 @@ class ClassForPutStaticTest {
   static byte[] bytes;
   static Boolean someBoolean;
   static String aString;
-  static java.util.List aList;
+  static List<?> aList;
   static Object[] objects;
   static Throwable lastError;
 
@@ -63,7 +65,7 @@ class ClassForPutStaticTest {
     bytes = null;
     someBoolean = false;
     aString = "I am a normal string";
-    aList = new java.util.ArrayList();
+    aList = new ArrayList<>();
     objects = null;
     lastError = new Exception("dummy exception");
   }
@@ -72,13 +74,28 @@ class ClassForPutStaticTest {
 @RunWith(MockitoJUnitRunner.class)
 public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
 
-  private Dispatcher dispatcher =
-      new SetClassVariableDispatcher(
-          peerUuid, messageBuilder, dispatcherConnector, objectLookupStore);
-
-  private Class targetClass = ClassForPutStaticTest.class;
+  private final Class<?> targetClass = ClassForPutStaticTest.class;
 
   private final String sourceFilename = "NotARealClass.java";
+
+  @Before
+  public void setUp() {
+    super.setUp();
+    dispatcher =
+        new SetClassVariableDispatcher(
+            peerUuid,
+            messageBuilder,
+            dispatcherConnector,
+            Boolean.TRUE.toString(),
+            objectLookupStore);
+    onlyPublicDispatcher =
+        new SetClassVariableDispatcher(
+            peerUuid,
+            messageBuilder,
+            dispatcherConnector,
+            Boolean.FALSE.toString(),
+            objectLookupStore);
+  }
 
   @After
   public void resetTestClassVariables() {
@@ -299,7 +316,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
-    LinkedList newFieldValue = new LinkedList();
+    LinkedList<?> newFieldValue = new LinkedList<>();
     Object[] args = {newFieldValue};
     Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
@@ -315,7 +332,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   public void dispatchIncoming_object_ok() {
 
     String fieldName = "aList";
-    LinkedList newFieldValue = new LinkedList();
+    LinkedList<?> newFieldValue = new LinkedList<>();
     ObjectRef valueObjRef = objectLookupStore.storeObject(newFieldValue);
 
     ExecMessage incomingMessage =
@@ -349,7 +366,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
-    java.util.List newFieldValue = null;
+    List<?> newFieldValue = null;
     Object[] args = {newFieldValue};
     assertThat(ClassForPutStaticTest.aList, notNullValue());
     Object returned = dispatcher.dispatch(ctxt, this, null, args);
@@ -365,7 +382,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   public void dispatchIncoming_nullObject_ok() {
 
     String fieldName = "aList";
-    LinkedList newFieldValue = null;
+    LinkedList<?> newFieldValue = null;
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutStatic(
@@ -485,4 +502,19 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
     assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
   }
+
+  @Override
+  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {}
+
+  @Override
+  public void dispatchIncoming_packagePrivateAccessibleObject_reflectiveOperationException()
+      throws Throwable {}
+
+  @Override
+  public void dispatchIncoming_protectedAccessibleObject_reflectiveOperationException()
+      throws Throwable {}
+
+  @Override
+  public void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
+      throws Throwable {}
 }
