@@ -49,6 +49,10 @@ public class ClassForTestingMethodLookup {
   public String methodWithOneParam(double param1) {
     return "methodWithOne_doubleParam";
   }
+
+  public String methodWithOneFloatAndDoubleParam(float param1, double param2) {
+    return "methodWithOneFloatAndDoubleParam";
+  }
   // </editor-fold>
 
   // <editor-fold desc="Wrapper type testing">
@@ -145,6 +149,13 @@ public class ClassForTestingMethodLookup {
   }
   // </editor-fold>
 
+  // <editor-fold desc="Cache testing">
+  public String methodForCacheTest(String param1, Float param2, String param3) {
+    return "methodForCacheTest";
+  }
+
+  // </editor-fold>
+
   // <editor-fold desc="Ambiguous testing">
   public String methodWithThreeParams(String param1, String param2, String param3) {
     return "methodWithTwoParams";
@@ -153,16 +164,7 @@ public class ClassForTestingMethodLookup {
   public String methodWithThreeParams(String param1, String param2, Object param3) {
     return "methodWithTwoParams";
   }
-  // </editor-fold>
 
-  // <editor-fold desc="Cache testing">
-  public String methodForCacheTest(String param1, Float param2, String param3) {
-    return "methodForCacheTest";
-  }
-
-  // </editor-fold>
-
-  // <editor-fold desc="Ambiguous call testing">
   public String methodWithObjectAndNumber(Object param1, Number param2) {
     return "methodWithObjectAndNumber";
   }

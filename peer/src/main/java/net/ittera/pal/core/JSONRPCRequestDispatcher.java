@@ -28,7 +28,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import net.ittera.pal.common.util.Strings;
-import net.ittera.pal.core.messages.InboundJSONRPCMsg;
+import net.ittera.pal.core.messages.InboundJsonRpcMsg;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -87,7 +87,7 @@ class JSONRPCRequestDispatcher extends ConnectedService {
     while (!shutdownRequested && !Thread.interrupted()) {
       try {
         // TODO
-        // get requests from DEALER socket and forward to WebSocket clients
+        // get responses from DEALER socket and forward to WebSocket clients
         byte[] buff = dealerSocket.recv(0);
         String clientId = null;
         String message = null;
@@ -129,7 +129,7 @@ class JSONRPCRequestDispatcher extends ConnectedService {
   }
 
   private void sendMessageToDispatchers(UUID clientId, String message) {
-    InboundJSONRPCMsg inboundJSONRPCMsg = new InboundJSONRPCMsg(clientId, message);
+    InboundJsonRpcMsg inboundJSONRPCMsg = new InboundJsonRpcMsg(clientId, message);
     boolean sent = inboundJSONRPCMsg.send(dealerSocket);
     if (!sent) {
       logger.error("Error sending message to dispatchers: {}", inboundJSONRPCMsg);

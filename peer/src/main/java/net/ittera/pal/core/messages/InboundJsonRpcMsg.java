@@ -26,7 +26,7 @@ import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.messages.BaseMsg;
 import org.zeromq.ZMQ;
 
-public class InboundJSONRPCMsg extends BaseMsg {
+public class InboundJsonRpcMsg extends BaseMsg {
   /**
    * This message is sent directly by DEALER, so it needs to emulate a REQ envelope (empty initial
    * frame) when serializing, and NOT expect it when deserializing.
@@ -45,13 +45,13 @@ public class InboundJSONRPCMsg extends BaseMsg {
 
   private final String jsonMessage;
 
-  public InboundJSONRPCMsg(UUID clientId, String message) {
+  public InboundJsonRpcMsg(UUID clientId, String message) {
     Stream.of(clientId, message).forEach(Objects::requireNonNull);
     this.clientId = clientId;
     this.jsonMessage = message;
   }
 
-  private InboundJSONRPCMsg(UUID clientId, String message, int size) {
+  private InboundJsonRpcMsg(UUID clientId, String message, int size) {
     this(clientId, message);
     this.size = size;
   }
@@ -81,7 +81,7 @@ public class InboundJSONRPCMsg extends BaseMsg {
    * blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
    * ready, then all are)
    */
-  public static InboundJSONRPCMsg recvMsg(ZMQ.Socket socket, boolean blocking) {
+  public static InboundJsonRpcMsg recvMsg(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
@@ -100,11 +100,11 @@ public class InboundJSONRPCMsg extends BaseMsg {
     msgSize += buff.length;
     final String message = new String(buff, ZMQ.CHARSET);
 
-    return new InboundJSONRPCMsg(clientId, message, msgSize);
+    return new InboundJsonRpcMsg(clientId, message, msgSize);
   }
 
   // default is non-blocking
-  public static InboundJSONRPCMsg recvMsg(ZMQ.Socket socket) {
+  public static InboundJsonRpcMsg recvMsg(ZMQ.Socket socket) {
     return recvMsg(socket, false);
   }
 
@@ -112,7 +112,7 @@ public class InboundJSONRPCMsg extends BaseMsg {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    InboundJSONRPCMsg that = (InboundJSONRPCMsg) o;
+    InboundJsonRpcMsg that = (InboundJsonRpcMsg) o;
     return Objects.equals(clientId, that.clientId) && Objects.equals(jsonMessage, that.jsonMessage);
   }
 
@@ -123,7 +123,7 @@ public class InboundJSONRPCMsg extends BaseMsg {
 
   @Override
   public String toString() {
-    return "InboundJSONRPCMsg{" + ", clientId=" + clientId + ", message=" + jsonMessage + '}';
+    return "InboundJsonRpcMsg{" + ", clientId=" + clientId + ", message=" + jsonMessage + '}';
   }
 
   public UUID getClientId() {

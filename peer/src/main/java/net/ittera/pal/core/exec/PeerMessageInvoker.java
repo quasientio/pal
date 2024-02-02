@@ -22,7 +22,7 @@ package net.ittera.pal.core.exec;
 import java.util.Arrays;
 import java.util.UUID;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
-import net.ittera.pal.core.messages.InboundJSONRPCMsg;
+import net.ittera.pal.core.messages.InboundJsonRpcMsg;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -101,7 +101,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
     boolean socketError = false;
     while (!interrupted() && !socketError) {
       rpcReq = null;
-      InboundJSONRPCMsg jsonrpcMsg = null;
+      InboundJsonRpcMsg jsonrpcMsg = null;
 
       if (logger.isDebugEnabled()) {
         logger.debug("Ready and polling from sockets...");
@@ -117,7 +117,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
 
         // got a JSON-RPC request
         if (poller.pollin(1)) {
-          jsonrpcMsg = InboundJSONRPCMsg.recvMsg(jsonrpcSocket, true);
+          jsonrpcMsg = InboundJsonRpcMsg.recvMsg(jsonrpcSocket, true);
         }
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();

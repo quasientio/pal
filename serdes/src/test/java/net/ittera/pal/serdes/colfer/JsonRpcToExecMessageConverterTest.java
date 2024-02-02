@@ -3,12 +3,13 @@ package net.ittera.pal.serdes.colfer;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import net.ittera.pal.messages.jsonrpc.InvalidJsonRpcRequestException;
 import org.junit.Test;
 
 public class JsonRpcToExecMessageConverterTest {
 
   @Test
-  public void parseJsonRpcMessage_illegalCharactersInClassName_illegalArgumentException() {
+  public void parseJsonRpcMessage_illegalCharactersInClassName_invalidJsonRpcRequestException() {
     JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
     Arrays.asList(
             "net.ittera.pal.core.exec.3DModel.1234.getPeerUuid", // starts with a digit
@@ -26,8 +27,8 @@ public class JsonRpcToExecMessageConverterTest {
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[],\"id\":1}", method);
               try {
                 converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
-                fail("Expected IllegalArgumentException");
-              } catch (IllegalArgumentException e) {
+                fail("Expected InvalidJsonRpcRequestException");
+              } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Invalid characters in class name"));
               }
             });
@@ -35,7 +36,7 @@ public class JsonRpcToExecMessageConverterTest {
 
   @Test
   public void
-      parseJsonRpcMessage_illegalUseOfReservedKeywordInClassName_illegalArgumentException() {
+      parseJsonRpcMessage_illegalUseOfReservedKeywordInClassName_invalidJsonRpcRequestException() {
     JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
     Arrays.asList(
             "class",
@@ -99,8 +100,8 @@ public class JsonRpcToExecMessageConverterTest {
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[],\"id\":1}", method);
               try {
                 converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
-                fail("Expected IllegalArgumentException");
-              } catch (IllegalArgumentException e) {
+                fail("Expected InvalidJsonRpcRequestException");
+              } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Class name is a Java reserved keyword"));
               }
             });
@@ -121,13 +122,18 @@ public class JsonRpcToExecMessageConverterTest {
             method -> {
               String jsonRpcMessage =
                   String.format(
-                      "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[],\"id\":1}", method);
-              converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                      "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[{\"value\": %s},{\"value\": %d}],\"id\":1}",
+                      method, "myParam1", 12345);
+              try {
+                converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+              } catch (InvalidJsonRpcRequestException e) {
+                throw new RuntimeException(e);
+              }
             });
   }
 
   @Test
-  public void parseJsonRpcMessage_noParametersGivenForPut_illegalArgumentException() {
+  public void parseJsonRpcMessage_noParametersGivenForPut_invalidJsonRpcRequestException() {
     JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
     Arrays.asList(
             "put:net.ittera.pal.core.exec.PeerMessageInvoker.peerUuid", // static put
@@ -141,15 +147,49 @@ public class JsonRpcToExecMessageConverterTest {
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[],\"id\":1}", method);
               try {
                 converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
-                fail("Expected IllegalArgumentException");
-              } catch (IllegalArgumentException e) {
+                fail("Expected InvalidJsonRpcRequestException");
+              } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Field put must have exactly one parameter"));
               }
             });
   }
 
   @Test
-  public void parseJsonRpcMessage_parametersGivenForGet_illegalArgumentException() {
+  public void justatest() throws InvalidJsonRpcRequestException {
+    JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
+    String method = "put:net.ittera.pal.core.exec.PeerMessageInvoker.peerUuid";
+    String jsonRpcMessage =
+        String.format(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[{\"value\": 50}],\"id\":1}",
+            method);
+    converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+  }
+
+  @Test
+  public void parseJsonRpcMessage_twoParametersGivenForPut_invalidJsonRpcRequestException() {
+    JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
+    Arrays.asList(
+            "put:net.ittera.pal.core.exec.PeerMessageInvoker.peerUuid", // static put
+            "put:net.ittera.pal.core.exec.PeerMessageInvoker.479345.peerUuid" // instance put
+            )
+        .stream()
+        .forEach(
+            method -> {
+              String jsonRpcMessage =
+                  String.format(
+                      "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[{\"value\": %s},{\"value\": %d}],\"id\":1}",
+                      method, "myParam1", 12345);
+              try {
+                converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                fail("Expected InvalidJsonRpcRequestException");
+              } catch (InvalidJsonRpcRequestException e) {
+                assertTrue(e.getMessage().contains("Field put must have exactly one parameter"));
+              }
+            });
+  }
+
+  @Test
+  public void parseJsonRpcMessage_parametersGivenForGet_invalidJsonRpcRequestException() {
     JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
     Arrays.asList(
             "get:net.ittera.pal.core.exec.PeerMessageInvoker.peerUuid", // static get
@@ -164,8 +204,8 @@ public class JsonRpcToExecMessageConverterTest {
                       method, 123);
               try {
                 converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
-                fail("Expected IllegalArgumentException");
-              } catch (IllegalArgumentException e) {
+                fail("Expected InvalidJsonRpcRequestException");
+              } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Field get cannot have any parameter"));
               }
             });

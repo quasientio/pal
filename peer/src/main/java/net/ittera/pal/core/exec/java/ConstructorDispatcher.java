@@ -27,8 +27,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -189,11 +187,6 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
             execMessage.getConstructorCall().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
-
-    List<String> parameterTypeNames =
-        Stream.of(execMessage.getConstructorCall().getParameters())
-            .map(p -> p.getType().getName())
-            .collect(Collectors.toList());
-    return reflectionHelper.lookupConstructor(clazz, args.toArray(), parameterTypeNames);
+    return reflectionHelper.lookupConstructor(clazz, args.toArray(), parameterTypes);
   }
 }

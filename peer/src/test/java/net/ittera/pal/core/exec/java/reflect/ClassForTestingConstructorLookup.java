@@ -55,6 +55,9 @@ public class ClassForTestingConstructorLookup {
     this.param = "doubleParam";
   }
 
+  public ClassForTestingConstructorLookup(boolean param0, float param1, double param2) {
+    this.param = "boolFloatAndDoubleParams";
+  }
   // </editor-fold>
 
   // <editor-fold desc="Wrapper type testing">

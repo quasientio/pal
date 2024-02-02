@@ -1,7 +1,8 @@
 package net.ittera.pal.core.exec.java.reflect;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -12,6 +13,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import net.ittera.pal.core.exec.java.AmbiguousCallException;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -22,15 +24,14 @@ import org.junit.Test;
  * <pre>
  * For primitives & wrapper classes:
  * - one test with the primitive type
- * - one test with the wrapper type in canonical form (ie. "java.lang.Integer")
- * - one test with the wrapper type specified in short form (ie. "Integer" instead of "java.lang.Integer")
+ * - one test with the wrapper type
  * TODO: ARRAYS
  * TODO: VARARGS
  * </pre>
  *
  * <p>TODO Test ambiguous calls -> also in corresponding Dispatcher class
  */
-public class ReflectionHelperLookupConstructorTest {
+public class ReflectionHelperLookupConstructorWithTypesTest {
 
   private final ReflectionHelper reflectionHelper = new ReflectionHelper();
   private final Class<?> clazz = ClassForTestingConstructorLookup.class;
@@ -58,21 +59,10 @@ public class ReflectionHelperLookupConstructorTest {
 
   // <editor-fold desc="String">
   @Test
-  public void constructorWithOneParam_stringFQN() throws Exception {
+  public void constructorWithOneParam_string() throws Exception {
     Object[] args = new Object[] {"str1"};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Collections.singletonList("java.lang.String"));
-
-    assertNotNull(constructor);
-    assertEquals("stringParam", invoke(constructor, args));
-  }
-
-  @Test
-  public void constructorWithOneParam_stringShortName() throws Exception {
-    Object[] args = new Object[] {"str1"};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("String"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(String.class));
 
     assertNotNull(constructor);
     assertEquals("stringParam", invoke(constructor, args));
@@ -84,7 +74,7 @@ public class ReflectionHelperLookupConstructorTest {
   public void constructorWithOneParam_char() throws Exception {
     Object[] args = new Object[] {'a'};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("char"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Character.TYPE));
 
     assertNotNull(constructor);
     assertEquals("charParam", invoke(constructor, args));
@@ -94,7 +84,7 @@ public class ReflectionHelperLookupConstructorTest {
   public void constructorWithOneParam_boolean() throws Exception {
     Object[] args = new Object[] {true};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("boolean"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Boolean.TYPE));
 
     assertNotNull(constructor);
     assertEquals("booleanParam", invoke(constructor, args));
@@ -104,7 +94,7 @@ public class ReflectionHelperLookupConstructorTest {
   public void constructorWithOneParam_byte() throws Exception {
     Object[] args = new Object[] {(byte) 1};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("byte"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Byte.TYPE));
 
     assertNotNull(constructor);
     assertEquals("byteParam", invoke(constructor, args));
@@ -114,7 +104,7 @@ public class ReflectionHelperLookupConstructorTest {
   public void constructorWithOneParam_short() throws Exception {
     Object[] args = new Object[] {(short) 1};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("short"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Short.TYPE));
 
     assertNotNull(constructor);
     assertEquals("shortParam", invoke(constructor, args));
@@ -124,7 +114,7 @@ public class ReflectionHelperLookupConstructorTest {
   public void constructorWithOneParam_int() throws Exception {
     Object[] args = new Object[] {1};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("int"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Integer.TYPE));
 
     assertNotNull(constructor);
     assertEquals("intParam", invoke(constructor, args));
@@ -134,7 +124,7 @@ public class ReflectionHelperLookupConstructorTest {
   public void constructorWithOneParam_long() throws Exception {
     Object[] args = new Object[] {1L};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("long"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Long.TYPE));
 
     assertNotNull(constructor);
     assertEquals("longParam", invoke(constructor, args));
@@ -144,7 +134,7 @@ public class ReflectionHelperLookupConstructorTest {
   public void constructorWithOneParam_float() throws Exception {
     Object[] args = new Object[] {1.0f};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("float"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Float.TYPE));
 
     assertNotNull(constructor);
     assertEquals("floatParam", invoke(constructor, args));
@@ -154,7 +144,7 @@ public class ReflectionHelperLookupConstructorTest {
   public void constructorWithOneParam_double() throws Exception {
     Object[] args = new Object[] {1.0d};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("double"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Double.TYPE));
 
     assertNotNull(constructor);
     assertEquals("doubleParam", invoke(constructor, args));
@@ -165,168 +155,80 @@ public class ReflectionHelperLookupConstructorTest {
   // <editor-fold desc="Wrappers">
 
   @Test
-  public void constructorWithOneParam_Character_canonicalName() throws Exception {
+  public void constructorWithOneParam_Character() throws Exception {
     Object[] args = new Object[] {'a'};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Collections.singletonList("java.lang.Character"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Character.class));
 
     assertNotNull(constructor);
     assertEquals("CharacterParam", invoke(constructor, args));
   }
 
   @Test
-  public void constructorWithOneParam_Character_shortName() throws Exception {
-    Object[] args = new Object[] {'a'};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("Character"));
-
-    assertNotNull(constructor);
-    assertEquals("CharacterParam", invoke(constructor, args));
-  }
-
-  @Test
-  public void constructorWithOneParam_Boolean_canonicalName() throws Exception {
+  public void constructorWithOneParam_Boolean() throws Exception {
     Object[] args = new Object[] {true};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Collections.singletonList("java.lang.Boolean"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Boolean.class));
 
     assertNotNull(constructor);
     assertEquals("BooleanParam", invoke(constructor, args));
   }
 
   @Test
-  public void constructorWithOneParam_Boolean_shortName() throws Exception {
-    Object[] args = new Object[] {true};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("Boolean"));
-
-    assertNotNull(constructor);
-    assertEquals("BooleanParam", invoke(constructor, args));
-  }
-
-  @Test
-  public void constructorWithOneParam_Byte_canonicalName() throws Exception {
+  public void constructorWithOneParam_Byte() throws Exception {
     Object[] args = new Object[] {(byte) 1};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Collections.singletonList("java.lang.Byte"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Byte.class));
 
     assertNotNull(constructor);
     assertEquals("ByteParam", invoke(constructor, args));
   }
 
   @Test
-  public void constructorWithOneParam_Byte_shortName() throws Exception {
-    Object[] args = new Object[] {(byte) 1};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("Byte"));
-
-    assertNotNull(constructor);
-    assertEquals("ByteParam", invoke(constructor, args));
-  }
-
-  @Test
-  public void constructorWithOneParam_Short_canonicalName() throws Exception {
+  public void constructorWithOneParam_Short() throws Exception {
     Object[] args = new Object[] {(short) 1};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Collections.singletonList("java.lang.Short"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Short.class));
 
     assertNotNull(constructor);
     assertEquals("ShortParam", invoke(constructor, args));
   }
 
   @Test
-  public void constructorWithOneParam_Short_shortName() throws Exception {
-    Object[] args = new Object[] {(short) 1};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("Short"));
-
-    assertNotNull(constructor);
-    assertEquals("ShortParam", invoke(constructor, args));
-  }
-
-  @Test
-  public void constructorWithOneParam_Integer_canonicalName() throws Exception {
+  public void constructorWithOneParam_Integer() throws Exception {
     Object[] args = new Object[] {1};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Collections.singletonList("java.lang.Integer"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Integer.class));
 
     assertNotNull(constructor);
     assertEquals("IntegerParam", invoke(constructor, args));
   }
 
   @Test
-  public void constructorWithOneParam_Integer_shortName() throws Exception {
-    Object[] args = new Object[] {1};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("Integer"));
-
-    assertNotNull(constructor);
-    assertEquals("IntegerParam", invoke(constructor, args));
-  }
-
-  @Test
-  public void constructorWithOneParam_Long_canonicalName() throws Exception {
+  public void constructorWithOneParam_Long() throws Exception {
     Object[] args = new Object[] {1L};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Collections.singletonList("java.lang.Long"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Long.class));
 
     assertNotNull(constructor);
     assertEquals("LongParam", invoke(constructor, args));
   }
 
   @Test
-  public void constructorWithOneParam_Long_shortName() throws Exception {
-    Object[] args = new Object[] {1L};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("Long"));
-
-    assertNotNull(constructor);
-    assertEquals("LongParam", invoke(constructor, args));
-  }
-
-  @Test
-  public void constructorWithOneParam_Float_canonicalName() throws Exception {
+  public void constructorWithOneParam_Float() throws Exception {
     Object[] args = new Object[] {1.0f};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Collections.singletonList("java.lang.Float"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Float.class));
 
     assertNotNull(constructor);
     assertEquals("FloatParam", invoke(constructor, args));
   }
 
   @Test
-  public void constructorWithOneParam_Float_shortName() throws Exception {
-    Object[] args = new Object[] {1.0f};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("Float"));
-
-    assertNotNull(constructor);
-    assertEquals("FloatParam", invoke(constructor, args));
-  }
-
-  @Test
-  public void constructorWithOneParam_Double_canonicalName() throws Exception {
+  public void constructorWithOneParam_Double() throws Exception {
     Object[] args = new Object[] {1.0d};
     Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Collections.singletonList("java.lang.Double"));
-
-    assertNotNull(constructor);
-    assertEquals("DoubleParam", invoke(constructor, args));
-  }
-
-  @Test
-  public void constructorWithOneParam_Double_shortName() throws Exception {
-    Object[] args = new Object[] {1.0d};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList("Double"));
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Double.class));
 
     assertNotNull(constructor);
     assertEquals("DoubleParam", invoke(constructor, args));
@@ -336,8 +238,7 @@ public class ReflectionHelperLookupConstructorTest {
   // <editor-fold desc="Test caching">
   @Test
   public void testCaching() throws Exception {
-    List<String> paramTypes =
-        Arrays.asList("java.lang.Integer", "java.lang.Float", "java.lang.String");
+    List<Class<?>> paramTypes = Arrays.asList(Integer.class, Float.class, String.class);
     Object[] args = new Object[] {10, 4.9f, "str123"};
 
     AtomicInteger cacheHits = new AtomicInteger(0);
@@ -376,22 +277,40 @@ public class ReflectionHelperLookupConstructorTest {
   // </editor-fold>
 
   // <editor-fold desc="Test exceptions">
+  @Test(expected = IllegalArgumentException.class)
+  public void constructor_paramAndParamTypesOfDifferentLength_illegalArgumentException()
+      throws Exception {
+    Object[] args = new Object[] {1.0f, 1.0f, 1};
+    reflectionHelper.lookupConstructor(
+        clazz, args, Arrays.asList(Float.TYPE, Float.TYPE, Integer.TYPE, Integer.TYPE));
+  }
+
   @Test(expected = NoSuchMethodException.class)
   public void constructor_noMatchingParams_noSuchMethodException() throws Exception {
     Object[] args = new Object[] {1.0f, 1.0f, 1, 1};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Arrays.asList("float", "float", "int", "int"));
+    reflectionHelper.lookupConstructor(
+        clazz, args, Arrays.asList(Float.TYPE, Float.TYPE, Integer.TYPE, Integer.TYPE));
   }
 
+  @Test
   @Ignore
-  @Test(expected = AmbiguousCallException.class)
   public void constructor_twoMatchingConstructors_ambiguousCallException() throws Exception {
     Object[] args = new Object[] {new Object(), 1};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Arrays.asList("java.lang.Object", "java.lang.Object"));
+    try {
+      reflectionHelper.lookupConstructor(clazz, args, Arrays.asList(Object.class, Number.class));
+      fail("Expected AmbiguousCallException");
+    } catch (AmbiguousCallException e) {
+      assertEquals(2, e.getMatchingExecutables().size());
+      List<List<Class<?>>> parameterTypeListsOfMatchedExecutables =
+          e.getMatchingExecutables().stream()
+              .map(executable -> Arrays.asList(executable.getParameterTypes()))
+              .collect(Collectors.toList());
+      assertThat(
+          parameterTypeListsOfMatchedExecutables,
+          containsInAnyOrder(
+              Arrays.asList(Object.class, Integer.class),
+              Arrays.asList(Object.class, Number.class)));
+    }
   }
-
   // </editor-fold>
 }

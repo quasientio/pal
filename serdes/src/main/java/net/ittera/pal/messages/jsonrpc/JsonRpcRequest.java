@@ -3,6 +3,7 @@ package net.ittera.pal.messages.jsonrpc;
 import com.google.gson.annotations.SerializedName;
 import java.util.Arrays;
 import java.util.List;
+import net.ittera.pal.messages.types.ExecMessageType;
 
 /**
  * Represents a JSON-RPC request message.
@@ -80,16 +81,6 @@ import java.util.List;
  * </pre>
  */
 public class JsonRpcRequest {
-  public enum ExecMessageType {
-    CONSTRUCTOR,
-    INSTANCE_METHOD,
-    CLASS_METHOD,
-    GET_STATIC,
-    GET_INSTANCE_FIELD,
-    PUT_STATIC,
-    PUT_INSTANCE_FIELD,
-  }
-
   private ExecMessageType execMessageType;
   private String objectRef;
   private String className;
@@ -107,7 +98,7 @@ public class JsonRpcRequest {
   private List<JsonRpcParameter> params;
 
   @SerializedName("id")
-  private int id;
+  private String id;
 
   public String getJsonrpc() {
     return jsonrpc;
@@ -121,7 +112,7 @@ public class JsonRpcRequest {
     return params;
   }
 
-  public int getId() {
+  public String getId() {
     return id;
   }
 
@@ -137,7 +128,7 @@ public class JsonRpcRequest {
     this.params = params;
   }
 
-  public void setId(int id) {
+  public void setId(String id) {
     this.id = id;
   }
 
@@ -176,7 +167,7 @@ public class JsonRpcRequest {
   }
 
   public void processMethodParts() {
-    String[] parts = method.split("\\.");
+    final String[] parts = method.split("\\.");
 
     // set objectRef
     this.objectRef =
@@ -192,7 +183,7 @@ public class JsonRpcRequest {
       parts[0] = parts[0].split(":")[1]; // Remove 'get'
       fieldName = parts[parts.length - 1];
       if (objectRef != null) {
-        execMessageType = ExecMessageType.GET_INSTANCE_FIELD;
+        execMessageType = ExecMessageType.GET_FIELD;
         className = parts[parts.length - 3];
         fullyQualifiedClassName = String.join(".", Arrays.copyOfRange(parts, 0, parts.length - 2));
       } else {
@@ -204,7 +195,7 @@ public class JsonRpcRequest {
       parts[0] = parts[0].split(":")[1]; // Remove 'put'
       fieldName = parts[parts.length - 1];
       if (objectRef != null) {
-        execMessageType = ExecMessageType.PUT_INSTANCE_FIELD;
+        execMessageType = ExecMessageType.PUT_FIELD;
         className = parts[parts.length - 3];
         fullyQualifiedClassName = String.join(".", Arrays.copyOfRange(parts, 0, parts.length - 2));
       } else {

@@ -1,16 +1,18 @@
 package net.ittera.pal.core.exec.java.reflect;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.times;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import net.ittera.pal.core.exec.java.AmbiguousCallException;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -21,15 +23,13 @@ import org.junit.Test;
  * <pre>
  * For primitives & wrapper classes:
  * - one test with the primitive type
- * - one test with the wrapper type in canonical form (ie. "java.lang.Integer")
- * - one test with the wrapper type specified in short form (ie. "Integer" instead of "java.lang.Integer")
- * TODO: ARRAYS
- * TODO: VARARGS
+ * - one test with the wrapper type
+ * TODO: add tests for ARRAYS
+ * TODO: add tests for VARARGS
+ * TODO: add tests for generics
  * </pre>
- *
- * <p>TODO Test ambiguous calls -> also in corresponding Dispatcher class
  */
-public class ReflectionHelperLookupMethodTest {
+public class ReflectionHelperLookupMethodWithTypesTest {
 
   private final ReflectionHelper reflectionHelper = new ReflectionHelper();
   private final Class<?> clazz = ClassForTestingMethodLookup.class;
@@ -55,24 +55,12 @@ public class ReflectionHelperLookupMethodTest {
 
   // <editor-fold desc="String">
   @Test
-  public void methodWithOneParam_stringFQN() throws Exception {
+  public void methodWithOneParam_string() throws Exception {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {"str1"};
     Method method =
         reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("java.lang.String"), methodName);
-
-    assertNotNull(method);
-    assertEquals(methodName, method.getName());
-    assertEquals("methodWithOneStringParam", invoke(method, args));
-  }
-
-  @Test
-  public void methodWithOneParam_stringShortName() throws Exception {
-    String methodName = "methodWithOneParam";
-    Object[] args = new Object[] {"str1"};
-    Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("String"), methodName);
+            clazz, args, Collections.singletonList(String.class), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -86,7 +74,8 @@ public class ReflectionHelperLookupMethodTest {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {'a'};
     Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("char"), methodName);
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Character.TYPE), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -99,7 +88,7 @@ public class ReflectionHelperLookupMethodTest {
     Object[] args = new Object[] {true};
     Method method =
         reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("boolean"), methodName);
+            clazz, args, Collections.singletonList(Boolean.TYPE), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -111,7 +100,8 @@ public class ReflectionHelperLookupMethodTest {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {(byte) 1};
     Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("byte"), methodName);
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Byte.TYPE), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -123,7 +113,8 @@ public class ReflectionHelperLookupMethodTest {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {(short) 1};
     Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("short"), methodName);
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Short.TYPE), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -135,7 +126,8 @@ public class ReflectionHelperLookupMethodTest {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {1};
     Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("int"), methodName);
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Integer.TYPE), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -147,7 +139,8 @@ public class ReflectionHelperLookupMethodTest {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {1L};
     Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("long"), methodName);
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Long.TYPE), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -159,7 +152,8 @@ public class ReflectionHelperLookupMethodTest {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {1.0f};
     Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("float"), methodName);
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Float.TYPE), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -171,7 +165,8 @@ public class ReflectionHelperLookupMethodTest {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {1.0d};
     Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("double"), methodName);
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Double.TYPE), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -183,12 +178,12 @@ public class ReflectionHelperLookupMethodTest {
   // <editor-fold desc="Wrappers">
 
   @Test
-  public void methodWithOneParam_Character_canonicalName() throws Exception {
+  public void methodWithOneParam_Character() throws Exception {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {'a'};
     Method method =
         reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("java.lang.Character"), methodName);
+            clazz, args, Collections.singletonList(Character.class), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -196,25 +191,12 @@ public class ReflectionHelperLookupMethodTest {
   }
 
   @Test
-  public void methodWithOneParam_Character_shortName() throws Exception {
-    String methodName = "methodWithOneParam";
-    Object[] args = new Object[] {'a'};
-    Method method =
-        reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("Character"), methodName);
-
-    assertNotNull(method);
-    assertEquals(methodName, method.getName());
-    assertEquals("methodWithOneCharacterParam", invoke(method, args));
-  }
-
-  @Test
-  public void methodWithOneParam_Boolean_canonicalName() throws Exception {
+  public void methodWithOneParam_Boolean() throws Exception {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {true};
     Method method =
         reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("java.lang.Boolean"), methodName);
+            clazz, args, Collections.singletonList(Boolean.class), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -222,25 +204,12 @@ public class ReflectionHelperLookupMethodTest {
   }
 
   @Test
-  public void methodWithOneParam_Boolean_shortName() throws Exception {
-    String methodName = "methodWithOneParam";
-    Object[] args = new Object[] {true};
-    Method method =
-        reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("Boolean"), methodName);
-
-    assertNotNull(method);
-    assertEquals(methodName, method.getName());
-    assertEquals("methodWithOneBooleanParam", invoke(method, args));
-  }
-
-  @Test
-  public void methodWithOneParam_Byte_canonicalName() throws Exception {
+  public void methodWithOneParam_Byte() throws Exception {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {(byte) 1};
     Method method =
         reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("java.lang.Byte"), methodName);
+            clazz, args, Collections.singletonList(Byte.class), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -248,24 +217,12 @@ public class ReflectionHelperLookupMethodTest {
   }
 
   @Test
-  public void methodWithOneParam_Byte_shortName() throws Exception {
-    String methodName = "methodWithOneParam";
-    Object[] args = new Object[] {(byte) 1};
-    Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("Byte"), methodName);
-
-    assertNotNull(method);
-    assertEquals(methodName, method.getName());
-    assertEquals("methodWithOneByteParam", invoke(method, args));
-  }
-
-  @Test
-  public void methodWithOneParam_Short_canonicalName() throws Exception {
+  public void methodWithOneParam_Short() throws Exception {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {(short) 1};
     Method method =
         reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("java.lang.Short"), methodName);
+            clazz, args, Collections.singletonList(Short.class), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -273,24 +230,12 @@ public class ReflectionHelperLookupMethodTest {
   }
 
   @Test
-  public void methodWithOneParam_Short_shortName() throws Exception {
-    String methodName = "methodWithOneParam";
-    Object[] args = new Object[] {(short) 1};
-    Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("Short"), methodName);
-
-    assertNotNull(method);
-    assertEquals(methodName, method.getName());
-    assertEquals("methodWithOneShortParam", invoke(method, args));
-  }
-
-  @Test
-  public void methodWithOneParam_Integer_canonicalName() throws Exception {
+  public void methodWithOneParam_Integer() throws Exception {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {1};
     Method method =
         reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("java.lang.Integer"), methodName);
+            clazz, args, Collections.singletonList(Integer.class), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -298,25 +243,12 @@ public class ReflectionHelperLookupMethodTest {
   }
 
   @Test
-  public void methodWithOneParam_Integer_shortName() throws Exception {
-    String methodName = "methodWithOneParam";
-    Object[] args = new Object[] {1};
-    Method method =
-        reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("Integer"), methodName);
-
-    assertNotNull(method);
-    assertEquals(methodName, method.getName());
-    assertEquals("methodWithOneIntegerParam", invoke(method, args));
-  }
-
-  @Test
-  public void methodWithOneParam_Long_canonicalName() throws Exception {
+  public void methodWithOneParam_Long() throws Exception {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {1L};
     Method method =
         reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("java.lang.Long"), methodName);
+            clazz, args, Collections.singletonList(Long.class), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -324,24 +256,12 @@ public class ReflectionHelperLookupMethodTest {
   }
 
   @Test
-  public void methodWithOneParam_Long_shortName() throws Exception {
-    String methodName = "methodWithOneParam";
-    Object[] args = new Object[] {1L};
-    Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("Long"), methodName);
-
-    assertNotNull(method);
-    assertEquals(methodName, method.getName());
-    assertEquals("methodWithOneLongParam", invoke(method, args));
-  }
-
-  @Test
-  public void methodWithOneParam_Float_canonicalName() throws Exception {
+  public void methodWithOneParam_Float() throws Exception {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {1.0f};
     Method method =
         reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("java.lang.Float"), methodName);
+            clazz, args, Collections.singletonList(Float.class), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -349,36 +269,12 @@ public class ReflectionHelperLookupMethodTest {
   }
 
   @Test
-  public void methodWithOneParam_Float_shortName() throws Exception {
-    String methodName = "methodWithOneParam";
-    Object[] args = new Object[] {1.0f};
-    Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("Float"), methodName);
-
-    assertNotNull(method);
-    assertEquals(methodName, method.getName());
-    assertEquals("methodWithOneFloatParam", invoke(method, args));
-  }
-
-  @Test
-  public void methodWithOneParam_Double_canonicalName() throws Exception {
+  public void methodWithOneParam_Double() throws Exception {
     String methodName = "methodWithOneParam";
     Object[] args = new Object[] {1.0d};
     Method method =
         reflectionHelper.lookupMethod(
-            clazz, args, Collections.singletonList("java.lang.Double"), methodName);
-
-    assertNotNull(method);
-    assertEquals(methodName, method.getName());
-    assertEquals("methodWithOneDoubleParam", invoke(method, args));
-  }
-
-  @Test
-  public void methodWithOneParam_Double_shortName() throws Exception {
-    String methodName = "methodWithOneParam";
-    Object[] args = new Object[] {1.0d};
-    Method method =
-        reflectionHelper.lookupMethod(clazz, args, Collections.singletonList("Double"), methodName);
+            clazz, args, Collections.singletonList(Double.class), methodName);
 
     assertNotNull(method);
     assertEquals(methodName, method.getName());
@@ -389,8 +285,7 @@ public class ReflectionHelperLookupMethodTest {
   // <editor-fold desc="Test caching">
   @Test
   public void testCaching() throws Exception {
-    List<String> paramTypes =
-        Arrays.asList("java.lang.String", "java.lang.Float", "java.lang.String");
+    List<Class<?>> paramTypes = Arrays.asList(String.class, Float.class, String.class);
     Object[] args = new Object[] {"hello10", 4.9f, "str123"};
     String methodName = "methodForCacheTest";
 
@@ -432,23 +327,43 @@ public class ReflectionHelperLookupMethodTest {
   // </editor-fold>
 
   // <editor-fold desc="Test exceptions">
+  @Test(expected = IllegalArgumentException.class)
+  public void method_paramAndParamTypesOfDifferentLength_illegalArgumentException()
+      throws Exception {
+    Object[] args = new Object[] {1.0f, 1.0f, 1};
+    String methodName = "anyMethod";
+    reflectionHelper.lookupMethod(
+        clazz, args, Arrays.asList(Float.TYPE, Float.TYPE, Integer.TYPE, Integer.TYPE), methodName);
+  }
+
   @Test(expected = NoSuchMethodException.class)
   public void method_noMatchingParams_noSuchMethodException() throws Exception {
     Object[] args = new Object[] {1.0f, 1.0f, 1, 1};
     String methodName = "ghostMethod";
-    Method method =
-        reflectionHelper.lookupMethod(
-            clazz, args, Arrays.asList("float", "float", "int", "int"), methodName);
+    reflectionHelper.lookupMethod(
+        clazz, args, Arrays.asList(Float.TYPE, Float.TYPE, Integer.TYPE, Integer.TYPE), methodName);
   }
 
+  @Test
   @Ignore
-  @Test(expected = AmbiguousCallException.class)
-  public void method_twoMatchingMethods_ambiguousCallException() throws Exception {
+  public void typesGiven_twoMatchingMethods_ambiguousCallException() throws Exception {
     Object[] args = new Object[] {new Object(), 1};
-    Constructor<?> constructor =
-        reflectionHelper.lookupConstructor(
-            clazz, args, Arrays.asList("java.lang.Object", "java.lang.Object"));
+    try {
+      reflectionHelper.lookupMethod(
+          clazz, args, Arrays.asList(Object.class, Object.class), "methodWithObjectAndNumber");
+      fail("Expected AmbiguousCallException");
+    } catch (AmbiguousCallException e) {
+      assertEquals(2, e.getMatchingExecutables().size());
+      List<List<Class<?>>> parameterTypeListsOfMatchedExecutables =
+          e.getMatchingExecutables().stream()
+              .map(executable -> Arrays.asList(executable.getParameterTypes()))
+              .collect(Collectors.toList());
+      assertThat(
+          parameterTypeListsOfMatchedExecutables,
+          containsInAnyOrder(
+              Arrays.asList(Object.class, Integer.class),
+              Arrays.asList(Object.class, Number.class)));
+    }
   }
-
   // </editor-fold>
 }

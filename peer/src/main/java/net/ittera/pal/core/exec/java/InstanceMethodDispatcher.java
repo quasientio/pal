@@ -25,8 +25,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -186,11 +184,6 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
             true,
             Thread.currentThread().getContextClassLoader());
     return reflectionHelper.lookupMethod(
-        clazz,
-        args.toArray(),
-        Stream.of(execMessage.getInstanceMethodCall().getParameters())
-            .map(p -> p.getType().getName())
-            .collect(Collectors.toList()),
-        execMessage.getInstanceMethodCall().getName());
+        clazz, args.toArray(), parameterTypes, execMessage.getInstanceMethodCall().getName());
   }
 }

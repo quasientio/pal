@@ -25,8 +25,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -131,7 +129,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
 
   /**
    * @param execMessage
-   * @param parameterTypes Not used here.
+   * @param parameterTypes
    * @param args
    * @return
    * @throws ReflectiveOperationException
@@ -140,17 +138,12 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   protected AccessibleObject loadAccessibleObject(
       ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)
       throws ReflectiveOperationException, AmbiguousCallException {
-
     Class<?> clazz =
         Class.forName(
             execMessage.getClassMethodCall().getClazz().getName(),
             true,
             Thread.currentThread().getContextClassLoader());
-    List<String> parameterTypeNames =
-        Stream.of(execMessage.getClassMethodCall().getParameters())
-            .map(p -> p.getType().getName())
-            .collect(Collectors.toList());
     return reflectionHelper.lookupMethod(
-        clazz, args.toArray(), parameterTypeNames, execMessage.getClassMethodCall().getName());
+        clazz, args.toArray(), parameterTypes, execMessage.getClassMethodCall().getName());
   }
 }
