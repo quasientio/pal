@@ -95,6 +95,31 @@ public class ClassForTestingConstructorLookup {
 
   // </editor-fold>
 
+  // <editor-fold desc="Arrays testing">
+  public ClassForTestingConstructorLookup(double[] param1) {
+    this.param = "doubleArrayParam";
+  }
+
+  public ClassForTestingConstructorLookup(Double[] param1) {
+    this.param = "DoubleArrayParam";
+  }
+
+  public ClassForTestingConstructorLookup(Number[] param1) {
+    this.param = "NumberArrayParam";
+  }
+
+  public ClassForTestingConstructorLookup(Object[] param1) {
+    this.param = "ObjectArrayParam";
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Varargs testing">
+
+  public ClassForTestingConstructorLookup(Float... param1) {
+    this.param = "FloatVarargs";
+  }
+  // </editor-fold>
+
   // <editor-fold desc="Object type testing">
   public ClassForTestingConstructorLookup(Object param1) {
     this.param = "ObjectParam";

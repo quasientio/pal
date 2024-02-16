@@ -25,9 +25,9 @@ import org.junit.Test;
  * For primitives & wrapper classes:
  * - one test with the primitive type
  * - one test with the wrapper type
- * TODO: ARRAYS
- * TODO: VARARGS
  * </pre>
+ *
+ * <p>TODO: add tests for generics
  *
  * <p>TODO Test ambiguous calls -> also in corresponding Dispatcher class
  */
@@ -233,6 +233,78 @@ public class ReflectionHelperLookupConstructorWithTypesTest {
     assertNotNull(constructor);
     assertEquals("DoubleParam", invoke(constructor, args));
   }
+  // </editor-fold>
+
+  // <editor-fold desc="Arrays testing">
+  @Test
+  public void constructorWithArrayOfDoublePrimitive() throws Exception {
+    Object[] args = new Object[] {new double[] {1.0d, 4.6d}};
+    Constructor<?> constructor =
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(double[].class));
+    assertNotNull(constructor);
+    assertEquals("doubleArrayParam", invoke(constructor, args));
+  }
+
+  @Test
+  public void constructorWithArrayOfDoubleWrapper() throws Exception {
+    Object[] args = new Object[] {new Double[] {1.0d, 4.6d}};
+    Constructor<?> constructor =
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Double[].class));
+    assertNotNull(constructor);
+    assertEquals("DoubleArrayParam", invoke(constructor, args));
+  }
+
+  @Test
+  public void constructorWithArrayOfNumber() throws Exception {
+
+    // passing the args inside a Number[] array
+    Object[] args = new Object[] {new Number[] {1.0d, 4.6d}};
+    Constructor<?> constructor =
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Number[].class));
+    assertNotNull(constructor);
+    assertEquals("NumberArrayParam", invoke(constructor, args));
+
+    // passing the args inside a Double[] array
+    args = new Object[] {new Double[] {1.0d, 4.6d}};
+    constructor =
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Number[].class));
+    assertNotNull(constructor);
+    assertEquals("NumberArrayParam", invoke(constructor, args));
+  }
+
+  @Test
+  public void constructorWithArrayOfObject() throws Exception {
+    // passing the args inside an Object[] array
+    Object[] args = new Object[] {new Object[] {1.0d, 4.6d}};
+    Constructor<?> constructor =
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Object[].class));
+    assertNotNull(constructor);
+    assertEquals("ObjectArrayParam", invoke(constructor, args));
+
+    // passing the args inside a Number[] array
+    args = new Object[] {new Number[] {1.0d, 4.6d}};
+    constructor =
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Object[].class));
+    assertNotNull(constructor);
+    assertEquals("ObjectArrayParam", invoke(constructor, args));
+
+    // passing the args inside a Double[] array
+    args = new Object[] {new Double[] {1.0d, 4.6d}};
+    constructor =
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Object[].class));
+    assertNotNull(constructor);
+    assertEquals("ObjectArrayParam", invoke(constructor, args));
+  }
+
+  @Test
+  public void constructorWithFloatVarargs() throws Exception {
+    Object[] args = new Object[] {new Float[] {1.0f, 20f, 3.013f}};
+    Constructor<?> constructor =
+        reflectionHelper.lookupConstructor(clazz, args, Collections.singletonList(Float[].class));
+    assertNotNull(constructor);
+    assertEquals("FloatVarargs", invoke(constructor, args));
+  }
+
   // </editor-fold>
 
   // <editor-fold desc="Test caching">

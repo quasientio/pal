@@ -276,6 +276,63 @@ public class ReflectionHelperLookupMethodWithoutTypesTest {
   }
   // </editor-fold>
 
+  // <editor-fold desc="Arrays testing">
+  @Test
+  public void methodWithDoublePrimitiveArrayParam() throws Exception {
+    String methodName = "methodWithArrayParam";
+    Object[] args = new Object[] {new double[] {1.0, 2.0, 3.0}};
+    Method method = reflectionHelper.lookupMethod(clazz, args, methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("doubleArrayParam", invoke(method, args));
+  }
+
+  @Test
+  public void methodWithDoubleArrayParam() throws Exception {
+    String methodName = "methodWithArrayParam";
+    Object[] args = new Object[] {new Double[] {1.0, 2.0, 3.0}};
+    Method method = reflectionHelper.lookupMethod(clazz, args, methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("DoubleArrayParam", invoke(method, args));
+  }
+
+  @Test
+  public void methodWithNumberArrayParam() throws Exception {
+    String methodName = "methodWithArrayParam";
+    Object[] args = new Object[] {new Number[] {14.3d, 2.1d, 3.9d}};
+    Method method = reflectionHelper.lookupMethod(clazz, args, methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("NumberArrayParam", invoke(method, args));
+  }
+
+  @Test
+  public void methodWithObjectArrayParam() throws Exception {
+    String methodName = "methodWithArrayParam";
+    Object[] args = new Object[] {new Object[] {14.3d, 2.1d, 3.9d}};
+    Method method = reflectionHelper.lookupMethod(clazz, args, methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("ObjectArrayParam", invoke(method, args));
+  }
+
+  @Test
+  public void methodWithFloatVarargs() throws Exception {
+    String methodName = "methodWithFloatVarargs";
+    Object[] args = new Object[] {new Float[] {1.0f, 20f, 3.013f}};
+    Method method = reflectionHelper.lookupMethod(clazz, args, methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("FloatVarargs", invoke(method, args));
+  }
+  // </editor-fold>
+
   // <editor-fold desc="Test caching">
   @Test
   public void testCaching() throws Exception {

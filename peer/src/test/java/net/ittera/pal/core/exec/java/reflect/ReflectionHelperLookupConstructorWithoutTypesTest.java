@@ -29,6 +29,11 @@ import org.junit.Test;
  *   <li>if there is no corresponding method with the wrapper type, lookupConstructor() will return
  *       the method with the primitive type(s), even if the arguments were autoboxed. This is
  *       asserted by the test method <b>constructorWithOneFloatAndDoubleParam</b>.
+ *   <li>when arrays are passed as arguments, the method that will be returned depends on the type
+ *       of the array. For example, if an array of double is passed, the method that takes a
+ *       double[] will be returned. In contrast, when types are given, the method that takes an
+ *       array of Number will be returned if parameter type is Number[], even if the argument is an
+ *       array of double. See array tests in ReflectionHelperLookupConstructorWithTypesTest.
  * </ul>
  *
  * <p>For primitives & wrapper classes:
@@ -39,8 +44,6 @@ import org.junit.Test;
  * </ul>
  *
  * <pre>
- * TODO: add tests for ARRAYS
- * TODO: add tests for VARARGS
  * TODO: add tests for generics
  * </pre>
  */
@@ -238,6 +241,48 @@ public class ReflectionHelperLookupConstructorWithoutTypesTest {
 
     assertNotNull(constructor);
     assertEquals("DoubleParam", invoke(constructor, args));
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Arrays testing">
+  @Test
+  public void constructorWithArrayOfDoublePrimitive() throws Exception {
+    Object[] args = new Object[] {new double[] {1.0d, 4.6d}};
+    Constructor<?> constructor = reflectionHelper.lookupConstructor(clazz, args);
+    assertNotNull(constructor);
+    assertEquals("doubleArrayParam", invoke(constructor, args));
+  }
+
+  @Test
+  public void constructorWithArrayOfDoubleWrapper() throws Exception {
+    Object[] args = new Object[] {new Double[] {1.0d, 4.6d}};
+    Constructor<?> constructor = reflectionHelper.lookupConstructor(clazz, args);
+    assertNotNull(constructor);
+    assertEquals("DoubleArrayParam", invoke(constructor, args));
+  }
+
+  @Test
+  public void constructorWithArrayOfNumber() throws Exception {
+    Object[] args = new Object[] {new Number[] {1.0d, 4.6d}};
+    Constructor<?> constructor = reflectionHelper.lookupConstructor(clazz, args);
+    assertNotNull(constructor);
+    assertEquals("NumberArrayParam", invoke(constructor, args));
+  }
+
+  @Test
+  public void constructorWithArrayOfObject() throws Exception {
+    Object[] args = new Object[] {new Object[] {1.0d, 4.6d}};
+    Constructor<?> constructor = reflectionHelper.lookupConstructor(clazz, args);
+    assertNotNull(constructor);
+    assertEquals("ObjectArrayParam", invoke(constructor, args));
+  }
+
+  @Test
+  public void constructorWithFloatVarargs() throws Exception {
+    Object[] args = new Object[] {new Float[] {1.0f, 20f, 3.013f}};
+    Constructor<?> constructor = reflectionHelper.lookupConstructor(clazz, args);
+    assertNotNull(constructor);
+    assertEquals("FloatVarargs", invoke(constructor, args));
   }
   // </editor-fold>
 

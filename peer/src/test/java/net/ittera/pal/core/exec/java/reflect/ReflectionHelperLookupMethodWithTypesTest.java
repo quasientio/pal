@@ -24,10 +24,11 @@ import org.junit.Test;
  * For primitives & wrapper classes:
  * - one test with the primitive type
  * - one test with the wrapper type
- * TODO: add tests for ARRAYS
- * TODO: add tests for VARARGS
- * TODO: add tests for generics
  * </pre>
+ *
+ * <p>TODO: add tests for generics
+ *
+ * <p>TODO Test ambiguous calls -> also in corresponding Dispatcher class
  */
 public class ReflectionHelperLookupMethodWithTypesTest {
 
@@ -280,6 +281,108 @@ public class ReflectionHelperLookupMethodWithTypesTest {
     assertEquals(methodName, method.getName());
     assertEquals("methodWithOneDoubleParam", invoke(method, args));
   }
+  // </editor-fold>
+
+  // <editor-fold desc="Arrays testing">
+  @Test
+  public void methodWithDoublePrimitiveArrayParam() throws Exception {
+    String methodName = "methodWithArrayParam";
+    Object[] args = new Object[] {new double[] {1.0, 2.0, 3.0}};
+    Method method =
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(double[].class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("doubleArrayParam", invoke(method, args));
+  }
+
+  @Test
+  public void methodWithDoubleArrayParam() throws Exception {
+    String methodName = "methodWithArrayParam";
+    Object[] args = new Object[] {new Double[] {1.0, 2.0, 3.0}};
+    Method method =
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Double[].class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("DoubleArrayParam", invoke(method, args));
+  }
+
+  @Test
+  public void methodWithNumberArrayParam() throws Exception {
+    String methodName = "methodWithArrayParam";
+
+    // passing the args inside a Number[] array
+    Object[] args = new Object[] {new Number[] {14.3d, 2.1d, 3.9d}};
+    Method method =
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Number[].class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("NumberArrayParam", invoke(method, args));
+
+    // passing the args inside a Double[] array
+    args = new Object[] {new Double[] {14.3d, 2.1d, 3.9d}};
+    method =
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Number[].class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("NumberArrayParam", invoke(method, args));
+  }
+
+  @Test
+  public void methodWithObjectArrayParam() throws Exception {
+    String methodName = "methodWithArrayParam";
+
+    // passing the args inside an Object[] array
+    Object[] args = new Object[] {new Object[] {14.3d, 2.1d, 3.9d}};
+    Method method =
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Object[].class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("ObjectArrayParam", invoke(method, args));
+
+    // passing the args inside a Number[] array
+    args = new Object[] {new Number[] {14.3d, 2.1d, 3.9d}};
+    method =
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Object[].class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("ObjectArrayParam", invoke(method, args));
+
+    // passing the args inside a Double[] array
+    args = new Object[] {new Double[] {14.3d, 2.1d, 3.9d}};
+    method =
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Object[].class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("ObjectArrayParam", invoke(method, args));
+  }
+
+  @Test
+  public void methodWithFloatVarargs() throws Exception {
+    String methodName = "methodWithFloatVarargs";
+    Object[] args = new Object[] {new Float[] {1.0f, 20f, 3.013f}};
+    Method method =
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Float[].class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("FloatVarargs", invoke(method, args));
+  }
+
   // </editor-fold>
 
   // <editor-fold desc="Test caching">

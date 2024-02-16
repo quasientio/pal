@@ -89,6 +89,30 @@ public class ClassForTestingMethodLookup {
   }
   // </editor-fold>
 
+  // <editor-fold desc="Arrays testing">
+  public String methodWithArrayParam(double[] param1) {
+    return "doubleArrayParam";
+  }
+
+  public String methodWithArrayParam(Double[] param1) {
+    return "DoubleArrayParam";
+  }
+
+  public String methodWithArrayParam(Number[] param1) {
+    return "NumberArrayParam";
+  }
+
+  public String methodWithArrayParam(Object[] param1) {
+    return "ObjectArrayParam";
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Varargs testing">
+  public String methodWithFloatVarargs(Float... params) {
+    return "FloatVarargs";
+  }
+  // </editor-fold>
+
   // <editor-fold desc="Object type testing">
   public String methodWithOneParam(Object param1) {
     return "methodWithOneObjectParam";
