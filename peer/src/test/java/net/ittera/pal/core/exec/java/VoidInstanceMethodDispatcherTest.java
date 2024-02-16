@@ -26,8 +26,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,12 +49,12 @@ class ClassForVoidInstanceMethodTest {
 
   ClassForVoidInstanceMethodTest() {}
 
-  void addHelloWorld() {
+  private void addHelloWorld() {
     wordsCollected.add("Hello");
     wordsCollected.add("World");
   }
 
-  void addWord(String word) {
+  public void addWord(String word) {
     if (word == null) {
       return;
     }
@@ -73,7 +72,7 @@ class ClassForVoidInstanceMethodTest {
     }
   }
 
-  void addWords(String... words) {
+  protected void addWords(String... words) {
     Arrays.stream(words).filter(w -> w.matches(WORD_REGEX)).forEach(w -> wordsCollected.add(w));
   }
 
@@ -545,17 +544,142 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   }
 
   @Override
-  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {}
+  @Test
+  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {
+    // create and store new instance
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    String methodName = "addWord";
+    Class<?>[] parameterTypes = {String.class};
+    Object[] args = {"hello"};
+    ObjectRef[] argObjRefs = {null};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            targetObjRef,
+            toNames(parameterTypes),
+            args,
+            argObjRefs);
+
+    // dispatch
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_packagePrivateAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    // create and store new instance
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    String methodName = "addWords";
+    Class<?>[] parameterTypes = {Integer.TYPE};
+    Object[] args = {4};
+    ObjectRef[] argObjRefs = {null};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            targetObjRef,
+            toNames(parameterTypes),
+            args,
+            argObjRefs);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_protectedAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    // create and store new instance
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    String methodName = "addWords";
+    Class<?>[] parameterTypes = {String[].class};
+    Object[] args = {new String[] {"hello", "world"}};
+    ObjectRef[] argObjRefs = {null};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            targetObjRef,
+            toNames(parameterTypes),
+            args,
+            argObjRefs);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    // create and store new instance
+    ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    String methodName = "addHelloWorld";
+    Class<?>[] parameterTypes = {};
+    Object[] args = {};
+    ObjectRef[] argObjRefs = {};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildInstanceMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            targetObjRef,
+            toNames(parameterTypes),
+            args,
+            argObjRefs);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 }

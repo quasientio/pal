@@ -29,7 +29,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -52,10 +52,11 @@ class ClassForPutStaticTest {
     __resetStaticVars();
   }
 
-  static short someShort;
+  public static short someShort;
   static byte[] bytes;
   static Boolean someBoolean;
-  static String aString;
+  protected static String aString;
+  private static String secretString;
   static List<?> aList;
   static Object[] objects;
   static Throwable lastError;
@@ -504,17 +505,101 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   }
 
   @Override
-  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {}
+  @Test
+  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {
+    String fieldName = "someShort";
+    String fieldClassName = "short.class";
+    short newFieldValue = 987;
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutStatic(
+            peerUuid, targetClass.getName(), fieldName, fieldClassName, newFieldValue);
+
+    // dispatch with the onlyPublicDispatcher - expect no exception
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_packagePrivateAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String fieldName = "someBoolean";
+    String fieldClassName = Boolean.class.getName();
+    Boolean newFieldValue = true;
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutStatic(
+            peerUuid, targetClass.getName(), fieldName, fieldClassName, newFieldValue);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getStaticFieldPutDone());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is(NoSuchFieldException.class.getName()));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_protectedAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String fieldName = "aString";
+    String fieldClassName = String.class.getName();
+    String newFieldValue = "snafulupagus";
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutStatic(
+            peerUuid, targetClass.getName(), fieldName, fieldClassName, newFieldValue);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getStaticFieldPutDone());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is(NoSuchFieldException.class.getName()));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String fieldName = "secretString";
+    String fieldClassName = String.class.getName();
+    String newFieldValue = "snafulupagus";
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutStatic(
+            peerUuid, targetClass.getName(), fieldName, fieldClassName, newFieldValue);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getStaticFieldPutDone());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is(NoSuchFieldException.class.getName()));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 }

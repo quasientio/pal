@@ -27,9 +27,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,11 +58,11 @@ class ClassForVoidClassMethodTest {
     slept = true;
   }
 
-  static void sleep(Long millis) {
+  public static void sleep(Long millis) {
     millisSlept = millis;
   }
 
-  static void sleepUnboxed(long millis) {
+  protected static void sleepUnboxed(long millis) {
     millisSlept = millis;
   }
 
@@ -85,6 +83,10 @@ class ClassForVoidClassMethodTest {
     if (chunk > 0) {
       aList.add(chunk);
     }
+  }
+
+  private static void nap() {
+    sleep(30 * 60 * 1000L);
   }
 
   // call this method from unit tests to restore class variables that have been modified
@@ -551,17 +553,130 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   }
 
   @Override
-  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {}
+  @Test
+  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {
+    String methodName = "sleep";
+    Class<?>[] parameterTypes = {Long.class};
+    ObjectRef[] argObjRefs = {null};
+    Object[] args = {8888L};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildClassMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            toNames(parameterTypes),
+            this,
+            null,
+            args,
+            argObjRefs);
+
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    verifyDispatcherConnectorSendExecMessageCalledOnce();
+    assertTrue(replyMsg.getReturnValue().getIsVoid());
+    assertThat(replyMsg.getRaisedThrowable(), is(nullValue()));
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_packagePrivateAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String methodName = "sleep";
+    Class<?>[] parameterTypes = {};
+    ObjectRef[] argObjRefs = {};
+    Object[] args = {};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildClassMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            toNames(parameterTypes),
+            this,
+            null,
+            args,
+            argObjRefs);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_protectedAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String methodName = "sleepUnboxed";
+    Class<?>[] parameterTypes = {Long.TYPE};
+    ObjectRef[] argObjRefs = {null};
+    Object[] args = {23423L};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildClassMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            toNames(parameterTypes),
+            this,
+            null,
+            args,
+            argObjRefs);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String methodName = "nap";
+    Class<?>[] parameterTypes = {};
+    ObjectRef[] argObjRefs = {};
+    Object[] args = {};
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildClassMethod(
+            peerUuid,
+            targetClass.getName(),
+            methodName,
+            toNames(parameterTypes),
+            this,
+            null,
+            args,
+            argObjRefs);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is("java.lang.NoSuchMethodException"));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(replyMsg.getReturnValue());
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 }

@@ -46,10 +46,11 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 // auxiliary class
 class ClassForPutFieldTest {
-  short someShort = 4;
+  public short someShort = 4;
   byte[] bytes;
   Long aLong = 8238L;
-  String aString = "I am a normal string";
+  protected String aString = "I am a normal string";
+  private String aPrivateString = "I am a private string";
   List<?> aList = new ArrayList<>();
   Object[] objects;
   Throwable lastError = new Exception("dummy exception");
@@ -552,17 +553,134 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   }
 
   @Override
-  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {}
+  @Test
+  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {
+    String fieldName = "someShort";
+    short newFieldValue = 987;
+    String fieldClassName = "short.class";
+
+    // create and store new instance
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutObject(
+            peerUuid,
+            targetClass.getName(),
+            fieldName,
+            targetObjRef,
+            fieldClassName,
+            newFieldValue);
+
+    // dispatch with the onlyPublicDispatcher - expect no exception
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getRaisedThrowable());
+    assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_packagePrivateAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String fieldName = "aLong";
+    Long newFieldValue = 98739L;
+    String fieldClassName = Long.class.getName();
+
+    // create and store new instance
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutObject(
+            peerUuid,
+            targetClass.getName(),
+            fieldName,
+            targetObjRef,
+            fieldClassName,
+            newFieldValue);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getInstanceFieldPutDone());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is(NoSuchFieldException.class.getName()));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_protectedAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String fieldName = "aString";
+    String newFieldValue = "I am a new string";
+    String fieldClassName = String.class.getName();
+
+    // create and store new instance
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutObject(
+            peerUuid,
+            targetClass.getName(),
+            fieldName,
+            targetObjRef,
+            fieldClassName,
+            newFieldValue);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getInstanceFieldPutDone());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is(NoSuchFieldException.class.getName()));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String fieldName = "aPrivateString";
+    String newFieldValue = "I am a new private string";
+    String fieldClassName = String.class.getName();
+
+    // create and store new instance
+    ClassForPutFieldTest target = new ClassForPutFieldTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildPutObject(
+            peerUuid,
+            targetClass.getName(),
+            fieldName,
+            targetObjRef,
+            fieldClassName,
+            newFieldValue);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getInstanceFieldPutDone());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is(NoSuchFieldException.class.getName()));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 }

@@ -22,8 +22,7 @@ package net.ittera.pal.core.exec.java;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,12 +43,13 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 // auxiliary class
 class ClassForGetFieldTest {
-  short someShort = 0;
+  public short someShort = 0;
   byte[] bytes;
   Integer someInteger;
-  String aString = "I am a normal string";
+  protected String aString = "I am a normal string";
   List<?> anObject = new ArrayList<>();
   Object[] objects = {1, "a", false};
+  private Object[] privateObjs = {0, "b", true};
   Throwable lastError = new Error("dummy error");
   Class<?> aNullClass;
 }
@@ -485,17 +485,109 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   }
 
   @Override
-  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {}
+  @Test
+  public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {
+    String fieldName = "someShort";
+
+    // create and store new instance
+    ClassForGetFieldTest target = new ClassForGetFieldTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName, targetObjRef);
+
+    // dispatch with the onlyPublicDispatcher - expect no exception
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(replyMsg.getReturnValue());
+    assertFalse(replyMsg.getReturnValue().getIsVoid());
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_packagePrivateAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String fieldName = "someInteger";
+
+    // create and store new instance
+    ClassForGetFieldTest target = new ClassForGetFieldTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName, targetObjRef);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertNotNull(replyMsg.getRaisedThrowable());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is(NoSuchFieldException.class.getName()));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(replyMsg.getReturnValue());
+    assertFalse(replyMsg.getReturnValue().getIsVoid());
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_protectedAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String fieldName = "aString";
+
+    // create and store new instance
+    ClassForGetFieldTest target = new ClassForGetFieldTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName, targetObjRef);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertNotNull(replyMsg.getRaisedThrowable());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is(NoSuchFieldException.class.getName()));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(replyMsg.getReturnValue());
+    assertFalse(replyMsg.getReturnValue().getIsVoid());
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 
   @Override
+  @Test
   public void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
-      throws Throwable {}
+      throws Throwable {
+    String fieldName = "privateObjs";
+
+    // create and store new instance
+    ClassForGetFieldTest target = new ClassForGetFieldTest();
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildGetObject(peerUuid, targetClass.getName(), fieldName, targetObjRef);
+
+    // dispatch with the onlyPublicDispatcher - expect NoSuchMethodException
+    ExecMessage replyMsg =
+        ((ExecMessageDispatcher) onlyPublicDispatcher).dispatchIncoming(incomingMessage);
+    assertNull(replyMsg.getReturnValue());
+    assertNotNull(replyMsg.getRaisedThrowable());
+    assertThat(
+        replyMsg.getRaisedThrowable().getThrowable().getType(),
+        is(NoSuchFieldException.class.getName()));
+
+    // dispatch with the all access dispatcher - expect no exception
+    replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
+    assertNotNull(replyMsg.getReturnValue());
+    assertFalse(replyMsg.getReturnValue().getIsVoid());
+    assertNull(replyMsg.getRaisedThrowable());
+  }
 }
