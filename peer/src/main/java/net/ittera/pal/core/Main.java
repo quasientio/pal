@@ -480,11 +480,8 @@ public class Main implements Callable<Integer> {
   }
 
   private static int findOpenPort() throws IOException {
-    final ServerSocket tmpSocket = new ServerSocket(0, 0);
-    try {
+    try (ServerSocket tmpSocket = new ServerSocket(0, 0)) {
       return tmpSocket.getLocalPort();
-    } finally {
-      tmpSocket.close();
     }
   }
 
