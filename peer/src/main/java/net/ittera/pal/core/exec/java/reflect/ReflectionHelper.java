@@ -20,10 +20,7 @@
 package net.ittera.pal.core.exec.java.reflect;
 
 import java.lang.reflect.*;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -197,16 +194,23 @@ public class ReflectionHelper {
             .collect(Collectors.toList());
 
     if (!matchingMethods.isEmpty()) {
+      final Method matchingMethod;
       if (matchingMethods.size() > 1) {
-        throw new AmbiguousCallException(
-            clazz.getName(), methodName, parameterTypes, matchingMethods);
+        final List<Method> narrowedDownMatches =
+            narrowDownMethodMatches(parameterTypesArray, matchingMethods);
+        if (narrowedDownMatches.size() != 1) {
+          throw new AmbiguousCallException(clazz.getName(), parameterTypes, matchingMethods);
+        } else {
+          matchingMethod = narrowedDownMatches.get(0);
+        }
+      } else {
+        matchingMethod = matchingMethods.get(0);
       }
-      Method method = matchingMethods.get(0);
-      cache(clazz, methodName, parameterTypes, method);
+      cache(clazz, methodName, parameterTypes, matchingMethod);
       if (logger.isDebugEnabled()) {
-        logger.debug("Got method with signature in step2: {}", method.toGenericString());
+        logger.debug("Got method with signature in step2: {}", matchingMethod.toGenericString());
       }
-      return method;
+      return matchingMethod;
     }
 
     // now scan other (ie. non-public) methods
@@ -231,16 +235,23 @@ public class ReflectionHelper {
               .collect(Collectors.toList());
 
       if (!matchingMethods.isEmpty()) {
+        final Method matchingMethod;
         if (matchingMethods.size() > 1) {
-          throw new AmbiguousCallException(
-              clazz.getName(), methodName, parameterTypes, matchingMethods);
+          final List<Method> narrowedDownMatches =
+              narrowDownMethodMatches(parameterTypesArray, matchingMethods);
+          if (narrowedDownMatches.size() != 1) {
+            throw new AmbiguousCallException(clazz.getName(), parameterTypes, matchingMethods);
+          } else {
+            matchingMethod = narrowedDownMatches.get(0);
+          }
+        } else {
+          matchingMethod = matchingMethods.get(0);
         }
-        Method method = matchingMethods.get(0);
-        cache(clazz, methodName, parameterTypes, method);
+        cache(clazz, methodName, parameterTypes, matchingMethod);
         if (logger.isDebugEnabled()) {
-          logger.debug("Got method with signature in step3: {}", method.toGenericString());
+          logger.debug("Got method with signature in step3: {}", matchingMethod.toGenericString());
         }
-        return method;
+        return matchingMethod;
       }
     }
     throw new NoSuchMethodException(
@@ -264,6 +275,7 @@ public class ReflectionHelper {
       throws AmbiguousCallException, NoSuchMethodException {
     return lookupConstructor(clazz, parameters, null);
   }
+
   /**
    * Gets the right constructor when a parameter is a subtype of a constructor's formal parameter
    * type. Uses ClassUtils.isAssignable() and Class.isAssignableFrom() to check for assignability.
@@ -366,15 +378,24 @@ public class ReflectionHelper {
             .collect(Collectors.toList());
 
     if (!matchingConstructors.isEmpty()) {
+      final Constructor<?> matchingConstructor;
       if (matchingConstructors.size() > 1) {
-        throw new AmbiguousCallException(clazz.getName(), parameterTypes, matchingConstructors);
+        final List<Constructor<?>> narrowedDownMatches =
+            narrowDownConstructorMatches(parameterTypesArray, matchingConstructors);
+        if (narrowedDownMatches.size() != 1) {
+          throw new AmbiguousCallException(clazz.getName(), parameterTypes, matchingConstructors);
+        } else {
+          matchingConstructor = narrowedDownMatches.get(0);
+        }
+      } else {
+        matchingConstructor = matchingConstructors.get(0);
       }
-      Constructor<?> constructor = matchingConstructors.get(0);
-      cache(clazz, null, parameterTypes, constructor);
+      cache(clazz, null, parameterTypes, matchingConstructor);
       if (logger.isDebugEnabled()) {
-        logger.debug("Got constructor with signature in step2: {}", constructor.toGenericString());
+        logger.debug(
+            "Got constructor with signature in step2: {}", matchingConstructor.toGenericString());
       }
-      return constructor;
+      return matchingConstructor;
     }
 
     // now scan other (ie. non-public) constructors
@@ -398,16 +419,24 @@ public class ReflectionHelper {
               .collect(Collectors.toList());
 
       if (!matchingConstructors.isEmpty()) {
+        final Constructor<?> matchingConstructor;
         if (matchingConstructors.size() > 1) {
-          throw new AmbiguousCallException(clazz.getName(), parameterTypes, matchingConstructors);
+          final List<Constructor<?>> narrowedDownMatches =
+              narrowDownConstructorMatches(parameterTypesArray, matchingConstructors);
+          if (narrowedDownMatches.size() != 1) {
+            throw new AmbiguousCallException(clazz.getName(), parameterTypes, matchingConstructors);
+          } else {
+            matchingConstructor = narrowedDownMatches.get(0);
+          }
+        } else {
+          matchingConstructor = matchingConstructors.get(0);
         }
-        Constructor<?> constructor = matchingConstructors.get(0);
-        cache(clazz, null, parameterTypes, constructor);
+        cache(clazz, null, parameterTypes, matchingConstructor);
         if (logger.isDebugEnabled()) {
           logger.debug(
-              "Got constructor with signature in step3: {}", constructor.toGenericString());
+              "Got constructor with signature in step3: {}", matchingConstructor.toGenericString());
         }
-        return constructor;
+        return matchingConstructor;
       }
     }
     throw new NoSuchMethodException(
@@ -479,6 +508,65 @@ public class ReflectionHelper {
       // parameter's actual type
       return clazz.isAssignableFrom(parameterType);
     }
+  }
+
+  /**
+   * Narrows down the list of matching constructors to those that have equal types for all the
+   * parameters that are not primitive or wrapper types. This helps to solve ambiguity when there
+   * are multiple matches only due to primitive widening/auto-boxing.
+   *
+   * @param parameterTypes
+   * @param matchingConstructors
+   * @return
+   */
+  private List<Constructor<?>> narrowDownConstructorMatches(
+      Class<?>[] parameterTypes, List<Constructor<?>> matchingConstructors) {
+    List<Constructor<?>> exactMatches = new ArrayList<>();
+    for (Constructor<?> constructor : matchingConstructors) {
+      Class<?>[] candidateTypes = constructor.getParameterTypes();
+      boolean isExactMatch = true;
+      for (int i = 0; i < parameterTypes.length; i++) {
+        if (!ClassUtils.isPrimitiveOrWrapper(parameterTypes[i])) {
+          if (!candidateTypes[i].equals(parameterTypes[i])) {
+            isExactMatch = false;
+            break;
+          }
+        }
+      }
+      if (isExactMatch) {
+        exactMatches.add(constructor);
+      }
+    }
+    return exactMatches;
+  }
+  /**
+   * Narrows down the list of matching methods to those that have equal types for all the parameters
+   * that are not primitive or wrapper types. This helps to solve ambiguity when there are multiple
+   * matches only due to primitive widening/auto-boxing.
+   *
+   * @param parameterTypes
+   * @param matchingMethods
+   * @return
+   */
+  private List<Method> narrowDownMethodMatches(
+      Class<?>[] parameterTypes, List<Method> matchingMethods) {
+    List<Method> exactMatches = new ArrayList<>();
+    for (Method method : matchingMethods) {
+      Class<?>[] candidateTypes = method.getParameterTypes();
+      boolean isExactMatch = true;
+      for (int i = 0; i < parameterTypes.length; i++) {
+        if (!ClassUtils.isPrimitiveOrWrapper(parameterTypes[i])) {
+          if (!candidateTypes[i].equals(parameterTypes[i])) {
+            isExactMatch = false;
+            break;
+          }
+        }
+      }
+      if (isExactMatch) {
+        exactMatches.add(method);
+      }
+    }
+    return exactMatches;
   }
 
   private void traceParameters(Object[] parameters, @Nullable List<Class<?>> parameterTypes) {
