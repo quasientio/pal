@@ -33,6 +33,7 @@ import org.junit.Test;
 public class ReflectionHelperLookupMethodWithTypesTest {
 
   private final ReflectionHelper reflectionHelper = new ReflectionHelper();
+  private final ReflectionHelper reflectionHelperWithNonPublicAccess = new ReflectionHelper(true);
   private final Class<?> clazz = ClassForTestingMethodLookup.class;
 
   private Object invoke(Method method) throws Exception {
@@ -369,7 +370,9 @@ public class ReflectionHelperLookupMethodWithTypesTest {
     assertEquals(methodName, method.getName());
     assertEquals("ObjectArrayParam", invoke(method, args));
   }
+  // </editor-fold>
 
+  // <editor-fold desc="Varargs">
   @Test
   public void methodWithFloatVarargs() throws Exception {
     String methodName = "methodWithFloatVarargs";
@@ -383,6 +386,31 @@ public class ReflectionHelperLookupMethodWithTypesTest {
     assertEquals("FloatVarargs", invoke(method, args));
   }
 
+  @Test
+  public void methodWithVarargsOverloadedStrings() throws Exception {
+    String methodName = "methodWithVarargs";
+    Object[] args = new Object[] {new String[] {"str1", "str2", "str3"}};
+    Method method =
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(String[].class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("methodWithStringVarargs", invoke(method, args));
+  }
+
+  @Test
+  public void methodWithVarargsOverloadedObjects() throws Exception {
+    String methodName = "methodWithVarargs";
+    Object[] args = new Object[] {new Object[] {"str1", "str2", "str3"}};
+    Method method =
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(Object[].class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("methodWithObjectVarargs", invoke(method, args));
+  }
   // </editor-fold>
 
   // <editor-fold desc="Test caching">
@@ -426,6 +454,77 @@ public class ReflectionHelperLookupMethodWithTypesTest {
 
     // verify cache was hit once
     assertEquals(1, cacheHits.get());
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Visibility testing">
+  @Test
+  public void publicMethod() throws Exception {
+    String methodName = "publicMethodWithOneParam";
+    Object[] args = new Object[] {"str1"};
+    Method method =
+        reflectionHelper.lookupMethod(
+            clazz, args, Collections.singletonList(String.class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+  }
+
+  @Test(expected = NoSuchMethodException.class)
+  public void privateMethod() throws Exception {
+    String methodName = "privateMethodWithOneParam";
+    Object[] args = new Object[] {"str1"};
+    reflectionHelper.lookupMethod(clazz, args, Collections.singletonList(String.class), methodName);
+  }
+
+  @Test
+  public void privateMethod_withNonPublicReflectionHelper() throws Exception {
+    String methodName = "privateMethodWithOneParam";
+    Object[] args = new Object[] {"str1"};
+    Method method =
+        reflectionHelperWithNonPublicAccess.lookupMethod(
+            clazz, args, Collections.singletonList(String.class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+  }
+
+  @Test(expected = NoSuchMethodException.class)
+  public void protectedMethod() throws Exception {
+    String methodName = "protectedMethodWithOneParam";
+    Object[] args = new Object[] {"str1"};
+    reflectionHelper.lookupMethod(clazz, args, Collections.singletonList(String.class), methodName);
+  }
+
+  @Test
+  public void protectedMethod_withNonPublicReflectionHelper() throws Exception {
+    String methodName = "protectedMethodWithOneParam";
+    Object[] args = new Object[] {"str1"};
+    Method method =
+        reflectionHelperWithNonPublicAccess.lookupMethod(
+            clazz, args, Collections.singletonList(String.class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+  }
+
+  @Test(expected = NoSuchMethodException.class)
+  public void packageProtectedMethod() throws Exception {
+    String methodName = "packageProtectedMethodWithOneParam";
+    Object[] args = new Object[] {"str1"};
+    reflectionHelper.lookupMethod(clazz, args, Collections.singletonList(String.class), methodName);
+  }
+
+  @Test
+  public void packageProtectedMethod_withNonPublicReflectionHelper() throws Exception {
+    String methodName = "packageProtectedMethodWithOneParam";
+    Object[] args = new Object[] {"str1"};
+    Method method =
+        reflectionHelperWithNonPublicAccess.lookupMethod(
+            clazz, args, Collections.singletonList(String.class), methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
   }
   // </editor-fold>
 

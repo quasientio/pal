@@ -320,7 +320,9 @@ public class ReflectionHelperLookupMethodWithoutTypesTest {
     assertEquals(methodName, method.getName());
     assertEquals("ObjectArrayParam", invoke(method, args));
   }
+  // </editor-fold>
 
+  // <editor-fold desc="Varargs">
   @Test
   public void methodWithFloatVarargs() throws Exception {
     String methodName = "methodWithFloatVarargs";
@@ -331,6 +333,29 @@ public class ReflectionHelperLookupMethodWithoutTypesTest {
     assertEquals(methodName, method.getName());
     assertEquals("FloatVarargs", invoke(method, args));
   }
+
+  @Test
+  public void methodWithVarargsOverloadedStrings() throws Exception {
+    String methodName = "methodWithVarargs";
+    Object[] args = new Object[] {new String[] {"str1", "str2", "str3"}};
+    Method method = reflectionHelper.lookupMethod(clazz, args, methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("methodWithStringVarargs", invoke(method, args));
+  }
+
+  @Test
+  public void methodWithVarargsOverloadedObjects() throws Exception {
+    String methodName = "methodWithVarargs";
+    Object[] args = new Object[] {new Object[] {"str1", "str2", "str3"}};
+    Method method = reflectionHelper.lookupMethod(clazz, args, methodName);
+
+    assertNotNull(method);
+    assertEquals(methodName, method.getName());
+    assertEquals("methodWithObjectVarargs", invoke(method, args));
+  }
+
   // </editor-fold>
 
   // <editor-fold desc="Test caching">
@@ -377,6 +402,11 @@ public class ReflectionHelperLookupMethodWithoutTypesTest {
     // verify cache was hit once
     assertEquals(1, cacheHits.get());
   }
+  // </editor-fold>
+
+  // <editor-fold desc="Visibility testing">
+  // No need to test visibility, as it is tested in ReflectionHelperLookupMethodWithTypesTest,
+  // and the visibility of the methods is the same regardless of the parameter types.
   // </editor-fold>
 
   // <editor-fold desc="Test exceptions">

@@ -276,13 +276,31 @@ public class ReflectionHelperLookupConstructorWithoutTypesTest {
     assertNotNull(constructor);
     assertEquals("ObjectArrayParam", invoke(constructor, args));
   }
+  // </editor-fold>
 
+  // <editor-fold desc="Varargs">
   @Test
   public void constructorWithFloatVarargs() throws Exception {
     Object[] args = new Object[] {new Float[] {1.0f, 20f, 3.013f}};
     Constructor<?> constructor = reflectionHelper.lookupConstructor(clazz, args);
     assertNotNull(constructor);
     assertEquals("FloatVarargs", invoke(constructor, args));
+  }
+
+  @Test
+  public void constructorWithVarargsOverloadedStrings() throws Exception {
+    Object[] args = new Object[] {12, new String[] {"str1", "str2", "str3"}};
+    Constructor<?> constructor = reflectionHelper.lookupConstructor(clazz, args);
+    assertNotNull(constructor);
+    assertEquals("constructorWithStringVarargs", invoke(constructor, args));
+  }
+
+  @Test
+  public void constructorWithVarargsOverloadedObjects() throws Exception {
+    Object[] args = new Object[] {12, new Object[] {"str1", "str2", "str3"}};
+    Constructor<?> constructor = reflectionHelper.lookupConstructor(clazz, args);
+    assertNotNull(constructor);
+    assertEquals("constructorWithObjectVarargs", invoke(constructor, args));
   }
   // </editor-fold>
 
@@ -328,6 +346,11 @@ public class ReflectionHelperLookupConstructorWithoutTypesTest {
     // verify that the cache was hit once
     assertEquals(1, cacheHits.get());
   }
+  // </editor-fold>
+
+  // <editor-fold desc="Visibility testing">
+  // No need to test visibility, as it is tested in ReflectionHelperLookupConstructorWithTypesTest,
+  // and the visibility of the methods is the same regardless of the parameter types.
   // </editor-fold>
 
   // <editor-fold desc="Test exceptions">

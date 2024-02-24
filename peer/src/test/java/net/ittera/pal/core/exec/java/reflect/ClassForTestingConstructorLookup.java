@@ -114,9 +114,16 @@ public class ClassForTestingConstructorLookup {
   // </editor-fold>
 
   // <editor-fold desc="Varargs testing">
-
   public ClassForTestingConstructorLookup(Float... param1) {
     this.param = "FloatVarargs";
+  }
+
+  public ClassForTestingConstructorLookup(int param1, String... param2) {
+    this.param = "constructorWithStringVarargs";
+  }
+
+  public ClassForTestingConstructorLookup(int param1, Object... param2) {
+    this.param = "constructorWithObjectVarargs";
   }
   // </editor-fold>
 
@@ -127,9 +134,26 @@ public class ClassForTestingConstructorLookup {
   // </editor-fold>
 
   // <editor-fold desc="Cache testing">
-
   public ClassForTestingConstructorLookup(Integer i, Float f, String s) {
     this.param = "IntegerFloatStringParams";
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Visibility testing">
+  public ClassForTestingConstructorLookup(byte param1, byte param2) {
+    this.param = "publicConstructor";
+  }
+
+  private ClassForTestingConstructorLookup(byte param1, byte param2, int param3) {
+    this.param = "privateConstructor";
+  }
+
+  protected ClassForTestingConstructorLookup(byte param1, byte param2, short param3) {
+    this.param = "protectedConstructor";
+  }
+
+  ClassForTestingConstructorLookup(byte param1, byte param2, long param3) {
+    this.param = "packageProtectedConstructor";
   }
   // </editor-fold>
 

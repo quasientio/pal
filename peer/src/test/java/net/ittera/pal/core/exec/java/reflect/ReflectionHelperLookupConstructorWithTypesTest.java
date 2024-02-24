@@ -34,6 +34,7 @@ import org.junit.Test;
 public class ReflectionHelperLookupConstructorWithTypesTest {
 
   private final ReflectionHelper reflectionHelper = new ReflectionHelper();
+  private final ReflectionHelper reflectionHelperWithNonPublicAccess = new ReflectionHelper(true);
   private final Class<?> clazz = ClassForTestingConstructorLookup.class;
 
   private Object invoke(Constructor<?> constructor) throws Exception {
@@ -43,6 +44,7 @@ public class ReflectionHelperLookupConstructorWithTypesTest {
   }
 
   private Object invoke(Constructor<?> constructor, Object[] args) throws Exception {
+    constructor.setAccessible(true);
     ClassForTestingConstructorLookup instance =
         (ClassForTestingConstructorLookup) constructor.newInstance(args);
     return instance.getParam();
@@ -296,6 +298,9 @@ public class ReflectionHelperLookupConstructorWithTypesTest {
     assertEquals("ObjectArrayParam", invoke(constructor, args));
   }
 
+  // </editor-fold>
+
+  // <editor-fold desc="Varargs">
   @Test
   public void constructorWithFloatVarargs() throws Exception {
     Object[] args = new Object[] {new Float[] {1.0f, 20f, 3.013f}};
@@ -305,6 +310,25 @@ public class ReflectionHelperLookupConstructorWithTypesTest {
     assertEquals("FloatVarargs", invoke(constructor, args));
   }
 
+  @Test
+  public void constructorWithVarargsOverloadedStrings() throws Exception {
+    Object[] args = new Object[] {12, new String[] {"str1", "str2", "str3"}};
+    Constructor<?> constructor =
+        reflectionHelper.lookupConstructor(
+            clazz, args, Arrays.asList(Integer.TYPE, String[].class));
+    assertNotNull(constructor);
+    assertEquals("constructorWithStringVarargs", invoke(constructor, args));
+  }
+
+  @Test
+  public void constructorWithVarargsOverloadedObjects() throws Exception {
+    Object[] args = new Object[] {12, new Object[] {"str1", "str2", "str3"}};
+    Constructor<?> constructor =
+        reflectionHelper.lookupConstructor(
+            clazz, args, Arrays.asList(Integer.TYPE, Object[].class));
+    assertNotNull(constructor);
+    assertEquals("constructorWithObjectVarargs", invoke(constructor, args));
+  }
   // </editor-fold>
 
   // <editor-fold desc="Test caching">
@@ -345,6 +369,71 @@ public class ReflectionHelperLookupConstructorWithTypesTest {
 
     // verify that the cache was hit once
     assertEquals(1, cacheHits.get());
+  }
+  // </editor-fold>
+
+  // <editor-fold desc="Visibility testing">
+  @Test
+  public void publicConstructor() throws Exception {
+    Object[] args = new Object[] {(byte) 3, (byte) 7};
+    Constructor constructor =
+        reflectionHelper.lookupConstructor(clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE));
+
+    assertNotNull(constructor);
+    assertEquals("publicConstructor", invoke(constructor, args));
+  }
+
+  @Test(expected = NoSuchMethodException.class)
+  public void privateConstructor() throws Exception {
+    Object[] args = new Object[] {(byte) 3, (byte) 7, 4};
+    reflectionHelper.lookupConstructor(
+        clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Integer.TYPE));
+  }
+
+  @Test
+  public void privateConstructor_withNonPublicReflectionHelper() throws Exception {
+    Object[] args = new Object[] {(byte) 3, (byte) 7, 4};
+    Constructor constructor =
+        reflectionHelperWithNonPublicAccess.lookupConstructor(
+            clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Integer.TYPE));
+
+    assertNotNull(constructor);
+    assertEquals("privateConstructor", invoke(constructor, args));
+  }
+
+  @Test(expected = NoSuchMethodException.class)
+  public void protectedConstructor() throws Exception {
+    Object[] args = new Object[] {(byte) 3, (byte) 7, (short) 4};
+    reflectionHelper.lookupConstructor(
+        clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Short.TYPE));
+  }
+
+  @Test
+  public void protectedConstructor_withNonPublicReflectionHelper() throws Exception {
+    Object[] args = new Object[] {(byte) 3, (byte) 7, (short) 4};
+    Constructor constructor =
+        reflectionHelperWithNonPublicAccess.lookupConstructor(
+            clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Short.TYPE));
+
+    assertNotNull(constructor);
+    assertEquals("protectedConstructor", invoke(constructor, args));
+  }
+
+  @Test(expected = NoSuchMethodException.class)
+  public void packageProtectedConstructor() throws Exception {
+    Object[] args = new Object[] {(byte) 3, (byte) 7, 4L};
+    reflectionHelper.lookupConstructor(clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Long.TYPE));
+  }
+
+  @Test
+  public void packageProtectedConstructor_withNonPublicReflectionHelper() throws Exception {
+    Object[] args = new Object[] {(byte) 3, (byte) 7, 4L};
+    Constructor constructor =
+        reflectionHelperWithNonPublicAccess.lookupConstructor(
+            clazz, args, Arrays.asList(Byte.TYPE, Byte.TYPE, Long.TYPE));
+
+    assertNotNull(constructor);
+    assertEquals("packageProtectedConstructor", invoke(constructor, args));
   }
   // </editor-fold>
 

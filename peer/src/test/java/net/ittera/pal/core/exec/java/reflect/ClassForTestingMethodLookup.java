@@ -107,12 +107,6 @@ public class ClassForTestingMethodLookup {
   }
   // </editor-fold>
 
-  // <editor-fold desc="Varargs testing">
-  public String methodWithFloatVarargs(Float... params) {
-    return "FloatVarargs";
-  }
-  // </editor-fold>
-
   // <editor-fold desc="Object type testing">
   public String methodWithOneParam(Object param1) {
     return "methodWithOneObjectParam";
@@ -132,7 +126,7 @@ public class ClassForTestingMethodLookup {
     return "protectedMethodWithOneParam";
   }
 
-  String packageVisibleMethodWithOneParam(String param1) {
+  String packageProtectedMethodWithOneParam(String param1) {
     return "packageVisibleMethodWithOneParam";
   }
   // </editor-fold>
@@ -160,16 +154,16 @@ public class ClassForTestingMethodLookup {
   // </editor-fold>
 
   // <editor-fold desc="Varargs testing">
+  public String methodWithFloatVarargs(Float... params) {
+    return "FloatVarargs";
+  }
+
   public String methodWithVarargs(String... params) {
     return "methodWithStringVarargs";
   }
 
   public String methodWithVarargs(Object... params) {
     return "methodWithObjectVarargs";
-  }
-
-  public String methodWithVarargsAndOneParam(String param1, String... params) {
-    return "methodWithVarargsAndOneParam";
   }
   // </editor-fold>
 
