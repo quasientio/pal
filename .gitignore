@@ -3,6 +3,9 @@ lib/
 logs/
 .idea/
 .local/
+.project
+.classpath
+.settings/
 venv/
 /*classes_info.txt
 /*/*classes_info.txt
