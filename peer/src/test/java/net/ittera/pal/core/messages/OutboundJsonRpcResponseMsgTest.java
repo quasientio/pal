@@ -21,7 +21,7 @@ package net.ittera.pal.core.messages;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 import java.util.UUID;
 import net.ittera.pal.core.ZmqEnabledTest;
@@ -32,34 +32,39 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-public class InboundJsonRpcMsgTest extends ZmqEnabledTest {
+public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
   @Test
   public void send() {
-    UUID clientId = UUID.randomUUID();
-    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"foo\",\"params\":[],\"id\":1}";
 
-    InboundJsonRpcMsg msgOut = new InboundJsonRpcMsg(clientId, jsonMessage);
-
-    // send
+    // create and connect sockets
     String socketAddr = "inproc://here";
     ZContext zContext = createContext();
-    ZMQ.Socket out = zContext.createSocket(SocketType.DEALER);
-    out.bind(socketAddr);
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.connect(socketAddr);
-    msgOut.send(out);
-    logger.debug("sent msgOut= {}", msgOut);
+    ZMQ.Socket dealerSocket = zContext.createSocket(SocketType.DEALER);
+    dealerSocket.bind(socketAddr);
+    ZMQ.Socket repSocket = zContext.createSocket(SocketType.REP);
+    repSocket.connect(socketAddr);
+
+    // before sending a reply from REP to DEALER, we need to receive a request from DEALER
+    dealerSocket.send("", ZMQ.SNDMORE); // emulate empty envelope
+    dealerSocket.send("fake request", 0);
+    String recvdStr = repSocket.recvStr();
+    assertEquals("fake request", recvdStr);
+
+    // create and send a OutboundJsonRpcResponseMsg instance from REP to DEALER
+    UUID clientId = UUID.randomUUID();
+    String jsonRpcMessage = "{\"jsonrpc\":\"2.0\",\"result\":\"foo\",\"id\":1}";
+    OutboundJsonRpcResponseMsg msgOut = new OutboundJsonRpcResponseMsg(clientId, jsonRpcMessage);
+    msgOut.send(repSocket);
 
     // receive and compare
-    InboundJsonRpcMsg msgIn = InboundJsonRpcMsg.recvMsg(in, true);
-    logger.debug("received msgIn= {}", msgIn);
+    OutboundJsonRpcResponseMsg msgIn = OutboundJsonRpcResponseMsg.recvMsg(dealerSocket, true);
     assertThat(msgIn, is(msgOut));
 
     // close
-    out.close();
-    in.close();
+    dealerSocket.close();
+    repSocket.close();
     zContext.destroy();
   }
 
@@ -67,9 +72,9 @@ public class InboundJsonRpcMsgTest extends ZmqEnabledTest {
   public void testEquals() {
     // test two different instances
     UUID clientId = UUID.randomUUID();
-    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"foo\",\"params\":[],\"id\":1}";
-    InboundJsonRpcMsg msg1 = new InboundJsonRpcMsg(clientId, jsonMessage);
-    InboundJsonRpcMsg msg2 = new InboundJsonRpcMsg(clientId, jsonMessage);
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"result\":\"foo\",\"id\":1}";
+    OutboundJsonRpcResponseMsg msg1 = new OutboundJsonRpcResponseMsg(clientId, jsonMessage);
+    OutboundJsonRpcResponseMsg msg2 = new OutboundJsonRpcResponseMsg(clientId, jsonMessage);
     assertThat(msg1, is(msg2));
 
     // test same instance
@@ -77,12 +82,12 @@ public class InboundJsonRpcMsgTest extends ZmqEnabledTest {
 
     // test two different instances with different clientId
     UUID clientId2 = UUID.randomUUID();
-    InboundJsonRpcMsg msg3 = new InboundJsonRpcMsg(clientId2, jsonMessage);
+    OutboundJsonRpcResponseMsg msg3 = new OutboundJsonRpcResponseMsg(clientId2, jsonMessage);
     assertThat(msg1, is(not(msg3)));
 
     // test two different instances with different jsonMessage
-    String jsonMessage2 = "{\"jsonrpc\":\"2.0\",\"method\":\"bar\",\"params\":[],\"id\":1}";
-    InboundJsonRpcMsg msg4 = new InboundJsonRpcMsg(clientId, jsonMessage2);
+    String jsonMessage2 = "{\"jsonrpc\":\"2.0\",\"error\":\"bar\",\"id\":1}";
+    OutboundJsonRpcResponseMsg msg4 = new OutboundJsonRpcResponseMsg(clientId, jsonMessage2);
     assertThat(msg1, is(not(msg4)));
   }
 }

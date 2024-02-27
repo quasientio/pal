@@ -17,13 +17,12 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.rpc.basic;
+package net.ittera.pal.rpc.binary;
 
 import static org.junit.Assert.assertEquals;
 
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ReturnValue;
-import net.ittera.pal.rpc.AbstractPeerMessageIT;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
@@ -32,7 +31,7 @@ import org.junit.Test;
  *
  * <p>TODO: - arrays
  */
-public class NonVoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
+public class NonVoidInstanceMethodMessageIT extends AbstractBinaryRPCMessageIT {
 
   protected final String className = "net.ittera.pal.apps.rpc.NonVoidInstanceMethods";
 

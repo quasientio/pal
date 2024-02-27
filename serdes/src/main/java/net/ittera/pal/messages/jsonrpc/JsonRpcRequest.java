@@ -19,6 +19,8 @@ import net.ittera.pal.messages.types.ExecMessageType;
  *   }
  *   </pre>
  *
+ * <p>The jsonrpc field is always "2.0".
+ *
  * <p>For the method field, the following formats are supported:
  *
  * <ul>
@@ -34,8 +36,6 @@ import net.ittera.pal.messages.types.ExecMessageType;
  * <p>The params field is an array of parameters.
  *
  * <p>The id field is an integer that is used to correlate the request with the response.
- *
- * <p>The jsonrpc field is always "2.0".
  *
  * <p>The following table shows the mapping between the method field and the ExecMessageType enum:
  *
@@ -151,6 +151,23 @@ public class JsonRpcRequest {
 
   public String getObjectRef() {
     return objectRef;
+  }
+
+  @Override
+  public String toString() {
+    return "JsonRpcRequest{"
+        + "jsonrpc='"
+        + jsonrpc
+        + '\''
+        + ", method='"
+        + method
+        + '\''
+        + ", params="
+        + params
+        + ", id='"
+        + id
+        + '\''
+        + '}';
   }
 
   private static boolean isNumeric(String str) {

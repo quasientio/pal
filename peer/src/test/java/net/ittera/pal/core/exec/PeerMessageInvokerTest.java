@@ -28,6 +28,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.gson.Gson;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,8 +38,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
+import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
+import net.ittera.pal.core.messages.OutboundJsonRpcResponseMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
@@ -58,7 +63,9 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   private final String RPC_DEALER_ADDR = "inproc://deal";
   private final String JSONRPC_DEALER_ADDR = "inproc://json.deal";
   private ZContext context;
-  private Socket dealerSocket;
+  private Socket rpcDealerSocket;
+  private Socket jsonRpcDealerSocket;
+  private static Gson gson = new Gson();
   private ExecutorService execService;
   private PeerMessageInvoker peerMessageInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
@@ -69,8 +76,11 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
     this.context = createContext();
     this.execService = Executors.newCachedThreadPool();
     // simulate RPCRequestDispatcher's DEALER socket
-    this.dealerSocket = context.createSocket(SocketType.DEALER);
-    dealerSocket.bind(RPC_DEALER_ADDR);
+    this.rpcDealerSocket = context.createSocket(SocketType.DEALER);
+    rpcDealerSocket.bind(RPC_DEALER_ADDR);
+    // simulate JSONRPCRequestDispatcher's DEALER socket
+    this.jsonRpcDealerSocket = context.createSocket(SocketType.DEALER);
+    jsonRpcDealerSocket.bind(JSONRPC_DEALER_ADDR);
 
     /* mock incomingMessageDispatcher */
     incomingMessageDispatcher = mock(IncomingMessageDispatcher.class);
@@ -111,6 +121,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
 
   @After
   public void cleanup() throws Exception {
+    peerMessageInvoker.closeConnections();
     closeContext(context);
     execService.shutdownNow();
     execService.awaitTermination(5, TimeUnit.SECONDS);
@@ -118,7 +129,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void invokeOneMessage() throws Exception {
+  public void invokeRPCMessage() throws Exception {
 
     // start invoker thread
     execService.submit(peerMessageInvoker);
@@ -126,12 +137,12 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
     // deal msg
     ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     Message wrapper = msgBuilder.wrap(invokable);
-    dealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
-    dealerSocket.send(ColferUtils.toBytes(wrapper), 0);
+    rpcDealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
+    rpcDealerSocket.send(ColferUtils.toBytes(wrapper), 0);
     // get reply
-    dealerSocket.recv(); // 1st frame empty to emulate REP envelope
+    rpcDealerSocket.recv(); // 1st frame empty to emulate REP envelope
     Message msg = new Message();
-    msg.unmarshal(dealerSocket.recv(), 0);
+    msg.unmarshal(rpcDealerSocket.recv(), 0);
     ExecMessage reply = msg.getExecMessage();
 
     assertThat(peerMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(1)));
@@ -142,7 +153,46 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void invokeManyMessages() throws Exception {
+  public void invokeJSONRPCMessage() throws Exception {
+
+    // start invoker thread
+    execService.submit(peerMessageInvoker);
+
+    // create new JSON-RPC request
+    JsonRpcRequest request = new JsonRpcRequest();
+    request.setJsonrpc("2.0");
+    request.setMethod("new:java.lang.String");
+    final UUID requestUuid = UUID.randomUUID();
+    final UUID clientId = UUID.randomUUID();
+    request.setId(requestUuid.toString());
+    request.processMethodParts();
+
+    // deal msg
+    String jsonRpcRequestAsString = gson.toJson(request);
+    InboundJsonRpcRequestMsg inboundJSONRPCRequestMsg =
+        new InboundJsonRpcRequestMsg(clientId, jsonRpcRequestAsString);
+    boolean sentOk = inboundJSONRPCRequestMsg.send(jsonRpcDealerSocket);
+    if (!sentOk) {
+      throw new RuntimeException("Error sending JSON-RPC message");
+    }
+
+    // get reply
+    OutboundJsonRpcResponseMsg outboundJsonRpcResponseMsg =
+        OutboundJsonRpcResponseMsg.recvMsg(jsonRpcDealerSocket, true);
+    final String jsonRpcResponseAsString = outboundJsonRpcResponseMsg.getJsonMessage();
+    final JsonRpcResponse jsonRpcResponse =
+        gson.fromJson(jsonRpcResponseAsString, JsonRpcResponse.class);
+
+    // assert number of calls
+    assertThat(peerMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(1)));
+    verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
+
+    // assert reply msg followsUuid of original
+    assertThat(jsonRpcResponse.getId(), is(requestUuid.toString()));
+  }
+
+  @Test
+  public void invokeManyRPCMessages() throws Exception {
 
     // start invoker thread
     execService.submit(peerMessageInvoker);
@@ -155,13 +205,13 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
       // deal msg
       ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       Message wrapper = msgBuilder.wrap(invokable);
-      dealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
-      dealerSocket.send(ColferUtils.toBytes(wrapper), 0);
+      rpcDealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
+      rpcDealerSocket.send(ColferUtils.toBytes(wrapper), 0);
       msgsToInvoke.add(invokable);
       // get reply
-      dealerSocket.recv(); // 1st frame empty to emulate REP envelope
+      rpcDealerSocket.recv(); // 1st frame empty to emulate REP envelope
       Message msg = new Message();
-      msg.unmarshal(dealerSocket.recv(), 0);
+      msg.unmarshal(rpcDealerSocket.recv(), 0);
       ExecMessage reply = msg.getExecMessage();
       replyMessages.add(reply);
     }
@@ -175,5 +225,43 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
       assertThat(
           replyMessages.get(i).getResponseToUuid(), is(msgsToInvoke.get(i).getMessageUuid()));
     }
+  }
+
+  @Test
+  public void invokeManyJSONRPCMessages() throws Exception {
+
+    // start invoker thread
+    execService.submit(peerMessageInvoker);
+
+    // deal msgs
+    int msgCount = 10;
+    for (int i = 0; i < msgCount; i++) {
+      // create JSON-RPC request
+      JsonRpcRequest request = new JsonRpcRequest();
+      request.setJsonrpc("2.0");
+      request.setMethod("new:java.lang.String");
+      final UUID requestUuid = UUID.randomUUID();
+      final UUID clientId = UUID.randomUUID();
+      request.setId(requestUuid.toString());
+      request.processMethodParts();
+      // deal msg
+      String jsonRpcRequestAsString = gson.toJson(request);
+      InboundJsonRpcRequestMsg inboundJSONRPCRequestMsg =
+          new InboundJsonRpcRequestMsg(clientId, jsonRpcRequestAsString);
+      boolean sentOk = inboundJSONRPCRequestMsg.send(jsonRpcDealerSocket);
+      if (!sentOk) {
+        throw new RuntimeException("Error sending JSON-RPC message");
+      }
+
+      // get reply
+      OutboundJsonRpcResponseMsg outboundJsonRpcResponseMsg =
+          OutboundJsonRpcResponseMsg.recvMsg(jsonRpcDealerSocket, true);
+      final JsonRpcResponse jsonRpcResponse =
+          gson.fromJson(outboundJsonRpcResponseMsg.getJsonMessage(), JsonRpcResponse.class);
+    }
+
+    // assert number of calls
+    assertThat(peerMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(msgCount)));
+    verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), anyBoolean());
   }
 }

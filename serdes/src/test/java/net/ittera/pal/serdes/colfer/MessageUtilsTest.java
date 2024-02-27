@@ -2,16 +2,15 @@ package net.ittera.pal.serdes.colfer;
 
 import static org.junit.Assert.*;
 
-import java.util.Arrays;
+import java.util.stream.Stream;
 import net.ittera.pal.messages.jsonrpc.InvalidJsonRpcRequestException;
 import org.junit.Test;
 
-public class JsonRpcToExecMessageConverterTest {
+public class MessageUtilsTest {
 
   @Test
   public void parseJsonRpcMessage_illegalCharactersInClassName_invalidJsonRpcRequestException() {
-    JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
-    Arrays.asList(
+    Stream.of(
             "net.ittera.pal.core.exec.3DModel.1234.getPeerUuid", // starts with a digit
             "net.ittera.pal.core.exec.My-Class.getPeerUuid", // contains a hyphen
             "new:net.ittera.pal.core.exec.#Settings", // contains a hash
@@ -19,14 +18,13 @@ public class JsonRpcToExecMessageConverterTest {
             "get:net.ittera.pal.core.exec.PeerMessage/Invoker.peerUuid", // contains a slash
             "get:net.ittera.pal.core.exec.Peer*MessageInvoker.peerUuid" // contains an asterisk
             )
-        .stream()
         .forEach(
             method -> {
               String jsonRpcMessage =
                   String.format(
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[],\"id\":1}", method);
               try {
-                converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcRequestException");
               } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Invalid characters in class name"));
@@ -37,8 +35,7 @@ public class JsonRpcToExecMessageConverterTest {
   @Test
   public void
       parseJsonRpcMessage_illegalUseOfReservedKeywordInClassName_invalidJsonRpcRequestException() {
-    JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
-    Arrays.asList(
+    Stream.of(
             "class",
             "null",
             "true",
@@ -91,7 +88,6 @@ public class JsonRpcToExecMessageConverterTest {
             "synchronized",
             "transient",
             "volatile")
-        .stream()
         .forEach(
             classname -> {
               String method = String.format("get:net.ittera.pal.core.exec.%s.peerUuid", classname);
@@ -99,7 +95,7 @@ public class JsonRpcToExecMessageConverterTest {
                   String.format(
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[],\"id\":1}", method);
               try {
-                converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcRequestException");
               } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Class name is a Java reserved keyword"));
@@ -109,15 +105,13 @@ public class JsonRpcToExecMessageConverterTest {
 
   @Test
   public void parseJsonRpcMessage_validClassNamesAndMethod_noException() {
-    JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
-    Arrays.asList(
+    Stream.of(
             "com.example.MyClass",
             "com.example._MyClass",
             "com.example.$MyClass",
             "com.example.MyClass84732",
             "com.example.MyCla__ss",
             "com.example.$MyCla$$")
-        .stream()
         .forEach(
             method -> {
               String jsonRpcMessage =
@@ -125,7 +119,7 @@ public class JsonRpcToExecMessageConverterTest {
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[{\"value\": %s},{\"value\": %d}],\"id\":1}",
                       method, "myParam1", 12345);
               try {
-                converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
               } catch (InvalidJsonRpcRequestException e) {
                 throw new RuntimeException(e);
               }
@@ -134,19 +128,17 @@ public class JsonRpcToExecMessageConverterTest {
 
   @Test
   public void parseJsonRpcMessage_noParametersGivenForPut_invalidJsonRpcRequestException() {
-    JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
-    Arrays.asList(
+    Stream.of(
             "put:net.ittera.pal.core.exec.PeerMessageInvoker.peerUuid", // static put
             "put:net.ittera.pal.core.exec.PeerMessageInvoker.479345.peerUuid" // instance put
             )
-        .stream()
         .forEach(
             method -> {
               String jsonRpcMessage =
                   String.format(
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[],\"id\":1}", method);
               try {
-                converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcRequestException");
               } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Field put must have exactly one parameter"));
@@ -156,23 +148,20 @@ public class JsonRpcToExecMessageConverterTest {
 
   @Test
   public void justatest() throws InvalidJsonRpcRequestException {
-    JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
     String method = "put:net.ittera.pal.core.exec.PeerMessageInvoker.peerUuid";
     String jsonRpcMessage =
         String.format(
             "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[{\"value\": 50}],\"id\":1}",
             method);
-    converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+    MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
   }
 
   @Test
   public void parseJsonRpcMessage_twoParametersGivenForPut_invalidJsonRpcRequestException() {
-    JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
-    Arrays.asList(
+    Stream.of(
             "put:net.ittera.pal.core.exec.PeerMessageInvoker.peerUuid", // static put
             "put:net.ittera.pal.core.exec.PeerMessageInvoker.479345.peerUuid" // instance put
             )
-        .stream()
         .forEach(
             method -> {
               String jsonRpcMessage =
@@ -180,7 +169,7 @@ public class JsonRpcToExecMessageConverterTest {
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[{\"value\": %s},{\"value\": %d}],\"id\":1}",
                       method, "myParam1", 12345);
               try {
-                converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcRequestException");
               } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Field put must have exactly one parameter"));
@@ -190,12 +179,10 @@ public class JsonRpcToExecMessageConverterTest {
 
   @Test
   public void parseJsonRpcMessage_parametersGivenForGet_invalidJsonRpcRequestException() {
-    JsonRpcToExecMessageConverter converter = new JsonRpcToExecMessageConverter();
-    Arrays.asList(
+    Stream.of(
             "get:net.ittera.pal.core.exec.PeerMessageInvoker.peerUuid", // static get
             "get:net.ittera.pal.core.exec.PeerMessageInvoker.479345.peerUuid" // instance get
             )
-        .stream()
         .forEach(
             method -> {
               String jsonRpcMessage =
@@ -203,7 +190,7 @@ public class JsonRpcToExecMessageConverterTest {
                       "{\"jsonrpc\": \"2.0\", \"method\": \"%s\", \"params\": [{\"value\": %d}], \"id\": 1}",
                       method, 123);
               try {
-                converter.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcRequestException");
               } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Field get cannot have any parameter"));

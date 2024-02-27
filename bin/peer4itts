@@ -17,6 +17,7 @@ pal run \
   --dir $PAL_DIRECTORY \
   --name peer-for-itt \
   --rpc 5656 \
+  --json-rpc 7789 \
   --rpc-threads 3 \
   --rpc-allow-nonpublic \
   --log auto \

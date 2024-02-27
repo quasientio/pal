@@ -592,7 +592,7 @@ public class Main implements Callable<Integer> {
           fatalExit(e, PeerException.FatalCode.ERROR_PARSING_JSONRPC_PORT_NUMBER);
         }
       }
-      properties.setProperty("in.websocket", format("%s:%d", hostname, port));
+      properties.setProperty("in.websocket", format("ws://%s:%d", hostname, port));
       properties.setProperty("peer.threadPoolSize", String.valueOf(rpcThreads));
     }
 

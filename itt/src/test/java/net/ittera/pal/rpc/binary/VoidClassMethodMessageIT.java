@@ -17,10 +17,9 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.rpc.basic;
+package net.ittera.pal.rpc.binary;
 
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.rpc.AbstractPeerMessageIT;
 import org.junit.Test;
 
 /**
@@ -29,7 +28,7 @@ import org.junit.Test;
  * <p>TODO we should check the calls worked: As these methods are void, we should store some value
  * in a field of the target object and check it (+ revert it)
  */
-public class VoidClassMethodMessageIT extends AbstractPeerMessageIT {
+public class VoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
 
   protected final String className = "net.ittera.pal.apps.rpc.VoidStaticMethods";
 

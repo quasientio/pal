@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.rpc;
+package net.ittera.pal.rpc.binary;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -49,7 +49,7 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractPeerMessageIT extends AbstractIntegrationTest
+public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
     implements ExecMessageAssertions {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
@@ -85,12 +85,12 @@ public abstract class AbstractPeerMessageIT extends AbstractIntegrationTest
 
     final Properties consumerProperties = new Properties();
     try (final InputStream stream =
-        AbstractPeerMessageIT.class.getResourceAsStream(CONSUMER_PROPERTIES_PATH)) {
+        AbstractBinaryRPCMessageIT.class.getResourceAsStream(CONSUMER_PROPERTIES_PATH)) {
       consumerProperties.load(stream);
     }
     final Properties producerProperties = new Properties();
     try (final InputStream stream =
-        AbstractPeerMessageIT.class.getResourceAsStream(PRODUCER_PROPERTIES_PATH)) {
+        AbstractBinaryRPCMessageIT.class.getResourceAsStream(PRODUCER_PROPERTIES_PATH)) {
       producerProperties.load(stream);
     }
     thinPeer =

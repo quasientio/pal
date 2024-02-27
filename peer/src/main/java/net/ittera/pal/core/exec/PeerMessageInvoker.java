@@ -19,13 +19,18 @@
 
 package net.ittera.pal.core.exec;
 
+import com.google.gson.Gson;
 import java.util.Arrays;
 import java.util.UUID;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
-import net.ittera.pal.core.messages.InboundJsonRpcMsg;
+import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
+import net.ittera.pal.core.messages.OutboundJsonRpcResponseMsg;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.colfer.MessageUtils;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -39,6 +44,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
   private ZMQ.Socket rpcSocket;
   private final String jsonrpcDealerAddress;
   private ZMQ.Socket jsonrpcSocket;
+  private static Gson gson = new Gson();
 
   public PeerMessageInvoker(
       ThreadGroup group,
@@ -101,7 +107,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
     boolean socketError = false;
     while (!interrupted() && !socketError) {
       rpcReq = null;
-      InboundJsonRpcMsg jsonrpcMsg = null;
+      InboundJsonRpcRequestMsg jsonrpcMsg = null;
 
       if (logger.isDebugEnabled()) {
         logger.debug("Ready and polling from sockets...");
@@ -117,7 +123,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
 
         // got a JSON-RPC request
         if (poller.pollin(1)) {
-          jsonrpcMsg = InboundJsonRpcMsg.recvMsg(jsonrpcSocket, true);
+          jsonrpcMsg = InboundJsonRpcRequestMsg.recvMsg(jsonrpcSocket, true);
         }
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
@@ -183,26 +189,36 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
       // parse and dispatch new JSON-RPC req
       if (jsonrpcMsg != null) {
         final long started = System.currentTimeMillis();
-        requestMsg = new Message();
         boolean unmarshalError = false;
+        JsonRpcRequest jsonRpcRequest = null;
 
         try {
-          //            requestMsg.unmarshal(jsonrpcMsg.getMessage().getBytes(ZMQ.CHARSET), 0);
+          jsonRpcRequest = MessageUtils.parseAndValidateJsonRpcMessage(jsonrpcMsg.getJsonMessage());
           if (logger.isDebugEnabled()) {
-            logger.debug("Received JSON-RPC message with uuid: {}", getMessageUuid(requestMsg));
+            logger.debug(
+                "Received JSON-RPC message from client uuid: {}", jsonrpcMsg.getClientId());
           }
         } catch (Exception e) {
           logger.error("Caught exception parsing message", e);
           unmarshalError = true;
         }
 
+        // create ExecMessage from JSON-RPC request message
+        requestMsg =
+            messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getClientId());
+
         // dispatch
         if (!unmarshalError) {
           try {
             replyMsg = dispatch(requestMsg);
 
+            // create JSON-RPC reply from ExecMessage reply
+            final JsonRpcResponse jsonRpcResponse =
+                messageBuilder.jsonRpcResponseFromExecMessageReply(replyMsg.getExecMessage());
+
             // send reply
-            //              jsonrpcMsg.send(jsonrpcSocket);
+            new OutboundJsonRpcResponseMsg(jsonrpcMsg.getClientId(), gson.toJson(jsonRpcResponse))
+                .send(jsonrpcSocket);
 
             if (logger.isDebugEnabled()) {
               final long took = System.currentTimeMillis() - started;

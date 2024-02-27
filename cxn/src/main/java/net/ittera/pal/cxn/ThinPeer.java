@@ -21,8 +21,11 @@ package net.ittera.pal.cxn;
 
 import static java.lang.String.format;
 
+import com.google.gson.Gson;
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalUnit;
@@ -34,19 +37,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.ControlStatusType;
-import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.RPCType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -58,6 +59,8 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -102,11 +105,16 @@ public class ThinPeer {
   private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap<>();
   private ExecutorService asyncConsumerExecutor;
 
-  // zmq stuff
+  // rpc stuff
   private ZContext zmqContext;
   private Socket peerSocket;
-  private PeerInfo currentPeer;
+  private WSClient wsClient;
   private String rpcAddress;
+  private String jsonRpcAddress;
+  private Gson gson = new Gson();
+  private RPCType rpcType = RPCType.BINARY_RPC;
+  private PeerInfo initialPeer;
+  private PeerInfo currentPeer;
   private boolean talkingToPeer;
   private boolean zmqContextGiven;
 
@@ -195,7 +203,7 @@ public class ThinPeer {
   }
 
   public ThinPeer withInitialPeer(PeerInfo initialPeer) {
-    this.currentPeer = initialPeer;
+    this.initialPeer = initialPeer;
     return this;
   }
 
@@ -217,6 +225,11 @@ public class ThinPeer {
 
   public ThinPeer withSelfRegistration(boolean registerSelf) {
     this.registerSelf = registerSelf;
+    return this;
+  }
+
+  public ThinPeer withRPCType(RPCType rpcType) {
+    this.rpcType = rpcType;
     return this;
   }
 
@@ -260,7 +273,7 @@ public class ThinPeer {
     final boolean logless =
         (!producerGiven && producerProperties == null)
             || (!consumerGiven && consumerProperties == null)
-            || currentPeer != null;
+            || initialPeer != null;
 
     if (!logless) {
       // configure log(s) to connect to; fill bootstrap servers if only log names given
@@ -329,23 +342,27 @@ public class ThinPeer {
       logIOEnabled = true;
     }
 
-    // configure ZMQ
+    // configure RPC
     if (allowP2P) {
-      if (zmqContext == null) {
-        logger.info("Initializing zmq context");
-        this.zmqContext = new ZContext();
+      if (rpcType == RPCType.BINARY_RPC) {
+        if (zmqContextGiven) {
+          logger.info("Using given ZMQ context");
+        } else {
+          logger.info("Initializing zmq context");
+          this.zmqContext = new ZContext();
+        }
+        this.peerSocket = zmqContext.createSocket(SocketType.REQ);
       }
-      this.peerSocket = zmqContext.createSocket(SocketType.REQ);
-      if (currentPeer != null) {
-        if (currentPeer.getRpcAddress() != null) {
-          connectToPeer(currentPeer);
-        } else if (currentPeer.getUuid() != null) {
-          connectToPeer(currentPeer.getUuid());
+      if (initialPeer != null) {
+        if (initialPeer.getRpcAddress() != null) {
+          connectToPeer(initialPeer);
+        } else if (initialPeer.getUuid() != null) {
+          connectToPeer(initialPeer.getUuid());
         } else {
           throw new RuntimeException(
               format(
                   "Cannot connect to peer without its UUID or listening (i.e. RPC) address. Peer -> %s",
-                  currentPeer));
+                  initialPeer));
         }
       }
     }
@@ -353,8 +370,8 @@ public class ThinPeer {
     initialized = true;
     logger.info(
         format(
-            "Initialized ThinPeer with:%n uuid: %s,%n name: %s,%n rpcAddress: %s,%n directory: %s,%n initialPeer: %s,%n inLog: %s,%n outLog: %s",
-            peerUuid, peerName, rpcAddress, palDirectoryUrl, currentPeer, inLog, outLog));
+            "Initialized ThinPeer with:%n uuid: %s,%n name: %s,%n rpcAddress: %s,%n directory: %s,%n initialPeer: %s,%n rpcType: %s,%n inLog: %s,%n outLog: %s",
+            peerUuid, peerName, rpcAddress, palDirectoryUrl, initialPeer, rpcType, inLog, outLog));
 
     return this;
   }
@@ -366,10 +383,15 @@ public class ThinPeer {
     return null;
   }
 
-  private void connectSocket() {
-    peerSocket.setIdentity(("Dual-Peer-" + peerUuid.toString()).getBytes(ZMQ.CHARSET));
-    peerSocket.connect(currentPeer.getRpcAddress());
+  private void connectZMQSocket(PeerInfo peer) {
+    peerSocket.setIdentity(("ThinPeer-" + peerUuid.toString()).getBytes(ZMQ.CHARSET));
+    peerSocket.connect(peer.getRpcAddress());
     isSocketConnected = true;
+  }
+
+  private void connectWebSocket(PeerInfo peer) throws URISyntaxException, InterruptedException {
+    wsClient = new WSClient(new URI(peer.getJsonrpcAddress()));
+    wsClient.connectBlocking();
   }
 
   private void assertInitialized() {
@@ -378,8 +400,7 @@ public class ThinPeer {
     }
   }
 
-  public ExecMessage sendAndReceive(ExecMessage message)
-      throws ExecutionException, InterruptedException {
+  public ExecMessage sendAndReceive(ExecMessage message) throws Exception {
     assertInitialized();
     if (logger.isTraceEnabled()) {
       logger.trace("sendAndReceive: in with message: {}", ColferUtils.format(message));
@@ -391,39 +412,16 @@ public class ThinPeer {
     }
   }
 
-  /** <b>INCOMPLETE</b>: only checks for matches of staticFieldPutDone's ONLY USED BY SWING TESTS */
-  public ExecMessage waitFor(ExecMessageType type, String fieldName) {
+  public JsonRpcResponse sendAndReceive(JsonRpcRequest jsonRpc) {
     assertInitialized();
-    if (logger.isDebugEnabled()) {
-      logger.debug("Starting wait for type: {} and field name: {}", type, fieldName);
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendAndReceive: in with jsonRpcRequest: {}", jsonRpc);
     }
-    // TODO extra param to seek before -> consumer.seek(inTopicPartition, sentRecordOffset);
-
-    while (true) {
-      ConsumerRecords<String, byte[]> records = consumer.poll(pollingDuration);
-      for (ConsumerRecord<String, byte[]> record : records) {
-        final Message message = new Message();
-        message.unmarshal(record.value(), 0);
-        long receivedMsgOffset = record.offset();
-        final ExecMessage execMessage = message.getExecMessage();
-        if (execMessage != null) {
-          final StaticFieldPutDone staticFieldPutDone = execMessage.getStaticFieldPutDone();
-          if (staticFieldPutDone != null
-              && fieldName.equals(staticFieldPutDone.getField().getName())) {
-            if (logger.isDebugEnabled()) {
-              logger.debug(
-                  "Got matching message with offset {}:\n{}",
-                  receivedMsgOffset,
-                  ColferUtils.format(execMessage));
-            }
-            return execMessage;
-          }
-        } else {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Skipping record with offset {}", receivedMsgOffset);
-          }
-        }
-      }
+    if (talkingToPeer) {
+      return sendToPeer(jsonRpc);
+    } else {
+      throw new IllegalStateException(
+          "Not connected to any peer. Cannot send and receive JSON-RPC messages to/from log");
     }
   }
 
@@ -531,8 +529,7 @@ public class ThinPeer {
     }
   }
 
-  private ExecMessage sendToLogAndReceive(ExecMessage message)
-      throws ExecutionException, InterruptedException {
+  private ExecMessage sendToLogAndReceive(ExecMessage message) throws Exception {
 
     if (logger.isTraceEnabled()) {
       logger.trace("sendToLogAndReceive: in with message: {}", ColferUtils.format(message));
@@ -544,7 +541,7 @@ public class ThinPeer {
     return sendToLogConsumeAndSwitchToPeer(message);
   }
 
-  private ExecMessage sendToLogConsumeAndSwitchToPeer(ExecMessage message) {
+  private ExecMessage sendToLogConsumeAndSwitchToPeer(ExecMessage message) throws Exception {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "sendToLogConsumeAndSwitchToPeer: in with message: {}", ColferUtils.format(message));
@@ -558,7 +555,7 @@ public class ThinPeer {
     return replyMsg;
   }
 
-  private ExecMessage sendAndReceiveConsumingLog(ExecMessage message) {
+  private ExecMessage sendAndReceiveConsumingLog(ExecMessage message) throws Exception {
     if (logger.isTraceEnabled()) {
       logger.trace("sendAndReceiveConsumingLog: in with message: {}", ColferUtils.format(message));
     }
@@ -631,7 +628,7 @@ public class ThinPeer {
     }
   }
 
-  public void connectToPeer(UUID peerUuid) {
+  public void connectToPeer(UUID peerUuid) throws Exception {
     PeerInfo newPeer = null;
     try {
       newPeer = getPalDirectory().getPeerInfo(peerUuid);
@@ -643,7 +640,7 @@ public class ThinPeer {
     }
   }
 
-  private void connectToPeer(PeerInfo peerInfo) {
+  private void connectToPeer(PeerInfo peer) throws Exception {
     if (logger.isTraceEnabled()) {
       logger.trace("connectToPeer: in with peerUuid: {}", peerUuid);
     }
@@ -655,10 +652,14 @@ public class ThinPeer {
       sendDeleteSessionRequest();
     }
 
-    currentPeer = peerInfo;
-    connectSocket();
+    if (rpcType == RPCType.BINARY_RPC) {
+      connectZMQSocket(peer);
+    } else { // is JSON-RPC
+      connectWebSocket(peer);
+    }
+    currentPeer = peer;
     talkingToPeer = true;
-    logger.info("Now in direct talk with {}", peerInfo);
+    logger.info("Now in direct talk with {}", peer);
   }
 
   public ExecMessage sendToPeer(ExecMessage message) {
@@ -686,7 +687,20 @@ public class ThinPeer {
     return replyMsg;
   }
 
-  // TODO: refactor this and above method
+  public JsonRpcResponse sendToPeer(JsonRpcRequest jsonRpcRequest) {
+    assertInitialized();
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendToPeer: in with jsonRpcRequest: {}", jsonRpcRequest);
+    }
+    wsClient.send(gson.toJson(jsonRpcRequest), jsonRpcRequest.getId());
+    try {
+      return wsClient.futureResponse.get();
+    } catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException("Error waiting for response", e);
+    }
+  }
+
+  // TODO: refactor this and above methods
   public ControlMessage sendToPeer(ControlMessage message) {
     assertInitialized();
     if (logger.isTraceEnabled()) {
@@ -829,5 +843,39 @@ public class ThinPeer {
 
   public boolean isClosed() {
     return closed;
+  }
+
+  private final class WSClient extends WebSocketClient {
+    private final CompletableFuture<JsonRpcResponse> futureResponse = new CompletableFuture<>();
+
+    WSClient(URI uri) {
+      super(uri);
+    }
+
+    public void send(String message, String requestId) {
+      super.send(message);
+    }
+
+    @Override
+    public void onOpen(ServerHandshake handshakedata) {
+      logger.info("WebSocket connection opened");
+    }
+
+    @Override
+    public void onMessage(String message) {
+      logger.info("Received message: {}", message);
+      JsonRpcResponse response = gson.fromJson(message, JsonRpcResponse.class);
+      futureResponse.complete(response);
+    }
+
+    @Override
+    public void onClose(int code, String reason, boolean remote) {
+      logger.info("WebSocket connection closed");
+    }
+
+    @Override
+    public void onError(Exception ex) {
+      logger.error("WebSocket error", ex);
+    }
   }
 }

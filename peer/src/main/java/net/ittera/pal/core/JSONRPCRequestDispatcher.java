@@ -28,7 +28,8 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import net.ittera.pal.common.util.Strings;
-import net.ittera.pal.core.messages.InboundJsonRpcMsg;
+import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
+import net.ittera.pal.core.messages.OutboundJsonRpcResponseMsg;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -71,8 +72,9 @@ class JSONRPCRequestDispatcher extends ConnectedService {
   @Override
   protected void openConnections() {
     // to get remote requests
-    String hostname = Strings.stringBefore(websocketAddress, ":");
-    int port = Integer.parseInt(Strings.stringAfter(websocketAddress, ":"));
+    String hostnameAndPort = Strings.stringAfter(websocketAddress, "ws://");
+    String hostname = Strings.stringBefore(hostnameAndPort, ":");
+    int port = Integer.parseInt(Strings.stringAfter(hostnameAndPort, ":"));
     webSocketServer = new InternalWebSocketServer(new InetSocketAddress(hostname, port));
 
     // to send the requests to the dispatcher threads
@@ -84,14 +86,14 @@ class JSONRPCRequestDispatcher extends ConnectedService {
   public final void run() {
     webSocketServer.start();
     boolean socketError = false;
-    while (!shutdownRequested && !Thread.interrupted()) {
+    while (!shutdownRequested && !Thread.interrupted() && !socketError) {
       try {
-        // TODO
         // get responses from DEALER socket and forward to WebSocket clients
-        byte[] buff = dealerSocket.recv(0);
-        String clientId = null;
-        String message = null;
-
+        OutboundJsonRpcResponseMsg outboundJSONRPCResponseMsg =
+            OutboundJsonRpcResponseMsg.recvMsg(dealerSocket, true);
+        UUID clientId = outboundJSONRPCResponseMsg.getClientId();
+        String jsonRpcResponse = outboundJSONRPCResponseMsg.getJsonMessage();
+        sendResponseToWebSocketClient(clientId, jsonRpcResponse);
       } catch (ClosedSelectorException ex) {
         if (logger.isDebugEnabled()) {
           logger.debug("Caught ClosedSelectorException. Breaking out.");
@@ -129,14 +131,15 @@ class JSONRPCRequestDispatcher extends ConnectedService {
   }
 
   private void sendMessageToDispatchers(UUID clientId, String message) {
-    InboundJsonRpcMsg inboundJSONRPCMsg = new InboundJsonRpcMsg(clientId, message);
-    boolean sent = inboundJSONRPCMsg.send(dealerSocket);
+    InboundJsonRpcRequestMsg inboundJSONRPCRequestMsg =
+        new InboundJsonRpcRequestMsg(clientId, message);
+    boolean sent = inboundJSONRPCRequestMsg.send(dealerSocket);
     if (!sent) {
-      logger.error("Error sending message to dispatchers: {}", inboundJSONRPCMsg);
+      logger.error("Error sending message to dispatchers: {}", inboundJSONRPCRequestMsg);
     }
   }
 
-  private WebSocket getClientSocketFromId(String clientId) {
+  private WebSocket getClientSocketFromId(UUID clientId) {
     return webSocketClientMapping.entrySet().stream()
         .filter(e -> e.getValue().equals(clientId))
         .map(Map.Entry::getKey)
@@ -144,7 +147,7 @@ class JSONRPCRequestDispatcher extends ConnectedService {
         .orElse(null);
   }
 
-  public void sendResponseToWebSocketClient(String clientId, String response) {
+  public void sendResponseToWebSocketClient(UUID clientId, String response) {
     WebSocket clientSocket = getClientSocketFromId(clientId);
     clientSocket.send(response);
   }
@@ -176,7 +179,6 @@ class JSONRPCRequestDispatcher extends ConnectedService {
 
     @Override
     public void onMessage(WebSocket conn, String message) {
-      // Forward message to ZeroMQ DEALER socket with client ID
       UUID clientId = webSocketClientMapping.get(conn);
       sendMessageToDispatchers(clientId, message);
     }

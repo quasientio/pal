@@ -17,13 +17,12 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.rpc.basic;
+package net.ittera.pal.rpc.binary;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import net.ittera.pal.messages.colfer.ReturnValue;
-import net.ittera.pal.rpc.AbstractPeerMessageIT;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
@@ -32,7 +31,7 @@ import org.junit.Test;
  *
  * <p>TODO: arrays objectrefs rest of primitive types (?)
  */
-public class GetClassVariableMessageIT extends AbstractPeerMessageIT {
+public class GetClassVariableMessageIT extends AbstractBinaryRPCMessageIT {
 
   protected final String className = "net.ittera.pal.apps.rpc.StaticVars";
 

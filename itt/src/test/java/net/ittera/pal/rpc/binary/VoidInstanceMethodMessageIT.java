@@ -17,10 +17,9 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.rpc.basic;
+package net.ittera.pal.rpc.binary;
 
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.rpc.AbstractPeerMessageIT;
 import org.junit.Test;
 
 /**
@@ -28,7 +27,7 @@ import org.junit.Test;
  *
  * <p>TODO - arrays
  */
-public class VoidInstanceMethodMessageIT extends AbstractPeerMessageIT {
+public class VoidInstanceMethodMessageIT extends AbstractBinaryRPCMessageIT {
 
   protected final String className = "net.ittera.pal.apps.rpc.VoidInstanceMethods";
 

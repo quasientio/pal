@@ -1,5 +1,12 @@
 package net.ittera.pal;
 
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Predicate;
+import net.ittera.pal.common.directory.nodes.PeerInfo;
+import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.messages.types.RPCType;
+
 public abstract class AbstractIntegrationTest {
 
   private static String PAL_DIRECTORY_URL;
@@ -27,5 +34,21 @@ public abstract class AbstractIntegrationTest {
       KAFKA_SERVERS = kafkaServers;
     }
     return KAFKA_SERVERS;
+  }
+
+  protected static Optional<PeerInfo> findRPCPeer(RPCType rpcType)
+      throws ExecutionException, InterruptedException {
+    Predicate<PeerInfo> hasRpcType =
+        peerInfo -> {
+          if (rpcType == RPCType.BINARY_RPC) {
+            return peerInfo.getRpcAddress() != null;
+          } else {
+            return peerInfo.getJsonrpcAddress() != null;
+          }
+        };
+
+    try (PALDirectory palDirectory = new PALDirectory(getPALDirectoryURL())) {
+      return palDirectory.getAllPeers().stream().filter(hasRpcType).findFirst();
+    }
   }
 }

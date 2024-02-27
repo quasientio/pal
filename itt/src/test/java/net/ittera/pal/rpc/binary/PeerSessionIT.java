@@ -17,14 +17,14 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.rpc;
+package net.ittera.pal.rpc.binary;
 
 import javax.annotation.Nullable;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import org.junit.Test;
 
-public class PeerSessionIT extends AbstractPeerMessageIT {
+public class PeerSessionIT extends AbstractBinaryRPCMessageIT {
 
   private ReturnValue addToList(ObjectRef listObjRef, String value) throws Exception {
     return addToList(listObjRef, value, null);

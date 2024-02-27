@@ -17,11 +17,10 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.rpc.basic;
+package net.ittera.pal.rpc.binary;
 
 import net.ittera.pal.apps.rpc.Constructors;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.rpc.AbstractPeerMessageIT;
 import org.junit.Test;
 
 /**
@@ -32,7 +31,7 @@ import org.junit.Test;
  * taking Constructors type, not Object type) - invoke constructor using constructor-ref (requires
  * [ticket:15]) - inner constructor (commented out below), if it makes sense
  */
-public class ConstructorMessageIT extends AbstractPeerMessageIT {
+public class ConstructorMessageIT extends AbstractBinaryRPCMessageIT {
 
   protected final String className = "net.ittera.pal.apps.rpc.Constructors";
 

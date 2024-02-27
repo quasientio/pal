@@ -37,7 +37,7 @@ import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.rpc.ExecMessageAssertions;
+import net.ittera.pal.rpc.binary.ExecMessageAssertions;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;

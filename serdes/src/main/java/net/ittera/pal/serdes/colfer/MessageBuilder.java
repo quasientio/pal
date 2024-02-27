@@ -74,6 +74,9 @@ import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldGet;
 import net.ittera.pal.messages.colfer.StaticFieldPut;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
+import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.ControlCommandType;
 import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.ExecMessageType;
@@ -1031,6 +1034,172 @@ public final class MessageBuilder {
         interceptMessage.getCallbackMethod(),
         interceptedMessage);
   }
+  // </editor-fold>
+
+  // <editor-fold desc="JSON-RPC messages">
+  // TODO
+  private Parameter[] convertJsonParamsToColferParams(List<JsonRpcParameter> jsonParams) {
+    // Convert JSON-RPC parameters to Colfer Parameter objects
+    // Loop through jsonParams and create Parameter objects
+    if (jsonParams == null || jsonParams.isEmpty()) {
+      return new Parameter[0];
+    }
+    return null;
+  }
+
+  private InstanceMethodCall createInstanceMethodCall(JsonRpcRequest jsonRpcRequest) {
+    InstanceMethodCall instanceMethodCall = new InstanceMethodCall();
+    instanceMethodCall.setClazz(getWrappedClass(jsonRpcRequest.getFullyQualifiedClassName()));
+    instanceMethodCall.setName(jsonRpcRequest.getMethodName());
+    instanceMethodCall.setObjectRef(jsonRpcRequest.getObjectRef());
+    instanceMethodCall.setParameters(convertJsonParamsToColferParams(jsonRpcRequest.getParams()));
+    return instanceMethodCall;
+  }
+
+  private ClassMethodCall createClassMethodCall(JsonRpcRequest jsonRpcRequest) {
+    ClassMethodCall classMethodCall = new ClassMethodCall();
+    classMethodCall.setClazz(getWrappedClass(jsonRpcRequest.getFullyQualifiedClassName()));
+    classMethodCall.setName(jsonRpcRequest.getMethodName());
+    classMethodCall.setParameters(convertJsonParamsToColferParams(jsonRpcRequest.getParams()));
+    return classMethodCall;
+  }
+
+  private InstanceFieldPut createInstanceFieldPut(JsonRpcRequest jsonRpcRequest) {
+    InstanceFieldPut instanceFieldPut = new InstanceFieldPut();
+    instanceFieldPut.setClazz(getWrappedClass(jsonRpcRequest.getFullyQualifiedClassName()));
+    instanceFieldPut.setField(getWrappedField((String) null, jsonRpcRequest.getFieldName()));
+    instanceFieldPut.setObjectRef(jsonRpcRequest.getObjectRef());
+    JsonRpcParameter value = jsonRpcRequest.getParams().get(0);
+    if ("objectRef".equals(value.getType())) { // value is an object reference
+      instanceFieldPut.setValueObjectRef(value.getValue().toString());
+    } else {
+      instanceFieldPut.setValueObject(getWrappedObject(value.getValue(), value.getType(), null));
+    }
+    return instanceFieldPut;
+  }
+
+  private StaticFieldPut createStaticFieldPut(JsonRpcRequest jsonRpcRequest) {
+    StaticFieldPut staticFieldPut = new StaticFieldPut();
+    staticFieldPut.setClazz(getWrappedClass(jsonRpcRequest.getFullyQualifiedClassName()));
+    staticFieldPut.setField(getWrappedField((String) null, jsonRpcRequest.getFieldName()));
+    JsonRpcParameter value = jsonRpcRequest.getParams().get(0);
+    if ("objectRef".equals(value.getType())) { // value is an object reference
+      staticFieldPut.setValueObjectRef(value.getValue().toString());
+    } else {
+      staticFieldPut.setValueObject(getWrappedObject(value.getValue(), value.getType(), null));
+    }
+    return staticFieldPut;
+  }
+
+  private InstanceFieldGet createInstanceFieldGet(JsonRpcRequest jsonRpcRequest) {
+    InstanceFieldGet instanceFieldGet = new InstanceFieldGet();
+    instanceFieldGet.setClazz(
+        new net.ittera.pal.messages.colfer.Class()
+            .withName(jsonRpcRequest.getFullyQualifiedClassName()));
+    instanceFieldGet.setField(
+        new net.ittera.pal.messages.colfer.Field().withName(jsonRpcRequest.getFieldName()));
+    instanceFieldGet.setObjectRef(jsonRpcRequest.getObjectRef());
+    return instanceFieldGet;
+  }
+
+  private StaticFieldGet createStaticFieldGet(JsonRpcRequest jsonRpcRequest) {
+    StaticFieldGet staticFieldGet = new StaticFieldGet();
+    staticFieldGet.setClazz(
+        new net.ittera.pal.messages.colfer.Class()
+            .withName(jsonRpcRequest.getFullyQualifiedClassName()));
+    staticFieldGet.setField(
+        new net.ittera.pal.messages.colfer.Field().withName(jsonRpcRequest.getFieldName()));
+    return staticFieldGet;
+  }
+
+  private ConstructorCall createConstructorCall(JsonRpcRequest jsonRpcRequest) {
+    ConstructorCall constructorCall = new ConstructorCall();
+    constructorCall.setClazz(
+        new net.ittera.pal.messages.colfer.Class()
+            .withName(jsonRpcRequest.getFullyQualifiedClassName()));
+    constructorCall.setParameters(convertJsonParamsToColferParams(jsonRpcRequest.getParams()));
+    return constructorCall;
+  }
+
+  public Message jsonRpcRequestToExecMessage(JsonRpcRequest jsonRpcRequest, UUID fromPeerUuid) {
+
+    // Create an instance of ExecMessage and initialize required common fields
+    ExecMessage execMessage = new ExecMessage();
+    execMessage.setPeerUuid(fromPeerUuid.toString());
+    execMessage.setMessageUuid(jsonRpcRequest.getId());
+    execMessage.setExecMessageType(jsonRpcRequest.getExecMessageType().toByte());
+
+    // currentTime is meant for the client to indicate when then message is sent; as we don't have
+    // it in a JSON-RPC request, we set it here to the time the message is received
+    execMessage.setCurrentTime(dtf.format(ZonedDateTime.now()));
+
+    // Create the appropriate ExecMessage call object based on the ExecMessageType
+    switch (jsonRpcRequest.getExecMessageType()) {
+      case CONSTRUCTOR:
+        execMessage.setConstructorCall(createConstructorCall(jsonRpcRequest));
+        break;
+      case GET_STATIC:
+        execMessage.setStaticFieldGet(createStaticFieldGet(jsonRpcRequest));
+        break;
+      case GET_FIELD:
+        execMessage.setInstanceFieldGet(createInstanceFieldGet(jsonRpcRequest));
+        break;
+      case PUT_STATIC:
+        execMessage.setStaticFieldPut(createStaticFieldPut(jsonRpcRequest));
+        break;
+      case PUT_FIELD:
+        execMessage.setInstanceFieldPut(createInstanceFieldPut(jsonRpcRequest));
+        break;
+      case CLASS_METHOD:
+        execMessage.setClassMethodCall(createClassMethodCall(jsonRpcRequest));
+        break;
+      case INSTANCE_METHOD:
+        execMessage.setInstanceMethodCall(createInstanceMethodCall(jsonRpcRequest));
+        break;
+    }
+    return wrap(execMessage);
+  }
+
+  public JsonRpcResponse jsonRpcResponseFromExecMessageReply(ExecMessage execMessageResponse) {
+
+    // Create a JSON-RPC response object
+    final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
+    jsonRpcResponse.setId(execMessageResponse.getResponseToUuid());
+
+    switch (ExecMessageType.fromByte(execMessageResponse.getExecMessageType())) {
+      case PUT_STATIC_DONE:
+        jsonRpcResponse.setResult(
+            String.format(
+                "%s:%s",
+                "PUT_STATIC_DONE",
+                ColferUtils.toJSON(execMessageResponse.getStaticFieldPutDone())));
+        break;
+      case PUT_FIELD_DONE:
+        jsonRpcResponse.setResult(
+            String.format(
+                "%s:%s",
+                "PUT_FIELD_DONE",
+                ColferUtils.toJSON(execMessageResponse.getInstanceFieldPutDone())));
+        break;
+      case RETURN_VALUE:
+        jsonRpcResponse.setResult(
+            String.format(
+                "%s:%s", "RETURN_VALUE", ColferUtils.toJSON(execMessageResponse.getReturnValue())));
+        break;
+      case THROWABLE:
+        jsonRpcResponse.setError(
+            String.format(
+                "%s:%s",
+                "THROWABLE", ColferUtils.toJSON(execMessageResponse.getRaisedThrowable())));
+        break;
+      default:
+        throw new RuntimeException(
+            "Unexpected response message type: "
+                + ExecMessageType.fromByte(execMessageResponse.getExecMessageType()).name());
+    }
+    return jsonRpcResponse;
+  }
+
   // </editor-fold>
 
   // <editor-fold desc="Control messages">
