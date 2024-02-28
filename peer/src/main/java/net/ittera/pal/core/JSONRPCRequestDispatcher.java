@@ -130,6 +130,16 @@ class JSONRPCRequestDispatcher extends ConnectedService {
     closeConnection(dealerSocket, "Error closing JSON-RPC dealer socket");
   }
 
+  @Override
+  protected void triggerStop() {
+    super.triggerStop();
+    try {
+      webSocketServer.stop();
+    } catch (InterruptedException e) {
+      logger.error("Error stopping WebSocket server", e);
+    }
+  }
+
   private void sendMessageToDispatchers(UUID clientId, String message) {
     InboundJsonRpcRequestMsg inboundJSONRPCRequestMsg =
         new InboundJsonRpcRequestMsg(clientId, message);
