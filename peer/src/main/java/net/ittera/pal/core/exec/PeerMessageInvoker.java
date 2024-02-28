@@ -20,8 +20,11 @@
 package net.ittera.pal.core.exec;
 
 import com.google.gson.Gson;
+import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.UUID;
+import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
 import net.ittera.pal.core.messages.OutboundJsonRpcResponseMsg;
@@ -40,6 +43,7 @@ import zmq.ZError;
 
 class PeerMessageInvoker extends AbstractMessageInvokerThread {
 
+  private final Set<RunOptions> runOptions;
   private final String rpcDealerAddress;
   private ZMQ.Socket rpcSocket;
   private final String jsonrpcDealerAddress;
@@ -51,6 +55,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
       String name,
       ZContext zmqContext,
       MessageBuilder messageBuilder,
+      Set<RunOptions> runOptions,
       String rpcDealerAddress,
       String jsonrpcDealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
@@ -64,6 +69,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
         incomingMessageDispatcher,
         dispatcherConnector,
         peerUuid);
+    this.runOptions = runOptions;
     this.rpcDealerAddress = rpcDealerAddress;
     this.jsonrpcDealerAddress = jsonrpcDealerAddress;
   }
@@ -72,11 +78,13 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
   PeerMessageInvoker(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
+      Set<RunOptions> runOptions,
       String rpcDealerAddress,
       String jsonrpcDealerAddress,
       IncomingMessageDispatcher incomingMessageDispatcher,
       UUID peerUuid) {
     super(zmqContext, messageBuilder, incomingMessageDispatcher, peerUuid);
+    this.runOptions = runOptions;
     this.rpcDealerAddress = rpcDealerAddress;
     this.jsonrpcDealerAddress = jsonrpcDealerAddress;
   }
@@ -84,24 +92,44 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
   @Override
   public void run() {
 
+    Poller poller = zmqContext.createPoller(2);
+    int rpcSocketIndex = -1;
+    int jsonrpcSocketIndex = -1;
+
     // create and connect REP socket for RPC
-    rpcSocket = zmqContext.createSocket(SocketType.REP);
-    rpcSocket.connect(rpcDealerAddress);
+    if (runOptions.contains(RunOptions.WITH_RPC)) {
+      rpcSocket = zmqContext.createSocket(SocketType.REP);
+      boolean rpcSocketConnected = rpcSocket.connect(rpcDealerAddress);
+      if (rpcSocketConnected) {
+        if (logger.isDebugEnabled()) {
+          logger.debug("Connected to RPC dealer at {}", rpcDealerAddress);
+        }
+        rpcSocketIndex = poller.register(rpcSocket, Poller.POLLIN);
+      } else {
+        logger.error("Failed to connect to RPC dealer at {}", rpcDealerAddress);
+      }
+    }
 
     // create and connect REP socket for JSON-RPC
-    jsonrpcSocket = zmqContext.createSocket(SocketType.REP);
-    jsonrpcSocket.connect(jsonrpcDealerAddress);
-
-    Poller poller = zmqContext.createPoller(2);
-    poller.register(rpcSocket, Poller.POLLIN);
-    poller.register(jsonrpcSocket, Poller.POLLIN);
+    if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
+      jsonrpcSocket = zmqContext.createSocket(SocketType.REP);
+      boolean jsonrpcSocketConnected = jsonrpcSocket.connect(jsonrpcDealerAddress);
+      if (jsonrpcSocketConnected) {
+        if (logger.isDebugEnabled()) {
+          logger.debug("Connected to JSON-RPC dealer at {}", jsonrpcDealerAddress);
+        }
+        jsonrpcSocketIndex = poller.register(jsonrpcSocket, Poller.POLLIN);
+      } else {
+        logger.error("Failed to connect to JSON-RPC dealer at {}", jsonrpcDealerAddress);
+      }
+    }
 
     Message requestMsg;
     Message replyMsg;
     byte[] rpcReq;
 
     if (logger.isDebugEnabled()) {
-      logger.debug("Start getting requests from socket");
+      logger.debug("Start getting requests from sockets");
     }
 
     boolean socketError = false;
@@ -113,16 +141,37 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
         logger.debug("Ready and polling from sockets...");
       }
 
-      poller.poll();
+      int signaled;
+      try {
+        signaled = poller.poll();
+      } catch (ZError.IOException e) {
+        if (e.getCause() instanceof ClosedChannelException) {
+          // we are probably shutting down
+          if (logger.isDebugEnabled()) {
+            logger.debug("Caught ClosedChannelException during poll. Breaking out.");
+          }
+          break;
+        } else {
+          logger.error("Caught unexpected ZError exception during poll", e);
+          throw e;
+        }
+      }
+
+      if (signaled < 1) {
+        if (logger.isInfoEnabled()) {
+          logger.info("Poller returned from poll with {} sockets ready. Breaking out.", signaled);
+        }
+        break;
+      }
 
       try {
         // got a RPC request
-        if (poller.pollin(0)) {
+        if (rpcSocketIndex != -1 && poller.pollin(rpcSocketIndex)) {
           rpcReq = rpcSocket.recv(0);
         }
 
         // got a JSON-RPC request
-        if (poller.pollin(1)) {
+        if (jsonrpcSocketIndex != -1 && poller.pollin(jsonrpcSocketIndex)) {
           jsonrpcMsg = InboundJsonRpcRequestMsg.recvMsg(jsonrpcSocket, true);
         }
       } catch (ZMQException ex) {

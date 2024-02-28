@@ -30,12 +30,11 @@ import static org.mockito.Mockito.when;
 
 import com.google.gson.Gson;
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
@@ -113,6 +112,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
         new PeerMessageInvoker(
             context,
             msgBuilder,
+            new HashSet<>(Arrays.asList(RunOptions.WITH_RPC, RunOptions.WITH_JSONRPC)),
             RPC_DEALER_ADDR,
             JSONRPC_DEALER_ADDR,
             incomingMessageDispatcher,

@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
-import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
@@ -43,7 +42,7 @@ public abstract class ExecThreadFactory implements ThreadFactory {
   private static final boolean THREAD_GROUP_IS_DAEMON = false;
   private static final boolean THREAD_IS_DAEMON = false;
 
-  private static final Logger logger = LoggerFactory.getLogger(ExecThreadFactory.class);
+  protected static final Logger logger = LoggerFactory.getLogger(ExecThreadFactory.class);
 
   private ExecChannelType execChannelType;
   protected MessageBuilder messageBuilder;
@@ -56,8 +55,8 @@ public abstract class ExecThreadFactory implements ThreadFactory {
   private ClassLoader classLoader;
 
   enum ExecChannelType {
-    PEER("peer"),
-    LOG("log");
+    RPC("RPC"),
+    LOG("LOG");
 
     final String name;
 
@@ -127,10 +126,10 @@ public abstract class ExecThreadFactory implements ThreadFactory {
   }
 
   protected String getThreadBaseName() {
-    return String.format("%s Executor", Strings.capitalize(execChannelType.name));
+    return String.format("%s Executor", execChannelType.name);
   }
 
   private String getThreadGroupName() {
-    return String.format("%s Executor Group", Strings.capitalize(execChannelType.name));
+    return String.format("%s Executor Group", execChannelType.name);
   }
 }

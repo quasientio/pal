@@ -161,9 +161,9 @@ public class Main implements Callable<Integer> {
   private String rpc; // corresponding ENV var: RPC
 
   @Option(
-      names = {"-j", "--json-rpc"},
+      names = {"-j", "--jsonrpc"},
       paramLabel = "[HOST:]PORT|auto",
-      description = "listen for JSONRPC requests on WebSocket (auto = localhost:random_port)")
+      description = "listen for JSON-RPC requests on WebSocket (auto = localhost:random_port)")
   private String jsonRpc; // corresponding ENV var: JSON_RPC
 
   @Option(
@@ -592,7 +592,7 @@ public class Main implements Callable<Integer> {
           fatalExit(e, PeerException.FatalCode.ERROR_PARSING_JSONRPC_PORT_NUMBER);
         }
       }
-      properties.setProperty("in.websocket", format("ws://%s:%d", hostname, port));
+      properties.setProperty("in.jsonrpc", format("ws://%s:%d", hostname, port));
       properties.setProperty("peer.threadPoolSize", String.valueOf(rpcThreads));
     }
 
@@ -671,7 +671,7 @@ public class Main implements Callable<Integer> {
         self.setRpcAddress(properties.getProperty("in.rpc"));
       }
       if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
-        self.setJsonrpcAddress(properties.getProperty("in.websocket"));
+        self.setJsonrpcAddress(properties.getProperty("in.jsonrpc"));
       }
       if (properties
           .getProperty(ZMQProps.OUT_PUB_CHANNEL)
@@ -762,7 +762,8 @@ public class Main implements Callable<Integer> {
       }
 
       // stop peer executor (interrupts all peer exec threads)
-      if (runOptions.contains(RunOptions.WITH_RPC)) {
+      if (runOptions.contains(RunOptions.WITH_RPC)
+          || runOptions.contains(RunOptions.WITH_JSONRPC)) {
         final ThreadPool peerMessageExecutor = injector.getInstance(PeerMessageExecutor.class);
         peerMessageExecutor.shutdown();
         logger.info("Done shutting down peer threads");
@@ -948,7 +949,7 @@ public class Main implements Callable<Integer> {
     }
 
     // prestart threads to create the REP sockets; this must be done after DEALER
-    if (runOptions.contains(RunOptions.WITH_RPC)) {
+    if (runOptions.contains(RunOptions.WITH_RPC) || runOptions.contains(RunOptions.WITH_JSONRPC)) {
       injector.getInstance(PeerMessageExecutor.class).startAllThreads();
     }
 

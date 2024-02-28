@@ -62,7 +62,7 @@ class JSONRPCRequestDispatcher extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("JSONRPCRequestDispatcher.service") String serviceName,
-      @Named("in.websocket") String websocketAddress,
+      @Named("in.jsonrpc") String websocketAddress,
       @Named("json.in.dealer") String dealerAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.websocketAddress = websocketAddress;
@@ -163,22 +163,30 @@ class JSONRPCRequestDispatcher extends ConnectedService {
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-      logger.debug(
-          "New connection from: {}", conn.getRemoteSocketAddress().getAddress().getHostAddress());
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "New connection from: {}", conn.getRemoteSocketAddress().getAddress().getHostAddress());
+      }
       UUID clientId = UUID.randomUUID();
       webSocketClientMapping.put(conn, clientId);
     }
 
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-      logger.debug(
-          "Closed connection from: {}",
-          conn.getRemoteSocketAddress().getAddress().getHostAddress());
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Closed connection from: {}",
+            conn.getRemoteSocketAddress().getAddress().getHostAddress());
+      }
       webSocketClientMapping.remove(conn);
     }
 
     @Override
     public void onMessage(WebSocket conn, String message) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "New message from {}", conn.getRemoteSocketAddress().getAddress().getHostAddress());
+      }
       UUID clientId = webSocketClientMapping.get(conn);
       sendMessageToDispatchers(clientId, message);
     }

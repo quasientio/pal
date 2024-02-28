@@ -22,7 +22,9 @@ package net.ittera.pal.core.exec;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import java.util.Set;
 import java.util.UUID;
+import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.exec.java.CustomClassloader;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -39,6 +41,7 @@ public class PeerMessageExecutor extends ThreadPool {
   public PeerMessageExecutor(
       @Named("peer.threadPoolSize") String threadPoolSize,
       ZContext zmqContext,
+      Set<RunOptions> runOptions,
       @Named("in.dealer") String rpcDealerAddress,
       @Named("json.in.dealer") String jsonrpcDealerAddress,
       MessageBuilder messageBuilder,
@@ -51,12 +54,13 @@ public class PeerMessageExecutor extends ThreadPool {
         Integer.parseInt(threadPoolSize),
         new PeerExecThreadFactory(
             zmqContext,
+            runOptions,
             rpcDealerAddress,
             jsonrpcDealerAddress,
             messageBuilder,
             incomingMessageDispatcher,
             dispatcherConnector,
-            ExecThreadFactory.ExecChannelType.PEER,
+            ExecThreadFactory.ExecChannelType.RPC,
             customClassloader,
             peerUuid));
   }
