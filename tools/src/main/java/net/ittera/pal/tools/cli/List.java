@@ -128,14 +128,18 @@ public class List extends AbstractPALSubcommand {
           "%%-%ds %%-36s  %%-%ds %%-%ds --> %%-%ds %%-8s",
           MAX_LOG_NAME_LEN, MAX_LOG_SIZE_LEN, MAX_LOG_IDX_LEN, MAX_LOG_IDX_LEN);
 
-  /** uuid name rpc pub jmx ctime */
+  /** uuid name rpc jsonrpc pub jmx ctime */
   private static final String PEERS_LONG_FORMAT =
       format(
-          "%%-36s %%-%ds %%-%ds %%-%ds %%-%ds %%-8s",
-          MAX_PEER_NAME_LEN, MAX_ENDPOINT_LEN, MAX_ENDPOINT_LEN, MAX_ENDPOINT_LEN);
+          "%%-36s %%-%ds %%-%ds %%-%ds %%-%ds %%-%ds %%-8s",
+          MAX_PEER_NAME_LEN,
+          MAX_ENDPOINT_LEN,
+          MAX_ENDPOINT_LEN,
+          MAX_ENDPOINT_LEN,
+          MAX_ENDPOINT_LEN);
 
   @Override
-  protected void initialize() throws Exception {
+  protected void initialize() {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
   }
 
@@ -285,6 +289,10 @@ public class List extends AbstractPALSubcommand {
                   ? ""
                   : trimTo(
                       Strings.stringAfter(peerInfo.getRpcAddress(), "tcp://"), MAX_ENDPOINT_LEN),
+              peerInfo.getJsonrpcAddress() == null
+                  ? ""
+                  : trimTo(
+                      Strings.stringAfter(peerInfo.getJsonrpcAddress(), "ws://"), MAX_ENDPOINT_LEN),
               peerInfo.getPubAddress() == null
                   ? ""
                   : trimTo(
@@ -382,7 +390,9 @@ public class List extends AbstractPALSubcommand {
       if (longListing) {
         out.println(format("total %d", peers.size()));
         if (!peers.isEmpty()) {
-          out.println((format(PEERS_LONG_FORMAT, "UUID", "Name", "RPC", "PUB", "JMX", "Uptime")));
+          out.println(
+              (format(
+                  PEERS_LONG_FORMAT, "UUID", "Name", "RPC", "JSON-RPC", "PUB", "JMX", "Uptime")));
         }
       }
       printPeers(peers);
