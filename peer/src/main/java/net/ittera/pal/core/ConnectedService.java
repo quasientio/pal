@@ -121,7 +121,7 @@ public abstract class ConnectedService extends AbstractService {
     runThread.interrupt();
   }
 
-  private final Thread createRunThread() {
+  private Thread createRunThread() {
     Thread t = new Thread(threadGroup, this::startAndRun, serviceName);
     t.setUncaughtExceptionHandler(
         (thread, throwable) -> logger.error("Uncaught error in Service thread", throwable));

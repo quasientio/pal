@@ -182,10 +182,14 @@ public class DispatcherConnector {
       publishMessage(msg);
     }
 
+    if (!runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
+      return execMessage; // we're done
+    }
+
     // if no intercepts, return received ExecMessage
     if (matchingIntercepts == null || matchingIntercepts.isEmpty()) {
       if (logger.isDebugEnabled()) {
-        logger.debug("No intercepts for execMessage: {}", format(execMessage));
+        logger.debug("No intercepts for execMessage w/uuid: {}", execMessage.getMessageUuid());
       }
       return execMessage;
     }
