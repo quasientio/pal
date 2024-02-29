@@ -52,7 +52,7 @@ import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.core.exec.InterceptInformer;
 import net.ittera.pal.core.exec.LogMessageExecutor;
-import net.ittera.pal.core.exec.PeerMessageExecutor;
+import net.ittera.pal.core.exec.RPCMessageExecutor;
 import net.ittera.pal.core.exec.ThreadPool;
 import net.ittera.pal.core.exec.java.CustomClassloader;
 import net.ittera.pal.core.exec.java.SelfCaller;
@@ -764,8 +764,8 @@ public class Main implements Callable<Integer> {
       // stop peer executor (interrupts all peer exec threads)
       if (runOptions.contains(RunOptions.WITH_RPC)
           || runOptions.contains(RunOptions.WITH_JSONRPC)) {
-        final ThreadPool peerMessageExecutor = injector.getInstance(PeerMessageExecutor.class);
-        peerMessageExecutor.shutdown();
+        final ThreadPool rpcMessageExecutor = injector.getInstance(RPCMessageExecutor.class);
+        rpcMessageExecutor.shutdown();
         logger.info("Done shutting down peer threads");
       }
 
@@ -950,7 +950,7 @@ public class Main implements Callable<Integer> {
 
     // prestart threads to create the REP sockets; this must be done after DEALER
     if (runOptions.contains(RunOptions.WITH_RPC) || runOptions.contains(RunOptions.WITH_JSONRPC)) {
-      injector.getInstance(PeerMessageExecutor.class).startAllThreads();
+      injector.getInstance(RPCMessageExecutor.class).startAllThreads();
     }
 
     // now call target (main class or JAR file), if given

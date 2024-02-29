@@ -56,7 +56,7 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
-public class PeerMessageInvokerTest extends ZmqEnabledTest {
+public class RPCMessageInvokerTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
   private final String RPC_DEALER_ADDR = "inproc://deal";
@@ -66,7 +66,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   private Socket jsonRpcDealerSocket;
   private static Gson gson = new Gson();
   private ExecutorService execService;
-  private PeerMessageInvoker peerMessageInvoker;
+  private RPCMessageInvoker rpcMessageInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
   private final MessageBuilder msgBuilder = new MessageBuilder();
 
@@ -108,8 +108,8 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
                   return reply;
                 });
 
-    this.peerMessageInvoker =
-        new PeerMessageInvoker(
+    this.rpcMessageInvoker =
+        new RPCMessageInvoker(
             context,
             msgBuilder,
             new HashSet<>(Arrays.asList(RunOptions.WITH_RPC, RunOptions.WITH_JSONRPC)),
@@ -121,7 +121,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
 
   @After
   public void cleanup() throws Exception {
-    peerMessageInvoker.closeConnections();
+    rpcMessageInvoker.closeConnections();
     closeContext(context);
     execService.shutdownNow();
     execService.awaitTermination(5, TimeUnit.SECONDS);
@@ -132,7 +132,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   public void invokeRPCMessage() throws Exception {
 
     // start invoker thread
-    execService.submit(peerMessageInvoker);
+    execService.submit(rpcMessageInvoker);
 
     // deal msg
     ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
@@ -145,7 +145,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
     msg.unmarshal(rpcDealerSocket.recv(), 0);
     ExecMessage reply = msg.getExecMessage();
 
-    assertThat(peerMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(1)));
+    assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(1)));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
 
     // assert reply msg followsUuid of original
@@ -156,7 +156,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   public void invokeJSONRPCMessage() throws Exception {
 
     // start invoker thread
-    execService.submit(peerMessageInvoker);
+    execService.submit(rpcMessageInvoker);
 
     // create new JSON-RPC request
     JsonRpcRequest request = new JsonRpcRequest();
@@ -184,7 +184,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
         gson.fromJson(jsonRpcResponseAsString, JsonRpcResponse.class);
 
     // assert number of calls
-    assertThat(peerMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(1)));
+    assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(1)));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
 
     // assert reply msg followsUuid of original
@@ -195,7 +195,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   public void invokeManyRPCMessages() throws Exception {
 
     // start invoker thread
-    execService.submit(peerMessageInvoker);
+    execService.submit(rpcMessageInvoker);
 
     // deal msgs
     int msgCount = 10;
@@ -217,7 +217,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
     }
 
     // assert number of calls
-    assertThat(peerMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(msgCount)));
+    assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(msgCount)));
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), anyBoolean());
 
     // assert reply msg followsUuid of original
@@ -231,7 +231,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
   public void invokeManyJSONRPCMessages() throws Exception {
 
     // start invoker thread
-    execService.submit(peerMessageInvoker);
+    execService.submit(rpcMessageInvoker);
 
     // deal msgs
     int msgCount = 10;
@@ -261,7 +261,7 @@ public class PeerMessageInvokerTest extends ZmqEnabledTest {
     }
 
     // assert number of calls
-    assertThat(peerMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(msgCount)));
+    assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is(Long.valueOf(msgCount)));
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), anyBoolean());
   }
 }

@@ -41,7 +41,7 @@ import org.zeromq.ZMQ.Poller;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-class PeerMessageInvoker extends AbstractMessageInvokerThread {
+class RPCMessageInvoker extends AbstractMessageInvokerThread {
 
   private final Set<RunOptions> runOptions;
   private final String rpcDealerAddress;
@@ -50,7 +50,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
   private ZMQ.Socket jsonrpcSocket;
   private static Gson gson = new Gson();
 
-  public PeerMessageInvoker(
+  public RPCMessageInvoker(
       ThreadGroup group,
       String name,
       ZContext zmqContext,
@@ -75,7 +75,7 @@ class PeerMessageInvoker extends AbstractMessageInvokerThread {
   }
 
   // Constructor for unit-testing
-  PeerMessageInvoker(
+  RPCMessageInvoker(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
       Set<RunOptions> runOptions,

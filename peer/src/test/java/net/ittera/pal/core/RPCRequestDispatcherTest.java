@@ -57,7 +57,7 @@ public class RPCRequestDispatcherTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
   /*
-  a class for Workers (which REPly to Dealer) IRL: PeerMessageInvoker's
+  a class for Workers (which REPly to Dealer) IRL: RPCMessageInvoker's
   */
   private class Worker implements Runnable {
 

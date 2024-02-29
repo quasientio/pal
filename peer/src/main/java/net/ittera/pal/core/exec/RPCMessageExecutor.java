@@ -33,12 +33,12 @@ import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 
 @Singleton
-public class PeerMessageExecutor extends ThreadPool {
+public class RPCMessageExecutor extends ThreadPool {
 
-  protected static final Logger logger = LoggerFactory.getLogger(PeerMessageExecutor.class);
+  protected static final Logger logger = LoggerFactory.getLogger(RPCMessageExecutor.class);
 
   @Inject
-  public PeerMessageExecutor(
+  public RPCMessageExecutor(
       @Named("peer.threadPoolSize") String threadPoolSize,
       ZContext zmqContext,
       Set<RunOptions> runOptions,

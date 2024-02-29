@@ -39,7 +39,7 @@ public class PeerExecThreadFactory extends ExecThreadFactory {
 
   @Override
   protected AbstractMessageInvokerThread createInvokerThread(String newThreadName) {
-    return new PeerMessageInvoker(
+    return new RPCMessageInvoker(
         threadGroup,
         newThreadName,
         zmqContext,

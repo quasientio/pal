@@ -13,7 +13,7 @@ import net.ittera.pal.messages.types.ExecMessageType;
  * <pre>
  *   {
  *     "jsonrpc": "2.0",
- *     "method": "net.ittera.pal.core.exec.PeerMessageInvoker.1234.getPeerUuid",
+ *     "method": "net.ittera.pal.core.exec.RPCMessageInvoker.1234.getPeerUuid",
  *     "params": [],
  *     "id": 1
  *   }
