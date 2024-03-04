@@ -172,7 +172,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     String fieldName = "bytes";
     byte[] newFieldValue = "bytes".getBytes();
-    String fieldClassName = "byte[].class";
+    String fieldClassName = "[B";
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();

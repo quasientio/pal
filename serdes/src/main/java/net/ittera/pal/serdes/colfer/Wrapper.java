@@ -23,6 +23,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
@@ -41,9 +42,15 @@ public final class Wrapper {
 
   private static final Logger logger = LoggerFactory.getLogger(Wrapper.class);
 
-  // we don't include String's here, as we check separately
-  static final List<Class> reconstructableCharSeqClasses =
-      Arrays.asList(StringBuilder.class, StringBuffer.class);
+  static final List<Class> reconstructableCharSeqClasses;
+  static final List<String> reconstructableCharSeqClassNames;
+
+  static {
+    // we don't include String's here, as we check separately
+    reconstructableCharSeqClasses = Arrays.asList(StringBuilder.class, StringBuffer.class);
+    reconstructableCharSeqClassNames =
+        reconstructableCharSeqClasses.stream().map(Class::getName).collect(Collectors.toList());
+  }
 
   private Wrapper() {
     // avoid instantiation
@@ -51,6 +58,14 @@ public final class Wrapper {
 
   public static boolean isWrappableCharSeqClass(Class clazz) {
     return reconstructableCharSeqClasses.contains(clazz);
+  }
+
+  public static boolean isWrappableCharSeqClass(String classname) {
+    return reconstructableCharSeqClassNames.contains(classname);
+  }
+
+  public static boolean isArrayClassName(String className) {
+    return className.startsWith("[");
   }
 
   /**
@@ -71,46 +86,28 @@ public final class Wrapper {
    *
    * @param wrappedObject the object to wrap into
    * @param object the object to wrap
-   * @param t the class of the object to wrap
+   * @param classname the class of the object to wrap
    * @param objectRef the object reference, if any
-   * @param <T> the type of the object to wrap
    * @return a Colfer Obj (object) instance
    * @throws NullPointerException if t is null
-   * @throws IllegalArgumentException if t is not a Class nor a String
    */
-  private static <T> Obj getWrappedObjectAux(
-      Obj wrappedObject, java.lang.Object object, T t, ObjectRef objectRef) {
+  private static Obj getWrappedObjectAux(
+      Obj wrappedObject, java.lang.Object object, String classname, ObjectRef objectRef) {
 
     if (logger.isTraceEnabled()) {
       logger.trace(
-          "in getWrappedObjectAux with object: {}, class: {}, objectRef: {}", object, t, objectRef);
-    }
-
-    if (t == null) {
-      throw new NullPointerException("class(name) parameter cannot be null nor empty");
-    }
-
-    // we got a class or classname?
-    String className = null;
-    Class clazz = null;
-    if (t instanceof Class) {
-      clazz = (Class) t;
-    } else if (t instanceof String) {
-      className = (String) t;
-    } else {
-      throw new IllegalArgumentException("Type of t parameter is neither Class nor String");
+          "in getWrappedObjectAux with object: {}, class: {}, objectRef: {}",
+          object,
+          classname,
+          objectRef);
     }
 
     // set required fields
     wrappedObject.setIsNull(object == null && objectRef == null);
     wrappedObject.setIsVoid(object == void.class || object == Void.class);
+    wrappedObject.setClazz(getWrappedClass(classname));
+    wrappedObject.setIsArray(isArrayClassName(classname));
 
-    if (clazz != null) {
-      wrappedObject.setClazz(getWrappedClass(clazz));
-      wrappedObject.setIsArray(clazz.isArray());
-    } else {
-      wrappedObject.setClazz(getWrappedClass(className));
-    }
     if (objectRef != null) {
       wrappedObject.setRef(String.valueOf(objectRef.getRef()));
     }
@@ -119,7 +116,7 @@ public final class Wrapper {
     // wrap object
     if (object != null) {
       wrappedObject.setHash(object.hashCode());
-      if ((object instanceof String) || isWrappableCharSeqClass(clazz)) {
+      if ((object instanceof String) || isWrappableCharSeqClass(classname)) {
         wrappedObject.setValue(object.toString());
       } else if (object.getClass().isArray()) {
         wrappedObject.setIsArray(true);
@@ -131,7 +128,7 @@ public final class Wrapper {
         for (int i = 0; i < length; i++) {
           final java.lang.Object arrayElem = Array.get(object, i);
           // wrap all array elements -- recursive
-          arrayElems[i] = getWrappedObject(arrayElem, arrayElem.getClass(), null);
+          arrayElems[i] = getWrappedObject(arrayElem, arrayElem.getClass().getName(), null);
         }
         wrappedObject.setArrayValues(arrayElems);
       } else if (Classes.isPrimitiveOrWrapper(object.getClass())) {
@@ -139,7 +136,7 @@ public final class Wrapper {
       } else {
         // nothing we can do but leave a trace
         if (logger.isTraceEnabled()) {
-          logger.warn("Don't know what to do to wrap object: {} of class: {}", object, t);
+          logger.warn("Don't know what to do to wrap object: {} of class: {}", object, classname);
         }
       }
     }
@@ -176,21 +173,32 @@ public final class Wrapper {
             && isWrappableCharSeqClass(object.getClass().getComponentType()));
   }
 
+  private static boolean isValidClassName(String className) {
+    String arrayRegex = "(\\[)*";
+    String baseTypeRegex = "([a-zA-Z_$][a-zA-Z\\d_$]*\\.)*[a-zA-Z_$][a-zA-Z\\d_$]*";
+    String primitiveArrayRegex = "\\[+[BCDFIJSZ]";
+    String endRegex = "(;)?";
+    String regex = "(" + arrayRegex + "?" + baseTypeRegex + endRegex + ")|" + primitiveArrayRegex;
+    return className.matches(regex);
+  }
+
   /**
    * Wraps objects into a Colfer Obj(ect), which can be later unwrapped into the original object.
    * See getWrappedObjectAux() for a list of valid wrappable types.
    *
    * @param object the object to wrap
-   * @param t the class of the object to wrap
+   * @param classname the class name of the object to wrap
    * @param objectRef the object reference, if any
-   * @param <T> the type of the object to wrap
    * @return a Colfer Obj (object) instance
    * @throws NonWrappableObjectException if the object is not wrappable
    */
-  static <T> Obj getWrappedObject(java.lang.Object object, T t, ObjectRef objectRef) {
+  static <T> Obj getWrappedObject(java.lang.Object object, String classname, ObjectRef objectRef) {
     if (logger.isTraceEnabled()) {
       logger.trace(
-          "in getWrappedObject with object: {}, class: {}, objectRef: {}", object, t, objectRef);
+          "in getWrappedObject with object: {}, class: {}, objectRef: {}",
+          object,
+          classname,
+          objectRef);
     }
     final Obj obj = new Obj();
     if (object instanceof Obj) {
@@ -200,7 +208,10 @@ public final class Wrapper {
     if (objectRef == null && !isWrappable(object)) {
       throw new NonWrappableObjectException(object);
     }
-    return getWrappedObjectAux(obj, object, t, objectRef);
+    if (!isValidClassName(classname)) {
+      throw new IllegalArgumentException("Invalid class name: " + classname);
+    }
+    return getWrappedObjectAux(obj, object, classname, objectRef);
   }
 
   static net.ittera.pal.messages.colfer.Class getWrappedClass(String className) {
@@ -259,7 +270,8 @@ public final class Wrapper {
     if (context != null) {
       wrappedCtxt.setSenderClass(getWrappedClass(context.getWithinType()));
       if (sender != null) {
-        wrappedCtxt.setSender(getWrappedObject(sender, context.getWithinType(), senderObjRef));
+        wrappedCtxt.setSender(
+            getWrappedObject(sender, context.getWithinType().getName(), senderObjRef));
       }
 
       if (context.getSourceFilename() != null) {
@@ -273,7 +285,7 @@ public final class Wrapper {
       }
     } else {
       wrappedCtxt.setSenderClass(getWrappedClass(sender.getClass()));
-      wrappedCtxt.setSender(getWrappedObject(sender, sender.getClass(), senderObjRef));
+      wrappedCtxt.setSender(getWrappedObject(sender, sender.getClass().getName(), senderObjRef));
     }
 
     return wrappedCtxt;

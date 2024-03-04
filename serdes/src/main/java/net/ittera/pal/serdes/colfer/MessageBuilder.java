@@ -22,6 +22,10 @@ package net.ittera.pal.serdes.colfer;
 import static net.ittera.pal.serdes.colfer.MessageUtils.getClassname;
 import static net.ittera.pal.serdes.colfer.MessageUtils.getExecutableName;
 import static net.ittera.pal.serdes.colfer.MessageUtils.getParameterTypes;
+import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedClass;
+import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedContext;
+import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedField;
+import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedObject;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
@@ -222,37 +226,6 @@ public final class MessageBuilder {
 
     return throwableMsg;
   }
-
-  /** Methods delegating to Wrapper */
-  private <T> Obj getWrappedObject(Object object, T t, ObjectRef objectRef) {
-    return Wrapper.getWrappedObject(object, t, objectRef);
-  }
-
-  private net.ittera.pal.messages.colfer.Context getWrappedContext(
-      Context context, Object sender, ObjectRef senderObjRef) {
-    return Wrapper.getWrappedContext(context, sender, senderObjRef);
-  }
-
-  private net.ittera.pal.messages.colfer.Field getWrappedField(Field field) {
-    return Wrapper.getWrappedField(field);
-  }
-
-  private net.ittera.pal.messages.colfer.Field getWrappedField(Class clazz, String fieldName) {
-    return Wrapper.getWrappedField(clazz, fieldName);
-  }
-
-  private net.ittera.pal.messages.colfer.Field getWrappedField(String className, String fieldName) {
-    return Wrapper.getWrappedField(className, fieldName);
-  }
-
-  private net.ittera.pal.messages.colfer.Class getWrappedClass(Class clazz) {
-    return Wrapper.getWrappedClass(clazz);
-  }
-
-  private net.ittera.pal.messages.colfer.Class getWrappedClass(String className) {
-    return Wrapper.getWrappedClass(className);
-  }
-
   // </editor-fold>
 
   // <editor-fold desc="Header messages">
@@ -660,7 +633,8 @@ public final class MessageBuilder {
         execMessage.setStaticFieldPut(
             new StaticFieldPut()
                 .withClazz(clazz)
-                .withValueObject(getWrappedObject(arg, fieldSignature.getFieldType(), argObjRef))
+                .withValueObject(
+                    getWrappedObject(arg, fieldSignature.getFieldType().getName(), argObjRef))
                 .withField(field)
                 .withModifiers(modifiers)
                 .withContext(ctxt));
@@ -872,11 +846,11 @@ public final class MessageBuilder {
 
     final ReturnValue valueMessage = new ReturnValue();
 
-    Class declaringClass = ((Member) accessibleObject).getDeclaringClass();
+    Class<?> declaringClass = ((Member) accessibleObject).getDeclaringClass();
 
     // set 'object'
     if (!isVoid) {
-      Class objectClass;
+      Class<?> objectClass;
       if (accessibleObject instanceof Constructor) {
         objectClass = declaringClass;
       } else if (accessibleObject instanceof Method) {
@@ -887,7 +861,7 @@ public final class MessageBuilder {
         throw new RuntimeException(
             String.format("Unable to handle accessible object of type: %s", accessibleObject));
       }
-      valueMessage.setObject(getWrappedObject(object, objectClass, objectRef));
+      valueMessage.setObject(getWrappedObject(object, objectClass.getName(), objectRef));
     }
 
     // set 'from'

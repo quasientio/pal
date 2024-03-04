@@ -41,7 +41,7 @@ public class UnwrapperTest extends WrappingTestBase {
   @Test
   public void unwrapObject_wrappedVoidObject_originalValue() throws ClassNotFoundException {
     Object wrappable = void.class;
-    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass(), null);
+    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
     Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
     assertEquals(void.class, unwrapped);
   }
@@ -49,7 +49,7 @@ public class UnwrapperTest extends WrappingTestBase {
   @Test
   public void unwrapObject_wrappedVoidClass_originalValue() throws ClassNotFoundException {
     Object wrappable = Void.class;
-    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass(), null);
+    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
     Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
     assertEquals(void.class, unwrapped);
   }
@@ -57,7 +57,7 @@ public class UnwrapperTest extends WrappingTestBase {
   @Test
   public void unwrapObject_stringBuilder_originalValue() throws ClassNotFoundException {
     StringBuilder wrappable = new StringBuilder("world");
-    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass(), null);
+    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
     Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
 
     // compare class and value
@@ -68,7 +68,7 @@ public class UnwrapperTest extends WrappingTestBase {
   @Test
   public void unwrapObject_stringBuffer_originalValue() throws ClassNotFoundException {
     StringBuffer wrappable = new StringBuffer("world");
-    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass(), null);
+    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
     Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
 
     // compare class and value
@@ -86,7 +86,7 @@ public class UnwrapperTest extends WrappingTestBase {
             .collect(toList());
 
     for (Object wrappable : valuedWrappableObjs) {
-      Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass(), null);
+      Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
       Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
       // compare class and value(s)
       assertEquals(wrappable.getClass(), unwrapped.getClass());

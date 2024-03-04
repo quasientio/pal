@@ -242,7 +242,6 @@ public class MessageUtilsTest {
                   String.format(
                       "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [%s], \"id\": 1}",
                       params);
-              System.out.println(jsonRpcMessage);
               logger.debug(jsonRpcMessage);
               try {
                 jsonRpcRequest = MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);

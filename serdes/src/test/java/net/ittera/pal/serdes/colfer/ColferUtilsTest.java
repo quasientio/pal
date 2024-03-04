@@ -32,7 +32,8 @@ public class ColferUtilsTest {
     // create marshallable message
     Object target = new ClassForColferUtilsTest();
     Obj targetObj =
-        Wrapper.getWrappedObject(target, signature.getDeclaringType(), ObjectRef.randomRef());
+        Wrapper.getWrappedObject(
+            target, signature.getDeclaringType().getName(), ObjectRef.randomRef());
     net.ittera.pal.messages.colfer.Field field =
         Wrapper.getWrappedField(signature.getFieldType(), signature.getName());
     int modifiers = signature.getModifiers();

@@ -274,13 +274,13 @@ public class WrapperTest extends WrappingTestBase {
 
   @Test(expected = IllegalArgumentException.class)
   public void getWrappedObject_InvalidObjectType_illegalArgumentException() {
-    Wrapper.getWrappedObject(new Object(), 238923, ObjectRef.randomRef());
+    Wrapper.getWrappedObject(new Object(), "238923", ObjectRef.randomRef());
   }
 
   @Test
   public void getWrappedObject_EmptyArray_wrappedArrayWithZeroLength() {
     Integer[] emptyArray = new Integer[0];
-    Obj wrapped = Wrapper.getWrappedObject(emptyArray, emptyArray.getClass(), null);
+    Obj wrapped = Wrapper.getWrappedObject(emptyArray, emptyArray.getClass().getName(), null);
     assertNotNull(wrapped);
     assertEquals(0, wrapped.getArrayValues().length);
   }
@@ -292,7 +292,7 @@ public class WrapperTest extends WrappingTestBase {
       try {
         logger.debug(
             "Calling Wrapper.getWrappedObject with " + obj + " and class " + obj.getClass());
-        Wrapper.getWrappedObject(obj, obj.getClass(), null);
+        Wrapper.getWrappedObject(obj, obj.getClass().getName(), null);
         fail("Should have thrown an exception");
       } catch (NonWrappableObjectException ex) {
         // all good
@@ -310,7 +310,7 @@ public class WrapperTest extends WrappingTestBase {
             .collect(toList());
 
     for (Object obj : valuedWrappableObjs) {
-      Obj wrappedObj = Wrapper.getWrappedObject(obj, obj.getClass(), null);
+      Obj wrappedObj = Wrapper.getWrappedObject(obj, obj.getClass().getName(), null);
       assertNotNull(wrappedObj);
       assertNotNull(wrappedObj.getClazz());
       assertNotNull(wrappedObj.getClazz().getName());
@@ -331,7 +331,7 @@ public class WrapperTest extends WrappingTestBase {
   public void getWrappedObject_voidObject_wrappedOk() {
 
     net.ittera.pal.messages.colfer.Obj wrappedObj =
-        Wrapper.getWrappedObject(void.class, void.class.getClass(), null);
+        Wrapper.getWrappedObject(void.class, void.class.getName(), null);
 
     assertNotNull(wrappedObj);
     assertNotNull(wrappedObj.getClazz());
@@ -346,7 +346,7 @@ public class WrapperTest extends WrappingTestBase {
   @Test
   public void getWrappedObject_voidClassObject_wrappedOk() {
 
-    Obj wrappedObj = Wrapper.getWrappedObject(Void.class, Void.class.getClass(), null);
+    Obj wrappedObj = Wrapper.getWrappedObject(Void.class, Void.class.getName(), null);
 
     assertNotNull(wrappedObj);
     assertNotNull(wrappedObj.getClazz());
@@ -377,7 +377,7 @@ public class WrapperTest extends WrappingTestBase {
   public void getWrappedObject_ObjectWithObjectRef_wrappedObjectWithRef() {
     ObjectRef objectRef = ObjectRef.randomRef();
     Object object = new ArrayList<String>();
-    Obj wrapped = Wrapper.getWrappedObject(object, object.getClass(), objectRef);
+    Obj wrapped = Wrapper.getWrappedObject(object, object.getClass().getName(), objectRef);
     assertNotNull(wrapped);
     assertEquals(String.valueOf(objectRef.getRef()), wrapped.getRef());
   }

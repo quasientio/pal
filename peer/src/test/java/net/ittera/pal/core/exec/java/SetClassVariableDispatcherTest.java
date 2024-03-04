@@ -180,7 +180,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   public void dispatchIncoming_primitiveArray_ok() {
 
     String fieldName = "bytes";
-    String fieldClassName = "byte[].class";
+    String fieldClassName = "[B";
     byte[] newFieldValue = "this is just a test".getBytes();
 
     ExecMessage incomingMessage =
