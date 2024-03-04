@@ -20,10 +20,10 @@ public class JsonRpcParameterTest {
 
   @Test
   public void testBoolean() {
-    JsonRpcParameter jsonRpcParameter =
-        gson.fromJson("{\"value\": true, \"type\": \"int\"}", JsonRpcParameter.class);
+    JsonRpcParameter jsonRpcParameter = gson.fromJson("{\"value\": true}", JsonRpcParameter.class);
     assertEquals(true, jsonRpcParameter.getValue());
     assertEquals(java.lang.Boolean.class, jsonRpcParameter.getValue().getClass());
+    assertNull(jsonRpcParameter.getType());
   }
 
   @Test
@@ -33,6 +33,7 @@ public class JsonRpcParameterTest {
         gson.fromJson(String.format("{\"value\": %d}", intValue), JsonRpcParameter.class);
     assertEquals(intValue, jsonRpcParameter.getValue());
     assertEquals(java.lang.Integer.class, jsonRpcParameter.getValue().getClass());
+    assertNull(jsonRpcParameter.getType());
   }
 
   @Test
@@ -42,13 +43,28 @@ public class JsonRpcParameterTest {
         gson.fromJson(String.format("{\"value\": %d}", longValue), JsonRpcParameter.class);
     assertEquals(longValue, jsonRpcParameter.getValue());
     assertEquals(java.lang.Long.class, jsonRpcParameter.getValue().getClass());
+    assertNull(jsonRpcParameter.getType());
   }
 
   @Test
   public void testChar() {
-    JsonRpcParameter jsonRpcParameter =
-        gson.fromJson("{\"value\": 'a', \"type\": \"int\"}", JsonRpcParameter.class);
+    JsonRpcParameter jsonRpcParameter = gson.fromJson("{\"value\": 'a'}", JsonRpcParameter.class);
     assertEquals('a', jsonRpcParameter.getValue());
     assertEquals(java.lang.Character.class, jsonRpcParameter.getValue().getClass());
+    assertNull(jsonRpcParameter.getType());
+  }
+
+  @Test
+  public void testNullValue() {
+    JsonRpcParameter jsonRpcParameter = gson.fromJson("{\"value\": null}", JsonRpcParameter.class);
+    assertNull(jsonRpcParameter.getValue());
+    assertNull(jsonRpcParameter.getType());
+  }
+
+  @Test
+  public void testEmpty() {
+    JsonRpcParameter jsonRpcParameter = gson.fromJson("{}", JsonRpcParameter.class);
+    assertNull(jsonRpcParameter.getValue());
+    assertNull(jsonRpcParameter.getType());
   }
 }

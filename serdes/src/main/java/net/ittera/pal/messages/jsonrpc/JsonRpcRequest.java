@@ -6,9 +6,10 @@ import java.util.List;
 import net.ittera.pal.messages.types.ExecMessageType;
 
 /**
- * Represents a JSON-RPC request message.
+ * Represents a JSON-RPC 2.0 request message. See <a
+ * href="https://www.jsonrpc.org/specification">JSON-RPC 2.0 Spec</a>
  *
- * <p>Message format:
+ * <p>Message example:
  *
  * <pre>
  *   {
@@ -19,9 +20,9 @@ import net.ittera.pal.messages.types.ExecMessageType;
  *   }
  *   </pre>
  *
- * <p>The jsonrpc field is always "2.0".
+ * <p>The <b>jsonrpc</b> field is always "2.0".
  *
- * <p>For the method field, the following formats are supported:
+ * <p>For the <b>method</b> field, the following formats are supported:
  *
  * <ul>
  *   <li>The format "ClassName.methodName" indicates a static method call.
@@ -33,9 +34,20 @@ import net.ittera.pal.messages.types.ExecMessageType;
  *   <li>The format "put:ClassName.1234.fieldName" indicates an instance field put.
  * </ul>
  *
- * <p>The params field is an array of parameters.
+ * <p>The <b>params</b> field is an array of parameters given by-position.
  *
- * <p>The id field is an integer that is used to correlate the request with the response.
+ * <p>Each element of the array can be either a single value, or an Object. When given as an Object,
+ * it can have any of the following fields:
+ *
+ * <ul>
+ *   <li>value: the actual parameter value. If omitted, it’s considered null. The value is also
+ *       considered null if either the object itself is null, or an empty object, ie. {}
+ *   <li>type: if given, it must be a string representing the value’s type. The special type “ref”
+ *       is used to indicate that the param value is an ObjectRef. If type is “ref”, then value
+ *       cannot be null.
+ * </ul>
+ *
+ * <p>The <b>id</b> field is an integer that is used to correlate the request with the response.
  *
  * <p>The following table shows the mapping between the method field and the ExecMessageType enum:
  *

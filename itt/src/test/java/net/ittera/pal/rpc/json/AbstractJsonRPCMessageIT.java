@@ -68,14 +68,14 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
 
     // find a peer listening with JSON-RPC enabled
     PeerInfo jsonRpcPeer =
-        findRPCPeer(RPCType.JSON_RPC)
+        findRPCPeer(RPCType.JSONRPC)
             .orElseThrow(() -> new RuntimeException("No peer found with JSON-RPC enabled"));
     thinPeer =
         new ThinPeer()
             .withUUID(clientId)
             .withDirectoryURL(getPALDirectoryURL())
             .withInitialPeer(jsonRpcPeer)
-            .withRPCType(RPCType.JSON_RPC)
+            .withOutboundRPCType(RPCType.JSONRPC)
             .init();
   }
 
@@ -83,7 +83,7 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
     logger.debug("Sending JSON-RPC request: {}", jsonRpcRequest);
     final JsonRpcResponse response;
     try {
-      response = thinPeer.sendAndReceive(jsonRpcRequest);
+      response = thinPeer.sendAndReceive(jsonRpcRequest, JsonRpcRequest.class);
     } catch (Exception e) {
       logger.error(
           "Exception sending/receiving message with uuid: {}\n{}",

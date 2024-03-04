@@ -40,7 +40,7 @@ public abstract class AbstractIntegrationTest {
       throws ExecutionException, InterruptedException {
     Predicate<PeerInfo> hasRpcType =
         peerInfo -> {
-          if (rpcType == RPCType.BINARY_RPC) {
+          if (rpcType == RPCType.RPC) {
             return peerInfo.getRpcAddress() != null;
           } else {
             return peerInfo.getJsonrpcAddress() != null;

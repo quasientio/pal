@@ -110,9 +110,8 @@ public class ThinPeer {
   private Socket peerSocket;
   private WSClient wsClient;
   private String rpcAddress;
-  private String jsonRpcAddress;
   private Gson gson = new Gson();
-  private RPCType rpcType = RPCType.BINARY_RPC;
+  private RPCType outboundRpcType = RPCType.RPC;
   private PeerInfo initialPeer;
   private PeerInfo currentPeer;
   private boolean talkingToPeer;
@@ -228,8 +227,8 @@ public class ThinPeer {
     return this;
   }
 
-  public ThinPeer withRPCType(RPCType rpcType) {
-    this.rpcType = rpcType;
+  public ThinPeer withOutboundRPCType(RPCType rpcType) {
+    this.outboundRpcType = rpcType;
     return this;
   }
 
@@ -342,9 +341,9 @@ public class ThinPeer {
       logIOEnabled = true;
     }
 
-    // configure RPC
+    // configure RPC and connect to initial peer if given
     if (allowP2P) {
-      if (rpcType == RPCType.BINARY_RPC) {
+      if (outboundRpcType == RPCType.RPC) {
         if (zmqContextGiven) {
           logger.info("Using given ZMQ context");
         } else {
@@ -354,7 +353,7 @@ public class ThinPeer {
         this.peerSocket = zmqContext.createSocket(SocketType.REQ);
       }
       if (initialPeer != null) {
-        if (initialPeer.getRpcAddress() != null) {
+        if (initialPeer.getRpcAddress() != null || initialPeer.getJsonrpcAddress() != null) {
           connectToPeer(initialPeer);
         } else if (initialPeer.getUuid() != null) {
           connectToPeer(initialPeer.getUuid());
@@ -371,7 +370,14 @@ public class ThinPeer {
     logger.info(
         format(
             "Initialized ThinPeer with:%n uuid: %s,%n name: %s,%n rpcAddress: %s,%n directory: %s,%n initialPeer: %s,%n rpcType: %s,%n inLog: %s,%n outLog: %s",
-            peerUuid, peerName, rpcAddress, palDirectoryUrl, initialPeer, rpcType, inLog, outLog));
+            peerUuid,
+            peerName,
+            rpcAddress,
+            palDirectoryUrl,
+            initialPeer,
+            outboundRpcType,
+            inLog,
+            outLog));
 
     return this;
   }
@@ -412,13 +418,14 @@ public class ThinPeer {
     }
   }
 
-  public JsonRpcResponse sendAndReceive(JsonRpcRequest jsonRpc) {
+  public <T> JsonRpcResponse sendAndReceive(T jsonRpc, Class<T> jsonRpcType) {
     assertInitialized();
     if (logger.isTraceEnabled()) {
-      logger.trace("sendAndReceive: in with jsonRpcRequest: {}", jsonRpc);
+      logger.trace("sendAndReceive: in with jsonRpc: {}", jsonRpc);
     }
+
     if (talkingToPeer) {
-      return sendToPeer(jsonRpc);
+      return sendToPeer(jsonRpc, jsonRpcType);
     } else {
       throw new IllegalStateException(
           "Not connected to any peer. Cannot send and receive JSON-RPC messages to/from log");
@@ -652,7 +659,7 @@ public class ThinPeer {
       sendDeleteSessionRequest();
     }
 
-    if (rpcType == RPCType.BINARY_RPC) {
+    if (outboundRpcType == RPCType.RPC) {
       connectZMQSocket(peer);
     } else { // is JSON-RPC
       connectWebSocket(peer);
@@ -667,7 +674,7 @@ public class ThinPeer {
     if (logger.isTraceEnabled()) {
       logger.trace("sendToPeer: in with message: {}", ColferUtils.format(message));
     }
-    // send message request to peer
+    // wrap in Message and send to peer
     peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
 
     final long waitStart = System.currentTimeMillis();
@@ -687,12 +694,20 @@ public class ThinPeer {
     return replyMsg;
   }
 
-  public JsonRpcResponse sendToPeer(JsonRpcRequest jsonRpcRequest) {
+  public <T> JsonRpcResponse sendToPeer(T jsonRpcRequest, Class<T> jsonRpcType) {
     assertInitialized();
     if (logger.isTraceEnabled()) {
       logger.trace("sendToPeer: in with jsonRpcRequest: {}", jsonRpcRequest);
     }
-    wsClient.send(gson.toJson(jsonRpcRequest), jsonRpcRequest.getId());
+    String rpc;
+    if (jsonRpcType == JsonRpcRequest.class) {
+      rpc = gson.toJson(jsonRpcRequest);
+    } else if (jsonRpcType == String.class) {
+      rpc = (String) jsonRpcRequest;
+    } else {
+      throw new IllegalArgumentException("Unsupported type for jsonRpc");
+    }
+    wsClient.send(rpc);
     try {
       return wsClient.futureResponse.get();
     } catch (InterruptedException | ExecutionException e) {
@@ -852,7 +867,7 @@ public class ThinPeer {
       super(uri);
     }
 
-    public void send(String message, String requestId) {
+    public void send(String message) {
       super.send(message);
     }
 

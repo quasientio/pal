@@ -20,8 +20,8 @@
 package net.ittera.pal.messages.types;
 
 public enum RPCType {
-  BINARY_RPC,
-  JSON_RPC;
+  RPC,
+  JSONRPC;
 
   public static RPCType fromByte(byte typeAsByte) {
     return RPCType.values()[typeAsByte - 1];

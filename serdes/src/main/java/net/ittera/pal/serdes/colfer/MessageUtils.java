@@ -20,6 +20,7 @@
 package net.ittera.pal.serdes.colfer;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -27,13 +28,16 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
-import net.ittera.pal.messages.jsonrpc.InvalidJsonRpcRequestException;
-import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.messages.jsonrpc.*;
 import net.ittera.pal.messages.types.ExecMessageType;
 
 public class MessageUtils {
 
-  private static Gson gson = new Gson();
+  private static Gson gson =
+      new GsonBuilder()
+          .registerTypeAdapter(JsonRpcParameter.class, new JsonRpcParameterDeserializer())
+          .registerTypeAdapter(JsonRpcRequest.class, new JsonRpcRequestDeserializer())
+          .create();
 
   /**
    * Regular expression for a valid class name. This regex ensures that the class name starts with a
@@ -121,6 +125,16 @@ public class MessageUtils {
     // Check for empty id
     if (jsonRpcRequest.getId() == null || jsonRpcRequest.getId().isEmpty()) {
       throw new InvalidJsonRpcRequestException("Missing or blank JSON-RPC id)");
+    }
+
+    // Check that params that are Refs have a non-null value
+    if (jsonRpcRequest.getParams() != null) {
+      for (JsonRpcParameter param : jsonRpcRequest.getParams()) {
+        if ("ref".equalsIgnoreCase(param.getType()) && param.getValue() == null) {
+          throw new InvalidJsonRpcRequestException(
+              "Ref parameter has a null value: " + jsonRpcRequest.getMethod());
+        }
+      }
     }
 
     // Check for illegal characters in the class name

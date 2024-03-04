@@ -4,10 +4,15 @@ import static org.junit.Assert.*;
 
 import java.util.stream.Stream;
 import net.ittera.pal.messages.jsonrpc.InvalidJsonRpcRequestException;
+import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MessageUtilsTest {
+  private static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);
 
+  // <editor-fold desc="illegal characters and words">
   @Test
   public void parseJsonRpcMessage_illegalCharactersInClassName_invalidJsonRpcRequestException() {
     Stream.of(
@@ -126,6 +131,9 @@ public class MessageUtilsTest {
             });
   }
 
+  // </editor-fold>
+
+  // <editor-fold desc="number of params in field ops">
   @Test
   public void parseJsonRpcMessage_noParametersGivenForPut_invalidJsonRpcRequestException() {
     Stream.of(
@@ -147,7 +155,7 @@ public class MessageUtilsTest {
   }
 
   @Test
-  public void justatest() throws InvalidJsonRpcRequestException {
+  public void parseJsonRpcMessage_putWithParam_ok() throws InvalidJsonRpcRequestException {
     String method = "put:net.ittera.pal.core.exec.RPCMessageInvoker.peerUuid";
     String jsonRpcMessage =
         String.format(
@@ -197,4 +205,64 @@ public class MessageUtilsTest {
               }
             });
   }
+
+  // </editor-fold>
+
+  // <editor-fold desc="type and value of params">
+  @Test
+  public void parseJsonRpcMessage_paramWithStringValueAndNoType_ok() {
+    Stream.of(String.format("\"%s\"", "Hello, World!"), "{\"value\": \"Hello, World!\"}")
+        .forEach(
+            params -> {
+              JsonRpcRequest jsonRpcRequest;
+              String jsonRpcMessage =
+                  String.format(
+                      "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [%s], \"id\": 1}",
+                      params);
+              logger.debug(jsonRpcMessage);
+              try {
+                jsonRpcRequest = MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+              } catch (InvalidJsonRpcRequestException e) {
+                throw new RuntimeException(e);
+              }
+              assertNotNull(jsonRpcRequest.getParams());
+              assertEquals(jsonRpcRequest.getParams().size(), 1);
+              assertEquals(jsonRpcRequest.getParams().get(0).getValue(), "Hello, World!");
+              assertNull(jsonRpcRequest.getParams().get(0).getType());
+            });
+  }
+
+  @Test
+  public void parseJsonRpcMessage_nullValueParams_ok() {
+    Stream.of("null", "{\"value\": null}", "{}")
+        .forEach(
+            params -> {
+              JsonRpcRequest jsonRpcRequest;
+              String jsonRpcMessage =
+                  String.format(
+                      "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [%s], \"id\": 1}",
+                      params);
+              System.out.println(jsonRpcMessage);
+              logger.debug(jsonRpcMessage);
+              try {
+                jsonRpcRequest = MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+              } catch (InvalidJsonRpcRequestException e) {
+                throw new RuntimeException(e);
+              }
+              assertNotNull(jsonRpcRequest.getParams());
+              assertEquals(jsonRpcRequest.getParams().size(), 1);
+              assertNull(jsonRpcRequest.getParams().get(0).getValue());
+              assertNull(jsonRpcRequest.getParams().get(0).getType());
+            });
+  }
+
+  @Test(expected = InvalidJsonRpcRequestException.class)
+  public void parseJsonRpcMessage_typeIsRefButNoValueGiven_invalidJsonRpcRequestException()
+      throws InvalidJsonRpcRequestException {
+    String jsonRpcMessage =
+        "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [{\"type\": \"ref\"}], \"id\": 1}";
+    MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+  }
+
+  // </editor-fold>
 }

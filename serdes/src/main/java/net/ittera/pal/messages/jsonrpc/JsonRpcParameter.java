@@ -9,6 +9,8 @@ public class JsonRpcParameter {
   @SerializedName("type")
   private String type;
 
+  private boolean isRef;
+
   public Object getValue() {
     return value;
   }
@@ -23,5 +25,13 @@ public class JsonRpcParameter {
 
   public void setType(String type) {
     this.type = type;
+  }
+
+  public boolean isRef() {
+    return isRef;
+  }
+
+  public void setIsRef(boolean isRef) {
+    this.isRef = isRef;
   }
 }
