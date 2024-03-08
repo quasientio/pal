@@ -122,6 +122,10 @@ public class ClassForTestingConstructorLookup {
     this.param = "constructorWithStringVarargs";
   }
 
+  public ClassForTestingConstructorLookup(String param1, int... param2) {
+    this.param = "constructorWithIntVarargs";
+  }
+
   public ClassForTestingConstructorLookup(int param1, Object... param2) {
     this.param = "constructorWithObjectVarargs";
   }

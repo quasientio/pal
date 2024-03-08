@@ -162,6 +162,10 @@ public class ClassForTestingMethodLookup {
     return "methodWithStringVarargs";
   }
 
+  public String methodWithVarargs(String param, int... params) {
+    return "methodWithIntVarargs";
+  }
+
   public String methodWithVarargs(Object... params) {
     return "methodWithObjectVarargs";
   }

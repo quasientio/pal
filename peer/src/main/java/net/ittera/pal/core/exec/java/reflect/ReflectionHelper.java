@@ -23,6 +23,7 @@ import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -55,91 +56,68 @@ public class ReflectionHelper {
     this.allowNonPublic = Boolean.parseBoolean(rpcAllowNonpublicStr);
   }
 
-  private static final Map<String, String> shortToLongNames =
-      new HashMap<String, String>() {
-        {
-          put("string", "java.lang.String");
-          put("String", "java.lang.String");
-          put("Character", "java.lang.Character");
-          put("Boolean", "java.lang.Boolean");
-          put("Byte", "java.lang.Byte");
-          put("Short", "java.lang.Short");
-          put("Integer", "java.lang.Integer");
-          put("Long", "java.lang.Long");
-          put("Float", "java.lang.Float");
-          put("Double", "java.lang.Double");
-        }
-      };
-
   private final Map<String, Method> matchedMethodsCache = new ConcurrentHashMap<>();
   private final Map<String, Constructor<?>> matchedConstructorsCache = new ConcurrentHashMap<>();
-
-  /**
-   * Convenience method to use when looking up methods for JSON-RPC calls and the parameter types
-   * are not known.
-   *
-   * @param clazz
-   * @param parameters
-   * @param methodName
-   * @return the matching method
-   * @throws AmbiguousCallException if more than one method matches the call
-   * @throws NoSuchMethodException if no method matches the call
-   */
-  public Method lookupMethod(Class<?> clazz, Object[] parameters, String methodName)
-      throws AmbiguousCallException, NoSuchMethodException {
-    return lookupMethod(clazz, parameters, null, methodName);
-  }
 
   /**
    * Gets the right method when a parameter is a subtype of a method's formal parameter type. Uses
    * ClassUtils.isAssignable() and Class.isAssignableFrom() to check for assignability.
    *
-   * <p>If parameterTypes are given, method matching will be done using these types. The list of
-   * parameterTypes should be the same length as the parameters list. Also, when parameterTypes are
+   * <p>If parameter types are given, method matching will be done using these types. The list of
+   * parameter types should be the same length as the parameters list. When parameter types are
    * given, no primitive widening will be allowed, i.e. if a method has a formal parameter of type
-   * int, it will not match a call with a parameter of type long. This is the method to use when
-   * looking up methods for regular RPC calls, which normally include the parameter types in the
-   * call.
+   * int, it will not match a call with a parameter of type long.
    *
-   * <p>If parameterTypes is null, method matching will be done using the parameters' actual types.
-   * In this case, primitive widening assignment will be allowed for method matching. Use the
-   * convenience method lookupMethod(Class, Object[], String) when looking up methods for JSON-RPC
-   * calls and the parameter types are not known.
+   * <p>If a parameter type is null, method matching will be done using the parameters' actual
+   * types. In this case, primitive widening assignment will be allowed for method matching.
    *
    * @param clazz
    * @param parameters
-   * @param parameterTypes
+   * @param knownParameterTypes
    * @param methodName
    * @return the matching method
    * @throws AmbiguousCallException if more than one method matches the call
    * @throws NoSuchMethodException if no method matches the call
    */
   public Method lookupMethod(
-      Class<?> clazz,
-      Object[] parameters,
-      @Nullable List<Class<?>> parameterTypes,
-      String methodName)
+      @Nonnull Class<?> clazz,
+      @Nonnull Object[] parameters,
+      @Nonnull List<Class<?>> knownParameterTypes,
+      @Nonnull String methodName)
       throws AmbiguousCallException, NoSuchMethodException {
+
+    Objects.requireNonNull(clazz, "clazz cannot be null");
+    Objects.requireNonNull(parameters, "the list of parameters cannot be null");
+    Objects.requireNonNull(knownParameterTypes, "the list of parameter types cannot be null");
+    Objects.requireNonNull(methodName, "method name cannot be null");
+
     if (logger.isTraceEnabled()) {
       logger.trace("in w/ class:{} and method:{}", clazz.getName(), methodName);
     }
-
-    if (parameterTypes != null && parameterTypes.size() != parameters.length) {
+    if (knownParameterTypes.size() != parameters.length) {
       throw new IllegalArgumentException(
           String.format(
               "Parameters length=%s, different from parameter types length=%s",
-              parameters.length, parameterTypes.size()));
+              parameters.length, knownParameterTypes.size()));
     }
 
     // trace params
     if (logger.isTraceEnabled()) {
-      traceParameters(parameters, parameterTypes);
+      traceParameters(parameters, knownParameterTypes);
     }
 
-    boolean parameterTypesGiven = parameterTypes != null;
-
-    if (!parameterTypesGiven) {
-      parameterTypes = Arrays.stream(parameters).map(Object::getClass).collect(Collectors.toList());
+    // replace null parameter types with actual parameter types
+    final List<Class<?>> parameterTypes = new ArrayList<>();
+    for (int i = 0; i < knownParameterTypes.size(); i++) {
+      if (knownParameterTypes.get(i) != null) {
+        parameterTypes.add(knownParameterTypes.get(i));
+      } else {
+        if (parameters[i] == null) {
+          parameterTypes.add(null);
+        } else {
+          parameterTypes.add(parameters[i].getClass());
+        }
+      }
     }
 
     // lookup in cache
@@ -152,6 +130,7 @@ public class ReflectionHelper {
     }
 
     Class<?>[] parameterTypesArray = parameterTypes.toArray(new Class[0]);
+
     // let's try an exact match
     try {
       Method methodFound;
@@ -183,9 +162,15 @@ public class ReflectionHelper {
             .filter(
                 candidate -> {
                   final Class<?>[] candidateParameterTypes = candidate.getParameterTypes();
+                  boolean methodIsVarargs = candidate.isVarArgs();
                   for (int i = 0; i < candidateParameterTypes.length; i++) {
+                    boolean paramIsVarargs =
+                        methodIsVarargs && i == candidateParameterTypes.length - 1;
                     if (!isAssignable(
-                        parameters[i], parameterTypesArray[i], candidateParameterTypes[i])) {
+                        parameters[i],
+                        parameterTypesArray[i],
+                        candidateParameterTypes[i],
+                        paramIsVarargs)) {
                       return false;
                     }
                   }
@@ -199,7 +184,8 @@ public class ReflectionHelper {
         final List<Method> narrowedDownMatches =
             narrowDownMethodMatches(parameterTypesArray, matchingMethods);
         if (narrowedDownMatches.size() != 1) {
-          throw new AmbiguousCallException(clazz.getName(), parameterTypes, matchingMethods);
+          throw new AmbiguousCallException(
+              clazz.getName(), methodName, parameterTypes, matchingMethods);
         } else {
           matchingMethod = narrowedDownMatches.get(0);
         }
@@ -223,10 +209,16 @@ public class ReflectionHelper {
               .filter(m -> m.getParameterTypes().length == parameters.length)
               .filter(
                   candidate -> {
+                    boolean methodIsVarargs = candidate.isVarArgs();
                     final Class<?>[] candidateParameterTypes = candidate.getParameterTypes();
                     for (int i = 0; i < candidateParameterTypes.length; i++) {
+                      boolean paramIsVarargs =
+                          methodIsVarargs && i == candidateParameterTypes.length - 1;
                       if (!isAssignable(
-                          parameters[i], parameterTypesArray[i], candidateParameterTypes[i])) {
+                          parameters[i],
+                          parameterTypesArray[i],
+                          candidateParameterTypes[i],
+                          paramIsVarargs)) {
                         return false;
                       }
                     }
@@ -240,7 +232,8 @@ public class ReflectionHelper {
           final List<Method> narrowedDownMatches =
               narrowDownMethodMatches(parameterTypesArray, matchingMethods);
           if (narrowedDownMatches.size() != 1) {
-            throw new AmbiguousCallException(clazz.getName(), parameterTypes, matchingMethods);
+            throw new AmbiguousCallException(
+                clazz.getName(), methodName, parameterTypes, matchingMethods);
           } else {
             matchingMethod = narrowedDownMatches.get(0);
           }
@@ -256,72 +249,69 @@ public class ReflectionHelper {
     }
     throw new NoSuchMethodException(
         String.format(
-            "No matching method found for name:%s and parameter types: (%s)",
+            "No matching method '%s' found in class '%s' with parameter types: [%s]",
             methodName,
+            clazz.getName(),
             parameterTypes.stream().map(Class::getName).collect(Collectors.joining(", "))));
-  }
-
-  /**
-   * Convenience method to use when looking up constructors for JSON-RPC calls and the parameter
-   * types are not known.
-   *
-   * @param clazz
-   * @param parameters
-   * @return the matching constructor
-   * @throws AmbiguousCallException if more than one constructor matches the call
-   * @throws NoSuchMethodException if no constructor matches the call
-   */
-  public Constructor<?> lookupConstructor(Class<?> clazz, Object[] parameters)
-      throws AmbiguousCallException, NoSuchMethodException {
-    return lookupConstructor(clazz, parameters, null);
   }
 
   /**
    * Gets the right constructor when a parameter is a subtype of a constructor's formal parameter
    * type. Uses ClassUtils.isAssignable() and Class.isAssignableFrom() to check for assignability.
    *
-   * <p>If parameterTypes are given, constructor matching will be done using these types. The list
-   * of parameterTypes should be the same length as the parameters list. Also, when parameterTypes
+   * <p>If parameter types are given, constructor matching will be done using these types. The list
+   * of parameterTypes should be the same length as the parameters list. Also, when parameter types
    * are given, no primitive widening will be allowed, ie. if a constructor has a formal parameter
-   * of type int, it will not match a call with a parameter of type long. This is the method to use
-   * when looking up constructors for regular RPC calls, which normally include the parameter types
-   * in the call.
+   * of type int, it will not match a call with a parameter of type long.
    *
-   * <p>If parameterTypes is null, constructor matching will be done using the parameters' actual
-   * types. In this case, primitive widening assignment will be allowed for constructor matching.
-   * Use the convenience method lookupConstructor(Class, Object[]) when looking up constructors for
-   * JSON-RPC calls and the parameter types are not known.
+   * <p>If a parameter type is null, constructor matching is done using the parameters' actual type.
+   * In this case, primitive widening assignment will be allowed for constructor matching.
    *
    * @param clazz
    * @param parameters
-   * @param parameterTypes
+   * @param knownParameterTypes
    * @return the matching constructor
    * @throws AmbiguousCallException if more than one constructor matches the call
    * @throws NoSuchMethodException if no constructor matches the call
    */
   public Constructor<?> lookupConstructor(
-      Class<?> clazz, Object[] parameters, @Nullable List<Class<?>> parameterTypes)
+      @Nonnull Class<?> clazz,
+      @Nonnull Object[] parameters,
+      @Nonnull List<Class<?>> knownParameterTypes)
       throws AmbiguousCallException, NoSuchMethodException {
+
+    Objects.requireNonNull(clazz, "clazz cannot be null");
+    Objects.requireNonNull(parameters, "the list of parameters cannot be null");
+    Objects.requireNonNull(knownParameterTypes, "the list of parameter types cannot be null");
+
     if (logger.isTraceEnabled()) {
-      logger.trace("in w/ class:{}", clazz.getName());
+      logger.trace("in w/ class:{} and parameters", clazz.getName());
     }
 
-    if (parameterTypes != null && parameterTypes.size() != parameters.length) {
+    if (knownParameterTypes.size() != parameters.length) {
       throw new IllegalArgumentException(
           String.format(
               "Parameters length=%s, different from parameter types length=%s",
-              parameters.length, parameterTypes.size()));
+              parameters.length, knownParameterTypes.size()));
     }
 
     // trace params
     if (logger.isTraceEnabled()) {
-      traceParameters(parameters, parameterTypes);
+      traceParameters(parameters, knownParameterTypes);
     }
 
-    boolean parameterTypesGiven = parameterTypes != null;
-
-    if (!parameterTypesGiven) {
-      parameterTypes = Arrays.stream(parameters).map(Object::getClass).collect(Collectors.toList());
+    // replace null parameter types with actual parameter types
+    final List<Class<?>> parameterTypes = new ArrayList<>();
+    for (int i = 0; i < knownParameterTypes.size(); i++) {
+      if (knownParameterTypes.get(i) != null) {
+        parameterTypes.add(knownParameterTypes.get(i));
+      } else {
+        if (parameters[i] == null) {
+          throw new IllegalArgumentException(
+              "Cannot determine parameter type for null parameter at index " + i);
+        }
+        parameterTypes.add(parameters[i].getClass());
+      }
     }
 
     // lookup in cache
@@ -366,10 +356,16 @@ public class ReflectionHelper {
             .filter(constructor -> constructor.getParameterTypes().length == parameters.length)
             .filter(
                 candidate -> {
+                  boolean methodIsVarargs = candidate.isVarArgs();
                   final Class<?>[] candidateParameterTypes = candidate.getParameterTypes();
                   for (int i = 0; i < candidateParameterTypes.length; i++) {
+                    boolean paramIsVarargs =
+                        methodIsVarargs && i == candidateParameterTypes.length - 1;
                     if (!isAssignable(
-                        parameters[i], parameterTypesArray[i], candidateParameterTypes[i])) {
+                        parameters[i],
+                        parameterTypesArray[i],
+                        candidateParameterTypes[i],
+                        paramIsVarargs)) {
                       return false;
                     }
                   }
@@ -407,10 +403,16 @@ public class ReflectionHelper {
               .filter(m -> m.getParameterTypes().length == parameters.length)
               .filter(
                   candidate -> {
+                    boolean methodIsVarargs = candidate.isVarArgs();
                     final Class<?>[] candidateParameterTypes = candidate.getParameterTypes();
                     for (int i = 0; i < candidateParameterTypes.length; i++) {
+                      boolean paramIsVarargs =
+                          methodIsVarargs && i == candidateParameterTypes.length - 1;
                       if (!isAssignable(
-                          parameters[i], parameterTypesArray[i], candidateParameterTypes[i])) {
+                          parameters[i],
+                          parameterTypesArray[i],
+                          candidateParameterTypes[i],
+                          paramIsVarargs)) {
                         return false;
                       }
                     }
@@ -441,7 +443,7 @@ public class ReflectionHelper {
     }
     throw new NoSuchMethodException(
         String.format(
-            "No matching constructor found for class:%s and parameter types: (%s)",
+            "No matching constructor found in class '%s' with parameter types: [%s]",
             clazz.getName(),
             parameterTypes.stream().map(Class::getName).collect(Collectors.joining(", "))));
   }
@@ -480,26 +482,38 @@ public class ReflectionHelper {
     return keyBuilder.toString();
   }
 
-  private boolean isAssignable(Object parameter, @Nullable Class<?> parameterType, Class<?> clazz) {
+  private boolean isAssignable(
+      Object parameter, @Nullable Class<?> parameterType, Class<?> clazz, boolean paramIsVarargs) {
     if (parameter == null) {
       return !clazz.isPrimitive();
-    } else {
-      if (parameterType == null) {
-        return ClassUtils.isAssignable(parameter.getClass(), clazz);
-      }
-      // NOTE: if available, use parameterType for checking assignability, instead of the
-      // parameter's actual type
-      return ClassUtils.isAssignable(parameterType, clazz);
     }
+
+    // if available, use parameterType for checking assignability,
+    // else use the parameter's actual type
+    final Class<?> paramType = parameterType != null ? parameterType : parameter.getClass();
+
+    if (paramIsVarargs) {
+      if (paramType.isArray()) {
+        // if the parameter type is an array, we need to check against its component type
+        return isAssignable(
+            parameter, paramType.getComponentType(), clazz.getComponentType(), false);
+      } else {
+        return isAssignable(parameter, paramType, clazz.getComponentType(), false);
+      }
+    }
+
+    return ClassUtils.isAssignable(paramType, clazz);
   }
 
-  private boolean isAssignable(
+  private boolean isAssignable_notInUse(
       Object parameter,
       @Nullable Class<?> parameterType,
       Class<?> clazz,
+      boolean methodIsVarargs,
       boolean allowPrimitiveWidening) {
     if (allowPrimitiveWidening) {
-      return isAssignable(parameter, parameterType, clazz); // use ClassUtils isAssignable
+      return isAssignable(
+          parameter, parameterType, clazz, methodIsVarargs); // use ClassUtils isAssignable
     } else {
       if (parameterType == null) {
         return clazz.isAssignableFrom(parameter.getClass());
