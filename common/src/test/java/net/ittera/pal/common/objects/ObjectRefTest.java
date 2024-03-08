@@ -28,23 +28,25 @@ import org.junit.Test;
 
 public class ObjectRefTest {
 
-  int ref;
-  ObjectRef objectRef;
-
   @Before
-  public void setUp() {
-    ref = 17;
-    objectRef = ObjectRef.from(String.valueOf(ref));
+  public void setUp() {}
+
+  @Test
+  public void fromAsString() {
+    ObjectRef objectRef = ObjectRef.from("23");
+    assertEquals(23, objectRef.getRef());
   }
 
   @Test
-  public void getRef() {
-    assertThat(objectRef.getRef(), is(ref));
+  public void fromAsInt() {
+    ObjectRef objectRef = ObjectRef.from(23);
+    assertEquals(23, objectRef.getRef());
   }
 
   @Test
   public void testAsString() {
-    assertThat(objectRef.asString(), is(String.valueOf(ref)));
+    ObjectRef objectRef = ObjectRef.from(23);
+    assertEquals("23", objectRef.asString());
   }
 
   @Test
@@ -54,6 +56,8 @@ public class ObjectRefTest {
 
   @Test
   public void testToString() {
+    int ref = 17;
+    ObjectRef objectRef = ObjectRef.from(ref);
     assertThat(objectRef.toString(), is("objectRef: {" + ref + '}'));
   }
 }

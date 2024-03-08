@@ -26,7 +26,11 @@ public final class ObjectRef {
   private final int ref;
 
   private ObjectRef(String ref) {
-    this.ref = Integer.parseInt(ref);
+    this(Integer.parseInt(ref));
+  }
+
+  private ObjectRef(Integer ref) {
+    this.ref = ref;
   }
 
   public int getRef() {
@@ -34,6 +38,10 @@ public final class ObjectRef {
   }
 
   public static ObjectRef from(String ref) {
+    return new ObjectRef(ref);
+  }
+
+  public static ObjectRef from(int ref) {
     return new ObjectRef(ref);
   }
 
