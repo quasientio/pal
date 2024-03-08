@@ -255,13 +255,20 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         || execMessageType.equals(ExecMessageType.CLASS_METHOD)
         || execMessageType.equals(ExecMessageType.INSTANCE_METHOD)) {
       for (Parameter param : parameterList) {
-        Class<?> paramClass = Classes.getClassForPrimitive(param.getType().getName());
-        if (paramClass == null) { // ie. not a primitive
-          paramClass =
-              Class.forName(
-                  param.getType().getName(), true, Thread.currentThread().getContextClassLoader());
+        if (param.getType().getUnknown()) { // param class is unknown
+          paramClasses.add(null);
+        } else {
+          Class<?> primitiveClass = Classes.getClassForPrimitive(param.getType().getName());
+          if (primitiveClass != null) { // param is primitive
+            paramClasses.add(primitiveClass);
+          } else { // ie. not a primitive
+            paramClasses.add(
+                Class.forName(
+                    param.getType().getName(),
+                    true,
+                    Thread.currentThread().getContextClassLoader()));
+          }
         }
-        paramClasses.add(paramClass);
       }
     } else {
       return null;

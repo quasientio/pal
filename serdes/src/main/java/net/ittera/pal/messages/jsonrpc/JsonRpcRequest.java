@@ -44,7 +44,7 @@ import net.ittera.pal.messages.types.ExecMessageType;
  *       considered null if either the object itself is null, or an empty object, ie. {}
  *   <li>type: if given, it must be a string representing the value’s type. The special type “ref”
  *       is used to indicate that the param value is an ObjectRef. If type is “ref”, then value
- *       cannot be null.
+ *       cannot be null and must be an integer.
  * </ul>
  *
  * <p>The <b>id</b> field is an integer that is used to correlate the request with the response.

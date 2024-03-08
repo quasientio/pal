@@ -64,9 +64,8 @@ type Reflectable struct {
 }
 
 type Parameter struct {
-	name      text
-	value     Obj
-	modifiers uint32
-	Type      Class
-	isVarArgs bool
+	name  text
+	value Obj
+	Type  Class
+	isRef bool
 }

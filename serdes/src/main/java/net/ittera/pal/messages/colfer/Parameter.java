@@ -36,11 +36,9 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
 
   public Obj value;
 
-  public int modifiers;
-
   public Class Type;
 
-  public boolean isVarArgs;
+  public boolean isRef;
 
   /** Default constructor */
   public Parameter() {
@@ -144,7 +142,7 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.name.length() * 3 + 5 + 1;
+    long n = 1L + 6 + (long) this.name.length() * 3 + 1;
     if (this.value != null) n += 1 + (long) this.value.marshalFit();
     if (this.Type != null) n += 1 + (long) this.Type.marshalFit();
     if (n < 0 || n > (long) Parameter.colferSizeMax) return Parameter.colferSizeMax;
@@ -242,30 +240,13 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
         i = this.value.marshal(buf, i);
       }
 
-      if (this.modifiers != 0) {
-        int x = this.modifiers;
-        if ((x & ~((1 << 21) - 1)) != 0) {
-          buf[i++] = (byte) (2 | 0x80);
-          buf[i++] = (byte) (x >>> 24);
-          buf[i++] = (byte) (x >>> 16);
-          buf[i++] = (byte) (x >>> 8);
-        } else {
-          buf[i++] = (byte) 2;
-          while (x > 0x7f) {
-            buf[i++] = (byte) (x | 0x80);
-            x >>>= 7;
-          }
-        }
-        buf[i++] = (byte) x;
-      }
-
       if (this.Type != null) {
-        buf[i++] = (byte) 3;
+        buf[i++] = (byte) 2;
         i = this.Type.marshal(buf, i);
       }
 
-      if (this.isVarArgs) {
-        buf[i++] = (byte) 4;
+      if (this.isRef) {
+        buf[i++] = (byte) 3;
       }
 
       buf[i++] = (byte) 0x7f;
@@ -339,31 +320,13 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
       }
 
       if (header == (byte) 2) {
-        int x = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          x |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        this.modifiers = x;
-        header = buf[i++];
-      } else if (header == (byte) (2 | 0x80)) {
-        this.modifiers =
-            (buf[i++] & 0xff) << 24
-                | (buf[i++] & 0xff) << 16
-                | (buf[i++] & 0xff) << 8
-                | (buf[i++] & 0xff);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 3) {
         this.Type = new Class();
         i = this.Type.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 4) {
-        this.isVarArgs = true;
+      if (header == (byte) 3) {
+        this.isRef = true;
         header = buf[i++];
       }
 
@@ -383,7 +346,7 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 5L;
+  private static final long serialVersionUID = 4L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -467,35 +430,6 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.Parameter.modifiers.
-   *
-   * @return the value.
-   */
-  public int getModifiers() {
-    return this.modifiers;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Parameter.modifiers.
-   *
-   * @param value the replacement.
-   */
-  public void setModifiers(int value) {
-    this.modifiers = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Parameter.modifiers.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public Parameter withModifiers(int value) {
-    this.modifiers = value;
-    return this;
-  }
-
-  /**
    * Gets net.ittera.pal.messages/colfer.Parameter.Type.
    *
    * @return the value.
@@ -525,31 +459,31 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.Parameter.isVarArgs.
+   * Gets net.ittera.pal.messages/colfer.Parameter.isRef.
    *
    * @return the value.
    */
-  public boolean getIsVarArgs() {
-    return this.isVarArgs;
+  public boolean getIsRef() {
+    return this.isRef;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.Parameter.isVarArgs.
+   * Sets net.ittera.pal.messages/colfer.Parameter.isRef.
    *
    * @param value the replacement.
    */
-  public void setIsVarArgs(boolean value) {
-    this.isVarArgs = value;
+  public void setIsRef(boolean value) {
+    this.isRef = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.Parameter.isVarArgs.
+   * Sets net.ittera.pal.messages/colfer.Parameter.isRef.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public Parameter withIsVarArgs(boolean value) {
-    this.isVarArgs = value;
+  public Parameter withIsRef(boolean value) {
+    this.isRef = value;
     return this;
   }
 
@@ -558,9 +492,8 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
     int h = 1;
     if (this.name != null) h = 31 * h + this.name.hashCode();
     if (this.value != null) h = 31 * h + this.value.hashCode();
-    h = 31 * h + this.modifiers;
     if (this.Type != null) h = 31 * h + this.Type.hashCode();
-    h = 31 * h + (this.isVarArgs ? 1231 : 1237);
+    h = 31 * h + (this.isRef ? 1231 : 1237);
     return h;
   }
 
@@ -575,9 +508,8 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
 
     return (this.name == null ? o.name == null : this.name.equals(o.name))
         && (this.value == null ? o.value == null : this.value.equals(o.value))
-        && this.modifiers == o.modifiers
         && (this.Type == null ? o.Type == null : this.Type.equals(o.Type))
-        && this.isVarArgs == o.isVarArgs;
+        && this.isRef == o.isRef;
   }
 
   @Override
@@ -592,17 +524,13 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
         this.value = new Obj().fromJson(jsonObj);
       }
 
-      if (json.has("modifiers")) {
-        this.modifiers = json.get("modifiers").getAsInt();
-      }
-
       if (json.has("Type")) {
         JsonObject jsonObj = json.getAsJsonObject("Type");
         this.Type = new Class().fromJson(jsonObj);
       }
 
-      if (json.has("isVarArgs")) {
-        this.isVarArgs = json.get("isVarArgs").getAsBoolean();
+      if (json.has("isRef")) {
+        this.isRef = json.get("isRef").getAsBoolean();
       }
 
     } catch (Exception e) {

@@ -42,7 +42,7 @@ public final class Wrapper {
 
   private static final Logger logger = LoggerFactory.getLogger(Wrapper.class);
 
-  static final List<Class> reconstructableCharSeqClasses;
+  static final List<Class<?>> reconstructableCharSeqClasses;
   static final List<String> reconstructableCharSeqClassNames;
 
   static {
@@ -105,8 +105,17 @@ public final class Wrapper {
     // set required fields
     wrappedObject.setIsNull(object == null && objectRef == null);
     wrappedObject.setIsVoid(object == void.class || object == Void.class);
-    wrappedObject.setClazz(getWrappedClass(classname));
-    wrappedObject.setIsArray(isArrayClassName(classname));
+
+    // if classname is given, use it to set clazz, otherwise use the object's class
+    if (classname != null) {
+      wrappedObject.setClazz(getWrappedClass(classname));
+    } else {
+      wrappedObject.setClazz(getWrappedClass(object == null ? null : object.getClass()));
+    }
+
+    if (classname != null) {
+      wrappedObject.setIsArray(isArrayClassName(classname));
+    }
 
     if (objectRef != null) {
       wrappedObject.setRef(String.valueOf(objectRef.getRef()));
@@ -173,15 +182,6 @@ public final class Wrapper {
             && isWrappableCharSeqClass(object.getClass().getComponentType()));
   }
 
-  private static boolean isValidClassName(String className) {
-    String arrayRegex = "(\\[)*";
-    String baseTypeRegex = "([a-zA-Z_$][a-zA-Z\\d_$]*\\.)*[a-zA-Z_$][a-zA-Z\\d_$]*";
-    String primitiveArrayRegex = "\\[+[BCDFIJSZ]";
-    String endRegex = "(;)?";
-    String regex = "(" + arrayRegex + "?" + baseTypeRegex + endRegex + ")|" + primitiveArrayRegex;
-    return className.matches(regex);
-  }
-
   /**
    * Wraps objects into a Colfer Obj(ect), which can be later unwrapped into the original object.
    * See getWrappedObjectAux() for a list of valid wrappable types.
@@ -192,7 +192,10 @@ public final class Wrapper {
    * @return a Colfer Obj (object) instance
    * @throws NonWrappableObjectException if the object is not wrappable
    */
-  static <T> Obj getWrappedObject(java.lang.Object object, String classname, ObjectRef objectRef) {
+  static Obj getWrappedObject(
+      @Nullable java.lang.Object object,
+      @Nullable String classname,
+      @Nullable ObjectRef objectRef) {
     if (logger.isTraceEnabled()) {
       logger.trace(
           "in getWrappedObject with object: {}, class: {}, objectRef: {}",
@@ -200,7 +203,6 @@ public final class Wrapper {
           classname,
           objectRef);
     }
-    final Obj obj = new Obj();
     if (object instanceof Obj) {
       throw new NonWrappableObjectException(
           "Unexpected instance of Obj. Cannot wrap an already wrapped object", object);
@@ -208,10 +210,10 @@ public final class Wrapper {
     if (objectRef == null && !isWrappable(object)) {
       throw new NonWrappableObjectException(object);
     }
-    if (!isValidClassName(classname)) {
+    if (classname != null && !Classes.isValidClassName(classname)) {
       throw new IllegalArgumentException("Invalid class name: " + classname);
     }
-    return getWrappedObjectAux(obj, object, classname, objectRef);
+    return getWrappedObjectAux(new Obj(), object, classname, objectRef);
   }
 
   static net.ittera.pal.messages.colfer.Class getWrappedClass(String className) {
@@ -225,7 +227,7 @@ public final class Wrapper {
     return wrappedClass;
   }
 
-  static net.ittera.pal.messages.colfer.Class getWrappedClass(Class clazz) {
+  static net.ittera.pal.messages.colfer.Class getWrappedClass(Class<?> clazz) {
     final net.ittera.pal.messages.colfer.Class wrappedClass =
         new net.ittera.pal.messages.colfer.Class();
     if (clazz == null) {
@@ -245,7 +247,7 @@ public final class Wrapper {
     return wrappedField;
   }
 
-  static net.ittera.pal.messages.colfer.Field getWrappedField(Class clazz, String fieldName) {
+  static net.ittera.pal.messages.colfer.Field getWrappedField(Class<?> clazz, String fieldName) {
     final net.ittera.pal.messages.colfer.Field wrappedField =
         new net.ittera.pal.messages.colfer.Field();
     wrappedField.setName(fieldName);
@@ -273,16 +275,9 @@ public final class Wrapper {
         wrappedCtxt.setSender(
             getWrappedObject(sender, context.getWithinType().getName(), senderObjRef));
       }
-
-      if (context.getSourceFilename() != null) {
-        wrappedCtxt.setSourceLocationFile(context.getSourceFilename());
-      }
-
+      wrappedCtxt.setSourceLocationFile(context.getSourceFilename());
       wrappedCtxt.setSourceLocationLine(context.getSourceLine());
-
-      if (context.getWithinType() != null) {
-        wrappedCtxt.setSourceLocationType(context.getWithinType().getName());
-      }
+      wrappedCtxt.setSourceLocationType(context.getWithinType().getName());
     } else {
       wrappedCtxt.setSenderClass(getWrappedClass(sender.getClass()));
       wrappedCtxt.setSender(getWrappedObject(sender, sender.getClass().getName(), senderObjRef));

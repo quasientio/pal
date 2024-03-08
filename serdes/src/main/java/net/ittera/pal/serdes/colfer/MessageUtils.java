@@ -30,6 +30,9 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
 import net.ittera.pal.messages.jsonrpc.*;
 import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcParameterDeserializer;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcRequestDeserializer;
 
 public class MessageUtils {
 
@@ -107,7 +110,12 @@ public class MessageUtils {
   public static JsonRpcRequest parseAndValidateJsonRpcMessage(String jsonRpcMessage)
       throws InvalidJsonRpcRequestException {
     // Parse the JSON-RPC message
-    JsonRpcRequest jsonRpcRequest = gson.fromJson(jsonRpcMessage, JsonRpcRequest.class);
+    JsonRpcRequest jsonRpcRequest;
+    try {
+      jsonRpcRequest = gson.fromJson(jsonRpcMessage, JsonRpcRequest.class);
+    } catch (RuntimeException ex) {
+      throw new InvalidJsonRpcRequestException("Invalid JSON-RPC message: " + ex.getMessage());
+    }
 
     // Set the ExecMessageType and other fields based on the method field
     try {
@@ -127,12 +135,17 @@ public class MessageUtils {
       throw new InvalidJsonRpcRequestException("Missing or blank JSON-RPC id)");
     }
 
-    // Check that params that are Refs have a non-null value
+    // Check that params that are Refs have a non-null value and are Integers
     if (jsonRpcRequest.getParams() != null) {
       for (JsonRpcParameter param : jsonRpcRequest.getParams()) {
-        if ("ref".equalsIgnoreCase(param.getType()) && param.getValue() == null) {
-          throw new InvalidJsonRpcRequestException(
-              "Ref parameter has a null value: " + jsonRpcRequest.getMethod());
+        if (param.isRef()) {
+          if (param.getValue() == null) {
+            throw new InvalidJsonRpcRequestException("Ref parameter has a null value: " + param);
+          }
+          if (!(param.getValue() instanceof Integer)) {
+            throw new InvalidJsonRpcRequestException(
+                "Ref parameter has a non-integer value: " + param.getValue());
+          }
         }
       }
     }

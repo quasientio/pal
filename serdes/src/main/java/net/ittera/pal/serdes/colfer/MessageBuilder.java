@@ -136,7 +136,6 @@ public final class MessageBuilder {
     return new Parameter()
         .withName(paramName == null ? parameter.getName() : paramName)
         .withType(getWrappedClass(paramType == null ? parameter.getType().getName() : paramType))
-        .withIsVarArgs(parameter.isVarArgs())
         .withValue(getWrappedObject(param, paramType, paramObjRef));
   }
 
@@ -798,8 +797,8 @@ public final class MessageBuilder {
     if (accessibleObject.isPresent()) {
       if (accessibleObject.get() instanceof Constructor) {
         raisedThrowable.setConstructor(
-            ((Constructor) accessibleObject.get()).getDeclaringClass().getName());
-        raisedThrowable.setModifiers(((Constructor) accessibleObject.get()).getModifiers());
+            ((Constructor<?>) accessibleObject.get()).getDeclaringClass().getName());
+        raisedThrowable.setModifiers(((Constructor<?>) accessibleObject.get()).getModifiers());
       } else if (accessibleObject.get() instanceof Method) {
         raisedThrowable.setMethod(((Method) accessibleObject.get()).getName());
         raisedThrowable.setModifiers(((Method) accessibleObject.get()).getModifiers());
@@ -1020,9 +1019,19 @@ public final class MessageBuilder {
     Parameter[] colferParams = new Parameter[jsonParams.size()];
     for (int i = 0; i < jsonParams.size(); i++) {
       JsonRpcParameter jsonParam = jsonParams.get(i);
-      if (jsonParam.isRef()) {}
-
-      colferParams[i] = createParameter(jsonParam.getType(), jsonParam.getValue(), null);
+      ObjectRef objectRef = null;
+      if (jsonParam.isRef()) {
+        objectRef = ObjectRef.from((Integer) jsonParam.getValue());
+      }
+      colferParams[i] =
+          new Parameter()
+              .withType(getWrappedClass(jsonParam.getType()))
+              .withIsRef(jsonParam.isRef())
+              .withValue(
+                  getWrappedObject(
+                      jsonParam.isRef() ? null : jsonParam.getValue(),
+                      jsonParam.getType(),
+                      objectRef));
     }
     return colferParams;
   }

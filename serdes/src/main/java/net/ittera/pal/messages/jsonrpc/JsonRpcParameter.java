@@ -34,4 +34,17 @@ public class JsonRpcParameter {
   public void setIsRef(boolean isRef) {
     this.isRef = isRef;
   }
+
+  @Override
+  public String toString() {
+    return "JsonRpcParameter{"
+        + "value="
+        + value
+        + ", type='"
+        + type
+        + '\''
+        + ", isRef="
+        + isRef
+        + '}';
+  }
 }

@@ -756,13 +756,10 @@ class JSONSerializers {
       if (notEmpty(message.value)) {
         jsonElement.add("value", jsonSerializationContext.serialize(message.value));
       }
-      if (notEmpty(message.modifiers)) {
-        jsonElement.addProperty("modifiers", message.modifiers);
-      }
       if (notEmpty(message.Type)) {
         jsonElement.add("type", jsonSerializationContext.serialize(message.Type));
       }
-      jsonElement.addProperty("is_varargs", message.isVarArgs);
+      jsonElement.addProperty("is_ref", message.isRef);
       return jsonElement;
     }
   }

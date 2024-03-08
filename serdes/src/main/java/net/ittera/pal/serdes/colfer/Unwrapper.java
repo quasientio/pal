@@ -37,10 +37,10 @@ public class Unwrapper {
   private Unwrapper() {}
 
   private static <T> T reconstructCharSequence(T t, Obj object) {
-    Optional<Class> charSeqClass =
+    Optional<Class<?>> charSeqClass =
         Wrapper.reconstructableCharSeqClasses.stream().filter(c -> c.equals(t)).findFirst();
 
-    Constructor c;
+    Constructor<?> c;
     try {
       c = charSeqClass.get().getConstructor(String.class);
     } catch (NoSuchMethodException e) {
@@ -67,7 +67,7 @@ public class Unwrapper {
    * @param clazz
    * @return
    */
-  public static java.lang.Object unwrapObject(Obj object, Class clazz) {
+  public static java.lang.Object unwrapObject(Obj object, Class<?> clazz) {
     if (logger.isTraceEnabled()) {
       logger.trace("in with object:\n{}, clazz:\n{}", object, clazz);
     }
@@ -78,6 +78,30 @@ public class Unwrapper {
 
     if (object.getIsVoid()) {
       return void.class;
+    }
+
+    // if clazz (from parameter type) is null
+    if (clazz == null) {
+      if (object.getClazz() == null || object.getClazz().getUnknown()) {
+
+        // without object.getClazz we cannot do anything
+        throw new IllegalArgumentException("Type is null and wrapped object has no class");
+      } else {
+
+        // unwrap with the class found in Obj.getClazz -- recursive
+        Class<?> objectActualClass;
+        try {
+          objectActualClass =
+              Class.forName(
+                  object.getClazz().getName(),
+                  true,
+                  Thread.currentThread().getContextClassLoader());
+        } catch (ClassNotFoundException e) {
+          throw new IllegalArgumentException(
+              "Class in obj.clazz not found: " + object.getClazz().getName(), e);
+        }
+        return unwrapObject(object, objectActualClass);
+      }
     }
 
     if (clazz == String.class) {
@@ -265,19 +289,15 @@ public class Unwrapper {
       } else {
         throw new IllegalArgumentException("Unsupported array type:" + clazz.getName());
       }
-    } else if (clazz == String.class) {
-      // no casting needed
-      return object.getValue();
-
-      // no other types supported
     } else {
+      // no other types supported
       throw new IllegalArgumentException("Unsupported object type:" + clazz.getName());
     }
   }
 
   public static java.lang.Object unwrapObject(Obj object) throws ClassNotFoundException {
     final String objClassName = object.getClazz().getName();
-    Class objectClass = Classes.getClassForPrimitive(objClassName);
+    Class<?> objectClass = Classes.getClassForPrimitive(objClassName);
     if (objectClass == null) {
       objectClass =
           Class.forName(objClassName, true, Thread.currentThread().getContextClassLoader());

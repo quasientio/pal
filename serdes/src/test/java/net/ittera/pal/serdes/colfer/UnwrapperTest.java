@@ -107,4 +107,13 @@ public class UnwrapperTest extends WrappingTestBase {
     wrappedObj.setIsArray(false);
     Unwrapper.unwrapObject(wrappedObj, arrayClass);
   }
+
+  @Test
+  public void unwrapObject_TypeIsNullObjectIsString_returnsString() {
+    Obj wrappedObj = new Obj();
+    wrappedObj.setValue("Hiya");
+    wrappedObj.setClazz(new net.ittera.pal.messages.colfer.Class().withName("java.lang.String"));
+    Object unwrapped = Unwrapper.unwrapObject(wrappedObj, null);
+    assertEquals(String.class, unwrapped.getClass());
+  }
 }

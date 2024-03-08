@@ -69,7 +69,6 @@ public class Caller extends AbstractPALSubcommand {
   private final Properties producerProperties = new Properties();
   private Long pollDuration;
   private String logPrefix;
-  private String methodName = "main";
   private String palDirectoryURL;
   private UUID peerUuid;
   private String peerAddress;
@@ -257,7 +256,8 @@ public class Caller extends AbstractPALSubcommand {
     if (!uuidGiven) {
       uuid = UUID.randomUUID();
     }
-    MethodCallBuilder methodCallBuilder = new MethodCallBuilder(uuid, className, argList);
+    MainMethodCallBuilder mainMethodCallBuilder =
+        new MainMethodCallBuilder(uuid, className, argList);
 
     final boolean sendToPeer = Stream.of(peerAddress, peerUuid).anyMatch(Objects::nonNull);
 
@@ -323,7 +323,8 @@ public class Caller extends AbstractPALSubcommand {
       if (inferredRpcType == RPCType.JSONRPC) {
         if (stdinReqs == null || stdinReqs.isEmpty()) {
           // build and send JSON-RPC request built from cmd line args
-          print(thinPeer.sendAndReceive(methodCallBuilder.buildJsonRpc(), JsonRpcRequest.class));
+          print(
+              thinPeer.sendAndReceive(mainMethodCallBuilder.buildJsonRpc(), JsonRpcRequest.class));
         } else {
           // send raw JSON-RPC request(s) read from stdin
           for (String jsonRpc : stdinReqs) {
@@ -331,7 +332,7 @@ public class Caller extends AbstractPALSubcommand {
           }
         }
       } else {
-        print(thinPeer.sendAndReceive(methodCallBuilder.buildExecMessage()));
+        print(thinPeer.sendAndReceive(mainMethodCallBuilder.buildExecMessage()));
       }
     }
     thinPeer.close();
@@ -363,7 +364,8 @@ public class Caller extends AbstractPALSubcommand {
     if (!uuidGiven) {
       uuid = UUID.randomUUID();
     }
-    MethodCallBuilder methodCallBuilder = new MethodCallBuilder(uuid, className, argList);
+    MainMethodCallBuilder mainMethodCallBuilder =
+        new MainMethodCallBuilder(uuid, className, argList);
 
     if (logName != null) {
       inLogName = outLogName = logName;
@@ -394,7 +396,7 @@ public class Caller extends AbstractPALSubcommand {
     int reqsSent = 0;
     while (reqsSent < requests) {
       // send to log and forget
-      thinPeer.sendToLogAndForget(methodCallBuilder.buildExecMessage());
+      thinPeer.sendToLogAndForget(mainMethodCallBuilder.buildExecMessage());
       reqsSent++;
     }
     thinPeer.close();
@@ -530,7 +532,7 @@ public class Caller extends AbstractPALSubcommand {
     }
   }
 
-  private class MethodCallBuilder {
+  private class MainMethodCallBuilder {
     private final UUID thinPeerUuid;
     final Class<?>[] parameterTypes = new Class[] {String[].class};
     private final String methodName = "main";
@@ -539,7 +541,7 @@ public class Caller extends AbstractPALSubcommand {
     private final Object[] parameters;
     private final ObjectRef[] argObjRefs;
 
-    public MethodCallBuilder(UUID thinPeerUuid, String className, List<String> argList) {
+    public MainMethodCallBuilder(UUID thinPeerUuid, String className, List<String> argList) {
       // create reusable arrays for message construction
       parameterTypesNamesArray = new String[parameterTypes.length];
       IntStream.range(0, parameterTypes.length)
@@ -570,13 +572,13 @@ public class Caller extends AbstractPALSubcommand {
       jsonRpc.setJsonrpc("2.0");
       jsonRpc.setId(UUID.randomUUID().toString());
       jsonRpc.setMethod(String.format("%s.%s", className, methodName));
-      List<JsonRpcParameter> parameterList = new ArrayList<>();
       if (argList != null) {
-        for (String arg : argList) {
-          JsonRpcParameter parameter = new JsonRpcParameter();
-          parameter.setValue(arg);
-          parameterList.add(parameter);
-        }
+        JsonRpcParameter parameter = new JsonRpcParameter();
+        String[] argArray = argList.toArray(new String[0]);
+        parameter.setValue(argArray);
+        parameter.setType("[Ljava.lang.String;");
+        List<JsonRpcParameter> parameterList = new ArrayList<>();
+        parameterList.add(parameter);
         jsonRpc.setParams(parameterList);
       }
       return jsonRpc;

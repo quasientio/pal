@@ -267,8 +267,8 @@ public class WrapperTest extends WrappingTestBase {
 
   // <editor-fold defaultstate="collapsed" desc="getWrappedObject tests">
 
-  @Test(expected = NullPointerException.class)
-  public void getWrappedObject_NullClass_nullPointerException() {
+  @Test
+  public void getWrappedObject_NullClass_wrapped() {
     Wrapper.getWrappedObject(new Object(), null, ObjectRef.randomRef());
   }
 

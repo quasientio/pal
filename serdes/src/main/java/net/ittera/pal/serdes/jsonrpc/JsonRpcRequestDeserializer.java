@@ -1,9 +1,11 @@
-package net.ittera.pal.messages.jsonrpc;
+package net.ittera.pal.serdes.jsonrpc;
 
 import com.google.gson.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
+import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 
 public class JsonRpcRequestDeserializer implements JsonDeserializer<JsonRpcRequest> {
   private final JsonRpcParameterDeserializer parameterDeserializer =

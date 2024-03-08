@@ -1,4 +1,4 @@
-package net.ittera.pal.messages.jsonrpc;
+package net.ittera.pal.serdes.jsonrpc;
 
 public class InvalidJsonRpcRequestException extends Exception {
   public InvalidJsonRpcRequestException(String message) {

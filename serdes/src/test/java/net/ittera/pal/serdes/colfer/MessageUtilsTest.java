@@ -3,8 +3,8 @@ package net.ittera.pal.serdes.colfer;
 import static org.junit.Assert.*;
 
 import java.util.stream.Stream;
-import net.ittera.pal.messages.jsonrpc.InvalidJsonRpcRequestException;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -263,5 +263,51 @@ public class MessageUtilsTest {
     MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
   }
 
+  @Test(expected = InvalidJsonRpcRequestException.class)
+  public void parseJsonRpcMessage_typeIsRefButValueIsBoolean_invalidJsonRpcRequestException()
+      throws InvalidJsonRpcRequestException {
+    String jsonRpcMessage =
+        "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [{\"type\": \"ref\", \"value\":false}], \"id\": 1}";
+    MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+  }
+
+  @Test(expected = InvalidJsonRpcRequestException.class)
+  public void parseJsonRpcMessage_typeIsRefButValueIsDoubleAsString_invalidJsonRpcRequestException()
+      throws InvalidJsonRpcRequestException {
+    String jsonRpcMessage =
+        "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [{\"type\": \"ref\", \"value\":\"23255.44\"}], \"id\": 1}";
+    MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+  }
+
+  @Test
+  public void parseJsonRpcMessage_typeIsRefAndValueIsInt_ok()
+      throws InvalidJsonRpcRequestException {
+    String jsonRpcMessage =
+        "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [{\"type\": \"ref\", \"value\":23255}], \"id\": 1}";
+    JsonRpcRequest jsonRpcRequest = MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+    assertNotNull(jsonRpcRequest.getParams());
+    assertEquals(jsonRpcRequest.getParams().size(), 1);
+    assertTrue(jsonRpcRequest.getParams().get(0).isRef());
+    assertEquals(jsonRpcRequest.getParams().get(0).getValue(), 23255);
+
+    // type is NOT in Param when its value == "ref"
+    assertNull(jsonRpcRequest.getParams().get(0).getType());
+  }
+
+  @Test
+  public void parseJsonRpcMessage_typeIsRefAndValueIsIntAsString_ok()
+      throws InvalidJsonRpcRequestException {
+    String jsonRpcMessage =
+        "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [{\"type\": \"ref\", \"value\":\"23255\"}], \"id\": 1}";
+
+    JsonRpcRequest jsonRpcRequest = MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+    assertNotNull(jsonRpcRequest.getParams());
+    assertEquals(jsonRpcRequest.getParams().size(), 1);
+    assertTrue(jsonRpcRequest.getParams().get(0).isRef());
+    assertEquals(jsonRpcRequest.getParams().get(0).getValue(), 23255);
+
+    // type is NOT in Param when its value == "ref"
+    assertNull(jsonRpcRequest.getParams().get(0).getType());
+  }
   // </editor-fold>
 }

@@ -252,12 +252,11 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
           unmarshalError = true;
         }
 
-        // create ExecMessage from JSON-RPC request message
-        requestMsg =
-            messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getClientId());
-
         // dispatch
         if (!unmarshalError) {
+          // create ExecMessage from JSON-RPC request message
+          requestMsg =
+              messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getClientId());
           try {
             replyMsg = dispatch(requestMsg);
 
