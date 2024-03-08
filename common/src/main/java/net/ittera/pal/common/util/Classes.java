@@ -19,12 +19,25 @@
 
 package net.ittera.pal.common.util;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public final class Classes {
+
+  private static final Map<String, String> simpleToLongNames =
+      new HashMap<String, String>() {
+        {
+          put("String", "java.lang.String");
+          put("Character", "java.lang.Character");
+          put("Boolean", "java.lang.Boolean");
+          put("Byte", "java.lang.Byte");
+          put("Short", "java.lang.Short");
+          put("Integer", "java.lang.Integer");
+          put("Long", "java.lang.Long");
+          put("Float", "java.lang.Float");
+          put("Double", "java.lang.Double");
+        }
+      };
 
   private static final Map<Class<?>, Class<?>> PRIMITIVE_TO_WRAPPER;
 
@@ -56,6 +69,14 @@ public final class Classes {
     map.put("float", Float.TYPE);
     map.put("void", Void.TYPE);
     PRIMITIVE_NAME_TO_CLASS = Collections.unmodifiableMap(map);
+  }
+
+  private static final Set<String> ONLY_PRIMITIVE_NAMES;
+
+  static {
+    Set<String> primitives = new HashSet<>(PRIMITIVE_NAME_TO_CLASS.keySet());
+    primitives.remove("void");
+    ONLY_PRIMITIVE_NAMES = Collections.unmodifiableSet(primitives);
   }
 
   private static final Map<String, Class<?>> WRAPPER_NAME_TO_CLASS;
@@ -99,6 +120,10 @@ public final class Classes {
     return type != void.class && WRAPPER_TO_PRIMITIVE.containsKey(type);
   }
 
+  public static String simpleToLongName(String shortName) {
+    return simpleToLongNames.get(shortName);
+  }
+
   @SuppressWarnings("rawtypes")
   public static Class getClassForPrimitive(String primitiveName) {
     return PRIMITIVE_NAME_TO_CLASS.get(primitiveName);
@@ -122,5 +147,30 @@ public final class Classes {
     }
 
     return type.isPrimitive() || isPrimitiveWrapper(type);
+  }
+
+  public static boolean isPrimitive(String className) {
+    return ONLY_PRIMITIVE_NAMES.contains(className);
+  }
+
+  public static boolean isOneDimensionalPrimitiveArray(String className) {
+    return className.matches("\\[[BCDFIJSZ]");
+  }
+
+  public static boolean isOneDimensionalPrimitiveWrapperArray(String className) {
+    return className.matches(
+        "\\[L(java\\.lang\\.)?(Boolean|Byte|Character|Short|Integer|Long|Float|Double);");
+  }
+
+  public static boolean isValidClassName(String className) {
+    if (className == null || className.isEmpty()) {
+      return false;
+    }
+    String arrayRegex = "(\\[)*";
+    String baseTypeRegex = "([a-zA-Z_$][a-zA-Z\\d_$]*\\.)*[a-zA-Z_$][a-zA-Z\\d_$]*";
+    String primitiveArrayRegex = "\\[+[BCDFIJSZ]";
+    String endRegex = "(;)?";
+    String regex = "(" + arrayRegex + "?" + baseTypeRegex + endRegex + ")|" + primitiveArrayRegex;
+    return className.matches(regex);
   }
 }

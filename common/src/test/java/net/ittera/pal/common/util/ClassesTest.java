@@ -31,6 +31,7 @@ public class ClassesTest {
   public void getClassForPrimitive() {
     // reminder that <primitive>.class == <Wrapper>.type
     assert boolean.class == Boolean.TYPE;
+
     assertEquals(boolean.class, Classes.getClassForPrimitive("boolean"));
     assertEquals(Boolean.TYPE, Classes.getClassForPrimitive("boolean"));
     assertEquals(Byte.TYPE, Classes.getClassForPrimitive("byte"));
@@ -116,5 +117,116 @@ public class ClassesTest {
     assertFalse(Classes.isPrimitiveOrWrapper(Object.class));
     assertFalse(Classes.isPrimitiveOrWrapper(Enum.class));
     assertFalse(Classes.isPrimitiveOrWrapper(Throwable.class));
+  }
+
+  @Test
+  public void isPrimitive() {
+    assertTrue(Classes.isPrimitive("boolean"));
+    assertTrue(Classes.isPrimitive("byte"));
+    assertTrue(Classes.isPrimitive("char"));
+    assertTrue(Classes.isPrimitive("short"));
+    assertTrue(Classes.isPrimitive("int"));
+    assertTrue(Classes.isPrimitive("long"));
+    assertTrue(Classes.isPrimitive("double"));
+    assertTrue(Classes.isPrimitive("float"));
+
+    assertFalse(Classes.isPrimitive("void"));
+    assertFalse(Classes.isPrimitive("Integer"));
+    assertFalse(Classes.isPrimitive("Double"));
+    assertFalse(Classes.isPrimitive("String"));
+    assertFalse(Classes.isPrimitive("Object"));
+    assertFalse(Classes.isPrimitive("Enum"));
+    assertFalse(Classes.isPrimitive("Throwable"));
+  }
+
+  @Test
+  public void simpleToLongName() {
+    assertEquals("java.lang.String", Classes.simpleToLongName("String"));
+    assertEquals("java.lang.Character", Classes.simpleToLongName("Character"));
+    assertEquals("java.lang.Boolean", Classes.simpleToLongName("Boolean"));
+    assertEquals("java.lang.Byte", Classes.simpleToLongName("Byte"));
+    assertEquals("java.lang.Short", Classes.simpleToLongName("Short"));
+    assertEquals("java.lang.Integer", Classes.simpleToLongName("Integer"));
+    assertEquals("java.lang.Long", Classes.simpleToLongName("Long"));
+    assertEquals("java.lang.Float", Classes.simpleToLongName("Float"));
+    assertEquals("java.lang.Double", Classes.simpleToLongName("Double"));
+  }
+
+  @Test
+  public void isOneDimensionalPrimitiveWrapperArray() {
+    assertTrue(Classes.isOneDimensionalPrimitiveWrapperArray(Boolean[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveWrapperArray(Byte[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveWrapperArray(Character[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveWrapperArray(Short[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveWrapperArray(Integer[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveWrapperArray(Long[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveWrapperArray(Double[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveWrapperArray(Float[].class.getName()));
+
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(boolean[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(byte[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(char[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(short[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(int[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(long[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(double[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(float[].class.getName()));
+
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(Void[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(Object[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(String[].class.getName()));
+  }
+
+  @Test
+  public void isOneDimensionalPrimitiveArray() {
+    assertTrue(Classes.isOneDimensionalPrimitiveArray(boolean[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveArray(byte[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveArray(char[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveArray(short[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveArray(int[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveArray(long[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveArray(double[].class.getName()));
+    assertTrue(Classes.isOneDimensionalPrimitiveArray(float[].class.getName()));
+
+    assertFalse(Classes.isOneDimensionalPrimitiveArray(Boolean[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveArray(Byte[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveArray(Character[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveArray(Short[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveArray(Integer[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveArray(Long[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveArray(Double[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveArray(Float[].class.getName()));
+
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(Void[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(Object[].class.getName()));
+    assertFalse(Classes.isOneDimensionalPrimitiveWrapperArray(String[].class.getName()));
+  }
+
+  @Test
+  public void isValidClassName_returnsTrueForValidClassNames() {
+    assertTrue(Classes.isValidClassName("java.lang.String"));
+    assertTrue(Classes.isValidClassName("java.util.List"));
+    assertTrue(Classes.isValidClassName("net.ittera.pal.common.util.Classes"));
+    assertTrue(Classes.isValidClassName("[Ljava.lang.String;"));
+    assertTrue(Classes.isValidClassName("[I"));
+  }
+
+  @Test
+  public void isValidClassName_returnsFalseForInvalidClassNames() {
+    assertFalse(Classes.isValidClassName("123invalid"));
+    assertFalse(Classes.isValidClassName("invalid-class"));
+    assertFalse(Classes.isValidClassName("invalid package.name"));
+    assertFalse(Classes.isValidClassName("invalid[package.name]"));
+    assertFalse(Classes.isValidClassName("invalid[package.name];"));
+  }
+
+  @Test
+  public void isValidClassName_returnsFalseForNull() {
+    assertFalse(Classes.isValidClassName(null));
+  }
+
+  @Test
+  public void isValidClassName_returnsFalseForEmptyString() {
+    assertFalse(Classes.isValidClassName(""));
   }
 }
