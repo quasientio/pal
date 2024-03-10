@@ -39,7 +39,7 @@ public class RPCMessageExecutor extends ThreadPool {
 
   @Inject
   public RPCMessageExecutor(
-      @Named("peer.threadPoolSize") String threadPoolSize,
+      @Named("rpc.threadPoolSize") String threadPoolSize,
       ZContext zmqContext,
       Set<RunOptions> runOptions,
       @Named("in.dealer") String rpcDealerAddress,

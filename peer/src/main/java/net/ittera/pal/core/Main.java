@@ -562,7 +562,7 @@ public class Main implements Callable<Integer> {
         }
       }
       properties.setProperty("in.rpc", format("tcp://%s:%d", hostname, port));
-      properties.setProperty("peer.threadPoolSize", String.valueOf(rpcThreads));
+      properties.setProperty("rpc.threadPoolSize", String.valueOf(rpcThreads));
     }
 
     // are we listening for JSONRPC requests
@@ -593,7 +593,7 @@ public class Main implements Callable<Integer> {
         }
       }
       properties.setProperty("in.jsonrpc", format("ws://%s:%d", hostname, port));
-      properties.setProperty("peer.threadPoolSize", String.valueOf(rpcThreads));
+      properties.setProperty("rpc.threadPoolSize", String.valueOf(rpcThreads));
     }
 
     // message content options
