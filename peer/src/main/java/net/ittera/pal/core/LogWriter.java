@@ -34,7 +34,6 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.util.UUIDUtils;
-import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.messages.LogMessageHeader;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.InternalHeader;
@@ -68,9 +67,7 @@ class LogWriter extends ConnectedService {
   private final String outPubAddress;
   private final String offsetPubAddress;
 
-  private final DirectoryConnectionProvider directoryConnectionProvider;
   private boolean publishOffsets;
-  private boolean writeReplyNodes;
   private LogInfo outLog;
   private LogInfo inLog;
   private final AtomicInteger messagesSent = new AtomicInteger(0);
@@ -86,18 +83,10 @@ class LogWriter extends ConnectedService {
       @Named("key.serializer") String keySerializer,
       @Named("value.serializer") String valueSerializer,
       @Named("out.pub") String outPubAddress,
-      @Named("offset.pub") String offsetPubAddress,
-      @Named("log.registerReplies") String writeReplyNodesStr,
-      DirectoryConnectionProvider directoryConnectionProvider) {
+      @Named("offset.pub") String offsetPubAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
-    this.directoryConnectionProvider = directoryConnectionProvider;
     this.outPubAddress = outPubAddress;
     this.offsetPubAddress = offsetPubAddress;
-    if (directoryConnectionProvider.get().isPresent()) {
-      this.writeReplyNodes = writeReplyNodesStr == null || Boolean.parseBoolean(writeReplyNodesStr);
-    } else if (writeReplyNodes) {
-      logger.warn("Not writing reply nodes since we are not connected to a PAL Directory");
-    }
     producerProperties.put("key.serializer", keySerializer);
     producerProperties.put("value.serializer", valueSerializer);
     StringBuilder propsStr = new StringBuilder();
@@ -123,34 +112,29 @@ class LogWriter extends ConnectedService {
       String serviceName,
       @Named("out.pub") String outPubAddress,
       @Named("offset.pub") String offsetPubAddress,
-      boolean writeReplyNodes,
-      Producer<String, byte[]> producer,
-      DirectoryConnectionProvider directoryConnectionProvider) {
+      Producer<String, byte[]> producer) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.producer = producer;
-    this.directoryConnectionProvider = directoryConnectionProvider;
     this.outPubAddress = outPubAddress;
     this.offsetPubAddress = offsetPubAddress;
-    if (directoryConnectionProvider.get().isPresent()) {
-      this.writeReplyNodes = writeReplyNodes;
-    } else if (writeReplyNodes) {
-      logger.warn("Not writing reply nodes since we are not connected to a PAL Directory");
-    }
     logger.info("Created log message writer");
   }
 
   @Override
   protected void openConnections() {
+
     // start subscriber
     this.subscriberSocket = zmqContext.createSocket(SocketType.SUB);
     subscriberSocket.connect(outPubAddress);
     subscriberSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
+
     // start offsets publisher
     if (publishOffsets) {
       this.offsetPublisherSocket = zmqContext.createSocket(SocketType.PUB);
       offsetPublisherSocket.bind(offsetPubAddress);
     }
     logger.info("connections open - except kafka producer");
+
     // create and store immutable headers (instead of creating with every send)
     this.HEADERS.put(
         "SELF_PRODUCED_HEADER", new LogMessageHeader("produced-by", UUIDUtils.toBytes(peerUuid)));
@@ -164,6 +148,7 @@ class LogWriter extends ConnectedService {
     this.inLog = inLog;
     this.publishOffsets = publishOffsets;
     producerProperties.put("bootstrap.servers", outLog.getBootstrapServers());
+
     // create producer, if not assigned in constructor
     if (this.producer == null) {
       this.producer = new KafkaProducer<>(producerProperties);
@@ -246,11 +231,15 @@ class LogWriter extends ConnectedService {
     }
     ProducerRecord<String, byte[]> newRecord =
         new ProducerRecord<>(outLog.getName(), 0, fromPeer.toString(), message, headers);
-    producer.send(newRecord);
+    if (publishOffsets) {
+      producer.send(newRecord, new MessageOffsetInformer(messageUuid, offsetPublisherSocket));
+    } else {
+      producer.send(newRecord);
+    }
     messagesSent.getAndIncrement();
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "new message sent with uuid: {} replying to message uuid: {} ({} bytes)",
+          "new message sent w/uuid: {} in reply to message w/uuid: {} ({} bytes)",
           messageUuid,
           responseToUuid,
           message.length);

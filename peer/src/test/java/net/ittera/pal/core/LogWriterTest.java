@@ -98,9 +98,7 @@ public class LogWriterTest extends ZmqEnabledTest {
             "LogWriterTest-Service",
             OUT_PUB_ADDR,
             OFFSET_PUB_ADDR,
-            true,
-            producer,
-            directoryConnectionProvider);
+            producer);
     // configure log
     log = new LogInfo("testapp", "localhost:9092");
     logWriter.writeToLog(log, log, false);
