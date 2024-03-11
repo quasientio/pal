@@ -284,6 +284,8 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
         }
       }
     }
+
+    poller.close();
     closeConnections();
   }
 
