@@ -75,6 +75,7 @@ public class Pal implements Callable<Integer>, PALCommand {
   }
 
   public static void main(String[] args) {
+    System.setProperty("picocli.ansi", "false");
     Pal pal = new Pal();
     CommandLine commandLine = new CommandLine(pal);
 
