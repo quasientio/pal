@@ -261,6 +261,6 @@ class LogWriter extends ConnectedService {
   protected void closeConnections() {
     close(producer, 300, ChronoUnit.MILLIS, "Error closing producer");
     closeConnection(subscriberSocket, "Error closing subscriber");
-    closeConnection(offsetPublisherSocket, "Error offset publisher");
+    closeConnection(offsetPublisherSocket, "Error closing offset publisher");
   }
 }
