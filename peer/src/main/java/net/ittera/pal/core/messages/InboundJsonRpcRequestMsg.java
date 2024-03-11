@@ -31,6 +31,9 @@ public class InboundJsonRpcRequestMsg extends BaseMsg {
    * This message is sent directly by DEALER, so it needs to emulate a REQ envelope (empty initial
    * frame) when serializing, and NOT expect it when deserializing.
    *
+   * <p>The envelope is optional because the message is also sent and received through a PUSH/PULL
+   * socket pair internally by JSONRPCRequestDispatcher, which does not require an envelope.
+   *
    * <pre>
    * FRAMES:
    * -------
@@ -58,11 +61,15 @@ public class InboundJsonRpcRequestMsg extends BaseMsg {
 
   @Override
   public boolean send(ZMQ.Socket socket) {
+    return send(socket, true);
+  }
+
+  public boolean send(ZMQ.Socket socket, boolean withEnvelope) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
     // emulate empty REQ envelope since this message is sent directly by a DEALER
-    if (!socket.send("", ZMQ.SNDMORE)) {
+    if (withEnvelope && !socket.send("", ZMQ.SNDMORE)) {
       return false;
     }
     // clientId

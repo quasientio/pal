@@ -36,7 +36,7 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
   @Test
-  public void send() {
+  public void sendViaDealer() {
 
     // create and connect sockets
     String socketAddr = "inproc://here";
@@ -61,6 +61,34 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
     // close
     dealerSocket.close();
     repSocket.close();
+    zContext.destroy();
+  }
+
+  @Test
+  public void sendViaPush() {
+
+    final String pushAddress = "inproc://websocket-push";
+    ZContext zContext = createContext();
+    ZMQ.Socket pushSocket = zContext.createSocket(SocketType.PUSH);
+    pushSocket.bind(pushAddress);
+    ZMQ.Socket pullSocket = zContext.createSocket(SocketType.PULL);
+    pullSocket.connect(pushAddress);
+
+    // send
+    UUID clientId = UUID.randomUUID();
+    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"foo\",\"params\":[],\"id\":1}";
+    InboundJsonRpcRequestMsg msgOut = new InboundJsonRpcRequestMsg(clientId, jsonMessage);
+    msgOut.send(pushSocket, false);
+    logger.debug("sent msgOut= {}", msgOut);
+
+    // receive and compare
+    InboundJsonRpcRequestMsg msgIn = InboundJsonRpcRequestMsg.recvMsg(pullSocket, true);
+    logger.debug("received msgIn= {}", msgIn);
+    assertThat(msgIn, is(msgOut));
+
+    // close
+    pushSocket.close();
+    pullSocket.close();
     zContext.destroy();
   }
 
