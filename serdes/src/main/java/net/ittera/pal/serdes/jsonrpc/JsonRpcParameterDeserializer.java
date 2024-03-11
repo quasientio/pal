@@ -123,22 +123,26 @@ public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcPar
   private void handleJsonArray(
       JsonRpcParameter param, JsonArray jsonArray, JsonDeserializationContext context) {
     final String type = param.getType();
-    if (type == null) {
-      throw new RuntimeException("Type not given for array param: " + param);
+    final Class<?> clazz;
+    if (type != null && !type.isEmpty()) {
+      try {
+        clazz = Class.forName(type);
+      } catch (ClassNotFoundException e) {
+        throw new RuntimeException("Invalid class type: " + type);
+      }
+    } else {
+      // if type is not given, try to infer the type by looking at the first element
+      if (jsonArray.isEmpty()) {
+        throw new RuntimeException("Type not given for empty array param: " + param);
+      }
+      clazz = getTypeOfArray(jsonArray);
     }
 
-    Class<?> clazz;
-    try {
-      clazz = Class.forName(type);
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException("Invalid class type: " + type);
-    }
     Class<?> componentType = clazz.getComponentType();
-
     if (clazz.isArray()
-        || componentType.equals(String.class)
-        || componentType.isPrimitive()
-        || isPrimitiveWrapper(componentType)) {
+        && (componentType.equals(String.class)
+            || componentType.isPrimitive()
+            || isPrimitiveWrapper(componentType))) {
       Object array = Array.newInstance(componentType, jsonArray.size());
       for (int i = 0; i < jsonArray.size(); i++) {
         Array.set(array, i, context.deserialize(jsonArray.get(i), componentType));
@@ -147,6 +151,31 @@ public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcPar
     } else {
       throw new RuntimeException("Unsupported array type: " + type);
     }
+  }
+
+  private Class<?> getTypeOfArray(JsonArray jsonArray) {
+    Class<?> inferredType = null;
+    JsonElement element = jsonArray.get(0);
+    if (element.isJsonPrimitive()) {
+      JsonPrimitive primitive = element.getAsJsonPrimitive();
+      if (primitive.isString()) {
+        inferredType = String[].class;
+      } else if (primitive.isNumber()) {
+        Number num = primitive.getAsNumber();
+        if (Math.ceil(num.doubleValue()) != num.longValue()) {
+          inferredType = Double[].class;
+        } else {
+          inferredType = Integer[].class;
+        }
+      } else if (primitive.isBoolean()) {
+        inferredType = Boolean[].class;
+      }
+    } else if (element.isJsonArray()) {
+      inferredType = Array.newInstance(getTypeOfArray(element.getAsJsonArray()), 0).getClass();
+    } else {
+      throw new RuntimeException("Unsupported type for array element: " + element);
+    }
+    return inferredType;
   }
 
   private void handleJsonPrimitive(

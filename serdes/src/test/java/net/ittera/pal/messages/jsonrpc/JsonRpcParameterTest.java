@@ -245,4 +245,45 @@ public class JsonRpcParameterTest {
     assertEquals(arrayType, jsonRpcParameter.getType());
     assertFalse(jsonRpcParameter.isRef());
   }
+
+  @Test
+  public void testStringArray_withoutType() {
+    String[] stringArray = new String[] {"test1", "test2"};
+    JsonRpcParameter jsonRpcParameter =
+        gson.fromJson(
+            String.format("{\"value\": [\"%s\", \"%s\"]}", stringArray[0], stringArray[1]),
+            JsonRpcParameter.class);
+    assertArrayEquals(stringArray, (String[]) jsonRpcParameter.getValue());
+    assertEquals(stringArray.getClass(), jsonRpcParameter.getValue().getClass());
+    assertNull(jsonRpcParameter.getType());
+    assertFalse(jsonRpcParameter.isRef());
+  }
+
+  @Test
+  public void testIntArray_withoutType() {
+    int[] intArray = new int[] {1, 2};
+    JsonRpcParameter jsonRpcParameter =
+        gson.fromJson(
+            String.format("{\"value\": [%d, %d]}", intArray[0], intArray[1]),
+            JsonRpcParameter.class);
+    assertEquals(intArray[0], (int) ((Integer[]) jsonRpcParameter.getValue())[0]);
+    assertEquals(intArray[1], (int) ((Integer[]) jsonRpcParameter.getValue())[1]);
+    assertEquals(Integer[].class, jsonRpcParameter.getValue().getClass());
+    assertNull(jsonRpcParameter.getType());
+    assertFalse(jsonRpcParameter.isRef());
+  }
+
+  @Test
+  public void testDoubleArray_withoutType() {
+    double[] doubleArray = new double[] {1.4, 2.5};
+    JsonRpcParameter jsonRpcParameter =
+        gson.fromJson(
+            String.format("{\"value\": [%s, %s]}", doubleArray[0], doubleArray[1]),
+            JsonRpcParameter.class);
+    assertEquals(doubleArray[0], ((Double[]) jsonRpcParameter.getValue())[0], 0.0);
+    assertEquals(doubleArray[1], ((Double[]) jsonRpcParameter.getValue())[1], 0.0);
+    assertEquals(Double[].class, jsonRpcParameter.getValue().getClass());
+    assertNull(jsonRpcParameter.getType());
+    assertFalse(jsonRpcParameter.isRef());
+  }
 }
