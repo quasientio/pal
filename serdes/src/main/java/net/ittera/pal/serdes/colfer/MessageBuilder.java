@@ -91,7 +91,7 @@ import org.slf4j.LoggerFactory;
 
 public final class MessageBuilder {
 
-  protected static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);
+  private static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);
 
   // ISO 8601 with millis (fraction-of-second) + TZ (no name, only offset)
   private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
@@ -945,7 +945,6 @@ public final class MessageBuilder {
         intercept.getInterceptable().getType().equals(InterceptableType.METHOD_CALL);
 
     if (isMethodInterceptable) {
-      InterceptRequest<InterceptableMethodCall> methodIntercept = intercept;
       return new InterceptMessage()
           .withPeerUuid(intercept.getPeer().toString())
           .withInterceptType(intercept.getType().toByte())
@@ -955,7 +954,7 @@ public final class MessageBuilder {
               new net.ittera.pal.messages.colfer.InterceptableMethod()
                   .withName(intercept.getInterceptable().getName())
                   .withParameterTypes(
-                      methodIntercept
+                      ((InterceptRequest<InterceptableMethodCall>) intercept)
                           .getInterceptable()
                           .getParameterTypes()
                           .toArray(new String[0])))
@@ -963,7 +962,6 @@ public final class MessageBuilder {
           .withCallbackMethod(intercept.getCallbackMethod());
     }
 
-    InterceptRequest<InterceptableFieldOp> fieldIntercept = intercept;
     return new InterceptMessage()
         .withPeerUuid(intercept.getPeer().toString())
         .withInterceptType(intercept.getType().toByte())
@@ -972,7 +970,11 @@ public final class MessageBuilder {
         .withField(
             new net.ittera.pal.messages.colfer.InterceptableField()
                 .withName(intercept.getInterceptable().getName())
-                .withFieldOpType(fieldIntercept.getInterceptable().getFieldOpType().toByte()))
+                .withFieldOpType(
+                    ((InterceptRequest<InterceptableFieldOp>) intercept)
+                        .getInterceptable()
+                        .getFieldOpType()
+                        .toByte()))
         .withCallbackClass(intercept.getCallbackClass())
         .withCallbackMethod(intercept.getCallbackMethod());
   }
@@ -1157,29 +1159,17 @@ public final class MessageBuilder {
 
     switch (ExecMessageType.fromByte(execMessageResponse.getExecMessageType())) {
       case PUT_STATIC_DONE:
-        jsonRpcResponse.setResult(
-            String.format(
-                "%s:%s",
-                "PUT_STATIC_DONE",
-                ColferUtils.toJSON(execMessageResponse.getStaticFieldPutDone())));
+        jsonRpcResponse.setResult(ColferUtils.toJSON(execMessageResponse.getStaticFieldPutDone()));
         break;
       case PUT_FIELD_DONE:
         jsonRpcResponse.setResult(
-            String.format(
-                "%s:%s",
-                "PUT_FIELD_DONE",
-                ColferUtils.toJSON(execMessageResponse.getInstanceFieldPutDone())));
+            ColferUtils.toJSON(execMessageResponse.getInstanceFieldPutDone()));
         break;
       case RETURN_VALUE:
-        jsonRpcResponse.setResult(
-            String.format(
-                "%s:%s", "RETURN_VALUE", ColferUtils.toJSON(execMessageResponse.getReturnValue())));
+        jsonRpcResponse.setResult(ColferUtils.toJSON(execMessageResponse.getReturnValue()));
         break;
       case THROWABLE:
-        jsonRpcResponse.setError(
-            String.format(
-                "%s:%s",
-                "THROWABLE", ColferUtils.toJSON(execMessageResponse.getRaisedThrowable())));
+        jsonRpcResponse.setError(ColferUtils.toJSON(execMessageResponse.getRaisedThrowable()));
         break;
       default:
         throw new RuntimeException(

@@ -187,7 +187,7 @@ public class ColferUtils {
     return new Object() {
       @Override
       public String toString() {
-        return '\n' + toJSON(message, false);
+        return toJSON(message, false);
       }
     };
   }

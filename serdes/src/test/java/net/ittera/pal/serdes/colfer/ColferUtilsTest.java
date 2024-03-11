@@ -85,6 +85,6 @@ public class ColferUtilsTest {
     Marshallable message = createMarshallable();
     Object formatted = ColferUtils.format(message);
     assertNotNull(formatted);
-    assertEquals("\n" + ColferUtils.toJSON(message, false), formatted.toString());
+    assertEquals(ColferUtils.toJSON(message, false), formatted.toString());
   }
 }

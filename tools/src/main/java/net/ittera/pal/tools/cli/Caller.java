@@ -22,12 +22,14 @@ package net.ittera.pal.tools.cli;
 import static picocli.CommandLine.Option;
 import static picocli.CommandLine.Parameters;
 
+import com.google.gson.Gson;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,6 +41,9 @@ import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.Obj;
+import net.ittera.pal.messages.colfer.RaisedThrowable;
+import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
@@ -52,7 +57,7 @@ import picocli.CommandLine.ParentCommand;
 
 @Command(
     name = "call",
-    customSynopsis = "pal call [OPTIONS] class [args...]%n",
+    customSynopsis = "pal call [OPTIONS] [class args...]%n",
     description = "Send messages to peers or logs",
     separator = " ",
     sortOptions = false,
@@ -70,19 +75,15 @@ public class Caller extends AbstractPALSubcommand {
   private Long pollDuration;
   private String logPrefix;
   private String palDirectoryURL;
+  private MainMethodCallBuilder mainMethodCallBuilder;
   private UUID peerUuid;
   private String peerAddress;
-  private List<String> stdinReqs;
+  private final Gson gson = new Gson();
+  private List<String> stdinRequests = new ArrayList<>();
 
   @ParentCommand PALCommand palCommand;
 
   /** Options */
-  @Option(
-      names = {"-u", "--uuid"},
-      paramLabel = "uuid",
-      description = "uuid to use by this peer (default: <random>)")
-  private UUID uuid;
-
   @Option(
       names = {"-l", "--log"},
       paramLabel = "name",
@@ -90,47 +91,52 @@ public class Caller extends AbstractPALSubcommand {
   private String logName;
 
   @Option(
-      names = {"-i", "--in-log"},
+      names = {"-i", "--from-log"},
       paramLabel = "name",
       description = "read from given log")
   private String inLogName;
 
   @Option(
-      names = {"-o", "--out-log"},
+      names = {"-o", "--to-log"},
       paramLabel = "name",
       description = "write to given log")
   private String outLogName;
 
   @Option(
-      names = {"-p", "--peer"},
+      names = {"-p", "--to-peer"},
       paramLabel = "uuid|HOST:PORT",
       description = "talk to peer with given UUID or RPC address")
   private String peerIdentifier;
 
   @Option(
-      names = {"-t", "--rpc-type"},
+      names = {"-r", "--rpc-type"},
       paramLabel = "RPC|JSONRPC",
-      description = "specifies the RPC type for the peer")
+      description = "the RPC type to use")
   private String rpcType;
 
   @Option(
+      names = {"-m", "--method"},
+      paramLabel = "method",
+      defaultValue = "main",
+      description = "method to call on the class (default: main)")
+  private String methodName;
+
+  @Option(
       names = {"-f", "--forget-reply"},
-      description = "do not wait for replies")
+      description = "do not wait for replies (default: false)")
   private boolean sendAndForget;
 
   @Option(
-      names = {"-r", "--num-requests"},
-      defaultValue = "1",
-      paramLabel = "NUM_REQUESTS",
-      description = "number of times to send each request per client (default: 1)")
-  private int requests;
+      names = {"-a", "--add-ids"},
+      description = "add missing JSON-RPC request IDs (default: false)")
+  private boolean autoIds;
 
   @Option(
-      names = {"-c", "--num-clients"},
+      names = {"-t", "--num-threads"},
       defaultValue = "1",
-      paramLabel = "NUM_CLIENTS",
-      description = "number of clients to use (default: 1)")
-  private int numberOfClients;
+      paramLabel = "NUM_THREADS",
+      description = "number of threads, i.e. clients to use (default: 1)")
+  private int numberOfThreads;
 
   @Option(names = "-v", description = "run verbosely")
   private boolean verbose;
@@ -142,10 +148,10 @@ public class Caller extends AbstractPALSubcommand {
   private boolean helpRequested = false;
 
   /** Params */
-  @Parameters(index = "0", hidden = true)
+  @Parameters(index = "0", arity = "0..1", hidden = true)
   private String className;
 
-  @Parameters(index = "1..*", hidden = true)
+  @Parameters(index = "1..*", arity = "0..*", hidden = true)
   private List<String> argList;
 
   Caller() {
@@ -154,6 +160,7 @@ public class Caller extends AbstractPALSubcommand {
 
   @Override
   protected final void validateInput() {
+
     if (Stream.of(peerIdentifier, logName, outLogName).noneMatch(Caller::optionGiven)) {
       throw new RuntimeException("Nowhere to call. Please specify --peer, --log or --out-log.");
     }
@@ -163,6 +170,33 @@ public class Caller extends AbstractPALSubcommand {
           "You must specify a log to read from, or else use --forget-reply.");
     }
 
+    // resolve peer identifier
+    if (optionGiven(peerIdentifier)) {
+      UUID parsedUuid = null;
+      try {
+        parsedUuid = UUID.fromString(peerIdentifier);
+      } catch (IllegalArgumentException iae) {
+        // nevermind
+      } finally {
+        peerUuid = parsedUuid;
+      }
+      // not a valid UUID, must be an address then
+      if (peerUuid == null) {
+        if (!peerIdentifier.startsWith("tcp://") && !peerIdentifier.startsWith("ws://")) {
+          throw new RuntimeException(
+              "Peer address must start with tcp:// (for ZMQ-RPC) or ws:// (for JSON-RPC)");
+        }
+        peerAddress = peerIdentifier;
+      }
+    }
+
+    // --forget-reply only works with Log, not with peer
+    if (optionGiven(peerIdentifier) && sendAndForget) {
+      throw new RuntimeException(
+          "Direct p2p talk (-p) is not compatible with -f (--forget-reply) option");
+    }
+
+    // validate RPC type and endpoint
     if (optionGiven(rpcType)) {
       if (!rpcType.equals(RPCType.RPC.name()) && !rpcType.equals(RPCType.JSONRPC.name())) {
         throw new RuntimeException("Invalid RPC type. Must be RPC or JSONRPC.");
@@ -176,6 +210,37 @@ public class Caller extends AbstractPALSubcommand {
         }
       }
     }
+
+    // read stdin for raw JSON-RPC requests (1 per line), if any
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
+      if (reader.ready()) {
+        stdinRequests = new ArrayList<>();
+        String line;
+        while ((line = reader.readLine()) != null) {
+          stdinRequests.add(line);
+        }
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    // requests are given through STDIN or through command line parameters,
+    // either or
+    if (!optionGiven(className) && stdinRequests.isEmpty()) {
+      throw new RuntimeException(
+          "You must specify a class to call or provide JSON-RPC requests through STDIN.");
+    }
+
+    // but not both
+    if (optionGiven(className) && !stdinRequests.isEmpty()) {
+      throw new RuntimeException(
+          "Either specify a class or provide JSON-RPC requests through STDIN, but not both.");
+    }
+
+    if (peerAddress != null && peerAddress.startsWith("tcp://") && !stdinRequests.isEmpty()) {
+      throw new RuntimeException(
+          "JSON-RPC requests given through STDIN, but peer address does not start with ws:// (for JSON-RPC)");
+    }
   }
 
   @Override
@@ -184,14 +249,13 @@ public class Caller extends AbstractPALSubcommand {
       logger.debug("Initializing...");
     }
 
-    // read stdin for raw JSON-RPC requests (1 per line), if any
-    try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
-      if (reader.ready()) {
-        stdinReqs = new ArrayList<>();
-        String line;
-        while ((line = reader.readLine()) != null) {
-          stdinReqs.add(line);
-        }
+    if (optionGiven(className)) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Will call class: {} and method: {}", className, methodName);
+      }
+    } else {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Will send given JSON-RPC requests");
       }
     }
 
@@ -199,22 +263,6 @@ public class Caller extends AbstractPALSubcommand {
     initializeDirectoryConnectionProvider(palDirectoryURL);
 
     loadProperties();
-
-    // resolve peer identifier
-    if (peerIdentifier != null && !peerIdentifier.isEmpty()) {
-      UUID parsedUuid = null;
-      try {
-        parsedUuid = UUID.fromString(peerIdentifier);
-      } catch (IllegalArgumentException iae) {
-        // nevermind
-      } finally {
-        peerUuid = parsedUuid;
-      }
-      // not a valid UUID, must be an address then
-      if (peerUuid == null) {
-        peerAddress = peerIdentifier;
-      }
-    }
   }
 
   private void loadProperties() throws IOException {
@@ -242,29 +290,21 @@ public class Caller extends AbstractPALSubcommand {
   }
 
   /**
-   * Serially sends all requests in a single (ThinPeer) thread. With log IO 1st req is sent to Log,
+   * Serially sends requests in a single (ThinPeer) thread. With log IO 1st req is sent to Log,
    * waits for Future reply, then sends all other directly to the peer which replied.
    *
    * <p>In p2p mode (-p), it sends all directly to peer.
    */
-  private int runReqsWithSingleClient() throws Exception {
+  private int sendRequestsWithSingleClient() throws Exception {
 
-    int reqsSent;
     long start;
-
-    boolean uuidGiven = uuid != null;
-    if (!uuidGiven) {
-      uuid = UUID.randomUUID();
-    }
-    MainMethodCallBuilder mainMethodCallBuilder =
-        new MainMethodCallBuilder(uuid, className, argList);
-
     final boolean sendToPeer = Stream.of(peerAddress, peerUuid).anyMatch(Objects::nonNull);
 
     RPCType inferredRpcType = optionGiven(rpcType) ? RPCType.valueOf(rpcType) : null;
 
     // create ThinPeer
     final ThinPeer thinPeer;
+    final UUID thinPeerUuid = UUID.randomUUID();
     if (sendToPeer) {
       PeerInfo peerInfo;
       if (peerUuid != null) {
@@ -287,9 +327,9 @@ public class Caller extends AbstractPALSubcommand {
       }
       thinPeer =
           new ThinPeer()
-              .withUUID(uuid)
+              .withUUID(thinPeerUuid)
               .withDirectoryURL(palDirectoryURL)
-              .withSelfRegistration(uuidGiven)
+              .withSelfRegistration(true)
               .withInitialPeer(peerInfo)
               .withOutboundRPCType(inferredRpcType)
               .init();
@@ -301,9 +341,9 @@ public class Caller extends AbstractPALSubcommand {
       LogInfo outLog = outLogName == null ? null : new LogInfo(outLogName);
       thinPeer =
           new ThinPeer()
-              .withUUID(uuid)
+              .withUUID(thinPeerUuid)
               .withDirectoryURL(palDirectoryURL)
-              .withSelfRegistration(uuidGiven)
+              .withSelfRegistration(true)
               .withInLog(inLog)
               .withOutLog(outLog)
               .withConsumerProperties(consumerProperties)
@@ -317,30 +357,58 @@ public class Caller extends AbstractPALSubcommand {
       thinPeer.init();
     }
 
-    // send message(s)
-    start = System.currentTimeMillis();
-    for (reqsSent = 0; reqsSent < requests; reqsSent++) {
-      if (inferredRpcType == RPCType.JSONRPC) {
-        if (stdinReqs == null || stdinReqs.isEmpty()) {
-          // build and send JSON-RPC request built from cmd line args
-          print(
-              thinPeer.sendAndReceive(mainMethodCallBuilder.buildJsonRpc(), JsonRpcRequest.class));
-        } else {
-          // send raw JSON-RPC request(s) read from stdin
-          for (String jsonRpc : stdinReqs) {
-            print(thinPeer.sendAndReceive(jsonRpc, String.class));
-          }
-        }
-      } else {
-        print(thinPeer.sendAndReceive(mainMethodCallBuilder.buildExecMessage()));
-      }
+    // init call builder
+    if (className != null) {
+      mainMethodCallBuilder =
+          new MainMethodCallBuilder(thinPeerUuid, className, methodName, argList);
     }
+    // send message(s)
+    int reqsSent = 0;
+    start = System.currentTimeMillis();
+    List<CompletableFuture<JsonRpcResponse>> jsonRpcResponseFutures = new ArrayList<>();
+    if (inferredRpcType == RPCType.JSONRPC) {
+      if (stdinRequests == null || stdinRequests.isEmpty()) {
+        // build and send 1 JSON-RPC request from cmd line args
+        jsonRpcResponseFutures.add(
+            thinPeer.sendAndReceive(mainMethodCallBuilder.buildJsonRpc(), JsonRpcRequest.class));
+        reqsSent++;
+      } else {
+        // send N JSON-RPC request(s) read from stdin
+        for (String jsonRpc : stdinRequests) {
+          if (autoIds) { // generate missing JSON-RPC request IDs
+            JsonRpcRequest request = gson.fromJson(jsonRpc, JsonRpcRequest.class);
+            if (request.getId() == null || request.getId().isEmpty()) {
+              request.setId(UUID.randomUUID().toString());
+            }
+            jsonRpcResponseFutures.add(thinPeer.sendAndReceive(request, JsonRpcRequest.class));
+          } else { // send raw JSON-RPC request
+            jsonRpcResponseFutures.add(thinPeer.sendAndReceive(jsonRpc, String.class));
+          }
+          reqsSent++;
+        }
+        if (reqsSent > 1 && logger.isDebugEnabled()) {
+          logger.debug("sent {} JSON-RPC request(s) to peer", reqsSent);
+        }
+      }
+    } else {
+      // build and send 1 ExecMessage from cmd line args
+      print(thinPeer.sendAndReceive(mainMethodCallBuilder.buildExecMessage()));
+      reqsSent++;
+    }
+
+    // wait for all replies
+    for (CompletableFuture<JsonRpcResponse> future : jsonRpcResponseFutures) {
+      print(future.get());
+    }
+
     thinPeer.close();
 
+    long spent = System.currentTimeMillis() - start;
+    if (logger.isInfoEnabled()) {
+      logger.info("sent and received {} requests in {} ms", reqsSent, spent);
+    }
     if (verbose) {
-      System.out.printf(
-          "sent and received %s requests in %s ms%n",
-          reqsSent, (System.currentTimeMillis() - start));
+      err.printf("sent and received %s requests in %s ms%n", reqsSent, spent);
     }
 
     return reqsSent;
@@ -353,19 +421,7 @@ public class Caller extends AbstractPALSubcommand {
    * name simply refers to the fact that ThinPeer won't wait for a reply to the message sent, as
    * opposed to when calling ThinPeer.sendAndReceive().
    */
-  private int runReqsWithSingleClientAsync() throws Exception {
-
-    if (peerAddress != null || peerUuid != null) {
-      throw new RuntimeException(
-          "Direct p2p talk (-p) is not compatible with -f (--forget-reply) option");
-    }
-
-    boolean uuidGiven = uuid != null;
-    if (!uuidGiven) {
-      uuid = UUID.randomUUID();
-    }
-    MainMethodCallBuilder mainMethodCallBuilder =
-        new MainMethodCallBuilder(uuid, className, argList);
+  private int sendRequestsWithSingleClientAsync() throws Exception {
 
     if (logName != null) {
       inLogName = outLogName = logName;
@@ -374,67 +430,60 @@ public class Caller extends AbstractPALSubcommand {
     LogInfo outLog = outLogName == null ? null : new LogInfo(outLogName);
 
     // create ThinPeer
-    final ThinPeer thinPeer =
+    final UUID thinPeerUuid = UUID.randomUUID();
+    try (ThinPeer thinPeer =
         new ThinPeer()
-            .withUUID(uuid)
+            .withUUID(thinPeerUuid)
             .withDirectoryURL(palDirectoryURL)
-            .withSelfRegistration(uuidGiven)
+            .withSelfRegistration(true)
             .withInLog(inLog)
             .withOutLog(outLog)
             .withConsumerProperties(consumerProperties)
-            .withProducerProperties(producerProperties);
-    if (pollDuration != null) {
-      thinPeer.withPollingDuration(pollDuration);
-    }
-    if (logPrefix != null) {
-      thinPeer.withLogPrefix(logPrefix);
-    }
-    thinPeer.init();
+            .withProducerProperties(producerProperties)) {
+      if (pollDuration != null) {
+        thinPeer.withPollingDuration(pollDuration);
+      }
+      if (logPrefix != null) {
+        thinPeer.withLogPrefix(logPrefix);
+      }
+      thinPeer.init();
 
-    // send message(s)
-    long start = System.currentTimeMillis();
-    int reqsSent = 0;
-    while (reqsSent < requests) {
-      // send to log and forget
+      // send message(s)
+      long start = System.currentTimeMillis();
       thinPeer.sendToLogAndForget(mainMethodCallBuilder.buildExecMessage());
-      reqsSent++;
-    }
-    thinPeer.close();
+      int reqsSent = 1;
 
-    if (verbose) {
-      System.out.printf(
-          "sent and received %s requests in %s ms%n",
-          reqsSent, (System.currentTimeMillis() - start));
-    }
+      if (verbose) {
+        err.printf(
+            "sent and received %s requests in %s ms%n",
+            reqsSent, (System.currentTimeMillis() - start));
+      }
 
-    return reqsSent;
+      return reqsSent;
+    }
   }
 
   /**
    * Use this method to send requests in parallel with separate client (ThinPeer) threads NOTE that
-   * this method calls either the runReqsWithSingleClient() or runReqsWithSingleClientAsync()
-   * methods in parallel threads
+   * this method calls either the sendRequestsWithSingleClient() or
+   * sendRequestsWithSingleClientAsync() methods in parallel threads
    */
-  private void runReqsWithNClients() throws Exception {
+  private void sendRequestsWithNClients() throws Exception {
 
-    if (requests <= 1) {
+    if (numberOfThreads <= 1) {
       throw new IllegalArgumentException(
-          "Method must be called with requests > 1. requests = " + requests);
-    }
-    if (numberOfClients <= 1) {
-      throw new IllegalArgumentException(
-          "Method must be called with clients > 1. clients = " + numberOfClients);
+          "Method must be called with clients > 1. clients = " + numberOfThreads);
     }
 
-    Thread[] clientList = new Thread[numberOfClients];
+    Thread[] clientList = new Thread[numberOfThreads];
     final AtomicInteger reqsSent = new AtomicInteger(0);
-    final CountDownLatch latch = new CountDownLatch(numberOfClients);
+    final CountDownLatch latch = new CountDownLatch(numberOfThreads);
 
     // start timing
     long start = System.currentTimeMillis();
 
     // create all threads
-    IntStream.range(0, numberOfClients)
+    IntStream.range(0, numberOfThreads)
         .forEach(
             i -> {
               Thread client =
@@ -443,9 +492,9 @@ public class Caller extends AbstractPALSubcommand {
                         try {
                           int sent;
                           if (sendAndForget) {
-                            sent = runReqsWithSingleClientAsync();
+                            sent = sendRequestsWithSingleClientAsync();
                           } else {
-                            sent = runReqsWithSingleClient();
+                            sent = sendRequestsWithSingleClient();
                           }
                           reqsSent.getAndAdd(sent);
                         } catch (Exception e) {
@@ -464,9 +513,9 @@ public class Caller extends AbstractPALSubcommand {
     latch.await();
 
     if (verbose) {
-      System.out.printf(
+      err.printf(
           "sent %s requests with %s client(s) in %s ms%n",
-          reqsSent.get(), numberOfClients, (System.currentTimeMillis() - start));
+          reqsSent.get(), numberOfThreads, (System.currentTimeMillis() - start));
     }
   }
 
@@ -476,21 +525,17 @@ public class Caller extends AbstractPALSubcommand {
       logger.debug("Running command...");
     }
 
-    if (sendAndForget && (peerAddress != null || peerUuid != null)) {
-      throw new RuntimeException(
-          "Direct p2p talk (-p) is not compatible with -f (--forget-reply) option");
-    }
-    if (requests == 1 || numberOfClients == 1) {
+    if (numberOfThreads == 1) {
       if (sendAndForget) {
-        logger.info("running runReqsWithSingleClientAsync()");
-        runReqsWithSingleClientAsync();
+        logger.info("running sendRequestsWithSingleClientAsync()");
+        sendRequestsWithSingleClientAsync();
       } else {
-        logger.info("running runReqsWithSingleClient()");
-        runReqsWithSingleClient();
+        logger.info("running sendRequestsWithSingleClient()");
+        sendRequestsWithSingleClient();
       }
     } else {
-      logger.info("running runReqsWithNClients()");
-      runReqsWithNClients();
+      logger.info("running sendRequestsWithNClients()");
+      sendRequestsWithNClients();
     }
     return 0;
   }
@@ -518,30 +563,45 @@ public class Caller extends AbstractPALSubcommand {
 
   private void print(JsonRpcResponse response) {
     if (response.getResult() != null) {
-      System.out.println(response.getResult());
+      print(gson.fromJson(response.getResult(), ReturnValue.class));
     } else if (response.getError() != null) {
-      System.out.println(response.getError());
+      out.println(response.getError());
     }
   }
 
   private void print(ExecMessage response) {
     if (response.getReturnValue() != null) {
-      System.out.println(ColferUtils.format(response.getReturnValue()));
+      print(response.getReturnValue());
     } else if (response.getRaisedThrowable() != null) {
-      System.out.println(ColferUtils.format(response.getRaisedThrowable()));
+      print(response.getRaisedThrowable());
     }
+  }
+
+  private void print(ReturnValue returnValue) {
+    if (returnValue.getIsVoid()) {
+      return;
+    }
+    Obj object = returnValue.getObject();
+    if (object != null) {
+      out.println(object.getValue());
+    }
+  }
+
+  private void print(RaisedThrowable raisedThrowable) {
+    out.println(ColferUtils.format(raisedThrowable));
   }
 
   private class MainMethodCallBuilder {
     private final UUID thinPeerUuid;
     final Class<?>[] parameterTypes = new Class[] {String[].class};
-    private final String methodName = "main";
+    private final String methodName;
     private final String className;
     private final String[] parameterTypesNamesArray;
     private final Object[] parameters;
     private final ObjectRef[] argObjRefs;
 
-    public MainMethodCallBuilder(UUID thinPeerUuid, String className, List<String> argList) {
+    public MainMethodCallBuilder(
+        UUID thinPeerUuid, String className, String methodName, List<String> argList) {
       // create reusable arrays for message construction
       parameterTypesNamesArray = new String[parameterTypes.length];
       IntStream.range(0, parameterTypes.length)
@@ -550,6 +610,7 @@ public class Caller extends AbstractPALSubcommand {
       argObjRefs = new ObjectRef[parameterTypes.length];
       this.thinPeerUuid = thinPeerUuid;
       this.className = className;
+      this.methodName = methodName;
       if (argList != null) {
         parameters[0] = argList.toArray(new String[0]);
       }
