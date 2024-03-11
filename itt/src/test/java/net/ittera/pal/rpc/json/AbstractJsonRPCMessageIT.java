@@ -25,6 +25,7 @@ import com.google.inject.Injector;
 import com.google.inject.name.Names;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
@@ -79,11 +80,12 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
             .init();
   }
 
-  private JsonRpcResponse sendAndReceive(JsonRpcRequest jsonRpcRequest) {
+  private JsonRpcResponse sendAndReceive(JsonRpcRequest jsonRpcRequest)
+      throws ExecutionException, InterruptedException {
     logger.debug("Sending JSON-RPC request: {}", jsonRpcRequest);
     final JsonRpcResponse response;
     try {
-      response = thinPeer.sendAndReceive(jsonRpcRequest, JsonRpcRequest.class);
+      response = thinPeer.sendAndReceive(jsonRpcRequest, JsonRpcRequest.class).get();
     } catch (Exception e) {
       logger.error(
           "Exception sending/receiving message with uuid: {}\n{}",

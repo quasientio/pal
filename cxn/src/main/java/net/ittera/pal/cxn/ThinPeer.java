@@ -69,7 +69,7 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 /** This class is not thread-safe. For multi-threaded scenarios, use different instances. */
-public class ThinPeer {
+public class ThinPeer implements AutoCloseable {
 
   private UUID peerUuid;
   private String peerName;
@@ -110,7 +110,7 @@ public class ThinPeer {
   private Socket peerSocket;
   private WSClient wsClient;
   private String rpcAddress;
-  private Gson gson = new Gson();
+  private final Gson gson = new Gson();
   private RPCType outboundRpcType = RPCType.RPC;
   private PeerInfo initialPeer;
   private PeerInfo currentPeer;
@@ -418,7 +418,7 @@ public class ThinPeer {
     }
   }
 
-  public <T> JsonRpcResponse sendAndReceive(T jsonRpc, Class<T> jsonRpcType) {
+  public <T> CompletableFuture<JsonRpcResponse> sendAndReceive(T jsonRpc, Class<T> jsonRpcType) {
     assertInitialized();
     if (logger.isTraceEnabled()) {
       logger.trace("sendAndReceive: in with jsonRpc: {}", jsonRpc);
@@ -590,7 +590,7 @@ public class ThinPeer {
     }
     consumer.seek(inTopicPartition, sentRecordOffset);
 
-    // wait for reply  (should contain following = sentRecordOffset in message)
+    // wait for reply  (should contain responseToUuid = sentRecordOffset in message)
     while (true) {
       ConsumerRecords<String, byte[]> records = consumer.poll(pollingDuration);
       if (records.count() != 0 && logger.isDebugEnabled()) {
@@ -602,9 +602,7 @@ public class ThinPeer {
         long receivedMsgOffset = record.offset();
         final ExecMessage execMessage = rcvdMsg.getExecMessage();
         final String responseToUuid = execMessage == null ? null : execMessage.getResponseToUuid();
-        if (execMessage != null
-            && responseToUuid != null
-            && message.getMessageUuid().equals(responseToUuid)) {
+        if (execMessage != null && message.getMessageUuid().equals(responseToUuid)) {
           if (logger.isDebugEnabled()) {
             logger.debug(
                 "Got reply with offset {} and uuid {} ",
@@ -694,7 +692,7 @@ public class ThinPeer {
     return replyMsg;
   }
 
-  public <T> JsonRpcResponse sendToPeer(T jsonRpcRequest, Class<T> jsonRpcType) {
+  public <T> CompletableFuture<JsonRpcResponse> sendToPeer(T jsonRpcRequest, Class<T> jsonRpcType) {
     assertInitialized();
     if (logger.isTraceEnabled()) {
       logger.trace("sendToPeer: in with jsonRpcRequest: {}", jsonRpcRequest);
@@ -707,12 +705,7 @@ public class ThinPeer {
     } else {
       throw new IllegalArgumentException("Unsupported type for jsonRpc");
     }
-    wsClient.send(rpc);
-    try {
-      return wsClient.futureResponse.get();
-    } catch (InterruptedException | ExecutionException e) {
-      throw new RuntimeException("Error waiting for response", e);
-    }
+    return wsClient.sendAsync(rpc);
   }
 
   // TODO: refactor this and above methods
@@ -800,6 +793,7 @@ public class ThinPeer {
     }
   }
 
+  @Override
   public void close() {
     assertInitialized();
 
@@ -861,14 +855,29 @@ public class ThinPeer {
   }
 
   private final class WSClient extends WebSocketClient {
-    private final CompletableFuture<JsonRpcResponse> futureResponse = new CompletableFuture<>();
+    private final Map<String, CompletableFuture<JsonRpcResponse>> futureResponses =
+        new ConcurrentHashMap<>();
 
     WSClient(URI uri) {
       super(uri);
     }
 
     public void send(String message) {
+      if (logger.isTraceEnabled()) {
+        logger.trace("sending message to ws socket: {}", message);
+      }
       super.send(message);
+    }
+
+    public CompletableFuture<JsonRpcResponse> sendAsync(String message) {
+      if (logger.isTraceEnabled()) {
+        logger.trace("sending message to ws socket: {}", message);
+      }
+      JsonRpcRequest request = gson.fromJson(message, JsonRpcRequest.class);
+      CompletableFuture<JsonRpcResponse> futureResponse = new CompletableFuture<>();
+      futureResponses.put(request.getId(), futureResponse);
+      send(message);
+      return futureResponse;
     }
 
     @Override
@@ -880,7 +889,13 @@ public class ThinPeer {
     public void onMessage(String message) {
       logger.info("Received message: {}", message);
       JsonRpcResponse response = gson.fromJson(message, JsonRpcResponse.class);
-      futureResponse.complete(response);
+      CompletableFuture<JsonRpcResponse> futureResponse = futureResponses.get(response.getId());
+      if (futureResponse == null) {
+        logger.error("No future response found for message id: {}", response.getId());
+      } else {
+        futureResponse.complete(response);
+        futureResponses.remove(response.getId());
+      }
     }
 
     @Override
