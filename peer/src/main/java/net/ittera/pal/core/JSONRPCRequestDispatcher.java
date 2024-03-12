@@ -213,12 +213,6 @@ class JSONRPCRequestDispatcher extends ConnectedService {
     }
   }
 
-  private boolean pushMessageForDispatch(UUID connId, String message) {
-    InboundJsonRpcRequestMsg inboundJSONRPCRequestMsg =
-        new InboundJsonRpcRequestMsg(connId, message);
-    return inboundJSONRPCRequestMsg.send(pushSocket, false);
-  }
-
   private WebSocket getConnectionSocketFromId(UUID connId) {
     return webSocketConnectionMapping.entrySet().stream()
         .filter(e -> e.getValue().equals(connId))
@@ -293,7 +287,9 @@ class JSONRPCRequestDispatcher extends ConnectedService {
       if (logger.isTraceEnabled()) {
         logger.trace("Message received: {}", message);
       }
-      boolean sentOk = pushMessageForDispatch(connId, message);
+      InboundJsonRpcRequestMsg inboundJSONRPCRequestMsg =
+          new InboundJsonRpcRequestMsg(connId, message);
+      boolean sentOk = inboundJSONRPCRequestMsg.send(pushSocket, false);
       if (logger.isDebugEnabled()) {
         logger.debug("Pushed message from connection id: {} for dispatch", connId);
       }
