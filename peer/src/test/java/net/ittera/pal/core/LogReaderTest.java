@@ -19,12 +19,11 @@
 
 package net.ittera.pal.core;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -65,12 +64,12 @@ public class LogReaderTest extends ZmqEnabledTest {
   /*
   class for Workers (which REPly to Dealer) IRL: LogMessageInvoker
   */
-  class Worker implements Runnable {
+  static class Worker implements Runnable {
 
-    private ZMQ.Socket socket;
-    private ZContext context;
-    private String dealerAddress;
-    private Set<String> rcvdMsgUuids = new TreeSet<>();
+    private final ZMQ.Socket socket;
+    private final ZContext context;
+    private final String dealerAddress;
+    private final Set<String> rcvdMsgUuids = new TreeSet<>();
 
     Worker(ZContext context, String dealerAddress) {
       this.context = context;
@@ -85,7 +84,7 @@ public class LogReaderTest extends ZmqEnabledTest {
 
       // process requests
       while (!Thread.interrupted()) {
-        InboundLogMsg logMsg = null;
+        InboundLogMsg logMsg;
         try {
           logMsg = InboundLogMsg.recvMsg(socket, true);
           Message wrapper = new Message();
@@ -117,6 +116,7 @@ public class LogReaderTest extends ZmqEnabledTest {
       }
 
       this.socket.close();
+      this.context.close();
     }
 
     Set<String> getReceivedMessages() {
@@ -128,14 +128,14 @@ public class LogReaderTest extends ZmqEnabledTest {
   private ExecutorService execService;
   private ZContext zmqContext;
   private LogReader logReader;
-  private UUID peerUuid = UUID.randomUUID();
+  private final UUID peerUuid = UUID.randomUUID();
   private ServiceManager manager;
   private MockConsumer<String, byte[]> consumer;
   private LogInfo log;
   private final int partition = 0;
   private final String DEALER_ADDR = "inproc://inlog_tests";
   private final String OFFSET_PUB_ADDR = "inproc://offsets_tests";
-  private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
+  private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
   private Set<Service> services;
 
   @After
@@ -170,12 +170,12 @@ public class LogReaderTest extends ZmqEnabledTest {
     final List<TopicPartition> topicPartitionList = Collections.singletonList(topicPartition);
     consumer.assign(topicPartitionList);
     consumer.seek(topicPartition, 0);
-    services = new HashSet<>(Arrays.asList(this.logReader));
+    services = new HashSet<>(Collections.singletonList(this.logReader));
     this.manager = new ServiceManager(services);
   }
 
   @Test
-  public void dontAcceptRequests() throws Exception {
+  public void dontAcceptRequests() {
     logger.trace("entering dontAcceptRequests()");
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
@@ -305,13 +305,14 @@ public class LogReaderTest extends ZmqEnabledTest {
     // send 1 message
     MessageBuilder msgBuilder = new MessageBuilder();
     String key = peerUuid.toString();
+    @SuppressWarnings("unchecked")
     InterceptMessage msg =
         msgBuilder.buildInterceptMessage(
             peerUuid,
             InterceptType.BEFORE,
             "java.io.PrintStream",
             "println",
-            Collections.EMPTY_LIST,
+            (List<String>) Collections.EMPTY_LIST,
             this.getClass().getName(),
             "someCallbackMethod");
     ConsumerRecord<String, byte[]> record =
@@ -360,14 +361,9 @@ public class LogReaderTest extends ZmqEnabledTest {
     int msgsToSend = 20;
     for (int i = 0; i < msgsToSend; i++) {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-      long offset = i;
       ConsumerRecord<String, byte[]> record =
           new ConsumerRecord<>(
-              this.log.getName(),
-              partition,
-              offset,
-              key,
-              ColferUtils.toBytes(msgBuilder.wrap(msg)));
+              this.log.getName(), partition, i, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
       this.consumer.addRecord(record);
       sentUuids.add(msg.getMessageUuid());
     }
