@@ -1,16 +1,16 @@
-package net.ittera.pal.serdes.colfer;
+package net.ittera.pal.serdes.jsonrpc;
 
+import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
 import static org.junit.Assert.*;
 
 import java.util.stream.Stream;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
-import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MessageUtilsTest {
-  private static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);
+public class JsonRpcMessageUtilsTest {
+  private static final Logger logger = LoggerFactory.getLogger("tests");
 
   // <editor-fold desc="illegal characters and words">
   @Test
@@ -29,7 +29,7 @@ public class MessageUtilsTest {
                   String.format(
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[],\"id\":1}", method);
               try {
-                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcRequestException");
               } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Invalid characters in class name"));
@@ -100,7 +100,7 @@ public class MessageUtilsTest {
                   String.format(
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[],\"id\":1}", method);
               try {
-                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcRequestException");
               } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Class name is a Java reserved keyword"));
@@ -124,7 +124,7 @@ public class MessageUtilsTest {
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[{\"value\": %s},{\"value\": %d}],\"id\":1}",
                       method, "myParam1", 12345);
               try {
-                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                parseAndValidateJsonRpcMessage(jsonRpcMessage);
               } catch (InvalidJsonRpcRequestException e) {
                 throw new RuntimeException(e);
               }
@@ -146,7 +146,7 @@ public class MessageUtilsTest {
                   String.format(
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[],\"id\":1}", method);
               try {
-                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcRequestException");
               } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Field put must have exactly one parameter"));
@@ -161,7 +161,7 @@ public class MessageUtilsTest {
         String.format(
             "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[{\"value\": 50}],\"id\":1}",
             method);
-    MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+    parseAndValidateJsonRpcMessage(jsonRpcMessage);
   }
 
   @Test
@@ -177,7 +177,7 @@ public class MessageUtilsTest {
                       "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":[{\"value\": %s},{\"value\": %d}],\"id\":1}",
                       method, "myParam1", 12345);
               try {
-                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcRequestException");
               } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Field put must have exactly one parameter"));
@@ -198,7 +198,7 @@ public class MessageUtilsTest {
                       "{\"jsonrpc\": \"2.0\", \"method\": \"%s\", \"params\": [{\"value\": %d}], \"id\": 1}",
                       method, 123);
               try {
-                MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                parseAndValidateJsonRpcMessage(jsonRpcMessage);
                 fail("Expected InvalidJsonRpcRequestException");
               } catch (InvalidJsonRpcRequestException e) {
                 assertTrue(e.getMessage().contains("Field get cannot have any parameter"));
@@ -221,7 +221,7 @@ public class MessageUtilsTest {
                       params);
               logger.debug(jsonRpcMessage);
               try {
-                jsonRpcRequest = MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonRpcMessage);
               } catch (InvalidJsonRpcRequestException e) {
                 throw new RuntimeException(e);
               }
@@ -244,7 +244,7 @@ public class MessageUtilsTest {
                       params);
               logger.debug(jsonRpcMessage);
               try {
-                jsonRpcRequest = MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+                jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonRpcMessage);
               } catch (InvalidJsonRpcRequestException e) {
                 throw new RuntimeException(e);
               }
@@ -260,7 +260,7 @@ public class MessageUtilsTest {
       throws InvalidJsonRpcRequestException {
     String jsonRpcMessage =
         "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [{\"type\": \"ref\"}], \"id\": 1}";
-    MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+    parseAndValidateJsonRpcMessage(jsonRpcMessage);
   }
 
   @Test(expected = InvalidJsonRpcRequestException.class)
@@ -268,7 +268,7 @@ public class MessageUtilsTest {
       throws InvalidJsonRpcRequestException {
     String jsonRpcMessage =
         "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [{\"type\": \"ref\", \"value\":false}], \"id\": 1}";
-    MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+    parseAndValidateJsonRpcMessage(jsonRpcMessage);
   }
 
   @Test(expected = InvalidJsonRpcRequestException.class)
@@ -276,7 +276,7 @@ public class MessageUtilsTest {
       throws InvalidJsonRpcRequestException {
     String jsonRpcMessage =
         "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [{\"type\": \"ref\", \"value\":\"23255.44\"}], \"id\": 1}";
-    MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+    parseAndValidateJsonRpcMessage(jsonRpcMessage);
   }
 
   @Test
@@ -284,7 +284,7 @@ public class MessageUtilsTest {
       throws InvalidJsonRpcRequestException {
     String jsonRpcMessage =
         "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [{\"type\": \"ref\", \"value\":23255}], \"id\": 1}";
-    JsonRpcRequest jsonRpcRequest = MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+    JsonRpcRequest jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonRpcMessage);
     assertNotNull(jsonRpcRequest.getParams());
     assertEquals(jsonRpcRequest.getParams().size(), 1);
     assertTrue(jsonRpcRequest.getParams().get(0).isRef());
@@ -300,7 +300,7 @@ public class MessageUtilsTest {
     String jsonRpcMessage =
         "{\"jsonrpc\": \"2.0\", \"method\": \"com.example.MyClass.print\", \"params\": [{\"type\": \"ref\", \"value\":\"23255\"}], \"id\": 1}";
 
-    JsonRpcRequest jsonRpcRequest = MessageUtils.parseAndValidateJsonRpcMessage(jsonRpcMessage);
+    JsonRpcRequest jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonRpcMessage);
     assertNotNull(jsonRpcRequest.getParams());
     assertEquals(jsonRpcRequest.getParams().size(), 1);
     assertTrue(jsonRpcRequest.getParams().get(0).isRef());
@@ -308,6 +308,17 @@ public class MessageUtilsTest {
 
     // type is NOT in Param when its value == "ref"
     assertNull(jsonRpcRequest.getParams().get(0).getType());
+  }
+
+  @Test
+  public void parseJsonRpcMessage_typeIsRefAndValueIsString_ok()
+      throws InvalidJsonRpcRequestException {
+    String jsonRpcMessage =
+        "{\"jsonrpc\":\"2.0\", \"method\":\"net.ittera.pal.examples.HelloPeople.main\", \"id\":\"53eeb24c-f058-49e5-aa92-8e10ac049368\", \"params\":[{\"value\":[\"Ma\",\"Na\"], \"type\":\"[Ljava.lang.String;\"}]}";
+    JsonRpcRequest jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonRpcMessage);
+    assertNotNull(jsonRpcRequest.getParams());
+    assertEquals(jsonRpcRequest.getParams().size(), 1);
+    assertFalse(jsonRpcRequest.getParams().get(0).isRef());
   }
   // </editor-fold>
 }

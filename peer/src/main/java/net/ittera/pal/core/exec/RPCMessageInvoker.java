@@ -19,6 +19,8 @@
 
 package net.ittera.pal.core.exec;
 
+import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
+
 import com.google.gson.Gson;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
@@ -33,7 +35,6 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
-import net.ittera.pal.serdes.colfer.MessageUtils;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -48,7 +49,7 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
   private ZMQ.Socket rpcSocket;
   private final String jsonrpcDealerAddress;
   private ZMQ.Socket jsonrpcSocket;
-  private static Gson gson = new Gson();
+  private static final Gson gson = new Gson();
 
   public RPCMessageInvoker(
       ThreadGroup group,
@@ -242,7 +243,7 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
         JsonRpcRequest jsonRpcRequest = null;
 
         try {
-          jsonRpcRequest = MessageUtils.parseAndValidateJsonRpcMessage(jsonrpcMsg.getJsonMessage());
+          jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonrpcMsg.getJsonMessage());
           if (logger.isDebugEnabled()) {
             logger.debug(
                 "Received JSON-RPC message from client uuid: {}", jsonrpcMsg.getClientId());

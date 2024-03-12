@@ -19,7 +19,7 @@
 
 package net.ittera.pal.core.exec.java;
 
-import static net.ittera.pal.serdes.colfer.MessageUtils.getParameterTypes;
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -33,8 +33,8 @@ import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
+import net.ittera.pal.serdes.colfer.ExecMessageUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
-import net.ittera.pal.serdes.colfer.MessageUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,8 +88,8 @@ public class InterceptRequestEntryTest {
     // create Exec message
     ExecMessage execMessage =
         msgBuilder.buildEmptyConstructor(UUID.randomUUID(), "java.util.ArrayList");
-    final String classname = MessageUtils.getClassname(execMessage);
-    final String executableName = MessageUtils.getExecutableName(execMessage);
+    final String classname = ExecMessageUtils.getClassname(execMessage);
+    final String executableName = ExecMessageUtils.getExecutableName(execMessage);
     final List<String> paramTypesList = getParameterTypes(execMessage);
     final String[] parameterTypes =
         paramTypesList == null ? null : paramTypesList.toArray(new String[0]);
@@ -124,8 +124,8 @@ public class InterceptRequestEntryTest {
             new String[0],
             new Object[0],
             new ObjectRef[0]);
-    final String classname = MessageUtils.getClassname(execMessage);
-    final String executableName = MessageUtils.getExecutableName(execMessage);
+    final String classname = ExecMessageUtils.getClassname(execMessage);
+    final String executableName = ExecMessageUtils.getExecutableName(execMessage);
     final List<String> paramTypesList = getParameterTypes(execMessage);
     final String[] parameterTypes =
         paramTypesList == null ? null : paramTypesList.toArray(new String[0]);
@@ -159,8 +159,8 @@ public class InterceptRequestEntryTest {
             null,
             new Object[0],
             new ObjectRef[0]);
-    final String classname = MessageUtils.getClassname(execMessage);
-    final String executableName = MessageUtils.getExecutableName(execMessage);
+    final String classname = ExecMessageUtils.getClassname(execMessage);
+    final String executableName = ExecMessageUtils.getExecutableName(execMessage);
     final List<String> paramTypesList = getParameterTypes(execMessage);
     final String[] parameterTypes =
         paramTypesList == null ? null : paramTypesList.toArray(new String[0]);

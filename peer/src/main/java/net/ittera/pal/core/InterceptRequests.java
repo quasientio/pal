@@ -20,7 +20,7 @@
 package net.ittera.pal.core;
 
 import static java.lang.String.format;
-import static net.ittera.pal.serdes.colfer.MessageUtils.getParameterTypes;
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,7 +34,7 @@ import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InterceptableField;
 import net.ittera.pal.messages.colfer.InterceptableMethod;
 import net.ittera.pal.messages.types.ExecMessageType;
-import net.ittera.pal.serdes.colfer.MessageUtils;
+import net.ittera.pal.serdes.colfer.ExecMessageUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,8 +57,8 @@ class InterceptRequests {
 
   private List<InterceptMessage> getMatchingIntercepts(
       ExecMessage execMessage, List<InterceptRequestEntry> interceptRequestEntries) {
-    final String classname = MessageUtils.getClassname(execMessage);
-    final String executableName = MessageUtils.getExecutableName(execMessage);
+    final String classname = ExecMessageUtils.getClassname(execMessage);
+    final String executableName = ExecMessageUtils.getExecutableName(execMessage);
     final List<String> paramTypesList = getParameterTypes(execMessage);
     final String[] parameterTypes =
         paramTypesList == null ? null : paramTypesList.toArray(new String[0]);

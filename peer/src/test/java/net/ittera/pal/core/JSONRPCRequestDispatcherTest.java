@@ -1,5 +1,6 @@
 package net.ittera.pal.core;
 
+import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.*;
@@ -15,7 +16,6 @@ import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
 import net.ittera.pal.core.messages.OutboundJsonRpcResponseMsg;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
-import net.ittera.pal.serdes.colfer.MessageUtils;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.junit.After;
@@ -58,7 +58,7 @@ public class JSONRPCRequestDispatcherTest extends ZmqEnabledTest {
 
           // parse and validate request
           JsonRpcRequest jsonRpcRequest =
-              MessageUtils.parseAndValidateJsonRpcMessage(rpcRequestMsg.getJsonMessage());
+              parseAndValidateJsonRpcMessage(rpcRequestMsg.getJsonMessage());
 
           // store received message id
           receivedMsgIds.add(jsonRpcRequest.getId());
