@@ -2,6 +2,7 @@ package net.ittera.pal.messages.jsonrpc;
 
 import com.google.gson.annotations.SerializedName;
 import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcError;
 
 /**
  * Represents a JSON-RPC response message.
@@ -35,7 +36,7 @@ public class JsonRpcResponse {
   private String result;
 
   @SerializedName("error")
-  private String error;
+  private JsonRpcError error;
 
   @SerializedName("id")
   private String id;
@@ -64,11 +65,11 @@ public class JsonRpcResponse {
     this.result = result;
   }
 
-  public String getError() {
+  public JsonRpcError getError() {
     return error;
   }
 
-  public void setError(String error) {
+  public void setError(JsonRpcError error) {
     this.error = error;
   }
 }

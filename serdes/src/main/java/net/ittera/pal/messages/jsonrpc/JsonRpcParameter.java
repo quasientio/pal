@@ -9,7 +9,7 @@ public class JsonRpcParameter {
   @SerializedName("type")
   private String type;
 
-  private boolean isRef;
+  private transient boolean isRef;
 
   public Object getValue() {
     return value;

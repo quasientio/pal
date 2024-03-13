@@ -19,13 +19,14 @@
 
 package net.ittera.pal.serdes.colfer;
 
-import static net.ittera.pal.serdes.colfer.MessageUtils.getClassname;
-import static net.ittera.pal.serdes.colfer.MessageUtils.getExecutableName;
-import static net.ittera.pal.serdes.colfer.MessageUtils.getParameterTypes;
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getClassname;
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getExecutableName;
+import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
 import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedClass;
 import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedContext;
 import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedField;
 import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedObject;
+import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.isMethodNotFoundError;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
@@ -81,11 +82,11 @@ import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
-import net.ittera.pal.messages.types.ControlCommandType;
-import net.ittera.pal.messages.types.ControlStatusType;
-import net.ittera.pal.messages.types.ExecMessageType;
-import net.ittera.pal.messages.types.InternalHeaderType;
-import net.ittera.pal.messages.types.MessageType;
+import net.ittera.pal.messages.types.*;
+import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcParamsException;
+import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcError;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1169,13 +1170,64 @@ public final class MessageBuilder {
         jsonRpcResponse.setResult(ColferUtils.toJSON(execMessageResponse.getReturnValue()));
         break;
       case THROWABLE:
-        jsonRpcResponse.setError(ColferUtils.toJSON(execMessageResponse.getRaisedThrowable()));
+        if (execMessageResponse.getRaisedThrowable() != null
+            && isMethodNotFoundError(
+                execMessageResponse.getRaisedThrowable().getThrowable().getType())) {
+          jsonRpcResponse.setError(
+              new JsonRpcError(
+                  JsonRpcErrorCode.METHOD_NOT_FOUND.getCode(),
+                  JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage(),
+                  ColferUtils.toJSON(
+                      execMessageResponse.getRaisedThrowable().getThrowable(), true)));
+        } else {
+          jsonRpcResponse.setError(
+              new JsonRpcError(
+                  JsonRpcErrorCode.SERVER_ERROR.getCode(),
+                  JsonRpcErrorCode.SERVER_ERROR.getMessage(),
+                  ColferUtils.toJSON(
+                      execMessageResponse.getRaisedThrowable().getThrowable(), true)));
+        }
         break;
       default:
         throw new RuntimeException(
             "Unexpected response message type: "
                 + ExecMessageType.fromByte(execMessageResponse.getExecMessageType()).name());
     }
+    return jsonRpcResponse;
+  }
+
+  public JsonRpcResponse jsonRpcResponseFromParseError(Exception exception, String requestId) {
+
+    final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
+    jsonRpcResponse.setId(requestId);
+    final JsonRpcError error;
+
+    if (exception instanceof JsonRpcParseException) {
+      error =
+          new JsonRpcError(
+              JsonRpcErrorCode.PARSE_ERROR.getCode(),
+              JsonRpcErrorCode.PARSE_ERROR.getMessage(),
+              ((JsonRpcParseException) exception).getJsonParseException().getMessage());
+    } else if (exception instanceof InvalidJsonRpcParamsException) {
+      error =
+          new JsonRpcError(
+              JsonRpcErrorCode.INVALID_PARAMS.getCode(),
+              JsonRpcErrorCode.INVALID_PARAMS.getMessage(),
+              exception.getMessage());
+    } else if (exception instanceof InvalidJsonRpcRequestException) {
+      error =
+          new JsonRpcError(
+              JsonRpcErrorCode.INVALID_REQUEST.getCode(),
+              JsonRpcErrorCode.INVALID_REQUEST.getMessage(),
+              exception.getMessage());
+    } else {
+      error =
+          new JsonRpcError(
+              JsonRpcErrorCode.INTERNAL_ERROR.getCode(),
+              JsonRpcErrorCode.INTERNAL_ERROR.getMessage(),
+              exception.getMessage());
+    }
+    jsonRpcResponse.setError(error);
     return jsonRpcResponse;
   }
 

@@ -47,7 +47,8 @@ import net.ittera.pal.messages.types.ExecMessageType;
  *       cannot be null and must be an integer.
  * </ul>
  *
- * <p>The <b>id</b> field is an integer that is used to correlate the request with the response.
+ * <p>The <b>id</b> field is an integer that is used to correlate the request with the response. The
+ * <b>id</b> field is currently mandatory (i.e. notifications are not supported).
  *
  * <p>The following table shows the mapping between the method field and the ExecMessageType enum:
  *
@@ -93,12 +94,12 @@ import net.ittera.pal.messages.types.ExecMessageType;
  * </pre>
  */
 public class JsonRpcRequest {
-  private ExecMessageType execMessageType;
-  private String objectRef;
-  private String className;
-  private String fullyQualifiedClassName;
-  private String methodName;
-  private String fieldName;
+  private transient ExecMessageType execMessageType;
+  private transient String objectRef;
+  private transient String className;
+  private transient String fullyQualifiedClassName;
+  private transient String methodName;
+  private transient String fieldName;
 
   @SerializedName("jsonrpc")
   private String jsonrpc;

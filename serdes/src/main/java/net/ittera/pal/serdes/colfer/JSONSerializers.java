@@ -148,7 +148,7 @@ class JSONSerializers {
       }
 
       if (notEmpty(message.responseToUuid)) {
-        jsonElement.addProperty("following_uuid", message.responseToUuid);
+        jsonElement.addProperty("response_to", message.responseToUuid);
       }
 
       switch (execMessageType) {
@@ -635,7 +635,7 @@ class JSONSerializers {
         jsonElement.addProperty("peer_uuid", message.peerUuid);
       }
       if (notEmpty(message.responseToUuid)) {
-        jsonElement.addProperty("following_uuid", message.responseToUuid);
+        jsonElement.addProperty("response_to", message.responseToUuid);
       }
       jsonElement.addProperty("result", message.result);
       return jsonElement;

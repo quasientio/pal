@@ -290,50 +290,50 @@ public class ExecMessageUtilsTest {
 
     // GetStatic
     ExecMessage execMessage =
-            messageBuilder.buildGetStatic(UUID.randomUUID(), className, fieldName);
+        messageBuilder.buildGetStatic(UUID.randomUUID(), className, fieldName);
 
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
 
     // GetField
     execMessage =
-            messageBuilder.buildGetObject(
-                    UUID.randomUUID(), className, fieldName, ObjectRef.randomRef());
+        messageBuilder.buildGetObject(
+            UUID.randomUUID(), className, fieldName, ObjectRef.randomRef());
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
 
     // PutStatic
     execMessage =
-            messageBuilder.buildPutStatic(
-                    UUID.randomUUID(), className, fieldName, ObjectRef.randomRef());
+        messageBuilder.buildPutStatic(
+            UUID.randomUUID(), className, fieldName, ObjectRef.randomRef());
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
 
     // PutField
     execMessage =
-            messageBuilder.buildPutObject(
-                    UUID.randomUUID(),
-                    className,
-                    "testField",
-                    ObjectRef.randomRef(),
-                    ObjectRef.randomRef());
+        messageBuilder.buildPutObject(
+            UUID.randomUUID(),
+            className,
+            "testField",
+            ObjectRef.randomRef(),
+            ObjectRef.randomRef());
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
 
     // PutFieldDone
     AccessibleObject accessibleObject = this.getClass().getDeclaredFields()[0];
     execMessage =
-            messageBuilder.buildPutObjectDone(
-                    UUID.randomUUID(),
-                    accessibleObject,
-                    UUID.randomUUID().toString(),
-                    UUID.randomUUID().toString());
+        messageBuilder.buildPutObjectDone(
+            UUID.randomUUID(),
+            accessibleObject,
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString());
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
 
     // PutStaticDone
     accessibleObject = this.getClass().getDeclaredFields()[0];
     execMessage =
-            messageBuilder.buildPutStaticDone(
-                    UUID.randomUUID(),
-                    accessibleObject,
-                    UUID.randomUUID().toString(),
-                    UUID.randomUUID().toString());
+        messageBuilder.buildPutStaticDone(
+            UUID.randomUUID(),
+            accessibleObject,
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString());
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
   }
 
@@ -341,13 +341,13 @@ public class ExecMessageUtilsTest {
   public void getParameterTypes_returnsNullForUnsupported_ReturnValue() {
     AccessibleObject accessibleObject = this.getClass().getMethods()[0];
     ExecMessage execMessage =
-            messageBuilder.buildReturnValue(
-                    UUID.randomUUID(),
-                    "test",
-                    accessibleObject,
-                    ObjectRef.randomRef(),
-                    false,
-                    UUID.randomUUID().toString());
+        messageBuilder.buildReturnValue(
+            UUID.randomUUID(),
+            "test",
+            accessibleObject,
+            ObjectRef.randomRef(),
+            false,
+            UUID.randomUUID().toString());
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
   }
   // </editor-fold>

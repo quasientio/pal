@@ -1,7 +1,6 @@
 package net.ittera.pal.serdes.jsonrpc;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.gson.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -10,7 +9,13 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.types.ExecMessageType;
 
 public class JsonRpcMessageUtils {
-  private static Gson gson =
+  private static final List<String> NOT_FOUND_EXCEPTION_TYPES =
+      Arrays.asList(
+          "java.lang.ClassNotFoundException",
+          "java.lang.NoSuchMethodException",
+          "java.lang.NoSuchFieldException");
+
+  private static final Gson gson =
       new GsonBuilder()
           .registerTypeAdapter(JsonRpcParameter.class, new JsonRpcParameterDeserializer())
           .registerTypeAdapter(JsonRpcRequest.class, new JsonRpcRequestDeserializer())
@@ -82,31 +87,57 @@ public class JsonRpcMessageUtils {
           "volatile");
 
   public static JsonRpcRequest parseAndValidateJsonRpcMessage(String jsonRpcMessage)
-      throws InvalidJsonRpcRequestException {
-    // Parse the JSON-RPC message
+      throws InvalidJsonRpcRequestException, InvalidJsonRpcParamsException, JsonRpcParseException {
+
+    JsonObject jsonObject;
+    String id = null;
+
+    /* We follow a 2-step process to parse the JSON-RPC message: 1. Parse the JSON-RPC message as a
+     JSON object and extract the id 2. Parse the JSON-RPC message as a JSON-RPC request and
+     validate it.
+     This allows us to return a JSON-RPC error that contains the id of the original request, even
+     if the request is invalid.
+    */
+
+    // Parse the JSON-RPC message as a JSON object and extract the id
+    try {
+      jsonObject = gson.fromJson(jsonRpcMessage, JsonObject.class);
+      JsonElement idElement = jsonObject.get("id");
+      if (idElement != null && idElement.isJsonPrimitive()) {
+        id = idElement.getAsString();
+      }
+    } catch (JsonParseException e) {
+      throw new JsonRpcParseException(e);
+    }
+
+    if (id == null || id.isEmpty()) {
+      throw new InvalidJsonRpcRequestException("Missing or blank id");
+    }
+
+    // Parse the JSON-RPC message as a JSON-RPC request and validate it
     JsonRpcRequest jsonRpcRequest;
     try {
-      jsonRpcRequest = gson.fromJson(jsonRpcMessage, JsonRpcRequest.class);
-    } catch (RuntimeException ex) {
-      throw new InvalidJsonRpcRequestException("Invalid JSON-RPC message: " + ex.getMessage());
+      jsonRpcRequest = gson.fromJson(jsonObject, JsonRpcRequest.class);
+    } catch (JsonParseException e) {
+      throw new JsonRpcParseException(e, id);
+    } catch (InvalidJsonRpcParamsException e) {
+      e.setRequestId(id);
+      throw e;
+    } catch (Exception e) {
+      throw new InvalidJsonRpcRequestException(e.getMessage(), id);
     }
 
     // Set the ExecMessageType and other fields based on the method field
     try {
       jsonRpcRequest.processMethodParts();
     } catch (IllegalArgumentException e) {
-      throw new InvalidJsonRpcRequestException(e);
+      throw new InvalidJsonRpcRequestException(e, id);
     }
 
     // Check for empty/illegal RPC version
     if (!("2.0").equals(jsonRpcRequest.getJsonrpc())) {
       throw new InvalidJsonRpcRequestException(
-          "Invalid JSON-RPC version: " + jsonRpcRequest.getJsonrpc());
-    }
-
-    // Check for empty id
-    if (jsonRpcRequest.getId() == null || jsonRpcRequest.getId().isEmpty()) {
-      throw new InvalidJsonRpcRequestException("Missing or blank JSON-RPC id)");
+          "Invalid JSON-RPC version: " + jsonRpcRequest.getJsonrpc(), id);
     }
 
     // Check that params that are Refs have a non-null value and are Integers
@@ -114,11 +145,11 @@ public class JsonRpcMessageUtils {
       for (JsonRpcParameter param : jsonRpcRequest.getParams()) {
         if (param.isRef()) {
           if (param.getValue() == null) {
-            throw new InvalidJsonRpcRequestException("Ref parameter has a null value: " + param);
+            throw new InvalidJsonRpcParamsException("Ref parameter has a null value: " + param, id);
           }
           if (!(param.getValue() instanceof Integer)) {
-            throw new InvalidJsonRpcRequestException(
-                "Ref parameter has a non-integer value: " + param.getValue());
+            throw new InvalidJsonRpcParamsException(
+                "Ref parameter has a non-integer value: " + param.getValue(), id);
           }
         }
       }
@@ -127,13 +158,13 @@ public class JsonRpcMessageUtils {
     // Check for illegal characters in the class name
     if (!VALID_CLASS_NAME_PATTERN.matcher(jsonRpcRequest.getClassName()).matches()) {
       throw new InvalidJsonRpcRequestException(
-          "Invalid characters in class name: " + jsonRpcRequest.getClassName());
+          "Invalid characters in class name: " + jsonRpcRequest.getClassName(), id);
     }
 
     // Check for Java reserved keywords in the class name
     if (JAVA_RESERVED_KEYWORDS.contains(jsonRpcRequest.getClassName())) {
       throw new InvalidJsonRpcRequestException(
-          "Class name is a Java reserved keyword: " + jsonRpcRequest.getClassName());
+          "Class name is a Java reserved keyword: " + jsonRpcRequest.getClassName(), id);
     }
 
     // Check for parameter consistency in field operations: PUTs should have exactly one parameter
@@ -145,7 +176,8 @@ public class JsonRpcMessageUtils {
                 + jsonRpcRequest.getMethod()
                 + " ("
                 + jsonRpcRequest.getParams().size()
-                + " given)");
+                + " given)",
+            id);
       }
     }
 
@@ -158,10 +190,22 @@ public class JsonRpcMessageUtils {
                 + jsonRpcRequest.getMethod()
                 + " ("
                 + jsonRpcRequest.getParams().size()
-                + " given)");
+                + " given)",
+            id);
       }
     }
 
     return jsonRpcRequest;
+  }
+
+  /**
+   * Check if the exception type is wrappable inside a JSON-RPC "Method not found" (-32601) so we
+   * can return a proper JsonRpcErrorCode.METHOD_NOT_FOUND
+   *
+   * @param exceptionType
+   * @return
+   */
+  public static boolean isMethodNotFoundError(String exceptionType) {
+    return NOT_FOUND_EXCEPTION_TYPES.contains(exceptionType);
   }
 }

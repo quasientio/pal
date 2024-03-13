@@ -35,6 +35,7 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcRequestException;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -49,6 +50,10 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
   private ZMQ.Socket rpcSocket;
   private final String jsonrpcDealerAddress;
   private ZMQ.Socket jsonrpcSocket;
+  private Poller poller;
+
+  private int rpcSocketIndex = -1;
+  private int jsonrpcSocketIndex = -1;
   private static final Gson gson = new Gson();
 
   public RPCMessageInvoker(
@@ -93,11 +98,56 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
   @Override
   public void run() {
 
-    Poller poller = zmqContext.createPoller(2);
-    int rpcSocketIndex = -1;
-    int jsonrpcSocketIndex = -1;
+    Poller poller = setupPoller();
+    boolean socketError = false;
+    logger.debug("Start getting requests from sockets");
 
-    // create and connect REP socket for RPC
+    while (!interrupted() && !socketError) {
+      int signaled = pollSockets(poller);
+
+      if (signaled < 1) {
+        if (logger.isInfoEnabled()) {
+          logger.info("Poller returned from poll with {} sockets ready. Breaking out.", signaled);
+        }
+        break;
+      }
+
+      try {
+        handleRPCRequest();
+        handleJsonRPCRequest();
+      } catch (ZMQException ex) {
+        socketError = handleSocketException(ex);
+      }
+    }
+
+    poller.close();
+    closeConnections();
+  }
+
+  private Poller setupPoller() {
+    poller = zmqContext.createPoller(2);
+    setupRPCSocket(poller);
+    setupJsonRPCSocket(poller);
+    return poller;
+  }
+
+  private int pollSockets(Poller poller) {
+    try {
+      return poller.poll();
+    } catch (ZError.IOException e) {
+      if (e.getCause() instanceof ClosedChannelException) {
+        if (logger.isDebugEnabled()) {
+          logger.debug("Caught ClosedChannelException during poll. Breaking out.");
+        }
+        return -1;
+      } else {
+        logger.error("Caught unexpected ZError exception during poll", e);
+        throw e;
+      }
+    }
+  }
+
+  private void setupRPCSocket(Poller poller) {
     if (runOptions.contains(RunOptions.WITH_RPC)) {
       rpcSocket = zmqContext.createSocket(SocketType.REP);
       boolean rpcSocketConnected = rpcSocket.connect(rpcDealerAddress);
@@ -110,8 +160,9 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
         logger.error("Failed to connect to RPC dealer at {}", rpcDealerAddress);
       }
     }
+  }
 
-    // create and connect REP socket for JSON-RPC
+  private void setupJsonRPCSocket(Poller poller) {
     if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
       jsonrpcSocket = zmqContext.createSocket(SocketType.REP);
       boolean jsonrpcSocketConnected = jsonrpcSocket.connect(jsonrpcDealerAddress);
@@ -124,170 +175,160 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
         logger.error("Failed to connect to JSON-RPC dealer at {}", jsonrpcDealerAddress);
       }
     }
+  }
 
-    Message requestMsg;
-    Message replyMsg;
-    byte[] rpcReq;
+  private void handleRPCRequest() {
+    if (rpcSocketIndex != -1 && poller.pollin(rpcSocketIndex)) {
+      byte[] rpcReq = rpcSocket.recv(0);
+      if (rpcReq != null) {
+        dispatchRPCRequest(rpcReq);
+      }
+    }
+  }
 
-    if (logger.isDebugEnabled()) {
-      logger.debug("Start getting requests from sockets");
+  private void dispatchRPCRequest(byte[] rpcReq) {
+
+    final long started = System.currentTimeMillis();
+    final Message requestMsg = new Message();
+    boolean unmarshalError = false;
+
+    try {
+      requestMsg.unmarshal(rpcReq, 0);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Received RPC message with uuid: {}", getMessageUuid(requestMsg));
+      }
+    } catch (Exception e) {
+      logger.error("Caught exception parsing message", e);
+      unmarshalError = true;
     }
 
-    boolean socketError = false;
-    while (!interrupted() && !socketError) {
-      rpcReq = null;
-      InboundJsonRpcRequestMsg jsonrpcMsg = null;
-
-      if (logger.isDebugEnabled()) {
-        logger.debug("Ready and polling from sockets...");
-      }
-
-      int signaled;
+    // dispatch
+    if (!unmarshalError) {
       try {
-        signaled = poller.poll();
-      } catch (ZError.IOException e) {
-        if (e.getCause() instanceof ClosedChannelException) {
-          // we are probably shutting down
-          if (logger.isDebugEnabled()) {
-            logger.debug("Caught ClosedChannelException during poll. Breaking out.");
-          }
-          break;
-        } else {
-          logger.error("Caught unexpected ZError exception during poll", e);
-          throw e;
-        }
-      }
+        final Message replyMsg = dispatch(requestMsg);
 
-      if (signaled < 1) {
-        if (logger.isInfoEnabled()) {
-          logger.info("Poller returned from poll with {} sockets ready. Breaking out.", signaled);
-        }
-        break;
-      }
+        // send reply
+        rpcSocket.send(ColferUtils.toBytes(replyMsg));
 
-      try {
-        // got a RPC request
-        if (rpcSocketIndex != -1 && poller.pollin(rpcSocketIndex)) {
-          rpcReq = rpcSocket.recv(0);
-        }
-
-        // got a JSON-RPC request
-        if (jsonrpcSocketIndex != -1 && poller.pollin(jsonrpcSocketIndex)) {
-          jsonrpcMsg = InboundJsonRpcRequestMsg.recvMsg(jsonrpcSocket, true);
-        }
-      } catch (ZMQException ex) {
-        int errorCode = ex.getErrorCode();
-        if (errorCode == ZError.ETERM) {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Caught ETERM during blocking read. Breaking out.");
-          }
-          socketError = true;
-        } else if (errorCode == ZError.EINTR) {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Caught EINTR during blocking read. Breaking out.");
-          }
-          socketError = true;
-        } else {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Re-throwing unexpected exception", ex);
-          }
-          throw ex;
-        }
-      }
-
-      // parse and dispatch new RPC req
-      if (rpcReq != null) {
-
-        final long started = System.currentTimeMillis();
-        requestMsg = new Message();
-        boolean unmarshalError = false;
-
-        try {
-          requestMsg.unmarshal(rpcReq, 0);
-          if (logger.isDebugEnabled()) {
-            logger.debug("Received RPC message with uuid: {}", getMessageUuid(requestMsg));
-          }
-        } catch (Exception e) {
-          logger.error("Caught exception parsing message", e);
-          unmarshalError = true;
-        }
-
-        // dispatch
-        if (!unmarshalError) {
-          try {
-            replyMsg = dispatch(requestMsg);
-
-            // send reply
-            rpcSocket.send(ColferUtils.toBytes(replyMsg));
-
-            if (logger.isDebugEnabled()) {
-              final long took = System.currentTimeMillis() - started;
-              if (logger.isDebugEnabled()) {
-                logger.debug(
-                    "Dispatched and sent message w/uuid: {} in reply to RPC request w/uuid: {} in {} ms",
-                    getMessageUuid(replyMsg),
-                    getMessageUuid(requestMsg),
-                    took);
-              }
-            }
-          } catch (Exception e) {
-            logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
-          }
-        }
-      }
-
-      // parse and dispatch new JSON-RPC req
-      if (jsonrpcMsg != null) {
-        final long started = System.currentTimeMillis();
-        boolean unmarshalError = false;
-        JsonRpcRequest jsonRpcRequest = null;
-
-        try {
-          jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonrpcMsg.getJsonMessage());
+        if (logger.isDebugEnabled()) {
+          final long took = System.currentTimeMillis() - started;
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Received JSON-RPC message from client uuid: {}", jsonrpcMsg.getClientId());
-          }
-        } catch (Exception e) {
-          logger.error("Caught exception parsing message", e);
-          unmarshalError = true;
-        }
-
-        // dispatch
-        if (!unmarshalError) {
-          // create ExecMessage from JSON-RPC request message
-          requestMsg =
-              messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getClientId());
-          try {
-            replyMsg = dispatch(requestMsg);
-
-            // create JSON-RPC reply from ExecMessage reply
-            final JsonRpcResponse jsonRpcResponse =
-                messageBuilder.jsonRpcResponseFromExecMessageReply(replyMsg.getExecMessage());
-
-            // send reply
-            new OutboundJsonRpcResponseMsg(jsonrpcMsg.getClientId(), gson.toJson(jsonRpcResponse))
-                .send(jsonrpcSocket);
-
-            if (logger.isDebugEnabled()) {
-              final long took = System.currentTimeMillis() - started;
-              if (logger.isDebugEnabled()) {
-                logger.debug(
-                    "Dispatched and sent message w/uuid: {} in reply to JSON-RPC request w/uuid: {} in {} ms",
-                    getMessageUuid(replyMsg),
-                    getMessageUuid(requestMsg),
-                    took);
-              }
-            }
-          } catch (Exception e) {
-            logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
+                "Dispatched and sent message w/uuid: {} in reply to RPC request w/uuid: {} in {} ms",
+                getMessageUuid(replyMsg),
+                getMessageUuid(requestMsg),
+                took);
           }
         }
+      } catch (Exception e) {
+        logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
       }
     }
+  }
 
-    poller.close();
-    closeConnections();
+  private void handleJsonRPCRequest() {
+    if (jsonrpcSocketIndex != -1 && poller.pollin(jsonrpcSocketIndex)) {
+      InboundJsonRpcRequestMsg jsonrpcMsg = InboundJsonRpcRequestMsg.recvMsg(jsonrpcSocket, true);
+      if (jsonrpcMsg != null) {
+        dispatchJsonRPCRequest(jsonrpcMsg);
+      }
+    }
+  }
+
+  private void dispatchJsonRPCRequest(InboundJsonRpcRequestMsg jsonrpcMsg) {
+
+    final long started = System.currentTimeMillis();
+    JsonRpcRequest jsonRpcRequest = null;
+    final JsonRpcResponse jsonRpcResponse;
+    String requestId = null;
+    Exception parseException = null;
+
+    // parse and validate JSON-RPC message
+    try {
+      jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonrpcMsg.getJsonMessage());
+      if (logger.isDebugEnabled()) {
+        logger.debug("Received JSON-RPC message from client uuid: {}", jsonrpcMsg.getClientId());
+      }
+    } catch (JsonRpcRequestException e) {
+      logger.error("Caught exception parsing message", e);
+      requestId = e.getRequestId();
+      parseException = e;
+    } catch (Exception e) {
+      parseException = e;
+      logger.error("Caught unexpected exception parsing message", e);
+    }
+
+    if (parseException != null) {
+
+      // parsing+validating failed, log and send error response
+      jsonRpcResponse = messageBuilder.jsonRpcResponseFromParseError(parseException, requestId);
+      new OutboundJsonRpcResponseMsg(jsonrpcMsg.getClientId(), gson.toJson(jsonRpcResponse))
+          .send(jsonrpcSocket);
+      logMessageDispatch(requestId, null, started);
+      return;
+    }
+
+    // create ExecMessage from JSON-RPC request message
+    final Message requestMsg =
+        messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getClientId());
+
+    // dispatch
+    Message replyMsg = null;
+    try {
+      replyMsg = dispatch(requestMsg);
+    } catch (Exception dispatchException) {
+
+      // dispatching failed, log and send error response
+      logger.error(
+          "Error dispatching message w/uuid {}", getMessageUuid(requestMsg), dispatchException);
+      jsonRpcResponse = messageBuilder.jsonRpcResponseFromParseError(dispatchException, requestId);
+      new OutboundJsonRpcResponseMsg(jsonrpcMsg.getClientId(), gson.toJson(jsonRpcResponse))
+          .send(jsonrpcSocket);
+      logMessageDispatch(requestMsg, jsonRpcResponse.getId(), started);
+      return;
+    }
+
+    // create JSON-RPC response from ExecMessage reply
+    jsonRpcResponse = messageBuilder.jsonRpcResponseFromExecMessageReply(replyMsg.getExecMessage());
+
+    // send response
+    new OutboundJsonRpcResponseMsg(jsonrpcMsg.getClientId(), gson.toJson(jsonRpcResponse))
+        .send(jsonrpcSocket);
+    logMessageDispatch(requestMsg, replyMsg, started);
+  }
+
+  private boolean handleSocketException(ZMQException ex) {
+    int errorCode = ex.getErrorCode();
+    if (errorCode == ZError.ETERM || errorCode == ZError.EINTR) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Caught ETERM or EINTR during blocking read. Breaking out.");
+      }
+      return true;
+    } else {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Re-throwing unexpected exception", ex);
+      }
+      throw ex;
+    }
+  }
+
+  private void logMessageDispatch(Message requestMsg, String replyId, long dispatchStart) {
+    logMessageDispatch(getMessageUuid(requestMsg), replyId, dispatchStart);
+  }
+
+  private void logMessageDispatch(Message requestMsg, Message replyMsg, long dispatchStart) {
+    logMessageDispatch(getMessageUuid(requestMsg), getMessageUuid(replyMsg), dispatchStart);
+  }
+
+  private void logMessageDispatch(String requestId, String replyId, long dispatchStart) {
+    if (logger.isDebugEnabled()) {
+      final long took = System.currentTimeMillis() - dispatchStart;
+      logger.debug(
+          "Dispatched and sent message w/id: {} in reply to request w/id: {} in {} ms",
+          replyId,
+          requestId,
+          took);
+    }
   }
 
   @Override

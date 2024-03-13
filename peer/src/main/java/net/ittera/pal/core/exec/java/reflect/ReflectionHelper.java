@@ -589,13 +589,19 @@ public class ReflectionHelper {
     } else {
       final StringBuilder stringBuilder = new StringBuilder();
       for (int i = 0; i < parameters.length; i++) {
+        String parameterType = "?";
+        if (parameterTypes != null) {
+          if (parameterTypes.get(i) != null) {
+            parameterType = parameterTypes.get(i).getName();
+          }
+        }
         stringBuilder
             .append("params[")
             .append(i)
             .append("]=")
             .append(parameters[i])
             .append(" type:")
-            .append(parameterTypes != null ? parameterTypes.get(i).getName() : '?')
+            .append(parameterType)
             .append('\n');
       }
       logger.trace(stringBuilder.toString());

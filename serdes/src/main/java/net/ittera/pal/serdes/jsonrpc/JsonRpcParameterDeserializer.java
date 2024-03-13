@@ -9,6 +9,8 @@ import static net.ittera.pal.common.util.Classes.isValidClassName;
 import com.google.gson.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
+import java.util.Arrays;
+import java.util.List;
 import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +48,7 @@ import org.slf4j.LoggerFactory;
  * </pre>
  */
 public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcParameter> {
+  private static final List<String> VALID_PARAM_ELEMENTS = Arrays.asList("value", "type");
   private static final Logger logger = LoggerFactory.getLogger(JsonRpcParameterDeserializer.class);
 
   /**
@@ -74,6 +77,14 @@ public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcPar
 
     if (json.isJsonObject()) {
       JsonObject jsonObject = json.getAsJsonObject();
+
+      jsonObject.keySet().stream()
+          .filter(key -> !VALID_PARAM_ELEMENTS.contains(key))
+          .findFirst()
+          .ifPresent(
+              key -> {
+                throw new InvalidJsonRpcParamsException("Invalid element in param: " + key);
+              });
 
       // set type and isRef
       if (jsonObject.has("type")) {
@@ -128,12 +139,12 @@ public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcPar
       try {
         clazz = Class.forName(type);
       } catch (ClassNotFoundException e) {
-        throw new RuntimeException("Invalid class type: " + type);
+        throw new InvalidJsonRpcParamsException("Invalid class type: " + type);
       }
     } else {
       // if type is not given, try to infer the type by looking at the first element
       if (jsonArray.isEmpty()) {
-        throw new RuntimeException("Type not given for empty array param: " + param);
+        throw new InvalidJsonRpcParamsException("Type not given for empty array param: " + param);
       }
       clazz = getTypeOfArray(jsonArray);
     }
@@ -149,7 +160,7 @@ public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcPar
       }
       param.setValue(array);
     } else {
-      throw new RuntimeException("Unsupported array type: " + type);
+      throw new InvalidJsonRpcParamsException("Unsupported array type: " + type);
     }
   }
 
@@ -173,7 +184,7 @@ public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcPar
     } else if (element.isJsonArray()) {
       inferredType = Array.newInstance(getTypeOfArray(element.getAsJsonArray()), 0).getClass();
     } else {
-      throw new RuntimeException("Unsupported type for array element: " + element);
+      throw new InvalidJsonRpcParamsException("Unsupported type for array element: " + element);
     }
     return inferredType;
   }
@@ -191,7 +202,7 @@ public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcPar
           param.setValue(num.intValue());
           return;
         } else {
-          throw new RuntimeException("Ref param value is not an integer: " + num);
+          throw new InvalidJsonRpcParamsException("Ref param value is not an integer: " + num);
         }
       } else {
         String numStr = primitive.getAsString();
@@ -199,7 +210,7 @@ public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcPar
           param.setValue(Integer.parseInt(numStr));
           return;
         } catch (NumberFormatException e) {
-          throw new RuntimeException("Ref param value is not an integer: " + numStr);
+          throw new InvalidJsonRpcParamsException("Ref param value is not an integer: " + numStr);
         }
       }
     }
@@ -241,7 +252,7 @@ public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcPar
             || param.getType().equalsIgnoreCase("java.math.BigDecimal")) {
           param.setValue(primitive.getAsBigDecimal());
         } else {
-          throw new RuntimeException("Unsupported type for param: " + param);
+          throw new InvalidJsonRpcParamsException("Unsupported type for param: " + param);
         }
       } else { // type not given, set value field with type inference
         if (Math.ceil(num.doubleValue()) != num.longValue()) {
