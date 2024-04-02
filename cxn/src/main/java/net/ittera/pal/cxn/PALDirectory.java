@@ -34,9 +34,7 @@ import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -64,14 +62,11 @@ public class PALDirectory implements AutoCloseable {
   private static final String LOGS_DIR = "logs";
   private static final String INTERCEPTS_DIR = "intercepts";
 
-  private static final String KEYVALUE_SEP = "|";
   private static Charset loadedCharset;
 
   private final String directoryUrl;
   private final Client client;
-  private static final Duration ETCD_KEEP_ALIVE_TIME_SECS = Duration.of(30, ChronoUnit.SECONDS);
   private final KV kvClient;
-  private final Watch watchClient;
   private final String namespace;
   private final List<InterceptNodeListener> interceptListeners = new ArrayList<>();
 
@@ -93,12 +88,12 @@ public class PALDirectory implements AutoCloseable {
             //            .keepaliveWithoutCalls(true)
             .build();
     this.kvClient = client.getKVClient();
-    this.watchClient = client.getWatchClient();
+    Watch watchClient = client.getWatchClient();
     this.namespace = namespace != null ? namespace : DEFAULT_PAL_NAMESPACE;
 
     watchClient.watch(
         getInterceptsPathKey(),
-        WatchOption.newBuilder().isPrefix(true).build(),
+        WatchOption.builder().isPrefix(true).build(),
         this::interceptEventConsumer);
   }
 
@@ -145,7 +140,7 @@ public class PALDirectory implements AutoCloseable {
 
   public Set<PeerInfo> getAllPeers() throws ExecutionException, InterruptedException {
     final GetResponse response =
-        kvClient.get(getPeersPathKey(), GetOption.newBuilder().isPrefix(true).build()).get();
+        kvClient.get(getPeersPathKey(), GetOption.builder().isPrefix(true).build()).get();
     final Set<PeerInfo> allPeers = new TreeSet<>();
     for (KeyValue kv : response.getKvs()) {
       // skip root peers path
@@ -170,9 +165,7 @@ public class PALDirectory implements AutoCloseable {
       }
     } else {
       final DeleteResponse deleteResponse =
-          kvClient
-              .delete(getPeersPathKey(), DeleteOption.newBuilder().isPrefix(true).build())
-              .get();
+          kvClient.delete(getPeersPathKey(), DeleteOption.builder().isPrefix(true).build()).get();
       deleted = deleteResponse.getDeleted();
     }
     logger.info("Unregistered {} peers", deleted);
@@ -214,7 +207,7 @@ public class PALDirectory implements AutoCloseable {
     }
     String path = event.getKeyValue().getKey().toString(getEncodingCharset());
     String[] parts =
-        Arrays.stream(path.split("\\/")).filter(s -> s.length() > 0).toArray(String[]::new);
+        Arrays.stream(path.split("/")).filter(s -> !s.isEmpty()).toArray(String[]::new);
     if (parts.length == 4) {
       try {
         final UUID peerUuid = UUID.fromString(parts[2]);
@@ -263,7 +256,7 @@ public class PALDirectory implements AutoCloseable {
     }
   }
 
-  public PutResponse registerIntercept(InterceptRequest interceptRequest)
+  public PutResponse registerIntercept(InterceptRequest<?> interceptRequest)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
     if (!peerExists(interceptRequest.getPeer())) {
       throw new NoPeerInfoNodeException(
@@ -289,7 +282,7 @@ public class PALDirectory implements AutoCloseable {
     return putResponse;
   }
 
-  public CompletableFuture<PutResponse> registerInterceptAsync(InterceptRequest interceptRequest)
+  public CompletableFuture<PutResponse> registerInterceptAsync(InterceptRequest<?> interceptRequest)
       throws NoPeerInfoNodeException, ExecutionException, InterruptedException {
     if (!peerExists(interceptRequest.getPeer())) {
       throw new NoPeerInfoNodeException(
@@ -305,14 +298,14 @@ public class PALDirectory implements AutoCloseable {
         ByteSequence.from(interceptData));
   }
 
-  public Set<InterceptRequest> getPeerInterceptRequests(UUID peerUuid)
+  public Set<InterceptRequest<?>> getPeerInterceptRequests(UUID peerUuid)
       throws ExecutionException, InterruptedException {
-    final Set<InterceptRequest> interceptRequests = new HashSet<>();
+    final Set<InterceptRequest<?>> interceptRequests = new HashSet<>();
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
     final ByteSequence peerInterceptsPathKey =
         ByteSequence.from(peerInterceptsPath.getBytes(getEncodingCharset()));
     final GetResponse response =
-        kvClient.get(peerInterceptsPathKey, GetOption.newBuilder().isPrefix(true).build()).get();
+        kvClient.get(peerInterceptsPathKey, GetOption.builder().isPrefix(true).build()).get();
     for (KeyValue kv : response.getKvs()) {
       final String interceptPath = kv.getKey().toString(getEncodingCharset());
       interceptRequests.add(getInterceptRequest(interceptPath));
@@ -328,7 +321,7 @@ public class PALDirectory implements AutoCloseable {
             .get(ByteSequence.from(interceptPath.getBytes(getEncodingCharset())))
             .get()
             .getKvs();
-    if (kvs.size() == 0) {
+    if (kvs.isEmpty()) {
       return null;
     }
     data = kvs.get(0).getValue().getBytes();
@@ -352,7 +345,7 @@ public class PALDirectory implements AutoCloseable {
         kvClient
             .delete(
                 ByteSequence.from(peerInterceptsPath.getBytes(getEncodingCharset())),
-                DeleteOption.newBuilder().isPrefix(true).build())
+                DeleteOption.builder().isPrefix(true).build())
             .get();
     logger.info(
         "Unregistered {} intercept request(s) for peer w/uuid: {}",
@@ -465,7 +458,7 @@ public class PALDirectory implements AutoCloseable {
             .get(
                 ByteSequence.from(
                     format("%s/%s", getLogsPath(), logNamePrefix).getBytes(getEncodingCharset())),
-                GetOption.newBuilder()
+                GetOption.builder()
                     .withSortField(GetOption.SortTarget.CREATE)
                     .withSortOrder(GetOption.SortOrder.ASCEND)
                     .isPrefix(true)
@@ -483,7 +476,7 @@ public class PALDirectory implements AutoCloseable {
 
   public Set<LogInfo> getAllLogs() throws ExecutionException, InterruptedException {
     final GetResponse getResponse =
-        kvClient.get(getLogsPathKey(), GetOption.newBuilder().isPrefix(true).build()).get();
+        kvClient.get(getLogsPathKey(), GetOption.builder().isPrefix(true).build()).get();
     final Set<LogInfo> allLogs = new TreeSet<>();
     for (KeyValue kv : getResponse.getKvs()) {
       // skip root logs path
@@ -543,7 +536,7 @@ public class PALDirectory implements AutoCloseable {
             .delete(
                 ByteSequence.from(
                     format("%s/%s", getLogsPath(), logNamePrefix).getBytes(getEncodingCharset())),
-                DeleteOption.newBuilder().isPrefix(true).build())
+                DeleteOption.builder().isPrefix(true).build())
             .get();
 
     long deleted = deleteResponse.getDeleted();
@@ -563,7 +556,7 @@ public class PALDirectory implements AutoCloseable {
       }
     } else {
       DeleteResponse deleteResponse =
-          kvClient.delete(getLogsPathKey(), DeleteOption.newBuilder().isPrefix(true).build()).get();
+          kvClient.delete(getLogsPathKey(), DeleteOption.builder().isPrefix(true).build()).get();
       deleted = deleteResponse.getDeleted();
     }
     logger.info("Unregistered {} logs", deleted);
