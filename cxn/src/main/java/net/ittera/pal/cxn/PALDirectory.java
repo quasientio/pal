@@ -313,7 +313,22 @@ public class PALDirectory implements AutoCloseable {
     return interceptRequests;
   }
 
-  public InterceptRequest getInterceptRequest(String interceptPath)
+  public Set<InterceptRequest<?>> getAllInterceptRequests() {
+    final Set<InterceptRequest<?>> interceptRequests = new HashSet<>();
+    try {
+      final GetResponse response =
+          kvClient.get(getInterceptsPathKey(), GetOption.builder().isPrefix(true).build()).get();
+      for (KeyValue kv : response.getKvs()) {
+        final String interceptPath = kv.getKey().toString(getEncodingCharset());
+        interceptRequests.add(getInterceptRequest(interceptPath));
+      }
+    } catch (ExecutionException | InterruptedException e) {
+      logger.error("Error getting all intercept requests", e);
+    }
+    return interceptRequests;
+  }
+
+  public InterceptRequest<?> getInterceptRequest(String interceptPath)
       throws ExecutionException, InterruptedException {
     final byte[] data;
     List<KeyValue> kvs =

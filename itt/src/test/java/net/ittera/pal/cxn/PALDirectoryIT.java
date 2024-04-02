@@ -600,6 +600,85 @@ public class PALDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
+  public void getAllInterceptRequests_requestsExist_requestList() throws Exception {
+    // create two different peers
+    final PeerInfo peerInfo1 = new PeerInfo(UUID.randomUUID(), "testing peer 1");
+    palDirectory.registerPeer(peerInfo1);
+    createdPeers.add(peerInfo1.getUuid());
+
+    final PeerInfo peerInfo2 = new PeerInfo(UUID.randomUUID(), "testing peer 2");
+    palDirectory.registerPeer(peerInfo2);
+    createdPeers.add(peerInfo2.getUuid());
+
+    // pre-assertions
+    assertTrue(palDirectory.peerExists(peerInfo1.getUuid()));
+    assertTrue(palDirectory.peerExists(peerInfo2.getUuid()));
+    assertTrue(palDirectory.getPeerInterceptRequests(peerInfo1.getUuid()).isEmpty());
+    assertTrue(palDirectory.getPeerInterceptRequests(peerInfo2.getUuid()).isEmpty());
+
+    // create 2 intercept requests for peer 1
+    Set<InterceptRequest<InterceptableMethodCall>> requestsPeer1 = new HashSet<>();
+    final int totalPeerIntercepts = 2;
+    for (int i = 0; i < totalPeerIntercepts; i++) {
+      requestsPeer1.add(
+          new InterceptRequest<>(
+              UUID.randomUUID(),
+              peerInfo1.getUuid(),
+              InterceptType.BEFORE,
+              "java.io.PrintStream",
+              "org.package.Callback",
+              "callMe",
+              new InterceptableMethodCall(
+                  "println", Arrays.asList("java.lang.String", "java.lang.Integer"))));
+    }
+
+    // create 2 intercept requests for peer 2
+    Set<InterceptRequest<InterceptableMethodCall>> requestsPeer2 = new HashSet<>();
+    for (int i = 0; i < totalPeerIntercepts; i++) {
+      requestsPeer2.add(
+          new InterceptRequest<>(
+              UUID.randomUUID(),
+              peerInfo2.getUuid(),
+              InterceptType.BEFORE,
+              "java.io.PrintStream",
+              "org.package.Callback",
+              "callMe",
+              new InterceptableMethodCall(
+                  "println", Arrays.asList("java.lang.String", "java.lang.Integer"))));
+    }
+
+    final CountDownLatch latch = new CountDownLatch(totalPeerIntercepts * 2);
+
+    // set listener
+    palDirectory.addInterceptNodeListener(
+        event -> {
+          if (event.getType().equals(Type.INTERCEPT_ADDED)) {
+            latch.countDown();
+          }
+        });
+
+    // register them
+    for (InterceptRequest<InterceptableMethodCall> interceptRequest : requestsPeer1) {
+      palDirectory.registerInterceptAsync(interceptRequest);
+      addInterceptRequestToCreated(peerInfo1.getUuid(), interceptRequest.getUuid());
+    }
+    for (InterceptRequest<InterceptableMethodCall> interceptRequest : requestsPeer2) {
+      palDirectory.registerInterceptAsync(interceptRequest);
+      addInterceptRequestToCreated(peerInfo2.getUuid(), interceptRequest.getUuid());
+    }
+
+    // wait for all listener events
+    latch.await();
+
+    // now retrieve and compare
+    Set<InterceptRequest<InterceptableMethodCall>> allInterceptRequests = new HashSet<>();
+    allInterceptRequests.addAll(requestsPeer1);
+    allInterceptRequests.addAll(requestsPeer2);
+
+    assertEquals(palDirectory.getAllInterceptRequests(), allInterceptRequests);
+  }
+
+  @Test
   public void unregisterPeerInterceptRequests_requestsExist_unregistered() throws Exception {
     // create peer
     final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "testing peer");
