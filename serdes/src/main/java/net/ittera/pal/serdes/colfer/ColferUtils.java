@@ -61,7 +61,7 @@ import net.ittera.pal.serdes.colfer.JSONSerializers.ContextSerializer;
 import net.ittera.pal.serdes.colfer.JSONSerializers.ExecMessageSerializer;
 import net.ittera.pal.serdes.colfer.JSONSerializers.FieldSerializer;
 import net.ittera.pal.serdes.colfer.JSONSerializers.InstanceFieldGetSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.InstanceFieldPutDoneSerializer;
+import net.ittera.pal.serdes.colfer.JSONSerializers.InstanceFieldPutDoneAdapter;
 import net.ittera.pal.serdes.colfer.JSONSerializers.InstanceFieldPutSerializer;
 import net.ittera.pal.serdes.colfer.JSONSerializers.InstanceMethodCallSerializer;
 import net.ittera.pal.serdes.colfer.JSONSerializers.InterceptKeyMessageSerializer;
@@ -76,9 +76,9 @@ import net.ittera.pal.serdes.colfer.JSONSerializers.ObjSerializer;
 import net.ittera.pal.serdes.colfer.JSONSerializers.ParameterSerializer;
 import net.ittera.pal.serdes.colfer.JSONSerializers.RaisedThrowableSerializer;
 import net.ittera.pal.serdes.colfer.JSONSerializers.ReflectableSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ReturnValueSerializer;
+import net.ittera.pal.serdes.colfer.JSONSerializers.ReturnValueAdapter;
 import net.ittera.pal.serdes.colfer.JSONSerializers.StaticFieldGetSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.StaticFieldPutDoneSerializer;
+import net.ittera.pal.serdes.colfer.JSONSerializers.StaticFieldPutDoneAdapter;
 import net.ittera.pal.serdes.colfer.JSONSerializers.StaticFieldPutSerializer;
 import net.ittera.pal.serdes.colfer.JSONSerializers.ThrowableSerializer;
 import org.slf4j.Logger;
@@ -110,10 +110,10 @@ public class ColferUtils {
             .registerTypeAdapter(RaisedThrowable.class, new RaisedThrowableSerializer())
             .registerTypeAdapter(StaticFieldGet.class, new StaticFieldGetSerializer())
             .registerTypeAdapter(StaticFieldPut.class, new StaticFieldPutSerializer())
-            .registerTypeAdapter(StaticFieldPutDone.class, new StaticFieldPutDoneSerializer())
+            .registerTypeAdapter(StaticFieldPutDone.class, new StaticFieldPutDoneAdapter())
             .registerTypeAdapter(InstanceFieldGet.class, new InstanceFieldGetSerializer())
             .registerTypeAdapter(InstanceFieldPut.class, new InstanceFieldPutSerializer())
-            .registerTypeAdapter(InstanceFieldPutDone.class, new InstanceFieldPutDoneSerializer())
+            .registerTypeAdapter(InstanceFieldPutDone.class, new InstanceFieldPutDoneAdapter())
             .registerTypeAdapter(InternalHeader.class, new InternalHeaderSerializer())
             .registerTypeAdapter(InterceptableMethod.class, new InterceptableMethodSerializer())
             .registerTypeAdapter(InterceptableField.class, new InterceptableFieldSerializer())
@@ -127,7 +127,7 @@ public class ColferUtils {
             .registerTypeAdapter(Constructor.class, new ConstructorSerializer())
             .registerTypeAdapter(Reflectable.class, new ReflectableSerializer())
             .registerTypeAdapter(Parameter.class, new ParameterSerializer())
-            .registerTypeAdapter(ReturnValue.class, new ReturnValueSerializer())
+            .registerTypeAdapter(ReturnValue.class, new ReturnValueAdapter())
             .registerTypeAdapter(Message.class, new MessageSerializer());
 
     if (prettyPrint) {

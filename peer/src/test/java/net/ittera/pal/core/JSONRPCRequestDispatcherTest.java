@@ -8,14 +8,21 @@ import static org.junit.Assert.*;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.*;
 import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
 import net.ittera.pal.core.messages.OutboundJsonRpcResponseMsg;
+import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
+import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResult;
+import net.ittera.pal.serdes.colfer.JSONSerializers;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcResponseDeserializer;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.junit.After;
@@ -35,12 +42,26 @@ public class JSONRPCRequestDispatcherTest extends ZmqEnabledTest {
     private final ZContext context;
     private final String dealerAddress;
     private final Set<String> receivedMsgIds = new TreeSet<>();
-    private final Gson gson = new Gson();
+    private Gson gson;
 
     Worker(ZContext context, String dealerAddress) {
       this.context = context;
       this.dealerAddress = dealerAddress;
       this.socket = this.context.createSocket(SocketType.REP);
+      initGson();
+    }
+
+    private void initGson() {
+      // initialize gson, registering custom adapters for JSON-RPC Response messages
+      this.gson =
+          new GsonBuilder()
+              .registerTypeAdapter(
+                  StaticFieldPutDone.class, new JSONSerializers.StaticFieldPutDoneAdapter())
+              .registerTypeAdapter(
+                  InstanceFieldPutDone.class, new JSONSerializers.InstanceFieldPutDoneAdapter())
+              .registerTypeAdapter(ReturnValue.class, new JSONSerializers.ReturnValueAdapter())
+              .registerTypeAdapter(JsonRpcResponse.class, new JsonRpcResponseDeserializer())
+              .create();
     }
 
     @Override
@@ -66,8 +87,12 @@ public class JSONRPCRequestDispatcherTest extends ZmqEnabledTest {
           // send back response
           final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
           jsonRpcResponse.setId(jsonRpcRequest.getId());
-          jsonRpcResponse.setResult("ok");
-          new OutboundJsonRpcResponseMsg(clientId, this.gson.toJson(jsonRpcResponse)).send(socket);
+          jsonRpcResponse.setJsonrpc("2.0");
+          ReturnValue returnValue = new ReturnValue();
+          returnValue.setIsVoid(true);
+          jsonRpcResponse.setResult(new JsonRpcResult(returnValue));
+          String responseAsJson = this.gson.toJson(jsonRpcResponse);
+          new OutboundJsonRpcResponseMsg(clientId, responseAsJson).send(socket);
         } catch (ZMQException ex) {
           int errorCode = ex.getErrorCode();
           if (errorCode == ZError.ETERM) {
@@ -97,10 +122,24 @@ public class JSONRPCRequestDispatcherTest extends ZmqEnabledTest {
   private static final class WSClient extends WebSocketClient {
     private final Map<String, CompletableFuture<JsonRpcResponse>> futureResponses =
         new ConcurrentHashMap<>();
-    private final Gson gson = new Gson();
+    private Gson gson;
 
     WSClient(URI serverUri) {
       super(serverUri);
+      initGson();
+    }
+
+    private void initGson() {
+      // initialize gson, registering custom adapters for JSON-RPC Response messages
+      gson =
+          new GsonBuilder()
+              .registerTypeAdapter(
+                  StaticFieldPutDone.class, new JSONSerializers.StaticFieldPutDoneAdapter())
+              .registerTypeAdapter(
+                  InstanceFieldPutDone.class, new JSONSerializers.InstanceFieldPutDoneAdapter())
+              .registerTypeAdapter(ReturnValue.class, new JSONSerializers.ReturnValueAdapter())
+              .registerTypeAdapter(JsonRpcResponse.class, new JsonRpcResponseDeserializer())
+              .create();
     }
 
     public CompletableFuture<JsonRpcResponse> sendAsync(JsonRpcRequest jsonRpcRequest) {
@@ -210,7 +249,8 @@ public class JSONRPCRequestDispatcherTest extends ZmqEnabledTest {
 
     // wait for response
     jsonRpcResponseFuture.get();
-    assertEquals("ok", jsonRpcResponseFuture.get().getResult());
+    assertEquals("RETURN_VALUE", jsonRpcResponseFuture.get().getResult().getResultType().name());
+    assertTrue(((ReturnValue) jsonRpcResponseFuture.get().getResult().getObject()).getIsVoid());
 
     // check received message ids
     assertEquals(rpcMessageInvoker.getReceivedMessageIds().size(), 1);
@@ -235,7 +275,8 @@ public class JSONRPCRequestDispatcherTest extends ZmqEnabledTest {
     // wait for responses
     for (CompletableFuture<JsonRpcResponse> jsonRpcResponseFuture : jsonRpcResponseFutures) {
       jsonRpcResponseFuture.get();
-      assertEquals("ok", jsonRpcResponseFuture.get().getResult());
+      assertEquals("RETURN_VALUE", jsonRpcResponseFuture.get().getResult().getResultType().name());
+      assertTrue(((ReturnValue) jsonRpcResponseFuture.get().getResult().getObject()).getIsVoid());
     }
 
     // check message ids received by worker

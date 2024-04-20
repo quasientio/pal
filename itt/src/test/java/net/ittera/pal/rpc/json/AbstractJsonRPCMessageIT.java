@@ -106,7 +106,7 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
   }
 
   /** Helper methods */
-  protected String callEmptyConstructor(String className) throws Exception {
+  protected Object callEmptyConstructor(String className) throws Exception {
     JsonRpcRequest jsonRpc = new JsonRpcRequest();
     jsonRpc.setJsonrpc("2.0");
     jsonRpc.setId(UUID.randomUUID().toString());
@@ -119,6 +119,6 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
      * expectedThrowableType); } else { assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
      * assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className); }
      */
-    return replyMsg.getResult();
+    return replyMsg.getResult().getObject();
   }
 }

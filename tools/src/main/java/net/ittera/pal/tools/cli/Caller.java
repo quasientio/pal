@@ -44,9 +44,7 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.RaisedThrowable;
 import net.ittera.pal.messages.colfer.ReturnValue;
-import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
-import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
-import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.messages.jsonrpc.*;
 import net.ittera.pal.messages.types.RPCType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -563,7 +561,7 @@ public class Caller extends AbstractPALSubcommand {
 
   private void print(JsonRpcResponse response) {
     if (response.getResult() != null) {
-      print(gson.fromJson(response.getResult(), ReturnValue.class));
+      out.println(response.getResult().getObject());
     } else if (response.getError() != null) {
       out.println(response.getError());
     }

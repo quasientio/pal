@@ -22,6 +22,7 @@ package net.ittera.pal.cxn;
 import static java.lang.String.format;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
@@ -43,13 +44,18 @@ import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.RPCType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.colfer.JSONSerializers;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcResponseDeserializer;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -110,7 +116,7 @@ public class ThinPeer implements AutoCloseable {
   private Socket peerSocket;
   private WSClient wsClient;
   private String rpcAddress;
-  private final Gson gson = new Gson();
+  private Gson gson;
   private RPCType outboundRpcType = RPCType.RPC;
   private PeerInfo initialPeer;
   private PeerInfo currentPeer;
@@ -365,6 +371,17 @@ public class ThinPeer implements AutoCloseable {
         }
       }
     }
+
+    // initialize gson, registering custom adapters for JSON-RPC Response messages
+    this.gson =
+        new GsonBuilder()
+            .registerTypeAdapter(
+                StaticFieldPutDone.class, new JSONSerializers.StaticFieldPutDoneAdapter())
+            .registerTypeAdapter(
+                InstanceFieldPutDone.class, new JSONSerializers.InstanceFieldPutDoneAdapter())
+            .registerTypeAdapter(ReturnValue.class, new JSONSerializers.ReturnValueAdapter())
+            .registerTypeAdapter(JsonRpcResponse.class, new JsonRpcResponseDeserializer())
+            .create();
 
     initialized = true;
     logger.info(

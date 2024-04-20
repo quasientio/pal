@@ -19,10 +19,7 @@
 
 package net.ittera.pal.serdes.colfer;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
+import com.google.gson.*;
 import java.lang.reflect.Type;
 import net.ittera.pal.common.lang.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;
@@ -93,7 +90,7 @@ import org.slf4j.LoggerFactory;
  *       serdes/src/main/colfer.
  * </pre>
  */
-class JSONSerializers {
+public class JSONSerializers {
 
   private static final Logger logger = LoggerFactory.getLogger(JSONSerializers.class);
 
@@ -113,7 +110,7 @@ class JSONSerializers {
     return value != null && value.length != 0;
   }
 
-  static class ExecMessageSerializer implements JsonSerializer<ExecMessage> {
+  public static class ExecMessageSerializer implements JsonSerializer<ExecMessage> {
 
     @Override
     public JsonElement serialize(
@@ -206,7 +203,7 @@ class JSONSerializers {
     }
   }
 
-  static class ConstructorCallSerializer implements JsonSerializer<ConstructorCall> {
+  public static class ConstructorCallSerializer implements JsonSerializer<ConstructorCall> {
     @Override
     public JsonElement serialize(
         ConstructorCall message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -228,7 +225,7 @@ class JSONSerializers {
     }
   }
 
-  static class InstanceMethodCallSerializer implements JsonSerializer<InstanceMethodCall> {
+  public static class InstanceMethodCallSerializer implements JsonSerializer<InstanceMethodCall> {
     @Override
     public JsonElement serialize(
         InstanceMethodCall message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -259,7 +256,7 @@ class JSONSerializers {
     }
   }
 
-  static class ClInitCallSerializer implements JsonSerializer<ClInitCall> {
+  public static class ClInitCallSerializer implements JsonSerializer<ClInitCall> {
     @Override
     public JsonElement serialize(
         ClInitCall message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -278,7 +275,7 @@ class JSONSerializers {
     }
   }
 
-  static class ClassMethodCallSerializer implements JsonSerializer<ClassMethodCall> {
+  public static class ClassMethodCallSerializer implements JsonSerializer<ClassMethodCall> {
     @Override
     public JsonElement serialize(
         ClassMethodCall message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -303,7 +300,7 @@ class JSONSerializers {
     }
   }
 
-  static class ContextSerializer implements JsonSerializer<Context> {
+  public static class ContextSerializer implements JsonSerializer<Context> {
     @Override
     public JsonElement serialize(
         Context message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -327,7 +324,7 @@ class JSONSerializers {
     }
   }
 
-  static class ThrowableSerializer implements JsonSerializer<Throwable> {
+  public static class ThrowableSerializer implements JsonSerializer<Throwable> {
     @Override
     public JsonElement serialize(
         Throwable message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -349,7 +346,7 @@ class JSONSerializers {
     }
   }
 
-  static class RaisedThrowableSerializer implements JsonSerializer<RaisedThrowable> {
+  public static class RaisedThrowableSerializer implements JsonSerializer<RaisedThrowable> {
     @Override
     public JsonElement serialize(
         RaisedThrowable message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -377,7 +374,7 @@ class JSONSerializers {
     }
   }
 
-  static class StaticFieldGetSerializer implements JsonSerializer<StaticFieldGet> {
+  public static class StaticFieldGetSerializer implements JsonSerializer<StaticFieldGet> {
     @Override
     public JsonElement serialize(
         StaticFieldGet message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -399,7 +396,7 @@ class JSONSerializers {
     }
   }
 
-  static class StaticFieldPutSerializer implements JsonSerializer<StaticFieldPut> {
+  public static class StaticFieldPutSerializer implements JsonSerializer<StaticFieldPut> {
 
     @Override
     public JsonElement serialize(
@@ -428,7 +425,8 @@ class JSONSerializers {
     }
   }
 
-  static class StaticFieldPutDoneSerializer implements JsonSerializer<StaticFieldPutDone> {
+  public static class StaticFieldPutDoneAdapter
+      implements JsonSerializer<StaticFieldPutDone>, JsonDeserializer<StaticFieldPutDone> {
     @Override
     public JsonElement serialize(
         StaticFieldPutDone message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -445,9 +443,28 @@ class JSONSerializers {
 
       return jsonElement;
     }
+
+    @Override
+    public StaticFieldPutDone deserialize(
+        JsonElement json, Type typeOfT, JsonDeserializationContext context)
+        throws JsonParseException {
+      final JsonObject jsonObject = json.getAsJsonObject();
+      final StaticFieldPutDone staticFieldPutDone = new StaticFieldPutDone();
+      if (jsonObject.has("class")) {
+        staticFieldPutDone.clazz = context.deserialize(jsonObject.get("class"), Class.class);
+      }
+      if (jsonObject.has("field")) {
+        staticFieldPutDone.field = context.deserialize(jsonObject.get("field"), Field.class);
+      }
+      if (jsonObject.has("static_field_put_uuid")) {
+        staticFieldPutDone.staticFieldPutUuid =
+            jsonObject.get("static_field_put_uuid").getAsString();
+      }
+      return staticFieldPutDone;
+    }
   }
 
-  static class InstanceFieldGetSerializer implements JsonSerializer<InstanceFieldGet> {
+  public static class InstanceFieldGetSerializer implements JsonSerializer<InstanceFieldGet> {
 
     @Override
     public JsonElement serialize(
@@ -473,7 +490,7 @@ class JSONSerializers {
     }
   }
 
-  static class InstanceFieldPutSerializer implements JsonSerializer<InstanceFieldPut> {
+  public static class InstanceFieldPutSerializer implements JsonSerializer<InstanceFieldPut> {
 
     @Override
     public JsonElement serialize(
@@ -505,7 +522,8 @@ class JSONSerializers {
     }
   }
 
-  static class InstanceFieldPutDoneSerializer implements JsonSerializer<InstanceFieldPutDone> {
+  public static class InstanceFieldPutDoneAdapter
+      implements JsonSerializer<InstanceFieldPutDone>, JsonDeserializer<InstanceFieldPutDone> {
     @Override
     public JsonElement serialize(
         InstanceFieldPutDone message,
@@ -524,9 +542,28 @@ class JSONSerializers {
 
       return jsonElement;
     }
+
+    @Override
+    public InstanceFieldPutDone deserialize(
+        JsonElement json, Type typeOfT, JsonDeserializationContext context)
+        throws JsonParseException {
+      final JsonObject jsonObject = json.getAsJsonObject();
+      final InstanceFieldPutDone instanceFieldPutDone = new InstanceFieldPutDone();
+      if (jsonObject.has("class")) {
+        instanceFieldPutDone.clazz = context.deserialize(jsonObject.get("class"), Class.class);
+      }
+      if (jsonObject.has("field")) {
+        instanceFieldPutDone.field = context.deserialize(jsonObject.get("field"), Field.class);
+      }
+      if (jsonObject.has("instance_field_put_uuid")) {
+        instanceFieldPutDone.instanceFieldPutUuid =
+            jsonObject.get("instance_field_put_uuid").getAsString();
+      }
+      return instanceFieldPutDone;
+    }
   }
 
-  static class InternalHeaderSerializer implements JsonSerializer<InternalHeader> {
+  public static class InternalHeaderSerializer implements JsonSerializer<InternalHeader> {
     @Override
     public JsonElement serialize(
         InternalHeader message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -541,7 +578,7 @@ class JSONSerializers {
     }
   }
 
-  static class InterceptableMethodSerializer implements JsonSerializer<InterceptableMethod> {
+  public static class InterceptableMethodSerializer implements JsonSerializer<InterceptableMethod> {
     @Override
     public JsonElement serialize(
         InterceptableMethod message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -558,7 +595,7 @@ class JSONSerializers {
     }
   }
 
-  static class InterceptableFieldSerializer implements JsonSerializer<InterceptableField> {
+  public static class InterceptableFieldSerializer implements JsonSerializer<InterceptableField> {
     @Override
     public JsonElement serialize(
         InterceptableField message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -572,7 +609,7 @@ class JSONSerializers {
     }
   }
 
-  static class InterceptMessageSerializer implements JsonSerializer<InterceptMessage> {
+  public static class InterceptMessageSerializer implements JsonSerializer<InterceptMessage> {
     @Override
     public JsonElement serialize(
         InterceptMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -605,7 +642,7 @@ class JSONSerializers {
     }
   }
 
-  static class InterceptKeyMessageSerializer implements JsonSerializer<InterceptKeyMessage> {
+  public static class InterceptKeyMessageSerializer implements JsonSerializer<InterceptKeyMessage> {
     @Override
     public JsonElement serialize(
         InterceptKeyMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -626,7 +663,7 @@ class JSONSerializers {
     }
   }
 
-  static class InterceptReplySerializer implements JsonSerializer<InterceptReply> {
+  public static class InterceptReplySerializer implements JsonSerializer<InterceptReply> {
     @Override
     public JsonElement serialize(
         InterceptReply message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -642,7 +679,7 @@ class JSONSerializers {
     }
   }
 
-  static class ClassSerializer implements JsonSerializer<Class> {
+  public static class ClassSerializer implements JsonSerializer<Class> {
     @Override
     public JsonElement serialize(
         Class message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -655,7 +692,7 @@ class JSONSerializers {
     }
   }
 
-  static class ObjSerializer implements JsonSerializer<Obj> {
+  public static class ObjSerializer implements JsonSerializer<Obj> {
     @Override
     public JsonElement serialize(
         Obj message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -685,7 +722,7 @@ class JSONSerializers {
     }
   }
 
-  static class FieldSerializer implements JsonSerializer<Field> {
+  public static class FieldSerializer implements JsonSerializer<Field> {
     @Override
     public JsonElement serialize(
         Field message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -703,7 +740,7 @@ class JSONSerializers {
     }
   }
 
-  static class MethodSerializer implements JsonSerializer<Method> {
+  public static class MethodSerializer implements JsonSerializer<Method> {
     @Override
     public JsonElement serialize(
         Method message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -715,7 +752,7 @@ class JSONSerializers {
     }
   }
 
-  static class ConstructorSerializer implements JsonSerializer<Constructor> {
+  public static class ConstructorSerializer implements JsonSerializer<Constructor> {
     @Override
     public JsonElement serialize(
         Constructor message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -727,7 +764,7 @@ class JSONSerializers {
     }
   }
 
-  static class ReflectableSerializer implements JsonSerializer<Reflectable> {
+  public static class ReflectableSerializer implements JsonSerializer<Reflectable> {
     @Override
     public JsonElement serialize(
         Reflectable message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -745,7 +782,7 @@ class JSONSerializers {
     }
   }
 
-  static class ParameterSerializer implements JsonSerializer<Parameter> {
+  public static class ParameterSerializer implements JsonSerializer<Parameter> {
     @Override
     public JsonElement serialize(
         Parameter message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -764,7 +801,8 @@ class JSONSerializers {
     }
   }
 
-  static class ReturnValueSerializer implements JsonSerializer<ReturnValue> {
+  public static class ReturnValueAdapter
+      implements JsonSerializer<ReturnValue>, JsonDeserializer<ReturnValue> {
     @Override
     public JsonElement serialize(
         ReturnValue message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -782,9 +820,29 @@ class JSONSerializers {
       }
       return jsonElement;
     }
+
+    @Override
+    public ReturnValue deserialize(
+        JsonElement json, Type typeOfT, JsonDeserializationContext context)
+        throws JsonParseException {
+      final JsonObject jsonObject = json.getAsJsonObject();
+      final ReturnValue returnValue = new ReturnValue();
+      returnValue.isVoid = jsonObject.get("is_void").getAsBoolean();
+      returnValue.isClass = jsonObject.get("is_class").getAsBoolean();
+      if (jsonObject.has("object")) {
+        returnValue.object = context.deserialize(jsonObject.get("object"), Obj.class);
+      }
+      if (jsonObject.has("from")) {
+        returnValue.from = context.deserialize(jsonObject.get("from"), Reflectable.class);
+      }
+      if (jsonObject.has("class")) {
+        returnValue.clazz = context.deserialize(jsonObject.get("class"), Class.class);
+      }
+      return returnValue;
+    }
   }
 
-  static class ControlMessageSerializer implements JsonSerializer<ControlMessage> {
+  public static class ControlMessageSerializer implements JsonSerializer<ControlMessage> {
     @Override
     public JsonElement serialize(
         ControlMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
@@ -810,7 +868,7 @@ class JSONSerializers {
     }
   }
 
-  static class MessageSerializer implements JsonSerializer<Message> {
+  public static class MessageSerializer implements JsonSerializer<Message> {
     @Override
     public JsonElement serialize(
         Message message, Type type, JsonSerializationContext jsonSerializationContext) {

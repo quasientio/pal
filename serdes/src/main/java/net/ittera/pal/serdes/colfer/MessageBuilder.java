@@ -79,13 +79,10 @@ import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldGet;
 import net.ittera.pal.messages.colfer.StaticFieldPut;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
-import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
-import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
-import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.messages.jsonrpc.*;
 import net.ittera.pal.messages.types.*;
 import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcParamsException;
 import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
-import net.ittera.pal.serdes.jsonrpc.JsonRpcError;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,6 +90,8 @@ import org.slf4j.LoggerFactory;
 public final class MessageBuilder {
 
   private static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);
+
+  private static final String JSON_RPC_VERSION = "2.0";
 
   // ISO 8601 with millis (fraction-of-second) + TZ (no name, only offset)
   private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
@@ -1157,17 +1156,17 @@ public final class MessageBuilder {
     // Create a JSON-RPC response object
     final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
     jsonRpcResponse.setId(execMessageResponse.getResponseToUuid());
+    jsonRpcResponse.setJsonrpc(JSON_RPC_VERSION);
 
     switch (ExecMessageType.fromByte(execMessageResponse.getExecMessageType())) {
       case PUT_STATIC_DONE:
-        jsonRpcResponse.setResult(ColferUtils.toJSON(execMessageResponse.getStaticFieldPutDone()));
+        jsonRpcResponse.setResult(new JsonRpcResult(execMessageResponse.getStaticFieldPutDone()));
         break;
       case PUT_FIELD_DONE:
-        jsonRpcResponse.setResult(
-            ColferUtils.toJSON(execMessageResponse.getInstanceFieldPutDone()));
+        jsonRpcResponse.setResult(new JsonRpcResult(execMessageResponse.getInstanceFieldPutDone()));
         break;
       case RETURN_VALUE:
-        jsonRpcResponse.setResult(ColferUtils.toJSON(execMessageResponse.getReturnValue()));
+        jsonRpcResponse.setResult(new JsonRpcResult(execMessageResponse.getReturnValue()));
         break;
       case THROWABLE:
         if (execMessageResponse.getRaisedThrowable() != null
@@ -1200,6 +1199,7 @@ public final class MessageBuilder {
 
     final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
     jsonRpcResponse.setId(requestId);
+    jsonRpcResponse.setJsonrpc(JSON_RPC_VERSION);
     final JsonRpcError error;
 
     if (exception instanceof JsonRpcParseException) {
