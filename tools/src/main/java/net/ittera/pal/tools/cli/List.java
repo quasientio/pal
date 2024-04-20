@@ -27,15 +27,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.TextStyle;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -141,6 +133,11 @@ public class List extends AbstractPALSubcommand {
   @Override
   protected void initialize() {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
+    if (!directoryConnectionProvider.get().isPresent()) {
+      err.println(
+          "A PALDirectory is required. Run with -d (--dir) or set the ENV variable PAL_DIRECTORY.");
+      System.exit(1);
+    }
   }
 
   @Override

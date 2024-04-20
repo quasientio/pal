@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 
 public abstract class AbstractPALSubcommand extends AbstractTool implements Callable<Integer> {
   private static final String LOGGING_CONFIG = "/cli-logging.xml";
-  private DirectoryConnectionProvider directoryConnectionProvider;
+  protected DirectoryConnectionProvider directoryConnectionProvider;
   protected PrintStream out;
   protected PrintStream err;
 
