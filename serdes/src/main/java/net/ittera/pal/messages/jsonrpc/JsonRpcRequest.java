@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName;
 import java.util.Arrays;
 import java.util.List;
 import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.JsonRpcRequestType;
 
 /**
  * Represents a JSON-RPC 2.0 request message. See <a
@@ -93,7 +94,7 @@ import net.ittera.pal.messages.types.ExecMessageType;
  * <p>
  * </pre>
  */
-public class JsonRpcRequest {
+public class JsonRpcRequest extends JsonRpcMessage {
   private transient ExecMessageType execMessageType;
   private transient String objectRef;
   private transient String className;
@@ -189,6 +190,14 @@ public class JsonRpcRequest {
       return true;
     } catch (NumberFormatException e) {
       return false;
+    }
+  }
+
+  public JsonRpcRequestType getJsonRpcRequestType() {
+    if (getId() != null && !getId().isEmpty()) {
+      return JsonRpcRequestType.REQUEST;
+    } else {
+      return JsonRpcRequestType.NOTIFICATION;
     }
   }
 
