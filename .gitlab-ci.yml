@@ -83,11 +83,11 @@ publish-pal-image:
     - docker build --file docker/Dockerfile --tag $CI_REGISTRY/cometera/pal/pal:latest .
     - docker push $CI_REGISTRY/cometera/pal/pal:latest
   only:
-    - master
+    - main
 
 deploy-pal:
   stage: publish-artifacts
   script: 
     - mvn deploy -s ci_settings.xml -DskipTests
   only:
-    - master
+    - main
