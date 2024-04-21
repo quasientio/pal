@@ -17,7 +17,7 @@ if [ -n "$JMX_HOST" ] && [ -n "$JMX_PORT" ]; then
 fi
 
 RUN_JVM_OPTS="-server \
-              -XX:+UseConcMarkSweepGC \
+              -XX:+UseG1GC \
               -XX:+AggressiveOpts \
               -XX:+UseBiasedLocking \
               -XX:+UseNUMA \

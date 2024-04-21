@@ -11,7 +11,7 @@
     <properties>
         <pal.version>1.0.0-SNAPSHOT</pal.version>
         <!-- BUILD VERSIONS -->
-        <java.version>1.8</java.version>
+        <java.version>9</java.version>
         <maven.surefire.version>3.0.0-M3</maven.surefire.version>
         <maven.failsafe.version>3.0.0-M3</maven.failsafe.version>
 
@@ -25,10 +25,10 @@
         <maven.plugin.clean>3.1.0</maven.plugin.clean>
         <maven.plugin.shade>3.2.1</maven.plugin.shade>
         <spotbugs.plugin.version>3.1.12</spotbugs.plugin.version>
-        <aspectj.plugin.version>1.11</aspectj.plugin.version>
+        <aspectj.plugin.version>1.15.0</aspectj.plugin.version>
 
         <!-- DEPENDENCIES VERSIONS -->
-        <aspectj.version>1.9.4</aspectj.version>
+        <aspectj.version>1.9.7</aspectj.version>
         <junit.version>4.13.1</junit.version>
         <hamcrest.core.version>2.2</hamcrest.core.version>
         <guava.version>31.1-jre</guava.version>

@@ -109,8 +109,7 @@ public class WrapperTest extends WrappingTestBase {
 
     // create list of 1-dimensional arrays, one for each of primitiveWrapperClasses, with length=1
     List wrapperArrays =
-        (List<Object>)
-            primitiveWrapperClasses.stream().map(c -> getArrayOf(c, 1)).collect(toList());
+        primitiveWrapperClasses.stream().map(c -> getArrayOf(c, 1)).collect(toList());
 
     for (Object wrapperArray : wrapperArrays) {
       assertTrue(

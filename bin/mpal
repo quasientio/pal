@@ -11,7 +11,7 @@ JMX_PROPS="-Dcom.sun.management.jmxremote \
 MAVEN_OPTS="-Xmx1024M \
            -Xms512M \
            -server \
-           -XX:+UseConcMarkSweepGC \
+           -XX:+UseG1GC \
            -XX:+AggressiveOpts \
            -XX:+UseBiasedLocking \
            -XX:+UseNUMA"
