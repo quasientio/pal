@@ -11,7 +11,7 @@
     <properties>
         <pal.version>1.0.0-SNAPSHOT</pal.version>
         <!-- BUILD VERSIONS -->
-        <java.version>9</java.version>
+        <java.version>10</java.version>
         <maven.surefire.version>3.0.0-M3</maven.surefire.version>
         <maven.failsafe.version>3.0.0-M3</maven.failsafe.version>
 
