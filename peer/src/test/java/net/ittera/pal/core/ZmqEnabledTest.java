@@ -19,6 +19,8 @@
 
 package net.ittera.pal.core;
 
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -68,5 +70,13 @@ public abstract class ZmqEnabledTest {
     // stop executor
     execService.shutdown();
     execService.awaitTermination(1, TimeUnit.SECONDS);
+  }
+
+  protected int findAvailableServerPort() {
+    try (ServerSocket socket = new ServerSocket(0)) {
+      return socket.getLocalPort();
+    } catch (IOException e) {
+      throw new IllegalStateException("No available server port found", e);
+    }
   }
 }

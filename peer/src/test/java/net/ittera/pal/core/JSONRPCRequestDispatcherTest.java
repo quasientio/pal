@@ -194,7 +194,7 @@ public class JSONRPCRequestDispatcherTest extends ZmqEnabledTest {
   public void setUp() throws URISyntaxException, InterruptedException {
     zmqContext = createContext();
     final String DEALER_ADDR = "inproc://jsonrpc.dealer";
-    final String WEBSOCKET_ADDR = "ws://localhost:8877";
+    final String WEBSOCKET_ADDR = String.format("ws://localhost:%d", findAvailableServerPort());
     dispatcher =
         new JSONRPCRequestDispatcher(
             UUID.randomUUID(),
@@ -223,6 +223,7 @@ public class JSONRPCRequestDispatcherTest extends ZmqEnabledTest {
 
   @After
   public void cleanup() throws Exception {
+    webSocketClient.close();
     manager.stopAsync().awaitStopped(2, TimeUnit.SECONDS);
     execService.shutdownNow();
     execService.awaitTermination(2, TimeUnit.SECONDS);
