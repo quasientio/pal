@@ -12,7 +12,6 @@ MAVEN_OPTS="-Xmx1024M \
            -Xms512M \
            -server \
            -XX:+UseG1GC \
-           -XX:+AggressiveOpts \
            -XX:+UseBiasedLocking \
            -XX:+UseNUMA"
 
