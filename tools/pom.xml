@@ -140,10 +140,6 @@
                             <shadedPattern>${shading.prefix}.aopalliance</shadedPattern>
                         </relocation>
                         <relocation>
-                            <pattern>javax.inject</pattern>
-                            <shadedPattern>${shading.prefix}.inject</shadedPattern>
-                        </relocation>
-                        <relocation>
                             <pattern>org.zeromq</pattern>
                             <shadedPattern>${shading.prefix}.zeromq</shadedPattern>
                         </relocation>

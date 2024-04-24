@@ -56,6 +56,7 @@ import net.ittera.pal.core.exec.RPCMessageExecutor;
 import net.ittera.pal.core.exec.ThreadPool;
 import net.ittera.pal.core.exec.java.CustomClassloader;
 import net.ittera.pal.core.exec.java.SelfCaller;
+import net.ittera.pal.core.exec.java.reflect.AnnotationsProcessor;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PALDirectory;
 import org.slf4j.Logger;
@@ -213,7 +214,7 @@ public class Main implements Callable<Integer> {
 
   // run options
   private Set<RunOptions> runOptions;
-
+  private CustomClassloader customClassloader;
   // zmq context
   private ZContext zmqContext;
   private Socket syncSocket;
@@ -629,7 +630,7 @@ public class Main implements Callable<Integer> {
     }
   }
 
-  private CustomClassloader createCustomClassloader() {
+  private void createCustomClassloader() {
     List<URL> urls = new ArrayList<>();
     if (classpath != null) {
       // colon-separated list of classpath entries where each is either a folder or a JAR file
@@ -651,8 +652,10 @@ public class Main implements Callable<Integer> {
         logger.error("Error adding JAR file as URL for custom classloader", ex);
       }
     }
-    return new CustomClassloader(
-        urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
+
+    this.customClassloader =
+        new CustomClassloader(
+            urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
   }
 
   private void registerSelfAsPeer(Injector injector) {
@@ -776,6 +779,9 @@ public class Main implements Callable<Integer> {
         logger.info("Done shutting down log threads");
       }
 
+      // asynchronously shutdown custom classloader notifications executor
+      singleExecutor.submit(() -> customClassloader.shutdown());
+
       // unregister self and close connection to paldir
       if (runOptions.contains(RunOptions.WITH_PALDIR)) {
         final Optional<PALDirectory> palDirectory =
@@ -870,14 +876,14 @@ public class Main implements Callable<Integer> {
     addMiscProperties();
 
     // init custom classloader
-    final CustomClassloader customClassloader = createCustomClassloader();
+    createCustomClassloader();
 
     // inject dependencies
     final Injector injector =
         Guice.createInjector(new PeerWiring(properties, runOptions, zmqContext, customClassloader));
-    // circular dependency must be resolved explicitly
-    customClassloader.setInterceptProcessor(
-        injector.getInstance(InterceptAnnotationProcessor.class));
+
+    // add the annotations processor as classloader listener
+    customClassloader.addClassLoadListener(injector.getInstance(AnnotationsProcessor.class));
 
     // register peer async
     final CountDownLatch selfRegistrationLatch = new CountDownLatch(1);
