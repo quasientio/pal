@@ -21,9 +21,9 @@
         <plugins>
             <!-- code reformatting -->
             <plugin>
-                <groupId>com.coveo</groupId>
+                <groupId>com.spotify.fmt</groupId>
                 <artifactId>fmt-maven-plugin</artifactId>
-                <version>${google.format.version}</version>
+                <version>${google.format.plugin.version}</version>
                 <executions>
                     <execution>
                         <goals>
@@ -36,7 +36,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.version}</version>
+                <version>${jacoco.plugin.version}</version>
                 <executions>
                     <execution>
                         <goals>
