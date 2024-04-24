@@ -47,8 +47,7 @@
         <gson.version>2.10.1</gson.version>
         <antpath.matcher>1.0.0</antpath.matcher>
         <unirest.version>3.14.5</unirest.version>
-        <jacoco.version>0.8.12</jacoco.version>
-        <equalsverifier.version>3.15.1</equalsverifier.version>
+        <equalsverifier.version>3.16.1</equalsverifier.version>
         <jsr305.version>3.0.2</jsr305.version>
         <java-websocket.version>1.5.6</java-websocket.version>
 
