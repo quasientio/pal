@@ -303,6 +303,7 @@ public class GetArrayVariableMessageIT extends AbstractBinaryRPCMessageIT {
       assertEquals(actualArray[i], ((double[]) rawObj)[i], 0);
     }
   }
+
   // </editor-fold>
 
   // <editor-fold defaultstate="collapsed" desc="primitive wrapper array tests">

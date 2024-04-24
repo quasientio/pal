@@ -102,6 +102,7 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
     assertNotNull(constructor);
     assertEquals("stringParam", invoke(constructor, args));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Primitives">
@@ -264,6 +265,7 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
     assertNotNull(constructor);
     assertEquals("DoubleParam", invoke(constructor, args));
   }
+
   /**
    * Asserts that if in the absence of a method with the wrapper type(s), the constructor with the
    * primitive type(s) is returned even if the arguments are autoboxed.
@@ -440,6 +442,7 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
     assertNotNull(constructor);
     assertEquals("DoubleParam", invoke(constructor, args));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Arrays testing">
@@ -538,6 +541,7 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
     assertNotNull(constructor);
     assertEquals("ObjectArrayParam", invoke(constructor, args));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Varargs">
@@ -611,6 +615,7 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
     assertNotNull(constructor);
     assertEquals("constructorWithIntVarargs", invoke(constructor, args));
   }
+
   /**
    * Lookup constructor that has a varargs parameter of type int, passing argument and param type of
    * int (i.e. the component type of the array)
@@ -640,6 +645,7 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
     assertNotNull(constructor);
     assertEquals("constructorWithIntVarargs", invoke(constructor, args));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Test caching">
@@ -725,6 +731,7 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
     // verify that the cache was hit once
     assertEquals(1, cacheHits.get());
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Visibility testing">
@@ -790,6 +797,7 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
     assertNotNull(constructor);
     assertEquals("packageProtectedConstructor", invoke(constructor, args));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Test misc exceptions">

@@ -94,6 +94,7 @@ public class ReflectionHelperLookupMethodTest extends AbstractReflectionHelperTe
     assertEquals(methodName, method.getName());
     assertEquals("methodWithOneStringParam", invoke(method, args));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Primitives">
@@ -296,6 +297,7 @@ public class ReflectionHelperLookupMethodTest extends AbstractReflectionHelperTe
     assertEquals(methodName, method.getName());
     assertEquals("methodWithOneDoubleParam", invoke(method, args));
   }
+
   /**
    * Asserts that if in the absence of a method with the wrapper type(s), the method with the
    * primitive type(s) is returned even if the arguments are autoboxed.
@@ -515,6 +517,7 @@ public class ReflectionHelperLookupMethodTest extends AbstractReflectionHelperTe
     assertEquals(methodName, method.getName());
     assertEquals("methodWithOneDoubleParam", invoke(method, args));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Arrays testing">
@@ -651,6 +654,7 @@ public class ReflectionHelperLookupMethodTest extends AbstractReflectionHelperTe
     assertEquals(methodName, method.getName());
     assertEquals("ObjectArrayParam", invoke(method, args));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Varargs">
@@ -741,6 +745,7 @@ public class ReflectionHelperLookupMethodTest extends AbstractReflectionHelperTe
     assertEquals(methodName, method.getName());
     assertEquals("methodWithIntVarargs", invoke(method, args));
   }
+
   /**
    * Lookup method that has a varargs parameter of type int, passing argument of type int (i.e. the
    * component type of the array) but no parameter types
@@ -874,6 +879,7 @@ public class ReflectionHelperLookupMethodTest extends AbstractReflectionHelperTe
     // verify cache was hit once
     assertEquals(1, cacheHits.get());
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Visibility testing">
@@ -945,6 +951,7 @@ public class ReflectionHelperLookupMethodTest extends AbstractReflectionHelperTe
     assertNotNull(method);
     assertEquals(methodName, method.getName());
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Test misc exceptions">

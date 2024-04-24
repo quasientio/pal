@@ -62,6 +62,7 @@ public class MessageBuilderTest {
     String className;
     String fieldName;
   }
+
   // <editor-fold desc="Helper methods">
 
   private net.ittera.pal.common.runtime.Context createContextForConstructor(
@@ -167,6 +168,7 @@ public class MessageBuilderTest {
     }
     return extractedFieldOpMessageInfo;
   }
+
   // </editor-fold>
 
   private MessageBuilder messageBuilder;
@@ -215,6 +217,7 @@ public class MessageBuilderTest {
     assertEquals(expectedBuilderSeq, execMessage.getBuilderSeq());
     assertEquals(expectedDispatchSeq, execMessage.getDispatchSeq());
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Header messages">
@@ -226,6 +229,7 @@ public class MessageBuilderTest {
     assertEquals(peerUuid.toString(), header.getValue());
     assertEquals(InternalHeaderType.WRITE_AHEAD.toByte(), header.getHeaderType());
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Constructor messages">
@@ -321,6 +325,7 @@ public class MessageBuilderTest {
       assertEquals(args[i], Unwrapper.unwrapObject(parameter.getValue()));
     }
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Instance method messages">
@@ -422,6 +427,7 @@ public class MessageBuilderTest {
       assertEquals(args[i], Unwrapper.unwrapObject(parameter.getValue()));
     }
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Class method messages">
@@ -563,6 +569,7 @@ public class MessageBuilderTest {
         args[1],
         Unwrapper.unwrapObject(execMessage.getClassMethodCall().getParameters()[1].getValue()));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Field Ops generic">
@@ -715,6 +722,7 @@ public class MessageBuilderTest {
     assertEquals(fieldName, execMessage.getStaticFieldGet().getField().getName());
     assertNull(execMessage.getStaticFieldGet().getContext());
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Instance field get messages">
@@ -738,6 +746,7 @@ public class MessageBuilderTest {
     assertEquals(targetObjRef, ObjectRef.from(execMessage.getInstanceFieldGet().getObjectRef()));
     assertNull(execMessage.getInstanceFieldGet().getContext());
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Static field put messages">
@@ -812,6 +821,7 @@ public class MessageBuilderTest {
     assertEquals(staticFieldPutUuid, execMessage.getStaticFieldPutDone().getStaticFieldPutUuid());
     assertEquals(responseToUuid, execMessage.getResponseToUuid());
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Instance field put messages">
@@ -893,6 +903,7 @@ public class MessageBuilderTest {
         instanceFieldPutUuid, execMessage.getInstanceFieldPutDone().getInstanceFieldPutUuid());
     assertEquals(responseToUuid, execMessage.getResponseToUuid());
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Intercept messages">
@@ -1488,6 +1499,7 @@ public class MessageBuilderTest {
               assertEquals(responseToUuid, execMessage.getResponseToUuid());
             });
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Return value messages">
@@ -1575,6 +1587,7 @@ public class MessageBuilderTest {
         Integer.parseInt(execMessage.getReturnValue().getObject().getRef()));
     assertEquals(responseToUuid, execMessage.getResponseToUuid());
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Control messages">

@@ -133,6 +133,7 @@ public class WrapperTest extends WrappingTestBase {
           Wrapper.isWrappable(array));
     }
   }
+
   // </editor-fold>
 
   // <editor-fold defaultstate="collapsed" desc="isWrappableCharSeqClass tests">
@@ -150,6 +151,7 @@ public class WrapperTest extends WrappingTestBase {
     assertFalse(Wrapper.isWrappableCharSeqClass(String.class));
     assertFalse(Wrapper.isWrappableCharSeqClass(Character.class));
   }
+
   // </editor-fold>
 
   // <editor-fold defaultstate="collapsed" desc="getWrappedClass tests">
@@ -228,6 +230,7 @@ public class WrapperTest extends WrappingTestBase {
       assertEquals(clazz.getName(), wrappedClass.getName());
     }
   }
+
   // </editor-fold>
 
   // <editor-fold defaultstate="collapsed" desc="getWrappedField tests">
@@ -262,6 +265,7 @@ public class WrapperTest extends WrappingTestBase {
     assertEquals(fieldName, wrappedField.getName());
     assertEquals(className, wrappedField.getClazz().getName());
   }
+
   // </editor-fold>
 
   // <editor-fold defaultstate="collapsed" desc="getWrappedObject tests">

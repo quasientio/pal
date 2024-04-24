@@ -12,6 +12,7 @@ public class ClassForTestingConstructorLookup {
   public ClassForTestingConstructorLookup() {
     this.param = "noParams";
   }
+
   // </editor-fold>
 
   public ClassForTestingConstructorLookup(String param1) {
@@ -58,6 +59,7 @@ public class ClassForTestingConstructorLookup {
   public ClassForTestingConstructorLookup(boolean param0, float param1, double param2) {
     this.param = "boolFloatAndDoubleParams";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Wrapper type testing">
@@ -111,6 +113,7 @@ public class ClassForTestingConstructorLookup {
   public ClassForTestingConstructorLookup(Object[] param1) {
     this.param = "ObjectArrayParam";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Varargs testing">
@@ -129,18 +132,21 @@ public class ClassForTestingConstructorLookup {
   public ClassForTestingConstructorLookup(int param1, Object... param2) {
     this.param = "constructorWithObjectVarargs";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Object type testing">
   public ClassForTestingConstructorLookup(Object param1) {
     this.param = "ObjectParam";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Cache testing">
   public ClassForTestingConstructorLookup(Integer i, Float f, String s) {
     this.param = "IntegerFloatStringParams";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Visibility testing">
@@ -159,6 +165,7 @@ public class ClassForTestingConstructorLookup {
   ClassForTestingConstructorLookup(byte param1, byte param2, long param3) {
     this.param = "packageProtectedConstructor";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Ambiguous call testing">

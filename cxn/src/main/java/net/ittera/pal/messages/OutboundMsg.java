@@ -40,6 +40,7 @@ import org.zeromq.ZMQException;
 public class OutboundMsg extends BaseMsg {
 
   private static final Logger logger = LoggerFactory.getLogger(OutboundMsg.class);
+
   /**
    *
    *

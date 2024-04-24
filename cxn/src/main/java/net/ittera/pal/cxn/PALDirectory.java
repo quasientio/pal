@@ -189,6 +189,7 @@ public class PALDirectory implements AutoCloseable {
     }
     return deleteResponse;
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Intercept request methods">
@@ -581,6 +582,7 @@ public class PALDirectory implements AutoCloseable {
   public long unregisterAllLogs() throws ExecutionException, InterruptedException {
     return unregisterAllLogsWithExcludes(null);
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Misc methods">
@@ -589,6 +591,7 @@ public class PALDirectory implements AutoCloseable {
     kvClient.close();
     client.close();
   }
+
   // </editor-fold>
 
   // <editor-fold desc="private helpers">

@@ -15,6 +15,7 @@ public class ClassForTestingMethodLookup {
   public String methodWithTwoParams(String param1, String param2) {
     return "methodWithTwoStringParams";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Primitive type testing">
@@ -53,6 +54,7 @@ public class ClassForTestingMethodLookup {
   public String methodWithOneFloatAndDoubleParam(float param1, double param2) {
     return "methodWithOneFloatAndDoubleParam";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Wrapper type testing">
@@ -87,6 +89,7 @@ public class ClassForTestingMethodLookup {
   public String methodWithOneParam(Double param1) {
     return "methodWithOneDoubleParam";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Arrays testing">
@@ -105,12 +108,14 @@ public class ClassForTestingMethodLookup {
   public String methodWithArrayParam(Object[] param1) {
     return "ObjectArrayParam";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Object type testing">
   public String methodWithOneParam(Object param1) {
     return "methodWithOneObjectParam";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Visibility testing">
@@ -129,6 +134,7 @@ public class ClassForTestingMethodLookup {
   String packageProtectedMethodWithOneParam(String param1) {
     return "packageVisibleMethodWithOneParam";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Overloading and widening testing">
@@ -151,6 +157,7 @@ public class ClassForTestingMethodLookup {
   public String methodWithTwoParams(String param1, Double param2) {
     return "methodWithStringAndDoubleParams";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Varargs testing">
@@ -169,6 +176,7 @@ public class ClassForTestingMethodLookup {
   public String methodWithVarargs(Object... params) {
     return "methodWithObjectVarargs";
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Cache testing">

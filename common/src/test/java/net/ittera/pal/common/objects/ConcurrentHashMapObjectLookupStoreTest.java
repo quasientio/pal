@@ -167,6 +167,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
               }
             });
   }
+
   // </editor-fold>
 
   // <editor-fold desc="lookupObject">
@@ -236,6 +237,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
               }
             });
   }
+
   // </editor-fold>
 
   // <editor-fold desc="containsObjectRef">
@@ -304,6 +306,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
               }
             });
   }
+
   // </editor-fold>
 
   // <editor-fold desc="size">
@@ -334,6 +337,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
               }
             });
   }
+
   // </editor-fold>
 
   // <editor-fold desc="clear">
@@ -360,6 +364,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
               }
             });
   }
+
   // </editor-fold>
 
   // <editor-fold desc="isEmpty">
@@ -392,6 +397,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
               }
             });
   }
+
   // </editor-fold>
 
   // <editor-fold desc="getObjects">
@@ -410,6 +416,7 @@ public class ConcurrentHashMapObjectLookupStoreTest {
     objectLookupStore.storeObject(new ArrayList<>());
     assertThat(objectLookupStore.getObjects(), is(aMapWithSize(1)));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="removeObject">

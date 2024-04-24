@@ -116,6 +116,7 @@ public final class MessageBuilder {
     threadBuilderSequence.set(new AtomicInteger(1));
     threadDispatchSequence.get().getAndIncrement();
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Private Auxiliary methods">
@@ -225,6 +226,7 @@ public final class MessageBuilder {
 
     return throwableMsg;
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Header messages">
@@ -669,6 +671,7 @@ public final class MessageBuilder {
 
     return execMessage;
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Static field get messages">
@@ -680,6 +683,7 @@ public final class MessageBuilder {
                 .withClazz(getWrappedClass(className))
                 .withField(getWrappedField(className, fieldName)));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Instance field get messages">
@@ -893,6 +897,7 @@ public final class MessageBuilder {
         .withReturnValue(
             valueMessage.withIsVoid(isVoid).withClazz(getWrappedClass(declaringClass)));
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Intercept messages">
@@ -1009,6 +1014,7 @@ public final class MessageBuilder {
         interceptMessage.getCallbackMethod(),
         interceptedMessage);
   }
+
   // </editor-fold>
 
   // <editor-fold desc="JSON-RPC messages">
@@ -1271,6 +1277,7 @@ public final class MessageBuilder {
   public ControlMessage buildControlMessage(UUID fromPeerUuid, ControlStatusType statusType) {
     return buildControlMessage(fromPeerUuid, statusType, null);
   }
+
   // </editor-fold>
 
   // <editor-fold desc="Message Wrapper">

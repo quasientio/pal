@@ -116,6 +116,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
       logger.debug("MessagePublisherStub: exiting");
     }
   }
+
   /*
   SessionService stub
    */

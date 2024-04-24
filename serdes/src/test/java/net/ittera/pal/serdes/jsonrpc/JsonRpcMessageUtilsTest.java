@@ -272,6 +272,7 @@ public class JsonRpcMessageUtilsTest {
               }
             });
   }
+
   // </editor-fold>
 
   // <editor-fold desc="unknown elements">
@@ -427,6 +428,7 @@ public class JsonRpcMessageUtilsTest {
     assertEquals(jsonRpcRequest.getParams().size(), 1);
     assertFalse(jsonRpcRequest.getParams().get(0).isRef());
   }
+
   // </editor-fold>
 
   // <editor-fold desc="unexpected elements in params">
