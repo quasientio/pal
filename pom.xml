@@ -31,8 +31,8 @@
         <jacoco.plugin.version>0.8.12</jacoco.plugin.version>
 
         <!-- DEPENDENCIES VERSIONS -->
-        <junit.version>4.13.1</junit.version>
         <aspectj.version>1.9.22</aspectj.version>
+        <junit.version>4.13.2</junit.version>
         <hamcrest.core.version>2.2</hamcrest.core.version>
         <guava.version>31.1-jre</guava.version>
         <guice.version>5.1.0</guice.version>
