@@ -42,7 +42,7 @@
         <commons.lang3.version>3.14.0</commons.lang3.version>
         <picocli.version>4.7.5</picocli.version>
         <jeromq.version>0.6.0</jeromq.version>
-        <jetcd.version>0.7.6</jetcd.version>
+        <jetcd.core.version>0.7.7</jetcd.core.version>
         <kafka.clients.version>3.4.0</kafka.clients.version>
         <kafka.streams.version>3.4.0</kafka.streams.version>
         <org.json.version>20230227</org.json.version>
@@ -258,7 +258,7 @@
             <dependency>
                 <groupId>io.etcd</groupId>
                 <artifactId>jetcd-core</artifactId>
-                <version>${jetcd.version}</version>
+                <version>${jetcd.core.version}</version>
             </dependency>
 
             <!-- jeromq -->
