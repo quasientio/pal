@@ -34,8 +34,8 @@
         <aspectj.version>1.9.22</aspectj.version>
         <junit.version>4.13.2</junit.version>
         <hamcrest.core.version>2.2</hamcrest.core.version>
-        <guava.version>31.1-jre</guava.version>
         <guice.version>5.1.0</guice.version>
+        <guava.version>33.1.0-jre</guava.version>
         <javax.inject.version>1</javax.inject.version>
         <mockito.version>3.6.28</mockito.version>
         <logback.classic.version>1.2.11</logback.classic.version>
