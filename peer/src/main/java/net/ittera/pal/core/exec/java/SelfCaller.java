@@ -21,6 +21,8 @@ package net.ittera.pal.core.exec.java;
 
 import com.google.common.primitives.Longs;
 import com.google.inject.name.Named;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,8 +31,6 @@ import java.util.UUID;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.stream.IntStream;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.core.PeerException;

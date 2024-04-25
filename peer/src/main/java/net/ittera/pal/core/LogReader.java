@@ -19,6 +19,9 @@
 
 package net.ittera.pal.core;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.nio.channels.ClosedSelectorException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -33,9 +36,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.core.messages.InboundLogMsg;

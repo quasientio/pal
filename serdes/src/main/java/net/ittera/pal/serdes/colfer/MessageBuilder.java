@@ -28,6 +28,8 @@ import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedField;
 import static net.ittera.pal.serdes.colfer.Wrapper.getWrappedObject;
 import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.isMethodNotFoundError;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
@@ -43,8 +45,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Named;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;

@@ -19,8 +19,8 @@
 
 package net.ittera.pal.core.exec.java;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import net.ittera.pal.core.SessionMessageDispatcher;
 import net.ittera.pal.core.exec.UnsupportedMessageException;
 import net.ittera.pal.messages.colfer.ControlMessage;

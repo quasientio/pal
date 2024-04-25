@@ -19,14 +19,14 @@
 
 package net.ittera.pal.core;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.exec.DuplicateInterceptException;

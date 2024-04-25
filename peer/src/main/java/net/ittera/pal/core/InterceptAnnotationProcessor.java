@@ -22,6 +22,8 @@ package net.ittera.pal.core;
 import static java.lang.String.format;
 
 import io.etcd.jetcd.kv.PutResponse;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -30,8 +32,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.FieldOpType;
 import net.ittera.pal.common.lang.intercept.After;

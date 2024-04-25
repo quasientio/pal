@@ -19,13 +19,13 @@
 
 package net.ittera.pal.core.exec.java;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectNotFoundException;
 import net.ittera.pal.common.objects.ObjectRef;

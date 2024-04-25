@@ -19,6 +19,9 @@
 
 package net.ittera.pal.core;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalUnit;
@@ -29,9 +32,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.util.UUIDUtils;
 import net.ittera.pal.messages.LogMessageHeader;

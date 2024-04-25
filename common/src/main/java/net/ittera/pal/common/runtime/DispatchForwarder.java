@@ -19,7 +19,7 @@
 
 package net.ittera.pal.common.runtime;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 /**
  * This class decouples the QuantizeAspect from the dispatch calls in AspectProxyDispatcher, by

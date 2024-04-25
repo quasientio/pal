@@ -19,6 +19,9 @@
 
 package net.ittera.pal.core;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ClosedSelectorException;
@@ -26,9 +29,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
 import net.ittera.pal.core.messages.OutboundJsonRpcResponseMsg;

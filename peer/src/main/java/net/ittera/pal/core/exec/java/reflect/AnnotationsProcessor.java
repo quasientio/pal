@@ -1,7 +1,7 @@
 package net.ittera.pal.core.exec.java.reflect;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import net.ittera.pal.core.InterceptAnnotationProcessor;
 import net.ittera.pal.core.exec.java.ClassLoaderListener;
 import org.slf4j.Logger;

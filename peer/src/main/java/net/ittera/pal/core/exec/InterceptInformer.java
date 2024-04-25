@@ -19,13 +19,13 @@
 
 package net.ittera.pal.core.exec;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import net.ittera.pal.common.directory.events.InterceptEvent;
 import net.ittera.pal.common.directory.events.InterceptNodeListener;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;

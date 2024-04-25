@@ -19,10 +19,10 @@
 
 package net.ittera.pal.cxn;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Provider;
 import java.util.Optional;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Provider;
 
 /**
  * This class implements a null-safe Provider for PALDirectory.

@@ -19,15 +19,15 @@
 
 package net.ittera.pal.core.exec.java.reflect;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import net.ittera.pal.core.exec.java.AmbiguousCallException;
 import org.apache.commons.lang3.ClassUtils;
 import org.slf4j.Logger;

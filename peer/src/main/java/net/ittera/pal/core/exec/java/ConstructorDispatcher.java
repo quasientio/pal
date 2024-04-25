@@ -21,15 +21,15 @@ package net.ittera.pal.core.exec.java;
 
 import static java.lang.Class.forName;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import net.ittera.pal.common.lang.reflect.ConstructorSignature;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.objects.ObjectLookupStore;

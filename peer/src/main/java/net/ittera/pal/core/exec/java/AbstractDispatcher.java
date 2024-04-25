@@ -19,9 +19,9 @@
 
 package net.ittera.pal.core.exec.java;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import java.util.UUID;
-import javax.inject.Inject;
-import javax.inject.Named;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.core.exec.java.reflect.ReflectionHelper;

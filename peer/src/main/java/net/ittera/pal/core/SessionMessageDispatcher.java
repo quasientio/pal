@@ -19,10 +19,10 @@
 
 package net.ittera.pal.core;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import java.util.Set;
 import java.util.UUID;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.core.exec.DispatcherConnector;
