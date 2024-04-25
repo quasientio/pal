@@ -6,7 +6,7 @@ variables:
   # See https://github.com/docker-library/docker/pull/166
   DOCKER_TLS_CERTDIR: ""
 
-image: maven:3.6.3-jdk-11
+image: maven:3-openjdk-17
 
 services:
   - name: docker:dind
