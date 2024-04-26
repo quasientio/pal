@@ -24,6 +24,7 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcResult;
 import net.ittera.pal.serdes.colfer.JSONSerializers;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcResponseDeserializer;
 import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.enums.ReadyState;
 import org.java_websocket.handshake.ServerHandshake;
 import org.junit.After;
 import org.junit.Before;
@@ -145,6 +146,13 @@ public class JSONRPCRequestDispatcherTest extends ZmqEnabledTest {
     public CompletableFuture<JsonRpcResponse> sendAsync(JsonRpcRequest jsonRpcRequest) {
       if (logger.isTraceEnabled()) {
         logger.trace("sending message to ws socket: {}", jsonRpcRequest);
+      }
+      while (this.getReadyState() != ReadyState.OPEN) {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException e) {
+          logger.error("error waiting for ws connection to open", e);
+        }
       }
       CompletableFuture<JsonRpcResponse> futureResponse = new CompletableFuture<>();
       futureResponses.put(jsonRpcRequest.getId(), futureResponse);
