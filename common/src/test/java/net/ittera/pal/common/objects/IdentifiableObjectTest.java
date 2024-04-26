@@ -53,11 +53,12 @@ public class IdentifiableObjectTest {
 
   @Test
   public void testEquals() {
-    // different instances should not be equal
+    // different Integer instances, but with same value should be equal
     Integer int1 = 23;
-    Integer int2 = new Integer(23);
-    assertThat(new IdentifiableObject(int1), is(not(new IdentifiableObject(int2))));
+    Integer int2 = 23;
+    assertThat(new IdentifiableObject(int1), is(new IdentifiableObject(int2)));
 
+    // different instances should not be equal
     String str1 = "ABC";
     String str2 = new String("ABC");
     assertThat(new IdentifiableObject(str1), is(not(new IdentifiableObject(str2))));

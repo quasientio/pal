@@ -158,7 +158,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractBinaryRPCMessageIT {
 
     // create new instance
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
-    Object param = new Long(Integer.MAX_VALUE) + 1;
+    Object param = (long) Integer.MAX_VALUE + 1;
 
     // now call the method
     String[] parameterTypes = {param.getClass().getTypeName()};
