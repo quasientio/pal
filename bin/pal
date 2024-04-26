@@ -18,7 +18,6 @@ fi
 
 RUN_JVM_OPTS="-server \
               -XX:+UseG1GC \
-              -XX:+UseBiasedLocking \
               -XX:+UseNUMA \
               -noverify"
 
