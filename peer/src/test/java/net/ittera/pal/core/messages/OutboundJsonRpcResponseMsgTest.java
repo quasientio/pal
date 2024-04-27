@@ -54,7 +54,14 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
 
     // create and send a OutboundJsonRpcResponseMsg instance from REP to DEALER
     UUID clientId = UUID.randomUUID();
-    String jsonRpcMessage = "{\"jsonrpc\":\"2.0\",\"result\":\"foo\",\"id\":1}";
+    String jsonRpcMessage =
+        """
+        {
+          "jsonrpc": "2.0",
+          "result": "foo",
+          "id": 1
+        }
+        """;
     OutboundJsonRpcResponseMsg msgOut = new OutboundJsonRpcResponseMsg(clientId, jsonRpcMessage);
     msgOut.send(repSocket);
 
@@ -72,7 +79,14 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
   public void testEquals() {
     // test two different instances
     UUID clientId = UUID.randomUUID();
-    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"result\":\"foo\",\"id\":1}";
+    String jsonMessage =
+        """
+            {
+              "jsonrpc": "2.0",
+              "result": "foo",
+              "id": 1
+            }
+            """;
     OutboundJsonRpcResponseMsg msg1 = new OutboundJsonRpcResponseMsg(clientId, jsonMessage);
     OutboundJsonRpcResponseMsg msg2 = new OutboundJsonRpcResponseMsg(clientId, jsonMessage);
     assertThat(msg1, is(msg2));
@@ -86,7 +100,14 @@ public class OutboundJsonRpcResponseMsgTest extends ZmqEnabledTest {
     assertThat(msg1, is(not(msg3)));
 
     // test two different instances with different jsonMessage
-    String jsonMessage2 = "{\"jsonrpc\":\"2.0\",\"error\":\"bar\",\"id\":1}";
+    String jsonMessage2 =
+        """
+            {
+              "jsonrpc": "2.0",
+              "error": "bar",
+              "id": 1
+            }
+            """;
     OutboundJsonRpcResponseMsg msg4 = new OutboundJsonRpcResponseMsg(clientId, jsonMessage2);
     assertThat(msg1, is(not(msg4)));
   }

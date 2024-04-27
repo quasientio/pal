@@ -23,7 +23,12 @@ public class JsonRpcParameterTest {
   public void testString() {
     String stringValue = "test";
     JsonRpcParameter jsonRpcParameter =
-        gson.fromJson(String.format("{\"value\": \"%s\"}", stringValue), JsonRpcParameter.class);
+        gson.fromJson(
+                """
+                {"value": "%s"}
+                """
+                .formatted(stringValue),
+            JsonRpcParameter.class);
     assertEquals(stringValue, jsonRpcParameter.getValue());
     assertEquals(java.lang.String.class, jsonRpcParameter.getValue().getClass());
     assertNull(jsonRpcParameter.getType());
@@ -32,7 +37,12 @@ public class JsonRpcParameterTest {
 
   @Test
   public void testBoolean() {
-    JsonRpcParameter jsonRpcParameter = gson.fromJson("{\"value\": true}", JsonRpcParameter.class);
+    JsonRpcParameter jsonRpcParameter =
+        gson.fromJson(
+            """
+                {"value": true}
+                """,
+            JsonRpcParameter.class);
     assertEquals(true, jsonRpcParameter.getValue());
     assertEquals(java.lang.Boolean.class, jsonRpcParameter.getValue().getClass());
     assertNull(jsonRpcParameter.getType());
@@ -43,7 +53,12 @@ public class JsonRpcParameterTest {
   public void testInt() {
     Integer intValue = Integer.MAX_VALUE;
     JsonRpcParameter jsonRpcParameter =
-        gson.fromJson(String.format("{\"value\": %d}", intValue), JsonRpcParameter.class);
+        gson.fromJson(
+                """
+        {"value": %d}
+        """
+                .formatted(intValue),
+            JsonRpcParameter.class);
     assertEquals(intValue, jsonRpcParameter.getValue());
     assertEquals(java.lang.Integer.class, jsonRpcParameter.getValue().getClass());
     assertNull(jsonRpcParameter.getType());
@@ -54,7 +69,12 @@ public class JsonRpcParameterTest {
   public void testLong() {
     Long longValue = (long) Integer.MAX_VALUE + 4;
     JsonRpcParameter jsonRpcParameter =
-        gson.fromJson(String.format("{\"value\": %d}", longValue), JsonRpcParameter.class);
+        gson.fromJson(
+                """
+                {"value": %d}
+                """
+                .formatted(longValue),
+            JsonRpcParameter.class);
     assertEquals(longValue, jsonRpcParameter.getValue());
     assertEquals(java.lang.Long.class, jsonRpcParameter.getValue().getClass());
     assertNull(jsonRpcParameter.getType());
@@ -63,7 +83,12 @@ public class JsonRpcParameterTest {
 
   @Test
   public void testChar() {
-    JsonRpcParameter jsonRpcParameter = gson.fromJson("{\"value\": 'a'}", JsonRpcParameter.class);
+    JsonRpcParameter jsonRpcParameter =
+        gson.fromJson(
+            """
+            {"value": 'a'}
+            """,
+            JsonRpcParameter.class);
     assertEquals('a', jsonRpcParameter.getValue());
     assertEquals(java.lang.Character.class, jsonRpcParameter.getValue().getClass());
     assertNull(jsonRpcParameter.getType());
@@ -72,7 +97,12 @@ public class JsonRpcParameterTest {
 
   @Test
   public void testNullValue() {
-    JsonRpcParameter jsonRpcParameter = gson.fromJson("{\"value\": null}", JsonRpcParameter.class);
+    JsonRpcParameter jsonRpcParameter =
+        gson.fromJson(
+            """
+              {"value": null}
+              """,
+            JsonRpcParameter.class);
     assertNull(jsonRpcParameter.getValue());
     assertNull(jsonRpcParameter.getType());
     assertFalse(jsonRpcParameter.isRef());
@@ -90,12 +120,15 @@ public class JsonRpcParameterTest {
   public void testStringArray() {
     String[] stringArray = new String[] {"test1", "test2"};
     String arrayType = "[Ljava.lang.String;";
-    JsonRpcParameter jsonRpcParameter =
-        gson.fromJson(
-            String.format(
-                "{\"value\": [\"%s\", \"%s\"], \"type\":\"%s\"}",
-                stringArray[0], stringArray[1], arrayType),
-            JsonRpcParameter.class);
+    String jsonInput =
+            """
+      {
+          "value": ["%s", "%s"],
+          "type":"%s"
+      }
+      """
+            .formatted(stringArray[0], stringArray[1], arrayType);
+    JsonRpcParameter jsonRpcParameter = gson.fromJson(jsonInput, JsonRpcParameter.class);
     assertArrayEquals(stringArray, (String[]) jsonRpcParameter.getValue());
     assertEquals(stringArray.getClass(), jsonRpcParameter.getValue().getClass());
     assertEquals(arrayType, jsonRpcParameter.getType());
@@ -108,9 +141,13 @@ public class JsonRpcParameterTest {
     String arrayType = "[I";
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format(
-                "{\"value\": [\"%s\", \"%s\"], \"type\":\"%s\"}",
-                intArray[0], intArray[1], arrayType),
+                """
+      {
+          "value": ["%s", "%s"],
+          "type":"%s"
+      }
+      """
+                .formatted(intArray[0], intArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(intArray, (int[]) jsonRpcParameter.getValue());
     assertEquals(intArray.getClass(), jsonRpcParameter.getValue().getClass());
@@ -124,9 +161,13 @@ public class JsonRpcParameterTest {
     String arrayType = integerArray.getClass().getName();
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format(
-                "{\"value\": [\"%s\", \"%s\"], \"type\":\"%s\"}",
-                integerArray[0], integerArray[1], arrayType),
+                """
+      {
+          "value": ["%s", "%s"],
+          "type":"%s"
+      }
+      """
+                .formatted(integerArray[0], integerArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(integerArray, (Integer[]) jsonRpcParameter.getValue());
     assertEquals(integerArray.getClass(), jsonRpcParameter.getValue().getClass());
@@ -140,9 +181,13 @@ public class JsonRpcParameterTest {
     String arrayType = "[F";
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format(
-                "{\"value\": [\"%s\", \"%s\"], \"type\":\"%s\"}",
-                floatArray[0], floatArray[1], arrayType),
+                """
+      {
+          "value": ["%s", "%s"],
+          "type":"%s"
+      }
+      """
+                .formatted(floatArray[0], floatArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(floatArray, (float[]) jsonRpcParameter.getValue(), 0.0f);
     assertEquals(floatArray.getClass(), jsonRpcParameter.getValue().getClass());
@@ -156,9 +201,13 @@ public class JsonRpcParameterTest {
     String arrayType = "[D";
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format(
-                "{\"value\": [\"%s\", \"%s\"], \"type\":\"%s\"}",
-                doubleArray[0], doubleArray[1], arrayType),
+                """
+      {
+          "value": ["%s", "%s"],
+          "type":"%s"
+      }
+      """
+                .formatted(doubleArray[0], doubleArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(doubleArray, (double[]) jsonRpcParameter.getValue(), 0.0);
     assertEquals(doubleArray.getClass(), jsonRpcParameter.getValue().getClass());
@@ -172,9 +221,13 @@ public class JsonRpcParameterTest {
     String arrayType = "[J";
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format(
-                "{\"value\": [\"%s\", \"%s\"], \"type\":\"%s\"}",
-                longArray[0], longArray[1], arrayType),
+                """
+      {
+          "value": ["%s", "%s"],
+          "type":"%s"
+      }
+      """
+                .formatted(longArray[0], longArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(longArray, (long[]) jsonRpcParameter.getValue());
     assertEquals(longArray.getClass(), jsonRpcParameter.getValue().getClass());
@@ -188,9 +241,13 @@ public class JsonRpcParameterTest {
     String arrayType = "[C";
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format(
-                "{\"value\": [\"%s\", \"%s\"], \"type\":\"%s\"}",
-                charArray[0], charArray[1], arrayType),
+                """
+      {
+          "value": ["%s", "%s"],
+          "type":"%s"
+      }
+      """
+                .formatted(charArray[0], charArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(charArray, (char[]) jsonRpcParameter.getValue());
     assertEquals(charArray.getClass(), jsonRpcParameter.getValue().getClass());
@@ -204,9 +261,13 @@ public class JsonRpcParameterTest {
     String arrayType = "[Z";
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format(
-                "{\"value\": [\"%s\", \"%s\"], \"type\":\"%s\"}",
-                booleanArray[0], booleanArray[1], arrayType),
+                """
+      {
+          "value": ["%s", "%s"],
+          "type":"%s"
+      }
+      """
+                .formatted(booleanArray[0], booleanArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(booleanArray, (boolean[]) jsonRpcParameter.getValue());
     assertEquals(booleanArray.getClass(), jsonRpcParameter.getValue().getClass());
@@ -220,9 +281,13 @@ public class JsonRpcParameterTest {
     String arrayType = "[S";
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format(
-                "{\"value\": [\"%s\", \"%s\"], \"type\":\"%s\"}",
-                shortArray[0], shortArray[1], arrayType),
+                """
+        {
+          "value": ["%s", "%s"],
+          "type":"%s"
+        }
+        """
+                .formatted(shortArray[0], shortArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(shortArray, (short[]) jsonRpcParameter.getValue());
     assertEquals(shortArray.getClass(), jsonRpcParameter.getValue().getClass());
@@ -236,9 +301,13 @@ public class JsonRpcParameterTest {
     String arrayType = "[B";
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format(
-                "{\"value\": [\"%s\", \"%s\"], \"type\":\"%s\"}",
-                byteArray[0], byteArray[1], arrayType),
+                """
+        {
+          "value": ["%s", "%s"],
+          "type":"%s"
+        }
+        """
+                .formatted(byteArray[0], byteArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(byteArray, (byte[]) jsonRpcParameter.getValue());
     assertEquals(byteArray.getClass(), jsonRpcParameter.getValue().getClass());
@@ -251,7 +320,12 @@ public class JsonRpcParameterTest {
     String[] stringArray = new String[] {"test1", "test2"};
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format("{\"value\": [\"%s\", \"%s\"]}", stringArray[0], stringArray[1]),
+                """
+            {
+                "value": ["%s", "%s"]
+            }
+            """
+                .formatted(stringArray[0], stringArray[1]),
             JsonRpcParameter.class);
     assertArrayEquals(stringArray, (String[]) jsonRpcParameter.getValue());
     assertEquals(stringArray.getClass(), jsonRpcParameter.getValue().getClass());
@@ -264,7 +338,10 @@ public class JsonRpcParameterTest {
     int[] intArray = new int[] {1, 2};
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format("{\"value\": [%d, %d]}", intArray[0], intArray[1]),
+                """
+                        {"value": [%d, %d]}
+                """
+                .formatted(intArray[0], intArray[1]),
             JsonRpcParameter.class);
     assertEquals(intArray[0], (int) ((Integer[]) jsonRpcParameter.getValue())[0]);
     assertEquals(intArray[1], (int) ((Integer[]) jsonRpcParameter.getValue())[1]);
@@ -278,7 +355,10 @@ public class JsonRpcParameterTest {
     double[] doubleArray = new double[] {1.4, 2.5};
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
-            String.format("{\"value\": [%s, %s]}", doubleArray[0], doubleArray[1]),
+                """
+                        {"value": [%s, %s]}
+                """
+                .formatted(doubleArray[0], doubleArray[1]),
             JsonRpcParameter.class);
     assertEquals(doubleArray[0], ((Double[]) jsonRpcParameter.getValue())[0], 0.0);
     assertEquals(doubleArray[1], ((Double[]) jsonRpcParameter.getValue())[1], 0.0);

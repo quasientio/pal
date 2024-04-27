@@ -48,7 +48,15 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
 
     // send
     UUID clientId = UUID.randomUUID();
-    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"foo\",\"params\":[],\"id\":1}";
+    String jsonMessage =
+        """
+        {
+          "jsonrpc": "2.0",
+          "method": "foo",
+          "params": [],
+          "id": 1
+        }
+        """;
     InboundJsonRpcRequestMsg msgOut = new InboundJsonRpcRequestMsg(clientId, jsonMessage);
     msgOut.send(dealerSocket);
     logger.debug("sent msgOut= {}", msgOut);
@@ -76,7 +84,15 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
 
     // send
     UUID clientId = UUID.randomUUID();
-    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"foo\",\"params\":[],\"id\":1}";
+    String jsonMessage =
+        """
+        {
+          "jsonrpc": "2.0",
+          "method": "foo",
+          "params": [],
+          "id": 1
+        }
+       """;
     InboundJsonRpcRequestMsg msgOut = new InboundJsonRpcRequestMsg(clientId, jsonMessage);
     msgOut.send(pushSocket, false);
     logger.debug("sent msgOut= {}", msgOut);
@@ -96,7 +112,15 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
   public void testEquals() {
     // test two different instances
     UUID clientId = UUID.randomUUID();
-    String jsonMessage = "{\"jsonrpc\":\"2.0\",\"method\":\"foo\",\"params\":[],\"id\":1}";
+    String jsonMessage =
+        """
+        {
+          "jsonrpc": "2.0",
+          "method": "foo",
+          "params": [],
+          "id": 1
+        }
+        """;
     InboundJsonRpcRequestMsg msg1 = new InboundJsonRpcRequestMsg(clientId, jsonMessage);
     InboundJsonRpcRequestMsg msg2 = new InboundJsonRpcRequestMsg(clientId, jsonMessage);
     assertThat(msg1, is(msg2));
@@ -110,7 +134,15 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
     assertThat(msg1, is(not(msg3)));
 
     // test two different instances with different jsonMessage
-    String jsonMessage2 = "{\"jsonrpc\":\"2.0\",\"method\":\"bar\",\"params\":[],\"id\":1}";
+    String jsonMessage2 =
+        """
+        {
+          "jsonrpc": "2.0",
+          "method": "bar",
+          "params": [],
+          "id": 1
+        }
+        """;
     InboundJsonRpcRequestMsg msg4 = new InboundJsonRpcRequestMsg(clientId, jsonMessage2);
     assertThat(msg1, is(not(msg4)));
   }
