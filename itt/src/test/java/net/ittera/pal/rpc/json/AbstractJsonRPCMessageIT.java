@@ -114,11 +114,7 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
     JsonRpcResponse replyMsg = sendAndReceive(jsonRpc);
 
     // basic assertions
-    /**
-     * if (expectedThrowableType != null) { assertHasThrowableOfType(replyMsg,
-     * expectedThrowableType); } else { assertThat(replyMsg.getReturnValue(), is(not(nullValue())));
-     * assertValueIsObjectRefOfType(replyMsg.getReturnValue(), className); }
-     */
+    // TODO
     return replyMsg.getResult().getObject();
   }
 }
