@@ -64,13 +64,17 @@ public class CustomClassloader extends URLClassLoader {
           if (!isCoreJavaClass(name)) {
             clazz = findClass(name);
           }
-          logger.debug("Loaded class {} using custom class loader", name);
+          if (logger.isTraceEnabled()) {
+            logger.trace("Loaded class {} using custom class loader", name);
+          }
         } catch (ClassNotFoundException ex) {
           // If not found, delegate to parent class loader
         }
         if (clazz == null) {
           clazz = getParent().loadClass(name);
-          logger.debug("Loaded class {} using parent class loader", name);
+          if (logger.isTraceEnabled()) {
+            logger.trace("Loaded class {} using parent class loader", name);
+          }
         }
       }
 

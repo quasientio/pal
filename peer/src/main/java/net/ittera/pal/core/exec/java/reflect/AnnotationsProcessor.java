@@ -30,7 +30,10 @@ public class AnnotationsProcessor implements ClassLoaderListener {
   public final void classLoaded(Class<?> clazz) {
     if (mustProcessClass(clazz)) {
       interceptAnnotationProcessor.process(clazz);
-      logger.debug("Completed processing annotations for class '{}'", clazz.getName());
+
+      if (logger.isTraceEnabled()) {
+        logger.trace("Completed processing annotations for class '{}'", clazz.getName());
+      }
     }
   }
 }

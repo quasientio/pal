@@ -59,8 +59,8 @@ public class InterceptAnnotationProcessor {
   }
 
   public void process(Class clazz) {
-    if (logger.isDebugEnabled()) {
-      logger.debug("inspecting class '{}' for annotations", clazz.getName());
+    if (logger.isTraceEnabled()) {
+      logger.trace("inspecting class '{}' for annotations", clazz.getName());
     }
 
     List<Class> annotationClasses = Arrays.asList(Before.class, After.class);
@@ -91,8 +91,8 @@ public class InterceptAnnotationProcessor {
                 (String) type.getDeclaredMethod("field").invoke(annotation, (Object[]) null);
             interceptableFieldOpType =
                 (String) type.getDeclaredMethod("fieldOpType").invoke(annotation, (Object[]) null);
-            if (logger.isDebugEnabled()) {
-              logger.debug(
+            if (logger.isTraceEnabled()) {
+              logger.trace(
                   "interceptableClassName: {}, interceptableMethodName: {}, parameterTypes: {}, interceptableFieldName: {}, interceptableFieldOpType: {}",
                   interceptableClassName,
                   interceptableMethodName,
