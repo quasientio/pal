@@ -191,6 +191,11 @@ public class Main implements Callable<Integer> {
   private boolean includeSourceContext = false;
 
   @Option(
+      names = {"--disable-annotation-processing"},
+      description = "disable annotation processing during class loading")
+  private boolean disableAnnotationProcessing = false;
+
+  @Option(
       names = {"-h", "--help"},
       usageHelp = true,
       description = "display this help message")
@@ -883,7 +888,9 @@ public class Main implements Callable<Integer> {
         Guice.createInjector(new PeerWiring(properties, runOptions, zmqContext, customClassloader));
 
     // add the annotations processor as classloader listener
-    customClassloader.addClassLoadListener(injector.getInstance(AnnotationsProcessor.class));
+    if (!disableAnnotationProcessing) {
+      customClassloader.addClassLoadListener(injector.getInstance(AnnotationsProcessor.class));
+    }
 
     // register peer async
     final CountDownLatch selfRegistrationLatch = new CountDownLatch(1);
