@@ -182,6 +182,20 @@
                             </excludes>
                         </filter>
                         <filter>
+                            <artifact>org.springframework.boot:spring-boot-loader</artifact>
+                            <includes>
+                                <include>org/springframework/boot/loader/net/protocol/nested/**</include>
+                                <include>org/springframework/boot/loader/net/util/UrlDecoder.class</include>
+                                <include>org/springframework/boot/loader/ref/Cleaner.class</include>
+                                <include>org/springframework/boot/loader/ref/DefaultCleaner.class</include>
+                                <include>org/springframework/boot/loader/zip/CloseableDataBlock.class</include>
+                                <include>org/springframework/boot/loader/zip/**</include>
+                                <include>org/springframework/boot/loader/log/DebugLogger.class</include>
+                                <include>org/springframework/boot/loader/log/DebugLogger$DisabledDebugLogger.class</include>
+                                <include>org/springframework/boot/loader/log/DebugLogger$SystemErrDebugLogger.class</include>
+                            </includes>
+                        </filter>
+                        <filter>
                             <artifact>*:*</artifact>
                             <excludes>
                                 <!-- TODO we MUST INCLUDE NOTICE files : licenses (eg. Apache) requires them to be included) -->
@@ -288,6 +302,12 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <!-- Not used by Pal, but needed to support the new spring-boot nested jars. See issue #223 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-loader</artifactId>
+            <version>${spring-boot-loader.version}</version>
         </dependency>
         <!-- explicit import of slf4j-api, since otherwise it pulls in older version from kafka-streams -->
         <dependency>
