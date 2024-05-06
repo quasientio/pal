@@ -21,6 +21,10 @@ RUN_JVM_OPTS="-server \
               -XX:+UseNUMA \
               -noverify"
 
+if [[ -n "$JAVA_AGENT" ]]; then
+    RUN_JVM_OPTS="$RUN_JVM_OPTS -javaagent:$JAVA_AGENT"
+fi
+
 
 echo $MAIN_ARGS | sed -E 's/^-+d[^:]*:[0-9]+ //' |  grep -q "^run"
 if [ "$?" -eq "0" ]; then
