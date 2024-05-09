@@ -103,6 +103,9 @@
                         <relocation>
                             <pattern>com.google</pattern>
                             <shadedPattern>${shading.prefix}.google</shadedPattern>
+                            <excludes>
+                                <exclude>com.google.gson.*</exclude>
+                            </excludes>
                         </relocation>
                         <relocation>
                             <pattern>org.json</pattern>
