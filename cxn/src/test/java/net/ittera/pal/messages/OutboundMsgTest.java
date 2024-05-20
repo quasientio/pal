@@ -19,12 +19,15 @@
 
 package net.ittera.pal.messages;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -40,7 +43,7 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-/** TODO: call constructor with marshallable instead of body (byte[]) */
+// TODO: call constructor with marshallable instead of body (byte[])
 public class OutboundMsgTest {
   private final MessageBuilder messageBuilder = new MessageBuilder();
   private static final Logger logger = LoggerFactory.getLogger("tests");
@@ -56,20 +59,12 @@ public class OutboundMsgTest {
   @Test
   public void sendWithNullables() {
     UUID execMessageUuid = UUID.randomUUID();
-    UUID followingMessageUuid = null;
-    byte[] body = "whatever".getBytes();
-    List<InternalHeader> headers = null;
+    byte[] body = "whatever".getBytes(UTF_8);
     ExecPhase execPhase = ExecPhase.BEFORE;
 
     // with null headers and responseToUuid
     OutboundMsg msgOut =
-        new OutboundMsg(
-            MessageType.EXEC_MESSAGE,
-            execPhase,
-            headers,
-            execMessageUuid,
-            followingMessageUuid,
-            body);
+        new OutboundMsg(MessageType.EXEC_MESSAGE, execPhase, null, execMessageUuid, null, body);
 
     // verify getters
     assertThat(msgOut.getMessageType(), is(MessageType.EXEC_MESSAGE));
@@ -80,28 +75,28 @@ public class OutboundMsgTest {
     assertThat(msgOut.getBody(), is(body));
 
     // send
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.bind(socketAddr);
-    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
-    out.connect(socketAddr);
+    String zmqEndpoint = "inproc://here";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.bind(zmqEndpoint);
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.connect(zmqEndpoint);
     msgOut.send(out);
 
     // receive and compare
-    OutboundMsg msgIn = OutboundMsg.recvMsg(in, true);
+    OutboundMsg msgIn = OutboundMsg.receive(in, true);
     assertThat(msgIn, is(msgOut));
 
     out.close();
     in.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 
   @Test
-  public void send() {
+  public void send() throws UnsupportedEncodingException {
     UUID interceptMessageUuid = UUID.randomUUID();
     UUID followingMessageUuid = UUID.randomUUID();
-    byte[] body = "whatever".getBytes();
+    byte[] body = "whatever".getBytes(UTF_8);
     InternalHeader writeAhead = messageBuilder.buildWriteAheadHeader(UUID.randomUUID());
     List<InternalHeader> headers = Collections.singletonList(writeAhead);
 
@@ -118,6 +113,7 @@ public class OutboundMsgTest {
     // verify getters
     assertThat(msgOut.getMessageType(), is(MessageType.INTERCEPT_MESSAGE));
     assertThat(msgOut.getExecPhase(), is(ExecPhase.UNDEFINED));
+    assertThat(msgOut.getHeaders(), is(notNullValue()));
     assertThat(msgOut.getHeaders().size(), is(1));
     assertThat(msgOut.getHeaders().get(0), is(writeAhead));
     assertThat(msgOut.getMessageUuid(), is(interceptMessageUuid));
@@ -125,29 +121,29 @@ public class OutboundMsgTest {
     assertThat(msgOut.getBody(), is(body));
 
     // send
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.bind(socketAddr);
-    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
-    out.connect(socketAddr);
+    String zmqEndpoint = "inproc://here";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.bind(zmqEndpoint);
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.connect(zmqEndpoint);
     msgOut.send(out);
     logger.debug("sent msgOut= {}", msgOut);
 
     // receive and compare
-    OutboundMsg msgIn = OutboundMsg.recvMsg(in, true);
+    OutboundMsg msgIn = OutboundMsg.receive(in, true);
     logger.debug("received msgIn= {}", msgIn);
     assertThat(msgIn, is(msgOut));
 
     out.close();
     in.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 
   @Test
-  public void testNPE() {
+  public void testNullPointerException() {
     UUID messageUuid = UUID.randomUUID();
-    byte[] body = "whatever".getBytes();
+    byte[] body = "whatever".getBytes(UTF_8);
     List<InternalHeader> headers = Collections.emptyList();
 
     // null messageType
@@ -200,7 +196,7 @@ public class OutboundMsgTest {
   public void testEquals() {
     UUID messageUuid = UUID.randomUUID();
     UUID followingMessageUuid = UUID.randomUUID();
-    byte[] body = "whatever".getBytes();
+    byte[] body = "whatever".getBytes(UTF_8);
     InternalHeader writeAhead = messageBuilder.buildWriteAheadHeader(UUID.randomUUID());
     List<InternalHeader> headers = Collections.singletonList(writeAhead);
 
@@ -278,7 +274,7 @@ public class OutboundMsgTest {
             headers,
             messageUuid,
             followingMessageUuid,
-            "whatevah".getBytes()),
+            "whatevah".getBytes(UTF_8)),
         is(not(msg1)));
   }
 }

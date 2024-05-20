@@ -22,7 +22,7 @@ package net.ittera.pal.core.messages;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
-import net.ittera.pal.common.util.UUIDUtils;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.BaseMsg;
 import org.zeromq.ZMQ;
 
@@ -73,7 +73,7 @@ public class InboundJsonRpcRequestMsg extends BaseMsg {
       return false;
     }
     // clientId
-    byte[] buff = UUIDUtils.toBytes(clientId);
+    byte[] buff = UuidUtils.toBytes(clientId);
     size = buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
@@ -85,10 +85,14 @@ public class InboundJsonRpcRequestMsg extends BaseMsg {
   }
 
   /**
-   * blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
-   * ready, then all are)
+   * Blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
+   * ready, then all are).
+   *
+   * @param socket ZMQ socket
+   * @param blocking blocking read flag
+   * @return InboundJsonRpcRequestMsg instance, or null if non-blocking and no message available
    */
-  public static InboundJsonRpcRequestMsg recvMsg(ZMQ.Socket socket, boolean blocking) {
+  public static InboundJsonRpcRequestMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
@@ -100,7 +104,7 @@ public class InboundJsonRpcRequestMsg extends BaseMsg {
     int msgSize = buff.length;
 
     // clientId
-    final UUID clientId = UUIDUtils.fromBytes(buff);
+    final UUID clientId = UuidUtils.fromBytes(buff);
 
     // message body
     buff = socket.recv();
@@ -111,14 +115,19 @@ public class InboundJsonRpcRequestMsg extends BaseMsg {
   }
 
   // default is non-blocking
-  public static InboundJsonRpcRequestMsg recvMsg(ZMQ.Socket socket) {
-    return recvMsg(socket, false);
+  public static InboundJsonRpcRequestMsg receive(ZMQ.Socket socket) {
+    return receive(socket, false);
   }
 
   @Override
+  @SuppressWarnings("EqualsGetClass")
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     InboundJsonRpcRequestMsg that = (InboundJsonRpcRequestMsg) o;
     return Objects.equals(clientId, that.clientId) && Objects.equals(jsonMessage, that.jsonMessage);
   }

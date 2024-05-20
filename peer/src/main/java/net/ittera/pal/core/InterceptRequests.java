@@ -50,10 +50,10 @@ import org.slf4j.LoggerFactory;
 class InterceptRequests {
   private static final Logger logger = LoggerFactory.getLogger(InterceptRequests.class);
 
-  private volatile ArrayList<InterceptRequestEntry> constructorIntercepts = new ArrayList<>();
-  private volatile ArrayList<InterceptRequestEntry> methodIntercepts = new ArrayList<>();
-  private volatile ArrayList<InterceptRequestEntry> fieldGetIntercepts = new ArrayList<>();
-  private volatile ArrayList<InterceptRequestEntry> fieldPutIntercepts = new ArrayList<>();
+  private volatile List<InterceptRequestEntry> constructorIntercepts = new ArrayList<>();
+  private volatile List<InterceptRequestEntry> methodIntercepts = new ArrayList<>();
+  private volatile List<InterceptRequestEntry> fieldGetIntercepts = new ArrayList<>();
+  private volatile List<InterceptRequestEntry> fieldPutIntercepts = new ArrayList<>();
 
   private List<InterceptMessage> getMatchingIntercepts(
       ExecMessage execMessage, List<InterceptRequestEntry> interceptRequestEntries) {
@@ -72,28 +72,21 @@ class InterceptRequests {
   List<InterceptMessage> getMatchingIntercepts(ExecMessage execMessage) {
     final ExecMessageType execMessageType =
         ExecMessageType.fromByte(execMessage.getExecMessageType());
-    switch (execMessageType) {
-      case CONSTRUCTOR:
-        return getMatchingIntercepts(execMessage, constructorIntercepts);
-      case INSTANCE_METHOD:
-      case CLASS_METHOD:
-        return getMatchingIntercepts(execMessage, methodIntercepts);
-      case GET_STATIC:
-      case GET_FIELD:
-        return getMatchingIntercepts(execMessage, fieldGetIntercepts);
-      case PUT_STATIC:
-      case PUT_FIELD:
-        return getMatchingIntercepts(execMessage, fieldPutIntercepts);
-      default:
-        return Collections.emptyList();
-    }
+    return switch (execMessageType) {
+      case CONSTRUCTOR -> getMatchingIntercepts(execMessage, constructorIntercepts);
+      case INSTANCE_METHOD, CLASS_METHOD -> getMatchingIntercepts(execMessage, methodIntercepts);
+      case GET_STATIC, GET_FIELD -> getMatchingIntercepts(execMessage, fieldGetIntercepts);
+      case PUT_STATIC, PUT_FIELD -> getMatchingIntercepts(execMessage, fieldPutIntercepts);
+      default -> Collections.emptyList();
+    };
   }
 
-  private ArrayList<InterceptRequestEntry> cloneListWithNewRequest(
-      ArrayList<InterceptRequestEntry> list, InterceptRequestEntry newRequest)
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private List<InterceptRequestEntry> cloneListWithNewRequest(
+      List<InterceptRequestEntry> list, InterceptRequestEntry newRequest)
       throws DuplicateInterceptException {
-    ArrayList<InterceptRequestEntry> newRequestList =
-        (ArrayList<InterceptRequestEntry>) list.clone();
+
+    var newRequestList = (ArrayList<InterceptRequestEntry>) ((ArrayList) list).clone();
 
     if (newRequestList.contains(newRequest)) {
       throw new DuplicateInterceptException(
@@ -105,6 +98,8 @@ class InterceptRequests {
     return newRequestList;
   }
 
+  // This method is called by the InterceptMatcher.run() thread only
+  @SuppressWarnings("NonAtomicOperationOnVolatileField")
   void registerInterceptRequest(InterceptMessage interceptMessage)
       throws DuplicateInterceptException {
     InterceptRequestEntry interceptRequestEntry = new InterceptRequestEntry(interceptMessage);
@@ -150,13 +145,14 @@ class InterceptRequests {
     }
   }
 
-  private ArrayList<InterceptRequestEntry> cloneListWithDeletedRequest(
-      ArrayList<InterceptRequestEntry> list, String interceptMessageUUID) {
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private List<InterceptRequestEntry> cloneListWithDeletedRequest(
+      List<InterceptRequestEntry> list, String interceptMessageUuid) {
 
     final List<Integer> occurrences = new ArrayList<>();
     for (int i = 0; i < list.size(); i++) {
       InterceptRequestEntry requestEntry = list.get(i);
-      if (interceptMessageUUID.equalsIgnoreCase(
+      if (interceptMessageUuid.equalsIgnoreCase(
           requestEntry.getInterceptMessage().getMessageUuid())) {
         occurrences.add(i);
       }
@@ -165,17 +161,20 @@ class InterceptRequests {
       return list;
     }
 
-    ArrayList<InterceptRequestEntry> clonedList = (ArrayList<InterceptRequestEntry>) list.clone();
+    @SuppressWarnings("unchecked")
+    var clonedList = (ArrayList<InterceptRequestEntry>) ((ArrayList) list).clone();
     occurrences.forEach(i -> clonedList.remove(i.intValue()));
     return clonedList;
   }
 
-  void unregisterInterceptRequest(String interceptMessageUUID) {
+  // This method is called by the InterceptMatcher.run() thread only
+  @SuppressWarnings("NonAtomicOperationOnVolatileField")
+  void unregisterInterceptRequest(String interceptMessageUuid) {
     constructorIntercepts =
-        cloneListWithDeletedRequest(constructorIntercepts, interceptMessageUUID);
-    methodIntercepts = cloneListWithDeletedRequest(methodIntercepts, interceptMessageUUID);
-    fieldGetIntercepts = cloneListWithDeletedRequest(fieldGetIntercepts, interceptMessageUUID);
-    fieldPutIntercepts = cloneListWithDeletedRequest(fieldPutIntercepts, interceptMessageUUID);
+        cloneListWithDeletedRequest(constructorIntercepts, interceptMessageUuid);
+    methodIntercepts = cloneListWithDeletedRequest(methodIntercepts, interceptMessageUuid);
+    fieldGetIntercepts = cloneListWithDeletedRequest(fieldGetIntercepts, interceptMessageUuid);
+    fieldPutIntercepts = cloneListWithDeletedRequest(fieldPutIntercepts, interceptMessageUuid);
   }
 
   int getRegisteredRequestsSize() {

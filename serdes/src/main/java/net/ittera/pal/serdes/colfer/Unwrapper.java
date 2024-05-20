@@ -20,15 +20,14 @@
 package net.ittera.pal.serdes.colfer;
 
 import java.lang.reflect.Constructor;
-import java.util.Optional;
 import net.ittera.pal.common.util.Classes;
 import net.ittera.pal.messages.colfer.Obj;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * On dynamically creating arrays with generics: see Rohit Jain answer in
- * https://stackoverflow.com/questions/18581002/how-to-create-a-generic-array
+ * On dynamically creating arrays with generics: see Rohit Jain answer. <a
+ * href="https://stackoverflow.com/questions/18581002/how-to-create-a-generic-array">...</a>
  */
 public class Unwrapper {
 
@@ -36,13 +35,18 @@ public class Unwrapper {
 
   private Unwrapper() {}
 
+  @SuppressWarnings("unchecked")
   private static <T> T reconstructCharSequence(T t, Obj object) {
-    Optional<Class<?>> charSeqClass =
-        Wrapper.reconstructableCharSeqClasses.stream().filter(c -> c.equals(t)).findFirst();
+    Class<?> charSeqClass =
+        Wrapper.reconstructableCharSeqClasses.stream()
+            .filter(c -> c.equals(t))
+            .findFirst()
+            .orElseThrow(
+                () -> new IllegalArgumentException("No matching CharSequence class found"));
 
     Constructor<?> c;
     try {
-      c = charSeqClass.get().getConstructor(String.class);
+      c = charSeqClass.getConstructor(String.class);
     } catch (NoSuchMethodException e) {
       logger.warn("Couldn't get constructor for char seq object", e);
       return null;
@@ -63,10 +67,11 @@ public class Unwrapper {
    * Returns objects in objectList as Object array with each object typed as its type in classList
    * This method undoes the wrapping of objects done by Wrapper.getWrappedObject()
    *
-   * @param object
-   * @param clazz
-   * @return
+   * @param object the Obj instance to unwrap
+   * @param clazz the class of the object to unwrap
+   * @return the unwrapped Object
    */
+  @SuppressWarnings("JdkObsolete") // silence errorprone warning about StringBuffer
   public static java.lang.Object unwrapObject(Obj object, Class<?> clazz) {
     if (logger.isTraceEnabled()) {
       logger.trace("in with object:\n{}, clazz:\n{}", object, clazz);
@@ -134,9 +139,7 @@ public class Unwrapper {
       } else {
         throw new IllegalArgumentException("Unsupported primitive type:" + clazz.getName());
       }
-    }
-    // is Array
-    else if (clazz.isArray()) {
+    } else if (clazz.isArray()) { // ARRAY
       if (!object.getIsArray()) {
         throw new IllegalArgumentException(
             "Type is array but wrapped object isn't:" + clazz.getName());
@@ -150,9 +153,7 @@ public class Unwrapper {
           array[idx++] = strObj.getValue();
         }
         return array;
-      }
-      // PRIMITIVE WRAPPERS
-      else if (clazz == Integer[].class) {
+      } else if (clazz == Integer[].class) { // PRIMITIVE WRAPPERS
         Integer[] array = new Integer[arrayValues.length];
         int idx = 0;
         for (Obj strObj : arrayValues) {
@@ -208,9 +209,7 @@ public class Unwrapper {
           array[idx++] = Double.valueOf(strObj.getValue());
         }
         return array;
-      }
-      // PRIMITIVES
-      else if (clazz == int[].class) {
+      } else if (clazz == int[].class) { // PRIMITIVES
         int[] array = new int[arrayValues.length];
         int idx = 0;
         for (Obj strObj : arrayValues) {

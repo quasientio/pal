@@ -38,8 +38,6 @@ public abstract class ExecThreadFactory implements ThreadFactory {
   protected final AtomicInteger threadCounter = new AtomicInteger(0);
 
   private static final int THREAD_GROUP_MAX_PRIORITY = Thread.NORM_PRIORITY;
-  private static final int THREAD_PRIORITY = Thread.NORM_PRIORITY;
-  private static final boolean THREAD_GROUP_IS_DAEMON = false;
   private static final boolean THREAD_IS_DAEMON = false;
 
   protected static final Logger logger = LoggerFactory.getLogger(ExecThreadFactory.class);
@@ -54,7 +52,7 @@ public abstract class ExecThreadFactory implements ThreadFactory {
   protected UUID peerUuid;
   private ClassLoader classLoader;
 
-  enum ExecChannelType {
+  public enum ExecChannelType {
     RPC("RPC"),
     LOG("LOG");
 
@@ -75,7 +73,6 @@ public abstract class ExecThreadFactory implements ThreadFactory {
       UUID peerUuid) {
     this.execChannelType = execChannelType;
     threadGroup = new ThreadGroup(getThreadGroupName());
-    threadGroup.setDaemon(THREAD_GROUP_IS_DAEMON);
     threadGroup.setMaxPriority(THREAD_GROUP_MAX_PRIORITY);
     this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
@@ -84,20 +81,18 @@ public abstract class ExecThreadFactory implements ThreadFactory {
     this.classLoader = classLoader;
     this.peerUuid = peerUuid;
     logger.info(
-        "Initialized exec thread factory with group name: {}, daemon: {}, maxPriority: {}",
+        "Initialized exec thread factory with group name: {}, maxPriority: {}",
         getThreadGroupName(),
-        THREAD_GROUP_IS_DAEMON,
         THREAD_GROUP_MAX_PRIORITY);
   }
 
   protected abstract AbstractMessageInvokerThread createInvokerThread(String threadName);
 
   @Override
-  public Thread newThread(Runnable r) {
+  public Thread newThread(@SuppressWarnings("NullableProblems") Runnable r) {
     final String newThreadName = getThreadBaseName() + ' ' + threadCounter.getAndIncrement();
     final Thread thread = createInvokerThread(newThreadName);
     thread.setContextClassLoader(classLoader);
-    thread.setPriority(THREAD_PRIORITY);
     thread.setDaemon(THREAD_IS_DAEMON);
     thread.setUncaughtExceptionHandler(
         (t, e) ->

@@ -44,7 +44,7 @@ class PeerWiring extends AbstractModule {
 
   private static final Logger logger = LoggerFactory.getLogger(PeerWiring.class);
   private final Properties properties;
-  private final ZContext zContext;
+  private final ZContext zmqContext;
   private final UUID peerUuid;
   private final CustomClassloader customClassloader;
   private final Set<RunOptions> runOptions;
@@ -53,7 +53,7 @@ class PeerWiring extends AbstractModule {
   PeerWiring(
       Properties properties,
       Set<RunOptions> runOptions,
-      ZContext zContext,
+      ZContext zmqContext,
       CustomClassloader customClassloader) {
     if (logger.isInfoEnabled()) {
       logger.info("Created guice module with properties:{}", printedProperties(properties));
@@ -61,7 +61,7 @@ class PeerWiring extends AbstractModule {
     this.properties = properties;
     addServiceNamesToProps();
     this.runOptions = runOptions;
-    this.zContext = zContext;
+    this.zmqContext = zmqContext;
     this.peerUuid = UUID.fromString(properties.getProperty("id"));
     this.customClassloader = customClassloader;
   }
@@ -80,8 +80,8 @@ class PeerWiring extends AbstractModule {
     // use underscore in names to better filter service-related traces
     properties.setProperty("LogReader.service", "Log_Reader");
     properties.setProperty("LogWriter.service", "Log_Writer");
-    properties.setProperty("RPCRequestDispatcher.service", "RPC_Request_Dispatcher");
-    properties.setProperty("JSONRPCRequestDispatcher.service", "JSONRPC_Request_Dispatcher");
+    properties.setProperty("RpcRequestDispatcher.service", "RPC_Request_Dispatcher");
+    properties.setProperty("JsonRpcRequestDispatcher.service", "JSONRPC_Request_Dispatcher");
     properties.setProperty("MessagePublisher.service", "Message_Publisher");
     properties.setProperty("Intercepts.service", "Intercepts_Processor");
     properties.setProperty("Session.service", "Session_Service");
@@ -106,26 +106,31 @@ class PeerWiring extends AbstractModule {
   }
 
   @Provides
+  @SuppressWarnings({"unused", "CloseableProvides"})
   ZContext getZmqContext() {
-    return zContext;
+    return zmqContext;
   }
 
   @Provides
+  @SuppressWarnings("unused")
   UUID getPeerUuid() {
     return peerUuid;
   }
 
   @Provides
+  @SuppressWarnings("unused")
   ThreadGroup getServiceThreadGroup() {
     return serviceThreadGroup;
   }
 
   @Provides
+  @SuppressWarnings({"unused", "CloseableProvides"})
   CustomClassloader getCustomClassloader() {
     return customClassloader;
   }
 
   @Provides
+  @SuppressWarnings("unused")
   Set<RunOptions> getRunOptions() {
     return runOptions;
   }

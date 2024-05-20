@@ -23,8 +23,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -43,19 +47,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
-// auxiliary class
-class ClassForGetStaticTest {
-  public static short someShort = 4;
-  static byte[] bytes = "Some".getBytes();
-  static Integer someInteger = 965235;
-  protected static String aString = "I am a normal string";
-  static List<?> anObject = new ArrayList<>();
-  static Object[] objects = {1, "a", false};
-  private static Object[] privateObjects = new Object[] {0, "b", true};
-  static Throwable lastError = new Exception("dummy exception");
-  static Map<?, ?> aNullMap;
-}
-
 @RunWith(MockitoJUnitRunner.class)
 public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
 
@@ -64,6 +55,7 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   private final String sourceFilename = "NotARealClass.java";
 
   @Before
+  @Override
   public void setUp() {
     super.setUp();
     dispatcher =
@@ -532,5 +524,19 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertNotNull(replyMsg.getReturnValue());
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  // auxiliary class
+  @SuppressWarnings({"unused", "StaticAssignmentOfThrowable"})
+  private static class ClassForGetStaticTest {
+    public static short someShort = 4;
+    static byte[] bytes = "Some".getBytes(StandardCharsets.UTF_8);
+    static Integer someInteger = 965235;
+    protected static String aString = "I am a normal string";
+    static List<?> anObject = new ArrayList<>();
+    static Object[] objects = {1, "a", false};
+    private static final Object[] privateObjects = new Object[] {0, "b", true};
+    static Throwable lastError = new Exception("dummy exception");
+    static Map<?, ?> aNullMap;
   }
 }

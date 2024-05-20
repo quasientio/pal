@@ -19,23 +19,22 @@
 
 package net.ittera.pal.serdes.colfer;
 
-import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import java.util.List;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.serdes.WrappingTestBase;
 import org.junit.Test;
 
-/** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior */
+// Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior
 public class UnwrapperTest extends WrappingTestBase {
 
   @Test
   public void unwrapObject_wrappedNullObject_originalValue() throws ClassNotFoundException {
-    Float wrappable = null;
-    Obj wrappedObj = Wrapper.getWrappedObject(wrappable, "java.lang.Float", null);
-    Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
-    assertEquals(wrappable, unwrapped);
+    Obj wrappedObj = Wrapper.getWrappedObject(null, "java.lang.Float", null);
+    assertNull(Unwrapper.unwrapObject(wrappedObj));
   }
 
   @Test
@@ -66,6 +65,7 @@ public class UnwrapperTest extends WrappingTestBase {
   }
 
   @Test
+  @SuppressWarnings("JdkObsolete") // silence errorprone warnings about StringBuffer
   public void unwrapObject_stringBuffer_originalValue() throws ClassNotFoundException {
     StringBuffer wrappable = new StringBuffer("world");
     Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
@@ -83,7 +83,7 @@ public class UnwrapperTest extends WrappingTestBase {
     List<Object> valuedWrappableObjs =
         wrappableObjects.stream()
             .filter(o -> o != null && o != void.class && o != Void.class)
-            .collect(toList());
+            .toList();
 
     for (Object wrappable : valuedWrappableObjs) {
       Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
@@ -103,7 +103,7 @@ public class UnwrapperTest extends WrappingTestBase {
   @Test(expected = IllegalArgumentException.class)
   public void unwrapObject_TypeIsArrayButWrappedObjectIsNot_illegalArgumentException() {
     Obj wrappedObj = new Obj();
-    Class arrayClass = int[].class;
+    var arrayClass = int[].class;
     wrappedObj.setIsArray(false);
     Unwrapper.unwrapObject(wrappedObj, arrayClass);
   }
@@ -114,6 +114,7 @@ public class UnwrapperTest extends WrappingTestBase {
     wrappedObj.setValue("Hiya");
     wrappedObj.setClazz(new net.ittera.pal.messages.colfer.Class().withName("java.lang.String"));
     Object unwrapped = Unwrapper.unwrapObject(wrappedObj, null);
+    assertNotNull(unwrapped);
     assertEquals(String.class, unwrapped.getClass());
   }
 }

@@ -31,31 +31,35 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 @Singleton
-class RPCRequestDispatcher extends ConnectedService {
+class RpcRequestDispatcher extends ConnectedService {
 
-  private static final Logger logger = LoggerFactory.getLogger(RPCRequestDispatcher.class);
+  private static final Logger logger = LoggerFactory.getLogger(RpcRequestDispatcher.class);
 
   // zmq stuff
   private final String routerAddress;
   private final String dealerAddress;
-  private static final String PROXY_CTRL_ADDR = "inproc://rdprxyctrl";
+  private static final String PROXY_CTRL_ADDRESS = "inproc://rdprxyctrl";
 
   private Socket rpcRouterSocket;
   private Socket dealerSocket;
   private Socket ctrlSocket;
 
   @Inject
-  public RPCRequestDispatcher(
+  public RpcRequestDispatcher(
       UUID peerUuid,
       ZContext context,
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
-      @Named("RPCRequestDispatcher.service") String serviceName,
+      @Named("RpcRequestDispatcher.service") String serviceName,
       @Named("in.rpc") String routerAddress,
       @Named("in.dealer") String dealerAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.routerAddress = routerAddress;
     this.dealerAddress = dealerAddress;
+    logger.info(
+        "RpcRequestDispatcher created with routerAddress:{}, dealerAddress:{}",
+        routerAddress,
+        dealerAddress);
   }
 
   @Override
@@ -68,7 +72,7 @@ class RPCRequestDispatcher extends ConnectedService {
     dealerSocket.bind(dealerAddress);
     // to get proxy termination command
     this.ctrlSocket = zmqContext.createSocket(SocketType.PAIR);
-    ctrlSocket.bind(PROXY_CTRL_ADDR);
+    ctrlSocket.bind(PROXY_CTRL_ADDRESS);
   }
 
   @Override
@@ -86,7 +90,7 @@ class RPCRequestDispatcher extends ConnectedService {
 
   private void sendProxyTermCmd() {
     ZMQ.Socket ctrlCliSocket = zmqContext.createSocket(SocketType.PAIR);
-    ctrlCliSocket.connect(PROXY_CTRL_ADDR);
+    ctrlCliSocket.connect(PROXY_CTRL_ADDRESS);
     ctrlCliSocket.send(ZMQ.PROXY_TERMINATE);
     ctrlCliSocket.close();
   }

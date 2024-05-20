@@ -20,8 +20,10 @@
 package net.ittera.pal.apps.rpc;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
+@SuppressWarnings("unused")
 public class VoidInstanceMethods {
 
   void doSomething() {
@@ -44,7 +46,7 @@ public class VoidInstanceMethods {
   }
 
   protected void printDate() {
-    LocalDate date = LocalDate.now();
+    LocalDate date = LocalDate.now(ZoneId.of("UTC"));
     System.out.println(date.format(DateTimeFormatter.ISO_LOCAL_DATE));
   }
 }

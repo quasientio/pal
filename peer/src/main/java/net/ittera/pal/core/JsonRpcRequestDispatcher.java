@@ -53,9 +53,9 @@ import zmq.ZError;
  * pulls them and sends them to the dealer socket.
  */
 @Singleton
-class JSONRPCRequestDispatcher extends ConnectedService {
+class JsonRpcRequestDispatcher extends ConnectedService {
 
-  private static final Logger logger = LoggerFactory.getLogger(JSONRPCRequestDispatcher.class);
+  private static final Logger logger = LoggerFactory.getLogger(JsonRpcRequestDispatcher.class);
   private final Map<WebSocket, UUID> webSocketConnectionMapping = new HashMap<>();
   private final Map<UUID, ConnectionStats> clientStatsMap = new HashMap<>();
 
@@ -71,12 +71,12 @@ class JSONRPCRequestDispatcher extends ConnectedService {
   private Socket pushSocket;
 
   @Inject
-  public JSONRPCRequestDispatcher(
+  public JsonRpcRequestDispatcher(
       UUID peerUuid,
       ZContext context,
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
-      @Named("JSONRPCRequestDispatcher.service") String serviceName,
+      @Named("JsonRpcRequestDispatcher.service") String serviceName,
       @Named("in.jsonrpc") String websocketAddress,
       @Named("json.in.dealer") String dealerAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
@@ -143,25 +143,25 @@ class JSONRPCRequestDispatcher extends ConnectedService {
       try {
         // get responses from DEALER socket and forward to WebSocket clients
         if (poller.pollin(0)) {
-          OutboundJsonRpcResponseMsg outboundJSONRPCResponseMsg =
-              OutboundJsonRpcResponseMsg.recvMsg(dealerSocket, true);
-          UUID clientId = outboundJSONRPCResponseMsg.getClientId();
-          String jsonRpcResponse = outboundJSONRPCResponseMsg.getJsonMessage();
+          OutboundJsonRpcResponseMsg responseMsg =
+              OutboundJsonRpcResponseMsg.receive(dealerSocket, true);
+          assert responseMsg != null;
+          UUID clientId = responseMsg.getClientId();
+          String jsonRpcResponse = responseMsg.getJsonMessage();
           sendResponseToWebSocketClient(clientId, jsonRpcResponse);
         }
 
         // get requests from WebSocket clients and forward to DEALER socket
         if (poller.pollin(1)) {
-          InboundJsonRpcRequestMsg inboundJSONRPCRequestMsg =
-              InboundJsonRpcRequestMsg.recvMsg(pullSocket, true);
-          boolean sent = inboundJSONRPCRequestMsg.send(dealerSocket);
+          InboundJsonRpcRequestMsg requestMsg = InboundJsonRpcRequestMsg.receive(pullSocket, true);
+          assert requestMsg != null;
+          boolean sent = requestMsg.send(dealerSocket);
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Sent message from connection id: {} to dispatchers",
-                inboundJSONRPCRequestMsg.getClientId());
+                "Sent message from connection id: {} to dispatchers", requestMsg.getClientId());
           }
           if (!sent) {
-            logger.error("Error pushing message for dispatch: {}", inboundJSONRPCRequestMsg);
+            logger.error("Error dealing message for dispatch: {}", requestMsg);
           }
         }
       } catch (ClosedSelectorException ex) {
@@ -287,9 +287,8 @@ class JSONRPCRequestDispatcher extends ConnectedService {
       if (logger.isTraceEnabled()) {
         logger.trace("Message received: {}", message);
       }
-      InboundJsonRpcRequestMsg inboundJSONRPCRequestMsg =
-          new InboundJsonRpcRequestMsg(connId, message);
-      boolean sentOk = inboundJSONRPCRequestMsg.send(pushSocket, false);
+      InboundJsonRpcRequestMsg requestMsg = new InboundJsonRpcRequestMsg(connId, message);
+      boolean sentOk = requestMsg.send(pushSocket, false);
       if (logger.isDebugEnabled()) {
         logger.debug("Pushed message from connection id: {} for dispatch", connId);
       }

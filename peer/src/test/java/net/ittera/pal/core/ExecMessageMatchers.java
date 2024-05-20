@@ -28,12 +28,12 @@ import org.hamcrest.TypeSafeMatcher;
 
 public class ExecMessageMatchers {
 
-  /** Matches if ReturnValue is of DeclaringClass */
+  // Matches if ReturnValue is of DeclaringClass
   public static final class HasDeclaringClassOf extends TypeSafeMatcher<Object> {
 
-    private Class declaringClass;
+    private final Class<?> declaringClass;
 
-    HasDeclaringClassOf(Class declaringClass) {
+    HasDeclaringClassOf(Class<?> declaringClass) {
       this.declaringClass = declaringClass;
     }
 
@@ -64,15 +64,15 @@ public class ExecMessageMatchers {
       description.appendText("has declaring class " + declaringClass.getName());
     }
 
-    public static Matcher<Object> hasDeclaringClass(Class declaringClass) {
+    public static Matcher<Object> hasDeclaringClass(Class<?> declaringClass) {
       return new HasDeclaringClassOf(declaringClass);
     }
   }
 
   public static final class ComesFromClass extends TypeSafeMatcher<Object> {
-    private Class clazz;
+    private final Class<?> clazz;
 
-    ComesFromClass(Class clazz) {
+    ComesFromClass(Class<?> clazz) {
       this.clazz = clazz;
     }
 
@@ -114,13 +114,13 @@ public class ExecMessageMatchers {
       description.appendText("comes from class: " + clazz.getName());
     }
 
-    public static Matcher<Object> comesFromClass(Class clazz) {
+    public static Matcher<Object> comesFromClass(Class<?> clazz) {
       return new ComesFromClass(clazz);
     }
   }
 
   public static final class ComesFromReflectable extends TypeSafeMatcher<Object> {
-    private String reflectableName;
+    private final String reflectableName;
 
     ComesFromReflectable(String reflectableName) {
       this.reflectableName = reflectableName;

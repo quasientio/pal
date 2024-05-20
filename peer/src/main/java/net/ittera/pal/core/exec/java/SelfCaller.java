@@ -32,12 +32,14 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.stream.IntStream;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.common.util.UUIDUtils;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.core.PeerException;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.exec.UnsupportedMessageException;
 import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -50,6 +52,7 @@ public class SelfCaller {
 
   private static final Logger logger = LoggerFactory.getLogger(SelfCaller.class);
 
+  static final int DEFAULT_EXIT_VALUE = -987654321;
   private final UUID peerUuid;
   private final IncomingMessageDispatcher incomingMessageDispatcher;
   private final MessageBuilder messageBuilder;
@@ -76,7 +79,7 @@ public class SelfCaller {
     this.runOptions = runOptions;
   }
 
-  public ExecMessage callMain(String className, List<String> argList) {
+  public int callMain(String className, List<String> argList) {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Preparing message to call {}.main() with args: [{}]",
@@ -85,7 +88,7 @@ public class SelfCaller {
     }
 
     // prepare arrays for message construction
-    final Class[] parameterTypes = new Class[] {String[].class};
+    final Class<?>[] parameterTypes = new Class[] {String[].class};
     final String[] parameterTypesNamesArray = new String[parameterTypes.length];
     IntStream.range(0, parameterTypes.length)
         .forEach(i -> parameterTypesNamesArray[i] = parameterTypes[i].getName());
@@ -112,8 +115,7 @@ public class SelfCaller {
                       parameters,
                       new ObjectRef[parameterTypes.length]);
               try {
-                ExecMessage reply = incomingMessageDispatcher.incomingCall(request, true);
-                replies.add(reply);
+                replies.add(incomingMessageDispatcher.incomingCall(request, true));
               } catch (UnsupportedMessageException e) {
                 logger.error("Unsupported message", e);
               }
@@ -123,7 +125,7 @@ public class SelfCaller {
 
     // prepare offset subscriber
     Socket offsetSubscriber = null;
-    if (runOptions.contains(RunOptions.WITH_OUTLOG)) {
+    if (runOptions.contains(RunOptions.WITH_OUT_LOG)) {
       offsetSubscriber = context.createSocket(SocketType.SUB);
       offsetSubscriber.connect(offsetPubAddress);
       offsetSubscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
@@ -138,19 +140,18 @@ public class SelfCaller {
     }
     // get reply message
     final ExecMessage reply = replies.get(0);
-    if (reply == null) {
-      return null;
-    }
+    assert reply != null;
 
     // wait for the reply message offset, to ensure all msg's from have been written to the log
-    if (runOptions.contains(RunOptions.WITH_OUTLOG)) {
+    if (runOptions.contains(RunOptions.WITH_OUT_LOG)) {
       boolean offsetPublished = false;
       long offset = -1;
       UUID uuid = null;
       while (!offsetPublished) {
-        // multi-part msg: 1) offset as byte[], 2) uuid as byte[]
+        assert offsetSubscriber != null;
+        // multipart msg: 1) offset as byte[], 2) uuid as byte[]
         offset = Longs.fromByteArray(offsetSubscriber.recv(0));
-        uuid = UUIDUtils.fromBytes(offsetSubscriber.recv(0));
+        uuid = UuidUtils.fromBytes(offsetSubscriber.recv(0));
         if (reply.getMessageUuid().equalsIgnoreCase(uuid.toString())) {
           offsetPublished = true;
         }
@@ -158,17 +159,18 @@ public class SelfCaller {
       // close socket
       offsetSubscriber.close();
       if (logger.isDebugEnabled()) {
-        logger.debug("Returning reply message with offset={} and uuid={}", offset, uuid);
+        logger.debug("Returned reply message with offset={} and uuid={}", offset, uuid);
       }
     } else {
       if (logger.isDebugEnabled()) {
-        logger.debug("Returning reply message with uuid={}", reply.getMessageUuid());
+        logger.debug("Returned reply message with uuid={}", reply.getMessageUuid());
       }
     }
-    return reply;
+
+    return getExitValueFromReply(reply);
   }
 
-  public ExecMessage callJar(String jarFile, List<String> argList) throws PeerException {
+  public int callJar(String jarFile, List<String> argList) throws PeerException {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Call jar `{}` with args: [{}]",
@@ -186,8 +188,36 @@ public class SelfCaller {
     }
     final String mainClass = attributes.getValue("Main-Class");
     if (mainClass == null) {
-      throw new PeerException(PeerException.FatalCode.ERROR_NO_MAINCLASS_IN_JAR_MANIFEST);
+      throw new PeerException(PeerException.FatalCode.ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST);
     }
     return callMain(mainClass, argList);
+  }
+
+  private int getExitValueFromReply(ExecMessage mainReplyMessage) {
+    return switch (ExecMessageType.fromByte(mainReplyMessage.getExecMessageType())) {
+      case RETURN_VALUE, GET_STATIC, GET_FIELD -> getIntFromReturnValue(mainReplyMessage);
+      default -> {
+        logger.error("Unexpected message type: {}", mainReplyMessage.getExecMessageType());
+        yield DEFAULT_EXIT_VALUE;
+      }
+    };
+  }
+
+  private int getIntFromReturnValue(ExecMessage message) {
+    if (message.getReturnValue().getObject() != null) {
+      Object returnedObject;
+      try {
+        returnedObject = Unwrapper.unwrapObject(message.getReturnValue().getObject());
+      } catch (ClassNotFoundException e) {
+        logger.error("Error unwrapping object", e);
+        return DEFAULT_EXIT_VALUE;
+      }
+      if (returnedObject instanceof Integer) {
+        return (Integer) returnedObject;
+      } else {
+        logger.error("Unsupported return value type: {}", returnedObject.getClass().getName());
+      }
+    }
+    return DEFAULT_EXIT_VALUE;
   }
 }

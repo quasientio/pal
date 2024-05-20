@@ -34,7 +34,7 @@ public class MessageStreamer {
   private static final Logger logger = LoggerFactory.getLogger(MessageStreamer.class);
   private static final int STATS_TRACE_INTERVAL = 100;
 
-  private ZContext zContext;
+  private ZContext zmqContext;
   private Socket subscriber;
   private final String host;
   private final int port;
@@ -47,17 +47,17 @@ public class MessageStreamer {
 
   public MessageStreamer connect() {
     // create zmq context
-    zContext = new ZContext();
-    zContext.setLinger(1000);
-    zContext.setRcvHWM(1000);
+    zmqContext = new ZContext();
+    zmqContext.setLinger(1000);
+    zmqContext.setRcvHWM(1000);
 
     // init SUB socket and subscribe
-    subscriber = zContext.createSocket(SocketType.SUB);
-    final String connAddr = String.format("tcp://%s:%d", host, port);
-    subscriber.connect(connAddr);
+    subscriber = zmqContext.createSocket(SocketType.SUB);
+    final String publishingEndpoint = String.format("tcp://%s:%d", host, port);
+    subscriber.connect(publishingEndpoint);
     subscriber.subscribe(ZMQ.SUBSCRIPTION_ALL);
     if (logger.isDebugEnabled()) {
-      logger.debug("Connected and subscribed to {}", connAddr);
+      logger.debug("Connected and subscribed to {}", publishingEndpoint);
     }
     return this;
   }
@@ -66,7 +66,10 @@ public class MessageStreamer {
 
     Message message = null;
     try {
-      OutboundMsg msg = OutboundMsg.recvMsg(subscriber, true);
+      OutboundMsg msg = OutboundMsg.receive(subscriber, true);
+      if (msg == null) {
+        return null;
+      }
       message = new Message();
       message.unmarshal(msg.getBody(), 0);
       receivedMessagesCount++;
@@ -88,7 +91,7 @@ public class MessageStreamer {
 
   public void close() {
     subscriber.close();
-    zContext.close();
+    zmqContext.close();
   }
 
   public Stream<Message> getStream() {

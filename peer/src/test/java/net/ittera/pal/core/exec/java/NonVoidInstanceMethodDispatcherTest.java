@@ -25,8 +25,12 @@ import static net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf.hasDec
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
+import java.util.Locale;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -34,48 +38,19 @@ import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
-// auxiliary class
-class ClassForNonVoidInstanceMethodTest {
-  private String value;
-
-  ClassForNonVoidInstanceMethodTest() {}
-
-  ClassForNonVoidInstanceMethodTest(String value) {
-    this.value = value;
-  }
-
-  public String floatAsString(float someFloat) {
-    return String.valueOf(someFloat);
-  }
-
-  String toUpperCase() {
-    return value.toUpperCase();
-  }
-
-  protected String append(String value) {
-    if (value == null) {
-      return this.value;
-    }
-    return this.value.concat(value);
-  }
-
-  private String join(String joiner, String... values) {
-    return String.join(joiner, values);
-  }
-}
-
 @RunWith(MockitoJUnitRunner.class)
+@SuppressWarnings("FloatingPointLiteralPrecision")
 public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTest {
   private final Class<?> targetClass = ClassForNonVoidInstanceMethodTest.class;
 
   private final String sourceFilename = "NotARealClass.java";
 
   @Before
+  @Override
   public void setUp() {
     super.setUp();
     dispatcher =
@@ -119,7 +94,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledTwice();
-    assertThat(returned, is(value.toUpperCase()));
+    assertThat(returned, is(value.toUpperCase(Locale.getDefault())));
   }
 
   @Test
@@ -154,7 +129,7 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(2L));
     String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
-    assertThat(returned, is(value.toUpperCase()));
+    assertThat(returned, is(value.toUpperCase(Locale.getDefault())));
     assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
@@ -449,7 +424,8 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     // dispatch
     Object target = new ClassForNonVoidInstanceMethodTest();
     try {
-      Object returned = dispatcher.dispatch(ctxt, this, target, args);
+      @SuppressWarnings("unused")
+      Object unused = dispatcher.dispatch(ctxt, this, target, args);
       fail("Should have thrown a NPE");
     } catch (NullPointerException npe) {
       // all good
@@ -492,14 +468,9 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
         is("java.lang.NullPointerException"));
   }
 
-  @Ignore
-  @Test
-  @Override
-  public void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown() throws Exception {}
-
   @Override
   @Test
-  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() throws Exception {
+  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() {
 
     // create and store new instance
     ClassForNonVoidInstanceMethodTest target = new ClassForNonVoidInstanceMethodTest();
@@ -674,5 +645,36 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     assertNotNull(replyMsg.getReturnValue());
     assertThat(Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject()), is("hello,world!"));
     assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  // auxiliary class
+  @SuppressWarnings("unused")
+  private static class ClassForNonVoidInstanceMethodTest {
+    private String value;
+
+    ClassForNonVoidInstanceMethodTest() {}
+
+    ClassForNonVoidInstanceMethodTest(String value) {
+      this.value = value;
+    }
+
+    public String floatAsString(float someFloat) {
+      return String.valueOf(someFloat);
+    }
+
+    String toUpperCase() {
+      return value.toUpperCase(Locale.getDefault());
+    }
+
+    protected String append(String value) {
+      if (value == null) {
+        return this.value;
+      }
+      return this.value.concat(value);
+    }
+
+    private String join(String joiner, String... values) {
+      return String.join(joiner, values);
+    }
   }
 }

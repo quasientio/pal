@@ -23,8 +23,8 @@ import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 
 /**
- * Credits:
- * https://stackoverflow.com/questions/3758606/how-to-convert-byte-size-into-human-readable-format-in-java
+ * Credits: <a
+ * href="https://stackoverflow.com/questions/3758606/how-to-convert-byte-size-into-human-readable-format-in-java">...</a>
  */
 public final class ByteSizeConverter {
   private ByteSizeConverter() {}

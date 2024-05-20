@@ -19,8 +19,8 @@
 
 package net.ittera.pal.core.messages;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import java.util.UUID;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -33,84 +33,81 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-public class SessionCmdMsgTest extends ZmqEnabledTest {
+public class SessionCommandMsgTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
   @Test
   public void sendAndReceiveDeleteSessionCmd() {
     UUID sessionId = UUID.randomUUID();
-    SessionCmdMsg msgOut = new SessionCmdMsg(SessionCommandType.DELETE_SESSION, sessionId);
+    SessionCommandMsg msgOut = new SessionCommandMsg(SessionCommandType.DELETE_SESSION, sessionId);
 
     // send
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
-    out.bind(socketAddr);
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.connect(socketAddr);
+    String socketAddress = "inproc://here";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.bind(socketAddress);
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.connect(socketAddress);
     msgOut.send(out);
-    logger.debug("sent msgOut= {}", msgOut);
 
     // receive and compare
-    SessionCmdMsg msgIn = SessionCmdMsg.recvMsg(in, true);
-    logger.debug("received msgIn= {}", msgIn);
+    SessionCommandMsg msgIn = SessionCommandMsg.receive(in, true);
     assertThat(msgIn, is(msgOut));
 
     // close
     out.close();
     in.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 
   @Test
   public void sendAndReceiveStoreObjectCmd() {
     UUID sessionId = UUID.randomUUID();
     ObjectRef objectRef = ObjectRef.from("239487234");
-    SessionCmdMsg msgOut = new SessionCmdMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
+    SessionCommandMsg msgOut =
+        new SessionCommandMsg(SessionCommandType.STORE_OBJECT, sessionId, objectRef);
 
     // send
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
-    out.bind(socketAddr);
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.connect(socketAddr);
+    String socketAddress = "inproc://here";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.bind(socketAddress);
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.connect(socketAddress);
     msgOut.send(out);
-    logger.debug("sent msgOut= {}", msgOut);
 
     // receive and compare
-    SessionCmdMsg msgIn = SessionCmdMsg.recvMsg(in, true);
-    logger.debug("received msgIn= {}", msgIn);
+    SessionCommandMsg msgIn = SessionCommandMsg.receive(in, true);
     assertThat(msgIn, is(msgOut));
 
     // close
     out.close();
     in.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 
   @Test
   public void sendAndReceiveClearSessionsCmd() {
-    SessionCmdMsg msgOut = new SessionCmdMsg(SessionCommandType.CLEAR_SESSIONS);
+    SessionCommandMsg msgOut = new SessionCommandMsg(SessionCommandType.CLEAR_SESSIONS);
 
     // send
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
-    out.bind(socketAddr);
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.connect(socketAddr);
+    String socketAddress = "inproc://here";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.bind(socketAddress);
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.connect(socketAddress);
     msgOut.send(out);
     logger.debug("sent msgOut= {}", msgOut);
 
     // receive and compare
-    SessionCmdMsg msgIn = SessionCmdMsg.recvMsg(in, true);
+    SessionCommandMsg msgIn = SessionCommandMsg.receive(in, true);
     logger.debug("received msgIn= {}", msgIn);
     assertThat(msgIn, is(msgOut));
 
     // close
     out.close();
     in.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 }

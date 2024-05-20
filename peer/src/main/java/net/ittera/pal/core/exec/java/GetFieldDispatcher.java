@@ -22,7 +22,6 @@ package net.ittera.pal.core.exec.java;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.util.List;
-import java.util.Optional;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
@@ -49,12 +48,19 @@ public abstract class GetFieldDispatcher extends FieldOpDispatcher {
 
   @Override
   protected Object invokeIncoming(
-      Optional<AccessibleObject> accessibleObject,
-      Object target,
-      List<Object> args,
-      Optional<Object> value)
+      AccessibleObject accessibleObject, Object target, List<Object> args, Object value)
       throws Exception {
-    Field field = (Field) accessibleObject.get();
+
+    // discard args and value
+    return invokeIncoming(accessibleObject, target);
+  }
+
+  private Object invokeIncoming(AccessibleObject accessibleObject, Object target) throws Exception {
+    if (logger.isTraceEnabled()) {
+      logger.trace(
+          "invokeIncoming:in w/ accessibleObject: {}, target: {}", accessibleObject, target);
+    }
+    Field field = (Field) accessibleObject;
     return field.get(target);
   }
 
@@ -63,7 +69,7 @@ public abstract class GetFieldDispatcher extends FieldOpDispatcher {
       ExecMessage execMessage,
       Object valueObject,
       ObjectRef valueObjRef,
-      Optional<AccessibleObject> accessibleObject,
+      AccessibleObject accessibleObject,
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking) {
 
@@ -79,7 +85,7 @@ public abstract class GetFieldDispatcher extends FieldOpDispatcher {
     }
 
     return messageBuilder.buildReturnValue(
-        peerUuid, valueObject, accessibleObject.get(), valueObjRef, returnsVoid(), messageUuid);
+        peerUuid, valueObject, accessibleObject, valueObjRef, returnsVoid(), messageUuid);
   }
 
   @Override
@@ -88,7 +94,7 @@ public abstract class GetFieldDispatcher extends FieldOpDispatcher {
   }
 
   @Override
-  protected boolean returnsVoid(Optional<AccessibleObject> accessibleObject) {
+  protected boolean returnsVoid(AccessibleObject accessibleObject) {
     return false;
   }
 }

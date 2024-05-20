@@ -19,19 +19,18 @@
 
 package net.ittera.pal.messages;
 
-import com.google.common.primitives.Ints;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.colfer.InternalHeader;
-import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -43,6 +42,7 @@ import org.zeromq.ZMQ;
 public class MessageStreamerTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
+  private static final int EXECUTOR_THREADS = 2;
 
   private static ZContext createContext() {
     ZContext ctxt = new ZContext();
@@ -53,17 +53,14 @@ public class MessageStreamerTest {
   }
 
   public static int findOpenPort() throws IOException {
-    final ServerSocket tmpSocket = new ServerSocket(0, 0);
-    try {
+    try (ServerSocket tmpSocket = new ServerSocket(0, 0)) {
       return tmpSocket.getLocalPort();
-    } finally {
-      tmpSocket.close();
     }
   }
 
-  private ExecutorService getExecutor(int nThreads) {
+  private ExecutorService getExecutor() {
     return Executors.newFixedThreadPool(
-        nThreads,
+        EXECUTOR_THREADS,
         r -> {
           Thread thread = new Thread(r);
           thread.setUncaughtExceptionHandler((t, e) -> logger.error("Uncaught exception", e));
@@ -81,9 +78,7 @@ public class MessageStreamerTest {
     String address = String.format("tcp://%s:%d", host, port);
     logger.debug("Will use address: {}", address);
     MessageBuilder msgBuilder = new MessageBuilder();
-    ExecutorService executor = getExecutor(2);
-    List<InternalHeader> headers = new ArrayList<>();
-    boolean done = false;
+    ExecutorService executor = getExecutor();
     CountDownLatch latch = new CountDownLatch(1);
     // start publisher, which simulates MessagePublisher
     Runnable publisher =
@@ -93,13 +88,15 @@ public class MessageStreamerTest {
           int sentMessages = 0;
           ExecMessage msg = msgBuilder.buildEmptyConstructor(UUID.randomUUID(), "java.lang.String");
           while (latch.getCount() > 0) {
-            // send headers
-            socket.send(Ints.toByteArray(0), ZMQ.SNDMORE);
-            if (headers.size() > 0) {
-              headers.forEach(h -> socket.send(ColferUtils.toBytes(h), ZMQ.SNDMORE));
-            }
-            // send message
-            socket.send(ColferUtils.toBytes(msg));
+            OutboundMsg outboundMsg =
+                new OutboundMsg(
+                    MessageType.EXEC_MESSAGE,
+                    ExecPhase.BEFORE,
+                    new ArrayList<>(),
+                    UUID.randomUUID(),
+                    null,
+                    msgBuilder.wrap(msg));
+            outboundMsg.send(socket);
             sentMessages++;
           }
           logger.debug("Sent {} messages", sentMessages);
@@ -117,14 +114,21 @@ public class MessageStreamerTest {
         };
 
     // start publisher
-    executor.submit(publisher);
+    Future<?> publisherFuture = executor.submit(publisher);
 
     // start streamer
-    executor.submit(streamer);
+    Future<?> streamerFuture = executor.submit(streamer);
+
+    // wait for the futures to complete to let any thrown exceptions propagate
+    streamerFuture.get();
+    publisherFuture.get();
 
     // stop
     executor.shutdown();
-    executor.awaitTermination(2, TimeUnit.SECONDS);
+
+    @SuppressWarnings("unused")
+    boolean result = executor.awaitTermination(2, TimeUnit.SECONDS);
+
     context.close();
     logger.debug("Stream received {} messages", messageStreamer.getReceivedMessagesCount());
   }

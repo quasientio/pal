@@ -20,8 +20,16 @@
 package net.ittera.pal.serdes.colfer;
 
 import static java.util.stream.Collectors.toList;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyArray;
+import static org.hamcrest.Matchers.emptyString;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.awt.Dimension;
 import java.lang.reflect.Array;
@@ -41,16 +49,16 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior */
+// Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior
 public class WrapperTest extends WrappingTestBase {
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
-  private static List<Class> allPrimitiveAndLangClasses;
+  private static List<Class<?>> allPrimitiveAndLangClasses;
 
   @BeforeClass
   public static void setupLists() {
 
-    List<Class> javaLangClasses = new ArrayList<>();
+    List<Class<?>> javaLangClasses = new ArrayList<>();
     javaLangClasses.addAll(primitiveWrapperClasses);
     javaLangClasses.addAll(nonWrapperJavaLangClasses);
 
@@ -59,8 +67,9 @@ public class WrapperTest extends WrappingTestBase {
     allPrimitiveAndLangClasses.addAll(javaLangClasses);
   }
 
-  private static <T> T[] getArrayOf(Class<T> clazz, int size) {
-    return (T[]) Array.newInstance(clazz, size);
+  @SuppressWarnings("unchecked")
+  private static <T> T[] getArrayOfLength1(Class<T> clazz) {
+    return (T[]) Array.newInstance(clazz, 1);
   }
 
   // <editor-fold defaultstate="collapsed" desc="isWrappable tests">
@@ -84,7 +93,9 @@ public class WrapperTest extends WrappingTestBase {
   public void isWrappable_oneDimArrayOfNonWrappableObject_false() {
 
     List<Object[]> nonWrappableArrays =
-        someNonWrappableObjects.stream().map(o -> getArrayOf(o.getClass(), 1)).collect(toList());
+        someNonWrappableObjects.stream()
+            .map(o -> getArrayOfLength1(o.getClass()))
+            .collect(toList());
 
     for (Object array : nonWrappableArrays) {
       assertFalse(String.format("%s should not be wrappable!", array), Wrapper.isWrappable(array));
@@ -96,7 +107,7 @@ public class WrapperTest extends WrappingTestBase {
 
     int arraySize = 1;
 
-    for (Class clazz : primitiveClasses) {
+    for (Class<?> clazz : primitiveClasses) {
       Object primitiveArray = Array.newInstance(clazz, arraySize);
       assertTrue(
           String.format("%s is not wrappable!", primitiveArray),
@@ -108,8 +119,8 @@ public class WrapperTest extends WrappingTestBase {
   public void isWrappable_oneDimArrayOfWrapper_true() {
 
     // create list of 1-dimensional arrays, one for each of primitiveWrapperClasses, with length=1
-    List wrapperArrays =
-        primitiveWrapperClasses.stream().map(c -> getArrayOf(c, 1)).collect(toList());
+    List<?> wrapperArrays =
+        primitiveWrapperClasses.stream().map(WrapperTest::getArrayOfLength1).toList();
 
     for (Object wrapperArray : wrapperArrays) {
       assertTrue(
@@ -119,7 +130,7 @@ public class WrapperTest extends WrappingTestBase {
     }
   }
 
-  /** 1-dimensional CharSequence arrays (String, StringBuffer, StringBuilder) */
+  // 1-dimensional CharSequence arrays (String, StringBuffer, StringBuilder)
   @Test
   public void isWrappable_oneDimCharSequenceTypeArray_true() {
 
@@ -158,7 +169,7 @@ public class WrapperTest extends WrappingTestBase {
 
   @Test
   public void getWrappedClass_nullClass_unknownClassNoName() {
-    net.ittera.pal.messages.colfer.Class wrappedClass = Wrapper.getWrappedClass((Class) null);
+    net.ittera.pal.messages.colfer.Class wrappedClass = Wrapper.getWrappedClass((Class<?>) null);
     assertNotNull(wrappedClass);
     assertTrue(wrappedClass.getUnknown());
     assertThat(wrappedClass.getName(), is(emptyString()));
@@ -167,7 +178,7 @@ public class WrapperTest extends WrappingTestBase {
   @Test
   public void getWrappedClass_javaLangOrPrimitiveClass_wrappedOk() {
     net.ittera.pal.messages.colfer.Class wrappedClass;
-    for (Class clazz : allPrimitiveAndLangClasses) {
+    for (Class<?> clazz : allPrimitiveAndLangClasses) {
       wrappedClass = Wrapper.getWrappedClass(clazz);
 
       // neither null nor unknown
@@ -189,14 +200,13 @@ public class WrapperTest extends WrappingTestBase {
     assertTrue(wrappedClass.getUnknown());
 
     // name is set and correctly
-    assert (wrappedClass.getName().isEmpty());
+    assertTrue(wrappedClass.getName().isEmpty());
   }
 
   @Test
   public void getWrappedClass_javaLangOrPrimitiveClassName_wrappedOk() {
 
-    List<String> classNames =
-        allPrimitiveAndLangClasses.stream().map(Class::getName).collect(toList());
+    List<String> classNames = allPrimitiveAndLangClasses.stream().map(Class::getName).toList();
 
     net.ittera.pal.messages.colfer.Class wrappedClass;
     for (String classname : classNames) {
@@ -211,15 +221,15 @@ public class WrapperTest extends WrappingTestBase {
     }
   }
 
-  /** Class of all wrappableObjects must be wrappable as well */
+  // Class of all wrappableObjects must be wrappable as well
   @Test
   public void getWrappedClass_wrappableClass_wrappedOk() {
 
-    List<Class> classes =
+    List<Class<?>> classes =
         wrappableObjects.stream().filter(Objects::nonNull).map(Object::getClass).collect(toList());
 
     net.ittera.pal.messages.colfer.Class wrappedClass;
-    for (Class clazz : classes) {
+    for (Class<?> clazz : classes) {
       wrappedClass = Wrapper.getWrappedClass(clazz);
 
       // neither null nor unknown
@@ -237,7 +247,7 @@ public class WrapperTest extends WrappingTestBase {
   @Test
   public void getWrappedField_fieldAndClass_wrappedOk() {
 
-    Class clazz = Integer.class;
+    var clazz = Integer.class;
     String fieldName = "height";
 
     net.ittera.pal.messages.colfer.Field wrappedField = Wrapper.getWrappedField(clazz, fieldName);
@@ -293,8 +303,7 @@ public class WrapperTest extends WrappingTestBase {
 
     for (Object obj : someNonWrappableObjects) {
       try {
-        logger.debug(
-            "Calling Wrapper.getWrappedObject with " + obj + " and class " + obj.getClass());
+        logger.debug("Calling Wrapper.getWrappedObject with {} and class {}", obj, obj.getClass());
         Wrapper.getWrappedObject(obj, obj.getClass().getName(), null);
         fail("Should have thrown an exception");
       } catch (NonWrappableObjectException ex) {
@@ -310,7 +319,7 @@ public class WrapperTest extends WrappingTestBase {
     List<Object> valuedWrappableObjs =
         wrappableObjects.stream()
             .filter(o -> o != null && o != void.class && o != Void.class)
-            .collect(toList());
+            .toList();
 
     for (Object obj : valuedWrappableObjs) {
       Obj wrappedObj = Wrapper.getWrappedObject(obj, obj.getClass().getName(), null);
@@ -393,7 +402,7 @@ public class WrapperTest extends WrappingTestBase {
     Signature signature = new FieldSignature(java.awt.Dimension.class.getDeclaredField("width"));
     String sourceFile = "SomeJavaClass.java";
     int lineNumber = 16;
-    Class withinType = java.awt.Dimension.class;
+    var withinType = java.awt.Dimension.class;
     Context context = new Context(sourceFile, lineNumber, withinType, signature);
     net.ittera.pal.messages.colfer.Context wrappedContext =
         Wrapper.getWrappedContext(context, this, ObjectRef.randomRef());

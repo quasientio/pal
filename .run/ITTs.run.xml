@@ -38,7 +38,7 @@
       <pattern testClass="net.ittera.pal.rpc.binary.PeerSessionIT" />
       <pattern testClass="net.ittera.pal.cxn.DirectoryConnectionProviderIT" />
       <pattern testClass="net.ittera.pal.cxn.EtcdIT" />
-      <pattern testClass="net.ittera.pal.cxn.PALDirectoryIT" />
+      <pattern testClass="net.ittera.pal.cxn.PalDirectoryIT" />
       <pattern testClass="net.ittera.pal.cxn.ThinPeerIT" />
       <pattern testClass="net.ittera.pal.intercept.MethodInterceptIT" />
     </patterns>

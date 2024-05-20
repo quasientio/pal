@@ -1,6 +1,7 @@
 package net.ittera.pal.core.exec.java.reflect;
 
 /** This class is used for testing ReflectionHelper.lookupMethod() TODO: add tests for generics */
+@SuppressWarnings("unused")
 public class ClassForTestingMethodLookup {
 
   // <editor-fold desc="Basic string N-param testing">
@@ -10,10 +11,6 @@ public class ClassForTestingMethodLookup {
 
   public String methodWithOneParam(String param1) {
     return "methodWithOneStringParam";
-  }
-
-  public String methodWithTwoParams(String param1, String param2) {
-    return "methodWithTwoStringParams";
   }
 
   // </editor-fold>
@@ -49,10 +46,6 @@ public class ClassForTestingMethodLookup {
 
   public String methodWithOneParam(double param1) {
     return "methodWithOne_doubleParam";
-  }
-
-  public String methodWithOneFloatAndDoubleParam(float param1, double param2) {
-    return "methodWithOneFloatAndDoubleParam";
   }
 
   // </editor-fold>
@@ -92,6 +85,13 @@ public class ClassForTestingMethodLookup {
 
   // </editor-fold>
 
+  // <editor-fold desc="Object type testing">
+  public String methodWithOneParam(Object param1) {
+    return "methodWithOneObjectParam";
+  }
+
+  // </editor-fold>
+
   // <editor-fold desc="Arrays testing">
   public String methodWithArrayParam(double[] param1) {
     return "doubleArrayParam";
@@ -107,13 +107,6 @@ public class ClassForTestingMethodLookup {
 
   public String methodWithArrayParam(Object[] param1) {
     return "ObjectArrayParam";
-  }
-
-  // </editor-fold>
-
-  // <editor-fold desc="Object type testing">
-  public String methodWithOneParam(Object param1) {
-    return "methodWithOneObjectParam";
   }
 
   // </editor-fold>
@@ -138,6 +131,10 @@ public class ClassForTestingMethodLookup {
   // </editor-fold>
 
   // <editor-fold desc="Overloading and widening testing">
+  public String methodWithTwoParams(String param1, String param2) {
+    return "methodWithTwoStringParams";
+  }
+
   public String methodWithTwoParams(String param1, Object param2) {
     return "methodWithStringAndObjectParams";
   }
@@ -156,6 +153,10 @@ public class ClassForTestingMethodLookup {
 
   public String methodWithTwoParams(String param1, Double param2) {
     return "methodWithStringAndDoubleParams";
+  }
+
+  public String methodWithOneFloatAndDoubleParam(float param1, double param2) {
+    return "methodWithOneFloatAndDoubleParam";
   }
 
   // </editor-fold>

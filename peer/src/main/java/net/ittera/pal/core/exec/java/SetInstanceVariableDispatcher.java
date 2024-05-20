@@ -25,8 +25,8 @@ import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectNotFoundException;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -65,19 +65,17 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
   }
 
   @Override
-  protected Object getTargetFromMessage(
-      ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
-      throws NullPointerException {
+  protected Object getTargetFromMessage(ExecMessage execMessage) throws NullPointerException {
     Object target;
     ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceFieldPut().getObjectRef());
     if (objectLookupStore.containsObjectRef(targetObjRef)) {
       target = objectLookupStore.lookupObject(targetObjRef);
     } else {
-      Exception onfe =
+      Exception objectNotFoundException =
           new ObjectNotFoundException(
               String.format("No object found with objRef: %d", targetObjRef.getRef()));
-      NullPointerException npe = new NullPointerException(onfe.getMessage());
-      npe.initCause(onfe);
+      NullPointerException npe = new NullPointerException(objectNotFoundException.getMessage());
+      npe.initCause(objectNotFoundException);
       throw npe;
     }
     if (logger.isTraceEnabled()) {
@@ -109,11 +107,11 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
   }
 
   @Override
-  protected Optional<Object> getValueFromMessage(
-      final ExecMessage execMessage, final Optional<AccessibleObject> accessibleObject) {
+  protected @Nullable Object getValueFromMessage(
+      final ExecMessage execMessage, final AccessibleObject accessibleObject) {
 
     final Object value;
-    final Field field = (Field) accessibleObject.get();
+    final Field field = (Field) accessibleObject;
 
     Obj valueObject = execMessage.getInstanceFieldPut().getValueObject();
     if (valueObject != null) {
@@ -129,7 +127,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
         logger.trace("Loaded value: {}", value);
       }
     }
-    return Optional.ofNullable(value);
+    return value;
   }
 
   @Override
@@ -137,7 +135,7 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
       ExecMessage execMessage,
       Object valueObject,
       ObjectRef valueObjRef,
-      Optional<AccessibleObject> accessibleObject,
+      AccessibleObject accessibleObject,
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking) {
     String messageUuid = execMessage.getMessageUuid();
@@ -149,7 +147,6 @@ public class SetInstanceVariableDispatcher extends SetFieldDispatcher {
           exceptionWhileLoading,
           exceptionWhileInvoking);
     }
-    return messageBuilder.buildPutObjectDone(
-        peerUuid, accessibleObject.get(), messageUuid, messageUuid);
+    return messageBuilder.buildPutObjectDone(peerUuid, accessibleObject, messageUuid, messageUuid);
   }
 }

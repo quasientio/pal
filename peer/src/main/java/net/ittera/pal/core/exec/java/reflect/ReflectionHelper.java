@@ -22,8 +22,15 @@ package net.ittera.pal.core.exec.java.reflect;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Member;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -71,10 +78,10 @@ public class ReflectionHelper {
    * <p>If a parameter type is null, method matching will be done using the parameters' actual
    * types. In this case, primitive widening assignment will be allowed for method matching.
    *
-   * @param clazz
-   * @param parameters
-   * @param knownParameterTypes
-   * @param methodName
+   * @param clazz the class to look up the method in
+   * @param parameters the parameters to match
+   * @param knownParameterTypes the known parameter types; null if the parameter types are unknown
+   * @param methodName the name of the method to look up
    * @return the matching method
    * @throws AmbiguousCallException if more than one method matches the call
    * @throws NoSuchMethodException if no method matches the call
@@ -199,7 +206,7 @@ public class ReflectionHelper {
       return matchingMethod;
     }
 
-    // now scan other (ie. non-public) methods
+    // now scan other (i.e. non-public) methods
     if (allowNonPublic) {
       matchingMethods =
           Arrays.stream(clazz.getDeclaredMethods())
@@ -261,15 +268,15 @@ public class ReflectionHelper {
    *
    * <p>If parameter types are given, constructor matching will be done using these types. The list
    * of parameterTypes should be the same length as the parameters list. Also, when parameter types
-   * are given, no primitive widening will be allowed, ie. if a constructor has a formal parameter
+   * are given, no primitive widening will be allowed, i.e. if a constructor has a formal parameter
    * of type int, it will not match a call with a parameter of type long.
    *
    * <p>If a parameter type is null, constructor matching is done using the parameters' actual type.
    * In this case, primitive widening assignment will be allowed for constructor matching.
    *
-   * @param clazz
-   * @param parameters
-   * @param knownParameterTypes
+   * @param clazz the class to look up the constructor in
+   * @param parameters the parameters to match
+   * @param knownParameterTypes the known parameter types; null if the parameter types are unknown
    * @return the matching constructor
    * @throws AmbiguousCallException if more than one constructor matches the call
    * @throws NoSuchMethodException if no constructor matches the call
@@ -394,7 +401,7 @@ public class ReflectionHelper {
       return matchingConstructor;
     }
 
-    // now scan other (ie. non-public) constructors
+    // now scan other (i.e. non-public) constructors
     if (allowNonPublic) {
       matchingConstructors =
           Arrays.stream(clazz.getDeclaredConstructors())
@@ -505,6 +512,7 @@ public class ReflectionHelper {
     return ClassUtils.isAssignable(paramType, clazz);
   }
 
+  @SuppressWarnings("unused")
   private boolean isAssignable_notInUse(
       Object parameter,
       @Nullable Class<?> parameterType,
@@ -529,9 +537,9 @@ public class ReflectionHelper {
    * parameters that are not primitive or wrapper types. This helps to solve ambiguity when there
    * are multiple matches only due to primitive widening/auto-boxing.
    *
-   * @param parameterTypes
-   * @param matchingConstructors
-   * @return
+   * @param parameterTypes the parameter types to match
+   * @param matchingConstructors the list of matching constructors
+   * @return the narrowed down list of matching constructors
    */
   private List<Constructor<?>> narrowDownConstructorMatches(
       Class<?>[] parameterTypes, List<Constructor<?>> matchingConstructors) {
@@ -559,9 +567,9 @@ public class ReflectionHelper {
    * that are not primitive or wrapper types. This helps to solve ambiguity when there are multiple
    * matches only due to primitive widening/auto-boxing.
    *
-   * @param parameterTypes
-   * @param matchingMethods
-   * @return
+   * @param parameterTypes the parameter types to match
+   * @param matchingMethods the list of matching methods
+   * @return the narrowed down list of matching methods
    */
   private List<Method> narrowDownMethodMatches(
       Class<?>[] parameterTypes, List<Method> matchingMethods) {

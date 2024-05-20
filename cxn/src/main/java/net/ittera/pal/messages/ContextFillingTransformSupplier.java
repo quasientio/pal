@@ -27,7 +27,7 @@ import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;
 
 public class ContextFillingTransformSupplier
-    implements Transformer<String, Message, KeyValue<String, Map>> {
+    implements Transformer<String, Message, KeyValue<String, Map<String, Object>>> {
   private ProcessorContext processorContext;
 
   @Override
@@ -36,7 +36,7 @@ public class ContextFillingTransformSupplier
   }
 
   @Override
-  public KeyValue<String, Map> transform(String key, Message message) {
+  public KeyValue<String, Map<String, Object>> transform(String key, Message message) {
     Map<String, Object> map = new HashMap<>();
     MessageContext messageContext =
         new MessageContext(

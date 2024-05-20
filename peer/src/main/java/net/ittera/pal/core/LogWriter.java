@@ -24,16 +24,20 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.annotation.Nullable;
 import net.ittera.pal.common.directory.nodes.LogInfo;
-import net.ittera.pal.common.util.UUIDUtils;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.LogMessageHeader;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.InternalHeader;
@@ -41,6 +45,7 @@ import net.ittera.pal.messages.types.InternalHeaderType;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.Header;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +56,7 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-/** TODO A 2nd thread that sends non-urgent messages from a queue. */
+// TODO A 2nd thread that sends non-urgent messages from a queue.
 @Singleton
 class LogWriter extends ConnectedService {
 
@@ -60,6 +65,10 @@ class LogWriter extends ConnectedService {
   // kafka stuff
   private Producer<String, byte[]> producer;
   private final Properties producerProperties = new Properties();
+  private static final Duration PRODUCER_CLOSE_TIMEOUT = Duration.of(300, ChronoUnit.MILLIS);
+
+  // used to check that messages sent to the log complete successfully
+  private final ExecutorService producerCheckExecutorService = Executors.newSingleThreadExecutor();
 
   // zmq stuff
   private Socket subscriberSocket;
@@ -69,9 +78,8 @@ class LogWriter extends ConnectedService {
 
   private boolean publishOffsets;
   private LogInfo outLog;
-  private LogInfo inLog;
   private final AtomicInteger messagesSent = new AtomicInteger(0);
-  private final Map<String, Header> HEADERS = new HashMap<>();
+  private static final Map<String, Header> SELF_HEADERS = new HashMap<>();
 
   @Inject
   public LogWriter(
@@ -103,7 +111,7 @@ class LogWriter extends ConnectedService {
         propsStr);
   }
 
-  /** Used from unit tests with MockProducer */
+  // Used from unit tests with MockProducer
   LogWriter(
       UUID peerUuid,
       ZContext context,
@@ -136,16 +144,15 @@ class LogWriter extends ConnectedService {
     logger.info("connections open - except kafka producer");
 
     // create and store immutable headers (instead of creating with every send)
-    this.HEADERS.put(
-        "SELF_PRODUCED_HEADER", new LogMessageHeader("produced-by", UUIDUtils.toBytes(peerUuid)));
-    this.HEADERS.put(
+    SELF_HEADERS.put(
+        "SELF_PRODUCED_HEADER", new LogMessageHeader("produced-by", UuidUtils.toBytes(peerUuid)));
+    SELF_HEADERS.put(
         "SELF_DISPATCHING_HEADER",
-        new LogMessageHeader("dispatching-by", UUIDUtils.toBytes(peerUuid)));
+        new LogMessageHeader("dispatching-by", UuidUtils.toBytes(peerUuid)));
   }
 
-  public void writeToLog(LogInfo outLog, LogInfo inLog, boolean publishOffsets) {
+  public void writeToLog(LogInfo outLog, boolean publishOffsets) {
     this.outLog = outLog;
-    this.inLog = inLog;
     this.publishOffsets = publishOffsets;
     producerProperties.put("bootstrap.servers", outLog.getBootstrapServers());
 
@@ -168,7 +175,8 @@ class LogWriter extends ConnectedService {
     while (!Thread.interrupted() && !socketError) {
       OutboundMsg msg = null;
       try {
-        msg = OutboundMsg.recvMsg(subscriberSocket, true);
+        msg = OutboundMsg.receive(subscriberSocket, true);
+        assert msg != null;
         if (logger.isDebugEnabled()) {
           logger.debug(
               "Received new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
@@ -192,9 +200,8 @@ class LogWriter extends ConnectedService {
         logger.error("Error parsing received message", e);
       }
       if (msg != null) {
-        // set headers
-        List<Header> logHeaders = fromInternalToLog(msg.getHeaders());
-        // send to kafka immediately
+        final List<Header> logHeaders =
+            msg.getHeaders() != null ? fromInternalToLog(msg.getHeaders()) : null;
         sendToKafka(
             msg.getBody(), msg.getMessageUuid(), msg.getResponseToUuid(), peerUuid, logHeaders);
       }
@@ -202,20 +209,38 @@ class LogWriter extends ConnectedService {
   }
 
   private List<Header> fromInternalToLog(List<InternalHeader> internalHeaders) {
+    if (logger.isDebugEnabled()) {
+      StringBuilder logHeadersStr = new StringBuilder();
+      for (InternalHeader ih : internalHeaders) {
+        logHeadersStr
+            .append("InternalHeader [type = ")
+            .append(InternalHeaderType.fromByte(ih.getHeaderType()).name())
+            .append(", value = ")
+            .append(ih.getValue())
+            .append("]")
+            .append("\n");
+      }
+      // remove the last \n
+      if (!logHeadersStr.isEmpty()) {
+        logHeadersStr.setLength(logHeadersStr.length() - 1);
+      }
+      logger.debug("Converting internal headers to log headers: {}", logHeadersStr);
+    }
     List<Header> logHeaders = new ArrayList<>();
     boolean isWriteAhead = false;
-    if (internalHeaders != null) {
-      for (InternalHeader ih : internalHeaders) {
-        if (ih.getHeaderType() == InternalHeaderType.WRITE_AHEAD.toByte()) {
-          isWriteAhead = true;
-          logHeaders.add(HEADERS.get("SELF_DISPATCHING_HEADER"));
-          break;
-        }
+    for (InternalHeader ih : internalHeaders) {
+      if (ih.getHeaderType() == InternalHeaderType.WRITE_AHEAD.toByte()) {
+        isWriteAhead = true;
+        logHeaders.add(SELF_HEADERS.get("SELF_DISPATCHING_HEADER"));
+        break;
       }
     }
     if (!isWriteAhead) {
       // we don't need an InternalHeader, we assume it's self-produced
-      logHeaders.add(HEADERS.get("SELF_PRODUCED_HEADER"));
+      logHeaders.add(SELF_HEADERS.get("SELF_PRODUCED_HEADER"));
+    }
+    if (logger.isDebugEnabled()) {
+      logger.debug("Returning log headers: {}", logHeaders);
     }
     return logHeaders;
   }
@@ -225,41 +250,66 @@ class LogWriter extends ConnectedService {
       UUID messageUuid,
       UUID responseToUuid,
       UUID fromPeer,
-      Iterable<Header> headers) {
+      @Nullable Iterable<Header> headers) {
     if (logger.isDebugEnabled()) {
-      logger.debug("sending new message with uuid: {}", messageUuid);
+      logger.debug("sending new message to kafka log with uuid: {}", messageUuid);
     }
     ProducerRecord<String, byte[]> newRecord =
         new ProducerRecord<>(outLog.getName(), 0, fromPeer.toString(), message, headers);
+
+    Future<RecordMetadata> sendFuture;
     if (publishOffsets) {
-      producer.send(newRecord, new MessageOffsetInformer(messageUuid, offsetPublisherSocket));
+      sendFuture =
+          producer.send(newRecord, new MessageOffsetInformer(messageUuid, offsetPublisherSocket));
     } else {
-      producer.send(newRecord);
+      sendFuture = producer.send(newRecord);
     }
-    messagesSent.getAndIncrement();
-    if (logger.isDebugEnabled()) {
-      logger.debug(
-          "new message sent w/uuid: {} in reply to message w/uuid: {} ({} bytes)",
-          messageUuid,
-          responseToUuid,
-          message.length);
-    }
+
+    producerCheckExecutorService.execute(
+        () -> {
+          try {
+            RecordMetadata sentRecordMetadata = sendFuture.get();
+            messagesSent.getAndIncrement();
+            if (logger.isDebugEnabled()) {
+              logger.debug(
+                  "new message written to log at offset: {}, w/uuid: {},"
+                      + " in reply to message w/uuid: {} ({} bytes)",
+                  sentRecordMetadata.offset(),
+                  messageUuid,
+                  responseToUuid,
+                  message.length);
+            }
+          } catch (Exception e) {
+            logger.error("Error sending message to log", e);
+          }
+        });
   }
 
-  private void close(
-      Producer producer, long timeout, TemporalUnit timeUnit, String msgForException) {
+  private void closeProducer() {
     if (producer != null) {
       try {
-        producer.close(Duration.of(timeout, timeUnit));
+        producer.close(PRODUCER_CLOSE_TIMEOUT);
       } catch (Exception e) {
-        logger.warn(msgForException, e);
+        logger.warn("Error closing producer", e);
       }
     }
   }
 
   @Override
   protected void closeConnections() {
-    close(producer, 300, ChronoUnit.MILLIS, "Error closing producer");
+    // stop the producer async executor
+    producerCheckExecutorService.shutdown();
+    try {
+      if (!producerCheckExecutorService.awaitTermination(250, TimeUnit.MILLISECONDS)) {
+        producerCheckExecutorService.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      producerCheckExecutorService.shutdownNow();
+    }
+    // close the producer
+    closeProducer();
+
+    // close the zmq sockets
     closeConnection(subscriberSocket, "Error closing subscriber");
     closeConnection(offsetPublisherSocket, "Error closing offset publisher");
   }

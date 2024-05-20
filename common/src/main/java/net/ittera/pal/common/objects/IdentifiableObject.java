@@ -41,16 +41,14 @@ class IdentifiableObject {
     return hash;
   }
 
+  @Override
   public final int hashCode() {
     return hash;
   }
 
-  /**
-   * IdentifiableObject's equality is based on the identityHashCode of the encapsulated object.
-   *
-   * @param other
-   * @return
-   */
+  /** IdentifiableObject's equality is based on the identityHashCode of the encapsulated object. */
+  @Override
+  @SuppressWarnings("EqualsUsingHashCode")
   public final boolean equals(Object other) {
     if (this == other) {
       return true;

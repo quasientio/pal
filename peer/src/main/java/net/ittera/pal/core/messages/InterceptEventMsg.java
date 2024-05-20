@@ -25,12 +25,12 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nullable;
-import net.ittera.pal.common.util.UUIDUtils;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.BaseMsg;
 import net.ittera.pal.messages.Marshallable;
 import org.zeromq.ZMQ;
 
-public class InterceptEvtMsg extends BaseMsg {
+public class InterceptEventMsg extends BaseMsg {
   /**
    *
    *
@@ -43,56 +43,65 @@ public class InterceptEvtMsg extends BaseMsg {
    * </pre>
    */
   public enum Type {
-    REGISTER,
-    UNREGISTER;
-    static final Type[] values = values();
+    REGISTER((byte) 1),
+    UNREGISTER((byte) 2);
+
+    private final byte idx;
+
+    Type(byte idx) {
+      this.idx = idx;
+    }
 
     public static Type fromByte(byte typeAsByte) {
-      return Type.values()[typeAsByte - 1];
+      return switch (typeAsByte) {
+        case 1 -> REGISTER;
+        case 2 -> UNREGISTER;
+        default -> throw new IllegalArgumentException("Unknown type: " + typeAsByte);
+      };
     }
 
     public byte toByte() {
-      return (byte) (this.ordinal() + 1);
+      return idx;
     }
   }
 
   // fields
   private final Type type;
-  @Nullable private final UUID interceptMsgUUID;
+  @Nullable private final UUID interceptMessageUuid;
   @Nullable private final byte[] body;
 
-  public InterceptEvtMsg(byte[] body) {
+  public InterceptEventMsg(byte[] body) {
     this(Type.REGISTER, body, null, null);
   }
 
-  public InterceptEvtMsg(Marshallable message) {
+  public InterceptEventMsg(Marshallable message) {
     this(Type.REGISTER, null, message, null);
   }
 
-  public InterceptEvtMsg(UUID interceptMsgUUID) {
-    this(Type.UNREGISTER, null, null, interceptMsgUUID);
+  public InterceptEventMsg(UUID interceptMessageUuid) {
+    this(Type.UNREGISTER, null, null, interceptMessageUuid);
   }
 
-  private InterceptEvtMsg(
+  private InterceptEventMsg(
       Type type,
       @Nullable byte[] body,
       @Nullable Marshallable marshallable,
-      @Nullable UUID interceptMsgUUID) {
+      @Nullable UUID interceptMessageUuid) {
     if (type.equals(Type.REGISTER) && (body == null && marshallable == null)) {
       throw new NullPointerException("Both body and marshallable are null.");
     }
 
     if (type.equals(Type.UNREGISTER)) {
-      Objects.requireNonNull(interceptMsgUUID);
+      Objects.requireNonNull(interceptMessageUuid);
     }
 
     this.type = type;
     this.body = marshallable != null ? toBytes(marshallable) : body;
-    this.interceptMsgUUID = interceptMsgUUID;
+    this.interceptMessageUuid = interceptMessageUuid;
   }
 
-  private InterceptEvtMsg(Type type, byte[] body, @Nullable UUID interceptMsgUUID, int size) {
-    this(type, body, null, interceptMsgUUID);
+  private InterceptEventMsg(Type type, byte[] body, @Nullable UUID interceptMessageUuid, int size) {
+    this(type, body, null, interceptMessageUuid);
     this.size = size;
   }
 
@@ -109,24 +118,23 @@ public class InterceptEvtMsg extends BaseMsg {
 
     if (type.equals(Type.REGISTER)) {
       buff = body;
-      size += buff.length;
-      if (!socket.send(buff, 0)) {
-        return false;
-      }
     } else { // (type.equals(Type.UNREGISTER))
-      buff = UUIDUtils.toBytes(interceptMsgUUID);
-      size += buff.length;
-      if (!socket.send(buff, 0)) {
-        return false;
-      }
+      buff = UuidUtils.toBytes(interceptMessageUuid);
     }
-
-    return true;
+    assert buff != null;
+    size += buff.length;
+    return socket.send(buff, 0);
   }
 
-  // blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
-  // ready, then all are)
-  public static InterceptEvtMsg recvMsg(ZMQ.Socket socket, boolean blocking) {
+  /**
+   * Blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
+   * ready, then all are).
+   *
+   * @param socket ZMQ socket
+   * @param blocking blocking read flag
+   * @return InterceptEventMsg instance, or null if non-blocking and no message available
+   */
+  public static InterceptEventMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
@@ -148,17 +156,18 @@ public class InterceptEvtMsg extends BaseMsg {
     if (type.equals(Type.REGISTER)) {
       body = buff;
     } else { // UNREGISTER
-      interceptMsgUuid = UUIDUtils.fromBytes(buff);
+      interceptMsgUuid = UuidUtils.fromBytes(buff);
     }
-    return new InterceptEvtMsg(type, body, interceptMsgUuid, msgSize);
+    return new InterceptEventMsg(type, body, interceptMsgUuid, msgSize);
   }
 
   // default is non-blocking
-  public static InterceptEvtMsg recvMsg(ZMQ.Socket socket) {
-    return recvMsg(socket, false);
+  public static InterceptEventMsg receive(ZMQ.Socket socket) {
+    return receive(socket, false);
   }
 
   @Override
+  @SuppressWarnings("EqualsGetClass")
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -166,26 +175,26 @@ public class InterceptEvtMsg extends BaseMsg {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    InterceptEvtMsg that = (InterceptEvtMsg) o;
+    InterceptEventMsg that = (InterceptEventMsg) o;
     return type == that.type
-        && Objects.equals(interceptMsgUUID, that.interceptMsgUUID)
+        && Objects.equals(interceptMessageUuid, that.interceptMessageUuid)
         && Arrays.equals(body, that.body);
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(type, interceptMsgUUID);
+    int result = Objects.hash(type, interceptMessageUuid);
     result = 31 * result + Arrays.hashCode(body);
     return result;
   }
 
   @Override
   public String toString() {
-    return "InterceptEvtMsg{"
+    return "InterceptEventMsg{"
         + "type="
         + type
         + ", interceptMsgUUID="
-        + interceptMsgUUID
+        + interceptMessageUuid
         + ", body="
         + Arrays.toString(body)
         + ", size="
@@ -198,8 +207,8 @@ public class InterceptEvtMsg extends BaseMsg {
   }
 
   @Nullable
-  public UUID getInterceptMsgUUID() {
-    return interceptMsgUUID;
+  public UUID getInterceptMessageUuid() {
+    return interceptMessageUuid;
   }
 
   @Nullable

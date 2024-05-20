@@ -25,21 +25,21 @@ import jakarta.inject.Provider;
 import java.util.Optional;
 
 /**
- * This class implements a null-safe Provider for PALDirectory.
+ * This class implements a null-safe Provider for PalDirectory.
  *
- * <p>It is used as a singleton that gets injected instead of PALDirectory. Methods that need a
- * connection need to call get() which returns the Optional<PALDirectory> reference.
+ * <p>It is used as a singleton that gets injected instead of PalDirectory. Methods that need a
+ * connection need to call get() which returns the Optional reference.
  *
  * <p>When peer runs without a pal directory, the Provider is initialized with the constant
- * PALDirectory.NO_URL.
+ * PalDirectory.NO_URL.
  */
-public class DirectoryConnectionProvider implements Provider<Optional<PALDirectory>> {
+public class DirectoryConnectionProvider implements Provider<Optional<PalDirectory>> {
 
-  // PALDirectory constructor parameters
+  // PalDirectory constructor parameters
   private final String connectionString;
   private final String namespace;
 
-  private PALDirectory palDirectoryInstance;
+  private PalDirectory palDirectoryInstance;
 
   @Inject
   public DirectoryConnectionProvider(@Named("paldir_url") String connectionString) {
@@ -52,13 +52,13 @@ public class DirectoryConnectionProvider implements Provider<Optional<PALDirecto
   }
 
   @Override
-  public Optional<PALDirectory> get() {
-    if (connectionString.equals(PALDirectory.NO_URL)) {
+  public Optional<PalDirectory> get() {
+    if (connectionString.equals(PalDirectory.NO_URL)) {
       return Optional.empty();
     }
 
     if (palDirectoryInstance == null) {
-      palDirectoryInstance = new PALDirectory(connectionString, namespace);
+      palDirectoryInstance = new PalDirectory(connectionString, namespace);
     }
 
     return Optional.of(palDirectoryInstance);

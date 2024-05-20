@@ -19,14 +19,27 @@
 
 package net.ittera.pal.cxn;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 import net.ittera.pal.AbstractIntegrationTest;
-import net.ittera.pal.common.directory.events.InterceptEvent.Type;
+import net.ittera.pal.common.directory.events.InterceptEvent;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
@@ -38,8 +51,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior */
-public class PALDirectoryIT extends AbstractIntegrationTest {
+// Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior
+public class PalDirectoryIT extends AbstractIntegrationTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
   private static final Set<UUID> createdPeers = new HashSet<>();
@@ -47,11 +60,11 @@ public class PALDirectoryIT extends AbstractIntegrationTest {
   private static Set<UUID> preExistingPeers;
   private static Set<UUID> preExistingLogs;
   private static final Map<UUID, List<UUID>> createdInterceptRequests = new HashMap<>();
-  private PALDirectory palDirectory;
+  private PalDirectory palDirectory;
 
   @Before
   public void setup() throws Exception {
-    palDirectory = new PALDirectory(getPALDirectoryURL());
+    palDirectory = new PalDirectory(getPalDirectoryUrl());
     preExistingPeers =
         palDirectory.getAllPeers().stream().map(PeerInfo::getUuid).collect(Collectors.toSet());
     preExistingLogs =
@@ -138,8 +151,8 @@ public class PALDirectoryIT extends AbstractIntegrationTest {
     assertEquals(peerInfo.getPubAddress(), retrievedPeerInfo.getPubAddress());
     assertEquals(peerInfo.getJmxAddress(), retrievedPeerInfo.getJmxAddress());
 
-    // verify ctime and mtime (which are in UTC) are within last second
-    OffsetDateTime now = OffsetDateTime.now();
+    // verify CTime and MTime (which are in UTC) are within last second
+    OffsetDateTime now = OffsetDateTime.now(ZoneId.of("UTC"));
     assertTrue(retrievedPeerInfo.getCTime().isAfter(now.minusSeconds(1)));
     assertTrue(retrievedPeerInfo.getCTime().isBefore(now));
     assertTrue(retrievedPeerInfo.getMTime().isAfter(now.minusSeconds(1)));
@@ -288,8 +301,8 @@ public class PALDirectoryIT extends AbstractIntegrationTest {
     assertEquals(newLogInfo, retrievedLogInfo);
     assertNotNull(retrievedLogInfo.getUuid());
 
-    // verify ctime and mtime (which are in UTC) are within last second
-    OffsetDateTime now = OffsetDateTime.now();
+    // verify CTime and MTime (which are in UTC) are within last second
+    OffsetDateTime now = OffsetDateTime.now(ZoneId.of("UTC"));
     assertTrue(retrievedLogInfo.getCTime().isAfter(now.minusSeconds(1)));
     assertTrue(retrievedLogInfo.getCTime().isBefore(now));
     assertTrue(retrievedLogInfo.getMTime().isAfter(now.minusSeconds(1)));
@@ -381,7 +394,8 @@ public class PALDirectoryIT extends AbstractIntegrationTest {
     assertEquals(logsToCreate, palDirectory.getLogCount(logNamePrefix));
 
     // unregister with prefix
-    palDirectory.unregisterLogs(logNamePrefix);
+    long logsUnregistered = palDirectory.unregisterLogs(logNamePrefix);
+    assertEquals(logsToCreate, logsUnregistered);
 
     // verify
     assertEquals(0, palDirectory.getLogCount(logNamePrefix));
@@ -403,8 +417,10 @@ public class PALDirectoryIT extends AbstractIntegrationTest {
     assertEquals(preExistingLogs.size() + logsToCreate, palDirectory.getAllLogs().size());
 
     // delete all
-    palDirectory.unregisterAllLogsWithExcludes(
-        preExistingLogs.stream().map(LogInfo::getUuid).collect(Collectors.toSet()));
+    long unregisteredLogs =
+        palDirectory.unregisterAllLogsWithExcludes(
+            preExistingLogs.stream().map(LogInfo::getUuid).collect(Collectors.toSet()));
+    assertEquals(logsToCreate, unregisteredLogs);
 
     // verify
     assertEquals(preExistingLogs.size(), palDirectory.getAllLogs().size());
@@ -581,14 +597,14 @@ public class PALDirectoryIT extends AbstractIntegrationTest {
     // set listener
     palDirectory.addInterceptNodeListener(
         event -> {
-          if (event.getType().equals(Type.INTERCEPT_ADDED)) {
+          if (event.type().equals(InterceptEvent.Type.INTERCEPT_ADDED)) {
             latch.countDown();
           }
         });
 
     // register them
     for (InterceptRequest<InterceptableMethodCall> interceptRequest : requests) {
-      palDirectory.registerInterceptAsync(interceptRequest);
+      palDirectory.registerInterceptAsync(interceptRequest).get();
       addInterceptRequestToCreated(peerInfo.getUuid(), interceptRequest.getUuid());
     }
 
@@ -652,18 +668,18 @@ public class PALDirectoryIT extends AbstractIntegrationTest {
     // set listener
     palDirectory.addInterceptNodeListener(
         event -> {
-          if (event.getType().equals(Type.INTERCEPT_ADDED)) {
+          if (event.type().equals(InterceptEvent.Type.INTERCEPT_ADDED)) {
             latch.countDown();
           }
         });
 
     // register them
     for (InterceptRequest<InterceptableMethodCall> interceptRequest : requestsPeer1) {
-      palDirectory.registerInterceptAsync(interceptRequest);
+      palDirectory.registerInterceptAsync(interceptRequest).get();
       addInterceptRequestToCreated(peerInfo1.getUuid(), interceptRequest.getUuid());
     }
     for (InterceptRequest<InterceptableMethodCall> interceptRequest : requestsPeer2) {
-      palDirectory.registerInterceptAsync(interceptRequest);
+      palDirectory.registerInterceptAsync(interceptRequest).get();
       addInterceptRequestToCreated(peerInfo2.getUuid(), interceptRequest.getUuid());
     }
 

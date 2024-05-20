@@ -21,17 +21,20 @@ package net.ittera.pal.rpc.binary;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.util.Arrays;
+import java.util.Locale;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
 /**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
  *
- * <p>TODO: - returningObjectRefArray() commented out below
+ * <p>TODO: - returningObjectRefArray() commented out below is failing. Add @Test, make it public
+ * and fix.
  */
 public class NonVoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
 
@@ -51,7 +54,7 @@ public class NonVoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
         callClassMethod(className, methodName, parameterTypes, parameters, paramObjRefs);
 
     // test returned value
-    String shouldReturn = param.toLowerCase();
+    String shouldReturn = param.toLowerCase(Locale.getDefault());
     assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
@@ -84,9 +87,9 @@ public class NonVoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
     ObjectRef listObjRef =
         ObjectRef.from(callEmptyConstructor("java.util.ArrayList").getObject().getRef());
 
-    // add some int's
-    int[] someInts = {39, 5, 58, 32, 70, 42};
-    for (int someInt : someInts) {
+    // add some integers
+    int[] someIntegers = {39, 5, 58, 32, 70, 42};
+    for (int someInt : someIntegers) {
       callInstanceMethod(
           "java.util.ArrayList",
           "add",
@@ -97,13 +100,13 @@ public class NonVoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
     }
 
     // call method
-    String[] parameterTypes = {"java.util.ArrayList"};
+    String[] parameterTypes = {"java.util.List"};
     Object[] params = new Object[parameterTypes.length];
     ObjectRef[] objRefs = {listObjRef};
     ReturnValue retValue = callClassMethod(className, methodName, parameterTypes, params, objRefs);
 
     // test returned value
-    Integer shouldReturn = Arrays.stream(someInts).reduce(0, Integer::sum);
+    Integer shouldReturn = Arrays.stream(someIntegers).reduce(0, Integer::sum);
     assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertEquals(shouldReturn, rawObj);
@@ -112,7 +115,7 @@ public class NonVoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
   @Test
   public void callClassMethod_returningNullObject_nullRetValue() throws Exception {
 
-    String methodName = "giveMeANull";
+    String methodName = "giveMeNull";
 
     // call method
     String[] parameterTypes = {};
@@ -127,7 +130,7 @@ public class NonVoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
     // test returned value
     assertValueIsNullObjectOfType(retValue, "java.lang.Object");
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertEquals(null, rawObj);
+    assertNull(rawObj);
   }
 
   @Test
@@ -180,7 +183,7 @@ public class NonVoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
   @Test
   public void callClassMethod_returningNullArray_nullRetValue() throws Exception {
 
-    String methodName = "giveMeANullBoolArray";
+    String methodName = "giveMeNullBoolArray";
 
     // call method
     String[] parameterTypes = {};
@@ -193,16 +196,15 @@ public class NonVoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
             new ObjectRef[parameterTypes.length]);
 
     // test returned value
-    Boolean[] shouldReturn = null;
     assertValueIsNullArrayOfType(retValue, "[Ljava.lang.Boolean;");
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertArrayEquals(shouldReturn, (Boolean[]) rawObj);
+    assertArrayEquals(null, (Boolean[]) rawObj);
   }
 
   @Test
   public void callClassMethod_returningObjectRef_refRetValue() throws Exception {
 
-    String methodName = "fetchMeAThreadSingleton";
+    String methodName = "getThreadSingleton";
 
     String[] parameterTypes = {};
     Object[] parameters = {};
@@ -236,10 +238,10 @@ public class NonVoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
     assertEquals(appRef, secondAppRef);
   }
 
-  //	@Test TODO reinstate and fix if it doesn't pass
-  public void callClassMethod_returningObjectRefArray_refRetValue() throws Exception {
+  // TODO reinstate and fix if it doesn't pass
+  private void callClassMethod_returningObjectRefArray_refRetValue() throws Exception {
 
-    String methodName = "fetchMeAThreadArray";
+    String methodName = "getThreadArray";
 
     String[] parameterTypes = {};
 

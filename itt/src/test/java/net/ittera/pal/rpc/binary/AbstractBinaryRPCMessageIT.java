@@ -19,11 +19,11 @@
 
 package net.ittera.pal.rpc.binary;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import com.google.inject.AbstractModule;
@@ -95,8 +95,8 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
     }
     thinPeer =
         new ThinPeer()
-            .withUUID(clientId)
-            .withDirectoryURL(getPALDirectoryURL())
+            .withUuid(clientId)
+            .withDirectoryUrl(getPalDirectoryUrl())
             .withConsumerProperties(consumerProperties)
             .withProducerProperties(producerProperties)
             .init();
@@ -125,16 +125,15 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
     }
   }
 
-  /** Helper Methods */
   protected ReturnValue callConstructor(
-      String className, Class[] parameterTypes, Object[] args, ObjectRef[] argObjRefs)
+      String className, Class<?>[] parameterTypes, Object[] args, ObjectRef[] argObjRefs)
       throws Exception {
     return callConstructor(className, parameterTypes, args, argObjRefs, null);
   }
 
   protected ReturnValue callConstructor(
       String className,
-      Class[] parameterTypes,
+      Class<?>[] parameterTypes,
       Object[] args,
       ObjectRef[] argObjRefs,
       String expectedThrowableType)

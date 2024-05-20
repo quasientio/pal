@@ -24,12 +24,12 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.common.util.UUIDUtils;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.BaseMsg;
 import net.ittera.pal.messages.types.SessionCommandType;
 import org.zeromq.ZMQ;
 
-public class SessionCmdMsg extends BaseMsg {
+public class SessionCommandMsg extends BaseMsg {
   /**
    *
    *
@@ -45,41 +45,41 @@ public class SessionCmdMsg extends BaseMsg {
   // fields
   private final SessionCommandType commandType;
 
-  @Nullable private final UUID sessionID;
+  @Nullable private final UUID sessionId;
   @Nullable private final ObjectRef objectRef;
 
-  public SessionCmdMsg(
+  public SessionCommandMsg(
       @Nonnull SessionCommandType commandType,
-      @Nullable UUID sessionID,
+      @Nullable UUID sessionId,
       @Nullable ObjectRef objectRef) {
     Objects.requireNonNull(commandType);
     if (!commandType.equals(SessionCommandType.CLEAR_SESSIONS)) {
-      Objects.requireNonNull(sessionID);
+      Objects.requireNonNull(sessionId);
     }
     if (commandType.equals(SessionCommandType.STORE_OBJECT)
         || commandType.equals(SessionCommandType.DELETE_OBJECT)) {
       Objects.requireNonNull(objectRef);
     }
     this.commandType = commandType;
-    this.sessionID = sessionID;
+    this.sessionId = sessionId;
     this.objectRef = objectRef;
   }
 
-  public SessionCmdMsg(@Nonnull SessionCommandType commandType) {
+  public SessionCommandMsg(@Nonnull SessionCommandType commandType) {
     this(commandType, null, null);
   }
 
-  public SessionCmdMsg(@Nonnull SessionCommandType commandType, UUID sessionID) {
-    this(commandType, sessionID, null);
+  public SessionCommandMsg(@Nonnull SessionCommandType commandType, UUID sessionId) {
+    this(commandType, sessionId, null);
   }
 
-  private SessionCmdMsg(
-      @Nonnull SessionCommandType commandType, UUID sessionID, ObjectRef objectRef, int size) {
-    this(commandType, sessionID, objectRef);
+  private SessionCommandMsg(
+      @Nonnull SessionCommandType commandType, UUID sessionId, ObjectRef objectRef, int size) {
+    this(commandType, sessionId, objectRef);
     this.size = size;
   }
 
-  private SessionCmdMsg(@Nonnull SessionCommandType commandType, int size) {
+  private SessionCommandMsg(@Nonnull SessionCommandType commandType, int size) {
     this(commandType);
     this.size = size;
   }
@@ -95,7 +95,7 @@ public class SessionCmdMsg extends BaseMsg {
     byte[] buff = new byte[] {commandType.toByte()};
     size += buff.length;
     final boolean hasSessionId =
-        !commandType.equals(SessionCommandType.CLEAR_SESSIONS) && (sessionID != null);
+        !commandType.equals(SessionCommandType.CLEAR_SESSIONS) && (sessionId != null);
     if (!socket.send(buff, hasSessionId ? ZMQ.SNDMORE : 0)) {
       return false;
     }
@@ -107,7 +107,7 @@ public class SessionCmdMsg extends BaseMsg {
 
     // sessionId
     if (hasSessionId) {
-      buff = UUIDUtils.toBytes(sessionID);
+      buff = UuidUtils.toBytes(sessionId);
       size += buff.length;
       if (!socket.send(buff, hasObjectRef ? ZMQ.SNDMORE : 0)) {
         return false;
@@ -126,9 +126,15 @@ public class SessionCmdMsg extends BaseMsg {
     return true;
   }
 
-  // blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
-  // ready, then all are)
-  public static SessionCmdMsg recvMsg(ZMQ.Socket socket, boolean blocking) {
+  /**
+   * Blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
+   * ready, then all are).
+   *
+   * @param socket ZMQ socket
+   * @param blocking blocking read flag
+   * @return SessionCommandMsg instance, or null if non-blocking and no message available
+   */
+  public static SessionCommandMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
@@ -143,13 +149,13 @@ public class SessionCmdMsg extends BaseMsg {
     SessionCommandType commandType = SessionCommandType.fromByte(buff[0]);
 
     if (commandType.equals(SessionCommandType.CLEAR_SESSIONS)) {
-      return new SessionCmdMsg(commandType, msgSize);
+      return new SessionCommandMsg(commandType, msgSize);
     }
 
     // sessionId
     buff = socket.recv();
     msgSize += buff.length;
-    UUID sessionUuid = UUIDUtils.fromBytes(buff);
+    UUID sessionUuid = UuidUtils.fromBytes(buff);
 
     // [objectRef]
     ObjectRef objRef = null;
@@ -159,15 +165,16 @@ public class SessionCmdMsg extends BaseMsg {
       msgSize += buff.length;
       objRef = ObjectRef.from(new String(buff, ZMQ.CHARSET));
     }
-    return new SessionCmdMsg(commandType, sessionUuid, objRef, msgSize);
+    return new SessionCommandMsg(commandType, sessionUuid, objRef, msgSize);
   }
 
   // default is non-blocking
-  public static SessionCmdMsg recvMsg(ZMQ.Socket socket) {
-    return recvMsg(socket, false);
+  public static SessionCommandMsg receive(ZMQ.Socket socket) {
+    return receive(socket, false);
   }
 
   @Override
+  @SuppressWarnings("EqualsGetClass")
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -175,24 +182,24 @@ public class SessionCmdMsg extends BaseMsg {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SessionCmdMsg that = (SessionCmdMsg) o;
+    SessionCommandMsg that = (SessionCommandMsg) o;
     return commandType == that.commandType
-        && Objects.equals(sessionID, that.sessionID)
+        && Objects.equals(sessionId, that.sessionId)
         && Objects.equals(objectRef, that.objectRef);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(commandType, sessionID, objectRef);
+    return Objects.hash(commandType, sessionId, objectRef);
   }
 
   @Override
   public String toString() {
-    return "SessionCmdMsg{"
+    return "SessionCommandMsg{"
         + "type="
         + commandType.name()
         + ", sessionID="
-        + sessionID
+        + sessionId
         + ", objectRef="
         + objectRef
         + ", size="
@@ -205,8 +212,8 @@ public class SessionCmdMsg extends BaseMsg {
   }
 
   @Nullable
-  public UUID getSessionID() {
-    return sessionID;
+  public UUID getSessionId() {
+    return sessionId;
   }
 
   @Nullable

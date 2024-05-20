@@ -22,6 +22,7 @@ package net.ittera.pal.common.directory.nodes;
 import com.alibaba.fastjson.JSON;
 import java.util.Objects;
 import java.util.UUID;
+import javax.annotation.Nonnull;
 
 public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
 
@@ -98,7 +99,7 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
   }
 
   @Override
-  public int compareTo(PeerInfo o) {
+  public int compareTo(@Nonnull PeerInfo o) {
     return getUuid().compareTo(o.getUuid());
   }
 
@@ -148,7 +149,7 @@ public final class PeerInfo extends InfoNode implements Comparable<PeerInfo> {
         + '}';
   }
 
-  public static PeerInfo fromJSON(String repr) {
+  public static PeerInfo fromJson(String repr) {
     return JSON.parseObject(repr, PeerInfo.class);
   }
 }

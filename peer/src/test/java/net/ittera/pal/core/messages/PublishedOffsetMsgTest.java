@@ -19,9 +19,9 @@
 
 package net.ittera.pal.core.messages;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
 
 import java.util.UUID;
 import net.ittera.pal.core.ZmqEnabledTest;
@@ -48,23 +48,23 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
     assertThat(msgOut.getMessageUuid(), is(messageUuid));
 
     // send
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.bind(socketAddr);
-    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
-    out.connect(socketAddr);
+    String socketAddress = "inproc://here";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.bind(socketAddress);
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.connect(socketAddress);
     msgOut.send(out);
     logger.debug("sent msgOut= {}", msgOut);
 
     // receive and compare
-    PublishedOffsetMsg msgIn = PublishedOffsetMsg.recvMsg(in, true);
+    PublishedOffsetMsg msgIn = PublishedOffsetMsg.receive(in, true);
     logger.debug("received msgIn= {}", msgIn);
     assertThat(msgIn, is(msgOut));
 
     out.close();
     in.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 
   @Test

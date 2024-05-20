@@ -19,6 +19,7 @@
 
 package net.ittera.pal.core.exec.java;
 
+@SuppressWarnings({"UtilityClass", "JavaLangClash"})
 public class Void {
 
   private static final Void instance = new Void();

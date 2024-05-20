@@ -1,6 +1,10 @@
 package net.ittera.pal.serdes.jsonrpc;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -135,7 +139,7 @@ public class JsonRpcMessageUtils {
     }
 
     // Check for empty/illegal RPC version
-    if (!("2.0").equals(jsonRpcRequest.getJsonrpc())) {
+    if (!"2.0".equals(jsonRpcRequest.getJsonrpc())) {
       throw new InvalidJsonRpcRequestException(
           "Invalid JSON-RPC version: " + jsonRpcRequest.getJsonrpc(), id);
     }
@@ -202,8 +206,8 @@ public class JsonRpcMessageUtils {
    * Check if the exception type is wrappable inside a JSON-RPC "Method not found" (-32601) so we
    * can return a proper JsonRpcErrorCode.METHOD_NOT_FOUND
    *
-   * @param exceptionType
-   * @return
+   * @param exceptionType the exception type to check
+   * @return true if the exception type is a not found exception, false otherwise
    */
   public static boolean isMethodNotFoundError(String exceptionType) {
     return NOT_FOUND_EXCEPTION_TYPES.contains(exceptionType);

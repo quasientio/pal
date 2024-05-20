@@ -19,12 +19,12 @@
 
 package net.ittera.pal.rpc.binary;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import net.ittera.pal.messages.colfer.ExecMessage;
@@ -35,19 +35,11 @@ import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// Helper assertion methods. Encapsulates details of serialization.
 public interface ExecMessageAssertions {
 
   Logger logger = LoggerFactory.getLogger("tests");
 
-  /**
-   * Helper assertion methods. Encapsulates details of serialization.
-   *
-   * @param returnValue
-   * @param className
-   * @param hasObjRef
-   * @param isNull
-   * @param isArray
-   */
   default void assertIsObjectOfType(
       ReturnValue returnValue,
       String className,
@@ -98,12 +90,13 @@ public interface ExecMessageAssertions {
     assertIsObjectOfType(returnValue, className, false, true, true);
   }
 
+  @SuppressWarnings("unchecked")
   default <T> void assertValueEqualsArray(T[] actualArray, ReturnValue retValue) throws Exception {
     logger.trace(
         "in assertValueEqualsArray w/: actualArray: {}, retValue:\n{}", actualArray, retValue);
 
     // check array type
-    Class classOfArray = actualArray.getClass();
+    Class<?> classOfArray = actualArray.getClass();
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());
     assertTrue(classOfArray.isInstance(rawObj));
 

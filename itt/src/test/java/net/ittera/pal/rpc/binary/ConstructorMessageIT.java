@@ -35,10 +35,9 @@ public class ConstructorMessageIT extends AbstractBinaryRPCMessageIT {
 
   protected final String className = "net.ittera.pal.apps.rpc.Constructors";
 
-  /**
-   * Explained here why won't pass
-   * https://stackoverflow.com/questions/32301892/nosuchmethodexception-for-public-no-argument-constructor-in-inner-class
-   */
+  // Explained here why won't pass
+  // <a
+  // href="https://stackoverflow.com/questions/32301892/nosuchmethodexception-for-public-no-argument-constructor-in-inner-class">...</a>
   // @Test
   public void innerConstructor() throws Exception {
 
@@ -57,7 +56,7 @@ public class ConstructorMessageIT extends AbstractBinaryRPCMessageIT {
 
     Object[] args = {5};
     ObjectRef[] argRefs = {null};
-    Class[] parameterTypes = {Integer.class};
+    Class<?>[] parameterTypes = {Integer.class};
 
     callConstructor(className, parameterTypes, args, argRefs);
   }
@@ -67,7 +66,7 @@ public class ConstructorMessageIT extends AbstractBinaryRPCMessageIT {
 
     Object[] args = {"Constructing an app", 5};
     ObjectRef[] argRefs = {null, null};
-    Class[] parameterTypes = {String.class, Integer.class};
+    Class<?>[] parameterTypes = {String.class, Integer.class};
 
     callConstructor(className, parameterTypes, args, argRefs);
   }
@@ -77,7 +76,7 @@ public class ConstructorMessageIT extends AbstractBinaryRPCMessageIT {
 
     Object[] args = {null};
     ObjectRef[] argRefs = {null};
-    Class[] parameterTypes = {Integer.class};
+    Class<?>[] parameterTypes = {Integer.class};
 
     callConstructor(className, parameterTypes, args, argRefs);
   }
@@ -87,7 +86,7 @@ public class ConstructorMessageIT extends AbstractBinaryRPCMessageIT {
 
     Object[] args = {new String[] {"Aa", "Bb", "Cc"}};
     ObjectRef[] argRefs = {null};
-    Class[] parameterTypes = {String[].class};
+    Class<?>[] parameterTypes = {String[].class};
 
     callConstructor(className, parameterTypes, args, argRefs);
   }
@@ -101,7 +100,7 @@ public class ConstructorMessageIT extends AbstractBinaryRPCMessageIT {
     // 2. Construct an instance calling the constructor that takes another instance as arg
     Object[] args = {null};
     ObjectRef[] argRefs = {newObjRef};
-    Class[] parameterTypes = {Constructors.class};
+    Class<?>[] parameterTypes = {Constructors.class};
 
     callConstructor(className, parameterTypes, args, argRefs);
   }
@@ -111,7 +110,7 @@ public class ConstructorMessageIT extends AbstractBinaryRPCMessageIT {
 
     Object[] args = {239823d, 38723d, 2323d};
     ObjectRef[] argRefs = {null, null, null};
-    Class[] parameterTypes = {Double.class, Double.class, Double.class};
+    Class<?>[] parameterTypes = {Double.class, Double.class, Double.class};
 
     callConstructor(className, parameterTypes, args, argRefs, "java.lang.NoSuchMethodException");
   }
@@ -122,7 +121,7 @@ public class ConstructorMessageIT extends AbstractBinaryRPCMessageIT {
 
     Object[] args = {239823d, 38723d, 2323d};
     ObjectRef[] argRefs = {null, null, null};
-    Class[] parameterTypes = {Double.class, Double.class, Double.class};
+    Class<?>[] parameterTypes = {Double.class, Double.class, Double.class};
 
     callConstructor(
         nonExistingClass, parameterTypes, args, argRefs, "java.lang.ClassNotFoundException");
@@ -133,7 +132,7 @@ public class ConstructorMessageIT extends AbstractBinaryRPCMessageIT {
 
     Object[] args = {"not_a_number"};
     ObjectRef[] argRefs = {null};
-    Class[] parameterTypes = {String.class};
+    Class<?>[] parameterTypes = {String.class};
 
     callConstructor(className, parameterTypes, args, argRefs, "java.lang.NumberFormatException");
   }

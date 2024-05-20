@@ -21,7 +21,6 @@ package net.ittera.pal.svcs;
 
 import static picocli.CommandLine.Option;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,9 +31,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import kong.unirest.Unirest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.ContextFillingTransformSupplier;
 import net.ittera.pal.messages.colfer.KafkaExecMessageSerde;
 import net.ittera.pal.messages.colfer.Message;
@@ -44,6 +46,7 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler;
 import org.apache.kafka.streams.kstream.KStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +57,7 @@ import picocli.CommandLine.Command;
 public class IndexingService implements Callable<Integer> {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexingService.class);
-  private CountDownLatch shutdownLatch = new CountDownLatch(1);
+  private final CountDownLatch shutdownLatch = new CountDownLatch(1);
 
   @Option(
       names = {"--es-url"},
@@ -82,35 +85,41 @@ public class IndexingService implements Callable<Integer> {
   private boolean verbose;
 
   private Instant lastIndexed;
-  private static final int BATCH_SIZE = 200;
-  private static final int SECS_TO_SUBMIT_BATCH = 5;
+  private Instant lastTimeReceived;
+  private static final int BATCH_SIZE = 100;
+  private static final int SECS_TO_SUBMIT_BATCH = 3;
 
-  private final List<Map> batch = new ArrayList<>(BATCH_SIZE);
+  private final List<Map<String, Object>> batch = new ArrayList<>(BATCH_SIZE);
 
   private MessageIndexer messageIndexer;
 
-  public IndexingService(String esURL, String palDirURL, String logName) {
-    this.elasticSearchAddress = esURL;
-    this.palDirAddress = palDirURL;
+  public IndexingService(String elasticSearchUrl, String palDirUrl, String logName) {
+    this.elasticSearchAddress = elasticSearchUrl;
+    this.palDirAddress = palDirUrl;
     this.logName = logName;
   }
 
   public IndexingService() {}
 
   private void setTimeLastReceived() {
+    lastTimeReceived = Instant.now();
+  }
+
+  private void setTimeLastIndexed() {
     lastIndexed = Instant.now();
   }
 
   private void submitBatch() {
     synchronized (batch) {
-      if (batch.size() > 0) {
+      if (!batch.isEmpty()) {
         messageIndexer.bulkIndex(logName, batch);
+        setTimeLastIndexed();
         batch.clear();
       }
     }
   }
 
-  private synchronized void addToBatch(Map messageWithCtx) {
+  private synchronized void addToBatch(Map<String, Object> messageWithCtx) {
     synchronized (batch) {
       batch.add(messageWithCtx);
     }
@@ -120,7 +129,7 @@ public class IndexingService implements Callable<Integer> {
   public Integer call() throws Exception {
 
     logger.info("Started indexing log `{}`", logName);
-    PALDirectory palDirectory = new PALDirectory(palDirAddress);
+    PalDirectory palDirectory = new PalDirectory(palDirAddress);
     LogInfo logInfo = palDirectory.getLogInfo(logName);
 
     messageIndexer = new MessageIndexer(elasticSearchAddress);
@@ -129,7 +138,7 @@ public class IndexingService implements Callable<Integer> {
     1. CONFIGURE STREAMS API
     */
     Properties props = new Properties();
-    String consumerId = "indexer-" + UUID.randomUUID().toString();
+    String consumerId = "indexer-" + UUID.randomUUID();
     if (verbose) {
       System.out.println("CONFIG:");
       System.out.println("=======");
@@ -164,16 +173,18 @@ public class IndexingService implements Callable<Integer> {
                   return new KeyValue<>(k, message);
                 });
 
-    KStream<String, Map> streamWithCtxt = stream.transform(ContextFillingTransformSupplier::new);
+    @SuppressWarnings("deprecation")
+    KStream<String, Map<String, Object>> streamWithCtxt =
+        stream.transform(ContextFillingTransformSupplier::new);
 
     streamWithCtxt.foreach(
         (k, m) -> {
           addToBatch(m);
+          setTimeLastReceived();
           if (batch.size() == BATCH_SIZE) {
             submitBatch();
             logger.debug("submitted new batch of {} docs", BATCH_SIZE);
           }
-          setTimeLastReceived();
         });
 
     /*
@@ -199,16 +210,25 @@ public class IndexingService implements Callable<Integer> {
     startStreams(streams);
     logger.debug("started kafka streams");
 
-    // have this waiting thread send incomplete batches after some time elapsed without new messages
-    while (shutdownLatch.getCount() > 0) {
-      if (batch.size() > 0) {
-        Duration elapsedSinceLast = Duration.between(lastIndexed, Instant.now());
-        if (elapsedSinceLast.compareTo(Duration.ofSeconds(SECS_TO_SUBMIT_BATCH)) > 0) {
-          submitBatch();
-        }
-      }
-      Thread.sleep(300);
-    }
+    // send incomplete batches after some time elapsed without new messages
+    ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+    @SuppressWarnings("unused")
+    var unused =
+        executorService.scheduleAtFixedRate(
+            () -> {
+              if (!batch.isEmpty()) {
+                submitBatch();
+              }
+            },
+            0,
+            SECS_TO_SUBMIT_BATCH,
+            TimeUnit.SECONDS);
+
+    // wait for the shutdown signal
+    shutdownLatch.await();
+
+    // shutdown the executor service
+    executorService.shutdown();
 
     // close resources
     streams.close();
@@ -216,10 +236,6 @@ public class IndexingService implements Callable<Integer> {
     palDirectory.close();
     logger.debug("indexing service for log '{}' has shut down", logName);
     return 0;
-  }
-
-  public void shutdown() {
-    shutdownLatch.countDown();
   }
 
   private void startStreams(KafkaStreams streams) {
@@ -238,8 +254,9 @@ public class IndexingService implements Callable<Integer> {
 
     // catch unhandled exceptions
     streams.setUncaughtExceptionHandler(
-        (Thread thread, Throwable throwable) -> {
-          logger.error("Uncaught throwable", throwable);
+        throwable -> {
+          logger.error("Uncaught exception in stream. Will shutdown client.", throwable);
+          return StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
         });
 
     // start consuming the stream
@@ -247,11 +264,20 @@ public class IndexingService implements Callable<Integer> {
     try {
       KafkaStreams.State finalState = stateFuture.get();
       if (finalState == KafkaStreams.State.RUNNING) {
+        logger.info("Stream started successfully");
         // TODO start consuming thread here
       }
     } catch (InterruptedException | ExecutionException ex) {
       logger.error("Error starting stream", ex);
     }
+  }
+
+  public Instant getLastIndexed() {
+    return lastIndexed;
+  }
+
+  public Instant getLastTimeReceived() {
+    return lastTimeReceived;
   }
 
   public static void main(String[] args) {

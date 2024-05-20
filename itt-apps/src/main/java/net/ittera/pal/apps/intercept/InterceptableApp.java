@@ -19,6 +19,7 @@
 
 package net.ittera.pal.apps.intercept;
 
+@SuppressWarnings("unused")
 public class InterceptableApp {
   volatile Integer counter = 1;
 

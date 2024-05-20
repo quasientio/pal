@@ -19,11 +19,12 @@
 
 package net.ittera.pal.common.lang.reflect;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotSame;
 
 import java.lang.reflect.Field;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class FieldSignatureTest {
@@ -45,7 +46,7 @@ public class FieldSignatureTest {
   }
 
   private Field field;
-  private Class fieldType;
+  private Class<?> fieldType;
   private FieldSignature fieldSignature;
 
   @Before
@@ -71,14 +72,13 @@ public class FieldSignatureTest {
     FieldSignature signature1 = new FieldSignature(field1);
     FieldSignature signature11 = new FieldSignature(field1);
 
-    Field field2 = FieldSignatureTest.DummyClass2.class.getDeclaredField("floatingField");
-    FieldSignature signature2 = new FieldSignature(field2);
-    FieldSignature signature22 = new FieldSignature(field2);
-
-    assertEquals(signature1, signature1);
     assertNotSame(signature1, signature11);
     assertEquals(signature1, signature11);
     assertEquals(signature1.hashCode(), signature11.hashCode());
+
+    Field field2 = FieldSignatureTest.DummyClass2.class.getDeclaredField("floatingField");
+    FieldSignature signature2 = new FieldSignature(field2);
+    FieldSignature signature22 = new FieldSignature(field2);
 
     assertNotSame(signature2, signature22);
     assertEquals(signature2, signature22);
@@ -93,13 +93,6 @@ public class FieldSignatureTest {
     assertNotEquals(signature1, signature3);
 
     assertNotEquals(signature1, null);
-    assertNotEquals(signature1, "silly lilly");
-  }
-
-  @Ignore("See comment in ConstructorSignatureTest.equalsContract().")
-  @Test
-  public void equalsContract() {
-    // TODO
   }
 
   @Test

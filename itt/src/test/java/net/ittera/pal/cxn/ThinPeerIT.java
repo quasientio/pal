@@ -19,17 +19,22 @@
 
 package net.ittera.pal.cxn;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.HashSet;
+import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
+import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
@@ -40,6 +45,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.zeromq.ZContext;
 
 public class ThinPeerIT extends AbstractIntegrationTest {
 
@@ -48,20 +54,19 @@ public class ThinPeerIT extends AbstractIntegrationTest {
   private final MessageBuilder msgBuilder = new MessageBuilder();
 
   // PAL directory
-  private PALDirectory palDirectory;
+  private PalDirectory palDirectory;
   private DirectoryConnectionProvider directoryConnectionProvider;
 
   // mock Kafka producer & consumer
   private MockProducer<String, byte[]> producer;
   private MockConsumer<String, byte[]> consumer;
 
-  private static final Set<UUID> createdPeers = new HashSet<>();
   private static final Set<LogInfo> createdLogs = new HashSet<>();
   private ThinPeer thinPeer;
 
   @Before
   public void setUp() {
-    directoryConnectionProvider = new DirectoryConnectionProvider(getPALDirectoryURL());
+    directoryConnectionProvider = new DirectoryConnectionProvider(getPalDirectoryUrl());
     palDirectory = directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
     producer = new MockProducer<>(Cluster.empty(), true, null, null, null);
     consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
@@ -77,57 +82,57 @@ public class ThinPeerIT extends AbstractIntegrationTest {
         // we may close it after testing an uninitialized thin peer, so it's fine
       }
     }
-    // unregister created peers and logs
-    for (UUID peer : createdPeers) {
-      palDirectory.unregisterPeer(peer);
-      logger.info("Cleaned up created peer: {}", peer);
-    }
-    for (String log : createdLogs.stream().map(LogInfo::getName).collect(Collectors.toList())) {
+    // unregister created logs (peers are unregistering themselves when closed)
+    for (String log : createdLogs.stream().map(LogInfo::getName).toList()) {
       palDirectory.unregisterLog(log);
       logger.info("Cleaned up created log: {}", log);
     }
     palDirectory.close();
   }
 
-  private LogInfo createLog(String name) throws Exception {
-    LogInfo log = new LogInfo(name, getKafkaServers());
+  private LogInfo createTestLog() throws Exception {
+    LogInfo log = new LogInfo("test_log", getKafkaServers());
     palDirectory.registerLog(log);
     createdLogs.add(log);
     return log;
   }
 
-  private ThinPeer createUninitialized() throws Exception {
-    return new ThinPeer()
-        .withUUID(UUID.randomUUID())
-        .withDirectoryProvider(directoryConnectionProvider)
-        .withConsumer(consumer)
-        .withProducer(producer)
-        .withLog(createLog("testlog"));
-  }
-
   @Test
-  public void initOK() throws Exception {
+  public void initOk() throws Exception {
     thinPeer =
         new ThinPeer()
             .withDirectoryProvider(directoryConnectionProvider)
             .withConsumer(consumer)
             .withProducer(producer)
-            .withLog(createLog("testlog"))
+            .withLog(createTestLog())
             .init();
     assertThat(thinPeer.isLogIOEnabled(), is(true));
-    thinPeer.close();
   }
 
   @Test
-  public void initWithMissingDirectoryOK() throws Exception {
+  public void initAndClose() throws Exception {
+    thinPeer =
+        new ThinPeer()
+            .withDirectoryProvider(directoryConnectionProvider)
+            .withConsumer(consumer)
+            .withProducer(producer)
+            .withLog(createTestLog())
+            .init();
+    assertTrue(thinPeer.isInitialized());
+    assertThat(thinPeer.isLogIOEnabled(), is(true));
+    thinPeer.close();
+    assertTrue(thinPeer.isClosed());
+  }
+
+  @Test
+  public void initWithMissingDirectoryOk() throws Exception {
     thinPeer =
         new ThinPeer()
             .withConsumer(consumer)
             .withProducer(producer)
-            .withLog(createLog("testlog"))
+            .withLog(createTestLog())
             .init();
     assertThat(thinPeer.isLogIOEnabled(), is(true));
-    thinPeer.close();
   }
 
   @Test
@@ -137,10 +142,9 @@ public class ThinPeerIT extends AbstractIntegrationTest {
         new ThinPeer()
             .withDirectoryProvider(directoryConnectionProvider)
             .withProducer(producer)
-            .withLog(createLog("testlog"))
+            .withLog(createTestLog())
             .init();
     assertThat(thinPeer.isLogIOEnabled(), is(false));
-    thinPeer.close();
   }
 
   @Test
@@ -150,15 +154,43 @@ public class ThinPeerIT extends AbstractIntegrationTest {
         new ThinPeer()
             .withDirectoryProvider(directoryConnectionProvider)
             .withConsumer(consumer)
-            .withLog(createLog("testlog"))
+            .withLog(createTestLog())
             .init();
     assertThat(thinPeer.isLogIOEnabled(), is(false));
-    thinPeer.close();
   }
 
   @Test
-  public void sendAndReceiveIllegalState() throws Exception {
-    thinPeer = createUninitialized();
+  public void initWithMiscFlags() throws Exception {
+    ZContext zmqContext = createZmqContext();
+    thinPeer =
+        new ThinPeer()
+            .withDirectoryProvider(directoryConnectionProvider)
+            .withConsumer(consumer)
+            .withLog(createTestLog())
+            .withBootstrapServers(getKafkaServers())
+            .withLogPrefix("test-prefix")
+            .withPollingDuration(1000)
+            .withZmqContext(zmqContext)
+            .withNoP2P()
+            .init();
+    assertEquals(getKafkaServers(), thinPeer.getBootstrapServers());
+    assertEquals("test-prefix", thinPeer.getLogPrefix());
+    assertEquals(1000, thinPeer.getPollingDuration().toMillis());
+    assertFalse(thinPeer.isP2PEnabled());
+    assertEquals(zmqContext, thinPeer.getZmqContext());
+  }
+
+  @Test
+  public void sendAndReceive_Uninitialized_IllegalState() throws Exception {
+    thinPeer =
+        new ThinPeer()
+            .withUuid(UUID.randomUUID())
+            .withDirectoryProvider(directoryConnectionProvider)
+            .withConsumer(consumer)
+            .withProducer(producer)
+            .withLog(createTestLog());
+
+    assertFalse(thinPeer.isInitialized());
     ExecMessage msg = msgBuilder.buildEmptyConstructor(thinPeer.getPeerUuid(), "java.lang.String");
     try {
       thinPeer.sendAndReceive(msg);
@@ -168,33 +200,68 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     }
   }
 
-  //  @Test
-  public void sendAndReceive() throws Exception {}
+  @Test
+  public void sendAndReceive_Closed_IllegalState() throws Exception {
+    thinPeer =
+        new ThinPeer()
+            .withDirectoryProvider(directoryConnectionProvider)
+            .withConsumer(consumer)
+            .withProducer(producer)
+            .withLog(createTestLog())
+            .init();
 
-  //  @Test
-  public void waitFor() {}
+    assertTrue(thinPeer.isInitialized());
 
-  //  @Test
-  public void getMessageAtOffset() {}
+    assertFalse(thinPeer.isClosed());
+    thinPeer.close();
+    assertTrue(thinPeer.isClosed());
+    ExecMessage msg = msgBuilder.buildEmptyConstructor(thinPeer.getPeerUuid(), "java.lang.String");
+    try {
+      thinPeer.sendAndReceive(msg);
+      fail("Should have raised IllegalStateException");
+    } catch (IllegalStateException e) {
+      // ok
+    }
+  }
 
-  //  @Test
-  public void getMessages() {}
+  @Test
+  public void initFullyConnectedAndTestGetters() throws Exception {
+    LogInfo inAndOutLog = createTestLog();
+    PeerInfo initialPeer = findRpcPeer(RpcType.JSONRPC).orElseThrow();
+    Properties producerProperties = new Properties();
+    Properties consumerProperties = new Properties();
+    UUID peerUuid = UUID.randomUUID();
+    thinPeer =
+        new ThinPeer()
+            .withName("test_peer")
+            .withDirectoryProvider(directoryConnectionProvider)
+            .withConsumer(consumer)
+            .withProducer(producer)
+            .withLog(inAndOutLog)
+            .withUuid(peerUuid)
+            .withProducerProperties(producerProperties)
+            .withConsumerProperties(consumerProperties)
+            .withRpcAddress("tcp://localhost:1234")
+            .withOutboundRpcType(RpcType.RPC)
+            .withInitialPeer(initialPeer)
+            .withSelfRegistration(false)
+            .init();
 
-  //  @Test
-  public void getPeerUuid() {}
-
-  //  @Test
-  public void sendToLogAndForget() {}
-
-  //  @Test
-  public void sendToLogAndAsyncProcessReqAndRepNodes() {}
-
-  //  @Test
-  public void connectToPeer() {}
-
-  //  @Test
-  public void sendToPeer() {}
-
-  //  @Test
-  public void close() {}
+    assertEquals("test_peer", thinPeer.getName());
+    assertEquals(getPalDirectoryUrl(), thinPeer.getPalDirectoryUrl());
+    assertEquals(consumer, thinPeer.getConsumer());
+    assertEquals(producer, thinPeer.getProducer());
+    assertEquals(inAndOutLog, thinPeer.getInLog());
+    assertEquals(inAndOutLog, thinPeer.getOutLog());
+    assertEquals(peerUuid, thinPeer.getPeerUuid());
+    assertEquals(producerProperties, thinPeer.getProducerProperties());
+    assertEquals(producerProperties, thinPeer.getConsumerProperties());
+    assertEquals("tcp://localhost:1234", thinPeer.getRpcAddress());
+    assertEquals(RpcType.RPC, thinPeer.getOutboundRpcType());
+    assertEquals(initialPeer, thinPeer.getInitialPeer());
+    assertFalse(thinPeer.isSelfRegistering());
+    assertTrue(thinPeer.isTalkingToPeer());
+    assertEquals(initialPeer, thinPeer.getCurrentPeer());
+    assertTrue(thinPeer.isZmqSocketConnected());
+  }
 }

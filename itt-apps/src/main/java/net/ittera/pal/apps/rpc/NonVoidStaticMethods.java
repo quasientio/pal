@@ -19,24 +19,26 @@
 
 package net.ittera.pal.apps.rpc;
 
-import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
+@SuppressWarnings("unused")
 public class NonVoidStaticMethods {
 
   private static Thread singleton;
 
-  public static Integer nonVoidSumUpList(ArrayList<Integer> listOfInts) {
+  public static Integer nonVoidSumUpList(List<Integer> listOfIntegers) {
     int sum = 0;
-    if (listOfInts != null) {
-      for (Integer listOfInt : listOfInts) {
-        sum += listOfInt;
+    if (listOfIntegers != null) {
+      for (Integer anInt : listOfIntegers) {
+        sum += anInt;
       }
     }
     return sum;
   }
 
   private static String testNonVoidStatic(String arg) {
-    return arg.toLowerCase();
+    return arg.toLowerCase(Locale.getDefault());
   }
 
   protected static Integer highFive() {
@@ -47,7 +49,7 @@ public class NonVoidStaticMethods {
     throw new RuntimeException("Here you go");
   }
 
-  public static Object giveMeANull() {
+  public static Object giveMeNull() {
     return null;
   }
 
@@ -59,18 +61,20 @@ public class NonVoidStaticMethods {
     return new Long[0];
   }
 
-  public static Boolean[] giveMeANullBoolArray() {
+  public static Boolean[] giveMeNullBoolArray() {
     return null;
   }
 
-  static Thread fetchMeAThreadSingleton() {
+  @SuppressWarnings("InstantiatingAThreadWithDefaultRunMethod")
+  static Thread getThreadSingleton() {
     if (singleton == null) {
       singleton = new Thread();
     }
     return singleton;
   }
 
-  static Thread[] fetchMeAThreadArray() {
+  @SuppressWarnings("InstantiatingAThreadWithDefaultRunMethod")
+  static Thread[] getThreadArray() {
     int arraySize = 2;
     Thread[] threads = new Thread[arraySize];
     for (int i = 0; i < arraySize; i++) {

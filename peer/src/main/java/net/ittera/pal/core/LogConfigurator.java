@@ -24,7 +24,7 @@ import java.util.Objects;
 import java.util.Properties;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +51,7 @@ class LogConfigurator {
     this.appProps = appProps;
     this.injector = injector;
     final String givenPaldirUrl = appProps.getProperty("paldir_url");
-    noPaldir = givenPaldirUrl == null || givenPaldirUrl.equals(PALDirectory.NO_URL);
+    noPaldir = givenPaldirUrl == null || givenPaldirUrl.equals(PalDirectory.NO_URL);
     kafkaServers = appProps.getProperty("kafka.bootstrap.servers");
     if (kafkaServers == null) {
       throw new IllegalArgumentException("No kafka servers given.");
@@ -59,7 +59,7 @@ class LogConfigurator {
   }
 
   private LogInfo registerNewLog() throws Exception {
-    final PALDirectory palDirectory =
+    final PalDirectory palDirectory =
         injector
             .getInstance(DirectoryConnectionProvider.class)
             .get()
@@ -69,7 +69,7 @@ class LogConfigurator {
 
   private LogInfo getOrRegisterGivenLog(String logName) throws Exception {
 
-    final PALDirectory palDirectory =
+    final PalDirectory palDirectory =
         injector
             .getInstance(DirectoryConnectionProvider.class)
             .get()
@@ -93,9 +93,9 @@ class LogConfigurator {
     logMessageReader.readFromLog(inLog, inAndOutAreSameLog, initialOffset);
   }
 
-  private void writeToLog(LogInfo outLog, LogInfo inLog) {
+  private void writeToLog(LogInfo outLog) {
     LogWriter logMessageWriter = injector.getInstance(LogWriter.class);
-    logMessageWriter.writeToLog(outLog, inLog, true);
+    logMessageWriter.writeToLog(outLog, true);
   }
 
   /**
@@ -103,7 +103,7 @@ class LogConfigurator {
    * With noPaldir, 'auto' does not register a new sequentially-named log, but is taken literally as
    * the log's name.
    *
-   * @throws Exception
+   * @throws Exception if getting or registering a log fails
    */
   void init() throws Exception {
 
@@ -140,7 +140,7 @@ class LogConfigurator {
 
     // init log writer
     if (outLog != null) {
-      writeToLog(outLog, inLog);
+      writeToLog(outLog);
     }
   }
 }

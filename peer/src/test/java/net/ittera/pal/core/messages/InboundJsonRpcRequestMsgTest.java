@@ -19,9 +19,9 @@
 
 package net.ittera.pal.core.messages;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
 
 import java.util.UUID;
 import net.ittera.pal.core.ZmqEnabledTest;
@@ -39,12 +39,12 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
   public void sendViaDealer() {
 
     // create and connect sockets
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket dealerSocket = zContext.createSocket(SocketType.DEALER);
-    dealerSocket.bind(socketAddr);
-    ZMQ.Socket repSocket = zContext.createSocket(SocketType.REP);
-    repSocket.connect(socketAddr);
+    String socketAddress = "inproc://here";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket dealerSocket = zmqContext.createSocket(SocketType.DEALER);
+    dealerSocket.bind(socketAddress);
+    ZMQ.Socket repSocket = zmqContext.createSocket(SocketType.REP);
+    repSocket.connect(socketAddress);
 
     // send
     UUID clientId = UUID.randomUUID();
@@ -59,53 +59,51 @@ public class InboundJsonRpcRequestMsgTest extends ZmqEnabledTest {
         """;
     InboundJsonRpcRequestMsg msgOut = new InboundJsonRpcRequestMsg(clientId, jsonMessage);
     msgOut.send(dealerSocket);
-    logger.debug("sent msgOut= {}", msgOut);
 
     // receive and compare
-    InboundJsonRpcRequestMsg msgIn = InboundJsonRpcRequestMsg.recvMsg(repSocket, true);
-    logger.debug("received msgIn= {}", msgIn);
+    InboundJsonRpcRequestMsg msgIn = InboundJsonRpcRequestMsg.receive(repSocket, true);
     assertThat(msgIn, is(msgOut));
 
     // close
     dealerSocket.close();
     repSocket.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 
   @Test
   public void sendViaPush() {
 
     final String pushAddress = "inproc://websocket-push";
-    ZContext zContext = createContext();
-    ZMQ.Socket pushSocket = zContext.createSocket(SocketType.PUSH);
+    ZContext zmqContext = createContext();
+    ZMQ.Socket pushSocket = zmqContext.createSocket(SocketType.PUSH);
     pushSocket.bind(pushAddress);
-    ZMQ.Socket pullSocket = zContext.createSocket(SocketType.PULL);
+    ZMQ.Socket pullSocket = zmqContext.createSocket(SocketType.PULL);
     pullSocket.connect(pushAddress);
 
     // send
     UUID clientId = UUID.randomUUID();
     String jsonMessage =
         """
-        {
-          "jsonrpc": "2.0",
-          "method": "foo",
-          "params": [],
-          "id": 1
-        }
-       """;
+                     {
+                       "jsonrpc": "2.0",
+                       "method": "foo",
+                       "params": [],
+                       "id": 1
+                     }
+                    """;
     InboundJsonRpcRequestMsg msgOut = new InboundJsonRpcRequestMsg(clientId, jsonMessage);
     msgOut.send(pushSocket, false);
     logger.debug("sent msgOut= {}", msgOut);
 
     // receive and compare
-    InboundJsonRpcRequestMsg msgIn = InboundJsonRpcRequestMsg.recvMsg(pullSocket, true);
+    InboundJsonRpcRequestMsg msgIn = InboundJsonRpcRequestMsg.receive(pullSocket, true);
     logger.debug("received msgIn= {}", msgIn);
     assertThat(msgIn, is(msgOut));
 
     // close
     pushSocket.close();
     pullSocket.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 
   @Test

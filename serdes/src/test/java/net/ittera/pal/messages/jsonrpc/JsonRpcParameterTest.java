@@ -1,6 +1,9 @@
 package net.ittera.pal.messages.jsonrpc;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -122,11 +125,11 @@ public class JsonRpcParameterTest {
     String arrayType = "[Ljava.lang.String;";
     String jsonInput =
             """
-      {
-          "value": ["%s", "%s"],
-          "type":"%s"
-      }
-      """
+                    {
+                        "value": ["%s", "%s"],
+                        "type":"%s"
+                    }
+                    """
             .formatted(stringArray[0], stringArray[1], arrayType);
     JsonRpcParameter jsonRpcParameter = gson.fromJson(jsonInput, JsonRpcParameter.class);
     assertArrayEquals(stringArray, (String[]) jsonRpcParameter.getValue());
@@ -142,11 +145,11 @@ public class JsonRpcParameterTest {
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
                 """
-      {
-          "value": ["%s", "%s"],
-          "type":"%s"
-      }
-      """
+                            {
+                                "value": ["%s", "%s"],
+                                "type":"%s"
+                            }
+                            """
                 .formatted(intArray[0], intArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(intArray, (int[]) jsonRpcParameter.getValue());
@@ -162,11 +165,11 @@ public class JsonRpcParameterTest {
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
                 """
-      {
-          "value": ["%s", "%s"],
-          "type":"%s"
-      }
-      """
+                            {
+                                "value": ["%s", "%s"],
+                                "type":"%s"
+                            }
+                            """
                 .formatted(integerArray[0], integerArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(integerArray, (Integer[]) jsonRpcParameter.getValue());
@@ -182,11 +185,11 @@ public class JsonRpcParameterTest {
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
                 """
-      {
-          "value": ["%s", "%s"],
-          "type":"%s"
-      }
-      """
+                            {
+                                "value": ["%s", "%s"],
+                                "type":"%s"
+                            }
+                            """
                 .formatted(floatArray[0], floatArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(floatArray, (float[]) jsonRpcParameter.getValue(), 0.0f);
@@ -202,11 +205,11 @@ public class JsonRpcParameterTest {
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
                 """
-      {
-          "value": ["%s", "%s"],
-          "type":"%s"
-      }
-      """
+                            {
+                                "value": ["%s", "%s"],
+                                "type":"%s"
+                            }
+                            """
                 .formatted(doubleArray[0], doubleArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(doubleArray, (double[]) jsonRpcParameter.getValue(), 0.0);
@@ -222,11 +225,11 @@ public class JsonRpcParameterTest {
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
                 """
-      {
-          "value": ["%s", "%s"],
-          "type":"%s"
-      }
-      """
+                            {
+                                "value": ["%s", "%s"],
+                                "type":"%s"
+                            }
+                            """
                 .formatted(longArray[0], longArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(longArray, (long[]) jsonRpcParameter.getValue());
@@ -242,11 +245,11 @@ public class JsonRpcParameterTest {
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
                 """
-      {
-          "value": ["%s", "%s"],
-          "type":"%s"
-      }
-      """
+                            {
+                                "value": ["%s", "%s"],
+                                "type":"%s"
+                            }
+                            """
                 .formatted(charArray[0], charArray[1], arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(charArray, (char[]) jsonRpcParameter.getValue());
@@ -262,12 +265,12 @@ public class JsonRpcParameterTest {
     JsonRpcParameter jsonRpcParameter =
         gson.fromJson(
                 """
-      {
-          "value": ["%s", "%s"],
-          "type":"%s"
-      }
-      """
-                .formatted(booleanArray[0], booleanArray[1], arrayType),
+                            {
+                                "value": ["%s", "%s"],
+                                "type":"%s"
+                            }
+                            """
+                .formatted(true, false, arrayType),
             JsonRpcParameter.class);
     assertArrayEquals(booleanArray, (boolean[]) jsonRpcParameter.getValue());
     assertEquals(booleanArray.getClass(), jsonRpcParameter.getValue().getClass());

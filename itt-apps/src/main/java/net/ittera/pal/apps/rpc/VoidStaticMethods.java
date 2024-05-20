@@ -19,8 +19,9 @@
 
 package net.ittera.pal.apps.rpc;
 
-import java.util.ArrayList;
+import java.util.List;
 
+@SuppressWarnings("unused")
 public class VoidStaticMethods {
 
   private static void testVoidStatic(String arg) {
@@ -28,7 +29,7 @@ public class VoidStaticMethods {
   }
 
   private static void printArg(int argIdx, String arg) {
-    System.out.println(String.format("Argument #%d to printArg: %s", argIdx, arg));
+    System.out.printf("Argument #%d to printArg: %s%n", argIdx, arg);
   }
 
   static void doSomethingStatically() {
@@ -39,9 +40,9 @@ public class VoidStaticMethods {
     throw new RuntimeException("Bastards threw me out!");
   }
 
-  public static void sumUpList(ArrayList<Integer> listOfInts) {
-    int sum = listOfInts.stream().reduce(0, Integer::sum);
-    System.out.println(String.format("The sum of ints = %d", sum));
+  public static void sumUpList(List<Integer> listOfIntegers) {
+    int sum = listOfIntegers.stream().reduce(0, Integer::sum);
+    System.out.printf("The sum of integers = %d%n", sum);
   }
 
   public static void main(String[] args) {}

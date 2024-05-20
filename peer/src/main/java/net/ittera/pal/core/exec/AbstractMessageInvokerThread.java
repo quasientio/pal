@@ -21,6 +21,8 @@ package net.ittera.pal.core.exec;
 
 import static java.lang.String.format;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
@@ -28,24 +30,24 @@ import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 
-/** Base class for Log and Peer Invoker threads */
+/** Base class for Log and Peer Invoker threads. */
 public abstract class AbstractMessageInvokerThread extends Thread {
 
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   private final AtomicLong requestsDispatched = new AtomicLong(0);
   private final AtomicLong requestsDismissed = new AtomicLong(0);
+  private final List<MessageDispatchListener> messageDispatchListeners = new ArrayList<>();
 
   // zmq stuff
   protected final ZContext zmqContext;
 
-  private final UUID peerUuid;
+  protected final UUID peerUuid;
   private final IncomingMessageDispatcher incomingMessageDispatcher;
   protected final DispatcherConnector dispatcherConnector;
   protected final MessageBuilder messageBuilder;
@@ -69,10 +71,8 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     }
   }
 
-  /**
-   * Constructor exclusive for unit-testing -- to avoid ExecutorService and ThreadFactory
-   * dependencies. NOTE: dispatcherConnector is set to null, since it's not required
-   */
+  // Constructor exclusive for unit-testing -- to avoid ExecutorService and ThreadFactory
+  // dependencies. NOTE: dispatcherConnector is set to null, since it's not required
   AbstractMessageInvokerThread(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
@@ -123,25 +123,32 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   @Override
   public abstract void run();
 
+  // This method returns void and is only used by LogMessageInvoker threads
   protected final void dispatch(Message message, Long recordOffset) {
     final ExecMessage execMessage = message.getExecMessage();
     if (execMessage != null) {
       dispatch(message.getExecMessage(), recordOffset);
+      notifyMessageDispatched(message);
       return;
     }
 
-    logger.error("Ignoring dispatch of msg of unknown type: {}", ColferUtils.format(message));
+    // Log message invoker can only dispatch ExecMessages
+    throw new IllegalArgumentException(format("No handler for message: %s", message));
   }
 
   protected final Message dispatch(Message message) {
     final ExecMessage execMessage = message.getExecMessage();
     if (execMessage != null) {
-      return messageBuilder.wrap(dispatch(message.getExecMessage(), null));
+      final Message reply = messageBuilder.wrap(dispatch(message.getExecMessage(), null));
+      notifyMessageDispatched(message);
+      return reply;
     }
 
     final ControlMessage controlMessage = message.getControlMessage();
     if (controlMessage != null) {
-      return messageBuilder.wrap(dispatch(message.getControlMessage()));
+      final Message reply = messageBuilder.wrap(dispatch(message.getControlMessage()));
+      notifyMessageDispatched(message);
+      return reply;
     }
 
     throw new IllegalArgumentException(
@@ -151,22 +158,22 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   private ExecMessage dispatch(ExecMessage requestMsg, @Nullable Long recordOffset) {
     final boolean isDirectRequest = recordOffset == null;
 
-    ExecMessage replyMsg = null;
+    ExecMessage replyMsg;
     try {
       replyMsg = incomingMessageDispatcher.incomingCall(requestMsg, isDirectRequest);
     } catch (UnsupportedMessageException e) {
-      logger.error("Unsupported incoming message", e);
+      logger.warn("Unsupported incoming message", e);
+      return null;
     }
-    if (replyMsg != null) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            "Invoker dispatched Exec Message w/uuid: {} and recordOffset: {}, reply uuid: {}",
-            requestMsg.getMessageUuid(),
-            recordOffset,
-            replyMsg.getMessageUuid());
-      }
-      updateCounters();
+
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "Invoker dispatched Exec Message w/uuid: {} and recordOffset: {}, reply uuid: {}",
+          requestMsg.getMessageUuid(),
+          recordOffset,
+          replyMsg.getMessageUuid());
     }
+    updateCounters();
     return replyMsg;
   }
 
@@ -175,7 +182,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     try {
       replyMsg = incomingMessageDispatcher.incomingControlMessage(controlMsg);
     } catch (UnsupportedMessageException e) {
-      logger.error("Unsupported incoming message", e);
+      logger.warn("Unsupported incoming message", e);
     }
     if (replyMsg != null) {
       if (logger.isDebugEnabled()) {
@@ -196,5 +203,20 @@ public abstract class AbstractMessageInvokerThread extends Thread {
 
   final AtomicLong getRequestsDispatched() {
     return requestsDispatched;
+  }
+
+  public void addMessageDispatchListener(MessageDispatchListener listener) {
+    messageDispatchListeners.add(listener);
+  }
+
+  @SuppressWarnings("unused")
+  public void removeMessageDispatchListener(MessageDispatchListener listener) {
+    messageDispatchListeners.remove(listener);
+  }
+
+  private void notifyMessageDispatched(Message message) {
+    for (MessageDispatchListener listener : messageDispatchListeners) {
+      listener.onMessageDispatched(message);
+    }
   }
 }

@@ -27,13 +27,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import javax.annotation.Nonnull;
 import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
@@ -52,11 +53,11 @@ import org.zeromq.ZMQ.Socket;
  * Intercept tests may be a little hard to follow, so some notes to clarify.
  *
  * <pre>
- * - Two ThinPeers are used, one for invoking a call (to a method or fieldop)
+ * - Two ThinPeers are used, one for invoking a call (to a method or field op)
  *   and a second one to send messages to the peer before/after callbacks in
  *   order to verify state object/class values.
  * - The peer against which we run the tests must be started with at least two
- *   RPC threads (--rpc-threads=2), one to receive the method/fieldop
+ *   RPC threads (--rpc-threads=2), one to receive the method/field op
  *   invocation, and another one to get requests that verify state.
  * - Verification of object/class values cannot fail() or throw assertion
  *   errors since these verifications happen in a separate thread (via an
@@ -76,22 +77,21 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
   protected final UUID myPeerUuid = UUID.randomUUID();
   protected ExecutorService executor;
 
-  private PALDirectory palDirectory;
-  private PeerInfo interceptablePeer;
-  private ZContext zmqContext;
+  private PalDirectory palDirectory;
+  private static ZContext zmqContext;
 
-  // a ThinPeer to invoke methods/fieldops that will trigger callbacks
+  // a ThinPeer to invoke methods/field ops that will trigger callbacks
   private ThinPeer thinPeer;
 
   // a 2nd ThinPeer to be used for verifications from callback threads
   protected ThinPeer verifierThinPeer;
 
-  // placeholder for assertion errors that happen outside junit's main thread
+  // placeholder for assertion errors that happen outside JUnit's main thread
   protected AssertionError assertionError;
 
   // per-thread REP socket to receive callbacks
-  private final ThreadLocal<Socket> threadRepSocket =
-      new ThreadLocal<Socket>() {
+  private static final ThreadLocal<Socket> threadRepSocket =
+      new ThreadLocal<>() {
         @Override
         protected Socket initialValue() {
           Socket callbackSocket = zmqContext.createSocket(SocketType.REP);
@@ -102,11 +102,12 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
         }
       };
   // flag to avoid closing a socket that hasn't been created
-  private final ThreadLocal<Boolean> threadRepSocketCreated = ThreadLocal.withInitial(() -> false);
+  private static final ThreadLocal<Boolean> threadRepSocketCreated =
+      ThreadLocal.withInitial(() -> false);
 
-  class ExceptionCatchingThreadFactory implements ThreadFactory {
+  private static class ExceptionCatchingThreadFactory implements ThreadFactory {
     @Override
-    public Thread newThread(Runnable r) {
+    public Thread newThread(@Nonnull Runnable r) {
       Thread thread = new Thread(r);
       thread.setUncaughtExceptionHandler(
           (t, e) -> logger.error("Uncaught exception in executor thread", e));
@@ -117,31 +118,31 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
   @Before
   public void setUp() throws Exception {
     DirectoryConnectionProvider directoryConnectionProvider =
-        new DirectoryConnectionProvider(getPALDirectoryURL(), null);
+        new DirectoryConnectionProvider(getPalDirectoryUrl(), null);
     this.palDirectory =
         directoryConnectionProvider
             .get()
-            .orElseThrow(() -> new RuntimeException("No connection for PALDirectory"));
-    this.interceptablePeer =
+            .orElseThrow(() -> new RuntimeException("No connection for PalDirectory"));
+    PeerInfo interceptablePeer =
         findRegisteredPeerListening()
             .orElseThrow(() -> new RuntimeException("No registered peer listening for requests"));
     this.thinPeer =
         new ThinPeer()
-            .withUUID(myPeerUuid)
+            .withUuid(myPeerUuid)
             .withName("InterceptTestClient")
-            .withRPCAddress(RPC_ADDRESS)
+            .withRpcAddress(RPC_ADDRESS)
             .withInitialPeer(interceptablePeer)
             .withDirectoryProvider(directoryConnectionProvider)
             .init();
     this.verifierThinPeer =
         new ThinPeer()
-            .withUUID(UUID.randomUUID())
+            .withUuid(UUID.randomUUID())
             .withName("Verifier")
             .withInitialPeer(interceptablePeer)
             .withDirectoryProvider(directoryConnectionProvider)
             .init();
     this.messageBuilder = new MessageBuilder();
-    this.zmqContext = createContext();
+    zmqContext = createZmqContext();
     this.executor = Executors.newFixedThreadPool(1, new ExceptionCatchingThreadFactory());
   }
 
@@ -172,14 +173,6 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
     callbackSocket.send(messageAsBytes);
     logger.debug("Sent callback fake return value: {}", ColferUtils.format(wrappedMessage));
     return callbackMsg;
-  }
-
-  private ZContext createContext() {
-    ZContext ctxt = new ZContext();
-    ctxt.setLinger(1000);
-    ctxt.setRcvHWM(10000);
-    ctxt.setSndHWM(10000);
-    return ctxt;
   }
 
   protected InterceptRequest<InterceptableMethodCall> createMethodCallInterceptRequest(
@@ -213,7 +206,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
 
   protected void closeContext() throws InterruptedException {
     ExecutorService execService = Executors.newCachedThreadPool();
-    execService.submit(
+    execService.execute(
         () -> {
           zmqContext.close();
           logger.debug("zmq context terminated");

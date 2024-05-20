@@ -19,19 +19,18 @@
 
 package net.ittera.pal.cxn;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
 
-import java.io.IOException;
 import net.ittera.pal.AbstractIntegrationTest;
 import org.junit.After;
 import org.junit.Test;
 
 public class DirectoryConnectionProviderIT extends AbstractIntegrationTest {
-  private PALDirectory palDirectory;
+  private PalDirectory palDirectory;
 
   @After
-  public void cleanUp() throws IOException {
+  public void cleanUp() {
     if (palDirectory != null) {
       palDirectory.close();
       palDirectory = null;
@@ -41,14 +40,14 @@ public class DirectoryConnectionProviderIT extends AbstractIntegrationTest {
   @Test
   public void getConnection_noPaldirUrl() {
     DirectoryConnectionProvider connectionFactory =
-        new DirectoryConnectionProvider(PALDirectory.NO_URL);
+        new DirectoryConnectionProvider(PalDirectory.NO_URL);
     assertThat(connectionFactory.get().isPresent(), is(false));
   }
 
   @Test
-  public void getConnection() throws Exception {
+  public void getConnection() {
     DirectoryConnectionProvider connectionFactory =
-        new DirectoryConnectionProvider(getPALDirectoryURL());
+        new DirectoryConnectionProvider(getPalDirectoryUrl());
     assertThat(connectionFactory.get().isPresent(), is(true));
   }
 }

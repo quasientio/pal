@@ -160,7 +160,7 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
         + '}';
   }
 
-  public static LogInfo fromJSON(String repr) {
+  public static LogInfo fromJson(String repr) {
     return JSON.parseObject(repr, LogInfo.class);
   }
 }

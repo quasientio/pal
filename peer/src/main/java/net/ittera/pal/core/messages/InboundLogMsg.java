@@ -77,10 +77,14 @@ public class InboundLogMsg extends BaseMsg {
   }
 
   /**
-   * blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
-   * ready, then all are)
+   * Blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
+   * ready, then all are).
+   *
+   * @param socket ZMQ socket
+   * @param blocking blocking read flag
+   * @return InboundLogMsg instance, or null if non-blocking and no message available
    */
-  public static InboundLogMsg recvMsg(ZMQ.Socket socket, boolean blocking) {
+  public static InboundLogMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
@@ -99,14 +103,19 @@ public class InboundLogMsg extends BaseMsg {
   }
 
   // default is non-blocking
-  public static InboundLogMsg recvMsg(ZMQ.Socket socket) {
-    return recvMsg(socket, false);
+  public static InboundLogMsg receive(ZMQ.Socket socket) {
+    return receive(socket, false);
   }
 
   @Override
+  @SuppressWarnings("EqualsGetClass")
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     InboundLogMsg that = (InboundLogMsg) o;
     return offset == that.offset && Arrays.equals(body, that.body);
   }

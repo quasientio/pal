@@ -1,6 +1,7 @@
 package net.ittera.pal.messages.jsonrpc;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import net.ittera.pal.messages.types.ExecMessageType;
 import org.junit.Test;

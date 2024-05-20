@@ -27,8 +27,8 @@ import java.lang.annotation.Target;
 /**
  * '@After' annotation for Interception.
  *
- * <p>Ant-path matching:
- * https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/util/AntPathMatcher.html
+ * <p>Ant-path matching: <a
+ * href="https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/util/AntPathMatcher.html">...</a>
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

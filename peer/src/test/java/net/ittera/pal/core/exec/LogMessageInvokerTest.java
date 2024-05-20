@@ -19,8 +19,8 @@
 
 package net.ittera.pal.core.exec;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -32,6 +32,7 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -54,14 +55,14 @@ import org.zeromq.ZMQ.Socket;
 public class LogMessageInvokerTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
-  private final String INLOG_ADDR = "inproc://inlog";
+  private static final String IN_LOG_ADDRESS = "inproc://in_log";
   private ZContext context;
   private Socket dealerSocket;
   private ExecutorService execService;
   private LogMessageInvoker logMessageInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
   private final MessageBuilder msgBuilder = new MessageBuilder();
-  private List<ExecMessage> execMessageReplies = new ArrayList<>();
+  private final List<ExecMessage> execMessageReplies = new ArrayList<>();
 
   @Before
   public void setup() throws Exception {
@@ -69,7 +70,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     this.execService = Executors.newCachedThreadPool();
     // simulate LogReader's DEALER socket
     this.dealerSocket = context.createSocket(SocketType.DEALER);
-    dealerSocket.bind(INLOG_ADDR);
+    dealerSocket.bind(IN_LOG_ADDRESS);
 
     /* mock incomingMessageDispatcher */
     incomingMessageDispatcher = mock(IncomingMessageDispatcher.class);
@@ -77,11 +78,11 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     // stub incomingCall for ExecMessage
     when(incomingMessageDispatcher.incomingCall(any(), anyBoolean()))
         .thenAnswer(
-            (Answer)
+            (Answer<?>)
                 invocation -> {
                   Object[] args = invocation.getArguments();
                   ExecMessage incomingMsg = (ExecMessage) args[0];
-                  Constructor constructor = null;
+                  Constructor<?> constructor = null;
                   try {
                     constructor = String.class.getConstructor();
                   } catch (NoSuchMethodException e) {
@@ -89,18 +90,14 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
                   }
                   ExecMessage reply =
                       msgBuilder.buildReturnValue(
-                          peerUuid,
-                          new String(),
-                          constructor,
-                          null,
-                          false,
-                          incomingMsg.getMessageUuid());
+                          peerUuid, "", constructor, null, false, incomingMsg.getMessageUuid());
                   execMessageReplies.add(reply);
                   return reply;
                 });
 
     this.logMessageInvoker =
-        new LogMessageInvoker(context, msgBuilder, INLOG_ADDR, incomingMessageDispatcher, peerUuid);
+        new LogMessageInvoker(
+            context, msgBuilder, IN_LOG_ADDRESS, incomingMessageDispatcher, peerUuid);
   }
 
   @After
@@ -115,24 +112,33 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
   public void invokeExecMessage() throws Exception {
 
     // start invoker thread
-    execService.submit(logMessageInvoker);
+    execService.execute(logMessageInvoker);
 
-    // deal msg
-    int fakeOffset = 0;
+    // create new ExecMessage
     ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
 
-    // send request to DEALER socket
+    // create a CountDownLatch with a count of 1
+    CountDownLatch latch = new CountDownLatch(1);
+
+    // create a MessageDispatchListener that counts down the latch when a message is dispatched
+    MessageDispatchListener listener = message -> latch.countDown();
+
+    // register the listener with the logMessageInvoker
+    logMessageInvoker.addMessageDispatchListener(listener);
+
+    // send request message to DEALER socket
+    int fakeOffset = 0;
     InboundLogMsg msg =
         new InboundLogMsg(fakeOffset, ColferUtils.toBytes(msgBuilder.wrap(invokable)));
     msg.send(dealerSocket);
 
-    // wait for msg to be rcvd
-    while (logMessageInvoker.getRequestsDispatched().get() < 1) {
-      Thread.sleep(100);
-    }
+    // wait for the message to be dispatched
+    latch.await();
+
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
 
     assertThat(execMessageReplies.size(), is(1));
+    assertThat(logMessageInvoker.getRequestsDispatched().get(), is((long) 1));
 
     // assert reply msg followsUuid of original
     assertThat(execMessageReplies.get(0).getResponseToUuid(), is(invokable.getMessageUuid()));
@@ -142,33 +148,47 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
   public void invokeManyMessages() throws Exception {
 
     // start invoker thread
-    execService.submit(logMessageInvoker);
+    execService.execute(logMessageInvoker);
 
-    // deal msg
+    // create messages
     int fakeOffset = 0;
     int msgCount = 10;
-    List<ExecMessage> msgsToInvoke = new ArrayList<>();
+    List<ExecMessage> messagesToInvoke = new ArrayList<>();
     for (int i = 0; i < msgCount; i++) {
       ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-      msgsToInvoke.add(invokable);
-      InboundLogMsg msg =
-          new InboundLogMsg(fakeOffset, ColferUtils.toBytes(msgBuilder.wrap(invokable)));
-      msg.send(dealerSocket);
+      messagesToInvoke.add(invokable);
     }
 
-    // wait for msg to be rcvd
-    while (logMessageInvoker.getRequestsDispatched().get() < msgCount) {
-      Thread.sleep(100);
-    }
+    // create a CountDownLatch with a count of msgCount
+    CountDownLatch latch = new CountDownLatch(msgCount);
+
+    // create a MessageDispatchListener that counts down the latch when a message is dispatched
+    MessageDispatchListener listener = message -> latch.countDown();
+
+    // register the listener with the logMessageInvoker
+    logMessageInvoker.addMessageDispatchListener(listener);
+
+    // send log messages to DEALER socket
+    messagesToInvoke.forEach(
+        invokable -> {
+          InboundLogMsg msg =
+              new InboundLogMsg(fakeOffset, ColferUtils.toBytes(msgBuilder.wrap(invokable)));
+          msg.send(dealerSocket);
+        });
+
+    // wait for msg to be received
+    latch.await();
 
     // assert number of calls
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), anyBoolean());
+    assertThat(logMessageInvoker.getRequestsDispatched().get(), is((long) msgCount));
     assertThat(execMessageReplies.size(), is(msgCount));
 
     // assert reply msg followsUuid of original
     for (int i = 0; i < msgCount; i++) {
       assertThat(
-          execMessageReplies.get(i).getResponseToUuid(), is(msgsToInvoke.get(i).getMessageUuid()));
+          execMessageReplies.get(i).getResponseToUuid(),
+          is(messagesToInvoke.get(i).getMessageUuid()));
     }
   }
 }

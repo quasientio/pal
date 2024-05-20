@@ -28,7 +28,7 @@ import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
 /**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
  *
  * <p>TODO arrays objectrefs rest of primitive types (?)
  */
@@ -58,7 +58,7 @@ public class GetInstanceVariableMessageIT extends AbstractBinaryRPCMessageIT {
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
     // now get instance variable
-    ReturnValue retValue = callGetInstanceVar(className, "aNullInt", newObjRef);
+    ReturnValue retValue = callGetInstanceVar(className, "myNullInt", newObjRef);
 
     assertValueIsNullObjectOfType(retValue, "java.lang.Integer");
   }
@@ -85,7 +85,7 @@ public class GetInstanceVariableMessageIT extends AbstractBinaryRPCMessageIT {
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
     // now get instance variable
-    ReturnValue retValue = callGetInstanceVar(className, "aNullStr", newObjRef);
+    ReturnValue retValue = callGetInstanceVar(className, "myNullStr", newObjRef);
 
     assertValueIsNullObjectOfType(retValue, "java.lang.String");
   }
@@ -97,7 +97,7 @@ public class GetInstanceVariableMessageIT extends AbstractBinaryRPCMessageIT {
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
     // now get instance variable
-    ReturnValue retValue = callGetInstanceVar(className, "aNullBool", newObjRef);
+    ReturnValue retValue = callGetInstanceVar(className, "myNullBool", newObjRef);
 
     assertValueIsNullObjectOfType(retValue, "java.lang.Boolean");
   }
@@ -109,7 +109,7 @@ public class GetInstanceVariableMessageIT extends AbstractBinaryRPCMessageIT {
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
     // now get instance variable
-    ReturnValue retValue = callGetInstanceVar(className, "aBool", newObjRef);
+    ReturnValue retValue = callGetInstanceVar(className, "myBool", newObjRef);
 
     assertValueIsObjectOfType(retValue, "boolean");
     Object rawObj = Unwrapper.unwrapObject(retValue.getObject());

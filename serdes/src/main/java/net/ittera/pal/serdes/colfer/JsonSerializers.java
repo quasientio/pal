@@ -19,7 +19,13 @@
 
 package net.ittera.pal.serdes.colfer;
 
-import com.google.gson.*;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 import java.lang.reflect.Type;
 import net.ittera.pal.common.lang.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;
@@ -90,9 +96,9 @@ import org.slf4j.LoggerFactory;
  *       serdes/src/main/colfer.
  * </pre>
  */
-public class JSONSerializers {
+public class JsonSerializers {
 
-  private static final Logger logger = LoggerFactory.getLogger(JSONSerializers.class);
+  private static final Logger logger = LoggerFactory.getLogger(JsonSerializers.class);
 
   private static boolean notEmpty(String value) {
     return value != null && !value.isEmpty();

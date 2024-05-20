@@ -4,22 +4,23 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Predicate;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
-import net.ittera.pal.cxn.PALDirectory;
-import net.ittera.pal.messages.types.RPCType;
+import net.ittera.pal.cxn.PalDirectory;
+import net.ittera.pal.messages.types.RpcType;
+import org.zeromq.ZContext;
 
 public abstract class AbstractIntegrationTest {
 
   private static String PAL_DIRECTORY_URL;
   private static String KAFKA_SERVERS;
 
-  protected static String getPALDirectoryURL() {
+  protected static String getPalDirectoryUrl() {
     if (PAL_DIRECTORY_URL == null) {
-      final String palDirectoryURL = System.getenv("PAL_DIRECTORY");
-      if (palDirectoryURL == null || palDirectoryURL.isEmpty()) {
+      final String palDirectoryUrl = System.getenv("PAL_DIRECTORY");
+      if (palDirectoryUrl == null || palDirectoryUrl.isEmpty()) {
         throw new RuntimeException(
             "Please set the environment variable PAL_DIRECTORY (eg. PAL_DIRECTORY=localhost:2379)");
       }
-      PAL_DIRECTORY_URL = palDirectoryURL;
+      PAL_DIRECTORY_URL = palDirectoryUrl;
     }
     return PAL_DIRECTORY_URL;
   }
@@ -36,19 +37,27 @@ public abstract class AbstractIntegrationTest {
     return KAFKA_SERVERS;
   }
 
-  protected static Optional<PeerInfo> findRPCPeer(RPCType rpcType)
+  protected static Optional<PeerInfo> findRpcPeer(RpcType rpcType)
       throws ExecutionException, InterruptedException {
     Predicate<PeerInfo> hasRpcType =
         peerInfo -> {
-          if (rpcType == RPCType.RPC) {
+          if (rpcType == RpcType.RPC) {
             return peerInfo.getRpcAddress() != null;
           } else {
             return peerInfo.getJsonrpcAddress() != null;
           }
         };
 
-    try (PALDirectory palDirectory = new PALDirectory(getPALDirectoryURL())) {
+    try (PalDirectory palDirectory = new PalDirectory(getPalDirectoryUrl())) {
       return palDirectory.getAllPeers().stream().filter(hasRpcType).findFirst();
     }
+  }
+
+  protected static ZContext createZmqContext() {
+    ZContext ctxt = new ZContext();
+    ctxt.setLinger(1000);
+    ctxt.setRcvHWM(10000);
+    ctxt.setSndHWM(10000);
+    return ctxt;
   }
 }

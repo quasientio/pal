@@ -20,17 +20,30 @@
 package net.ittera.pal.messages.types;
 
 public enum MessageType {
-  CONTROL_MESSAGE,
-  EXEC_MESSAGE,
-  INTERCEPT_MESSAGE,
-  INTERCEPT_KEY,
-  INTERCEPT_REPLY;
+  CONTROL_MESSAGE((byte) 1),
+  EXEC_MESSAGE((byte) 2),
+  INTERCEPT_MESSAGE((byte) 3),
+  INTERCEPT_KEY((byte) 4),
+  INTERCEPT_REPLY((byte) 5);
+
+  private final byte idx;
+
+  MessageType(byte idx) {
+    this.idx = idx;
+  }
 
   public static MessageType fromByte(byte messageTypeAsByte) {
-    return MessageType.values()[messageTypeAsByte - 1];
+    return switch (messageTypeAsByte) {
+      case 1 -> CONTROL_MESSAGE;
+      case 2 -> EXEC_MESSAGE;
+      case 3 -> INTERCEPT_MESSAGE;
+      case 4 -> INTERCEPT_KEY;
+      case 5 -> INTERCEPT_REPLY;
+      default -> throw new IllegalArgumentException("Unknown message type: " + messageTypeAsByte);
+    };
   }
 
   public byte toByte() {
-    return (byte) (this.ordinal() + 1);
+    return idx;
   }
 }

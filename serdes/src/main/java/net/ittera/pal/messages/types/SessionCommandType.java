@@ -20,16 +20,29 @@
 package net.ittera.pal.messages.types;
 
 public enum SessionCommandType {
-  STORE_OBJECT, // only internal
-  DELETE_OBJECT,
-  DELETE_SESSION,
-  CLEAR_SESSIONS; // only internal
+  STORE_OBJECT((byte) 1), // only internal
+  DELETE_OBJECT((byte) 2),
+  DELETE_SESSION((byte) 3),
+  CLEAR_SESSIONS((byte) 4); // only internal
+
+  private final byte idx;
+
+  SessionCommandType(byte idx) {
+    this.idx = idx;
+  }
 
   public static SessionCommandType fromByte(byte messageTypeAsByte) {
-    return SessionCommandType.values()[messageTypeAsByte - 1];
+    return switch (messageTypeAsByte) {
+      case 1 -> STORE_OBJECT;
+      case 2 -> DELETE_OBJECT;
+      case 3 -> DELETE_SESSION;
+      case 4 -> CLEAR_SESSIONS;
+      default ->
+          throw new IllegalArgumentException("Unknown session command type: " + messageTypeAsByte);
+    };
   }
 
   public byte toByte() {
-    return (byte) (this.ordinal() + 1);
+    return idx;
   }
 }

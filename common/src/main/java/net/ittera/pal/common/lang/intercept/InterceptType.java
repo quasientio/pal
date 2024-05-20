@@ -20,17 +20,31 @@
 package net.ittera.pal.common.lang.intercept;
 
 public enum InterceptType {
-  BEFORE,
-  AFTER,
-  AROUND,
-  BEFORE_ASYNC,
-  AFTER_ASYNC;
+  BEFORE((byte) 1),
+  AFTER((byte) 2),
+  AROUND((byte) 3),
+  BEFORE_ASYNC((byte) 4),
+  AFTER_ASYNC((byte) 5),
+  ;
+
+  private final byte idx;
+
+  InterceptType(byte idx) {
+    this.idx = idx;
+  }
 
   public static InterceptType fromByte(byte typeAsByte) {
-    return InterceptType.values()[typeAsByte - 1];
+    return switch (typeAsByte) {
+      case 1 -> BEFORE;
+      case 2 -> AFTER;
+      case 3 -> AROUND;
+      case 4 -> BEFORE_ASYNC;
+      case 5 -> AFTER_ASYNC;
+      default -> throw new IllegalArgumentException("Unknown intercept type: " + typeAsByte);
+    };
   }
 
   public byte toByte() {
-    return (byte) (this.ordinal() + 1);
+    return idx;
   }
 }

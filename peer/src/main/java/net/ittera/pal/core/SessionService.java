@@ -25,13 +25,14 @@ import jakarta.inject.Singleton;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.core.messages.SessionCmdMsg;
+import net.ittera.pal.core.messages.SessionCommandMsg;
 import net.ittera.pal.core.messages.SessionReplyMsg;
 import net.ittera.pal.messages.types.SessionStatusType;
 import org.slf4j.Logger;
@@ -42,7 +43,7 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-/** The remote peer's UUID is used as its sessionId */
+// The remote peer's UUID is used as its sessionId
 @Singleton
 public class SessionService extends ConnectedService {
 
@@ -139,9 +140,9 @@ public class SessionService extends ConnectedService {
   protected void run() {
     boolean socketError = false;
     while (!Thread.interrupted() && !socketError) {
-      SessionCmdMsg cmdMsg = null;
+      SessionCommandMsg cmdMsg = null;
       try {
-        cmdMsg = SessionCmdMsg.recvMsg(repSocket, true);
+        cmdMsg = SessionCommandMsg.receive(repSocket, true);
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
         if (errorCode == ZError.ETERM) {
@@ -171,24 +172,28 @@ public class SessionService extends ConnectedService {
       SessionStatusType status;
       switch (cmdMsg.getCommand()) {
         case STORE_OBJECT:
+          Objects.requireNonNull(cmdMsg.getSessionId());
+          Objects.requireNonNull(cmdMsg.getObjectRef());
           boolean stored = false;
           try {
-            stored = storeInSession(cmdMsg.getSessionID(), cmdMsg.getObjectRef());
+            stored = storeInSession(cmdMsg.getSessionId(), cmdMsg.getObjectRef());
           } catch (Exception e) {
-            logger.error("Error storing object in session w/uuid: {}", cmdMsg.getSessionID(), e);
+            logger.error("Error storing object in session w/uuid: {}", cmdMsg.getSessionId(), e);
           }
           status = stored ? SessionStatusType.OK : SessionStatusType.ERROR;
           replyMsg = new SessionReplyMsg(status);
           break;
         case DELETE_OBJECT:
+          Objects.requireNonNull(cmdMsg.getSessionId());
+          Objects.requireNonNull(cmdMsg.getObjectRef());
           boolean objectDeleted;
           try {
-            objectDeleted = deleteObject(cmdMsg.getSessionID(), cmdMsg.getObjectRef());
+            objectDeleted = deleteObject(cmdMsg.getSessionId(), cmdMsg.getObjectRef());
             status = objectDeleted ? SessionStatusType.OK : SessionStatusType.NO_SUCH_OBJECT;
           } catch (NoSuchSessionException e) {
             logger.error(
                 "No session found w/uuid: {} while deleting object w/objectRef: {}",
-                cmdMsg.getSessionID(),
+                cmdMsg.getSessionId(),
                 cmdMsg.getObjectRef().asString(),
                 e);
             status = SessionStatusType.NO_SUCH_SESSION;
@@ -196,24 +201,25 @@ public class SessionService extends ConnectedService {
             logger.error(
                 "Unexpected error deleting object w/objectRef: {} from session w/uuid: {}",
                 cmdMsg.getObjectRef() == null ? "<null>" : cmdMsg.getObjectRef().asString(),
-                cmdMsg.getSessionID(),
+                cmdMsg.getSessionId(),
                 e);
             status = SessionStatusType.ERROR;
           }
           replyMsg = new SessionReplyMsg(status);
           break;
         case DELETE_SESSION:
+          Objects.requireNonNull(cmdMsg.getSessionId());
           Set<ObjectRef> objectsInSession = null;
           try {
             // make a copy since the keySet returned will be empty after deleteSession()
-            objectsInSession = new HashSet<>(getObjectRefsInSession(cmdMsg.getSessionID()));
-            deleteSession(cmdMsg.getSessionID());
+            objectsInSession = new HashSet<>(getObjectRefsInSession(cmdMsg.getSessionId()));
+            deleteSession(cmdMsg.getSessionId());
             status = SessionStatusType.OK;
           } catch (NoSuchSessionException e) {
-            logger.error("No session found w/uuid: {}", cmdMsg.getSessionID(), e);
+            logger.error("No session found w/uuid: {}", cmdMsg.getSessionId(), e);
             status = SessionStatusType.NO_SUCH_SESSION;
           } catch (Exception e) {
-            logger.error("Unexpected error deleting session w/uuid: {}", cmdMsg.getSessionID(), e);
+            logger.error("Unexpected error deleting session w/uuid: {}", cmdMsg.getSessionId(), e);
             status = SessionStatusType.ERROR;
           }
           replyMsg =

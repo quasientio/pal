@@ -22,7 +22,7 @@ package net.ittera.pal.core.exec.java;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.util.List;
-import java.util.Optional;
+import javax.annotation.Nullable;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.runtime.Context;
 
@@ -47,13 +47,24 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
 
   @Override
   protected Object invokeIncoming(
-      Optional<AccessibleObject> accessibleObject,
-      Object target,
-      List<Object> args,
-      Optional<Object> value)
+      AccessibleObject accessibleObject, Object target, List<Object> args, Object value)
       throws Exception {
-    Field field = (Field) accessibleObject.get();
-    field.set(target, value.orElse(null));
+
+    // discard args
+    return invokeIncoming(accessibleObject, target, value);
+  }
+
+  private Object invokeIncoming(
+      AccessibleObject accessibleObject, Object target, @Nullable Object value) throws Exception {
+    if (logger.isTraceEnabled()) {
+      logger.trace(
+          "invokeIncoming:in w/ accessibleObject: {}, target: {}, value: {}",
+          accessibleObject,
+          target,
+          value);
+    }
+    Field field = (Field) accessibleObject;
+    field.set(target, value);
     return Void.getInstance();
   }
 
@@ -63,7 +74,7 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
   }
 
   @Override
-  protected boolean returnsVoid(Optional<AccessibleObject> accessibleObject) {
+  protected boolean returnsVoid(AccessibleObject accessibleObject) {
     return true;
   }
 }

@@ -7,13 +7,13 @@ import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.zeromq.ZContext;
 
-public class PeerExecThreadFactory extends ExecThreadFactory {
+public class RpcExecThreadFactory extends ExecThreadFactory {
 
   private final Set<RunOptions> runOptions;
   private final String rpcDealerSocketAddress;
   private final String jsonRpcDealerSocketAddress;
 
-  public PeerExecThreadFactory(
+  public RpcExecThreadFactory(
       ZContext zmqContext,
       Set<RunOptions> runOptions,
       String rpcDealerSocketAddress,
@@ -39,7 +39,7 @@ public class PeerExecThreadFactory extends ExecThreadFactory {
 
   @Override
   protected AbstractMessageInvokerThread createInvokerThread(String newThreadName) {
-    return new RPCMessageInvoker(
+    return new RpcMessageInvoker(
         threadGroup,
         newThreadName,
         zmqContext,

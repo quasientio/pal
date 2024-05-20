@@ -19,9 +19,12 @@
 
 package net.ittera.pal.common.runtime;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
@@ -42,11 +45,11 @@ import org.junit.Test;
 @SuppressWarnings("rawtypes")
 public class ContextTest {
   static class ClassForConstructorTest {
-    public ClassForConstructorTest(Integer intParam) {}
+    public ClassForConstructorTest(Integer ignoredIntParam) {}
   }
 
   static class ClassForMethodTest {
-    public void myMethod(String text) {}
+    public void myMethod(String ignoredText) {}
   }
 
   static class ClassForFieldTest {
@@ -78,7 +81,9 @@ public class ContextTest {
     }
   }
 
-  private ContextTestArgs constructorArgs, methodArgs, fieldArgs;
+  private ContextTestArgs constructorArgs;
+  private ContextTestArgs methodArgs;
+  private ContextTestArgs fieldArgs;
 
   @Before
   public void setUp() throws Exception {

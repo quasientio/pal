@@ -1,8 +1,9 @@
 package net.ittera.pal.core.exec.java.reflect;
 
 /** This class is used for testing ReflectionHelper.lookupConstructor() */
+@SuppressWarnings("unused")
 public class ClassForTestingConstructorLookup {
-  private String param;
+  private final String param;
 
   public String getParam() {
     return param;

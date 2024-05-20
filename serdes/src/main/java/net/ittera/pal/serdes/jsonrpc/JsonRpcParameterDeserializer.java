@@ -6,17 +6,21 @@ import static net.ittera.pal.common.util.Classes.isPrimitive;
 import static net.ittera.pal.common.util.Classes.isPrimitiveWrapper;
 import static net.ittera.pal.common.util.Classes.isValidClassName;
 
-import com.google.gson.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonPrimitive;
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.List;
 import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * Notes about the deserialization of JsonRpcParameter:
+ * Notes about the deserialization of JsonRpcParameter.
  *
  * <pre>
  *   - Refs: if the "type" field exists in the JSON object and it's not empty,
@@ -49,15 +53,14 @@ import org.slf4j.LoggerFactory;
  */
 public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcParameter> {
   private static final List<String> VALID_PARAM_ELEMENTS = Arrays.asList("value", "type");
-  private static final Logger logger = LoggerFactory.getLogger(JsonRpcParameterDeserializer.class);
 
   /**
    * Returns true if the given (non-simple) type is a class that can be deserialized. So far this
    * includes arrays that can currently be deserialized from a JsonArray (1-dimensional arrays of:
    * primitives, primitive wrappers or strings).
    *
-   * @param type
-   * @return
+   * @param type the type to check
+   * @return true if the type is a class that can be deserialized
    */
   private boolean isSerializable(String type) {
     return "[Ljava.lang.String;".equalsIgnoreCase(type)
@@ -127,9 +130,9 @@ public class JsonRpcParameterDeserializer implements JsonDeserializer<JsonRpcPar
    *  - strings
    * </pre>
    *
-   * @param param
-   * @param jsonArray
-   * @param context
+   * @param param the JsonRpcParameter object
+   * @param jsonArray the JsonArray to deserialize
+   * @param context the JsonDeserializationContext
    */
   private void handleJsonArray(
       JsonRpcParameter param, JsonArray jsonArray, JsonDeserializationContext context) {

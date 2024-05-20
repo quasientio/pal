@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 import org.apache.kafka.common.header.Headers;
 
-/** Used by ContextFillingTransformSupplier to encapsulate context of a kafka log message */
+/** Used by ContextFillingTransformSupplier to encapsulate context of a kafka log message. */
 public class MessageContext {
   private final long offset;
   private final long timestamp;
@@ -55,6 +55,7 @@ public class MessageContext {
     return partition;
   }
 
+  @SuppressWarnings("unused")
   public String getTopic() {
     return topic;
   }

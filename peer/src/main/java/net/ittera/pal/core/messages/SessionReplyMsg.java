@@ -92,9 +92,15 @@ public class SessionReplyMsg extends BaseMsg {
     return true;
   }
 
-  // blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
-  // ready, then all are)
-  public static SessionReplyMsg recvMsg(ZMQ.Socket socket, boolean blocking) {
+  /**
+   * Blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
+   * read, then all are).
+   *
+   * @param socket ZMQ socket
+   * @param blocking blocking read flag
+   * @return SessionReplyMsg instance, or null if non-blocking and no message available
+   */
+  public static SessionReplyMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
@@ -123,11 +129,12 @@ public class SessionReplyMsg extends BaseMsg {
   }
 
   // default is non-blocking
-  public static SessionReplyMsg recvMsg(ZMQ.Socket socket) {
-    return recvMsg(socket, false);
+  public static SessionReplyMsg receive(ZMQ.Socket socket) {
+    return receive(socket, false);
   }
 
   @Override
+  @SuppressWarnings("EqualsGetClass")
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -146,14 +153,15 @@ public class SessionReplyMsg extends BaseMsg {
 
   @Override
   public String toString() {
-    String repr = "SessionReplyMsg{" + "status=" + statusType.name();
-
+    StringBuilder sb = new StringBuilder();
+    sb.append("SessionReplyMsg{status=").append(statusType.name());
     if (objectRefs != null) {
-      final String objectRefsAsString =
+      String objectRefsAsString =
           objectRefs.stream().map(ObjectRef::asString).collect(Collectors.joining(","));
-      repr += ", objectRefs=" + objectRefsAsString;
+      sb.append(", objectRefs=").append(objectRefsAsString);
     }
-    return repr + ", size=" + (getSize() == -1 ? "<unknown>" : getSize()) + '}';
+    sb.append(", size=").append(getSize() == -1 ? "<unknown>" : getSize()).append('}');
+    return sb.toString();
   }
 
   public SessionStatusType getStatus() {

@@ -19,10 +19,11 @@
 
 package net.ittera.pal.core.messages;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
 
+import java.nio.charset.StandardCharsets;
 import net.ittera.pal.core.ZmqEnabledTest;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -37,35 +38,35 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
   @Test
   public void send() {
     long offset = 199;
-    byte[] body = "whatever".getBytes();
+    byte[] body = "whatever".getBytes(StandardCharsets.UTF_8);
 
     InboundLogMsg msgOut = new InboundLogMsg(offset, body);
 
     // send
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket out = zContext.createSocket(SocketType.DEALER);
-    out.bind(socketAddr);
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.connect(socketAddr);
+    String socketAddress = "inproc://here";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.DEALER);
+    out.bind(socketAddress);
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.connect(socketAddress);
     msgOut.send(out);
     logger.debug("sent msgOut= {}", msgOut);
 
     // receive and compare
-    InboundLogMsg msgIn = InboundLogMsg.recvMsg(in, true);
+    InboundLogMsg msgIn = InboundLogMsg.receive(in, true);
     logger.debug("received msgIn= {}", msgIn);
     assertThat(msgIn, is(msgOut));
 
     // close
     out.close();
     in.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 
   @Test
   public void testEquals() {
     long offset = 199;
-    byte[] body = "whatever".getBytes();
+    byte[] body = "whatever".getBytes(StandardCharsets.UTF_8);
 
     InboundLogMsg msg1 = new InboundLogMsg(offset, body);
 
@@ -76,6 +77,7 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
     assertThat(new InboundLogMsg(offset + 1, body), is(not(msg1)));
 
     // different body
-    assertThat(new InboundLogMsg(offset, "whatevah".getBytes()), is(not(msg1)));
+    assertThat(
+        new InboundLogMsg(offset, "whatevah".getBytes(StandardCharsets.UTF_8)), is(not(msg1)));
   }
 }

@@ -27,17 +27,17 @@ import java.io.PrintStream;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.tools.AbstractTool;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractPALSubcommand extends AbstractTool implements Callable<Integer> {
+public abstract class AbstractPalSubcommand extends AbstractTool implements Callable<Integer> {
   private static final String LOGGING_CONFIG = "/cli-logging.xml";
   protected DirectoryConnectionProvider directoryConnectionProvider;
   protected PrintStream out;
   protected PrintStream err;
 
-  protected AbstractPALSubcommand() {
+  protected AbstractPalSubcommand() {
     out = System.out;
     err = System.err;
   }
@@ -55,7 +55,7 @@ public abstract class AbstractPALSubcommand extends AbstractTool implements Call
 
   /**
    * Logging is configured here and not in the Pal parent command, since we can't configure logback
-   * when launching the 'run' subcommand, ie. a peer.
+   * when launching the 'run' subcommand, i.e. a peer.
    */
   private void configureLogging() {
     LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -63,11 +63,12 @@ public abstract class AbstractPALSubcommand extends AbstractTool implements Call
     configurator.setContext(context);
     context.reset();
     try (final InputStream stream =
-        AbstractPALSubcommand.class.getResourceAsStream(LOGGING_CONFIG)) {
+        AbstractPalSubcommand.class.getResourceAsStream(LOGGING_CONFIG)) {
       configurator.doConfigure(stream);
     } catch (Exception ie) {
       System.err.printf("Error loading logging configuration from %s%n", LOGGING_CONFIG);
       // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
+      //noinspection CallToPrintStackTrace
       ie.printStackTrace();
     }
   }
@@ -77,8 +78,8 @@ public abstract class AbstractPALSubcommand extends AbstractTool implements Call
         .get()
         .ifPresent(
             c -> {
-              Optional<PALDirectory> palDirectory = directoryConnectionProvider.get();
-              palDirectory.ifPresent(PALDirectory::close);
+              Optional<PalDirectory> palDirectory = directoryConnectionProvider.get();
+              palDirectory.ifPresent(PalDirectory::close);
             });
   }
 
@@ -86,14 +87,16 @@ public abstract class AbstractPALSubcommand extends AbstractTool implements Call
 
   protected abstract void initialize() throws Exception;
 
-  protected PALDirectory getPalDirectory() {
-    Optional<PALDirectory> palDirectory = directoryConnectionProvider.get();
+  protected PalDirectory getPalDirectory() {
+    Optional<PalDirectory> palDirectory = directoryConnectionProvider.get();
     return palDirectory.orElseThrow(
         () ->
             new RuntimeException(
-                "A PALDirectory is required. Run with -d (--dir) or set the ENV variable PAL_DIRECTORY."));
+                "A PalDirectory is required. Run with -d (--dir)"
+                    + " or set the ENV variable PAL_DIRECTORY."));
   }
 
+  @Override
   public Integer call() throws Exception {
     configureLogging();
     try {

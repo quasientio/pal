@@ -20,14 +20,25 @@
 package net.ittera.pal.messages.types;
 
 public enum ControlCommandType {
-  DELETE_OBJECT,
-  DELETE_SESSION;
+  DELETE_OBJECT((byte) 1),
+  DELETE_SESSION((byte) 2);
+
+  private final byte idx;
+
+  ControlCommandType(byte idx) {
+    this.idx = idx;
+  }
 
   public static ControlCommandType fromByte(byte messageTypeAsByte) {
-    return ControlCommandType.values()[messageTypeAsByte - 1];
+    return switch (messageTypeAsByte) {
+      case 1 -> DELETE_OBJECT;
+      case 2 -> DELETE_SESSION;
+      default ->
+          throw new IllegalArgumentException("Unknown control command type: " + messageTypeAsByte);
+    };
   }
 
   public byte toByte() {
-    return (byte) (this.ordinal() + 1);
+    return idx;
   }
 }

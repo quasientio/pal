@@ -19,8 +19,8 @@
 
 package net.ittera.pal.common.directory.nodes;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -31,8 +31,8 @@ import org.junit.Test;
 public class InfoNodeTest {
 
   private InfoNode infoNode;
-  long ctime = 23832734;
-  long mtime = 84508445;
+  private final long ctime = 23832734;
+  private final long mtime = 84508445;
 
   @Before
   public void setUp() throws Exception {

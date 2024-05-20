@@ -24,7 +24,6 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectNotFoundException;
@@ -62,19 +61,17 @@ public class GetInstanceVariableDispatcher extends GetFieldDispatcher {
   }
 
   @Override
-  protected Object getTargetFromMessage(
-      ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
-      throws NullPointerException {
+  protected Object getTargetFromMessage(ExecMessage execMessage) throws NullPointerException {
     Object target;
     ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceFieldGet().getObjectRef());
     if (objectLookupStore.containsObjectRef(targetObjRef)) {
       target = objectLookupStore.lookupObject(targetObjRef);
     } else {
-      Exception onfe =
+      Exception objectNotFoundException =
           new ObjectNotFoundException(
               String.format("No object found with objRef: %d", targetObjRef.getRef()));
-      NullPointerException npe = new NullPointerException(onfe.getMessage());
-      npe.initCause(onfe);
+      NullPointerException npe = new NullPointerException(objectNotFoundException.getMessage());
+      npe.initCause(objectNotFoundException);
       throw npe;
     }
     if (logger.isTraceEnabled()) {

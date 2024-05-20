@@ -27,25 +27,13 @@ import org.junit.Test;
 public class StringsTest {
 
   @Test
-  public void capitalize() {
-    assertEquals("Capitalized", Strings.capitalize("capitalized"));
-    assertEquals("Capitalized", Strings.capitalize("Capitalized"));
-    assertEquals("Capitalized", Strings.capitalize("CAPITALIZED"));
-    assertEquals("Capitalized", Strings.capitalize("cApItAlIzEd"));
-
-    assertEquals("A", Strings.capitalize("a"));
-    assertEquals("", Strings.capitalize(""));
-    assertNull(Strings.capitalize(null));
-  }
-
-  @Test
   public void stringBefore() {
     String str = "some rather long nonsensical-sentence-about nothing really";
     String sep = "-sentence-";
     assertEquals("some rather long nonsensical", Strings.stringBefore(str, sep));
 
     assertEquals(str, Strings.stringBefore(str, "notfound"));
-    assertEquals(null, Strings.stringBefore(null, sep));
+    assertNull(Strings.stringBefore(null, sep));
     assertEquals("", Strings.stringBefore("", sep));
     assertEquals("", Strings.stringBefore("blah", ""));
     assertEquals("blah", Strings.stringBefore("blah", null));
@@ -58,7 +46,7 @@ public class StringsTest {
     assertEquals("about nothing really", Strings.stringAfter(str, sep));
 
     assertEquals("", Strings.stringAfter(str, "notfound"));
-    assertEquals(null, Strings.stringAfter(null, sep));
+    assertNull(Strings.stringAfter(null, sep));
     assertEquals("", Strings.stringAfter("", sep));
     assertEquals(str, Strings.stringAfter(str, null));
     assertEquals("", Strings.stringAfter(str, ""));
@@ -75,7 +63,7 @@ public class StringsTest {
         Strings.stringAfterLast("some rather long nonsensical--sentence--about nothing--", sep));
     assertEquals(" really", Strings.stringAfterLast(str, sep));
     assertEquals("", Strings.stringAfterLast("", sep));
-    assertEquals(null, Strings.stringAfterLast(null, sep));
+    assertNull(Strings.stringAfterLast(null, sep));
     assertEquals(str, Strings.stringAfterLast(str, null));
     assertEquals("", Strings.stringAfterLast(str, ""));
   }

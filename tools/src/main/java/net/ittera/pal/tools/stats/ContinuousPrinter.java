@@ -31,10 +31,10 @@ import org.slf4j.LoggerFactory;
 public class ContinuousPrinter implements Runnable {
 
   private final Logger logger = LoggerFactory.getLogger(ContinuousPrinter.class);
-  private static int DEFAULT_SECS_TO_SLEEP = 2;
+  private static final int DEFAULT_SECS_TO_SLEEP = 2;
   private final int secsToSleep;
   private boolean done;
-  private boolean asJson;
+  private final boolean asJson;
   private final Counters counters;
   private Gson gson;
 
@@ -68,58 +68,59 @@ public class ContinuousPrinter implements Runnable {
         Arrays.stream(ExecMessageType.values())
             .forEach(
                 msgType -> {
-                  AtomicLong cntr = counters.getMessagesByType().get(msgType);
+                  AtomicLong messageCounter = counters.getMessagesByType().get(msgType.name());
                   System.out.printf(
-                      "# msgs of type: %16s : %d%n", msgType, cntr == null ? 0 : cntr.longValue());
+                      "# messages of type: %16s : %d%n",
+                      msgType, messageCounter == null ? 0 : messageCounter.longValue());
                 });
         printSeparator();
-        counters.getMessagesFromPeer().entrySet().stream()
+        counters
+            .getMessagesFromPeer()
             .forEach(
-                entry -> {
-                  System.out.printf(
-                      "# msgs by peer: %40s : %d%n",
-                      entry.getKey(), entry.getValue() == null ? 0 : entry.getValue().longValue());
-                });
+                (key, value) ->
+                    System.out.printf(
+                        "# messages by peer: %40s : %d%n",
+                        key, value == null ? 0 : value.longValue()));
         printSeparator();
-        counters.getMessagesByThread().entrySet().stream()
+        counters
+            .getMessagesByThread()
             .forEach(
-                entry -> {
-                  System.out.printf(
-                      "# msgs by thread: %40s : %d%n",
-                      entry.getKey(), entry.getValue() == null ? 0 : entry.getValue().longValue());
-                });
+                (key, value) ->
+                    System.out.printf(
+                        "# messages by thread: %40s : %d%n",
+                        key, value == null ? 0 : value.longValue()));
         printSeparator();
-        counters.getObjectsCreated().entrySet().stream()
+        counters
+            .getObjectsCreated()
             .forEach(
-                entry -> {
-                  System.out.printf(
-                      "# created objects of class: %40s = %d%n",
-                      entry.getKey(), entry.getValue() == null ? 0 : entry.getValue().longValue());
-                });
+                (key, value) ->
+                    System.out.printf(
+                        "# created objects of class: %40s = %d%n",
+                        key, value == null ? 0 : value.longValue()));
         printSeparator();
-        counters.getMethodsCalled().entrySet().stream()
+        counters
+            .getMethodsCalled()
             .forEach(
-                entry -> {
-                  System.out.printf(
-                      "# calls to <class>.<method>: %40s = %d%n",
-                      entry.getKey(), entry.getValue() == null ? 0 : entry.getValue().longValue());
-                });
+                (key, value) ->
+                    System.out.printf(
+                        "# calls to <class>.<method>: %40s = %d%n",
+                        key, value == null ? 0 : value.longValue()));
         printSeparator();
-        counters.getFieldReads().entrySet().stream()
+        counters
+            .getFieldReads()
             .forEach(
-                entry -> {
-                  System.out.printf(
-                      "# reads from <class>.<field>: %40s = %d%n",
-                      entry.getKey(), entry.getValue() == null ? 0 : entry.getValue().longValue());
-                });
+                (key, value) ->
+                    System.out.printf(
+                        "# reads from <class>.<field>: %40s = %d%n",
+                        key, value == null ? 0 : value.longValue()));
         printSeparator();
-        counters.getFieldWrites().entrySet().stream()
+        counters
+            .getFieldWrites()
             .forEach(
-                entry -> {
-                  System.out.printf(
-                      "# writes to <class>.<field>: %40s = %d%n",
-                      entry.getKey(), entry.getValue() == null ? 0 : entry.getValue().longValue());
-                });
+                (key, value) ->
+                    System.out.printf(
+                        "# writes to <class>.<field>: %40s = %d%n",
+                        key, value == null ? 0 : value.longValue()));
       }
       sleep();
     }
@@ -131,7 +132,7 @@ public class ContinuousPrinter implements Runnable {
 
   private void sleep() {
     try {
-      Thread.sleep(secsToSleep * 1000);
+      Thread.sleep(secsToSleep * 1000L);
     } catch (InterruptedException e) {
       logger.warn("thread interrupted", e);
     }

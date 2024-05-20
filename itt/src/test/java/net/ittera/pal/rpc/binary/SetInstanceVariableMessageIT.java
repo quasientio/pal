@@ -20,6 +20,7 @@
 package net.ittera.pal.rpc.binary;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import net.ittera.pal.common.objects.ObjectRef;
@@ -29,7 +30,7 @@ import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
 /**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
  *
  * <p>TODO: - private, protected, package-visible - primitives - arrays - objectrefs
  */
@@ -44,7 +45,6 @@ public class SetInstanceVariableMessageIT extends AbstractBinaryRPCMessageIT {
     String fieldClassName = "java.lang.Integer";
 
     Integer originalValue = 4;
-    Integer newValue = 500;
 
     // create new instance
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
@@ -58,6 +58,7 @@ public class SetInstanceVariableMessageIT extends AbstractBinaryRPCMessageIT {
     assertEquals(originalValue, rawObj);
 
     // now call set to modify
+    Integer newValue = 500;
     callPutField(className, fieldName, newObjRef, fieldClassName, newValue);
 
     // now get to test if set took place
@@ -74,12 +75,11 @@ public class SetInstanceVariableMessageIT extends AbstractBinaryRPCMessageIT {
     String fieldClassName = "java.lang.Integer";
 
     Integer originalValue = 1;
-    Integer newValue = null;
 
     // create new instance
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
-    // test with a non null integer
+    // test with a non-null integer
     ReturnValue retValue = callGetInstanceVar(className, fieldName, newObjRef);
     Obj retObj = retValue.getObject();
     assertValueIsObjectOfType(retValue, fieldClassName);
@@ -88,13 +88,13 @@ public class SetInstanceVariableMessageIT extends AbstractBinaryRPCMessageIT {
     assertEquals(originalValue, rawObj);
 
     // set integer to null
-    callPutField(className, fieldName, newObjRef, fieldClassName, newValue);
+    callPutField(className, fieldName, newObjRef, fieldClassName, null);
 
     // now get to test if set took place
     retValue = callGetInstanceVar(className, fieldName, newObjRef);
     assertValueIsNullObjectOfType(retValue, fieldClassName);
     rawObj = Unwrapper.unwrapObject(retValue.getObject());
-    assertEquals(newValue, rawObj);
+    assertNull(rawObj);
   }
 
   @Test

@@ -19,8 +19,9 @@
 
 package net.ittera.pal.common.lang.reflect;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -28,15 +29,14 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressWarnings("rawtypes")
 public class ParamsTest {
 
   static class DummyClass {
-    public void increment(int a, int b) {}
+    public void increment(int ignoredA, int ignoredB) {}
   }
 
   private String[] parameterNames;
-  private Class[] parameterTypes;
+  private Class<?>[] parameterTypes;
   private Parameter[] parameters;
   private Params params;
 
@@ -55,7 +55,7 @@ public class ParamsTest {
     String[] parameterNames = new String[] {"param1", "param2"};
 
     // parameterTypes should be of len=2
-    Class[] parameterTypes = new Class[] {String.class};
+    Class<?>[] parameterTypes = new Class[] {String.class};
     Method method =
         CodeSignatureTest.DummyClass.class.getDeclaredMethod("increment", int.class, int.class);
     Parameter[] parameters = method.getParameters();
@@ -68,7 +68,7 @@ public class ParamsTest {
   }
 
   @Test
-  public void params_noParamNames_argX() throws NoSuchMethodException {
+  public void params_noParamNames_argX() {
     Params paramsNoNames = new Params(null, parameterTypes, parameters);
     assertThat(paramsNoNames.getParameterNames(), is(new String[] {"arg0", "arg1"}));
   }

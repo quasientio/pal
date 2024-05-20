@@ -29,9 +29,7 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-/**
- * A base class for our guava-managed services (previously extending AbstractExecutionThreadService)
- */
+/** A base class for all our guava-managed services. */
 public abstract class ConnectedService extends AbstractService {
 
   private static final Logger logger = LoggerFactory.getLogger(ConnectedService.class);
@@ -82,15 +80,9 @@ public abstract class ConnectedService extends AbstractService {
   private void signalReady() {
     // signal Main that we're ready
     ZMQ.Socket senderSocket = zmqContext.createSocket(SocketType.PUSH);
-    senderSocket.connect(syncSocketAddress);
-    try {
+    try (senderSocket) {
+      senderSocket.connect(syncSocketAddress);
       senderSocket.send("go!");
-    } finally {
-      try {
-        senderSocket.close();
-      } catch (Exception exception) {
-        // ignore; probably closed by receiver
-      }
     }
   }
 

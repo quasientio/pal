@@ -30,10 +30,15 @@ import static org.mockito.Mockito.when;
 
 import com.google.gson.Gson;
 import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
@@ -56,15 +61,17 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
-public class RPCMessageInvokerTest extends ZmqEnabledTest {
+public class RpcMessageInvokerTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
+  private static final String RPC_DEALER_ADDRESS = "inproc://deal";
+  private static final String JSONRPC_DEALER_ADDRESS = "inproc://json.deal";
   private ZContext context;
   private Socket rpcDealerSocket;
   private Socket jsonRpcDealerSocket;
   private static final Gson gson = new Gson();
   private ExecutorService execService;
-  private RPCMessageInvoker rpcMessageInvoker;
+  private RpcMessageInvoker rpcMessageInvoker;
   private IncomingMessageDispatcher incomingMessageDispatcher;
   private final MessageBuilder msgBuilder = new MessageBuilder();
 
@@ -74,12 +81,10 @@ public class RPCMessageInvokerTest extends ZmqEnabledTest {
     this.execService = Executors.newCachedThreadPool();
     // simulate RPCRequestDispatcher's DEALER socket
     this.rpcDealerSocket = context.createSocket(SocketType.DEALER);
-    String RPC_DEALER_ADDR = "inproc://deal";
-    rpcDealerSocket.bind(RPC_DEALER_ADDR);
+    rpcDealerSocket.bind(RPC_DEALER_ADDRESS);
     // simulate JSONRPCRequestDispatcher's DEALER socket
     this.jsonRpcDealerSocket = context.createSocket(SocketType.DEALER);
-    String JSONRPC_DEALER_ADDR = "inproc://json.deal";
-    jsonRpcDealerSocket.bind(JSONRPC_DEALER_ADDR);
+    jsonRpcDealerSocket.bind(JSONRPC_DEALER_ADDRESS);
 
     /* mock incomingMessageDispatcher */
     incomingMessageDispatcher = mock(IncomingMessageDispatcher.class);
@@ -102,12 +107,12 @@ public class RPCMessageInvokerTest extends ZmqEnabledTest {
                 });
 
     this.rpcMessageInvoker =
-        new RPCMessageInvoker(
+        new RpcMessageInvoker(
             context,
             msgBuilder,
             new HashSet<>(Arrays.asList(RunOptions.WITH_RPC, RunOptions.WITH_JSONRPC)),
-            RPC_DEALER_ADDR,
-            JSONRPC_DEALER_ADDR,
+            RPC_DEALER_ADDRESS,
+            JSONRPC_DEALER_ADDRESS,
             incomingMessageDispatcher,
             peerUuid);
   }
@@ -122,10 +127,15 @@ public class RPCMessageInvokerTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void invokeRPCMessage() throws Exception {
+  public void invokeRpcMessage() throws Exception {
 
     // start invoker thread
-    execService.submit(rpcMessageInvoker);
+    execService.execute(rpcMessageInvoker);
+
+    // add a message dispatch listener
+    AtomicInteger listenerReceived = new AtomicInteger(0);
+    MessageDispatchListener dispatchListener = message -> listenerReceived.incrementAndGet();
+    rpcMessageInvoker.addMessageDispatchListener(dispatchListener);
 
     // deal msg
     ExecMessage invokable = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
@@ -134,22 +144,27 @@ public class RPCMessageInvokerTest extends ZmqEnabledTest {
     rpcDealerSocket.send(ColferUtils.toBytes(wrapper), 0);
     // get reply
     rpcDealerSocket.recv(); // 1st frame empty to emulate REP envelope
-    Message msg = new Message();
-    msg.unmarshal(rpcDealerSocket.recv(), 0);
-    ExecMessage reply = msg.getExecMessage();
+    Message replyMsg = new Message();
+    replyMsg.unmarshal(rpcDealerSocket.recv(), 0);
 
     assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is(1L));
+    assertThat(listenerReceived.get(), is(1));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
 
     // assert reply msg followsUuid of original
-    assertThat(reply.getResponseToUuid(), is(invokable.getMessageUuid()));
+    assertThat(replyMsg.getExecMessage().getResponseToUuid(), is(invokable.getMessageUuid()));
   }
 
   @Test
-  public void invokeJSONRPCMessage() throws Exception {
+  public void invokeJsonRpcMessage() throws Exception {
 
     // start invoker thread
-    execService.submit(rpcMessageInvoker);
+    execService.execute(rpcMessageInvoker);
+
+    // add a message dispatch listener
+    AtomicInteger listenerReceived = new AtomicInteger(0);
+    MessageDispatchListener dispatchListener = message -> listenerReceived.incrementAndGet();
+    rpcMessageInvoker.addMessageDispatchListener(dispatchListener);
 
     // create new JSON-RPC request
     JsonRpcRequest request = new JsonRpcRequest();
@@ -162,22 +177,24 @@ public class RPCMessageInvokerTest extends ZmqEnabledTest {
 
     // deal msg
     String jsonRpcRequestAsString = gson.toJson(request);
-    InboundJsonRpcRequestMsg inboundJSONRPCRequestMsg =
+    InboundJsonRpcRequestMsg inboundJsonRpcRequestMsg =
         new InboundJsonRpcRequestMsg(clientId, jsonRpcRequestAsString);
-    boolean sentOk = inboundJSONRPCRequestMsg.send(jsonRpcDealerSocket);
+    boolean sentOk = inboundJsonRpcRequestMsg.send(jsonRpcDealerSocket);
     if (!sentOk) {
       throw new RuntimeException("Error sending JSON-RPC message");
     }
 
     // get reply
     OutboundJsonRpcResponseMsg outboundJsonRpcResponseMsg =
-        OutboundJsonRpcResponseMsg.recvMsg(jsonRpcDealerSocket, true);
+        OutboundJsonRpcResponseMsg.receive(jsonRpcDealerSocket, true);
+    assert outboundJsonRpcResponseMsg != null;
     final String jsonRpcResponseAsString = outboundJsonRpcResponseMsg.getJsonMessage();
     final JsonRpcResponse jsonRpcResponse =
         gson.fromJson(jsonRpcResponseAsString, JsonRpcResponse.class);
 
     // assert number of calls
     assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is(1L));
+    assertThat(listenerReceived.get(), is(1));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
 
     // assert reply msg followsUuid of original
@@ -185,14 +202,19 @@ public class RPCMessageInvokerTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void invokeManyRPCMessages() throws Exception {
+  public void invokeManyRpcMessages() throws Exception {
 
     // start invoker thread
-    execService.submit(rpcMessageInvoker);
+    execService.execute(rpcMessageInvoker);
 
-    // deal msgs
+    // add a message dispatch listener
+    AtomicInteger listenerReceived = new AtomicInteger(0);
+    MessageDispatchListener dispatchListener = message -> listenerReceived.incrementAndGet();
+    rpcMessageInvoker.addMessageDispatchListener(dispatchListener);
+
+    // deal messages
     int msgCount = 10;
-    List<ExecMessage> msgsToInvoke = new ArrayList<>();
+    List<ExecMessage> messagesToInvoke = new ArrayList<>();
     List<ExecMessage> replyMessages = new ArrayList<>();
     for (int i = 0; i < msgCount; i++) {
       // deal msg
@@ -200,7 +222,7 @@ public class RPCMessageInvokerTest extends ZmqEnabledTest {
       Message wrapper = msgBuilder.wrap(invokable);
       rpcDealerSocket.send("", ZMQ.SNDMORE); // 1st frame empty to emulate REQ envelope
       rpcDealerSocket.send(ColferUtils.toBytes(wrapper), 0);
-      msgsToInvoke.add(invokable);
+      messagesToInvoke.add(invokable);
       // get reply
       rpcDealerSocket.recv(); // 1st frame empty to emulate REP envelope
       Message msg = new Message();
@@ -211,22 +233,28 @@ public class RPCMessageInvokerTest extends ZmqEnabledTest {
 
     // assert number of calls
     assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is((long) msgCount));
+    assertThat(listenerReceived.get(), is(msgCount));
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), anyBoolean());
 
     // assert reply msg followsUuid of original
     for (int i = 0; i < msgCount; i++) {
       assertThat(
-          replyMessages.get(i).getResponseToUuid(), is(msgsToInvoke.get(i).getMessageUuid()));
+          replyMessages.get(i).getResponseToUuid(), is(messagesToInvoke.get(i).getMessageUuid()));
     }
   }
 
   @Test
-  public void invokeManyJSONRPCMessages() throws Exception {
+  public void invokeManyJsonRpcMessages() throws Exception {
 
     // start invoker thread
-    execService.submit(rpcMessageInvoker);
+    execService.execute(rpcMessageInvoker);
 
-    // deal msgs
+    // add a message dispatch listener
+    AtomicInteger listenerReceived = new AtomicInteger(0);
+    MessageDispatchListener dispatchListener = message -> listenerReceived.incrementAndGet();
+    rpcMessageInvoker.addMessageDispatchListener(dispatchListener);
+
+    // deal messages
     int msgCount = 10;
     for (int i = 0; i < msgCount; i++) {
       // create JSON-RPC request
@@ -239,21 +267,23 @@ public class RPCMessageInvokerTest extends ZmqEnabledTest {
       request.processMethodParts();
       // deal msg
       String jsonRpcRequestAsString = gson.toJson(request);
-      InboundJsonRpcRequestMsg inboundJSONRPCRequestMsg =
+      InboundJsonRpcRequestMsg inboundJsonRpcRequestMsg =
           new InboundJsonRpcRequestMsg(clientId, jsonRpcRequestAsString);
-      boolean sentOk = inboundJSONRPCRequestMsg.send(jsonRpcDealerSocket);
+      boolean sentOk = inboundJsonRpcRequestMsg.send(jsonRpcDealerSocket);
       if (!sentOk) {
         throw new RuntimeException("Error sending JSON-RPC message");
       }
 
       // get reply
       OutboundJsonRpcResponseMsg outboundJsonRpcResponseMsg =
-          OutboundJsonRpcResponseMsg.recvMsg(jsonRpcDealerSocket, true);
+          OutboundJsonRpcResponseMsg.receive(jsonRpcDealerSocket, true);
+      assert outboundJsonRpcResponseMsg != null;
       gson.fromJson(outboundJsonRpcResponseMsg.getJsonMessage(), JsonRpcResponse.class);
     }
 
     // assert number of calls
     assertThat(rpcMessageInvoker.getRequestsDispatched().get(), is((long) msgCount));
+    assertThat(listenerReceived.get(), is(msgCount));
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), anyBoolean());
   }
 }

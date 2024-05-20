@@ -20,27 +20,35 @@
 package net.ittera.pal.core;
 
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.inject.Injector;
 import java.util.Optional;
 import java.util.Properties;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+@SuppressWarnings("DoNotMock")
 public class LogConfiguratorTest {
 
-  private PALDirectory mockedPalDirectory;
+  private PalDirectory mockedPalDirectory;
   private LogReader mockedLogReader;
   private LogWriter mockedLogWriter;
   private Injector mockedInjector;
   private Properties appProps;
-  private static final String KAFKA_TOPIC_PREFIX = "testapp";
+  private static final String KAFKA_TOPIC_PREFIX = "test_app";
   private static final String KAFKA_SERVERS = "kafka1:9092,kafka2:9094";
 
   @Before
@@ -49,12 +57,11 @@ public class LogConfiguratorTest {
     appProps.setProperty("kafka.bootstrap.servers", KAFKA_SERVERS);
     appProps.setProperty("kafkaTopicPrefix", KAFKA_TOPIC_PREFIX);
 
-    DirectoryConnectionProvider mockedDirectoryConnectionProvider =
-        mock(DirectoryConnectionProvider.class);
-    mockedPalDirectory = mock(PALDirectory.class);
+    mockedPalDirectory = mock(PalDirectory.class);
     mockedLogReader = mock(LogReader.class);
     mockedLogWriter = mock(LogWriter.class);
     mockedInjector = mock(Injector.class);
+    var mockedDirectoryConnectionProvider = mock(DirectoryConnectionProvider.class);
     when(mockedDirectoryConnectionProvider.get()).thenReturn(Optional.of(mockedPalDirectory));
     when(mockedInjector.getInstance(DirectoryConnectionProvider.class))
         .thenReturn(mockedDirectoryConnectionProvider);
@@ -68,15 +75,13 @@ public class LogConfiguratorTest {
   }
 
   @Test
-  public void init_missingKafkaServersInProperties_illegalArgumentException() throws Exception {
-    String inLogName = "applog_in";
-    Long inLogOffset = null;
-    String outLogName = null;
+  public void init_missingKafkaServersInProperties_illegalArgumentException() {
+    String inLogName = "app_log_in";
     Properties emptyProps = new Properties();
 
     // call init()
     try {
-      new LogConfigurator(inLogName, inLogOffset, outLogName, emptyProps, mockedInjector);
+      new LogConfigurator(inLogName, null, null, emptyProps, mockedInjector);
       fail("Should have raised IllegalArgumentException");
     } catch (IllegalArgumentException iae) {
       // ok
@@ -86,88 +91,78 @@ public class LogConfiguratorTest {
   @Test
   public void init_inLogExists_outLogIsNull_ok() throws Exception {
 
-    String inLogName = "applog_in";
-    Long inLogOffset = null;
-    String outLogName = null;
+    String inLogName = "app_log_in";
 
     // call init()
-    new LogConfigurator(inLogName, inLogOffset, outLogName, appProps, mockedInjector).init();
+    new LogConfigurator(inLogName, null, null, appProps, mockedInjector).init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
-    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, inLogOffset);
-    verify(mockedLogWriter, never()).writeToLog(any(), any(), anyBoolean());
+    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, null);
+    verify(mockedLogWriter, never()).writeToLog(any(), anyBoolean());
   }
 
   @Test
   public void init_inLogExists_outLogIsAuto_ok() throws Exception {
 
-    String inLogName = "applog_in";
-    Long inLogOffset = null;
+    String inLogName = "app_log_in";
     String outLogName = "auto";
-    String generatedLogName = "app_random1";
 
     // call init()
-    new LogConfigurator(inLogName, inLogOffset, outLogName, appProps, mockedInjector).init();
+    new LogConfigurator(inLogName, null, outLogName, appProps, mockedInjector).init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
     verify(mockedPalDirectory, never()).newLog(any(), any());
-    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, inLogOffset);
-    verify(mockedLogWriter, never())
-        .writeToLog(eq(new LogInfo(generatedLogName)), eq(new LogInfo(inLogName)), anyBoolean());
+    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, null);
+    verify(mockedLogWriter, never()).writeToLog(eq(new LogInfo("app_random1")), anyBoolean());
   }
 
   @Test
   public void init_inLogIsAuto_outLogIsAuto_ok() throws Exception {
 
     String inLogName = "auto";
-    Long inLogOffset = null;
     String outLogName = "auto";
 
     // call init()
-    new LogConfigurator(inLogName, inLogOffset, outLogName, appProps, mockedInjector).init();
+    new LogConfigurator(inLogName, null, outLogName, appProps, mockedInjector).init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
     verify(mockedPalDirectory, never()).newLog(any(), any());
-    verify(mockedLogReader).readFromLog(new LogInfo("auto"), true, inLogOffset);
-    verify(mockedLogWriter)
-        .writeToLog(eq(new LogInfo("auto")), eq(new LogInfo("auto")), anyBoolean());
+    verify(mockedLogReader).readFromLog(new LogInfo("auto"), true, null);
+    verify(mockedLogWriter).writeToLog(eq(new LogInfo("auto")), anyBoolean());
   }
 
   @Test
   public void init_inLogIsNew_outLogIsAuto_ok() throws Exception {
 
-    String inLogName = "new_applog";
-    Long inLogOffset = null;
+    String inLogName = "new_app_log";
     String outLogName = "auto";
 
     // call init()
-    new LogConfigurator(inLogName, inLogOffset, outLogName, appProps, mockedInjector).init();
+    new LogConfigurator(inLogName, null, outLogName, appProps, mockedInjector).init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
     verify(mockedPalDirectory, never()).registerLog(any(LogInfo.class));
     verify(mockedPalDirectory, never()).newLog(any(), any());
-    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, inLogOffset);
-    verify(mockedLogWriter)
-        .writeToLog(eq(new LogInfo("auto")), eq(new LogInfo(inLogName)), anyBoolean());
+    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, null);
+    verify(mockedLogWriter).writeToLog(eq(new LogInfo("auto")), anyBoolean());
   }
 
   @Test
   public void init_inLogExists_outLogExists_ok() throws Exception {
 
-    String inLogName = "applog_in";
-    Long inLogOffset = null;
-    String outLogName = "applog_out";
+    String inLogName = "app_log_in";
+    String outLogName = "app_log_out";
 
     // call init()
-    new LogConfigurator(inLogName, inLogOffset, outLogName, appProps, mockedInjector).init();
+    new LogConfigurator(inLogName, null, outLogName, appProps, mockedInjector).init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(inLogName);
@@ -175,44 +170,39 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).logExists(outLogName);
     verify(mockedPalDirectory, never()).getLogInfo(outLogName);
     verify(mockedPalDirectory, never()).newLog(any(), any());
-    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, inLogOffset);
-    verify(mockedLogWriter)
-        .writeToLog(eq(new LogInfo(outLogName)), eq(new LogInfo(inLogName)), anyBoolean());
+    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, null);
+    verify(mockedLogWriter).writeToLog(eq(new LogInfo(outLogName)), anyBoolean());
   }
 
   @Test
   public void init_inLogExists_sameOutLogExists_ok() throws Exception {
 
-    String logName = "applog_10";
-    Long inLogOffset = null;
+    String logName = "app_log_10";
 
     // call init()
-    new LogConfigurator(logName, inLogOffset, logName, appProps, mockedInjector).init();
+    new LogConfigurator(logName, null, logName, appProps, mockedInjector).init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(logName);
     verify(mockedPalDirectory, never()).getLogInfo(logName);
     verify(mockedPalDirectory, never()).newLog(any(), any());
-    verify(mockedLogReader).readFromLog(new LogInfo(logName), true, inLogOffset);
-    verify(mockedLogWriter)
-        .writeToLog(eq(new LogInfo(logName)), eq(new LogInfo(logName)), anyBoolean());
+    verify(mockedLogReader).readFromLog(new LogInfo(logName), true, null);
+    verify(mockedLogWriter).writeToLog(eq(new LogInfo(logName)), anyBoolean());
   }
 
   @Test
   public void init_inLogIsNull_outLogExists_ok() throws Exception {
 
-    String inLogName = null;
-    Long inLogOffset = null;
-    String outLogName = "applog_out";
+    String outLogName = "app_log_out";
 
     // call init()
-    new LogConfigurator(inLogName, inLogOffset, outLogName, appProps, mockedInjector).init();
+    new LogConfigurator(null, null, outLogName, appProps, mockedInjector).init();
 
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(outLogName);
     verify(mockedPalDirectory, never()).getLogInfo(outLogName);
     verify(mockedPalDirectory, never()).newLog(any(), any());
     verify(mockedLogReader, never()).readFromLog(any(), anyBoolean(), anyLong());
-    verify(mockedLogWriter).writeToLog(eq(new LogInfo(outLogName)), eq(null), anyBoolean());
+    verify(mockedLogWriter).writeToLog(eq(new LogInfo(outLogName)), anyBoolean());
   }
 }

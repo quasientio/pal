@@ -27,7 +27,11 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,63 +43,9 @@ import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
-
-// auxiliary class
-class ClassForVoidClassMethodTest {
-  public static boolean slept;
-  public static Long millisSlept;
-  static Object verified;
-
-  static {
-    __resetStaticVars();
-  }
-
-  static void sleep() {
-    slept = true;
-  }
-
-  public static void sleep(Long millis) {
-    millisSlept = millis;
-  }
-
-  protected static void sleepUnboxed(long millis) {
-    millisSlept = millis;
-  }
-
-  static void verify(Object toVerify) {
-    verified = toVerify;
-  }
-
-  static void add(List<Long> sumContainer, long... parts) {
-    // add it manually, (use streams for verification)
-    long sum = 0;
-    for (long part : parts) {
-      sum += part;
-    }
-    sumContainer.add(sum);
-  }
-
-  static void addPositive(List<Long> aList, long chunk) {
-    if (chunk > 0) {
-      aList.add(chunk);
-    }
-  }
-
-  private static void nap() {
-    sleep(30 * 60 * 1000L);
-  }
-
-  // call this method from unit tests to restore class variables that have been modified
-  static void __resetStaticVars() {
-    verified = "blah";
-    slept = false;
-    millisSlept = 0L;
-  }
-}
 
 @RunWith(MockitoJUnitRunner.class)
 public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
@@ -103,12 +53,13 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
   @After
   public void resetTestClassVariables() {
-    ClassForVoidClassMethodTest.__resetStaticVars();
+    ClassForVoidClassMethodTest.resetStaticVars();
   }
 
   private final String sourceFilename = "NotARealClass.java";
 
   @Before
+  @Override
   public void setUp() {
     super.setUp();
     dispatcher =
@@ -470,13 +421,12 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // args
-    long aNumber = 2;
-    List<Long> aList = null;
-    Object[] args = {aList, aNumber};
+    Object[] args = {null, 2};
 
     // dispatch
     try {
-      Object returned = dispatcher.dispatch(ctxt, this, null, args);
+      @SuppressWarnings("unused")
+      Object unused = dispatcher.dispatch(ctxt, this, null, args);
       fail("Should have thrown a NPE");
     } catch (NullPointerException npe) {
       // all good
@@ -489,8 +439,7 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
   public void dispatchIncoming_throwsException_exceptionThrown() {
     String methodName = "addPositive";
     Class<?>[] parameterTypes = {List.class, long.class};
-    List<Long> aList = null;
-    Object[] args = {aList, 2};
+    Object[] args = {null, 2};
     ObjectRef[] argObjRefs = {null, null};
 
     ExecMessage incomingMessage =
@@ -516,14 +465,9 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
         is("java.lang.NullPointerException"));
   }
 
-  @Ignore
-  @Test
-  @Override
-  public void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown() throws Exception {}
-
   @Override
   @Test
-  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() throws Exception {
+  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() {
     String methodName = "idontexist";
     Class<?>[] parameterTypes = {};
     Object[] args = {};
@@ -678,5 +622,59 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
     assertNotNull(replyMsg.getReturnValue());
     assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  // auxiliary class
+  @SuppressWarnings({"unused", "MemberName"})
+  private static class ClassForVoidClassMethodTest {
+    public static boolean slept;
+    public static Long millisSlept;
+    static Object verified;
+
+    static {
+      resetStaticVars();
+    }
+
+    static void sleep() {
+      slept = true;
+    }
+
+    public static void sleep(Long millis) {
+      millisSlept = millis;
+    }
+
+    protected static void sleepUnboxed(long millis) {
+      millisSlept = millis;
+    }
+
+    static void verify(Object toVerify) {
+      verified = toVerify;
+    }
+
+    static void add(List<Long> sumContainer, long... parts) {
+      // add it manually, (use streams for verification)
+      long sum = 0;
+      for (long part : parts) {
+        sum += part;
+      }
+      sumContainer.add(sum);
+    }
+
+    static void addPositive(List<Long> someList, long chunk) {
+      if (chunk > 0) {
+        someList.add(chunk);
+      }
+    }
+
+    private static void nap() {
+      sleep(30 * 60 * 1000L);
+    }
+
+    // call this method from unit tests to restore class variables that have been modified
+    static void resetStaticVars() {
+      verified = "blah";
+      slept = false;
+      millisSlept = 0L;
+    }
   }
 }

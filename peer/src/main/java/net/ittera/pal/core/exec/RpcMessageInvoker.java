@@ -31,11 +31,14 @@ import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
 import net.ittera.pal.core.messages.OutboundJsonRpcResponseMsg;
-import net.ittera.pal.messages.colfer.*;
+import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
+import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.serdes.colfer.ColferUtils;
-import net.ittera.pal.serdes.colfer.JSONSerializers;
+import net.ittera.pal.serdes.colfer.JsonSerializers;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcRequestException;
 import org.zeromq.SocketType;
@@ -45,7 +48,7 @@ import org.zeromq.ZMQ.Poller;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-class RPCMessageInvoker extends AbstractMessageInvokerThread {
+class RpcMessageInvoker extends AbstractMessageInvokerThread {
 
   private final Set<RunOptions> runOptions;
   private final String rpcDealerAddress;
@@ -58,7 +61,7 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
   private int jsonrpcSocketIndex = -1;
   private Gson gson;
 
-  public RPCMessageInvoker(
+  public RpcMessageInvoker(
       ThreadGroup group,
       String name,
       ZContext zmqContext,
@@ -84,7 +87,7 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
   }
 
   // Constructor for unit-testing
-  RPCMessageInvoker(
+  RpcMessageInvoker(
       ZContext zmqContext,
       MessageBuilder messageBuilder,
       Set<RunOptions> runOptions,
@@ -103,10 +106,10 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
     this.gson =
         new GsonBuilder()
             .registerTypeAdapter(
-                StaticFieldPutDone.class, new JSONSerializers.StaticFieldPutDoneAdapter())
+                StaticFieldPutDone.class, new JsonSerializers.StaticFieldPutDoneAdapter())
             .registerTypeAdapter(
-                InstanceFieldPutDone.class, new JSONSerializers.InstanceFieldPutDoneAdapter())
-            .registerTypeAdapter(ReturnValue.class, new JSONSerializers.ReturnValueAdapter())
+                InstanceFieldPutDone.class, new JsonSerializers.InstanceFieldPutDoneAdapter())
+            .registerTypeAdapter(ReturnValue.class, new JsonSerializers.ReturnValueAdapter())
             .create();
   }
 
@@ -128,8 +131,8 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
       }
 
       try {
-        handleRPCRequest();
-        handleJsonRPCRequest();
+        handleRpcRequest();
+        handleJsonRpcRequest();
       } catch (ZMQException ex) {
         socketError = handleSocketException(ex);
       }
@@ -141,8 +144,8 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
 
   private Poller setupPoller() {
     poller = zmqContext.createPoller(2);
-    setupRPCSocket(poller);
-    setupJsonRPCSocket(poller);
+    setupRpcSocket(poller);
+    setupJsonRpcSocket(poller);
     return poller;
   }
 
@@ -162,7 +165,7 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
     }
   }
 
-  private void setupRPCSocket(Poller poller) {
+  private void setupRpcSocket(Poller poller) {
     if (runOptions.contains(RunOptions.WITH_RPC)) {
       rpcSocket = zmqContext.createSocket(SocketType.REP);
       boolean rpcSocketConnected = rpcSocket.connect(rpcDealerAddress);
@@ -177,7 +180,7 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
     }
   }
 
-  private void setupJsonRPCSocket(Poller poller) {
+  private void setupJsonRpcSocket(Poller poller) {
     if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
       jsonrpcSocket = zmqContext.createSocket(SocketType.REP);
       boolean jsonrpcSocketConnected = jsonrpcSocket.connect(jsonrpcDealerAddress);
@@ -192,16 +195,16 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
     }
   }
 
-  private void handleRPCRequest() {
+  private void handleRpcRequest() {
     if (rpcSocketIndex != -1 && poller.pollin(rpcSocketIndex)) {
       byte[] rpcReq = rpcSocket.recv(0);
       if (rpcReq != null) {
-        dispatchRPCRequest(rpcReq);
+        dispatchRpcRequest(rpcReq);
       }
     }
   }
 
-  private void dispatchRPCRequest(byte[] rpcReq) {
+  private void dispatchRpcRequest(byte[] rpcReq) {
 
     final long started = System.currentTimeMillis();
     final Message requestMsg = new Message();
@@ -229,7 +232,8 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
           final long took = System.currentTimeMillis() - started;
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Dispatched and sent message w/uuid: {} in reply to RPC request w/uuid: {} in {} ms",
+                "Dispatched and sent message w/uuid: {} in reply to RPC request"
+                    + " w/uuid: {} in {} ms",
                 getMessageUuid(replyMsg),
                 getMessageUuid(requestMsg),
                 took);
@@ -241,16 +245,16 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
     }
   }
 
-  private void handleJsonRPCRequest() {
+  private void handleJsonRpcRequest() {
     if (jsonrpcSocketIndex != -1 && poller.pollin(jsonrpcSocketIndex)) {
-      InboundJsonRpcRequestMsg jsonrpcMsg = InboundJsonRpcRequestMsg.recvMsg(jsonrpcSocket, true);
+      InboundJsonRpcRequestMsg jsonrpcMsg = InboundJsonRpcRequestMsg.receive(jsonrpcSocket, true);
       if (jsonrpcMsg != null) {
-        dispatchJsonRPCRequest(jsonrpcMsg);
+        dispatchJsonRpcRequest(jsonrpcMsg);
       }
     }
   }
 
-  private void dispatchJsonRPCRequest(InboundJsonRpcRequestMsg jsonrpcMsg) {
+  private void dispatchJsonRpcRequest(InboundJsonRpcRequestMsg jsonrpcMsg) {
 
     final long started = System.currentTimeMillis();
     JsonRpcRequest jsonRpcRequest = null;
@@ -264,6 +268,7 @@ class RPCMessageInvoker extends AbstractMessageInvokerThread {
       if (logger.isDebugEnabled()) {
         logger.debug("Received JSON-RPC message from client uuid: {}", jsonrpcMsg.getClientId());
       }
+      requestId = jsonRpcRequest.getId();
     } catch (JsonRpcRequestException e) {
       logger.error("Caught exception parsing message", e);
       requestId = e.getRequestId();

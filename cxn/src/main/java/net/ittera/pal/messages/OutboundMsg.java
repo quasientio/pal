@@ -29,7 +29,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.runtime.ExecPhase;
-import net.ittera.pal.common.util.UUIDUtils;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.types.MessageType;
 import org.slf4j.Logger;
@@ -66,7 +66,7 @@ public class OutboundMsg extends BaseMsg {
   @Nullable private final UUID responseToUuid;
   private final byte[] body;
 
-  /** Only used by unit test */
+  // Only used by unit test
   OutboundMsg(
       MessageType messageType,
       ExecPhase execPhase,
@@ -158,7 +158,7 @@ public class OutboundMsg extends BaseMsg {
     }
 
     // message uuid
-    buff = UUIDUtils.toBytes(messageUuid);
+    buff = UuidUtils.toBytes(messageUuid);
     size += buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
@@ -168,7 +168,7 @@ public class OutboundMsg extends BaseMsg {
     buff =
         responseToUuid == null
             ? String.valueOf(0).getBytes(ZMQ.CHARSET)
-            : UUIDUtils.toBytes(responseToUuid);
+            : UuidUtils.toBytes(responseToUuid);
     size += buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
@@ -181,7 +181,7 @@ public class OutboundMsg extends BaseMsg {
 
   // blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
   // ready, then all are)
-  public static OutboundMsg recvMsg(ZMQ.Socket socket, boolean blocking) {
+  public static OutboundMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
@@ -222,14 +222,14 @@ public class OutboundMsg extends BaseMsg {
     // message uuid
     buff = socket.recv();
     msgSize += buff.length;
-    final UUID messageUuid = UUIDUtils.fromBytes(buff);
+    final UUID messageUuid = UuidUtils.fromBytes(buff);
 
     // responseToUuid
     buff = socket.recv();
     msgSize += buff.length;
     final UUID responseToUuid;
     if (!"0".equals(new String(buff, ZMQ.CHARSET))) {
-      responseToUuid = UUIDUtils.fromBytes(buff);
+      responseToUuid = UuidUtils.fromBytes(buff);
     } else {
       responseToUuid = null;
     }
@@ -243,14 +243,19 @@ public class OutboundMsg extends BaseMsg {
   }
 
   // default is non-blocking
-  public static OutboundMsg recvMsg(ZMQ.Socket socket) {
-    return recvMsg(socket, false);
+  public static OutboundMsg receive(ZMQ.Socket socket) {
+    return receive(socket, false);
   }
 
   @Override
+  @SuppressWarnings("EqualsGetClass")
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     OutboundMsg that = (OutboundMsg) o;
     return messageType == that.messageType
         && execPhase.equals(that.execPhase)
@@ -296,6 +301,7 @@ public class OutboundMsg extends BaseMsg {
     return execPhase;
   }
 
+  @Nullable
   public List<InternalHeader> getHeaders() {
     return headers;
   }

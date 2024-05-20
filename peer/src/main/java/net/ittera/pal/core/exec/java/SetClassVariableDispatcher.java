@@ -25,8 +25,8 @@ import jakarta.inject.Singleton;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.core.exec.DispatcherConnector;
@@ -85,11 +85,11 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
   }
 
   @Override
-  protected Optional<Object> getValueFromMessage(
-      final ExecMessage execMessage, final Optional<AccessibleObject> accessibleObject) {
+  protected @Nullable Object getValueFromMessage(
+      final ExecMessage execMessage, final AccessibleObject accessibleObject) {
 
     final Object value;
-    final Field field = (Field) accessibleObject.get();
+    final Field field = (Field) accessibleObject;
 
     Obj fieldPutObject = execMessage.getStaticFieldPut().getValueObject();
     if (fieldPutObject != null) {
@@ -105,8 +105,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
         logger.trace("Loaded value: {}", value);
       }
     }
-
-    return Optional.ofNullable(value);
+    return value;
   }
 
   @Override
@@ -114,7 +113,7 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
       ExecMessage execMessage,
       Object valueObject,
       ObjectRef valueObjRef,
-      Optional<AccessibleObject> accessibleObject,
+      AccessibleObject accessibleObject,
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking) {
     String messageUuid = execMessage.getMessageUuid();
@@ -126,7 +125,6 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
           exceptionWhileLoading,
           exceptionWhileInvoking);
     }
-    return messageBuilder.buildPutStaticDone(
-        peerUuid, accessibleObject.get(), messageUuid, messageUuid);
+    return messageBuilder.buildPutStaticDone(peerUuid, accessibleObject, messageUuid, messageUuid);
   }
 }

@@ -19,6 +19,7 @@
 
 package net.ittera.pal.apps.rpc;
 
+@SuppressWarnings("unused")
 public class Constructors {
 
   private Constructors innerInstance;
@@ -39,15 +40,14 @@ public class Constructors {
     }
   }
 
-  private Constructors(String[] aStringArrayParam) {
-
+  private Constructors(String[] myStringArrayParam) {
     StringBuilder sb = new StringBuilder();
-    for (String anAStringArrayParam : aStringArrayParam) {
-      sb.append(anAStringArrayParam).append(",");
+    for (String anotherStringArrayParam : myStringArrayParam) {
+      sb.append(anotherStringArrayParam).append(",");
     }
   }
 
-  protected Constructors(Constructors aConstructor) {
-    this.innerInstance = aConstructor;
+  protected Constructors(Constructors myConstructor) {
+    this.innerInstance = myConstructor;
   }
 }

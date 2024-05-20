@@ -20,13 +20,12 @@
 package net.ittera.pal.core;
 
 import static java.lang.String.format;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -36,8 +35,6 @@ import java.util.stream.Collectors;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.runtime.ExecPhase;
-import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.cxn.PALDirectory;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
@@ -63,15 +60,14 @@ public class LogWriterTest extends ZmqEnabledTest {
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private ZContext zmqContext;
   private LogWriter logWriter;
-  private UUID peerUuid = UUID.randomUUID();
+  private final UUID peerUuid = UUID.randomUUID();
   private ServiceManager manager;
   private MockProducer<String, byte[]> producer;
-  private LogInfo log;
   private ZMQ.Socket pubSocket;
-  private final String OUT_PUB_ADDR = "inproc://pub";
-  private final String OFFSET_PUB_ADDR = "inproc://offsets";
+  private static final String OUT_PUB_ADDRESS = "inproc://pub";
+  private static final String OFFSET_PUB_ADDRESS = "inproc://offsets";
   private final MessageBuilder msgBuilder = new MessageBuilder();
-  private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
+  private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
 
   @After
   public void cleanup() throws Exception {
@@ -83,8 +79,6 @@ public class LogWriterTest extends ZmqEnabledTest {
 
   @Before
   public void setup() throws Exception {
-    DirectoryConnectionProvider directoryConnectionProvider =
-        new DirectoryConnectionProvider(PALDirectory.NO_URL);
     zmqContext = this.createContext();
     producer =
         new MockProducer<>(
@@ -96,14 +90,14 @@ public class LogWriterTest extends ZmqEnabledTest {
             SYNC_SOCKET_ADDRESS,
             servicesThreadGroup,
             "LogWriterTest-Service",
-            OUT_PUB_ADDR,
-            OFFSET_PUB_ADDR,
+            OUT_PUB_ADDRESS,
+            OFFSET_PUB_ADDRESS,
             producer);
     // configure log
-    log = new LogInfo("testapp", "localhost:9092");
-    logWriter.writeToLog(log, log, false);
+    LogInfo log = new LogInfo("test_app", "localhost:9092");
+    logWriter.writeToLog(log, false);
     // start services
-    final Set<Service> services = new HashSet<>(Arrays.asList(this.logWriter));
+    final Set<Service> services = new HashSet<>(Collections.singletonList(this.logWriter));
     manager = new ServiceManager(services);
     manager.startAsync().awaitHealthy();
     collectGoSignals(services.size(), zmqContext);
@@ -133,10 +127,10 @@ public class LogWriterTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void noPublishedMsgs() throws Exception {
+  public void noPublishedMessages() {
     assertThat(logWriter.isRunning(), is(true));
 
-    // we PUBlish no messages
+    // we don't publish any messages
 
     // assert NO published message is produced to the log
     assertThat(producer.history().isEmpty(), is(true));
@@ -144,16 +138,16 @@ public class LogWriterTest extends ZmqEnabledTest {
 
   @Test
   public void publishedMixedMessages() throws Exception {
-    // we create outPub socket and PUBlish some messages
+    // we create outPub socket and publish some messages
     pubSocket = zmqContext.createSocket(SocketType.PUB);
-    pubSocket.bind(OUT_PUB_ADDR);
+    pubSocket.bind(OUT_PUB_ADDRESS);
 
-    List<Message> msgsCreated = new ArrayList<>();
+    List<Message> messagesCreated = new ArrayList<>();
     // create ExecMessage's
     int execMessagesToSend = 15;
     for (int i = 0; i < execMessagesToSend; i++) {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-      msgsCreated.add(msgBuilder.wrap(msg));
+      messagesCreated.add(msgBuilder.wrap(msg));
     }
     // create InterceptMessages
     int interceptMessagesToSend = 5;
@@ -164,14 +158,14 @@ public class LogWriterTest extends ZmqEnabledTest {
               InterceptType.BEFORE,
               "java.io.PrintStream",
               "println",
-              Collections.EMPTY_LIST,
+              Collections.emptyList(),
               this.getClass().getName(),
               "someCallbackMethod");
-      msgsCreated.add(msgBuilder.wrap(msg));
+      messagesCreated.add(msgBuilder.wrap(msg));
     }
 
     // PUB them
-    msgsCreated.forEach(
+    messagesCreated.forEach(
         msg -> {
           boolean hasExecMessage = msg.getExecMessage() != null;
           MessageType msgType =
@@ -199,7 +193,7 @@ public class LogWriterTest extends ZmqEnabledTest {
       producedMsgUuids.add(getMessageUuid(msg));
     }
     List<String> sentMsgUuids =
-        msgsCreated.stream().map(this::getMessageUuid).collect(Collectors.toList());
+        messagesCreated.stream().map(this::getMessageUuid).collect(Collectors.toList());
     assertThat(producer.history().size(), is(execMessagesToSend + interceptMessagesToSend));
     assertThat(producedMsgUuids, is(sentMsgUuids));
   }
@@ -208,32 +202,32 @@ public class LogWriterTest extends ZmqEnabledTest {
   public void publishedMessagesWithHeader() throws Exception {
     assertThat(logWriter.isRunning(), is(true));
 
-    // we create outPub socket and PUBlish some messages with header
+    // we create outPub socket and publish some messages with header
     pubSocket = zmqContext.createSocket(SocketType.PUB);
-    pubSocket.bind(OUT_PUB_ADDR);
+    pubSocket.bind(OUT_PUB_ADDRESS);
 
     int messagesToSend = 5;
-    List<Message> msgsCreated = new ArrayList<>();
+    List<Message> messagesCreated = new ArrayList<>();
     for (int i = 0; i < messagesToSend; i++) {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-      msgsCreated.add(msgBuilder.wrap(msg));
+      messagesCreated.add(msgBuilder.wrap(msg));
     }
 
     // PUB them
-    List<InternalHeader> headers = Arrays.asList(msgBuilder.buildWriteAheadHeader(peerUuid));
-    msgsCreated.stream()
-        .forEach(
-            msg -> {
-              OutboundMsg outMsg =
-                  new OutboundMsg(
-                      MessageType.EXEC_MESSAGE,
-                      ExecPhase.BEFORE,
-                      headers,
-                      UUID.fromString(getMessageUuid(msg)),
-                      getResponseToUuid(msg),
-                      msg);
-              outMsg.send(pubSocket);
-            });
+    List<InternalHeader> headers =
+        Collections.singletonList(msgBuilder.buildWriteAheadHeader(peerUuid));
+    messagesCreated.forEach(
+        msg -> {
+          OutboundMsg outMsg =
+              new OutboundMsg(
+                  MessageType.EXEC_MESSAGE,
+                  ExecPhase.BEFORE,
+                  headers,
+                  UUID.fromString(getMessageUuid(msg)),
+                  getResponseToUuid(msg),
+                  msg);
+          outMsg.send(pubSocket);
+        });
 
     // give it some time
     Thread.sleep(300);
@@ -246,7 +240,7 @@ public class LogWriterTest extends ZmqEnabledTest {
       producedMsgUuids.add(getMessageUuid(msg));
     }
     List<String> sentMsgUuids =
-        msgsCreated.stream().map(this::getMessageUuid).collect(Collectors.toList());
+        messagesCreated.stream().map(this::getMessageUuid).collect(Collectors.toList());
     assertThat(producer.history().size(), is(messagesToSend));
     assertThat(producedMsgUuids, is(sentMsgUuids));
   }

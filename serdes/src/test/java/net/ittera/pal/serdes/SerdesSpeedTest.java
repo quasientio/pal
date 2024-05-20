@@ -27,19 +27,17 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class SerdesSpeedTest {
 
   private MessageBuilder messageBuilder;
-  private final int MESSAGES_TO_CREATE = 1000000;
   String className = "net.ittera.pal.apps.MyClass";
   Object[] args = {
     new String[] {"A normal string", "Boring to say the least", "The loong winter is comiiing"}
   };
   ObjectRef[] argRefs = {null};
-  Class[] parameterTypes = {String[].class};
+  Class<?>[] parameterTypes = {String[].class};
   private String[] parameterTypesNamesArray;
 
   @Before
@@ -51,11 +49,11 @@ public class SerdesSpeedTest {
     }
   }
 
-  @Ignore
   @Test
   public void colferSerdes() {
     Instant start = Instant.now();
-    for (int i = 0; i < MESSAGES_TO_CREATE; i++) {
+    int messagesToCreate = 10000;
+    for (int i = 0; i < messagesToCreate; i++) {
       ExecMessage msg =
           messageBuilder.buildNonEmptyConstructor(
               UUID.randomUUID(), className, parameterTypesNamesArray, args, argRefs);
@@ -67,6 +65,6 @@ public class SerdesSpeedTest {
     Instant end = Instant.now();
     System.out.printf(
         "%d messages serialized+deserialized with colfer in %d ms%n",
-        MESSAGES_TO_CREATE, Duration.between(start, end).toMillis());
+        messagesToCreate, Duration.between(start, end).toMillis());
   }
 }

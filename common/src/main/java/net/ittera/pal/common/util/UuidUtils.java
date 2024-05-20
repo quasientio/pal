@@ -23,9 +23,9 @@ import com.google.common.primitives.Longs;
 import java.util.Objects;
 import java.util.UUID;
 
-public final class UUIDUtils {
+public final class UuidUtils {
 
-  private UUIDUtils() {}
+  private UuidUtils() {}
 
   public static byte[] toBytes(String uuid) {
     return toBytes(UUID.fromString(uuid));

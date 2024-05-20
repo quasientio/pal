@@ -31,6 +31,7 @@ import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -44,18 +45,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
-// auxiliary class
-class ClassForPutFieldTest {
-  public short someShort = 4;
-  byte[] bytes;
-  Long aLong = 8238L;
-  protected String aString = "I am a normal string";
-  private String aPrivateString = "I am a private string";
-  List<?> aList = new ArrayList<>();
-  Object[] objects;
-  Throwable lastError = new Exception("dummy exception");
-}
-
 @RunWith(MockitoJUnitRunner.class)
 public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
 
@@ -64,6 +53,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   private final String sourceFilename = "NotARealClass.java";
 
   @Before
+  @Override
   public void setUp() {
     super.setUp();
     dispatcher =
@@ -155,7 +145,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
-    byte[] newFieldValue = "bytes".getBytes();
+    byte[] newFieldValue = "bytes".getBytes(StandardCharsets.UTF_8);
     Object[] args = {newFieldValue};
     ClassForPutFieldTest target = new ClassForPutFieldTest();
     Object returned = dispatcher.dispatch(ctxt, this, target, args);
@@ -171,7 +161,7 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   public void dispatchIncoming_primitiveArray_ok() {
 
     String fieldName = "bytes";
-    byte[] newFieldValue = "bytes".getBytes();
+    byte[] newFieldValue = "bytes".getBytes(StandardCharsets.UTF_8);
     String fieldClassName = "[B";
 
     // create and store new instance
@@ -395,10 +385,9 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
-    List<?> newFieldValue = null;
-    Object[] args = {newFieldValue};
     ClassForPutFieldTest target = new ClassForPutFieldTest();
     assertThat(target.aList, notNullValue());
+    Object[] args = {null};
     Object returned = dispatcher.dispatch(ctxt, this, target, args);
 
     // expect
@@ -412,18 +401,16 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   public void dispatchIncoming_nullObject_ok() {
 
     String fieldName = "aList";
-    List<?> newFieldValue = null;
 
     // create and store new instance
     ClassForPutFieldTest target = new ClassForPutFieldTest();
-    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
+    assertThat(target.aList, notNullValue());
 
+    ObjectRef targetObjRef = objectLookupStore.storeObject(target);
     ExecMessage incomingMessage =
         messageBuilder.buildPutObject(
-            peerUuid, targetClass.getName(), fieldName, targetObjRef, "List.class", newFieldValue);
-
+            peerUuid, targetClass.getName(), fieldName, targetObjRef, "List.class", null);
     // dispatch
-    assertThat(target.aList, notNullValue());
     ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
@@ -682,5 +669,18 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
     assertThat(replyMsg.getInstanceFieldPutDone().getField().getName(), is(fieldName));
     assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  // auxiliary class
+  @SuppressWarnings({"unused", "StaticAssignmentOfThrowable", "MemberName"})
+  private static class ClassForPutFieldTest {
+    public short someShort = 4;
+    byte[] bytes;
+    Long aLong = 8238L;
+    protected String aString = "I am a normal string";
+    private final String aPrivateString = "I am a private string";
+    List<?> aList = new ArrayList<>();
+    Object[] objects;
+    Throwable lastError = new Exception("dummy exception");
   }
 }

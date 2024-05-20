@@ -19,6 +19,7 @@
 
 package net.ittera.pal.core.exec.java;
 
+@SuppressWarnings("unused")
 public abstract class AbstractMethodDispatcherTest extends AbstractDispatcherTest {
 
   public abstract void dispatch_noArgs_ok() throws Throwable;
@@ -44,9 +45,6 @@ public abstract class AbstractMethodDispatcherTest extends AbstractDispatcherTes
   public abstract void dispatch_throwsException_exceptionThrown() throws Throwable;
 
   public abstract void dispatchIncoming_throwsException_exceptionThrown() throws Exception;
-
-  public abstract void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown()
-      throws Exception;
 
   public abstract void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown()
       throws Exception;

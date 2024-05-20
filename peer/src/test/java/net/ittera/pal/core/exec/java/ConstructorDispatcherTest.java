@@ -19,16 +19,17 @@
 
 package net.ittera.pal.core.exec.java;
 
-import static java.util.stream.Collectors.joining;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.lang.reflect.Constructor;
-import java.util.Arrays;
 import net.ittera.pal.common.lang.reflect.ConstructorSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -39,46 +40,13 @@ import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import org.hamcrest.Matchers;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
-// auxiliary class
-class ClassForConstructorTest {
-  Integer someInteger;
-  String joinedVarArgs;
-  long aLong;
-
-  ClassForConstructorTest() {}
-
-  ClassForConstructorTest(boolean plusOne, long aLong) {
-    this.aLong = plusOne ? aLong + 1 : aLong;
-  }
-
-  ClassForConstructorTest(Integer someInteger) {
-    this.someInteger = someInteger;
-  }
-
-  ClassForConstructorTest(String aMalformedNumber) {
-    this.someInteger = Integer.valueOf(aMalformedNumber);
-  }
-
-  ClassForConstructorTest(String... args) {
-    this.joinedVarArgs = Arrays.stream(args).collect(joining());
-  }
-
-  /** for visibility tests */
-  public ClassForConstructorTest(int i) {}
-
-  protected ClassForConstructorTest(int i, int j) {}
-
-  private ClassForConstructorTest(int i, int j, int k) {}
-}
-
-/**
- * TODO: - with remoteArgs - with objectRefs - use ExecMessageAssertions for dispatchIncoming* tests
- */
+// TODO: with remoteArgs
+// TODO: with objectRefs
+// TODO: use ExecMessageAssertions for dispatchIncoming tests
 @RunWith(MockitoJUnitRunner.class)
 public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
@@ -87,6 +55,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   private final String sourceFilename = "NotARealClass.java";
 
   @Before
+  @Override
   public void setUp() {
     super.setUp();
     dispatcher =
@@ -259,11 +228,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     // dispatch
     ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
-    ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
+    ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
     assertTrue(objectLookupStore.containsObjectRef(objRef));
     assertThat(objectLookupStore.lookupObject(objRef), instanceOf(targetClass));
     assertThat(
@@ -294,11 +263,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     // dispatch
     ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
-    ObjectRef retObjRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(2L));
+    ObjectRef retObjRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
     assertTrue(objectLookupStore.containsObjectRef(retObjRef));
     assertThat(objectLookupStore.lookupObject(retObjRef), instanceOf(targetClass));
     assertThat(
@@ -326,11 +295,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     // dispatch
     ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
-    ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
+    ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
     assertTrue(objectLookupStore.containsObjectRef(objRef));
     assertThat(objectLookupStore.lookupObject(objRef), instanceOf(targetClass));
     assertThat(
@@ -414,11 +383,11 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     // dispatch
     ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
-    ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
     assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertThat(objectLookupStore.size(), is(1L));
+    ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
     assertTrue(objectLookupStore.containsObjectRef(objRef));
     assertThat(objectLookupStore.lookupObject(objRef), instanceOf(targetClass));
     assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
@@ -445,7 +414,8 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
     // dispatch
     try {
-      Object returned = dispatcher.dispatch(ctxt, this, null, args);
+      @SuppressWarnings("unused")
+      Object unused = dispatcher.dispatch(ctxt, this, null, args);
       fail("Should have thrown a NumberFormatException");
     } catch (NumberFormatException nfe) {
       // all good
@@ -478,14 +448,9 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         is("java.lang.NumberFormatException"));
   }
 
-  @Ignore
-  @Test
-  @Override
-  public void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown() throws Exception {}
-
   @Override
   @Test
-  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() throws Exception {
+  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() {
     Class<?>[] parameterTypes = {java.lang.String.class, Boolean.TYPE, java.lang.Integer.class};
     Object[] args = {"woiwefoj", true, 459};
     ObjectRef[] argRefs = {null, null, null};
@@ -570,6 +535,7 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
   }
 
   @Override
+  @Test
   public void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
       throws Throwable {
     Class<?>[] parameterTypes = {Integer.TYPE, Integer.TYPE, Integer.TYPE};
@@ -591,5 +557,38 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
     assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
     assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  // auxiliary class
+  @SuppressWarnings({"unused", "checkstyle:MemberName"})
+  private static class ClassForConstructorTest {
+    Integer someInteger;
+    String joinedVarArgs;
+    long aLong;
+
+    ClassForConstructorTest() {}
+
+    ClassForConstructorTest(boolean plusOne, long someLong) {
+      this.aLong = plusOne ? someLong + 1 : someLong;
+    }
+
+    ClassForConstructorTest(Integer someInteger) {
+      this.someInteger = someInteger;
+    }
+
+    ClassForConstructorTest(String someMalformedNumber) {
+      this.someInteger = Integer.valueOf(someMalformedNumber);
+    }
+
+    ClassForConstructorTest(String... args) {
+      this.joinedVarArgs = String.join("", args);
+    }
+
+    // for visibility tests
+    public ClassForConstructorTest(int i) {}
+
+    protected ClassForConstructorTest(int i, int j) {}
+
+    private ClassForConstructorTest(int i, int j, int k) {}
   }
 }

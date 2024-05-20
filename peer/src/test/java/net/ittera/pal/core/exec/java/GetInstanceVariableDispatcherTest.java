@@ -22,7 +22,10 @@ package net.ittera.pal.core.exec.java;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,19 +44,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
-// auxiliary class
-class ClassForGetFieldTest {
-  public short someShort = 0;
-  byte[] bytes;
-  Integer someInteger;
-  protected String aString = "I am a normal string";
-  List<?> anObject = new ArrayList<>();
-  Object[] objects = {1, "a", false};
-  private Object[] privateObjs = {0, "b", true};
-  Throwable lastError = new Error("dummy error");
-  Class<?> aNullClass;
-}
-
 @RunWith(MockitoJUnitRunner.class)
 public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
   private final Class<?> targetClass = ClassForGetFieldTest.class;
@@ -61,6 +51,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   private final String sourceFilename = "NotARealClass.java";
 
   @Before
+  @Override
   public void setUp() {
     super.setUp();
     dispatcher =
@@ -301,7 +292,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
   @Override
   @Test
-  public void dispatchIncoming_object_ok() throws Exception {
+  public void dispatchIncoming_object_ok() {
 
     String fieldName = "anObject";
 
@@ -566,7 +557,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
   @Test
   public void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
       throws Throwable {
-    String fieldName = "privateObjs";
+    String fieldName = "privateObjects";
 
     // create and store new instance
     ClassForGetFieldTest target = new ClassForGetFieldTest();
@@ -589,5 +580,19 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertNotNull(replyMsg.getReturnValue());
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  // auxiliary class
+  @SuppressWarnings({"unused", "checkstyle:MemberName"})
+  private static class ClassForGetFieldTest {
+    public short someShort = 0;
+    byte[] bytes;
+    Integer someInteger;
+    protected String aString = "I am a normal string";
+    List<?> anObject = new ArrayList<>();
+    Object[] objects = {1, "a", false};
+    private final Object[] privateObjects = {0, "b", true};
+    Throwable lastError = new Error("dummy error");
+    Class<?> aNullClass;
   }
 }

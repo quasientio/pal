@@ -29,6 +29,7 @@
         <aspectj.plugin.version>1.15.0</aspectj.plugin.version>
         <google.format.plugin.version>2.23</google.format.plugin.version>
         <jacoco.plugin.version>0.8.12</jacoco.plugin.version>
+        <errorprone.plugin.version>2.27.1</errorprone.plugin.version>
 
         <!-- DEPENDENCIES VERSIONS -->
         <aspectj.version>1.9.22</aspectj.version>
@@ -79,7 +80,30 @@
                     <configuration>
                         <source>${java.version}</source>
                         <target>${java.version}</target>
+                        <showWarnings>true</showWarnings>
+                        <encoding>UTF-8</encoding>
+                        <!-- -Xep:JUnitIncompatibleType:OFF to disable error (reported as https://github.com/google/error-prone/issues/4376) -->
+                        <compilerArgs>
+                            <arg>-Xlint:deprecation</arg>
+                            <arg>-Xlint:unchecked</arg>
+                            <arg>-XDcompilePolicy=simple</arg>
+                            <arg>
+                                -Xplugin:ErrorProne \
+                                -Xep:JUnitIncompatibleType:OFF \
+                                -Xep:DeadException:WARN \
+                                -XepExcludedPaths:.*/serdes/src/main/java/net/ittera/pal/messages/colfer.* \
+                                -Xep:GuardedBy:OFF
+                            </arg>
+                        </compilerArgs>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>com.google.errorprone</groupId>
+                                <artifactId>error_prone_core</artifactId>
+                                <version>${errorprone.plugin.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
                     </configuration>
+
                 </plugin>
                 <!-- report plugins -->
                 <plugin>
@@ -344,6 +368,12 @@
                 <groupId>org.java-websocket</groupId>
                 <artifactId>Java-WebSocket</artifactId>
                 <version>${java-websocket.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.errorprone</groupId>
+                <artifactId>error_prone_core</artifactId>
+                <version>${errorprone.plugin.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

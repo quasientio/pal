@@ -56,7 +56,7 @@ public final class Wrapper {
     // avoid instantiation
   }
 
-  public static boolean isWrappableCharSeqClass(Class clazz) {
+  public static boolean isWrappableCharSeqClass(Class<?> clazz) {
     return reconstructableCharSeqClasses.contains(clazz);
   }
 
@@ -71,8 +71,6 @@ public final class Wrapper {
   /**
    * Helper method for getWrappedObject() that does the actual wrapping work. It is recursive and
    * will be called for each element of an array/collection.
-   *
-   * <p>
    *
    * <pre>
    * Wrappable objects:
@@ -157,10 +155,10 @@ public final class Wrapper {
   }
 
   /**
-   * See getWrappedObjectAux() for a list of valid wrappable types
+   * See getWrappedObjectAux() for a list of valid wrappable types.
    *
-   * @param object
-   * @return
+   * @param object the object to check
+   * @return true if the object is wrappable, false otherwise
    */
   public static boolean isWrappable(java.lang.Object object) {
     return object == null
@@ -172,11 +170,9 @@ public final class Wrapper {
         || (object.getClass().isArray()
             && Classes.isPrimitiveOrWrapper(object.getClass().getComponentType()))
         ||
-        /**
-         * String[] will pass the last check so this check is redundant, but they're so common we
-         * can optimize a bit by checking first for String[] and avoid going through its interfaces
-         * as the next check does *
-         */
+        // String[] will pass the last check so this check is redundant, but they're so common we
+        // can optimize a bit by checking first for String[] and avoid going through its interfaces
+        // as the next check does *
         (object.getClass().isArray() && String.class.equals(object.getClass().getComponentType()))
         || (object.getClass().isArray()
             && isWrappableCharSeqClass(object.getClass().getComponentType()));

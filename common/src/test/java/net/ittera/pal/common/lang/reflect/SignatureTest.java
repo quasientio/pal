@@ -19,7 +19,7 @@
 
 package net.ittera.pal.common.lang.reflect;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
@@ -31,7 +31,7 @@ public class SignatureTest {
     public DummyClassForSignatureTest() {}
   }
 
-  protected Class declaringType;
+  protected Class<?> declaringType;
   protected String declaringTypeName;
   protected int modifiers;
   protected String name;

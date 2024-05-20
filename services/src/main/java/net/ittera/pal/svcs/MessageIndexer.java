@@ -20,7 +20,7 @@
 package net.ittera.pal.svcs;
 
 import static java.lang.String.format;
-import static net.ittera.pal.serdes.colfer.ColferUtils.toJSON;
+import static net.ittera.pal.serdes.colfer.ColferUtils.toJson;
 
 import java.util.List;
 import java.util.Map;
@@ -44,13 +44,13 @@ class MessageIndexer {
     logger.info("initialized MessageIndexer with server URL: {}", indexingServerUrl);
   }
 
-  void bulkIndex(String logName, List<Map> msgsWithCtx) {
+  void bulkIndex(String logName, List<Map<String, Object>> messagesWithContext) {
     if (logger.isDebugEnabled()) {
-      logger.debug("bulk-indexing {} messages", msgsWithCtx.size());
+      logger.debug("bulk-indexing {} messages", messagesWithContext.size());
     }
 
     final StringBuilder queryB = new StringBuilder();
-    msgsWithCtx.forEach(
+    messagesWithContext.forEach(
         map -> {
           Message msg = (Message) map.get("message");
           MessageContext ctxt = (MessageContext) map.get("context");
@@ -63,7 +63,7 @@ class MessageIndexer {
           queryB.append(printMessage(msg)).append("\n");
         });
 
-    HttpResponse<JsonNode> response = null;
+    HttpResponse<JsonNode> response;
     String bulkUrl = String.format("%s/_bulk", indexingServerUrl);
     response =
         Unirest.put(bulkUrl)
@@ -72,11 +72,7 @@ class MessageIndexer {
             .body(queryB.toString())
             .asJson();
 
-    if (logger.isDebugEnabled()) {
-      logger.debug("sent bulk query:\n{}", queryB.toString());
-      logger.debug("response status: {}", response.getStatusText());
-      logger.debug("errors?: {}", response.getBody().getObject().get("errors"));
-    }
+    debugLog(queryB.toString(), response);
   }
 
   void index(String logName, long offset, Message message) {
@@ -85,11 +81,7 @@ class MessageIndexer {
     }
 
     final String id = String.valueOf(offset);
-
     String putQuery = String.format("%s/%s/_create/%s", indexingServerUrl, logName, id);
-    if (logger.isDebugEnabled()) {
-      logger.debug("put query: {}", putQuery);
-    }
 
     HttpResponse<JsonNode> response;
     response =
@@ -98,35 +90,34 @@ class MessageIndexer {
             .header("Content-Type", "application/json")
             .body(printMessage(message))
             .asJson();
-    if (logger.isDebugEnabled()) {
-      logger.debug("response status: {}", response.getStatusText());
-      logger.debug("response body: {}", response.getBody());
-    }
+    debugLog(putQuery, response);
   }
 
   private static String getMessageUuid(Message msg) {
     final MessageType messageType = MessageType.fromByte(msg.getMessageType());
-    switch (messageType) {
-      case EXEC_MESSAGE:
-        return msg.getExecMessage().getMessageUuid();
-      case INTERCEPT_MESSAGE:
-        return msg.getInterceptMessage().getMessageUuid();
-      default:
-        return null;
-    }
+    return switch (messageType) {
+      case EXEC_MESSAGE -> msg.getExecMessage().getMessageUuid();
+      case INTERCEPT_MESSAGE -> msg.getInterceptMessage().getMessageUuid();
+      default -> null;
+    };
   }
 
   private String printMessage(Message msg) {
     final MessageType messageType = MessageType.fromByte(msg.getMessageType());
-    switch (messageType) {
-      case EXEC_MESSAGE:
-        return toJSON(msg.getExecMessage(), true);
-      case INTERCEPT_MESSAGE:
-        return toJSON(msg.getInterceptMessage(), true);
-      case INTERCEPT_REPLY:
-        return toJSON(msg.getInterceptReply(), true);
-      default:
-        throw new RuntimeException(format("unknown message type: %s", msg.toString()));
+    return switch (messageType) {
+      case EXEC_MESSAGE -> toJson(msg.getExecMessage(), true);
+      case INTERCEPT_MESSAGE -> toJson(msg.getInterceptMessage(), true);
+      case INTERCEPT_REPLY -> toJson(msg.getInterceptReply(), true);
+      default -> throw new RuntimeException(format("unknown message type: %s", msg));
+    };
+  }
+
+  private void debugLog(String query, HttpResponse<JsonNode> response) {
+    if (logger.isDebugEnabled()) {
+      logger.debug("sent query:\n{}", query);
+      logger.debug("response status: {}", response.getStatusText());
+      logger.debug("response body: {}", response.getBody());
+      logger.debug("errors?: {}", response.getBody().getObject().get("errors"));
     }
   }
 }

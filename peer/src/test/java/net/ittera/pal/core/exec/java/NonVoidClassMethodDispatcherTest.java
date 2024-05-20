@@ -23,7 +23,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Random;
 import java.util.stream.DoubleStream;
@@ -38,49 +43,9 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.hamcrest.Matchers;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
-
-// auxiliary class
-class ClassForNonVoidClassMethodTest {
-  private static final Random random = new Random();
-
-  static short getRandomMinute() {
-    return (short) random.nextInt(60);
-  }
-
-  static Double max(Double a, Double b) {
-    return Math.max(a, b);
-  }
-
-  protected static double min(double a, double b) {
-    return Math.min(a, b);
-  }
-
-  static double max(double... doubles) {
-    return DoubleStream.of(doubles).max().getAsDouble();
-  }
-
-  static double divBy(int number, int divisor) {
-    return number / divisor;
-  }
-
-  public static int aPublicMethod() {
-    return add(4, 5);
-  }
-
-  private static Integer add(Integer a, Integer b) {
-    if (a == null) {
-      return b;
-    }
-    if (b == null) {
-      return a;
-    }
-    return a + b;
-  }
-}
 
 @RunWith(MockitoJUnitRunner.class)
 public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest {
@@ -89,6 +54,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   private final String sourceFilename = "NotARealClass.java";
 
   @Before
+  @Override
   public void setUp() {
     super.setUp();
     dispatcher =
@@ -473,7 +439,8 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     // dispatch
     try {
-      Object returned = dispatcher.dispatch(ctxt, this, null, args);
+      @SuppressWarnings("unused")
+      Object unused = dispatcher.dispatch(ctxt, this, null, args);
       fail("Should have failed with a div by zero overflow");
     } catch (ArithmeticException ae) {
       // all good
@@ -516,14 +483,9 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
         is("java.lang.ArithmeticException"));
   }
 
-  @Ignore
-  @Test
-  @Override
-  public void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown() throws Exception {}
-
   @Override
   @Test
-  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() throws Exception {
+  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() {
 
     String methodName = "phantomMethod";
     Class<?>[] parameterTypes = {int.class, int.class};
@@ -557,7 +519,7 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
   @Override
   @Test
   public void dispatchIncoming_publicAccessibleObject_noException() throws Throwable {
-    String methodName = "aPublicMethod";
+    String methodName = "somePublicMethod";
     Class<?>[] parameterTypes = {};
     Object[] args = {};
     ObjectRef[] argObjRefs = {};
@@ -686,5 +648,46 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
     replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
     assertNotNull(replyMsg.getReturnValue());
     assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  // auxiliary class
+  @SuppressWarnings("unused")
+  private static class ClassForNonVoidClassMethodTest {
+    private static final Random random = new Random();
+
+    static short getRandomMinute() {
+      return (short) random.nextInt(60);
+    }
+
+    static Double max(Double a, Double b) {
+      return Math.max(a, b);
+    }
+
+    static double max(double... doubles) {
+      return DoubleStream.of(doubles).max().orElseThrow();
+    }
+
+    protected static double min(double a, double b) {
+      return Math.min(a, b);
+    }
+
+    @SuppressWarnings("NarrowCalculation")
+    static double divBy(int number, int divisor) {
+      return number / divisor;
+    }
+
+    public static int somePublicMethod() {
+      return add(4, 5);
+    }
+
+    private static Integer add(Integer a, Integer b) {
+      if (a == null) {
+        return b;
+      }
+      if (b == null) {
+        return a;
+      }
+      return a + b;
+    }
   }
 }

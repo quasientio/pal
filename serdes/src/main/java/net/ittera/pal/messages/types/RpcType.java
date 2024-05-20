@@ -17,12 +17,27 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.common.cli;
+package net.ittera.pal.messages.types;
 
-/**
- * By having the parent Pal (picocli) command class implement this interface, we can use
- * the @ParentCommand annotation in Pal's subcommands without a cyclic dependency.
- */
-public interface PALCommand {
-  public String getPalDirectoryConnectionString();
+public enum RpcType {
+  RPC((byte) 1),
+  JSONRPC((byte) 2);
+
+  private final byte idx;
+
+  RpcType(byte idx) {
+    this.idx = idx;
+  }
+
+  public static RpcType fromByte(byte typeAsByte) {
+    return switch (typeAsByte) {
+      case 1 -> RPC;
+      case 2 -> JSONRPC;
+      default -> throw new IllegalArgumentException("Unknown RPC type: " + typeAsByte);
+    };
+  }
+
+  public byte toByte() {
+    return idx;
+  }
 }

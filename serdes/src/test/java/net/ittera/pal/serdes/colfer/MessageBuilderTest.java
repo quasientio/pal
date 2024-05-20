@@ -1,13 +1,30 @@
 package net.ittera.pal.serdes.colfer;
 
-import static net.ittera.pal.messages.types.ExecMessageType.*;
-import static org.junit.Assert.*;
+import static net.ittera.pal.messages.types.ExecMessageType.GET_FIELD;
+import static net.ittera.pal.messages.types.ExecMessageType.GET_STATIC;
+import static net.ittera.pal.messages.types.ExecMessageType.PUT_FIELD;
+import static net.ittera.pal.messages.types.ExecMessageType.PUT_FIELD_DONE;
+import static net.ittera.pal.messages.types.ExecMessageType.PUT_STATIC;
+import static net.ittera.pal.messages.types.ExecMessageType.PUT_STATIC_DONE;
+import static net.ittera.pal.messages.types.ExecMessageType.RETURN_VALUE;
+import static net.ittera.pal.messages.types.ExecMessageType.THROWABLE;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.FieldOpType;
@@ -28,33 +45,37 @@ import net.ittera.pal.messages.colfer.InterceptReply;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.Parameter;
-import net.ittera.pal.messages.types.*;
+import net.ittera.pal.messages.types.ControlCommandType;
+import net.ittera.pal.messages.types.ControlStatusType;
+import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.InternalHeaderType;
+import net.ittera.pal.messages.types.MessageType;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
-class DummyClassForTest {
-  int anInt;
-  static String aStaticField;
-  Object anObject;
-
-  public DummyClassForTest() {}
-
-  public DummyClassForTest(String str1, int number) {}
-
-  public void dummyMethodJustPrimitiveArgs(String str1, int number, Boolean myboo) {}
-
-  public void dummyMethod(String str1, int number, List someList) {}
-
-  public int addInts(int x, int y) {
-    return x + y;
-  }
-
-  public static void dummyStaticMethod(String str1, String str2, boolean myboo) {}
-}
-
-/** Naming convention to use: methodName_stateUnderTest_expectedBehavior */
+// Naming convention to use: methodName_stateUnderTest_expectedBehavior
 public class MessageBuilderTest {
+
+  @SuppressWarnings({"unused", "rawtypes"})
+  static class DummyClassForTest {
+    int anInt;
+    static String aStaticField;
+    Object anObject;
+
+    public DummyClassForTest() {}
+
+    public DummyClassForTest(String str1, int number) {}
+
+    public void dummyMethodJustPrimitiveArgs(String str1, int number, Boolean myboo) {}
+
+    public void dummyMethod(String str1, int number, List someList) {}
+
+    public int addInts(int x, int y) {
+      return x + y;
+    }
+
+    public static void dummyStaticMethod(String str1, String str2, boolean myboo) {}
+  }
 
   static class ExtractedFieldOpMessageInfo {
     ObjectRef targetObjectRef;
@@ -66,43 +87,41 @@ public class MessageBuilderTest {
   // <editor-fold desc="Helper methods">
 
   private net.ittera.pal.common.runtime.Context createContextForConstructor(
-      Class constructorClass, Class... constructorArgTypes) throws Exception {
+      Class<?> constructorClass, Class<?>... constructorArgTypes) throws Exception {
     ConstructorSignature constructorSignature =
         new ConstructorSignature(constructorClass.getDeclaredConstructor(constructorArgTypes));
     String sourceFile = "MessageBuilderTest.java";
     int lineNumber = 17;
-    Class withinType = constructorClass;
     return new net.ittera.pal.common.runtime.Context(
-        sourceFile, lineNumber, withinType, constructorSignature);
+        sourceFile, lineNumber, constructorClass, constructorSignature);
   }
 
   private net.ittera.pal.common.runtime.Context createContextForInstanceMethod(
-      Class clazz, String method, Class... methodArgTypes) throws Exception {
+      Class<?> clazz, String method, Class<?>... methodArgTypes) throws Exception {
     MethodSignature methodSignature =
         new MethodSignature(clazz.getDeclaredMethod(method, methodArgTypes));
     String sourceFile = "MessageBuilderTest.java";
     int lineNumber = 20;
-    Class withinType = clazz;
     return new net.ittera.pal.common.runtime.Context(
-        sourceFile, lineNumber, withinType, methodSignature);
+        sourceFile, lineNumber, clazz, methodSignature);
   }
 
   private net.ittera.pal.common.runtime.Context createContextForClassMethod(
-      MethodSignature methodSignature) throws Exception {
+      MethodSignature methodSignature) {
 
     String sourceFile = "Arrays.java";
     int lineNumber = 2000;
-    Class withinType = Arrays.class;
+    Class<?> withinType = Arrays.class;
     return new net.ittera.pal.common.runtime.Context(
         sourceFile, lineNumber, withinType, methodSignature);
   }
 
   private net.ittera.pal.common.runtime.Context createContextForFieldOp(
-      Class clazz, String fieldName) throws Exception {
+      Class<?> clazz, String fieldName) throws Exception {
     FieldSignature fieldSignature = new FieldSignature(clazz.getDeclaredField(fieldName));
     String sourceFile = "MessageBuilderTest.java";
     int lineNumber = 20;
-    Class withinType = this.getClass();
+    Class<?> withinType = this.getClass();
     return new net.ittera.pal.common.runtime.Context(
         sourceFile, lineNumber, withinType, fieldSignature);
   }
@@ -206,7 +225,7 @@ public class MessageBuilderTest {
     assertEquals(expectedDispatchSeq, execMessage.getDispatchSeq());
 
     execMessage = messageBuilder.buildEmptyConstructor(peerUuid, className);
-    assertEquals(expectedBuilderSeq++, execMessage.getBuilderSeq());
+    assertEquals(expectedBuilderSeq, execMessage.getBuilderSeq());
     assertEquals(expectedDispatchSeq, execMessage.getDispatchSeq());
 
     messageBuilder.resetThreadLocalSequence();
@@ -268,7 +287,7 @@ public class MessageBuilderTest {
   @Test
   public void buildConstructor_withContext_constructorMessage() throws Exception {
     UUID peerUuid = UUID.randomUUID();
-    Class clazz = DummyClassForTest.class;
+    var clazz = DummyClassForTest.class;
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     Object[] args = {"test", 123};
@@ -303,7 +322,7 @@ public class MessageBuilderTest {
     UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
-    Class clazz = ArrayList.class;
+    var clazz = ArrayList.class;
     int arrayListInitialCapacity = 23;
     String[] parameterTypes = new String[] {"int"};
     Object[] args = {arrayListInitialCapacity};
@@ -335,7 +354,6 @@ public class MessageBuilderTest {
     UUID peerUuid = UUID.randomUUID();
     String className = "TestClassName";
     String methodName = "testMethod";
-    Object target = new Object();
     ObjectRef targetObjRef = ObjectRef.randomRef();
     String[] parameterTypes = {"String", "int"};
     Object[] args = {"test", 123};
@@ -358,11 +376,11 @@ public class MessageBuilderTest {
     UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
-    Class clazz = DummyClassForTest.class;
+    var clazz = DummyClassForTest.class;
     String methodName = "dummyMethod";
     Object target = new DummyClassForTest();
     ObjectRef targetObjRef = ObjectRef.randomRef();
-    Object[] args = {"test", 123, new ArrayList()};
+    Object[] args = {"test", 123, new ArrayList<>()};
     ObjectRef[] argObjRefs = {null, null, ObjectRef.randomRef()};
     Context instanceMethodContext =
         createContextForInstanceMethod(clazz, methodName, String.class, int.class, List.class);
@@ -508,29 +526,6 @@ public class MessageBuilderTest {
     assertNotNull(execMessage.getClassMethodCall().getContext());
   }
 
-  @Ignore(
-      "TODO: enable and complete once we implement wrapping of Object arrays in the Wrapper class")
-  @Test
-  public void buildClassMethod_withContextAndObjectArrayArgs_classMethodMessage() throws Exception {
-    UUID peerUuid = UUID.randomUUID();
-    // Arrays.deepEquals(Object[] a1, Object[] a2)
-    Context context =
-        createContextForClassMethod(
-            new MethodSignature(
-                Arrays.class.getDeclaredMethod(
-                    "deepEquals", new Class[] {Object[].class, Object[].class})));
-    Object sender = this;
-    ObjectRef senderObjRef = ObjectRef.randomRef();
-    Object[] args = new Object[] {new Object[] {4.5f, 54.2f}, new Object[] {"float1", "float2"}};
-    ObjectRef[] argObjRefs = new ObjectRef[] {null, null};
-    ExecMessage execMessage =
-        messageBuilderWithContext.buildClassMethod(
-            peerUuid, context, sender, senderObjRef, args, argObjRefs);
-
-    // assert expected values of ExecMessage
-    // TODO
-  }
-
   @Test
   public void buildClassMethod_staticMethodCall_classMethodMessage() throws ClassNotFoundException {
     UUID peerUuid = UUID.randomUUID();
@@ -538,7 +533,7 @@ public class MessageBuilderTest {
     ObjectRef senderObjRef = ObjectRef.randomRef();
     // Arrays.fill(boolean[] a, boolean val)
     String method = "fill";
-    Class clazz = Arrays.class;
+    var clazz = Arrays.class;
     String[] parameterTypes = new String[] {"[Z", "boolean"};
     Object[] args = new Object[] {new boolean[] {false, false, false}, true};
 
@@ -576,53 +571,46 @@ public class MessageBuilderTest {
   @Test
   public void buildFieldOp_allFourOps_fieldOpMessages() throws Exception {
 
+    // create a list of specific args for each of the four field op types
+    Map<String, Object> map = new HashMap<>();
+    map.put("messageType", GET_FIELD);
+    map.put("target", new Object());
+    map.put("targetObjectRef", ObjectRef.randomRef());
+    List<Map<String, Object>> listOfFieldOpArgs = new ArrayList<>();
+    listOfFieldOpArgs.add(map);
+
+    map = new HashMap<>();
+    map.put("messageType", PUT_FIELD);
+    map.put("target", new Object());
+    map.put("targetObjectRef", ObjectRef.from("492849"));
+    map.put("arg", "an argument");
+    map.put("argObjRef", ObjectRef.from("234987"));
+    listOfFieldOpArgs.add(map);
+
+    map = new HashMap<>();
+    map.put("messageType", GET_STATIC);
+    listOfFieldOpArgs.add(map);
+
+    map = new HashMap<>();
+    map.put("messageType", PUT_STATIC);
+    map.put("arg", "an argument");
+    map.put("argObjRef", ObjectRef.from("8702347"));
+    listOfFieldOpArgs.add(map);
+
     // common args for all 4 ops
-    UUID peerUuid = UUID.randomUUID();
-    Class targetClass = DummyClassForTest.class;
     String fieldName = "anInt";
+    var targetClass = DummyClassForTest.class;
+    UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     Context context = createContextForFieldOp(targetClass, fieldName);
 
-    // create a list of specific args for each of the four field op types
-    List<Map<String, Object>> listOfFieldOpArgs =
-        Arrays.asList(
-            new HashMap<String, Object>() {
-              {
-                put("messageType", GET_FIELD);
-                put("target", new Object());
-                put("targetObjectRef", ObjectRef.randomRef());
-              }
-            },
-            new HashMap<String, Object>() {
-              {
-                put("messageType", PUT_FIELD);
-                put("target", new Object());
-                put("targetObjectRef", ObjectRef.from("492849"));
-                put("arg", "an argument");
-                put("argObjRef", ObjectRef.from("234987"));
-              }
-            },
-            new HashMap<String, Object>() {
-              {
-                put("messageType", GET_STATIC);
-              }
-            },
-            new HashMap<String, Object>() {
-              {
-                put("messageType", PUT_STATIC);
-                put("arg", "an argument");
-                put("argObjRef", ObjectRef.from("8702347"));
-              }
-            });
-
     // call buildFieldOp for each of the four field op types
-    for (Map<String, Object> map : listOfFieldOpArgs) {
-      ExecMessageType execMessageType = (ExecMessageType) map.get("messageType");
-      Object target = map.get("target");
-      ObjectRef targetObjRef = (ObjectRef) map.get("targetObjectRef");
-      Object arg = map.get("arg");
-      ObjectRef argObjRef = (ObjectRef) map.get("argObjRef");
+    for (Map<String, Object> fieldOpArgs : listOfFieldOpArgs) {
+      ExecMessageType execMessageType = (ExecMessageType) fieldOpArgs.get("messageType");
+      ObjectRef targetObjRef = (ObjectRef) fieldOpArgs.get("targetObjectRef");
+      Object arg = fieldOpArgs.get("arg");
+      ObjectRef argObjRef = (ObjectRef) fieldOpArgs.get("argObjRef");
       ExecMessage execMessage =
           messageBuilderWithContext.buildFieldOp(
               peerUuid,
@@ -660,7 +648,7 @@ public class MessageBuilderTest {
   public void buildFieldOpDone_putFieldDone_fieldPutDoneMessage() throws Exception {
     MessageBuilder builder = new MessageBuilder();
     UUID peerUuid = UUID.randomUUID();
-    Class targetClass = DummyClassForTest.class;
+    var targetClass = DummyClassForTest.class;
     String fieldName = "anInt";
     Context context = createContextForFieldOp(targetClass, fieldName);
     AccessibleObject field = targetClass.getDeclaredField("anInt");
@@ -683,7 +671,7 @@ public class MessageBuilderTest {
   public void buildFieldOpDone_putStaticDone_staticFieldPutDoneMessage() throws Exception {
     MessageBuilder builder = new MessageBuilder();
     UUID peerUuid = UUID.randomUUID();
-    Class targetClass = DummyClassForTest.class;
+    var targetClass = DummyClassForTest.class;
     String fieldName = "anInt";
     Context context = createContextForFieldOp(targetClass, fieldName);
     AccessibleObject field = targetClass.getDeclaredField(fieldName);
@@ -801,7 +789,7 @@ public class MessageBuilderTest {
   public void buildPutStaticDone_withAccessibleObject_staticFieldPutDoneMessage()
       throws NoSuchFieldException {
     UUID peerUuid = UUID.randomUUID();
-    Class targetClass = DummyClassForTest.class;
+    var targetClass = DummyClassForTest.class;
     String fieldName = "aStaticField";
     AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
     String staticFieldPutUuid = UUID.randomUUID().toString();
@@ -882,7 +870,7 @@ public class MessageBuilderTest {
       throws NoSuchFieldException {
     MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
     UUID peerUuid = UUID.randomUUID();
-    Class targetClass = DummyClassForTest.class;
+    var targetClass = DummyClassForTest.class;
     String fieldName = "anObject";
     AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
     String instanceFieldPutUuid = UUID.randomUUID().toString();
@@ -978,13 +966,13 @@ public class MessageBuilderTest {
     UUID interceptRequestUuid = UUID.randomUUID();
     UUID peer = UUID.randomUUID();
     InterceptType type = InterceptType.AFTER;
-    Class clazz = DummyClassForTest.class;
-    Class callbackClass = this.getClass();
+    var clazz = DummyClassForTest.class;
+    var callbackClass = this.getClass();
     String callbackMethod = "fakeCallbackMethod";
     String fieldName = "anInt";
     InterceptableFieldOp interceptableFieldOp =
         new InterceptableFieldOp(fieldName, FieldOpType.GET);
-    InterceptRequest interceptRequest =
+    var interceptRequest =
         new InterceptRequest<>(
             interceptRequestUuid,
             peer,
@@ -1014,14 +1002,14 @@ public class MessageBuilderTest {
     UUID interceptRequestUuid = UUID.randomUUID();
     UUID peer = UUID.randomUUID();
     InterceptType type = InterceptType.BEFORE;
-    Class clazz = DummyClassForTest.class;
-    Class callbackClass = this.getClass();
+    var clazz = DummyClassForTest.class;
+    var callbackClass = this.getClass();
     String callbackMethod = "fakeCallbackMethod";
     String method = "dummyMethod";
     List<String> parameterTypes = Arrays.asList("String", "int", "java.util.List");
     InterceptableMethodCall interceptableMethodCall =
         new InterceptableMethodCall(method, parameterTypes);
-    InterceptRequest interceptRequest =
+    var interceptRequest =
         new InterceptRequest<>(
             interceptRequestUuid,
             peer,
@@ -1069,10 +1057,10 @@ public class MessageBuilderTest {
     UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
-    Class clazz = DummyClassForTest.class;
+    var clazz = DummyClassForTest.class;
     Object target = new DummyClassForTest();
     ObjectRef targetObjRef = ObjectRef.randomRef();
-    Object[] args = {"test", 123, new ArrayList()};
+    Object[] args = {"test", 123, new ArrayList<>()};
     ObjectRef[] argObjRefs = {null, null, ObjectRef.randomRef()};
     Context instanceMethodContext =
         createContextForInstanceMethod(clazz, "dummyMethod", String.class, int.class, List.class);
@@ -1157,8 +1145,7 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void buildCallbackForInterceptRequest_classMethodToBeIntercepted_callbackExecMessage()
-      throws Exception {
+  public void buildCallbackForInterceptRequest_classMethodToBeIntercepted_callbackExecMessage() {
     // create an ExecMessage out of a ClassMethod that we can use as interceptedMessage
     UUID peerUuid = UUID.randomUUID();
     Object sender = this;
@@ -1223,7 +1210,7 @@ public class MessageBuilderTest {
     Object target = new DummyClassForTest();
     ObjectRef targetObjRef = ObjectRef.randomRef();
     String methodName = "dummyMethod";
-    Object[] args = {"test", 123, new ArrayList()};
+    Object[] args = {"test", 123, new ArrayList<>()};
     ObjectRef[] argObjRefs = {null, null, ObjectRef.randomRef()};
     Context context =
         createContextForInstanceMethod(
@@ -1273,57 +1260,50 @@ public class MessageBuilderTest {
   public void buildCallbackForInterceptRequest_fieldOpsToBeIntercepted_callbackExecMessages()
       throws Exception {
 
+    // create a list of specific args for each of the four field op types
+    Map<String, Object> map = new HashMap<>();
+    map.put("messageType", GET_FIELD);
+    map.put("fieldOpType", FieldOpType.GET);
+    map.put("target", new DummyClassForTest());
+    map.put("targetObjectRef", ObjectRef.randomRef());
+    List<Map<String, Object>> listOfFieldOpArgs = new ArrayList<>();
+    listOfFieldOpArgs.add(map);
+
+    map = new HashMap<>();
+    map.put("messageType", PUT_FIELD);
+    map.put("fieldOpType", FieldOpType.PUT);
+    map.put("target", new DummyClassForTest());
+    map.put("targetObjectRef", ObjectRef.from("734524"));
+    map.put("arg", "87");
+    map.put("argObjRef", ObjectRef.from("2872346"));
+    listOfFieldOpArgs.add(map);
+
+    map = new HashMap<>();
+    map.put("fieldOpType", FieldOpType.GET);
+    map.put("messageType", GET_STATIC);
+    listOfFieldOpArgs.add(map);
+
+    map = new HashMap<>();
+    map.put("fieldOpType", FieldOpType.PUT);
+    map.put("messageType", PUT_STATIC);
+    map.put("arg", "378");
+    map.put("argObjRef", ObjectRef.from("2987234"));
+    listOfFieldOpArgs.add(map);
+
     // common for all four field ops
     UUID peerUuid = UUID.randomUUID();
     Object sender = this;
     ObjectRef senderObjRef = ObjectRef.randomRef();
     String fieldName = "anInt";
 
-    // create a list of specific args for each of the four field op types
-    List<Map<String, Object>> listOfFieldOpArgs =
-        Arrays.asList(
-            new HashMap<String, Object>() {
-              {
-                put("messageType", GET_FIELD);
-                put("fieldOpType", FieldOpType.GET);
-                put("target", new DummyClassForTest());
-                put("targetObjectRef", ObjectRef.randomRef());
-              }
-            },
-            new HashMap<String, Object>() {
-              {
-                put("messageType", PUT_FIELD);
-                put("fieldOpType", FieldOpType.PUT);
-                put("target", new DummyClassForTest());
-                put("targetObjectRef", ObjectRef.from("734524"));
-                put("arg", "87");
-                put("argObjRef", ObjectRef.from("2872346"));
-              }
-            },
-            new HashMap<String, Object>() {
-              {
-                put("fieldOpType", FieldOpType.GET);
-                put("messageType", GET_STATIC);
-              }
-            },
-            new HashMap<String, Object>() {
-              {
-                put("fieldOpType", FieldOpType.PUT);
-                put("messageType", PUT_STATIC);
-                put("arg", "378");
-                put("argObjRef", ObjectRef.from("2987234"));
-              }
-            });
-
     // call buildFieldOp for each of the four field op types
-    for (Map<String, Object> map : listOfFieldOpArgs) {
-      ExecMessageType execMessageType = (ExecMessageType) map.get("messageType");
-      FieldOpType fieldOpType = (FieldOpType) map.get("fieldOpType");
-      Class targetClass = DummyClassForTest.class;
-      Object target = map.get("target");
-      ObjectRef targetObjRef = (ObjectRef) map.get("targetObjectRef");
-      Object arg = map.get("arg");
-      ObjectRef argObjRef = (ObjectRef) map.get("argObjRef");
+    for (Map<String, Object> fieldOpArgs : listOfFieldOpArgs) {
+      ExecMessageType execMessageType = (ExecMessageType) fieldOpArgs.get("messageType");
+      FieldOpType fieldOpType = (FieldOpType) fieldOpArgs.get("fieldOpType");
+      var targetClass = DummyClassForTest.class;
+      ObjectRef targetObjRef = (ObjectRef) fieldOpArgs.get("targetObjectRef");
+      Object arg = fieldOpArgs.get("arg");
+      ObjectRef argObjRef = (ObjectRef) fieldOpArgs.get("argObjRef");
       Context context = createContextForFieldOp(targetClass, fieldName);
       ExecMessage interceptedExecMessage =
           messageBuilderWithContext.buildFieldOp(
@@ -1363,14 +1343,12 @@ public class MessageBuilderTest {
 
       // compare argument values
       switch (execMessageType) {
-        case GET_FIELD:
+        case GET_FIELD, GET_STATIC:
           break;
         case PUT_FIELD:
           assertEquals(
               interceptedExecMessage.getInstanceFieldPut().getValueObject().getValue(),
               callbackExecMessage.getClassMethodCall().getParameters()[0].getValue().getValue());
-          break;
-        case GET_STATIC:
           break;
         case PUT_STATIC:
           assertEquals(
@@ -1388,27 +1366,23 @@ public class MessageBuilderTest {
   // <editor-fold desc="Throwable messages">
   @Test
   public void buildAccessibleObjectThrowable_withConstructor_raisedThrowableMessage() {
+
+    List<AccessibleObject> accessibleObjects = new ArrayList<>();
+    accessibleObjects.add(DummyClassForTest.class.getDeclaredConstructors()[0]);
+    accessibleObjects.add(DummyClassForTest.class.getDeclaredMethods()[0]);
+    accessibleObjects.add(DummyClassForTest.class.getDeclaredFields()[0]);
+
     UUID peerUuid = UUID.randomUUID();
     String throwableMessage = "my throwable message";
     Throwable throwable = new Throwable(throwableMessage);
     String responseToUuid = UUID.randomUUID().toString();
 
-    List<AccessibleObject> accessibleObjects =
-        new ArrayList() {
-          {
-            add(DummyClassForTest.class.getDeclaredConstructors()[0]);
-            add(DummyClassForTest.class.getDeclaredMethods()[0]);
-            add(DummyClassForTest.class.getDeclaredFields()[0]);
-            add(new AccessibleObject() {}); // anonymous class to check for unsupported types
-          }
-        };
-
     for (AccessibleObject accessibleObject : accessibleObjects) {
-      ExecMessage execMessage = null;
+      ExecMessage execMessage;
       try {
         execMessage =
             messageBuilder.buildAccessibleObjectThrowable(
-                peerUuid, Optional.of(accessibleObject), null, throwable, responseToUuid);
+                peerUuid, accessibleObject, null, throwable, responseToUuid);
       } catch (UnsupportedOperationException e) {
         assertTrue(e.getMessage().contains("Unsupported accessibleObject type:"));
         continue;
@@ -1426,10 +1400,10 @@ public class MessageBuilderTest {
             ((Method) accessibleObject).getName(), execMessage.getRaisedThrowable().getMethod());
       } else if (accessibleObject instanceof Constructor) {
         assertEquals(
-            ((Constructor) accessibleObject).getModifiers(),
+            ((Constructor<?>) accessibleObject).getModifiers(),
             execMessage.getRaisedThrowable().getModifiers());
         assertEquals(
-            ((Constructor) accessibleObject).getDeclaringClass().getName(),
+            ((Constructor<?>) accessibleObject).getDeclaringClass().getName(),
             execMessage.getRaisedThrowable().getConstructor());
       } else if (accessibleObject instanceof Field) {
         assertEquals(
@@ -1461,12 +1435,12 @@ public class MessageBuilderTest {
     Throwable throwable = new Throwable(throwableMessage);
     String responseToUuid = UUID.randomUUID().toString();
 
-    Arrays.asList(ExecutableObjectType.values()).stream()
+    Arrays.asList(ExecutableObjectType.values())
         .forEach(
             executableObjectType -> {
               ExecMessage execMessage =
                   messageBuilder.buildAccessibleObjectThrowable(
-                      peerUuid, Optional.empty(), executableObjectType, throwable, responseToUuid);
+                      peerUuid, null, executableObjectType, throwable, responseToUuid);
 
               assertNotNull(execMessage);
               assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
@@ -1506,7 +1480,7 @@ public class MessageBuilderTest {
   @Test
   public void buildReturnValue_withConstructor_returnValueMessage() {
     UUID peerUuid = UUID.randomUUID();
-    Constructor constructor = DummyClassForTest.class.getConstructors()[0];
+    var constructor = DummyClassForTest.class.getConstructors()[0];
     Object returnValue = new DummyClassForTest();
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
     String responseToUuid = UUID.randomUUID().toString();
@@ -1609,8 +1583,7 @@ public class MessageBuilderTest {
   public void buildDeleteObjectControlMessage_withNoBody_deleteControlMessage() {
     MessageBuilder builder = new MessageBuilder(Boolean.toString(false));
     UUID fromPeer = UUID.randomUUID();
-    String body = null;
-    ControlMessage controlMessage = builder.buildDeleteObjectControlMessage(fromPeer, body);
+    ControlMessage controlMessage = builder.buildDeleteObjectControlMessage(fromPeer, null);
 
     assertNotNull(controlMessage);
     assertNotNull(controlMessage.getMessageUuid());

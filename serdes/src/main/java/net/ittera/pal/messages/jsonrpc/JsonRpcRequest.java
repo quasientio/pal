@@ -1,5 +1,6 @@
 package net.ittera.pal.messages.jsonrpc;
 
+import com.google.common.base.Splitter;
 import com.google.gson.annotations.SerializedName;
 import java.util.Arrays;
 import java.util.List;
@@ -54,8 +55,8 @@ import net.ittera.pal.messages.types.JsonRpcRequestType;
  * <p>The following table shows the mapping between the method field and the ExecMessageType enum:
  *
  * <pre>
- * <p>
- * <table>
+ *
+ * <p><table>
  * <tr>
  * <th>Method field</th>
  * <th>ExecMessageType</th>
@@ -91,7 +92,6 @@ import net.ittera.pal.messages.types.JsonRpcRequestType;
  * <td>PUT_INSTANCE_FIELD</td>
  * </tr>
  * </table>
- * <p>
  * </pre>
  */
 public class JsonRpcRequest extends JsonRpcMessage {
@@ -206,7 +206,7 @@ public class JsonRpcRequest extends JsonRpcMessage {
   }
 
   public void processMethodParts() {
-    final String[] parts = method.split("\\.");
+    final String[] parts = Splitter.on(".").splitToList(method).toArray(new String[0]);
 
     // set objectRef
     this.objectRef =
@@ -215,11 +215,11 @@ public class JsonRpcRequest extends JsonRpcMessage {
     // set execMessageType and other fields
     if (parts[0].startsWith("new:")) {
       execMessageType = ExecMessageType.CONSTRUCTOR;
-      parts[0] = parts[0].split(":")[1]; // Remove 'new'
+      parts[0] = Splitter.on(":").splitToList(parts[0]).get(1); // Remove 'new'
       className = parts[parts.length - 1];
       fullyQualifiedClassName = String.join(".", Arrays.copyOfRange(parts, 0, parts.length));
     } else if (parts[0].startsWith("get:")) {
-      parts[0] = parts[0].split(":")[1]; // Remove 'get'
+      parts[0] = Splitter.on(":").splitToList(parts[0]).get(1); // Remove 'get'
       fieldName = parts[parts.length - 1];
       if (objectRef != null) {
         execMessageType = ExecMessageType.GET_FIELD;
@@ -231,7 +231,7 @@ public class JsonRpcRequest extends JsonRpcMessage {
         fullyQualifiedClassName = String.join(".", Arrays.copyOfRange(parts, 0, parts.length - 1));
       }
     } else if (parts[0].startsWith("put:")) {
-      parts[0] = parts[0].split(":")[1]; // Remove 'put'
+      parts[0] = Splitter.on(":").splitToList(parts[0]).get(1); // Remove 'put'
       fieldName = parts[parts.length - 1];
       if (objectRef != null) {
         execMessageType = ExecMessageType.PUT_FIELD;

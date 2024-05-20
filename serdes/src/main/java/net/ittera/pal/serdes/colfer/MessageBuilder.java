@@ -36,14 +36,13 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.FieldOpType;
@@ -79,8 +78,17 @@ import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldGet;
 import net.ittera.pal.messages.colfer.StaticFieldPut;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
-import net.ittera.pal.messages.jsonrpc.*;
-import net.ittera.pal.messages.types.*;
+import net.ittera.pal.messages.jsonrpc.JsonRpcError;
+import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
+import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResult;
+import net.ittera.pal.messages.types.ControlCommandType;
+import net.ittera.pal.messages.types.ControlStatusType;
+import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.messages.types.InternalHeaderType;
+import net.ittera.pal.messages.types.JsonRpcErrorCode;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcParamsException;
 import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcParseException;
@@ -169,6 +177,8 @@ public final class MessageBuilder {
     }
     final Parameter[] params = new Parameter[paramsTypesLength];
     for (int i = 0; i < paramsTypesLength; i++) {
+      assert argObjRefs != null;
+      assert args != null;
       if (argObjRefs[i] != null) { // parameter is an objectref
         params[i] = createParameter(parameterTypes[i], null, argObjRefs[i]);
       } else if (args[i] != null) { // parameter is string, primitive or wrapper
@@ -190,7 +200,7 @@ public final class MessageBuilder {
             .withThreadName(Thread.currentThread().getName())
             .withDispatchSeq(threadDispatchSequence.get().intValue())
             .withBuilderSeq(threadBuilderSequence.get().getAndIncrement())
-            .withCurrentTime(dtf.format(ZonedDateTime.now()));
+            .withCurrentTime(dtf.format(ZonedDateTime.now(ZoneOffset.UTC)));
 
     if (responseToUuid != null && !responseToUuid.isEmpty()) {
       msgWrapper.setResponseToUuid(responseToUuid);
@@ -235,6 +245,7 @@ public final class MessageBuilder {
   }
 
   public InternalHeader buildWriteAheadHeader(UUID peerUuid) {
+    logger.debug("Building write-ahead header message with peerUuid: {}", peerUuid.toString());
     return buildInternalHeaderMessage(InternalHeaderType.WRITE_AHEAD)
         .withValue(peerUuid.toString());
   }
@@ -277,12 +288,12 @@ public final class MessageBuilder {
   /**
    * Args must be set either in args or argObjRefs. If null in both, value is assumed to be null.
    *
-   * @param peerUuid
-   * @param className
-   * @param parameterTypes
+   * @param peerUuid UUID of the peer
+   * @param className Name of the class
+   * @param parameterTypes Types of the parameters
    * @param args Should be of same length as parameterTypes. For Strings, primitives and wrappers.
    * @param argObjRefs Should be of same length as parameterTypes. For objectRefs.
-   * @return
+   * @return ExecMessage
    */
   public ExecMessage buildNonEmptyConstructor(
       UUID peerUuid,
@@ -311,6 +322,14 @@ public final class MessageBuilder {
    * Convenience method for building a constructor method message packing all arguments in a single
    * array, regardless of type (ObjectRef or not). TODO: other build methods should pack all
    * arguments and objRefs in a single array as well
+   *
+   * @param peerUuid UUID of this peer
+   * @param className Name of the class
+   * @param parameterTypes Types of the parameters
+   * @param args Should be of same length as parameterTypes. For Strings, primitives and wrappers.
+   * @param sender Sender object
+   * @param senderObjRef Sender object reference
+   * @return ExecMessage
    */
   public ExecMessage buildConstructor(
       UUID peerUuid,
@@ -347,6 +366,14 @@ public final class MessageBuilder {
    * Convenience method for building an instance method message packing all arguments in a single
    * array, regardless of type (ObjectRef or not). TODO: other build methods should pack all
    * arguments and objRefs in a single array as well
+   *
+   * @param peerUuid UUID of this peer
+   * @param className Name of the class
+   * @param methodName Name of the method
+   * @param targetObjRef Object reference of the target object
+   * @param parameterTypes Types of the parameters
+   * @param args Should be of same length as parameterTypes.
+   * @return ExecMessage
    */
   public ExecMessage buildInstanceMethod(
       UUID peerUuid,
@@ -474,7 +501,16 @@ public final class MessageBuilder {
   /**
    * Convenience method for building an instance method message packing all arguments in a single
    * array, regardless of type (ObjectRef or not). TODO: other build methods should pack all
-   * arguments and objRefs in a single array as well
+   * arguments and objRefs in a single array as well.
+   *
+   * @param peerUuid UUID of this peer
+   * @param className Name of the class
+   * @param methodName Name of the method
+   * @param parameterTypes Types of the parameters
+   * @param sender Sender object
+   * @param senderObjRef Sender object reference
+   * @param args Should be of same length as parameterTypes.
+   * @return ExecMessage
    */
   public ExecMessage buildClassMethod(
       UUID peerUuid,
@@ -519,6 +555,9 @@ public final class MessageBuilder {
     final String fieldParamType;
     final ExecMessageType otherMessageType =
         ExecMessageType.fromByte(otherMessage.getExecMessageType());
+
+    Obj valueObj;
+    String valueObjectRef;
     switch (otherMessageType) {
       case CONSTRUCTOR:
         classMethodCall.setParameters(otherMessage.getConstructorCall().getParameters());
@@ -531,8 +570,7 @@ public final class MessageBuilder {
         break;
       case PUT_STATIC:
         fieldParamType = otherMessage.getStaticFieldPut().getField().getClazz().getName();
-        Obj valueObj = otherMessage.getStaticFieldPut().getValueObject();
-        String valueObjectRef;
+        valueObj = otherMessage.getStaticFieldPut().getValueObject();
         if (valueObj != null && !valueObj.getRef().isEmpty()) {
           valueObjectRef = valueObj.getRef();
         } else {
@@ -792,28 +830,27 @@ public final class MessageBuilder {
   // <editor-fold desc="Throwable messages">
   public ExecMessage buildAccessibleObjectThrowable(
       UUID peerUuid,
-      @Nonnull Optional<AccessibleObject> accessibleObject,
+      @Nullable AccessibleObject accessibleObject,
       ExecutableObjectType executableObjectType,
       Throwable exception,
       String responseToUuid) {
 
     final RaisedThrowable raisedThrowable = new RaisedThrowable();
-    if (accessibleObject.isPresent()) {
-      if (accessibleObject.get() instanceof Constructor) {
+    if (accessibleObject != null) {
+      if (accessibleObject instanceof Constructor) {
         raisedThrowable.setConstructor(
-            ((Constructor<?>) accessibleObject.get()).getDeclaringClass().getName());
-        raisedThrowable.setModifiers(((Constructor<?>) accessibleObject.get()).getModifiers());
-      } else if (accessibleObject.get() instanceof Method) {
-        raisedThrowable.setMethod(((Method) accessibleObject.get()).getName());
-        raisedThrowable.setModifiers(((Method) accessibleObject.get()).getModifiers());
-      } else if (accessibleObject.get() instanceof Field) {
-        raisedThrowable.setField(((Field) accessibleObject.get()).getName());
-        raisedThrowable.setModifiers(((Field) accessibleObject.get()).getModifiers());
+            ((Constructor<?>) accessibleObject).getDeclaringClass().getName());
+        raisedThrowable.setModifiers(((Constructor<?>) accessibleObject).getModifiers());
+      } else if (accessibleObject instanceof Method) {
+        raisedThrowable.setMethod(((Method) accessibleObject).getName());
+        raisedThrowable.setModifiers(((Method) accessibleObject).getModifiers());
+      } else if (accessibleObject instanceof Field) {
+        raisedThrowable.setField(((Field) accessibleObject).getName());
+        raisedThrowable.setModifiers(((Field) accessibleObject).getModifiers());
       } else {
         throw new UnsupportedOperationException(
             String.format(
-                "Unsupported accessibleObject type: %s",
-                accessibleObject.get().getClass().getName()));
+                "Unsupported accessibleObject type: %s", accessibleObject.getClass().getName()));
       }
     } else {
       switch (executableObjectType) {
@@ -826,6 +863,9 @@ public final class MessageBuilder {
         case FIELD:
           raisedThrowable.setField("<info not available>");
           break;
+        default:
+          throw new UnsupportedOperationException(
+              String.format("Unsupported executableObjectType: %s", executableObjectType.name()));
       }
     }
 
@@ -853,17 +893,7 @@ public final class MessageBuilder {
 
     // set 'object'
     if (!isVoid) {
-      Class<?> objectClass;
-      if (accessibleObject instanceof Constructor) {
-        objectClass = declaringClass;
-      } else if (accessibleObject instanceof Method) {
-        objectClass = ((Method) accessibleObject).getReturnType();
-      } else if (accessibleObject instanceof Field) {
-        objectClass = ((Field) accessibleObject).getType();
-      } else {
-        throw new RuntimeException(
-            String.format("Unable to handle accessible object of type: %s", accessibleObject));
-      }
+      Class<?> objectClass = getClassOfAccessible(accessibleObject, declaringClass);
       valueMessage.setObject(getWrappedObject(object, objectClass.getName(), objectRef));
     }
 
@@ -896,6 +926,22 @@ public final class MessageBuilder {
     return newWrapper(ExecMessageType.RETURN_VALUE, peerUuid, responseToUuid)
         .withReturnValue(
             valueMessage.withIsVoid(isVoid).withClazz(getWrappedClass(declaringClass)));
+  }
+
+  private static Class<?> getClassOfAccessible(
+      AccessibleObject accessibleObject, Class<?> declaringClass) {
+    Class<?> objectClass;
+    if (accessibleObject instanceof Constructor) {
+      objectClass = declaringClass;
+    } else if (accessibleObject instanceof Method) {
+      objectClass = ((Method) accessibleObject).getReturnType();
+    } else if (accessibleObject instanceof Field) {
+      objectClass = ((Field) accessibleObject).getType();
+    } else {
+      throw new RuntimeException(
+          String.format("Unable to handle accessible object of type: %s", accessibleObject));
+    }
+    return objectClass;
   }
 
   // </editor-fold>
@@ -945,7 +991,8 @@ public final class MessageBuilder {
         .withCallbackMethod(callbackMethodName);
   }
 
-  public InterceptMessage buildInterceptMessage(InterceptRequest intercept) {
+  @SuppressWarnings("unchecked")
+  public InterceptMessage buildInterceptMessage(InterceptRequest<?> intercept) {
     boolean isMethodInterceptable =
         intercept.getInterceptable().getType().equals(InterceptableType.METHOD_CALL);
 
@@ -1128,7 +1175,7 @@ public final class MessageBuilder {
 
     // currentTime is meant for the client to indicate when then message is sent; as we don't have
     // it in a JSON-RPC request, we set it here to the time the message is received
-    execMessage.setCurrentTime(dtf.format(ZonedDateTime.now()));
+    execMessage.setCurrentTime(dtf.format(ZonedDateTime.now(ZoneOffset.UTC)));
 
     // Create the appropriate ExecMessage call object based on the ExecMessageType
     switch (jsonRpcRequest.getExecMessageType()) {
@@ -1153,6 +1200,9 @@ public final class MessageBuilder {
       case INSTANCE_METHOD:
         execMessage.setInstanceMethodCall(createInstanceMethodCall(jsonRpcRequest));
         break;
+      default:
+        throw new IllegalArgumentException(
+            "Unsupported ExecMessageType: " + jsonRpcRequest.getExecMessageType());
     }
     return wrap(execMessage);
   }
@@ -1182,14 +1232,14 @@ public final class MessageBuilder {
               new JsonRpcError(
                   JsonRpcErrorCode.METHOD_NOT_FOUND.getCode(),
                   JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage(),
-                  ColferUtils.toJSON(
+                  ColferUtils.toJson(
                       execMessageResponse.getRaisedThrowable().getThrowable(), true)));
         } else {
           jsonRpcResponse.setError(
               new JsonRpcError(
                   JsonRpcErrorCode.SERVER_ERROR.getCode(),
                   JsonRpcErrorCode.SERVER_ERROR.getMessage(),
-                  ColferUtils.toJSON(
+                  ColferUtils.toJson(
                       execMessageResponse.getRaisedThrowable().getThrowable(), true)));
         }
         break;

@@ -1,7 +1,12 @@
 package net.ittera.pal.serdes.jsonrpc;
 
 import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.stream.Stream;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
@@ -159,8 +164,8 @@ public class JsonRpcMessageUtilsTest {
   @Test
   public void parseJsonRpcMessage_noParametersGivenForPut_invalidJsonRpcRequestException() {
     Stream.of(
-            "put:net.ittera.pal.core.exec.RPCMessageInvoker.peerUuid", // static put
-            "put:net.ittera.pal.core.exec.RPCMessageInvoker.479345.peerUuid" // instance put
+            "put:net.ittera.pal.core.exec.RpcMessageInvoker.peerUuid", // static put
+            "put:net.ittera.pal.core.exec.RpcMessageInvoker.479345.peerUuid" // instance put
             )
         .forEach(
             method -> {
@@ -190,7 +195,7 @@ public class JsonRpcMessageUtilsTest {
         """
             {
               "jsonrpc": "2.0",
-              "method": "put:net.ittera.pal.core.exec.RPCMessageInvoker.peerUuid",
+              "method": "put:net.ittera.pal.core.exec.RpcMessageInvoker.peerUuid",
               "params": [{ "value": 50 }],
               "id": 1
             }
@@ -201,8 +206,8 @@ public class JsonRpcMessageUtilsTest {
   @Test
   public void parseJsonRpcMessage_twoParametersGivenForPut_invalidJsonRpcRequestException() {
     Stream.of(
-            "put:net.ittera.pal.core.exec.RPCMessageInvoker.peerUuid", // static put
-            "put:net.ittera.pal.core.exec.RPCMessageInvoker.479345.peerUuid" // instance put
+            "put:net.ittera.pal.core.exec.RpcMessageInvoker.peerUuid", // static put
+            "put:net.ittera.pal.core.exec.RpcMessageInvoker.479345.peerUuid" // instance put
             )
         .forEach(
             method -> {
@@ -230,8 +235,8 @@ public class JsonRpcMessageUtilsTest {
   @Test
   public void parseJsonRpcMessage_parametersGivenForGet_invalidJsonRpcRequestException() {
     Stream.of(
-            "get:net.ittera.pal.core.exec.RPCMessageInvoker.peerUuid", // static get
-            "get:net.ittera.pal.core.exec.RPCMessageInvoker.479345.peerUuid" // instance get
+            "get:net.ittera.pal.core.exec.RpcMessageInvoker.peerUuid", // static get
+            "get:net.ittera.pal.core.exec.RpcMessageInvoker.479345.peerUuid" // instance get
             )
         .forEach(
             method -> {

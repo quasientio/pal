@@ -48,8 +48,12 @@ public class JmxClient {
     return beanServer.queryNames(objectName, null);
   }
 
+  @SuppressWarnings("BanJNDI")
   private void connect() throws IOException {
-    conn = JMXConnectorFactory.connect(new JMXServiceURL(serverUrl));
+    // sanitize the serverUrl to remove the /jndi/ part
+    String rmiUrl = serverUrl.replaceFirst("/jndi/", "/");
+
+    conn = JMXConnectorFactory.connect(new JMXServiceURL(rmiUrl));
     conn.addConnectionNotificationListener(
         (notification, handback) -> {
           if (notification instanceof JMXConnectionNotification
@@ -57,7 +61,7 @@ public class JmxClient {
             try {
               connect();
             } catch (IOException e) {
-              logger.error("Error attempting to re-connect to: " + serverUrl, e);
+              logger.error("Error attempting to re-connect to: {}", serverUrl, e);
             }
           }
         },

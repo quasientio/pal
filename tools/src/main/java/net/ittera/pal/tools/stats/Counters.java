@@ -25,41 +25,41 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class Counters {
 
-  private AtomicLong numberOfMessages = new AtomicLong();
+  private final AtomicLong numberOfMessages = new AtomicLong();
 
   // types of
-  private Map<String, AtomicLong> messagesByType = new HashMap<>();
+  private final Map<String, AtomicLong> messagesByType = new HashMap<>();
 
   // messages by peer
-  private Map<String, AtomicLong> messagesFromPeer = new HashMap<>();
+  private final Map<String, AtomicLong> messagesFromPeer = new HashMap<>();
 
   // requests
-  private AtomicLong requests = new AtomicLong();
+  private final AtomicLong requests = new AtomicLong();
 
   // replies
-  private AtomicLong replies = new AtomicLong();
+  private final AtomicLong replies = new AtomicLong();
 
   // objects created by class
-  private Map<String, AtomicLong> objectsCreated = new HashMap<>();
+  private final Map<String, AtomicLong> objectsCreated = new HashMap<>();
 
   // static/instance methods called
-  private Map<String, AtomicLong> methodsCalled = new HashMap<>();
+  private final Map<String, AtomicLong> methodsCalled = new HashMap<>();
 
   // static/instance field reads
-  private Map<String, AtomicLong> fieldReads = new HashMap<>();
+  private final Map<String, AtomicLong> fieldReads = new HashMap<>();
 
   // static/instance field writes
-  private Map<String, AtomicLong> fieldWrites = new HashMap<>();
+  private final Map<String, AtomicLong> fieldWrites = new HashMap<>();
 
   // messages by threadName
-  private Map<String, AtomicLong> messagesByThread = new HashMap<>();
+  private final Map<String, AtomicLong> messagesByThread = new HashMap<>();
 
   // unique dispatches by thread(Name)
-  private Map<String, AtomicLong> dispatchesByThread = new HashMap<>();
+  private final Map<String, AtomicLong> dispatchesByThread = new HashMap<>();
 
   /*
   TODO:
-  - msgs / sec(min,hour)
+  - messages / sec(min,hour)
   - calls by visibility (public, private, etc. ie, modifiers)
    */
 
@@ -73,10 +73,12 @@ public class Counters {
     return messagesFromPeer;
   }
 
+  @SuppressWarnings("unused")
   public AtomicLong getRequests() {
     return requests;
   }
 
+  @SuppressWarnings("unused")
   public AtomicLong getReplies() {
     return replies;
   }
@@ -89,6 +91,7 @@ public class Counters {
     return messagesByThread;
   }
 
+  @SuppressWarnings("unused")
   public Map<String, AtomicLong> getDispatchesByThread() {
     return dispatchesByThread;
   }

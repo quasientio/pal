@@ -23,6 +23,7 @@ import static net.ittera.pal.common.util.Strings.stringAfter;
 import static net.ittera.pal.common.util.Strings.stringBefore;
 import static picocli.CommandLine.Option;
 
+import com.google.common.base.Splitter;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -36,7 +37,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.MessageStreamer;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.KafkaExecMessageSerde;
@@ -51,13 +52,14 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler;
 import org.apache.kafka.streams.kstream.KStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-/** TODO This class and MessageStreamPrinter should inherit from base class w/ common logic */
+// TODO This class and MessageStreamPrinter should inherit from base class w/ common logic
 @Command(name = "stats")
 public class MessageStreamStats extends AbstractTool implements Callable<Integer> {
 
@@ -78,7 +80,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
 
   @Option(
       names = {"-l", "--log"},
-      paramLabel = "LOGNAME",
+      paramLabel = "LOG_NAME",
       description = "read from given log")
   private String logName;
 
@@ -108,8 +110,8 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       description =
           "type(s) of messages to filter by ("
               + "STATIC_CONSTRUCTOR, RETURN_CLASS, CONSTRUCTOR, INSTANCE_METHOD,"
-              + "CLASS_METHOD, GET_STATIC, GET_FIELD, PUT_STATIC, PUT_FIELD, PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE,"
-              + "RETURN_VALUE)")
+              + " CLASS_METHOD, GET_STATIC, GET_FIELD, PUT_STATIC, PUT_FIELD,"
+              + " PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE, RETURN_VALUE)")
   private List<String> msgTypes;
 
   @Option(
@@ -118,6 +120,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       description = "filter by peer uuid")
   private String fromPeer;
 
+  @SuppressWarnings("unused")
   @Option(
       names = {"-ft", "--from-thread"},
       paramLabel = "THREAD_NAME",
@@ -129,6 +132,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       description = "print stats as JSON")
   private boolean jsonOutput;
 
+  @SuppressWarnings("unused")
   @Option(
       names = {"-h", "--help"},
       usageHelp = true,
@@ -142,8 +146,8 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
    * Use this constructor to run this class from another class, not the cmd-line (i.e. from Seer
    * app)
    *
-   * @param bootstrapServers
-   * @param logName
+   * @param bootstrapServers Kafka bootstrap servers
+   * @param logName Kafka topic name
    */
   public MessageStreamStats(String bootstrapServers, String logName) {
     this(bootstrapServers, logName, null, null, null);
@@ -153,11 +157,11 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
    * Use this constructor to run this class from another class, not the cmd-line (i.e. from Seer
    * app) For log-based streams
    *
-   * @param bootstrapServers
-   * @param logName
-   * @param msgTypes
-   * @param fromPeer
-   * @param threadName
+   * @param bootstrapServers Kafka bootstrap servers
+   * @param logName Kafka topic name
+   * @param msgTypes message types to filter by
+   * @param fromPeer peer uuid to filter by
+   * @param threadName thread name to filter by
    */
   public MessageStreamStats(
       String bootstrapServers,
@@ -173,17 +177,8 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     this.externalPrinting = true;
   }
 
-  /**
-   * Use this constructor to run this class from another class, not the cmd-line (i.e. from Seer
-   * app) For socket-based streams
-   *
-   * @param palDirAddress
-   * @param peerUuid
-   * @param peerAddress
-   * @param msgTypes
-   * @param fromPeer
-   * @param threadName
-   */
+  // Use this constructor to run this class from another class, not the cmd-line.
+  // For socket-based streams
   public MessageStreamStats(
       String palDirAddress,
       UUID peerUuid,
@@ -200,7 +195,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     this.externalPrinting = true;
   }
 
-  /** For use when running as a Picocli command (ie. from the cmd-line) */
+  /** For use when running as a Picocli command (i.e. from the cmd-line) */
   MessageStreamStats() {}
 
   public static void main(String[] args) {
@@ -209,32 +204,33 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
   }
 
   private String getShortClassname(String classname) {
-    String[] classnameParts = classname.split("\\.");
+    String[] classnameParts = Splitter.on('.').splitToList(classname).toArray(new String[0]);
     return classnameParts.length > 0 ? classnameParts[classnameParts.length - 1] : classname;
   }
 
+  @SuppressWarnings("unused")
   public Counters getCounters() {
     return counters;
   }
 
   private void updateCounters(Message message) {
-    // total msgs
+    // total messages
     counters.getNumberOfMessages().getAndIncrement();
 
     // by msg type
-    AtomicLong cntr = counters.getMessagesByType().get(getMessageType(message));
-    if (cntr == null) {
+    AtomicLong messageCounter = counters.getMessagesByType().get(getMessageType(message));
+    if (messageCounter == null) {
       counters.getMessagesByType().put(getMessageType(message), new AtomicLong(1));
     } else {
-      cntr.getAndIncrement();
+      messageCounter.getAndIncrement();
     }
 
     // by peer
-    cntr = counters.getMessagesFromPeer().get(getPeerUuid(message));
-    if (cntr == null) {
+    messageCounter = counters.getMessagesFromPeer().get(getPeerUuid(message));
+    if (messageCounter == null) {
       counters.getMessagesFromPeer().put(getPeerUuid(message), new AtomicLong(1));
     } else {
-      cntr.getAndIncrement();
+      messageCounter.getAndIncrement();
     }
 
     final ExecMessage execMessage = message.getExecMessage();
@@ -243,65 +239,61 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     }
 
     // by thread
-    cntr = counters.getMessagesByThread().get(execMessage.getThreadName());
-    if (cntr == null) {
+    messageCounter = counters.getMessagesByThread().get(execMessage.getThreadName());
+    if (messageCounter == null) {
       counters.getMessagesByThread().put(execMessage.getThreadName(), new AtomicLong(1));
     } else {
-      cntr.getAndIncrement();
+      messageCounter.getAndIncrement();
     }
 
-    String className, methodName, fieldName, classFieldKey;
+    String className;
+    String methodName;
+    String fieldName;
+    String classFieldKey;
     final ExecMessageType execMessageType =
         ExecMessageType.fromByte(execMessage.getExecMessageType());
     switch (execMessageType) {
-        // objects created by class
-      case CONSTRUCTOR:
+      case CONSTRUCTOR -> {
         String objClassKey = execMessage.getConstructorCall().getClazz().getName();
         incrementObjectsCreated(objClassKey);
-        break;
-        // methods called by class+name
-      case INSTANCE_METHOD:
+      }
+      case INSTANCE_METHOD -> {
         className = execMessage.getInstanceMethodCall().getClazz().getName();
         methodName = execMessage.getInstanceMethodCall().getName();
         String classMethodKey = String.format("%s.%s()", getShortClassname(className), methodName);
         incrementMethodCalls(classMethodKey);
-        break;
-        // methods called by class+name
-      case CLASS_METHOD:
+      }
+      case CLASS_METHOD -> {
         className = execMessage.getClassMethodCall().getClazz().getName();
         methodName = execMessage.getClassMethodCall().getName();
-        classMethodKey = String.format("%s.%s()", getShortClassname(className), methodName);
+        String classMethodKey = String.format("%s.%s()", getShortClassname(className), methodName);
         incrementMethodCalls(classMethodKey);
-        break;
-        // field reads
-      case GET_STATIC:
+      }
+      case GET_STATIC -> {
         className = execMessage.getStaticFieldGet().getClazz().getName();
         fieldName = execMessage.getStaticFieldGet().getField().getName();
         classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
         incrementFieldReads(classFieldKey);
-        break;
-        // field reads
-      case GET_FIELD:
+      }
+      case GET_FIELD -> {
         className = execMessage.getInstanceFieldGet().getClazz().getName();
         fieldName = execMessage.getInstanceFieldGet().getField().getName();
         classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
         incrementFieldReads(classFieldKey);
-        break;
-        // field writes
-      case PUT_STATIC:
+      }
+      case PUT_STATIC -> {
         className = execMessage.getStaticFieldPut().getClazz().getName();
         fieldName = execMessage.getStaticFieldPut().getField().getName();
         classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
         incrementFieldWrites(classFieldKey);
-        break;
-        // field writes
-      case PUT_FIELD:
+      }
+      case PUT_FIELD -> {
         className = execMessage.getInstanceFieldPut().getClazz().getName();
         fieldName = execMessage.getInstanceFieldPut().getField().getName();
         classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
         incrementFieldWrites(classFieldKey);
-        break;
-      default:
+      }
+      default -> throw new IllegalStateException("Unexpected value: " + execMessageType);
     }
   }
 
@@ -349,7 +341,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     1. CONFIGURE STREAMS API
     */
     Properties props = new Properties();
-    String consumerId = "printer-" + UUID.randomUUID().toString();
+    String consumerId = "printer-" + UUID.randomUUID();
     if (verbose) {
       System.out.println("CONFIG:");
       System.out.println("=======");
@@ -424,31 +416,39 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     try {
       shutdownLatch.await();
     } catch (Throwable e) {
-      e.printStackTrace();
+      logger.error("Uncaught error processing stream", e);
+      if (!externalPrinting) {
+        //noinspection CallToPrintStackTrace
+        e.printStackTrace();
+      }
       return 1;
     }
     return 0;
   }
 
-  private ExecutorService getExecutor(int nThreads) {
-    return Executors.newFixedThreadPool(
-        nThreads,
-        r -> {
-          Thread thread = new Thread(r);
-          thread.setUncaughtExceptionHandler((t, e) -> logger.error("Uncaught exception", e));
-          return thread;
-        });
-  }
-
   private Integer socketMessageStreamStats() throws Exception {
     Objects.requireNonNull(palDirAddress, "palDirAddress required");
 
-    ExecutorService executor = getExecutor(2);
+    ExecutorService executor =
+        Executors.newFixedThreadPool(
+            2,
+            r -> {
+              Thread thread = new Thread(r);
+              thread.setUncaughtExceptionHandler(
+                  (t, e) -> {
+                    logger.error("Uncaught exception", e);
+                    if (!externalPrinting) {
+                      //noinspection CallToPrintStackTrace
+                      e.printStackTrace();
+                    }
+                  });
+              return thread;
+            });
 
     if (peerAddress == null) { // peerUuid must be present then
-      String palDirectoryURL =
+      String palDirectoryUrl =
           palDirAddress != null ? palDirAddress : getProperty("pal_directory", null);
-      try (PALDirectory palDirectory = new PALDirectory(palDirectoryURL)) {
+      try (PalDirectory palDirectory = new PalDirectory(palDirectoryUrl)) {
         peerAddress = palDirectory.getPeerInfo(peerUuid).getPubAddress();
       }
     }
@@ -483,11 +483,11 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
 
     // start consuming
     try {
-      executor.submit(streamerThread);
+      executor.execute(streamerThread);
       logger.info("Stream started");
       if (!externalPrinting) {
         continuousPrinter = new ContinuousPrinter(counters, jsonOutput, 1);
-        executor.submit(continuousPrinter);
+        executor.execute(continuousPrinter);
         logger.info("Printer started");
       }
       latch.await();
@@ -499,11 +499,16 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
       streamer.close();
     } catch (Throwable e) {
       logger.error("Uncaught error", e);
+      if (!externalPrinting) {
+        //noinspection CallToPrintStackTrace
+        e.printStackTrace();
+      }
       return 1;
     }
     return 0;
   }
 
+  @Override
   public Integer call() throws Exception {
     if (peerAddress != null || peerUuid != null) {
       return socketMessageStreamStats();
@@ -515,6 +520,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     }
   }
 
+  @SuppressWarnings("unused")
   public void stopStreams() {
     shutdownLatch.countDown();
   }
@@ -535,8 +541,9 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
 
     // catch unhandled exceptions
     streams.setUncaughtExceptionHandler(
-        (Thread thread, Throwable throwable) -> {
-          throwable.printStackTrace();
+        throwable -> {
+          logger.error("Uncaught exception in stream. Will shutdown client.", throwable);
+          return StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
         });
 
     // start consuming the stream
@@ -550,7 +557,11 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
         }
       }
     } catch (InterruptedException | ExecutionException ex) {
-      ex.printStackTrace();
+      logger.error("Error processing stream", ex);
+      if (!externalPrinting) {
+        //noinspection CallToPrintStackTrace
+        ex.printStackTrace();
+      }
     }
   }
 }

@@ -32,9 +32,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
-import net.ittera.pal.common.cli.PALCommand;
+import net.ittera.pal.common.cli.PalCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.ContextFillingTransformSupplier;
 import net.ittera.pal.messages.MessageContext;
 import net.ittera.pal.messages.MessageStreamer;
@@ -63,11 +63,11 @@ import picocli.CommandLine.ParentCommand;
     sortOptions = false,
     optionListHeading = "%nOptions:%n",
     commandListHeading = "%nCommands:%n")
-public class MessageStreamPrinter extends AbstractPALSubcommand {
+public class MessageStreamPrinter extends AbstractPalSubcommand {
 
   private final Logger logger = LoggerFactory.getLogger(MessageStreamPrinter.class);
 
-  @ParentCommand PALCommand palCommand;
+  @ParentCommand PalCommand palCommand;
 
   @Option(
       names = {"-l", "--log"},
@@ -94,8 +94,8 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
       description =
           "type(s) of messages to filter by ("
               + "STATIC_CONSTRUCTOR, RETURN_CLASS, CONSTRUCTOR, INSTANCE_METHOD,"
-              + "CLASS_METHOD, GET_STATIC, GET_FIELD, PUT_STATIC, PUT_FIELD, PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE,"
-              + "RETURN_VALUE)")
+              + " CLASS_METHOD, GET_STATIC, GET_FIELD, PUT_STATIC, PUT_FIELD,"
+              + " PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE, RETURN_VALUE)")
   private List<String> msgTypes;
 
   @Option(
@@ -139,6 +139,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
   @Option(names = "-v", description = "run verbosely")
   private boolean verbose;
 
+  @SuppressWarnings("unused")
   @Option(
       names = {"-h", "--help"},
       usageHelp = true,
@@ -146,13 +147,13 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
   private boolean helpRequested = false;
 
   @Override
-  protected void initialize() throws Exception {
+  protected void initialize() {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
   }
 
   private Integer printLogMessageStream() {
     logger.info("Started printer for log: {}", logIdentifier);
-    PALDirectory palDirectory = getPalDirectory();
+    PalDirectory palDirectory = getPalDirectory();
 
     LogInfo log = null;
 
@@ -171,7 +172,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
       try {
         parsedUuid = UUID.fromString(logIdentifier);
       } catch (IllegalArgumentException iae) {
-        // nevermind
+        // never mind
       } finally {
         logUuid = parsedUuid;
       }
@@ -192,7 +193,12 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
       }
     }
 
-    // if not a valid UUID, or we have no PALDirectory, then treat log identifier as name
+    if (log == null) {
+      logger.error("No Log found for identifier: {}", logIdentifier);
+      return 1;
+    }
+
+    // if not a valid UUID, or we have no PalDirectory, then treat log identifier as name
     final String logName = log.getName();
     final String bootstrapServers = log.getBootstrapServers();
 
@@ -200,7 +206,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
     1. CONFIGURE STREAMS API
     */
     Properties props = new Properties();
-    String consumerId = "printer-" + UUID.randomUUID().toString();
+    String consumerId = "printer-" + UUID.randomUUID();
     if (verbose) {
       System.out.println("CONFIG:");
       System.out.println("=======");
@@ -265,7 +271,9 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
     }
 
     // stream: transform: add context  (offset, partition, timestamp, headers, etc.)
-    KStream<String, Map> streamWithCtxt = stream.transform(ContextFillingTransformSupplier::new);
+    @SuppressWarnings("deprecation")
+    KStream<String, Map<String, Object>> streamWithCtxt =
+        stream.transform(ContextFillingTransformSupplier::new);
 
     // stream: apply filter: offset
     if (offset != null) {
@@ -289,7 +297,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
                 msg.toString());
           } else if (jsonOutput) {
             System.out.printf(
-                "offset: %d,%nmessage: %s%n", ctxt.getOffset(), ColferUtils.toJSON(msg, true));
+                "offset: %d,%nmessage: %s%n", ctxt.getOffset(), ColferUtils.toJson(msg, true));
           } else { // compact format (default)
             System.out.printf(
                 "offset=%d uuid=%s key=%s type=%s%n",
@@ -306,6 +314,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
     /*
      3. START PROCESSING
     */
+    @SuppressWarnings("resource")
     final KafkaStreams streams = new KafkaStreams(topology, props);
     final CountDownLatch latch = new CountDownLatch(1);
 
@@ -329,24 +338,21 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
       streams.start();
       latch.await();
     } catch (Throwable e) {
-      e.printStackTrace();
+      logger.error("Uncaught error processing stream", e);
       return 1;
     }
     return 0;
   }
 
-  private ExecutorService getExecutor(int nThreads) {
-    return Executors.newFixedThreadPool(
-        nThreads,
-        r -> {
-          Thread thread = new Thread(r);
-          thread.setUncaughtExceptionHandler((t, e) -> logger.error("Uncaught exception", e));
-          return thread;
-        });
-  }
-
   private Integer printSocketMessageStream() throws Exception {
-    ExecutorService executor = getExecutor(1);
+    ExecutorService executor =
+        Executors.newFixedThreadPool(
+            1,
+            r -> {
+              Thread thread = new Thread(r);
+              thread.setUncaughtExceptionHandler((t, e) -> logger.error("Uncaught exception", e));
+              return thread;
+            });
 
     if (peerAddress == null) { // peerUuid must be present then
       peerAddress = getPalDirectory().getPeerInfo(peerUuid).getPubAddress();
@@ -367,7 +373,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
 
           // stream: apply filter: message types
           if (msgTypes != null) {
-            stream = stream.filter(m -> (msgTypes.contains(getMessageType(m))));
+            stream = stream.filter(m -> msgTypes.contains(getMessageType(m)));
           }
           // stream: apply filter: from peer (uuid)
           if (fromPeer != null) {
@@ -396,7 +402,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
                 if (fullOutput) {
                   System.out.printf("%s%n", msg.toString());
                 } else if (jsonOutput) {
-                  System.out.printf("%s%n", ColferUtils.toJSON(msg, true));
+                  System.out.printf("%s%n", ColferUtils.toJson(msg, true));
                 } else { // compact format (default)
                   System.out.printf("uuid=%s type=%s%n", getMessageType(msg), getMessageType(msg));
                 }
@@ -418,7 +424,7 @@ public class MessageStreamPrinter extends AbstractPALSubcommand {
 
     // start consuming and printing
     try {
-      executor.submit(streamerThread);
+      executor.execute(streamerThread);
       logger.info("Stream started");
       latch.await();
       logger.info("Shutting down");

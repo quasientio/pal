@@ -25,15 +25,7 @@ public final class Strings {
   private Strings() {}
 
   private static boolean isEmpty(String str) {
-    return (str == null || str.length() == 0);
-  }
-
-  public static String capitalize(String str) {
-    if (isEmpty(str)) {
-      return str;
-    }
-    String rest = str.substring(1);
-    return str.substring(0, 1).toUpperCase() + (isEmpty(rest) ? "" : rest.toLowerCase());
+    return (str == null || str.isEmpty());
   }
 
   public static String stringBefore(String string, String sep) {

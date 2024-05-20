@@ -19,8 +19,8 @@
 
 package net.ittera.pal.core.messages;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -42,24 +42,22 @@ public class SessionReplyMsgTest extends ZmqEnabledTest {
     SessionReplyMsg msgOut = new SessionReplyMsg(SessionStatusType.OK);
 
     // send
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
-    out.bind(socketAddr);
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.connect(socketAddr);
+    String socketAddress = "inproc://here";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.bind(socketAddress);
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.connect(socketAddress);
     msgOut.send(out);
-    logger.debug("sent msgOut= {}", msgOut);
 
     // receive and compare
-    SessionReplyMsg msgIn = SessionReplyMsg.recvMsg(in, true);
-    logger.debug("received msgIn= {}", msgIn);
+    SessionReplyMsg msgIn = SessionReplyMsg.receive(in, true);
     assertThat(msgIn, is(msgOut));
 
     // close
     out.close();
     in.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 
   @Test
@@ -71,23 +69,23 @@ public class SessionReplyMsgTest extends ZmqEnabledTest {
     SessionReplyMsg msgOut = new SessionReplyMsg(SessionStatusType.OK, objectRefs);
 
     // send
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
-    out.bind(socketAddr);
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.connect(socketAddr);
+    String socketAddress = "inproc://here";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.bind(socketAddress);
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.connect(socketAddress);
     msgOut.send(out);
     logger.debug("sent msgOut= {}", msgOut);
 
     // receive and compare
-    SessionReplyMsg msgIn = SessionReplyMsg.recvMsg(in, true);
+    SessionReplyMsg msgIn = SessionReplyMsg.receive(in, true);
     logger.debug("received msgIn= {}", msgIn);
     assertThat(msgIn, is(msgOut));
 
     // close
     out.close();
     in.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 }

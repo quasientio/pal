@@ -28,8 +28,9 @@ import java.util.List;
 import net.ittera.pal.common.util.Classes;
 import net.ittera.pal.serdes.colfer.Wrapper;
 
+@SuppressWarnings("JdkObsolete") // silence errorprone warnings about StringBuffer usage
 public abstract class WrappingTestBase {
-  protected static final List<Class> primitiveClasses =
+  protected static final List<Class<?>> primitiveClasses =
       Arrays.asList(
           boolean.class,
           byte.class,
@@ -40,7 +41,7 @@ public abstract class WrappingTestBase {
           long.class,
           short.class);
 
-  protected static final List<Class> primitiveWrapperClasses =
+  protected static final List<Class<?>> primitiveWrapperClasses =
       Arrays.asList(
           Boolean.class,
           Byte.class,
@@ -52,7 +53,7 @@ public abstract class WrappingTestBase {
           Short.class);
 
   /** Comprehensive list of all java.lang(8) classes */
-  protected static final List<Class> nonWrapperJavaLangClasses =
+  protected static final List<Class<?>> nonWrapperJavaLangClasses =
       Arrays.asList(
           Character.Subset.class,
           Character.UnicodeBlock.class,
@@ -81,14 +82,15 @@ public abstract class WrappingTestBase {
           Throwable.class,
           Void.class);
 
-  /** List of objects that should be wrappable */
+  // List of objects that should be wrappable
+  @SuppressWarnings("UnnecessaryStringBuilder")
   protected static final List<Object> wrappableObjects =
       Arrays.asList(
-          /** null and void * */
+          // null and void
           null,
           Void.class,
           void.class,
-          /** primitives * */
+          // primitives
           false,
           Byte.parseByte("0"),
           'c',
@@ -97,11 +99,11 @@ public abstract class WrappingTestBase {
           Integer.parseInt("4"),
           34L,
           Short.parseShort("10"),
-          /** char sequences * */
+          // char sequences
           "hello",
           new StringBuilder("world"),
           new StringBuffer("!!"),
-          /** primitive wrappers * */
+          // primitive wrappers
           Boolean.TRUE,
           Byte.valueOf("1"),
           Character.valueOf('a'),
@@ -110,7 +112,7 @@ public abstract class WrappingTestBase {
           Integer.valueOf("458"),
           Long.valueOf("348333"),
           Short.valueOf("25"),
-          /** arrays of primitives * */
+          // arrays of primitives
           new boolean[] {true, false},
           new byte[] {1, 2, 3},
           new char[] {'a', 'b', 'c'},
@@ -119,7 +121,7 @@ public abstract class WrappingTestBase {
           new int[] {1, 2, 3},
           new long[] {1L, 2L, 3L},
           new short[] {1, 2, 3},
-          /** arrays of wrappers * */
+          // arrays of wrappers
           new Boolean[] {true, false},
           new Byte[] {1, 2, 3},
           new Character[] {'a', 'b', 'c'},
@@ -128,12 +130,14 @@ public abstract class WrappingTestBase {
           new Integer[] {1, 2, 3},
           new Long[] {1L, 2L, 3L},
           new Short[] {1, 2, 3},
-          /** arrays of char sequences * */
+          // arrays of char sequences
           new String[] {"hey", "there"},
           new StringBuilder[] {new StringBuilder("hey"), new StringBuilder("there")},
           new StringBuffer[] {new StringBuffer("hey"), new StringBuffer("ya!")});
 
-  /** List of some objects that should NOT be wrappable */
+  // List of some objects that should NOT be wrappable
+  // we need to test this class - silence errorprone warnings
+  @SuppressWarnings({"JavaUtilDate", "rawtypes"})
   protected static final List<Object> someNonWrappableObjects =
       Arrays.asList(
           Object.class,
@@ -151,8 +155,8 @@ public abstract class WrappingTestBase {
    * Asserts that two arrays assigned to objects are equal. This method does delegates to the proper
    * assertArrayEquals method for the array type.
    *
-   * @param objectArray1
-   * @param objectArray2
+   * @param objectArray1 the first array
+   * @param objectArray2 the second array
    */
   protected void myAssertArrayEquals(Object objectArray1, Object objectArray2) {
     Class<?> arrayType = objectArray1.getClass().getComponentType();

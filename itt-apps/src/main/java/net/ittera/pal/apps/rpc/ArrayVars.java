@@ -19,10 +19,11 @@
 
 package net.ittera.pal.apps.rpc;
 
-/** NOTE THAT INTEGRATION TESTS are dependant on this class */
+// NOTE THAT INTEGRATION TESTS are dependent on this class
+@SuppressWarnings({"unused", "FieldMayBeFinal"})
 public class ArrayVars {
 
-  /** arrays - primitives boolean byte short char int long float double */
+  // arrays - primitives boolean byte short char int long float double
   private static boolean[] aNull_booleanArray;
 
   private static boolean[] anEmpty_booleanArray = {};
@@ -56,7 +57,7 @@ public class ArrayVars {
   private static double[] anEmpty_doubleArray = {};
   private static double[] a_doubleArray = {383239.3d, 0d, -239923.4038d};
 
-  /** arrays - primitive wrappers Boolean Byte Short Character Integer Long Float Double + String */
+  // arrays - primitive wrappers Boolean Byte Short Character Integer Long Float Double + String
   private static Boolean[] aNullBooleanArray;
 
   private static Boolean[] anEmptyBooleanArray = {};

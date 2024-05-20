@@ -23,9 +23,9 @@ import static picocli.CommandLine.Option;
 
 import java.util.Arrays;
 import java.util.concurrent.Callable;
-import net.ittera.pal.common.cli.PALCommand;
+import net.ittera.pal.common.cli.PalCommand;
 import net.ittera.pal.core.Main;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.HelpCommand;
@@ -45,11 +45,12 @@ import picocli.CommandLine.Spec;
     footer = "%nRun 'pal COMMAND --help' or 'pal help COMMAND' for more information on a command.",
     sortOptions = false,
     versionProvider = ManifestVersionProvider.class)
-public class Pal implements Callable<Integer>, PALCommand {
+public class Pal implements Callable<Integer>, PalCommand {
 
-  @Spec private CommandSpec spec;
+  @SuppressWarnings("unused")
+  @Spec
+  private CommandSpec spec;
 
-  /** Options */
   @Option(
       names = {"-d", "--dir"},
       paramLabel = "HOST:PORT",
@@ -63,14 +64,14 @@ public class Pal implements Callable<Integer>, PALCommand {
     return new CommandLine.RunLast().execute(parseResult);
   }
 
-  /** Custom initialization to be done before executing any command or subcommand */
+  // Custom initialization to be done before executing any command or subcommand.
   private void init() {
     if (palDirectoryUrl == null || palDirectoryUrl.trim().isEmpty()) {
       String palDirectoryEnvVar = System.getenv("PAL_DIRECTORY");
       palDirectoryUrl = palDirectoryEnvVar != null ? palDirectoryEnvVar.trim() : null;
     }
     if (palDirectoryUrl == null || palDirectoryUrl.isEmpty()) {
-      palDirectoryUrl = PALDirectory.NO_URL;
+      palDirectoryUrl = PalDirectory.NO_URL;
     }
   }
 
@@ -82,8 +83,8 @@ public class Pal implements Callable<Integer>, PALCommand {
     // run (i.e. peer) command goes first
     commandLine.addSubcommand("run", new Main());
 
-    // subcommands other than 'run' must be subclasses of AbstractPALSubcommand
-    java.util.List<AbstractPALSubcommand> subcommands =
+    // subcommands other than 'run' must be subclasses of AbstractPalSubcommand
+    java.util.List<AbstractPalSubcommand> subcommands =
         Arrays.asList(new MessageStreamPrinter(), new Caller(), new List(), new Remove());
     subcommands.forEach(commandLine::addSubcommand);
 
@@ -95,13 +96,13 @@ public class Pal implements Callable<Integer>, PALCommand {
   }
 
   @Override
-  public Integer call() throws Exception {
+  public Integer call() {
     // no sub-command given, let's help with that
     spec.commandLine().usage(System.out);
     return 0;
   }
 
-  /** PALCommand INTERFACE */
+  // PALCommand INTERFACE
   @Override
   public String getPalDirectoryConnectionString() {
     return this.palDirectoryUrl;

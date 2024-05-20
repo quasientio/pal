@@ -20,18 +20,33 @@
 package net.ittera.pal.messages.types;
 
 public enum ControlStatusType {
-  OK,
-  ERROR,
-  UNAUTHORIZED,
-  UNSUPPORTED_COMMAND,
-  NO_SUCH_SESSION,
-  NO_SUCH_OBJECT;
+  OK((byte) 1),
+  ERROR((byte) 2),
+  UNAUTHORIZED((byte) 3),
+  UNSUPPORTED_COMMAND((byte) 4),
+  NO_SUCH_SESSION((byte) 5),
+  NO_SUCH_OBJECT((byte) 6);
+
+  private final byte idx;
+
+  ControlStatusType(byte idx) {
+    this.idx = idx;
+  }
 
   public static ControlStatusType fromByte(byte messageTypeAsByte) {
-    return ControlStatusType.values()[messageTypeAsByte - 1];
+    return switch (messageTypeAsByte) {
+      case 1 -> OK;
+      case 2 -> ERROR;
+      case 3 -> UNAUTHORIZED;
+      case 4 -> UNSUPPORTED_COMMAND;
+      case 5 -> NO_SUCH_SESSION;
+      case 6 -> NO_SUCH_OBJECT;
+      default ->
+          throw new IllegalArgumentException("Unknown control status type: " + messageTypeAsByte);
+    };
   }
 
   public byte toByte() {
-    return (byte) (this.ordinal() + 1);
+    return idx;
   }
 }

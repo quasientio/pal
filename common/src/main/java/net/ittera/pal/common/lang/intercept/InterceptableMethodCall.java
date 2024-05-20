@@ -34,11 +34,7 @@ public final class InterceptableMethodCall extends Interceptable {
 
   public InterceptableMethodCall(String name, List<String> parameterTypes) {
     super(name, InterceptableType.METHOD_CALL);
-    if (parameterTypes == null) {
-      this.parameterTypes = Collections.emptyList();
-    } else {
-      this.parameterTypes = parameterTypes;
-    }
+    this.parameterTypes = Objects.requireNonNullElse(parameterTypes, Collections.emptyList());
   }
 
   public List<String> getParameterTypes() {

@@ -19,14 +19,15 @@
 
 package net.ittera.pal.apps.rpc;
 
+@SuppressWarnings("unused")
 public class InstanceVars {
 
   public Integer anInt = 4;
   Integer anotherInt = 1;
-  private Integer aNullInt;
+  private Integer myNullInt;
   protected String someString = "I'm not blank";
-  public String aNullStr;
-  Boolean aNullBool;
-  public boolean aBool = true;
+  public String myNullStr;
+  Boolean myNullBool;
+  public boolean myBool = true;
   private final short someShort = 233;
 }

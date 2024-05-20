@@ -27,7 +27,8 @@ public abstract class AbstractReflectionHelperTestBase {
     }
 
     if (executable instanceof Method) {
-      return ((Method) executable).invoke(getTestClass().newInstance(), args);
+      return ((Method) executable)
+          .invoke(getTestClass().getDeclaredConstructor().newInstance(), args);
     } else if (executable instanceof Constructor) {
       executable.setAccessible(true);
       return ((Constructor<?>) executable).newInstance(args);

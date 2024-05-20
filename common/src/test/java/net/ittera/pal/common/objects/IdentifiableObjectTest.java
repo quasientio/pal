@@ -19,9 +19,10 @@
 
 package net.ittera.pal.common.objects;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;

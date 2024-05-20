@@ -20,14 +20,24 @@
 package net.ittera.pal.common.lang;
 
 public enum FieldOpType {
-  GET,
-  PUT;
+  GET((byte) 1),
+  PUT((byte) 2);
+
+  private final byte idx;
+
+  FieldOpType(byte idx) {
+    this.idx = idx;
+  }
 
   public static FieldOpType fromByte(byte typeAsByte) {
-    return FieldOpType.values()[typeAsByte - 1];
+    return switch (typeAsByte) {
+      case 1 -> GET;
+      case 2 -> PUT;
+      default -> throw new IllegalArgumentException("Unknown field operation type: " + typeAsByte);
+    };
   }
 
   public byte toByte() {
-    return (byte) (this.ordinal() + 1);
+    return idx;
   }
 }

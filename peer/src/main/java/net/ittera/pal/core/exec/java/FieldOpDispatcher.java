@@ -21,7 +21,6 @@ package net.ittera.pal.core.exec.java;
 
 import java.lang.reflect.AccessibleObject;
 import java.util.List;
-import java.util.Optional;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -51,20 +50,17 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
   protected final ExecMessage wrapAfterExecMessage(
       Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
-    Optional<AccessibleObject> field =
-        Optional.of(((FieldSignature) ctxt.getSignature()).getField());
+    AccessibleObject field = ((FieldSignature) ctxt.getSignature()).getField();
 
     if (value instanceof InvocationExceptionWrapper) {
-      Exception invocationException = ((InvocationExceptionWrapper) value).getException();
+      Exception invocationException = ((InvocationExceptionWrapper) value).exception();
       return messageBuilder.buildAccessibleObjectThrowable(
           peerUuid, field, getExecutableObjectType(), invocationException, null);
     } else {
       if (!returnsVoid()) {
-        return messageBuilder.buildReturnValue(
-            peerUuid, value, field.get(), objectRef, false, null);
+        return messageBuilder.buildReturnValue(peerUuid, value, field, objectRef, false, null);
       } else {
-        return messageBuilder.buildFieldOpDone(
-            peerUuid, field.get(), ctxt, getAfterExecMessageType());
+        return messageBuilder.buildFieldOpDone(peerUuid, field, ctxt, getAfterExecMessageType());
       }
     }
   }

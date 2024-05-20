@@ -27,7 +27,7 @@ import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
 /**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
  *
  * <p>TODO: arrays objectrefs rest of primitive types (?)
  */

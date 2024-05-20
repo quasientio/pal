@@ -19,6 +19,7 @@
 
 package net.ittera.pal.core.exec.java;
 
+@SuppressWarnings("unused")
 public abstract class AbstractFieldOpDispatcherTest extends AbstractDispatcherTest {
 
   public abstract void dispatch_primitive_ok() throws Throwable;

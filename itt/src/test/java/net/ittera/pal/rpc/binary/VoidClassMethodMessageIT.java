@@ -23,7 +23,7 @@ import net.ittera.pal.common.objects.ObjectRef;
 import org.junit.Test;
 
 /**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
  *
  * <p>TODO we should check the calls worked: As these methods are void, we should store some value
  * in a field of the target object and check it (+ revert it)
@@ -94,9 +94,9 @@ public class VoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
     ObjectRef listObjRef =
         ObjectRef.from(callEmptyConstructor("java.util.ArrayList").getObject().getRef());
 
-    // add some int's
-    int[] someInts = {39, 5, 58, 32, 70, 42};
-    for (int someInt : someInts) {
+    // add some integers
+    int[] someIntegers = {39, 5, 58, 32, 70, 42};
+    for (int someInt : someIntegers) {
       callInstanceMethod(
           "java.util.ArrayList",
           "add",

@@ -19,8 +19,9 @@
 
 package net.ittera.pal.common.directory.nodes;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -123,7 +124,7 @@ public class InterceptRequestTest {
   public void toAndFromBytes_methodIntercept() {
     // method
     byte[] bytes = methodInterceptRequest.toBytes(StandardCharsets.UTF_8);
-    InterceptRequest deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
+    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
     assertEquals(methodInterceptRequest, deserialized);
   }
 
@@ -131,7 +132,7 @@ public class InterceptRequestTest {
   public void toAndFromBytes_fieldopIntercept() {
     // field op
     byte[] bytes = fieldOpInterceptRequest.toBytes(StandardCharsets.UTF_8);
-    InterceptRequest deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
+    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
     assertEquals(fieldOpInterceptRequest, deserialized);
   }
 

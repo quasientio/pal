@@ -40,7 +40,7 @@ import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.lang.intercept.InterceptableFieldOp;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,15 +58,15 @@ public class InterceptAnnotationProcessor {
     this.directoryConnectionProvider = directoryConnectionProvider;
   }
 
-  public void process(Class clazz) {
+  public void process(Class<?> clazz) {
     if (logger.isTraceEnabled()) {
       logger.trace("inspecting class '{}' for annotations", clazz.getName());
     }
 
-    List<Class> annotationClasses = Arrays.asList(Before.class, After.class);
+    List<Class<? extends Annotation>> annotationClasses = Arrays.asList(Before.class, After.class);
     // collect annotations and batch messages
     for (Method method : clazz.getDeclaredMethods()) {
-      for (Class annotationClass : annotationClasses) {
+      for (var annotationClass : annotationClasses) {
         Annotation annotation = method.getDeclaredAnnotation(annotationClass);
         InterceptType interceptType = getTypeForAnnotationClass(annotationClass);
         if (annotation != null) {
@@ -93,7 +93,8 @@ public class InterceptAnnotationProcessor {
                 (String) type.getDeclaredMethod("fieldOpType").invoke(annotation, (Object[]) null);
             if (logger.isTraceEnabled()) {
               logger.trace(
-                  "interceptableClassName: {}, interceptableMethodName: {}, parameterTypes: {}, interceptableFieldName: {}, interceptableFieldOpType: {}",
+                  "interceptableClassName: {}, interceptableMethodName: {}, parameterTypes: {},"
+                      + " interceptableFieldName: {}, interceptableFieldOpType: {}",
                   interceptableClassName,
                   interceptableMethodName,
                   parameterTypes,
@@ -130,7 +131,8 @@ public class InterceptAnnotationProcessor {
     // TODO process @After annotation
   }
 
-  private static InterceptType getTypeForAnnotationClass(Class annotationClass) {
+  private static InterceptType getTypeForAnnotationClass(
+      Class<? extends Annotation> annotationClass) {
     if (annotationClass == Before.class) {
       return InterceptType.BEFORE;
     } else if (annotationClass == After.class) {
@@ -141,11 +143,16 @@ public class InterceptAnnotationProcessor {
     }
   }
 
-  private void register(InterceptRequest interceptRequest) {
+  private void register(InterceptRequest<?> interceptRequest) {
     try {
-      Optional<PALDirectory> directory = directoryConnectionProvider.get();
-      PutResponse putResponse = directory.get().registerInterceptAsync(interceptRequest).get();
-      logger.debug("Successfully registered new intercept request in directory");
+      Optional<PalDirectory> directory = directoryConnectionProvider.get();
+      if (directory.isPresent()) {
+        @SuppressWarnings("unused")
+        PutResponse unusedResponse = directory.get().registerInterceptAsync(interceptRequest).get();
+        logger.debug("Successfully registered new intercept request in directory");
+      } else {
+        logger.error("Pal Directory is not available");
+      }
     } catch (Exception e) {
       logger.error("Error registering intercept request", e);
     }

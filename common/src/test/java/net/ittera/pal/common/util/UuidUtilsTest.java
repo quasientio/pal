@@ -17,11 +17,30 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.cxn;
+package net.ittera.pal.common.util;
 
-public class NoLogRequestNodeException extends Exception {
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
-  public NoLogRequestNodeException(String message) {
-    super(message);
+import java.util.UUID;
+import org.junit.Test;
+
+public class UuidUtilsTest {
+
+  @Test
+  public void toBytesFromBytes() {
+    UUID uuid = UUID.randomUUID();
+    // 8 + 8 bytes
+    byte[] uuidAsBytes = UuidUtils.toBytes(uuid);
+
+    assertThat(uuidAsBytes.length, is(16));
+    assertThat(UuidUtils.fromBytes(uuidAsBytes), is(uuid));
+  }
+
+  @Test
+  public void toBytes() {
+    UUID uuid = UUID.randomUUID();
+    byte[] uuidAsBytes = UuidUtils.toBytes(uuid.toString());
+    assertThat(UuidUtils.fromBytes(uuidAsBytes), is(uuid));
   }
 }

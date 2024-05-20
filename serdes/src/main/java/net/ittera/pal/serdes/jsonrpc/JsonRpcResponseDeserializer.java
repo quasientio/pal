@@ -1,33 +1,33 @@
 package net.ittera.pal.serdes.jsonrpc;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResult;
 import net.ittera.pal.messages.types.JsonRpcResultType;
-import net.ittera.pal.serdes.colfer.JSONSerializers;
+import net.ittera.pal.serdes.colfer.JsonSerializers;
 
 public class JsonRpcResponseDeserializer implements JsonDeserializer<JsonRpcResponse> {
   private final Gson gson = new Gson();
 
   private final Map<JsonRpcResultType, JsonDeserializer<?>> objectDeserializers;
 
-  public JsonRpcResponseDeserializer(
-      Map<JsonRpcResultType, JsonDeserializer<?>> objectDeserializers) {
-    this.objectDeserializers = objectDeserializers;
-  }
-
   public JsonRpcResponseDeserializer() {
     Map<JsonRpcResultType, JsonDeserializer<?>> objectDeserializers = new HashMap<>();
     objectDeserializers.put(
-        JsonRpcResultType.STATIC_FIELDPUT_DONE, new JSONSerializers.StaticFieldPutDoneAdapter());
+        JsonRpcResultType.STATIC_FIELDPUT_DONE, new JsonSerializers.StaticFieldPutDoneAdapter());
     objectDeserializers.put(
         JsonRpcResultType.INSTANCE_FIELDPUT_DONE,
-        new JSONSerializers.InstanceFieldPutDoneAdapter());
+        new JsonSerializers.InstanceFieldPutDoneAdapter());
     objectDeserializers.put(
-        JsonRpcResultType.RETURN_VALUE, new JSONSerializers.ReturnValueAdapter());
+        JsonRpcResultType.RETURN_VALUE, new JsonSerializers.ReturnValueAdapter());
     this.objectDeserializers = objectDeserializers;
   }
 

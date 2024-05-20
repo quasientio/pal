@@ -85,18 +85,14 @@ public final class Context {
     final String name = ajSig.getName();
 
     // extract common CodeSignature fields
-    if (ajSig instanceof org.aspectj.lang.reflect.CodeSignature) {
-      org.aspectj.lang.reflect.CodeSignature ajCodeSig =
-          (org.aspectj.lang.reflect.CodeSignature) ajSig;
+    if (ajSig instanceof org.aspectj.lang.reflect.CodeSignature ajCodeSig) {
 
       final Class[] exceptionTypes = ajCodeSig.getExceptionTypes();
       final String[] parameterNames = ajCodeSig.getParameterNames();
       final Class[] parameterTypes = ajCodeSig.getParameterTypes();
 
       // pull out specific fields of MethodSignature
-      if (ajSig instanceof org.aspectj.lang.reflect.MethodSignature) {
-        org.aspectj.lang.reflect.MethodSignature ajMethodSig =
-            (org.aspectj.lang.reflect.MethodSignature) ajSig;
+      if (ajSig instanceof org.aspectj.lang.reflect.MethodSignature ajMethodSig) {
         return new Context(
             filename,
             sourceLine,
@@ -113,9 +109,7 @@ public final class Context {
       }
 
       // pull out specific fields of ConstructorSignature
-      if (ajSig instanceof org.aspectj.lang.reflect.ConstructorSignature) {
-        org.aspectj.lang.reflect.ConstructorSignature ajConsSig =
-            (org.aspectj.lang.reflect.ConstructorSignature) ajSig;
+      if (ajSig instanceof org.aspectj.lang.reflect.ConstructorSignature ajConsSig) {
         return new Context(
             filename,
             sourceLine,
@@ -133,9 +127,7 @@ public final class Context {
     }
 
     // pull out specific fields of FieldSignature
-    if (ajSig instanceof org.aspectj.lang.reflect.FieldSignature) {
-      org.aspectj.lang.reflect.FieldSignature ajFieldSig =
-          (org.aspectj.lang.reflect.FieldSignature) ajSig;
+    if (ajSig instanceof org.aspectj.lang.reflect.FieldSignature ajFieldSig) {
       return new Context(
           filename,
           sourceLine,

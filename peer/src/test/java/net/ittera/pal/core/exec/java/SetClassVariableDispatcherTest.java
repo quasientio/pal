@@ -29,11 +29,11 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.Signature;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -45,33 +45,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
-// auxiliary class
-class ClassForPutStaticTest {
-
-  static {
-    __resetStaticVars();
-  }
-
-  public static short someShort;
-  static byte[] bytes;
-  static Boolean someBoolean;
-  protected static String aString;
-  private static String secretString;
-  static List<?> aList;
-  static Object[] objects;
-  static Throwable lastError;
-
-  static void __resetStaticVars() {
-    someShort = 4;
-    bytes = null;
-    someBoolean = false;
-    aString = "I am a normal string";
-    aList = new ArrayList<>();
-    objects = null;
-    lastError = new Exception("dummy exception");
-  }
-}
-
 @RunWith(MockitoJUnitRunner.class)
 public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTest {
 
@@ -80,6 +53,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   private final String sourceFilename = "NotARealClass.java";
 
   @Before
+  @Override
   public void setUp() {
     super.setUp();
     dispatcher =
@@ -100,7 +74,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
   @After
   public void resetTestClassVariables() {
-    ClassForPutStaticTest.__resetStaticVars();
+    ClassForPutStaticTest.resetStaticVars();
   }
 
   @Override
@@ -165,7 +139,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
-    byte[] newFieldValue = "this is just a test".getBytes();
+    byte[] newFieldValue = "this is just a test".getBytes(StandardCharsets.UTF_8);
     Object[] args = {newFieldValue};
     Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
@@ -181,7 +155,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     String fieldName = "bytes";
     String fieldClassName = "[B";
-    byte[] newFieldValue = "this is just a test".getBytes();
+    byte[] newFieldValue = "this is just a test".getBytes(StandardCharsets.UTF_8);
 
     ExecMessage incomingMessage =
         messageBuilder.buildPutStatic(
@@ -310,30 +284,30 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   public void dispatch_object_ok() throws Throwable {
 
     // signature
-    String fieldName = "aList";
+    String fieldName = "aCollection";
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
-    LinkedList<?> newFieldValue = new LinkedList<>();
+    var newFieldValue = new ArrayDeque<>();
     Object[] args = {newFieldValue};
     Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertThat(returned, is(Void.getInstance()));
-    assertThat(newFieldValue, instanceOf(LinkedList.class));
-    assertThat(ClassForPutStaticTest.aList, is(newFieldValue));
+    assertThat(newFieldValue, instanceOf(ArrayDeque.class));
+    assertThat(ClassForPutStaticTest.aCollection, is(newFieldValue));
   }
 
   @Override
   @Test
   public void dispatchIncoming_object_ok() {
 
-    String fieldName = "aList";
-    LinkedList<?> newFieldValue = new LinkedList<>();
+    String fieldName = "aCollection";
+    ArrayDeque<?> newFieldValue = new ArrayDeque<>();
     ObjectRef valueObjRef = objectLookupStore.storeObject(newFieldValue);
 
     ExecMessage incomingMessage =
@@ -348,7 +322,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
-    assertThat(ClassForPutStaticTest.aList, sameInstance(newFieldValue));
+    assertThat(ClassForPutStaticTest.aCollection, sameInstance(newFieldValue));
     assertThat(replyMsg.getStaticFieldPutDone(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
@@ -360,37 +334,34 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
   public void dispatch_nullObject_ok() throws Throwable {
 
     // signature
-    String fieldName = "aList";
+    String fieldName = "aCollection";
     Signature signature = new FieldSignature(targetClass.getDeclaredField(fieldName));
 
     // ctxt
     Context ctxt = new Context(sourceFilename, -1, targetClass, signature);
 
     // dispatch
-    List<?> newFieldValue = null;
-    Object[] args = {newFieldValue};
-    assertThat(ClassForPutStaticTest.aList, notNullValue());
+    assertThat(ClassForPutStaticTest.aCollection, notNullValue());
+    Object[] args = {null};
     Object returned = dispatcher.dispatch(ctxt, this, null, args);
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledTwice();
     assertThat(returned, is(Void.getInstance()));
-    assertThat(ClassForPutStaticTest.aList, is(nullValue()));
+    assertThat(ClassForPutStaticTest.aCollection, is(nullValue()));
   }
 
   @Override
   @Test
   public void dispatchIncoming_nullObject_ok() {
 
-    String fieldName = "aList";
-    LinkedList<?> newFieldValue = null;
+    String fieldName = "aCollection";
 
+    assertThat(ClassForPutStaticTest.aCollection, notNullValue());
     ExecMessage incomingMessage =
         messageBuilder.buildPutStatic(
-            peerUuid, targetClass.getName(), fieldName, "List.class", newFieldValue);
-
+            peerUuid, targetClass.getName(), fieldName, "List.class", null);
     // dispatch
-    assertThat(ClassForPutStaticTest.aList, notNullValue());
     ExecMessage replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
 
     // expect
@@ -399,7 +370,7 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
-    assertThat(ClassForPutStaticTest.aList, is(nullValue()));
+    assertThat(ClassForPutStaticTest.aCollection, is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
@@ -601,5 +572,33 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertNull(replyMsg.getReturnValue());
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  // auxiliary class
+  @SuppressWarnings({"unused", "StaticAssignmentOfThrowable"})
+  private static class ClassForPutStaticTest {
+
+    static {
+      resetStaticVars();
+    }
+
+    public static short someShort;
+    static byte[] bytes;
+    static Boolean someBoolean;
+    protected static String aString;
+    private static String secretString;
+    static ArrayDeque<?> aCollection;
+    static Object[] objects;
+    static Throwable lastError;
+
+    static void resetStaticVars() {
+      someShort = 4;
+      bytes = null;
+      someBoolean = false;
+      aString = "I am a normal string";
+      aCollection = new ArrayDeque<>();
+      objects = null;
+      lastError = new Exception("dummy exception");
+    }
   }
 }

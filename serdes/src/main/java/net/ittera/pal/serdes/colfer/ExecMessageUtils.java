@@ -31,52 +31,41 @@ public class ExecMessageUtils {
 
   public static String getClassname(ExecMessage execMessage) {
     final ExecMessageType msgType = ExecMessageType.fromByte(execMessage.getExecMessageType());
-    switch (msgType) {
-      case CONSTRUCTOR:
-        return execMessage.getConstructorCall().getClazz().getName();
-      case INSTANCE_METHOD:
-        return execMessage.getInstanceMethodCall().getClazz().getName();
-      case CLASS_METHOD:
-        return execMessage.getClassMethodCall().getClazz().getName();
-      case GET_STATIC:
-        return execMessage.getStaticFieldGet().getClazz().getName();
-      case GET_FIELD:
-        return execMessage.getInstanceFieldGet().getClazz().getName();
-      case PUT_STATIC:
-        return execMessage.getStaticFieldPut().getClazz().getName();
-      case PUT_FIELD:
-        return execMessage.getInstanceFieldPut().getClazz().getName();
-      default:
-        throw new IllegalArgumentException(
-            String.format("Unsupported ExecMessage type: %s", msgType));
-    }
+    return switch (msgType) {
+      case CONSTRUCTOR -> execMessage.getConstructorCall().getClazz().getName();
+      case INSTANCE_METHOD -> execMessage.getInstanceMethodCall().getClazz().getName();
+      case CLASS_METHOD -> execMessage.getClassMethodCall().getClazz().getName();
+      case GET_STATIC -> execMessage.getStaticFieldGet().getClazz().getName();
+      case GET_FIELD -> execMessage.getInstanceFieldGet().getClazz().getName();
+      case PUT_STATIC -> execMessage.getStaticFieldPut().getClazz().getName();
+      case PUT_FIELD -> execMessage.getInstanceFieldPut().getClazz().getName();
+      default ->
+          throw new IllegalArgumentException(
+              String.format("Unsupported ExecMessage type: %s", msgType));
+    };
   }
 
   public static String getExecutableName(ExecMessage execMessage) {
     final ExecMessageType execMessageType =
         ExecMessageType.fromByte(execMessage.getExecMessageType());
-    switch (execMessageType) {
-      case CONSTRUCTOR:
-        return "new";
-      case INSTANCE_METHOD:
-        return execMessage.getInstanceMethodCall().getName();
-      case CLASS_METHOD:
-        return execMessage.getClassMethodCall().getName();
-      case GET_STATIC:
-        return execMessage.getStaticFieldGet().getField().getName();
-      case GET_FIELD:
-        return execMessage.getInstanceFieldGet().getField().getName();
-      case PUT_STATIC:
-        return execMessage.getStaticFieldPut().getField().getName();
-      case PUT_FIELD:
-        return execMessage.getInstanceFieldPut().getField().getName();
-      default:
-        throw new IllegalArgumentException(
-            String.format("Unsupported ExecMessage type: %s", execMessageType));
-    }
+    return switch (execMessageType) {
+      case CONSTRUCTOR -> "new";
+      case INSTANCE_METHOD -> execMessage.getInstanceMethodCall().getName();
+      case CLASS_METHOD -> execMessage.getClassMethodCall().getName();
+      case GET_STATIC -> execMessage.getStaticFieldGet().getField().getName();
+      case GET_FIELD -> execMessage.getInstanceFieldGet().getField().getName();
+      case PUT_STATIC -> execMessage.getStaticFieldPut().getField().getName();
+      case PUT_FIELD -> execMessage.getInstanceFieldPut().getField().getName();
+      default ->
+          throw new IllegalArgumentException(
+              String.format("Unsupported ExecMessage type: %s", execMessageType));
+    };
   }
 
   /**
+   * Get the parameter types of the given ExecMessage.
+   *
+   * @param execMessage the ExecMessage to get the parameter types from
    * @return null if not a constructor/method call, possibly empty list of parameter class names
    *     otherwise
    */

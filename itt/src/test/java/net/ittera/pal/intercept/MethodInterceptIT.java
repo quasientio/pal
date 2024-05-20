@@ -19,10 +19,10 @@
 
 package net.ittera.pal.intercept;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,7 +46,7 @@ public class MethodInterceptIT extends AbstractInterceptIT {
   @Test
   public void testBeforeInstanceMethod() throws Exception {
 
-    final InterceptType INTERCEPT_TYPE = InterceptType.BEFORE;
+    final InterceptType interceptType = InterceptType.BEFORE;
 
     // args to call
     final int N = 2;
@@ -58,7 +58,7 @@ public class MethodInterceptIT extends AbstractInterceptIT {
     InterceptRequest<InterceptableMethodCall> interceptRequest =
         createMethodCallInterceptRequest(
             UUID.randomUUID(),
-            INTERCEPT_TYPE,
+            interceptType,
             InterceptableApp.class.getName(),
             callbackClass,
             callbackMethod,
@@ -82,7 +82,7 @@ public class MethodInterceptIT extends AbstractInterceptIT {
 
     // receive callbacks and verify class/object state in separate thread
     List<Message> callbacks = new ArrayList<>();
-    Future future =
+    Future<?> future =
         executor.submit(
             () -> {
               Message callback =

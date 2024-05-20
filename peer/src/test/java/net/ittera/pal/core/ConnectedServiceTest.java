@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executors;
+import javax.annotation.Nonnull;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ public class ConnectedServiceTest extends ZmqEnabledTest {
     return new ConnectedService(
         peerUuid, zmqContext, SYNC_SOCKET_ADDRESS, threadGroup, serviceName) {
       @Override
+      @SuppressWarnings("BusyWait")
       protected void run() {
         while (!shutdownRequested) {
           // do something
@@ -46,6 +48,8 @@ public class ConnectedServiceTest extends ZmqEnabledTest {
           try {
             Thread.sleep(300);
           } catch (InterruptedException e) {
+            logger.error("Interrupted", e);
+            Thread.currentThread().interrupt();
           }
         }
       }
@@ -75,24 +79,27 @@ public class ConnectedServiceTest extends ZmqEnabledTest {
 
     manager.addListener(
         new ServiceManager.Listener() {
+          @Override
           public void stopped() {
             logger.debug("Service manager stopped.");
           }
 
+          @Override
           public void healthy() {
             // start accepting requests
             logger.debug("Managed services ready");
           }
 
-          public void failure(Service service) {
-            logger.debug("failure: {} ", service.failureCause());
+          @Override
+          public void failure(@Nonnull Service service) {
+            logger.error("failed service: {} ", service, service.failureCause());
           }
         },
         Executors.newFixedThreadPool(1));
 
     manager.startAsync().awaitHealthy(); // we could skip awaiting here
     collectGoSignals(services.size(), zmqContext);
-    // now we know all services have sync'ed (awaitHealthy() is no guarantee of all being running)
+    // now we know all services have sync-ed (awaitHealthy() is no guarantee of all being running)
     manager.stopAsync();
     manager.awaitStopped();
     closeContext(zmqContext);

@@ -43,10 +43,6 @@ public abstract class InfoNode {
     this.mtime = OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
   }
 
-  public final void setMtime(Instant time) {
-    this.mtime = OffsetDateTime.ofInstant(time, ZoneOffset.UTC);
-  }
-
   public final OffsetDateTime getCTime() {
     return ctime;
   }
@@ -55,7 +51,7 @@ public abstract class InfoNode {
     return mtime;
   }
 
-  public final String toJSONString() {
+  public final String toJson() {
     return JSON.toJSONString(this);
   }
 }

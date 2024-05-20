@@ -26,7 +26,6 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
@@ -80,16 +79,14 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   protected ExecMessage wrapAfterExecMessage(
       Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
-    final Optional<AccessibleObject> method =
-        Optional.of(((MethodSignature) ctxt.getSignature()).getMethod());
+    final AccessibleObject method = ((MethodSignature) ctxt.getSignature()).getMethod();
 
     if (value instanceof InvocationExceptionWrapper) {
-      Exception invocationException = ((InvocationExceptionWrapper) value).getException();
+      Exception invocationException = ((InvocationExceptionWrapper) value).exception();
       return messageBuilder.buildAccessibleObjectThrowable(
           peerUuid, method, ExecutableObjectType.METHOD, invocationException, null);
     } else {
-      return messageBuilder.buildReturnValue(
-          peerUuid, value, method.get(), objectRef, isVoid, null);
+      return messageBuilder.buildReturnValue(peerUuid, value, method, objectRef, isVoid, null);
     }
   }
 
@@ -133,11 +130,18 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   }
 
   @Override
-  protected Object getTargetFromMessage(
-      ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
+  protected Object getTargetFromMessage(ExecMessage execMessage)
       throws ClassNotFoundException, NullPointerException {
-    Object target;
     final Obj methodCallObject = execMessage.getInstanceMethodCall().getObject();
+    if (logger.isTraceEnabled()) {
+      logger.trace("methodCallObject: {}", methodCallObject);
+      if (execMessage.getInstanceMethodCall().getObjectRef() != null
+          && !execMessage.getInstanceMethodCall().getObjectRef().isEmpty()) {
+        logger.trace("ObjectRef: {}", execMessage.getInstanceMethodCall().getObjectRef());
+      }
+    }
+
+    Object target;
     if (methodCallObject != null) {
       Class<?> objClass =
           Class.forName(
@@ -153,11 +157,11 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
       if (objectLookupStore.containsObjectRef(targetObjRef)) {
         target = objectLookupStore.lookupObject(targetObjRef);
       } else {
-        Exception onfe =
+        Exception objectNotFoundException =
             new ObjectNotFoundException(
                 String.format("No object found with objRef: %d", targetObjRef.getRef()));
-        NullPointerException npe = new NullPointerException(onfe.getMessage());
-        npe.initCause(onfe);
+        NullPointerException npe = new NullPointerException(objectNotFoundException.getMessage());
+        npe.initCause(objectNotFoundException);
         throw npe;
       }
       if (logger.isTraceEnabled()) {
@@ -167,13 +171,6 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
     return target;
   }
 
-  /**
-   * @param execMessage
-   * @param parameterTypes Not used here.
-   * @param args
-   * @return
-   * @throws ReflectiveOperationException
-   */
   @Override
   protected AccessibleObject loadAccessibleObject(
       ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)

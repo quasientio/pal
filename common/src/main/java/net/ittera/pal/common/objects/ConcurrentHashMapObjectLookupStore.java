@@ -33,12 +33,15 @@ import org.slf4j.LoggerFactory;
  * <pre>
  * Contract:
  * --=====--
- * storeObject() creates and saves a WeakReference and returns an ObjectRef (Plain wrapper around String)
+ * storeObject() creates and saves a WeakReference and returns an ObjectRef,
+ * which is a plain wrapper around String.
  *
- * We wrap objects before putting them in the map, so the Map implementation uses our overriden hashCode(),
- * which delegates to the value's System.identityHashCode, and not the normal hashCode.
+ * We wrap objects before putting them in the map, so that the Map implementation
+ * uses our overriden hashCode(), which delegates to the value's System.identityHashCode,
+ * and not the normal hashCode.
  *
- * This allows mapping values that are equal() -- This is OK because we don't care about the general Map contract.
+ * This allows mapping values that are equal() -- This is OK because we don't care about
+ * the general Map contract.
  *
  * <b>WARNING</b>: We assume System.identityHashCode will return distinct ints for different objects.
  * This may be the most probable, but is not guaranteed according to the JDK javadocs.
@@ -76,7 +79,9 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
   }
 
   private void startBackgroundProcessor() {
-    new ObjectLookupStoreBackgroundProcessor(this, objectLookupStoreStats).start();
+    ObjectLookupStoreBackgroundProcessor processor =
+        new ObjectLookupStoreBackgroundProcessor(this, objectLookupStoreStats);
+    processor.start();
   }
 
   private ObjectRef generateObjectRef(Object object) {
@@ -117,7 +122,7 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
   @Override
   public Object lookupObject(ObjectRef objectRef) {
     if (logger.isTraceEnabled()) {
-      logger.trace("in w/ objectRef: {}", objectRef);
+      logger.trace("in lookupObject w/ objectRef: {}", objectRef);
     }
     if (objectRef == null) {
       throw new NullPointerException("objectRef cannot be null");
@@ -152,7 +157,7 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
   @Override
   public boolean containsObjectRef(ObjectRef objectRef) {
     if (logger.isTraceEnabled()) {
-      logger.trace("in w/ objectRef: {}", objectRef);
+      logger.trace("in containsObjectRef w/ objectRef: {}", objectRef);
     }
     if (objectRef == null) {
       throw new NullPointerException("objectRef cannot be null");

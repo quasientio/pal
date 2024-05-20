@@ -46,19 +46,25 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.*;
-import net.ittera.pal.common.cli.PALCommand;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import javax.annotation.Nonnull;
+import net.ittera.pal.common.cli.PalCommand;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.core.exec.InterceptInformer;
 import net.ittera.pal.core.exec.LogMessageExecutor;
-import net.ittera.pal.core.exec.RPCMessageExecutor;
+import net.ittera.pal.core.exec.RpcMessageExecutor;
 import net.ittera.pal.core.exec.ThreadPool;
 import net.ittera.pal.core.exec.java.CustomClassloader;
 import net.ittera.pal.core.exec.java.SelfCaller;
 import net.ittera.pal.core.exec.java.reflect.AnnotationsProcessor;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -86,7 +92,9 @@ import picocli.CommandLine.ParentCommand;
     })
 public class Main implements Callable<Integer> {
 
-  @ParentCommand private PALCommand palCommand;
+  @SuppressWarnings("unused")
+  @ParentCommand
+  private PalCommand palCommand;
 
   @Option(
       names = {"-c", "-cp", "--classpath"},
@@ -98,7 +106,7 @@ public class Main implements Callable<Integer> {
       names = {"-d", "--dir"},
       paramLabel = "HOST:PORT",
       description = "PAL directory (if not given, run unregistered)")
-  private String palDirectoryURL; // corresponding ENV var: PAL_DIRECTORY
+  private String palDirectoryUrl; // corresponding ENV var: PAL_DIRECTORY
 
   @Option(
       names = {"-u", "--uuid"},
@@ -199,6 +207,7 @@ public class Main implements Callable<Integer> {
       names = {"-h", "--help"},
       usageHelp = true,
       description = "display this help message")
+  @SuppressWarnings("unused")
   private boolean helpRequested = false;
 
   @Option(
@@ -207,6 +216,7 @@ public class Main implements Callable<Integer> {
       hidden = true)
   private String jarFile;
 
+  @SuppressWarnings("unused")
   @Parameters(hidden = true)
   private List<String> cmdArgList;
 
@@ -231,32 +241,30 @@ public class Main implements Callable<Integer> {
   private static final String PROPERTIES_FILE = "/peer.properties";
   private static final String LOGGING_CONFIG = "/peer-logging.xml";
 
-  private static final class ZMQProps {
+  private static final class ZmqProperties {
     // defaults for ZMQ properties
     private static final String ZMQ_LINGER_DEFAULT = "1000";
     private static final String ZMQ_RCVHWM_DEFAULT = "10000";
     private static final String ZMQ_SNDHWM_DEFAULT = "10000";
-
     private static final String OUT_PUB_CHANNEL = "out.pub";
+    private static final String DEFAULT_PUB_HOSTNAME = "localhost";
+    private static final String DEFAULT_RPC_HOSTNAME = "localhost";
+    private static final String DEFAULT_JSONRPC_HOSTNAME = "localhost";
 
     // internal ZMQ channel names
     private static final Properties inprocEndpoints = new Properties();
 
     static {
-      inprocEndpoints.put("in.log", "inproc://inlog");
-      inprocEndpoints.put("in.dealer", "inproc://dealrpc");
-      inprocEndpoints.put("json.in.dealer", "inproc://dealjsonrpc");
+      inprocEndpoints.put("in.log", "inproc://in_log");
+      inprocEndpoints.put("in.dealer", "inproc://deal_rpc");
+      inprocEndpoints.put("json.in.dealer", "inproc://deal_jsonrpc");
       inprocEndpoints.put("out.cell", "inproc://cell");
       inprocEndpoints.put("out.pub.inproc", "inproc://pub");
       inprocEndpoints.put("offset.pub", "inproc://offsets");
       inprocEndpoints.put("sync.ready", "inproc://sync_ready");
-      inprocEndpoints.put("intercepts.reg", "inproc://intcept_reg");
+      inprocEndpoints.put("intercepts.reg", "inproc://intercept_reg");
       inprocEndpoints.put("session.svc", "inproc://session");
     }
-
-    private static final String DEFAULT_PUB_HOSTNAME = "localhost";
-    private static final String DEFAULT_RPC_HOSTNAME = "localhost";
-    private static final String DEFAULT_JSONRPC_HOSTNAME = "localhost";
   }
 
   private void initLogging() {
@@ -284,6 +292,7 @@ public class Main implements Callable<Integer> {
         } catch (Exception ex) {
           System.err.printf("Error loading logging configuration from %s%n", palLogging);
           // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
+          //noinspection CallToPrintStackTrace
           ex.printStackTrace();
         }
         return;
@@ -296,6 +305,7 @@ public class Main implements Callable<Integer> {
     } catch (Exception ex) {
       System.err.printf("Error loading logging configuration from %s%n", LOGGING_CONFIG);
       // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
+      //noinspection CallToPrintStackTrace
       ex.printStackTrace();
     }
   }
@@ -313,19 +323,19 @@ public class Main implements Callable<Integer> {
     logger.info("Loaded application properties from `{}`", PROPERTIES_FILE);
   }
 
-  private void initZContext() {
+  private void initZmqContext() {
     zmqContext = new ZContext();
     zmqContext.setLinger(
-        Integer.parseInt(properties.getProperty("ZMQ_LINGER", ZMQProps.ZMQ_LINGER_DEFAULT)));
+        Integer.parseInt(properties.getProperty("ZMQ_LINGER", ZmqProperties.ZMQ_LINGER_DEFAULT)));
     zmqContext.setRcvHWM(
-        Integer.parseInt(properties.getProperty("ZMQ_RCVHWM", ZMQProps.ZMQ_RCVHWM_DEFAULT)));
+        Integer.parseInt(properties.getProperty("ZMQ_RCVHWM", ZmqProperties.ZMQ_RCVHWM_DEFAULT)));
     zmqContext.setSndHWM(
-        Integer.parseInt(properties.getProperty("ZMQ_SNDHWM", ZMQProps.ZMQ_SNDHWM_DEFAULT)));
+        Integer.parseInt(properties.getProperty("ZMQ_SNDHWM", ZmqProperties.ZMQ_SNDHWM_DEFAULT)));
     logger.info("Created and configured zmq context");
 
     // start ready socket
     syncSocket = zmqContext.createSocket(SocketType.PULL);
-    syncSocket.bind(ZMQProps.inprocEndpoints.getProperty("sync.ready"));
+    syncSocket.bind(ZmqProperties.inprocEndpoints.getProperty("sync.ready"));
   }
 
   private void closeZmqContext() {
@@ -367,20 +377,12 @@ public class Main implements Callable<Integer> {
     return null;
   }
 
-  private static UUID getParameter(String envKey, UUID paramValue) {
-    final String uuidAsString =
-        getParameter(envKey, paramValue == null ? null : paramValue.toString());
-    if (uuidAsString != null) {
-      return UUID.fromString(uuidAsString);
-    }
-    return null;
-  }
-
   private void setEmptyParamsFromEnv() {
     classpath = getParameter("CLASSPATH", classpath);
     kafkaServers = getParameter("KAFKA_SERVERS", kafkaServers);
     name = getParameter("PEER_NAME", name);
-    uuid = getParameter("PEER_UUID", uuid);
+    String uuidString = getParameter("PEER_UUID", uuid == null ? null : uuid.toString());
+    uuid = uuidString == null ? null : UUID.fromString(uuidString);
     log = getParameter("LOG", log);
     inLog = getParameter("IN_LOG", inLog);
     outLog = getParameter("OUT_LOG", outLog);
@@ -390,18 +392,18 @@ public class Main implements Callable<Integer> {
 
     // if not given as option to this CMD, check if it was given as option to parent (Pal) command
     // else, set it from ENV if present
-    if (palDirectoryURL == null || palDirectoryURL.trim().isEmpty()) {
+    if (palDirectoryUrl == null || palDirectoryUrl.trim().isEmpty()) {
       // check ENV variable
       String palDirectoryEnvVar = System.getenv("PAL_DIRECTORY");
       palDirectoryEnvVar = palDirectoryEnvVar != null ? palDirectoryEnvVar.trim() : null;
       // check if it was given to parent command (Pal) as option
       if (palCommand != null
-          && !Arrays.asList(palDirectoryEnvVar, PALDirectory.NO_URL)
+          && !Arrays.asList(palDirectoryEnvVar, PalDirectory.NO_URL)
               .contains(palCommand.getPalDirectoryConnectionString())) {
-        palDirectoryURL = palCommand.getPalDirectoryConnectionString();
+        palDirectoryUrl = palCommand.getPalDirectoryConnectionString();
       } else {
         // set it from parsed ENV variable (which at this point may be null, that's ok)
-        palDirectoryURL = palDirectoryEnvVar;
+        palDirectoryUrl = palDirectoryEnvVar;
       }
     }
   }
@@ -424,7 +426,7 @@ public class Main implements Callable<Integer> {
     // verify and set run options
     runOptions = EnumSet.noneOf(RunOptions.class);
 
-    if (palDirectoryURL == null || palDirectoryURL.isEmpty()) {
+    if (palDirectoryUrl == null || palDirectoryUrl.isEmpty()) {
       // warn of incompatible options that will be ignored
       if (name != null) {
         System.err.println(
@@ -448,17 +450,18 @@ public class Main implements Callable<Integer> {
       // if logName is given, assign to both inLog and outLog
       if (inLog != null || outLog != null) {
         System.err.println(
-            "WARNING: with --log (LOG), --in-log (IN_LOG) and --out-log (OUT_LOG) options are ignored.");
+            "WARNING: with --log (LOG), --in-log (IN_LOG) and"
+                + " --out-log (OUT_LOG) options are ignored.");
       }
       inLog = outLog = log;
     }
 
     if (inLog != null) {
-      runOptions.add(RunOptions.WITH_INLOG);
+      runOptions.add(RunOptions.WITH_IN_LOG);
     }
 
     if (outLog != null) {
-      runOptions.add(RunOptions.WITH_OUTLOG);
+      runOptions.add(RunOptions.WITH_OUT_LOG);
     }
 
     // ensure that if offset was given, a log name to read from was also given
@@ -466,7 +469,7 @@ public class Main implements Callable<Integer> {
       fatalExit(null, PeerException.FatalCode.ERROR_NO_LOG_GIVEN);
     }
 
-    if (runOptions.contains(RunOptions.WITH_OUTLOG) || tcpPub != null) {
+    if (runOptions.contains(RunOptions.WITH_OUT_LOG) || tcpPub != null) {
       runOptions.add(RunOptions.WITH_TCP_PUB);
     }
 
@@ -506,9 +509,9 @@ public class Main implements Callable<Integer> {
     // add Directory url to app properties
     properties.setProperty(
         "paldir_url",
-        palDirectoryURL == null || palDirectoryURL.isEmpty()
-            ? PALDirectory.NO_URL
-            : palDirectoryURL);
+        palDirectoryUrl == null || palDirectoryUrl.isEmpty()
+            ? PalDirectory.NO_URL
+            : palDirectoryUrl);
 
     // add kafka servers if given
     if (kafkaServers != null) {
@@ -518,7 +521,7 @@ public class Main implements Callable<Integer> {
     // are we publishing via TCP, or just internally
     if (tcpPub != null) {
       int port = 0;
-      String hostname = ZMQProps.DEFAULT_PUB_HOSTNAME;
+      String hostname = ZmqProperties.DEFAULT_PUB_HOSTNAME;
       if (tcpPub.equalsIgnoreCase("auto")) {
         try {
           port = findOpenPort();
@@ -534,15 +537,16 @@ public class Main implements Callable<Integer> {
       } else {
         port = Integer.parseInt(tcpPub);
       }
-      properties.setProperty(ZMQProps.OUT_PUB_CHANNEL, format("tcp://%s:%d", hostname, port));
+      properties.setProperty(ZmqProperties.OUT_PUB_CHANNEL, format("tcp://%s:%d", hostname, port));
     } else {
       properties.setProperty(
-          ZMQProps.OUT_PUB_CHANNEL, ZMQProps.inprocEndpoints.getProperty("out.pub.inproc"));
+          ZmqProperties.OUT_PUB_CHANNEL,
+          ZmqProperties.inprocEndpoints.getProperty("out.pub.inproc"));
     }
 
     // are we listening for RPC requests
     if (rpc != null) {
-      String hostname = ZMQProps.DEFAULT_RPC_HOSTNAME;
+      String hostname = ZmqProperties.DEFAULT_RPC_HOSTNAME;
       int port = 0;
       if (rpc.equalsIgnoreCase("auto")) {
         try {
@@ -573,7 +577,7 @@ public class Main implements Callable<Integer> {
 
     // are we listening for JSONRPC requests
     if (jsonRpc != null) {
-      String hostname = ZMQProps.DEFAULT_JSONRPC_HOSTNAME;
+      String hostname = ZmqProperties.DEFAULT_JSONRPC_HOSTNAME;
       int port = 0;
       if (jsonRpc.equalsIgnoreCase("auto")) {
         try {
@@ -609,7 +613,7 @@ public class Main implements Callable<Integer> {
     properties.setProperty("rpc.allow_nonpublic", String.valueOf(rpcAllowNonPublic));
   }
 
-  private String getJMXAddress() {
+  private String getJmxAddress() {
     final String jmxRemote = System.getProperty("com.sun.management.jmxremote");
     if ("false".equalsIgnoreCase(jmxRemote)) {
       return null;
@@ -623,8 +627,8 @@ public class Main implements Callable<Integer> {
       final String hostEnv = System.getenv("JMX_HOST");
       if (hostEnv != null && !hostEnv.isEmpty()) {
         jmxRemoteHost = hostEnv;
-      } // if local.only, then we assume hostname = 'localhost'
-      else if (localOnly != null && !"false".equalsIgnoreCase(localOnly)) {
+      } else if (localOnly != null && !"false".equalsIgnoreCase(localOnly)) {
+        // if local.only, then we assume hostname = 'localhost'
         jmxRemoteHost = "localhost";
       }
     }
@@ -665,7 +669,7 @@ public class Main implements Callable<Integer> {
 
   private void registerSelfAsPeer(Injector injector) {
 
-    final PALDirectory palDirectory =
+    final PalDirectory palDirectory =
         injector
             .getInstance(DirectoryConnectionProvider.class)
             .get()
@@ -682,11 +686,11 @@ public class Main implements Callable<Integer> {
         self.setJsonrpcAddress(properties.getProperty("in.jsonrpc"));
       }
       if (properties
-          .getProperty(ZMQProps.OUT_PUB_CHANNEL)
-          .startsWith("tcp://")) { // only register PUB addr if over TCP
-        self.setPubAddress(properties.getProperty(ZMQProps.OUT_PUB_CHANNEL));
+          .getProperty(ZmqProperties.OUT_PUB_CHANNEL)
+          .startsWith("tcp://")) { // only register PUB address if over TCP
+        self.setPubAddress(properties.getProperty(ZmqProperties.OUT_PUB_CHANNEL));
       }
-      String jmxAddress = getJMXAddress();
+      String jmxAddress = getJmxAddress();
       if (jmxAddress != null) {
         self.setJmxAddress(jmxAddress);
       }
@@ -705,22 +709,22 @@ public class Main implements Callable<Integer> {
     final Set<Service> services = new HashSet<>();
     boolean sessionRequired = false;
 
-    if (runOptions.contains(RunOptions.WITH_INLOG)) {
+    if (runOptions.contains(RunOptions.WITH_IN_LOG)) {
       services.add(injector.getInstance(LogReader.class));
       sessionRequired = true;
     }
-    if (runOptions.contains(RunOptions.WITH_OUTLOG)) {
+    if (runOptions.contains(RunOptions.WITH_OUT_LOG)) {
       services.add(injector.getInstance(LogWriter.class));
     }
     if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
       services.add(injector.getInstance(MessagePublisher.class));
     }
     if (runOptions.contains(RunOptions.WITH_RPC)) {
-      services.add(injector.getInstance(RPCRequestDispatcher.class));
+      services.add(injector.getInstance(RpcRequestDispatcher.class));
       sessionRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_JSONRPC)) {
-      services.add(injector.getInstance(JSONRPCRequestDispatcher.class));
+      services.add(injector.getInstance(JsonRpcRequestDispatcher.class));
       sessionRequired = true;
     }
     if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
@@ -750,7 +754,7 @@ public class Main implements Callable<Integer> {
           }
 
           @Override
-          public void failure(Service service) {
+          public void failure(@Nonnull Service service) {
             fatalExit(service.failureCause(), PeerException.FatalCode.ERROR_SERVICE_MANAGER_FAILED);
           }
         },
@@ -772,24 +776,24 @@ public class Main implements Callable<Integer> {
       // stop peer executor (interrupts all peer exec threads)
       if (runOptions.contains(RunOptions.WITH_RPC)
           || runOptions.contains(RunOptions.WITH_JSONRPC)) {
-        final ThreadPool rpcMessageExecutor = injector.getInstance(RPCMessageExecutor.class);
+        final ThreadPool rpcMessageExecutor = injector.getInstance(RpcMessageExecutor.class);
         rpcMessageExecutor.shutdown();
         logger.info("Done shutting down peer threads");
       }
 
       // stop log executor (interrupts all log exec threads)
-      if (runOptions.contains(RunOptions.WITH_INLOG)) {
+      if (runOptions.contains(RunOptions.WITH_IN_LOG)) {
         final ThreadPool logMessageExecutor = injector.getInstance(LogMessageExecutor.class);
         logMessageExecutor.shutdown();
         logger.info("Done shutting down log threads");
       }
 
       // asynchronously shutdown custom classloader notifications executor
-      singleExecutor.submit(() -> customClassloader.shutdown());
+      singleExecutor.execute(() -> customClassloader.shutdown());
 
       // unregister self and close connection to paldir
       if (runOptions.contains(RunOptions.WITH_PALDIR)) {
-        final Optional<PALDirectory> palDirectory =
+        final Optional<PalDirectory> palDirectory =
             injector.getInstance(DirectoryConnectionProvider.class).get();
         palDirectory.ifPresent(
             dir -> {
@@ -809,7 +813,7 @@ public class Main implements Callable<Integer> {
       }
 
       // close zmq context asynchronously
-      singleExecutor.submit(this::closeZmqContext);
+      singleExecutor.execute(this::closeZmqContext);
       singleExecutor.shutdown();
 
       // wait a bit for services to stop
@@ -844,11 +848,11 @@ public class Main implements Callable<Integer> {
   private void collectGoSignals(int numberOfSignals) {
     CountDownLatch latch = new CountDownLatch(numberOfSignals);
     while (latch.getCount() > 0) {
-      String rcvd = syncSocket.recvStr();
-      if (rcvd.equalsIgnoreCase("go!")) {
+      String received = syncSocket.recvStr();
+      if (received.equalsIgnoreCase("go!")) {
         latch.countDown();
       } else {
-        logger.warn("ignoring unexpected msg: '{}'", rcvd);
+        logger.warn("ignoring unexpected msg: '{}'", received);
       }
     }
     syncSocket.close();
@@ -872,10 +876,10 @@ public class Main implements Callable<Integer> {
     loadProps();
 
     // initialize ZMQ and local sockets
-    initZContext();
+    initZmqContext();
 
     // add zmq channel names to properties
-    properties.putAll(ZMQProps.inprocEndpoints);
+    properties.putAll(ZmqProperties.inprocEndpoints);
 
     // add misc variables to app props
     addMiscProperties();
@@ -892,10 +896,10 @@ public class Main implements Callable<Integer> {
       customClassloader.addClassLoadListener(injector.getInstance(AnnotationsProcessor.class));
     }
 
-    // register peer async
+    // register peer asynchronously
     final CountDownLatch selfRegistrationLatch = new CountDownLatch(1);
     if (runOptions.contains(RunOptions.WITH_PALDIR)) {
-      singleExecutor.submit(
+      singleExecutor.execute(
           () -> {
             registerSelfAsPeer(injector);
             selfRegistrationLatch.countDown();
@@ -903,7 +907,8 @@ public class Main implements Callable<Integer> {
     }
 
     // init logs IO
-    if (runOptions.contains(RunOptions.WITH_INLOG) || runOptions.contains(RunOptions.WITH_OUTLOG)) {
+    if (runOptions.contains(RunOptions.WITH_IN_LOG)
+        || runOptions.contains(RunOptions.WITH_OUT_LOG)) {
       try {
         new LogConfigurator(inLog, logOffset, outLog, properties, injector).init();
       } catch (Exception ex) {
@@ -940,9 +945,9 @@ public class Main implements Callable<Integer> {
       manager.awaitHealthy();
     }
 
-    // start listening to intercept reqs
+    // start listening to intercept requests
     if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {
-      final PALDirectory palDirectory =
+      final PalDirectory palDirectory =
           injector
               .getInstance(DirectoryConnectionProvider.class)
               .get()
@@ -955,27 +960,28 @@ public class Main implements Callable<Integer> {
     }
 
     // start accepting Log requests
-    if (runOptions.contains(RunOptions.WITH_INLOG)) {
+    if (runOptions.contains(RunOptions.WITH_IN_LOG)) {
       LogReader logMessageReader = injector.getInstance(LogReader.class);
       logMessageReader.acceptRequests(true);
       injector.getInstance(LogMessageExecutor.class).startAllThreads();
     }
 
-    // prestart threads to create the REP sockets; this must be done after DEALER
+    // pre-start threads to create the REP sockets; this must be done after DEALER
     if (runOptions.contains(RunOptions.WITH_RPC) || runOptions.contains(RunOptions.WITH_JSONRPC)) {
-      injector.getInstance(RPCMessageExecutor.class).startAllThreads();
+      injector.getInstance(RpcMessageExecutor.class).startAllThreads();
     }
 
     // now call target (main class or JAR file), if given
     boolean mainCalled = false;
+    int returnValue = 0;
     if (className != null) {
       // self-call className.main() if given, and then we're done
-      injector.getInstance(SelfCaller.class).callMain(className, argList);
+      returnValue = injector.getInstance(SelfCaller.class).callMain(className, argList);
       mainCalled = true;
     } else if (jarFile != null) { // NOTE: jarFile was previously added to classpath
       // self-call Main-Class found in manifest
       try {
-        injector.getInstance(SelfCaller.class).callJar(jarFile, argList);
+        returnValue = injector.getInstance(SelfCaller.class).callJar(jarFile, argList);
       } catch (PeerException e) {
         fatalExit(e);
       }
@@ -990,6 +996,6 @@ public class Main implements Callable<Integer> {
         runAsServiceLatch.await();
       }
     }
-    return 0;
+    return returnValue;
   }
 }

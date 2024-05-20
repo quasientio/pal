@@ -34,8 +34,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Encapsulates information and provides serialization methods for intercept requests so they can be
- * saved to the registry/directory and processed by peers.
+ * Encapsulates information and provides serialization methods for intercept requests, so they can
+ * be saved to the registry/directory and processed by peers.
  *
  * @param <T> The type of interceptable of this request.
  */
@@ -104,14 +104,21 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
   public byte[] toBytes(Charset charset) {
     final String s =
         format(
-            "%s" + LINE_SEP + // 0. uuid
-                "%s" + LINE_SEP + // 1. peer
-                "%d" + LINE_SEP + // 2. type
-                "%s" + LINE_SEP + // 3. clazz
-                "%s" + LINE_SEP + // 4. callbackClass
-                "%s" + LINE_SEP + // 5. callbackMethod
-                "%d" + LINE_SEP + // 6. interceptableType
-                "%s", // 7. interceptable
+            "%s"
+                + LINE_SEP // 0. uuid
+                + "%s"
+                + LINE_SEP // 1. peer
+                + "%d"
+                + LINE_SEP // 2. type
+                + "%s"
+                + LINE_SEP // 3. clazz
+                + "%s"
+                + LINE_SEP // 4. callbackClass
+                + "%s"
+                + LINE_SEP // 5. callbackMethod
+                + "%d"
+                + LINE_SEP // 6. interceptableType
+                + "%s", // 7. interceptable
             uuid,
             peer,
             type.toByte(),
@@ -123,14 +130,14 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
     return s.getBytes(charset);
   }
 
-  @SuppressWarnings("rawtypes")
-  public static InterceptRequest fromBytes(byte[] serialized, Charset charset) {
+  public static InterceptRequest<?> fromBytes(byte[] serialized, Charset charset) {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Deserializing intercept request from bytes (len={}): {}",
           serialized.length,
           new String(serialized, charset));
     }
+    @SuppressWarnings("StringSplitter")
     final String[] parts = new String(serialized, charset).split(LINE_SEP);
     final UUID uuid = UUID.fromString(parts[0]);
     final UUID peer = UUID.fromString(parts[1]);
@@ -140,17 +147,11 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
     final String callbackMethod = parts[5];
     final InterceptableType interceptableType =
         InterceptableType.fromByte(Byte.parseByte(parts[6]));
-    final Interceptable interceptable;
-    switch (interceptableType) {
-      case METHOD_CALL:
-        interceptable = InterceptableMethodCall.fromSerializedString(parts[7]);
-        break;
-      case FIELD_OP:
-        interceptable = InterceptableFieldOp.fromSerializedString(parts[7]);
-        break;
-      default:
-        throw new IllegalArgumentException("Unsupported interceptable type: " + interceptableType);
-    }
+    final Interceptable interceptable =
+        switch (interceptableType) {
+          case METHOD_CALL -> InterceptableMethodCall.fromSerializedString(parts[7]);
+          case FIELD_OP -> InterceptableFieldOp.fromSerializedString(parts[7]);
+        };
     return new InterceptRequest<>(
         uuid, peer, type, clazz, callbackClass, callbackMethod, interceptable);
   }

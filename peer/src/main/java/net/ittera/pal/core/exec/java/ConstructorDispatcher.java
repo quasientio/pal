@@ -28,7 +28,6 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import net.ittera.pal.common.lang.reflect.ConstructorSignature;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
@@ -78,16 +77,15 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   protected final ExecMessage wrapAfterExecMessage(
       Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
-    final Optional<AccessibleObject> constructor =
-        Optional.of(((ConstructorSignature) ctxt.getSignature()).getConstructor());
+    final AccessibleObject constructor =
+        ((ConstructorSignature) ctxt.getSignature()).getConstructor();
 
     if (value instanceof InvocationExceptionWrapper) {
-      Exception invocationException = ((InvocationExceptionWrapper) value).getException();
+      Exception invocationException = ((InvocationExceptionWrapper) value).exception();
       return messageBuilder.buildAccessibleObjectThrowable(
           peerUuid, constructor, getExecutableObjectType(), invocationException, null);
     } else {
-      return messageBuilder.buildReturnValue(
-          peerUuid, value, constructor.get(), objectRef, false, null);
+      return messageBuilder.buildReturnValue(peerUuid, value, constructor, objectRef, false, null);
     }
   }
 
@@ -96,7 +94,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
       ExecMessage execMessage,
       Object valueObject,
       ObjectRef valueObjRef,
-      Optional<AccessibleObject> accessibleObject,
+      AccessibleObject accessibleObject,
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking) {
 
@@ -112,7 +110,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
     }
 
     return messageBuilder.buildReturnValue(
-        peerUuid, valueObject, accessibleObject.get(), valueObjRef, false, messageUuid);
+        peerUuid, valueObject, accessibleObject, valueObjRef, false, messageUuid);
   }
 
   @Override
@@ -141,25 +139,23 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
 
   @Override
   protected Object invokeIncoming(
-      Optional<AccessibleObject> accessibleObject,
-      Object target,
-      List<Object> args,
-      Optional<Object> value)
+      AccessibleObject accessibleObject, Object target, List<Object> args, Object value)
+      throws Exception {
+    // discard target and value
+    return invokeIncoming(accessibleObject, args);
+  }
+
+  private Object invokeIncoming(AccessibleObject accessibleObject, List<Object> args)
       throws Exception {
     if (logger.isTraceEnabled()) {
-      logger.trace(
-          "invokeIncoming:in w/ accessibleObject: {}, target: {}, args: {}, value: {}",
-          accessibleObject,
-          target,
-          args,
-          value);
+      logger.trace("invokeIncoming:in w/ accessibleObject: {}, args: {}", accessibleObject, args);
     }
-    Constructor<?> constructor = (Constructor<?>) accessibleObject.get();
+    Constructor<?> constructor = (Constructor<?>) accessibleObject;
     return constructor.newInstance(args.toArray(new Object[0]));
   }
 
   @Override
-  protected final boolean returnsVoid(Optional<AccessibleObject> accessibleObject) {
+  protected final boolean returnsVoid(AccessibleObject accessibleObject) {
     return false;
   }
 

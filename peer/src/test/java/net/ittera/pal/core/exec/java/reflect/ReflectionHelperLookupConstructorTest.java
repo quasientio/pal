@@ -1,8 +1,7 @@
 package net.ittera.pal.core.exec.java.reflect;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -14,9 +13,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import net.ittera.pal.core.exec.java.AmbiguousCallException;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -603,9 +599,9 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
 
   /**
    * Lookup constructor that has a varargs parameter of type int, passing argument and param type of
-   * int array
+   * int array.
    *
-   * @throws Exception
+   * @throws Exception when either lookupConstructor or invoke throws an exception
    */
   @Test
   public void constructorWithIntVarargsWithTypeIntArray() throws Exception {
@@ -620,7 +616,7 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
    * Lookup constructor that has a varargs parameter of type int, passing argument and param type of
    * int (i.e. the component type of the array)
    *
-   * @throws Exception
+   * @throws Exception when either lookupConstructor or invoke throws an exception
    */
   @Test
   public void constructorWithIntVarargsWithTypeInt() throws Exception {
@@ -635,7 +631,7 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
    * Lookup constructor that has a varargs parameter of type int, passing argument of type int (i.e.
    * the component type of the array), but no parameter types
    *
-   * @throws Exception
+   * @throws Exception when either lookupConstructor or invoke throws an exception
    */
   @Test
   public void noTypes_constructorWithIntVarargsWithTypeInt() throws Exception {
@@ -821,49 +817,5 @@ public class ReflectionHelperLookupConstructorTest extends AbstractReflectionHel
     Object[] args = new Object[] {1.0f, 1.0f, 1, 1};
     reflectionHelper.lookupConstructor(clazz, args, Arrays.asList(null, null, null, null));
   }
-
-  @Test
-  @Ignore
-  public void constructor_twoMatchingConstructors_ambiguousCallException() throws Exception {
-    Object[] args = new Object[] {new Object(), 1};
-    try {
-      reflectionHelper.lookupConstructor(clazz, args, Arrays.asList(Object.class, Number.class));
-      fail("Expected AmbiguousCallException");
-    } catch (AmbiguousCallException e) {
-      assertEquals(2, e.getMatchingExecutables().size());
-      List<List<Class<?>>> parameterTypeListsOfMatchedExecutables =
-          e.getMatchingExecutables().stream()
-              .map(executable -> Arrays.asList(executable.getParameterTypes()))
-              .collect(Collectors.toList());
-      assertThat(
-          parameterTypeListsOfMatchedExecutables,
-          containsInAnyOrder(
-              Arrays.asList(Object.class, Integer.class),
-              Arrays.asList(Object.class, Number.class)));
-    }
-  }
-
-  @Test
-  @Ignore
-  public void noTypes_constructor_twoMatchingConstructors_ambiguousCallException()
-      throws Exception {
-    Object[] args = new Object[] {new Object(), 1};
-    try {
-      reflectionHelper.lookupConstructor(clazz, args, Arrays.asList(null, null));
-      fail("Expected AmbiguousCallException");
-    } catch (AmbiguousCallException e) {
-      assertEquals(2, e.getMatchingExecutables().size());
-      List<List<Class<?>>> parameterTypeListsOfMatchedExecutables =
-          e.getMatchingExecutables().stream()
-              .map(executable -> Arrays.asList(executable.getParameterTypes()))
-              .collect(Collectors.toList());
-      assertThat(
-          parameterTypeListsOfMatchedExecutables,
-          containsInAnyOrder(
-              Arrays.asList(Object.class, Integer.class),
-              Arrays.asList(Object.class, Number.class)));
-    }
-  }
-
   // </editor-fold>
 }

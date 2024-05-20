@@ -19,13 +19,13 @@
 
 package net.ittera.pal.core;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -42,40 +42,37 @@ import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
 public class MessagePublisherTest extends ZmqEnabledTest {
-  private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
-  private final String OUTCELL_ADDR = "inproc://cell";
-  private final String OUTPUB_ADDR = "inproc://pub";
+  private static final String OUT_REP_ADDRESS = "inproc://cell";
+  private static final String OUT_PUB_ADDRESS = "inproc://pub";
   private ZContext context;
   private ServiceManager manager;
-  private MessagePublisher messagePublisher;
   private final MessageBuilder msgBuilder = new MessageBuilder();
-  private ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
-  private InternalHeader WRITE_AHEAD_HEADER;
-  private Socket reqSocket, subSocket;
+  private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
+  private InternalHeader writeAheadHeader;
+  private Socket reqSocket;
+  private Socket subSocket;
 
   @Before
   public void setup() throws InterruptedException {
-    this.WRITE_AHEAD_HEADER = msgBuilder.buildWriteAheadHeader(peerUuid);
+    this.writeAheadHeader = msgBuilder.buildWriteAheadHeader(peerUuid);
     this.context = createContext();
-    this.messagePublisher =
+    MessagePublisher messagePublisher =
         new MessagePublisher(
             UUID.randomUUID(),
             context,
             SYNC_SOCKET_ADDRESS,
             servicesThreadGroup,
             "MessagePublisherTest-Service",
-            OUTCELL_ADDR,
-            OUTPUB_ADDR);
-    final Set<Service> services = new HashSet<>(Arrays.asList(this.messagePublisher));
+            OUT_REP_ADDRESS,
+            OUT_PUB_ADDRESS);
+    final Set<Service> services = new HashSet<>(List.of(messagePublisher));
     this.manager = new ServiceManager(services);
 
     // start service
@@ -85,11 +82,11 @@ public class MessagePublisherTest extends ZmqEnabledTest {
 
     // create REQ socket to simulate requests (IRL: DispatcherConnector)
     reqSocket = context.createSocket(SocketType.REQ);
-    reqSocket.connect(OUTCELL_ADDR);
+    reqSocket.connect(OUT_REP_ADDRESS);
 
     // create SUB socket to simulate LogWriter
     subSocket = context.createSocket(SocketType.SUB);
-    subSocket.connect(OUTPUB_ADDR);
+    subSocket.connect(OUT_PUB_ADDRESS);
     subSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
   }
 
@@ -109,7 +106,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendExecMessage() throws Exception {
+  public void sendExecMessage() {
     // send 1 message request
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
     OutboundMsg outMsg =
@@ -127,7 +124,8 @@ public class MessagePublisherTest extends ZmqEnabledTest {
     assertThat(reply, is("0"));
 
     // check if it was published
-    OutboundMsg publishedOutMsg = OutboundMsg.recvMsg(subSocket, true);
+    OutboundMsg publishedOutMsg = OutboundMsg.receive(subSocket, true);
+    assertThat(publishedOutMsg, is(notNullValue()));
     assertThat(publishedOutMsg, is(outMsg));
 
     // verify exec message is what we sent
@@ -137,10 +135,10 @@ public class MessagePublisherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendExecMessageWithHeaders() throws Exception {
+  public void sendExecMessageWithHeaders() {
     // send 1 message request
     ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
-    List<InternalHeader> headers = Collections.singletonList(this.WRITE_AHEAD_HEADER);
+    List<InternalHeader> headers = Collections.singletonList(this.writeAheadHeader);
     OutboundMsg outMsg =
         new OutboundMsg(
             MessageType.EXEC_MESSAGE,
@@ -156,13 +154,15 @@ public class MessagePublisherTest extends ZmqEnabledTest {
     assertThat(reply, is("0"));
 
     // get what was published
-    OutboundMsg publishedOutMsg = OutboundMsg.recvMsg(subSocket, true);
+    OutboundMsg publishedOutMsg = OutboundMsg.receive(subSocket, true);
+    assertThat(publishedOutMsg, is(notNullValue()));
     assertThat(publishedOutMsg, is(outMsg));
 
     // verify exec message is what we sent
     Message publishedMsg = new Message();
     publishedMsg.unmarshal(publishedOutMsg.getBody(), 0);
     // verify header and msg as expected
+    assertThat(publishedOutMsg.getHeaders(), is(notNullValue()));
     assertThat(
         publishedOutMsg.getHeaders().get(0).getHeaderType(),
         is(InternalHeaderType.WRITE_AHEAD.toByte()));
@@ -171,7 +171,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void sendManyExecMessages() throws Exception {
+  public void sendManyExecMessages() {
     int messagesToSend = 15;
     List<ExecMessage> messagesSent = new ArrayList<>();
     for (int i = 0; i < messagesToSend; i++) {
@@ -196,7 +196,8 @@ public class MessagePublisherTest extends ZmqEnabledTest {
     // get what was published
     List<ExecMessage> messagesPublished = new ArrayList<>();
     for (int i = 0; i < messagesToSend; i++) {
-      OutboundMsg publishedOutMsg = OutboundMsg.recvMsg(subSocket, true);
+      OutboundMsg publishedOutMsg = OutboundMsg.receive(subSocket, true);
+      assertThat(publishedOutMsg, is(notNullValue()));
       Message receivedMsg = new Message();
       receivedMsg.unmarshal(publishedOutMsg.getBody(), 0);
       messagesPublished.add(receivedMsg.getExecMessage());

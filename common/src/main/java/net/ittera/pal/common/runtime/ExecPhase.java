@@ -20,15 +20,26 @@
 package net.ittera.pal.common.runtime;
 
 public enum ExecPhase {
-  BEFORE,
-  AFTER,
-  UNDEFINED;
+  BEFORE((byte) 1),
+  AFTER((byte) 2),
+  UNDEFINED((byte) 3);
+
+  private final byte idx;
+
+  ExecPhase(byte idx) {
+    this.idx = idx;
+  }
 
   public static ExecPhase fromByte(byte typeAsByte) {
-    return ExecPhase.values()[typeAsByte - 1];
+    return switch (typeAsByte) {
+      case 1 -> BEFORE;
+      case 2 -> AFTER;
+      case 3 -> UNDEFINED;
+      default -> throw new IllegalArgumentException("Unknown ExecPhase type: " + typeAsByte);
+    };
   }
 
   public byte toByte() {
-    return (byte) (this.ordinal() + 1);
+    return idx;
   }
 }

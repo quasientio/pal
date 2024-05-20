@@ -24,13 +24,22 @@ public enum InternalHeaderType {
    * Sent before dispatching a received message. Value is the UUID of the receiving-dispatching
    * peer, not the producer.
    */
-  WRITE_AHEAD;
+  WRITE_AHEAD((byte) 1);
+
+  private final byte idx;
+
+  InternalHeaderType(byte idx) {
+    this.idx = idx;
+  }
 
   public static InternalHeaderType fromByte(byte typeAsByte) {
-    return InternalHeaderType.values()[typeAsByte - 1];
+    return switch (typeAsByte) {
+      case 1 -> WRITE_AHEAD;
+      default -> throw new IllegalArgumentException("Unknown internal header type: " + typeAsByte);
+    };
   }
 
   public byte toByte() {
-    return (byte) (this.ordinal() + 1);
+    return idx;
   }
 }

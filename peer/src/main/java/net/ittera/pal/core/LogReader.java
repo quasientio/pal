@@ -25,7 +25,6 @@ import jakarta.inject.Singleton;
 import java.nio.channels.ClosedSelectorException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.AbstractQueue;
 import java.util.Collections;
 import java.util.List;
@@ -35,15 +34,16 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 import net.ittera.pal.common.directory.nodes.LogInfo;
-import net.ittera.pal.common.util.UUIDUtils;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.core.messages.PublishedOffsetMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
@@ -79,7 +79,7 @@ public class LogReader extends ConnectedService {
   // counters
   private final AtomicLong totalPollingNanos = new AtomicLong(0);
   private final AtomicInteger totalPolls = new AtomicInteger(0);
-  private final AtomicInteger messagesRcvd = new AtomicInteger(0);
+  private final AtomicInteger messagesReceived = new AtomicInteger(0);
 
   // kafka stuff
   private boolean skipWrittenOffsets;
@@ -90,6 +90,11 @@ public class LogReader extends ConnectedService {
   private Consumer<String, byte[]> consumer;
   private final Properties consumerProperties = new Properties();
   private volatile long lastOffsetRead = -1;
+  private static final Duration CONSUMER_CLOSE_TIMEOUT = Duration.of(300, ChronoUnit.MILLIS);
+
+  // synchronization to avoid busy-waiting before acceptingRequests
+  private final ReentrantLock lock = new ReentrantLock();
+  private final Condition acceptingRequestsCondition = lock.newCondition();
 
   // pal directory
   private final DirectoryConnectionProvider directoryConnectionProvider;
@@ -113,7 +118,8 @@ public class LogReader extends ConnectedService {
       boolean socketError = false;
       while (!shutdownRequested && !Thread.interrupted() && !socketError) {
         try {
-          PublishedOffsetMsg msg = PublishedOffsetMsg.recvMsg(offsetSubscriber, true);
+          PublishedOffsetMsg msg = PublishedOffsetMsg.receive(offsetSubscriber, true);
+          assert msg != null;
           skipOffsets.add(msg.getOffset());
         } catch (ClosedSelectorException ex) {
           if (logger.isDebugEnabled()) {
@@ -184,7 +190,7 @@ public class LogReader extends ConnectedService {
         "Created log reader for peer with id '{}' and properties: [{}]", peerUuid, propsStr);
   }
 
-  /** Used from unit tests with MockConsumer */
+  // Used from unit tests with MockConsumer
   LogReader(
       UUID peerUuid,
       ZContext context,
@@ -210,12 +216,13 @@ public class LogReader extends ConnectedService {
     this.kafkaTopic = log.getName();
     this.skipWrittenOffsets = skipWrittenOffsets;
     this.initialOffset = initialOffset;
-    Optional<PALDirectory> palDirectory = directoryConnectionProvider.get();
+    Optional<PalDirectory> palDirectory = directoryConnectionProvider.get();
     final LogInfo logInfo =
         palDirectory.isPresent() ? palDirectory.get().getLogInfo(log.getName()) : log;
     consumerProperties.put("bootstrap.servers", logInfo.getBootstrapServers());
     logger.info(
-        "Reading from log: {}, w/ bootstrapServers: {}, starting at offset: {}, {}skipping written offsets",
+        "Reading from log: {}, w/ bootstrapServers: {}, starting at offset: {},"
+            + " {}skipping written offsets",
         logInfo.getName(),
         logInfo.getBootstrapServers(),
         initialOffset,
@@ -249,16 +256,25 @@ public class LogReader extends ConnectedService {
   }
 
   @Override
+  @SuppressWarnings("ThreadPriorityCheck")
   public final void run() {
-    main_loop:
     while (!Thread.interrupted()) {
 
-      while (!acceptingRequests) {
+      // wait until we are ready to accept requests
+      if (!acceptingRequests) {
+        lock.lock();
         try {
-          Thread.sleep(100);
+          while (!acceptingRequests) {
+            logger.debug("Waiting to start accepting requests");
+            acceptingRequestsCondition.await();
+          }
         } catch (InterruptedException e) {
-          break main_loop;
+          logger.error("Interrupted while waiting to start request polling", e);
+          break;
+        } finally {
+          lock.unlock();
         }
+        logger.debug("Accepting requests now - polling from log: {}", kafkaTopic);
       }
 
       // read from kafka
@@ -268,7 +284,7 @@ public class LogReader extends ConnectedService {
       try {
         records = consumer.poll(pollDuration);
       } catch (InterruptException e) {
-        break main_loop;
+        break;
       }
       totalPollingNanos.getAndAdd(System.nanoTime() - t0);
       totalPolls.getAndIncrement();
@@ -280,12 +296,12 @@ public class LogReader extends ConnectedService {
       }
 
       // process records if any
-      for (ConsumerRecord record : records) {
-        messagesRcvd.getAndIncrement();
+      for (var record : records) {
+        messagesReceived.getAndIncrement();
         if (logger.isDebugEnabled()) {
           logger.debug(
               "Processing received record #{} with offset {} :\n {}",
-              messagesRcvd,
+              messagesReceived,
               record.offset(),
               record);
         }
@@ -293,7 +309,7 @@ public class LogReader extends ConnectedService {
         lastOffsetRead = messageOffset;
         if (!recordProducedOrDispatchingBySelf(record.headers())) {
           // send request to DEALER socket
-          InboundLogMsg msg = new InboundLogMsg(messageOffset, (byte[]) record.value());
+          InboundLogMsg msg = new InboundLogMsg(messageOffset, record.value());
           msg.send(logDealerSocket);
           if (logger.isDebugEnabled()) {
             logger.debug("Dealt new log message with offset: {}", messageOffset);
@@ -334,20 +350,19 @@ public class LogReader extends ConnectedService {
     }
   }
 
-  private void close(
-      Consumer consumer, long timeout, TemporalUnit timeUnit, String msgForException) {
+  private void closeConsumer() {
     if (consumer != null) {
       try {
-        consumer.close(Duration.of(timeout, timeUnit));
+        consumer.close(CONSUMER_CLOSE_TIMEOUT);
       } catch (Exception e) {
-        logger.warn(msgForException, e);
+        logger.warn("Error closing consumer", e);
       }
     }
   }
 
   @Override
   protected void closeConnections() {
-    close(consumer, 300, ChronoUnit.MILLIS, "Error closing consumer");
+    closeConsumer();
     closeConnection(logDealerSocket, "Error closing dealer");
     closeConnection(offsetSubscriberSocket, "Error closing offset subscriber");
     // TODO: send uncommitted offset, etc.
@@ -358,7 +373,7 @@ public class LogReader extends ConnectedService {
         .anyMatch(
             hdrName -> {
               for (Header header : headers.headers(hdrName)) {
-                UUID uuidInHeader = UUIDUtils.fromBytes(header.value());
+                UUID uuidInHeader = UuidUtils.fromBytes(header.value());
                 if (peerUuid.equals(uuidInHeader)) {
                   if (logger.isDebugEnabled()) {
                     logger.debug("Will skip message {} self", hdrName);
@@ -406,10 +421,11 @@ public class LogReader extends ConnectedService {
     acceptingRequests = false;
   }
 
+  @SuppressWarnings("unused")
   protected void logDebugStats() {
     if (logger.isDebugEnabled()) {
       logger.debug("--------STATS--------");
-      logger.debug("# of messages received from k-log: {}", messagesRcvd.get());
+      logger.debug("# of messages received from k-log: {}", messagesReceived.get());
       logger.debug("# polling nanoseconds: {}", totalPollingNanos.get());
       logger.debug("# polls: {}", totalPolls.get());
       logger.debug("-----END OF STATS-----");
@@ -421,6 +437,14 @@ public class LogReader extends ConnectedService {
   }
 
   public void acceptRequests(boolean acceptRequests) {
-    this.acceptingRequests = acceptRequests;
+    lock.lock();
+    try {
+      this.acceptingRequests = acceptRequests;
+      if (acceptRequests) {
+        acceptingRequestsCondition.signalAll();
+      }
+    } finally {
+      lock.unlock();
+    }
   }
 }

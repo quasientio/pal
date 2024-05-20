@@ -23,7 +23,7 @@ import net.ittera.pal.common.objects.ObjectRef;
 import org.junit.Test;
 
 /**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
  *
  * <p>TODO - arrays
  */
@@ -99,8 +99,7 @@ public class VoidInstanceMethodMessageIT extends AbstractBinaryRPCMessageIT {
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
     // now call the method
-    String param = null;
-    Object[] parameters = {param};
+    Object[] parameters = {null};
     String[] parameterTypes = {String.class.getName()};
     callVoidInstanceMethod(
         className,
@@ -121,8 +120,7 @@ public class VoidInstanceMethodMessageIT extends AbstractBinaryRPCMessageIT {
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
     // now call the method on a wrong class
-    String param = null;
-    Object[] parameters = {param};
+    Object[] parameters = {null};
     String[] parameterTypes = {String.class.getName()};
     callVoidInstanceMethod(
         nonExistingClass,
@@ -143,8 +141,7 @@ public class VoidInstanceMethodMessageIT extends AbstractBinaryRPCMessageIT {
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());
 
     // now call the method
-    String param = null;
-    Object[] parameters = {param};
+    Object[] parameters = {null};
     String[] parameterTypes = {String.class.getName()};
     callVoidInstanceMethod(
         className,
@@ -157,7 +154,7 @@ public class VoidInstanceMethodMessageIT extends AbstractBinaryRPCMessageIT {
   }
 
   @Test
-  public void callInstanceMethod_noSuchInstance_throwsNPE() throws Exception {
+  public void callInstanceMethod_noSuchInstance_throwsNullPointerException() throws Exception {
 
     String methodName = "printDate";
 

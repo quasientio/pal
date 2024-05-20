@@ -33,12 +33,12 @@ import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 
 @Singleton
-public class RPCMessageExecutor extends ThreadPool {
+public class RpcMessageExecutor extends ThreadPool {
 
-  protected static final Logger logger = LoggerFactory.getLogger(RPCMessageExecutor.class);
+  protected static final Logger logger = LoggerFactory.getLogger(RpcMessageExecutor.class);
 
   @Inject
-  public RPCMessageExecutor(
+  public RpcMessageExecutor(
       @Named("rpc.threadPoolSize") String threadPoolSize,
       ZContext zmqContext,
       Set<RunOptions> runOptions,
@@ -52,7 +52,7 @@ public class RPCMessageExecutor extends ThreadPool {
 
     super(
         Integer.parseInt(threadPoolSize),
-        new PeerExecThreadFactory(
+        new RpcExecThreadFactory(
             zmqContext,
             runOptions,
             rpcDealerAddress,

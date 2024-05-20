@@ -41,20 +41,43 @@ public class IncomingMessageDispatcher {
   protected static final Logger logger = LoggerFactory.getLogger(IncomingMessageDispatcher.class);
 
   // constructor & method dispatchers
-  @Inject private ConstructorDispatcher constructorDispatcher;
-  @Inject private ClassMethodDispatcher classMethodDispatcher;
-  @Inject private InstanceMethodDispatcher instanceMethodDispatcher;
+  @SuppressWarnings("unused")
+  @Inject
+  private ConstructorDispatcher constructorDispatcher;
 
-  // fieldop dispatchers
-  @Inject private GetClassVariableDispatcher getClassVariableDispatcher;
-  @Inject private SetClassVariableDispatcher setClassVariableDispatcher;
-  @Inject private GetInstanceVariableDispatcher getInstanceVariableDispatcher;
-  @Inject private SetInstanceVariableDispatcher setInstanceVariableDispatcher;
+  @SuppressWarnings("unused")
+  @Inject
+  private ClassMethodDispatcher classMethodDispatcher;
+
+  @SuppressWarnings("unused")
+  @Inject
+  private InstanceMethodDispatcher instanceMethodDispatcher;
+
+  // field op dispatchers
+  @SuppressWarnings("unused")
+  @Inject
+  private GetClassVariableDispatcher getClassVariableDispatcher;
+
+  @SuppressWarnings("unused")
+  @Inject
+  private SetClassVariableDispatcher setClassVariableDispatcher;
+
+  @SuppressWarnings("unused")
+  @Inject
+  private GetInstanceVariableDispatcher getInstanceVariableDispatcher;
+
+  @SuppressWarnings("unused")
+  @Inject
+  private SetInstanceVariableDispatcher setInstanceVariableDispatcher;
 
   // control message dispatchers
-  @Inject private SessionMessageDispatcher sessionMessageDispatcher;
+  @SuppressWarnings("unused")
+  @Inject
+  private SessionMessageDispatcher sessionMessageDispatcher;
 
   /**
+   * Dispatches the incoming message to the corresponding dispatcher.
+   *
    * @param execMessage Message to invoke
    * @param isDirect true if message comes from this or another peer, false if it comes from a log
    * @return the returnValue message
@@ -64,41 +87,28 @@ public class IncomingMessageDispatcher {
 
     final ExecMessageType execMessageType =
         ExecMessageType.fromByte(execMessage.getExecMessageType());
-    switch (execMessageType) {
-      case CONSTRUCTOR:
-        return constructorDispatcher.dispatchIncoming(execMessage, isDirect);
-      case INSTANCE_METHOD:
-        return instanceMethodDispatcher.dispatchIncoming(execMessage, isDirect);
-      case CLASS_METHOD:
-        return classMethodDispatcher.dispatchIncoming(execMessage, isDirect);
-      case GET_STATIC:
-        return getClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
-      case GET_FIELD:
-        return getInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
-      case PUT_STATIC:
-        return setClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
-      case PUT_FIELD:
-        return setInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
-      default:
-        throw new UnsupportedMessageException(
-            String.format(
-                "Incoming exec message ignored - no handler:%n%s",
-                ColferUtils.format(execMessage)));
-    }
+    return switch (execMessageType) {
+      case CONSTRUCTOR -> constructorDispatcher.dispatchIncoming(execMessage, isDirect);
+      case INSTANCE_METHOD -> instanceMethodDispatcher.dispatchIncoming(execMessage, isDirect);
+      case CLASS_METHOD -> classMethodDispatcher.dispatchIncoming(execMessage, isDirect);
+      case GET_STATIC -> getClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+      case GET_FIELD -> getInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+      case PUT_STATIC -> setClassVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+      case PUT_FIELD -> setInstanceVariableDispatcher.dispatchIncoming(execMessage, isDirect);
+      default ->
+          throw new UnsupportedMessageException(
+              String.format(
+                  "Incoming exec message ignored - no handler:%n%s",
+                  ColferUtils.format(execMessage)));
+    };
   }
 
   public ControlMessage incomingControlMessage(ControlMessage controlMessage)
       throws UnsupportedMessageException {
     final ControlCommandType commandType = ControlCommandType.fromByte(controlMessage.getCommand());
-    switch (commandType) {
-      case DELETE_OBJECT:
-      case DELETE_SESSION:
-        return sessionMessageDispatcher.incomingControlMessage(controlMessage);
-      default:
-        throw new UnsupportedMessageException(
-            String.format(
-                "Incoming control message ignored - no handler:%n%s",
-                ColferUtils.format(controlMessage)));
-    }
+    return switch (commandType) {
+      case DELETE_OBJECT, DELETE_SESSION ->
+          sessionMessageDispatcher.incomingControlMessage(controlMessage);
+    };
   }
 }

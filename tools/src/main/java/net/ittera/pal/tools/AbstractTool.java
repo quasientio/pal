@@ -19,6 +19,7 @@
 
 package net.ittera.pal.tools;
 
+import java.util.Locale;
 import javax.annotation.Nullable;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.types.ExecMessageType;
@@ -36,9 +37,9 @@ public class AbstractTool {
     if (System.getProperty(propertyName) != null) {
       logger.debug("loading value of '{}' from system properties", propertyName);
       return System.getProperty(propertyName);
-    } else if (System.getenv(propertyName.toUpperCase()) != null) {
-      logger.debug("loading value of '{}' from ENV", propertyName.toUpperCase());
-      return System.getenv(propertyName.toUpperCase());
+    } else if (System.getenv(propertyName.toUpperCase(Locale.getDefault())) != null) {
+      logger.debug("loading value of '{}' from ENV", propertyName.toUpperCase(Locale.getDefault()));
+      return System.getenv(propertyName.toUpperCase(Locale.getDefault()));
     } else if (defaultValue != null) {
       logger.debug("loading value of '{}' from default", propertyName);
       return defaultValue;
@@ -48,41 +49,39 @@ public class AbstractTool {
 
   protected static String getPeerUuid(Message msg) {
     final MessageType messageType = MessageType.fromByte(msg.getMessageType());
-    switch (messageType) {
-      case EXEC_MESSAGE:
-        return msg.getExecMessage().getPeerUuid();
-      case INTERCEPT_MESSAGE:
-        return msg.getInterceptMessage().getPeerUuid();
-      default:
-        return null;
-    }
+    return switch (messageType) {
+      case EXEC_MESSAGE -> msg.getExecMessage().getPeerUuid();
+      case INTERCEPT_MESSAGE -> msg.getInterceptMessage().getPeerUuid();
+      default -> null;
+    };
   }
 
   protected static String getMessageUuid(Message msg) {
     final MessageType messageType = MessageType.fromByte(msg.getMessageType());
-    switch (messageType) {
-      case EXEC_MESSAGE:
-        return msg.getExecMessage().getMessageUuid();
-      case INTERCEPT_MESSAGE:
-        return msg.getInterceptMessage().getMessageUuid();
-      default:
-        return null;
-    }
+    return switch (messageType) {
+      case EXEC_MESSAGE -> msg.getExecMessage().getMessageUuid();
+      case INTERCEPT_MESSAGE -> msg.getInterceptMessage().getMessageUuid();
+      default -> null;
+    };
   }
 
   protected static String getMessageType(Message msg) {
     final MessageType messageType = MessageType.fromByte(msg.getMessageType());
     switch (messageType) {
-      case EXEC_MESSAGE:
+      case EXEC_MESSAGE -> {
         ExecMessageType execMessageType =
             ExecMessageType.fromByte(msg.getExecMessage().getExecMessageType());
         return execMessageType.name();
-      case INTERCEPT_MESSAGE:
+      }
+      case INTERCEPT_MESSAGE -> {
         return "InterceptMessage";
-      case INTERCEPT_REPLY:
+      }
+      case INTERCEPT_REPLY -> {
         return "InterceptReply";
-      default:
+      }
+      default -> {
         return null;
+      }
     }
   }
 }

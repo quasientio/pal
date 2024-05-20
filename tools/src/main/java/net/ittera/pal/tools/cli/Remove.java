@@ -20,6 +20,7 @@
 package net.ittera.pal.tools.cli;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -30,7 +31,7 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import net.ittera.pal.common.cli.PALCommand;
+import net.ittera.pal.common.cli.PalCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -49,12 +50,13 @@ import picocli.CommandLine.ParentCommand;
     sortOptions = false,
     optionListHeading = "%nOptions:%n",
     description = "Remove peers or logs from directory")
-public class Remove extends AbstractPALSubcommand {
+public class Remove extends AbstractPalSubcommand {
 
   @Parameters(index = "0..*", hidden = true)
+  @SuppressWarnings("unused")
   private java.util.List<String> argList;
 
-  @ParentCommand PALCommand palCommand;
+  @ParentCommand PalCommand palCommand;
 
   @Option(
       names = {"-L", "--delete-logs"},
@@ -76,6 +78,7 @@ public class Remove extends AbstractPALSubcommand {
       description = "delete all")
   private boolean deleteAll;
 
+  @SuppressWarnings("unused")
   @Option(
       names = {"-h", "--help"},
       usageHelp = true,
@@ -93,7 +96,7 @@ public class Remove extends AbstractPALSubcommand {
   public void validateInput() {}
 
   @Override
-  protected void initialize() throws Exception {
+  protected void initialize() {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
   }
 
@@ -117,6 +120,7 @@ public class Remove extends AbstractPALSubcommand {
         new DeleteTopicsOptions().timeoutMs(DELETE_TOPIC_TIMEOUT_MS));
   }
 
+  @SuppressWarnings("unused")
   private void removeFromKafka(Set<LogInfo> logInfos, String bootstrapServers) {
     AdminClient adminClient = getAdminClientForServers(bootstrapServers);
     adminClient.deleteTopics(
@@ -139,7 +143,7 @@ public class Remove extends AbstractPALSubcommand {
     logger.info("Log '{}' (UUID: {}) removed", logInfo.getName(), logInfo.getUuid());
   }
 
-  private void deleteLogsWithUUID(UUID uuid) {
+  private void deleteLogsWithUuid(UUID uuid) {
     final Set<LogInfo> matchingLogs;
     try {
       matchingLogs =
@@ -157,7 +161,7 @@ public class Remove extends AbstractPALSubcommand {
       while (answer == null || !(answer.equalsIgnoreCase("y") || answer.equalsIgnoreCase("n"))) {
         out.printf(
             "There are %d logs with UUID '%s'. Delete all? (y/n): ", matchingLogs.size(), uuid);
-        try (Scanner scanner = new Scanner(System.in)) {
+        try (Scanner scanner = new Scanner(System.in, Charset.defaultCharset())) {
           answer = scanner.next();
         }
       }
@@ -183,9 +187,9 @@ public class Remove extends AbstractPALSubcommand {
     allLogs.forEach(this::deleteLog);
   }
 
-  private void deletePeer(UUID peerUUID) {
+  private void deletePeer(UUID peerUuid) {
     try {
-      getPalDirectory().unregisterPeer(peerUUID);
+      getPalDirectory().unregisterPeer(peerUuid);
     } catch (Exception e) {
       errors++;
     }
@@ -203,7 +207,7 @@ public class Remove extends AbstractPALSubcommand {
       while (answer == null || !(answer.equalsIgnoreCase("y") || answer.equalsIgnoreCase("n"))) {
         out.printf(
             "There are %d peers named '%s'. Delete all? (y/n): ", matchingPeers.size(), peerName);
-        try (Scanner scanner = new Scanner(System.in)) {
+        try (Scanner scanner = new Scanner(System.in, Charset.defaultCharset())) {
           answer = scanner.next();
         }
       }
@@ -225,7 +229,8 @@ public class Remove extends AbstractPALSubcommand {
 
   private void deleteAllPeers() {
     try {
-      getPalDirectory().unregisterAllPeers();
+      long peersUnregistered = getPalDirectory().unregisterAllPeers();
+      logger.debug("Unregistered {} peers", peersUnregistered);
     } catch (Exception e) {
       errors++;
     }
@@ -282,9 +287,8 @@ public class Remove extends AbstractPALSubcommand {
     if (deleteLogs) {
       if (deleteAll) {
         deleteAllLogs();
-      }
-      // TODO group all logs with same bootstrap servers and remove in batch
-      else if (argList != null && !argList.isEmpty()) {
+      } else if (argList != null && !argList.isEmpty()) {
+        // TODO group all logs with same bootstrap servers and remove in batch
         for (String arg : argList) {
           // try to parse arg as UUID
           UUID logUuid = null;
@@ -294,10 +298,9 @@ public class Remove extends AbstractPALSubcommand {
             // fine, it's not a UUID
           }
           if (logUuid != null) {
-            deleteLogsWithUUID(logUuid);
+            deleteLogsWithUuid(logUuid);
           } else {
             // if not a valid UUID we will consider it a name
-            Set<LogInfo> logsToDelete;
             if (startingWith) {
               final Set<LogInfo> allLogs = getPalDirectory().getAllLogs();
               allLogs.stream().filter(l -> l.getName().startsWith(arg)).forEach(this::deleteLog);
@@ -306,7 +309,6 @@ public class Remove extends AbstractPALSubcommand {
               if (log == null) {
                 logger.error("Cannot find log named '{}' in directory", arg);
                 errors++;
-                continue;
               } else {
                 deleteLog(log);
               }

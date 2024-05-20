@@ -25,6 +25,6 @@ public enum RunOptions {
   WITH_JSONRPC, // Listen to JSON-RPC requests
   WITH_TCP_PUB, // Publish messages
   WITH_INTERCEPTS, // Allow message interception
-  WITH_INLOG, // Read messages from LOG
-  WITH_OUTLOG, // Publish messages to LOG
+  WITH_IN_LOG, // Read messages from LOG
+  WITH_OUT_LOG, // Publish messages to LOG
 }

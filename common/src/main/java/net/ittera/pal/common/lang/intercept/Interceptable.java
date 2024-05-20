@@ -26,15 +26,25 @@ import javax.annotation.Nonnull;
 public abstract class Interceptable {
 
   public enum InterceptableType {
-    METHOD_CALL,
-    FIELD_OP;
+    METHOD_CALL((byte) 1),
+    FIELD_OP((byte) 2);
+
+    private final byte idx;
+
+    InterceptableType(byte idx) {
+      this.idx = idx;
+    }
 
     public static InterceptableType fromByte(byte typeAsByte) {
-      return InterceptableType.values()[typeAsByte - 1];
+      return switch (typeAsByte) {
+        case 1 -> METHOD_CALL;
+        case 2 -> FIELD_OP;
+        default -> throw new IllegalArgumentException("Unknown interceptable type: " + typeAsByte);
+      };
     }
 
     public byte toByte() {
-      return (byte) (this.ordinal() + 1);
+      return idx;
     }
   }
 
@@ -59,6 +69,7 @@ public abstract class Interceptable {
   }
 
   @Override
+  @SuppressWarnings("EqualsGetClass")
   public boolean equals(Object o) {
     if (this == o) {
       return true;

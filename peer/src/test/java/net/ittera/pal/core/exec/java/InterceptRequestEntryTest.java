@@ -20,11 +20,10 @@
 package net.ittera.pal.core.exec.java;
 
 import static net.ittera.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import net.ittera.pal.common.lang.intercept.InterceptType;
@@ -81,8 +80,8 @@ public class InterceptRequestEntryTest {
             InterceptType.BEFORE,
             "java.util.ArrayList",
             "new",
-            Arrays.asList(new String[0]),
-            "org.somepackage.MyInterceptor",
+            List.of(),
+            "org.some.package.MyInterceptor",
             "callMe");
 
     // create Exec message
@@ -108,8 +107,8 @@ public class InterceptRequestEntryTest {
             InterceptType.BEFORE,
             "java.io.PrintStream",
             "println",
-            Arrays.asList(new String[0]),
-            "org.somepackage.MyInterceptor",
+            List.of(),
+            "org.some.package.MyInterceptor",
             "callMe");
 
     // create Exec message
@@ -144,8 +143,8 @@ public class InterceptRequestEntryTest {
             InterceptType.BEFORE,
             "java.lang.System",
             "gc",
-            Arrays.asList(new String[0]),
-            "org.somepackage.MyInterceptor",
+            List.of(),
+            "org.some.package.MyInterceptor",
             "callMe");
 
     // create Exec message

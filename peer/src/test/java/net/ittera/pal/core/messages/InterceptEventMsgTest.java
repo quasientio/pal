@@ -19,14 +19,14 @@
 
 package net.ittera.pal.core.messages;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import net.ittera.pal.core.ZmqEnabledTest;
-import net.ittera.pal.core.messages.InterceptEvtMsg.Type;
 import net.ittera.pal.messages.Marshallable;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -35,90 +35,88 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-public class InterceptEvtMsgTest extends ZmqEnabledTest {
+public class InterceptEventMsgTest extends ZmqEnabledTest {
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
 
   @Test
   public void sendRegister() {
 
-    final byte[] body = "actual body is a intercept message".getBytes();
-    final Type type = Type.REGISTER;
+    final byte[] body = "actual body is a intercept message".getBytes(StandardCharsets.UTF_8);
+    final var type = InterceptEventMsg.Type.REGISTER;
 
-    InterceptEvtMsg msg = new InterceptEvtMsg(body);
+    InterceptEventMsg msg = new InterceptEventMsg(body);
 
     // verify getters
     assertThat(msg.getBody(), is(body));
     assertThat(msg.getType(), is(type));
 
     // send
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.bind(socketAddr);
-    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
-    out.connect(socketAddr);
+    String socketAddress = "inproc://here";
+    ZContext zmqContext = createContext();
+    ZMQ.Socket in = zmqContext.createSocket(SocketType.REP);
+    in.bind(socketAddress);
+    ZMQ.Socket out = zmqContext.createSocket(SocketType.REQ);
+    out.connect(socketAddress);
     msg.send(out);
-    logger.debug("sent msg= {}", msg);
 
     // receive and compare
-    InterceptEvtMsg msgIn = InterceptEvtMsg.recvMsg(in, true);
-    logger.debug("received msgIn= {}", msgIn);
+    InterceptEventMsg msgIn = InterceptEventMsg.receive(in, true);
     assertThat(msgIn, is(msg));
 
     out.close();
     in.close();
-    zContext.destroy();
+    zmqContext.destroy();
   }
 
   @Test
   public void sendUnregister() {
 
     final UUID interceptMsgUuid = UUID.randomUUID();
-    final Type type = Type.UNREGISTER;
+    final var type = InterceptEventMsg.Type.UNREGISTER;
 
-    InterceptEvtMsg msg = new InterceptEvtMsg(interceptMsgUuid);
+    InterceptEventMsg msg = new InterceptEventMsg(interceptMsgUuid);
 
     // verify getters
     assertThat(msg.getType(), is(type));
-    assertThat(msg.getInterceptMsgUUID(), is(interceptMsgUuid));
+    assertThat(msg.getInterceptMessageUuid(), is(interceptMsgUuid));
 
     // send
-    String socketAddr = "inproc://here";
-    ZContext zContext = createContext();
-    ZMQ.Socket in = zContext.createSocket(SocketType.REP);
-    in.bind(socketAddr);
-    ZMQ.Socket out = zContext.createSocket(SocketType.REQ);
-    out.connect(socketAddr);
+    String socketAddress = "inproc://here";
+    ZContext mqzContext = createContext();
+    ZMQ.Socket in = mqzContext.createSocket(SocketType.REP);
+    in.bind(socketAddress);
+    ZMQ.Socket out = mqzContext.createSocket(SocketType.REQ);
+    out.connect(socketAddress);
     msg.send(out);
     logger.debug("sent msg= {}", msg);
 
     // receive and compare
-    InterceptEvtMsg msgIn = InterceptEvtMsg.recvMsg(in, true);
+    InterceptEventMsg msgIn = InterceptEventMsg.receive(in, true);
     logger.debug("received msgIn= {}", msgIn);
     assertThat(msgIn, is(msg));
 
     out.close();
     in.close();
-    zContext.destroy();
+    mqzContext.destroy();
   }
 
   @Test
-  public void testNPE() {
+  public void testNullPointerException() {
     try {
-      new InterceptEvtMsg((Marshallable) null);
+      new InterceptEventMsg((Marshallable) null);
       fail("Should have raised NPE");
     } catch (NullPointerException e) {
       // ok then
     }
     try {
-      new InterceptEvtMsg((byte[]) null);
+      new InterceptEventMsg((byte[]) null);
       fail("Should have raised NPE");
     } catch (NullPointerException e) {
       // ok then
     }
     try {
-      new InterceptEvtMsg((UUID) null);
+      new InterceptEventMsg((UUID) null);
       fail("Should have raised NPE");
     } catch (NullPointerException e) {
       // ok then
@@ -128,23 +126,24 @@ public class InterceptEvtMsgTest extends ZmqEnabledTest {
   @Test
   public void testEquals() {
     // REGISTER type
-    byte[] body = "actual body is not a string".getBytes();
-    InterceptEvtMsg msg = new InterceptEvtMsg(body);
+    byte[] body = "actual body is not a string".getBytes(StandardCharsets.UTF_8);
+    InterceptEventMsg msg = new InterceptEventMsg(body);
 
     // assert equality
-    assertThat(new InterceptEvtMsg(body), is(msg));
+    assertThat(new InterceptEventMsg(body), is(msg));
 
     // different body
-    assertThat(new InterceptEvtMsg("another body".getBytes()), is(not(msg)));
+    assertThat(
+        new InterceptEventMsg("another body".getBytes(StandardCharsets.UTF_8)), is(not(msg)));
 
     // UNREGISTER type
     UUID interceptMsgUuid = UUID.randomUUID();
-    msg = new InterceptEvtMsg(interceptMsgUuid);
+    msg = new InterceptEventMsg(interceptMsgUuid);
 
     // assert equality
-    assertThat(new InterceptEvtMsg(interceptMsgUuid), is(msg));
+    assertThat(new InterceptEventMsg(interceptMsgUuid), is(msg));
 
     // different messageUuid
-    assertThat(new InterceptEvtMsg(UUID.randomUUID()), is(not(msg)));
+    assertThat(new InterceptEventMsg(UUID.randomUUID()), is(not(msg)));
   }
 }

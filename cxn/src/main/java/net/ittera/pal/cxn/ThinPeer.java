@@ -19,17 +19,12 @@
 
 package net.ittera.pal.cxn;
 
-import static java.lang.String.format;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import java.io.Closeable;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,7 +33,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -51,9 +51,9 @@ import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.ControlStatusType;
-import net.ittera.pal.messages.types.RPCType;
+import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
-import net.ittera.pal.serdes.colfer.JSONSerializers;
+import net.ittera.pal.serdes.colfer.JsonSerializers;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcResponseDeserializer;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -74,16 +74,20 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 
-/** This class is not thread-safe. For multi-threaded scenarios, use different instances. */
+/** This class is not thread-safe. For multithreaded scenarios, use different instances. */
 public class ThinPeer implements AutoCloseable {
 
   private UUID peerUuid;
   private String peerName;
   private boolean allowP2P = true;
-  private boolean isSocketConnected = false;
+  private boolean isZmqSocketConnected = false;
   private boolean closed;
   private boolean initialized;
   private final MessageBuilder msgBuilder = new MessageBuilder();
+
+  // used to check that messages sent to the log complete successfully
+  private final ExecutorService producerErrorCheckingExecutorService =
+      Executors.newSingleThreadExecutor();
 
   // static
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);
@@ -108,16 +112,16 @@ public class ThinPeer implements AutoCloseable {
   private Properties producerProperties;
   private Properties consumerProperties;
 
-  private Map<Long, ConsumerRecord> lastRecordsRead = new HashMap<>();
+  private Map<Long, ConsumerRecord<String, byte[]>> lastRecordsRead = new HashMap<>();
   private ExecutorService asyncConsumerExecutor;
 
   // rpc stuff
   private ZContext zmqContext;
   private Socket peerSocket;
-  private WSClient wsClient;
+  private WsClient wsClient;
   private String rpcAddress;
   private Gson gson;
-  private RPCType outboundRpcType = RPCType.RPC;
+  private RpcType outboundRpcType = RpcType.RPC;
   private PeerInfo initialPeer;
   private PeerInfo currentPeer;
   private boolean talkingToPeer;
@@ -133,7 +137,7 @@ public class ThinPeer implements AutoCloseable {
     // TODO use factory method instead of empty constructor
   }
 
-  public ThinPeer withUUID(UUID uuid) {
+  public ThinPeer withUuid(UUID uuid) {
     this.peerUuid = uuid;
     return this;
   }
@@ -143,7 +147,7 @@ public class ThinPeer implements AutoCloseable {
     return this;
   }
 
-  public ThinPeer withRPCAddress(String rpcAddress) {
+  public ThinPeer withRpcAddress(String rpcAddress) {
     this.rpcAddress = rpcAddress;
     return this;
   }
@@ -201,8 +205,8 @@ public class ThinPeer implements AutoCloseable {
     return this;
   }
 
-  public ThinPeer withZContext(ZContext zContext) {
-    this.zmqContext = zContext;
+  public ThinPeer withZmqContext(ZContext zmqContext) {
+    this.zmqContext = zmqContext;
     this.zmqContextGiven = true;
     return this;
   }
@@ -223,7 +227,7 @@ public class ThinPeer implements AutoCloseable {
     return this;
   }
 
-  public ThinPeer withDirectoryURL(String palDirectoryUrl) {
+  public ThinPeer withDirectoryUrl(String palDirectoryUrl) {
     this.palDirectoryUrl = palDirectoryUrl;
     return this;
   }
@@ -233,7 +237,7 @@ public class ThinPeer implements AutoCloseable {
     return this;
   }
 
-  public ThinPeer withOutboundRPCType(RPCType rpcType) {
+  public ThinPeer withOutboundRpcType(RpcType rpcType) {
     this.outboundRpcType = rpcType;
     return this;
   }
@@ -254,7 +258,7 @@ public class ThinPeer implements AutoCloseable {
       this.palDirectoryUrl = directoryConnectionProvider.getConnectionString();
     } else {
       if (palDirectoryUrl == null) {
-        this.palDirectoryUrl = PALDirectory.NO_URL;
+        this.palDirectoryUrl = PalDirectory.NO_URL;
       }
       directoryConnectionProvider = new DirectoryConnectionProvider(palDirectoryUrl);
     }
@@ -281,11 +285,18 @@ public class ThinPeer implements AutoCloseable {
             || initialPeer != null;
 
     if (!logless) {
-      // configure log(s) to connect to; fill bootstrap servers if only log names given
+      // get last log with prefix from PAL directory
       String kafkaTopicPrefix = logPrefix != null ? logPrefix : DEFAULT_TOPIC_PREFIX;
-      LogInfo lastLog = null;
+      LogInfo lastLog =
+          getPalDirectory() != null
+              ? getPalDirectory().getLastLogWithPrefix(kafkaTopicPrefix)
+              : null;
+
+      // configure log(s) to connect to; fill bootstrap servers if only log names given
       if (this.inLog == null) {
-        lastLog = getPalDirectory().getLastLogWithPrefix(kafkaTopicPrefix);
+        if (lastLog == null) {
+          throw new RuntimeException("Could not get last Log with prefix from PAL directory");
+        }
         this.inLog = lastLog;
       } else {
         if (this.inLog.getBootstrapServers() == null && bootstrapServers != null) {
@@ -295,7 +306,7 @@ public class ThinPeer implements AutoCloseable {
 
       if (outLog == null) {
         if (lastLog == null) {
-          lastLog = getPalDirectory().getLastLogWithPrefix(kafkaTopicPrefix);
+          throw new RuntimeException("Could not get last Log with prefix from PAL directory");
         }
         this.outLog = lastLog;
       } else {
@@ -349,7 +360,7 @@ public class ThinPeer implements AutoCloseable {
 
     // configure RPC and connect to initial peer if given
     if (allowP2P) {
-      if (outboundRpcType == RPCType.RPC) {
+      if (outboundRpcType == RpcType.RPC) {
         if (zmqContextGiven) {
           logger.info("Using given ZMQ context");
         } else {
@@ -365,9 +376,9 @@ public class ThinPeer implements AutoCloseable {
           connectToPeer(initialPeer.getUuid());
         } else {
           throw new RuntimeException(
-              format(
-                  "Cannot connect to peer without its UUID or listening (i.e. RPC) address. Peer -> %s",
-                  initialPeer));
+              "Cannot connect to peer without its UUID or "
+                  + "listening (i.e. RPC) address. Peer -> "
+                  + initialPeer);
         }
       }
     }
@@ -376,55 +387,66 @@ public class ThinPeer implements AutoCloseable {
     this.gson =
         new GsonBuilder()
             .registerTypeAdapter(
-                StaticFieldPutDone.class, new JSONSerializers.StaticFieldPutDoneAdapter())
+                StaticFieldPutDone.class, new JsonSerializers.StaticFieldPutDoneAdapter())
             .registerTypeAdapter(
-                InstanceFieldPutDone.class, new JSONSerializers.InstanceFieldPutDoneAdapter())
-            .registerTypeAdapter(ReturnValue.class, new JSONSerializers.ReturnValueAdapter())
+                InstanceFieldPutDone.class, new JsonSerializers.InstanceFieldPutDoneAdapter())
+            .registerTypeAdapter(ReturnValue.class, new JsonSerializers.ReturnValueAdapter())
             .registerTypeAdapter(JsonRpcResponse.class, new JsonRpcResponseDeserializer())
             .create();
 
     initialized = true;
     logger.info(
-        format(
-            "Initialized ThinPeer with:%n uuid: %s,%n name: %s,%n rpcAddress: %s,%n directory: %s,%n initialPeer: %s,%n rpcType: %s,%n inLog: %s,%n outLog: %s",
-            peerUuid,
-            peerName,
-            rpcAddress,
-            palDirectoryUrl,
-            initialPeer,
-            outboundRpcType,
-            inLog,
-            outLog));
-
+        """
+        Initialized ThinPeer with:
+        uuid: {},
+        name: {},
+        rpcAddress: {},
+        directory: {},
+        initialPeer: {},
+        rpcType: {},
+        inLog: {},
+        outLog: {}
+        """,
+        peerUuid,
+        peerName,
+        rpcAddress,
+        palDirectoryUrl,
+        initialPeer,
+        outboundRpcType,
+        inLog,
+        outLog);
     return this;
   }
 
-  private PALDirectory getPalDirectory() {
+  private PalDirectory getPalDirectory() {
     if (directoryConnectionProvider != null) {
       return directoryConnectionProvider.get().orElse(null);
     }
     return null;
   }
 
-  private void connectZMQSocket(PeerInfo peer) {
+  private void connectZmqSocket(PeerInfo peer) {
     peerSocket.setIdentity(("ThinPeer-" + peerUuid.toString()).getBytes(ZMQ.CHARSET));
     peerSocket.connect(peer.getRpcAddress());
-    isSocketConnected = true;
+    isZmqSocketConnected = true;
   }
 
   private void connectWebSocket(PeerInfo peer) throws URISyntaxException, InterruptedException {
-    wsClient = new WSClient(new URI(peer.getJsonrpcAddress()));
+    wsClient = new WsClient(new URI(peer.getJsonrpcAddress()));
     wsClient.connectBlocking();
   }
 
-  private void assertInitialized() {
+  private void assertInitializedAndActive() {
     if (!initialized) {
       throw new IllegalStateException("ThinPeer is not initialized. Did you call init()?");
+    }
+    if (closed) {
+      throw new IllegalStateException("ThinPeer is closed. Cannot perform operations.");
     }
   }
 
   public ExecMessage sendAndReceive(ExecMessage message) throws Exception {
-    assertInitialized();
+    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
       logger.trace("sendAndReceive: in with message: {}", ColferUtils.format(message));
     }
@@ -436,7 +458,7 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public <T> CompletableFuture<JsonRpcResponse> sendAndReceive(T jsonRpc, Class<T> jsonRpcType) {
-    assertInitialized();
+    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
       logger.trace("sendAndReceive: in with jsonRpc: {}", jsonRpc);
     }
@@ -449,12 +471,13 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
+  @SuppressWarnings("unused")
   public Message getMessageAtOffset(Long seek) {
     return getMessageAtOffset(seek, true);
   }
 
   private Message getMessageAtOffset(Long seek, boolean lookupCached) {
-    assertInitialized();
+    assertInitializedAndActive();
     if (logger.isDebugEnabled()) {
       logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
     }
@@ -468,7 +491,7 @@ public class ThinPeer implements AutoCloseable {
       }
     }
 
-    Map<Long, ConsumerRecord> recordsRead = new HashMap<>();
+    Map<Long, ConsumerRecord<String, byte[]>> recordsRead = new HashMap<>();
     ConsumerRecord<String, byte[]> requestedRecord = null;
 
     long actualSeekOffset = (seek - PRECEDING_RECS < 0) ? seek : seek - PRECEDING_RECS;
@@ -482,7 +505,7 @@ public class ThinPeer implements AutoCloseable {
       if (logger.isDebugEnabled()) {
         logger.debug("Read {} records during poll", records.count());
       }
-      for (ConsumerRecord record : records) {
+      for (ConsumerRecord<String, byte[]> record : records) {
         if (seek == record.offset()) {
           requestedRecord = record;
         }
@@ -507,13 +530,14 @@ public class ThinPeer implements AutoCloseable {
     return null;
   }
 
-  public List<ConsumerRecord> getMessages(long startOffset, long numMessages) {
-    assertInitialized();
+  @SuppressWarnings("unused")
+  public List<ConsumerRecord<?, ?>> getMessages(long startOffset, long numMessages) {
+    assertInitializedAndActive();
     if (logger.isDebugEnabled()) {
       logger.debug("Getting {} messages starting @ offset #{}", numMessages, startOffset);
     }
     consumer.seek(inTopicPartition, startOffset);
-    List<ConsumerRecord> messages = new ArrayList<>();
+    List<ConsumerRecord<?, ?>> messages = new ArrayList<>();
     boolean gotAllMessages = false;
 
     while (!gotAllMessages) {
@@ -521,7 +545,7 @@ public class ThinPeer implements AutoCloseable {
       if (logger.isDebugEnabled()) {
         logger.debug("got {} records after poll", records.count());
       }
-      for (ConsumerRecord record : records) {
+      for (var record : records) {
         if (record.offset() < startOffset + numMessages) {
           messages.add(record);
           gotAllMessages = messages.size() == numMessages;
@@ -537,19 +561,30 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public void sendToLogAndForget(ExecMessage message) {
-    assertInitialized();
+    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
       logger.trace("sendToLogAndForget: in with message: {}", ColferUtils.format(message));
     }
     // send to kafka
     final byte[] body = ColferUtils.toBytes(msgBuilder.wrap(message));
-    producer.send(
-        new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body));
+    var sendFuture =
+        producer.send(
+            new ProducerRecord<>(
+                outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body));
+
+    // log any errors
+    var unusedFuture =
+        producerErrorCheckingExecutorService.submit(
+            () -> {
+              try {
+                sendFuture.get();
+              } catch (Exception e) {
+                logger.error("Error sending message to log", e);
+              }
+            });
+
     if (logger.isDebugEnabled()) {
-      logger.debug(
-          "Message sent to log:\n{} ({} bytes), and we're done",
-          ColferUtils.format(message),
-          body.length);
+      logger.debug("Message sent to log:\n{} ({} bytes)", ColferUtils.format(message), body.length);
     }
   }
 
@@ -572,9 +607,11 @@ public class ThinPeer implements AutoCloseable {
     }
     ExecMessage replyMsg = sendAndReceiveConsumingLog(message);
 
-    // switch to direct p2p talk
-    String msgPeerUuid = replyMsg.getPeerUuid();
-    connectToPeer(UUID.fromString(msgPeerUuid));
+    if (replyMsg != null) {
+      // switch to direct p2p talk
+      String msgPeerUuid = replyMsg.getPeerUuid();
+      connectToPeer(UUID.fromString(msgPeerUuid));
+    }
 
     return replyMsg;
   }
@@ -614,10 +651,10 @@ public class ThinPeer implements AutoCloseable {
         logger.debug("Received {} records", records.count());
       }
       for (ConsumerRecord<String, byte[]> record : records) {
-        final Message rcvdMsg = new Message();
-        rcvdMsg.unmarshal(record.value(), 0);
+        final Message receivedMessage = new Message();
+        receivedMessage.unmarshal(record.value(), 0);
         long receivedMsgOffset = record.offset();
-        final ExecMessage execMessage = rcvdMsg.getExecMessage();
+        final ExecMessage execMessage = receivedMessage.getExecMessage();
         final String responseToUuid = execMessage == null ? null : execMessage.getResponseToUuid();
         if (execMessage != null && message.getMessageUuid().equals(responseToUuid)) {
           if (logger.isDebugEnabled()) {
@@ -631,8 +668,9 @@ public class ThinPeer implements AutoCloseable {
             UUID msgPeerUuid = UUID.fromString(execMessage.getPeerUuid());
             PeerInfo newPeer = null;
             try {
-              // we getPeerProperties and close after since we assume we'll get here only once
-              newPeer = getPalDirectory().getPeerInfo(msgPeerUuid);
+              if (getPalDirectory() != null) {
+                newPeer = getPalDirectory().getPeerInfo(msgPeerUuid);
+              }
             } catch (Exception ex) {
               logger.error("Couldn't get peer properties", ex);
             }
@@ -652,6 +690,9 @@ public class ThinPeer implements AutoCloseable {
 
   public void connectToPeer(UUID peerUuid) throws Exception {
     PeerInfo newPeer = null;
+    if (getPalDirectory() == null) {
+      throw new RuntimeException("Cannot connect to peer without PAL directory");
+    }
     try {
       newPeer = getPalDirectory().getPeerInfo(peerUuid);
     } catch (Exception ex) {
@@ -670,12 +711,12 @@ public class ThinPeer implements AutoCloseable {
       throw new RuntimeException("Cannot connect to peer: p2p is disallowed");
     }
 
-    if (currentPeer != null && isSocketConnected) {
+    if (currentPeer != null && isZmqSocketConnected) {
       sendDeleteSessionRequest();
     }
 
-    if (outboundRpcType == RPCType.RPC) {
-      connectZMQSocket(peer);
+    if (outboundRpcType == RpcType.RPC) {
+      connectZmqSocket(peer);
     } else { // is JSON-RPC
       connectWebSocket(peer);
     }
@@ -685,7 +726,7 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public ExecMessage sendToPeer(ExecMessage message) {
-    assertInitialized();
+    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
       logger.trace("sendToPeer: in with message: {}", ColferUtils.format(message));
     }
@@ -701,7 +742,7 @@ public class ThinPeer implements AutoCloseable {
     final ExecMessage replyMsg = replyMsgWrapper.getExecMessage();
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Got reply message: {}, waited {} ms",
+          "Got reply message to Exec message: {}, waited {} ms",
           ColferUtils.format(replyMsg),
           (waitEnd - waitStart));
     }
@@ -710,7 +751,7 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public <T> CompletableFuture<JsonRpcResponse> sendToPeer(T jsonRpcRequest, Class<T> jsonRpcType) {
-    assertInitialized();
+    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
       logger.trace("sendToPeer: in with jsonRpcRequest: {}", jsonRpcRequest);
     }
@@ -727,9 +768,9 @@ public class ThinPeer implements AutoCloseable {
 
   // TODO: refactor this and above methods
   public ControlMessage sendToPeer(ControlMessage message) {
-    assertInitialized();
+    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
-      logger.trace("sendToPeer: in with message: {}", ColferUtils.format(message));
+      logger.trace("in sendToPeer with Control message: {}", ColferUtils.format(message));
     }
     // send message request to peer
     peerSocket.send(ColferUtils.toBytes(msgBuilder.wrap(message)));
@@ -743,7 +784,7 @@ public class ThinPeer implements AutoCloseable {
     final ControlMessage replyMsg = replyMsgWrapper.getControlMessage();
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Got reply message: {}, waited {} ms",
+          "Got reply to Control message: {}, waited {} ms",
           ColferUtils.format(replyMsg),
           (waitEnd - waitStart));
     }
@@ -769,7 +810,6 @@ public class ThinPeer implements AutoCloseable {
     ControlStatusType statusType = ControlStatusType.fromByte(replyMsg.getStatus());
     if (Objects.requireNonNull(statusType) == ControlStatusType.OK) {
       logger.info("Object w/ref {} was deleted.", objectRef);
-      return;
     } else {
       throw new Exception(
           String.format(
@@ -777,52 +817,50 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
-  private void close(Consumer consumer, long timeout, TemporalUnit timeUnit, String msg) {
+  private void closeConsumer() {
     if (consumer != null) {
       try {
-        consumer.close(Duration.of(timeout, timeUnit));
-        logger.info(msg);
+        consumer.close(Duration.of(500, ChronoUnit.MILLIS));
+        logger.info("Log consumer closed.");
       } catch (Exception e) {
         logger.warn("Error closing consumer", e);
       }
     }
   }
 
-  private void close(Producer producer, long timeout, TemporalUnit timeUnit, String msg) {
+  private void closeProducer() {
     if (producer != null) {
       try {
-        producer.close(Duration.of(timeout, timeUnit));
-        logger.info(msg);
+        producer.close(Duration.of(500, ChronoUnit.MILLIS));
+        logger.info("Log producer closed.");
       } catch (Exception e) {
         logger.warn("Error closing producer", e);
       }
     }
   }
 
-  private void close(Closeable resource, String msg) {
-    if (resource != null) {
-      try {
-        resource.close();
-        logger.info(msg);
-      } catch (IOException e) {
-        logger.warn("Error closing resource", e);
-      }
+  private void closePeerSocket() {
+    try {
+      peerSocket.close();
+      logger.info("Peer socket closed.");
+    } catch (Exception e) {
+      logger.warn("Error closing peer socket", e);
     }
   }
 
   @Override
   public void close() {
-    assertInitialized();
+    assertInitializedAndActive();
 
-    if (currentPeer != null && isSocketConnected) {
+    if (currentPeer != null && isZmqSocketConnected) {
       sendDeleteSessionRequest();
     }
 
     // NOTE: we only close resources that were not passed to us
 
     // close socket-related resources
-    close(peerSocket, "Peer socket closed.");
-    isSocketConnected = false;
+    closePeerSocket();
+    isZmqSocketConnected = false;
     if (!zmqContextGiven) {
       try {
         if (zmqContext != null) {
@@ -835,11 +873,20 @@ public class ThinPeer implements AutoCloseable {
     }
 
     // close log-related resources
+    producerErrorCheckingExecutorService.shutdown();
+    try {
+      if (!producerErrorCheckingExecutorService.awaitTermination(250, TimeUnit.MILLISECONDS)) {
+        producerErrorCheckingExecutorService.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      producerErrorCheckingExecutorService.shutdownNow();
+    }
+
     if (!producerGiven) {
-      close(producer, 500, ChronoUnit.MILLIS, "Log producer closed.");
+      closeProducer();
     }
     if (!consumerGiven) {
-      close(consumer, 500, ChronoUnit.MILLIS, "Log consumer closed.");
+      closeConsumer();
     }
     if (asyncConsumerExecutor != null) {
       asyncConsumerExecutor.shutdown();
@@ -863,6 +910,7 @@ public class ThinPeer implements AutoCloseable {
     closed = true;
   }
 
+  // <editor-fold desc="Getters">
   public boolean isLogIOEnabled() {
     return logIOEnabled;
   }
@@ -871,14 +919,101 @@ public class ThinPeer implements AutoCloseable {
     return closed;
   }
 
-  private final class WSClient extends WebSocketClient {
+  public boolean isInitialized() {
+    return initialized;
+  }
+
+  public String getName() {
+    return peerName;
+  }
+
+  public boolean isP2PEnabled() {
+    return allowP2P;
+  }
+
+  public String getBootstrapServers() {
+    return bootstrapServers;
+  }
+
+  public LogInfo getInLog() {
+    return inLog;
+  }
+
+  public LogInfo getOutLog() {
+    return outLog;
+  }
+
+  public Duration getPollingDuration() {
+    return pollingDuration;
+  }
+
+  public Producer<String, byte[]> getProducer() {
+    return producer;
+  }
+
+  public Consumer<String, byte[]> getConsumer() {
+    return consumer;
+  }
+
+  public Properties getProducerProperties() {
+    return producerProperties;
+  }
+
+  public Properties getConsumerProperties() {
+    return consumerProperties;
+  }
+
+  public ZContext getZmqContext() {
+    return zmqContext;
+  }
+
+  public String getRpcAddress() {
+    return rpcAddress;
+  }
+
+  public RpcType getOutboundRpcType() {
+    return outboundRpcType;
+  }
+
+  public PeerInfo getInitialPeer() {
+    return initialPeer;
+  }
+
+  public PeerInfo getCurrentPeer() {
+    return currentPeer;
+  }
+
+  public boolean isTalkingToPeer() {
+    return talkingToPeer;
+  }
+
+  public String getPalDirectoryUrl() {
+    return palDirectoryUrl;
+  }
+
+  public String getLogPrefix() {
+    return logPrefix;
+  }
+
+  public boolean isSelfRegistering() {
+    return registerSelf;
+  }
+
+  public boolean isZmqSocketConnected() {
+    return isZmqSocketConnected;
+  }
+
+  // </editor-fold>
+
+  private final class WsClient extends WebSocketClient {
     private final Map<String, CompletableFuture<JsonRpcResponse>> futureResponses =
         new ConcurrentHashMap<>();
 
-    WSClient(URI uri) {
+    WsClient(URI uri) {
       super(uri);
     }
 
+    @Override
     public void send(String message) {
       if (logger.isTraceEnabled()) {
         logger.trace("sending message to ws socket: {}", message);
@@ -888,7 +1023,7 @@ public class ThinPeer implements AutoCloseable {
 
     public CompletableFuture<JsonRpcResponse> sendAsync(String message) {
       if (logger.isTraceEnabled()) {
-        logger.trace("sending message to ws socket: {}", message);
+        logger.trace("in sendAsync - sending message to ws socket: {}", message);
       }
       JsonRpcRequest request = gson.fromJson(message, JsonRpcRequest.class);
       CompletableFuture<JsonRpcResponse> futureResponse = new CompletableFuture<>();

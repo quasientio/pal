@@ -30,9 +30,9 @@ import net.ittera.pal.common.directory.events.InterceptEvent;
 import net.ittera.pal.common.directory.events.InterceptNodeListener;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
-import net.ittera.pal.core.messages.InterceptEvtMsg;
+import net.ittera.pal.core.messages.InterceptEventMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -52,7 +52,7 @@ public class InterceptInformer implements InterceptNodeListener {
   private final ZContext zmqContext;
   private final MessageBuilder messageBuilder;
   private final DirectoryConnectionProvider directoryConnectionProvider;
-  private final String interceptsAddr;
+  private final String interceptsAddress;
   private final UUID peerUuid;
 
   // flag to avoid creating the threadLocal socket when we're trying to close it before having been
@@ -61,14 +61,14 @@ public class InterceptInformer implements InterceptNodeListener {
 
   // per-thread REQ socket to send out messages
   private final ThreadLocal<Socket> threadSocket =
-      new ThreadLocal<Socket>() {
+      new ThreadLocal<>() {
         @Override
         protected Socket initialValue() {
           Socket worker = zmqContext.createSocket(SocketType.REQ);
-          worker.connect(interceptsAddr);
+          worker.connect(interceptsAddress);
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Created and connected REQ new socket to interceptsAddress: {}", interceptsAddr);
+                "Created and connected REQ new socket to interceptsAddress: {}", interceptsAddress);
           }
           threadSocketCreated.set(true);
           return worker;
@@ -81,17 +81,17 @@ public class InterceptInformer implements InterceptNodeListener {
       MessageBuilder messageBuilder,
       DirectoryConnectionProvider directoryConnectionProvider,
       UUID peerUuid,
-      @Named("intercepts.reg") String interceptsAddr) {
+      @Named("intercepts.reg") String interceptsAddress) {
     this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
     this.directoryConnectionProvider = directoryConnectionProvider;
     this.peerUuid = peerUuid;
-    this.interceptsAddr = interceptsAddr;
+    this.interceptsAddress = interceptsAddress;
   }
 
   public void registerAllInterceptsInDirectory() {
     final Set<PeerInfo> peers;
-    final PALDirectory palDirectory =
+    final PalDirectory palDirectory =
         directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
     try {
       peers = palDirectory.getAllPeers();
@@ -100,7 +100,7 @@ public class InterceptInformer implements InterceptNodeListener {
       return;
     }
 
-    final List<InterceptRequest> allInterceptRequests = new ArrayList<>();
+    final List<InterceptRequest<?>> allInterceptRequests = new ArrayList<>();
     for (PeerInfo peer : peers) {
       try {
         allInterceptRequests.addAll(palDirectory.getPeerInterceptRequests(peer.getUuid()));
@@ -113,7 +113,7 @@ public class InterceptInformer implements InterceptNodeListener {
         interceptRequest -> {
           InterceptMessage interceptMessage =
               messageBuilder.buildInterceptMessage(interceptRequest);
-          sendInterceptEventMsg(new InterceptEvtMsg(ColferUtils.toBytes(interceptMessage)));
+          sendInterceptEventMsg(new InterceptEventMsg(ColferUtils.toBytes(interceptMessage)));
         });
   }
 
@@ -122,34 +122,40 @@ public class InterceptInformer implements InterceptNodeListener {
     if (logger.isDebugEnabled()) {
       logger.debug("Got new intercept event: {}", event);
     }
-    switch (event.getType()) {
+
+    InterceptEventMsg interceptEventMsg;
+    switch (event.type()) {
       case INTERCEPT_ADDED:
-        final InterceptRequest interceptRequest = event.getInterceptRequest();
-        if (event.getPeerUUID().equals(peerUuid)) {
+        final InterceptRequest<?> interceptRequest = event.interceptRequest();
+        if (event.peerUuid().equals(peerUuid)) {
           if (logger.isDebugEnabled()) {
             logger.debug("Ignoring self-produced intercept request: {}", interceptRequest);
           }
           return;
         }
         InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
-        sendInterceptEventMsg(new InterceptEvtMsg(ColferUtils.toBytes(interceptMessage)));
+        interceptEventMsg = new InterceptEventMsg(ColferUtils.toBytes(interceptMessage));
         break;
       case INTERCEPT_REMOVED:
-        if (event.getPeerUUID().equals(peerUuid)) {
+        if (event.peerUuid().equals(peerUuid)) {
           if (logger.isDebugEnabled()) {
             logger.debug(
                 "Ignoring unregistration of self-produced intercept request: {}",
-                event.getInterceptRequest());
+                event.interceptRequest());
           }
           return;
         }
-        UUID interceptMsg = event.getInterceptUUID();
-        sendInterceptEventMsg(new InterceptEvtMsg(interceptMsg));
+        UUID interceptMsg = event.interceptUuid();
+        interceptEventMsg = new InterceptEventMsg(interceptMsg);
         break;
+      default:
+        throw new IllegalStateException("Unexpected intercept event type: " + event.type());
     }
+
+    sendInterceptEventMsg(interceptEventMsg);
   }
 
-  private void sendInterceptEventMsg(InterceptEvtMsg message) {
+  private void sendInterceptEventMsg(InterceptEventMsg message) {
     if (logger.isDebugEnabled()) {
       logger.debug("Sending new intercept evt message: {}", message);
     }

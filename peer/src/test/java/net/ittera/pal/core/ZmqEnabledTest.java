@@ -48,8 +48,8 @@ public abstract class ZmqEnabledTest {
     Socket syncSocket = context.createSocket(SocketType.PULL);
     syncSocket.bind(SYNC_SOCKET_ADDRESS);
     while (latch.getCount() > 0) {
-      String rcvd = syncSocket.recvStr();
-      if (rcvd.equalsIgnoreCase("go!")) {
+      String receivedString = syncSocket.recvStr();
+      if (receivedString.equalsIgnoreCase("go!")) {
         logger.debug("go received");
         latch.countDown();
       }
@@ -61,7 +61,7 @@ public abstract class ZmqEnabledTest {
 
   protected void closeContext(ZContext context) throws InterruptedException {
     ExecutorService execService = Executors.newCachedThreadPool();
-    execService.submit(
+    execService.execute(
         () -> {
           context.close();
           logger.debug("zmq context terminated");
@@ -69,10 +69,11 @@ public abstract class ZmqEnabledTest {
 
     // stop executor
     execService.shutdown();
-    execService.awaitTermination(1, TimeUnit.SECONDS);
+    @SuppressWarnings("unused")
+    boolean unusedResult = execService.awaitTermination(1, TimeUnit.SECONDS);
   }
 
-  protected int findAvailableServerPort() {
+  protected static int findAvailableServerPort() {
     try (ServerSocket socket = new ServerSocket(0)) {
       return socket.getLocalPort();
     } catch (IOException e) {

@@ -33,7 +33,7 @@ import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
-import net.ittera.pal.messages.types.RPCType;
+import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -69,14 +69,14 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
 
     // find a peer listening with JSON-RPC enabled
     PeerInfo jsonRpcPeer =
-        findRPCPeer(RPCType.JSONRPC)
+        findRpcPeer(RpcType.JSONRPC)
             .orElseThrow(() -> new RuntimeException("No peer found with JSON-RPC enabled"));
     thinPeer =
         new ThinPeer()
-            .withUUID(clientId)
-            .withDirectoryURL(getPALDirectoryURL())
+            .withUuid(clientId)
+            .withDirectoryUrl(getPalDirectoryUrl())
             .withInitialPeer(jsonRpcPeer)
-            .withOutboundRPCType(RPCType.JSONRPC)
+            .withOutboundRpcType(RpcType.JSONRPC)
             .init();
   }
 
@@ -105,7 +105,6 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
     }
   }
 
-  /** Helper methods */
   protected Object callEmptyConstructor(String className) throws Exception {
     JsonRpcRequest jsonRpc = new JsonRpcRequest();
     jsonRpc.setJsonrpc("2.0");

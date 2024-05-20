@@ -52,41 +52,38 @@ import net.ittera.pal.messages.colfer.StaticFieldGet;
 import net.ittera.pal.messages.colfer.StaticFieldPut;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.colfer.Throwable;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ClInitCallSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ClassMethodCallSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ClassSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ConstructorCallSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ConstructorSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ContextSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ExecMessageSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.FieldSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.InstanceFieldGetSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.InstanceFieldPutDoneAdapter;
-import net.ittera.pal.serdes.colfer.JSONSerializers.InstanceFieldPutSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.InstanceMethodCallSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.InterceptKeyMessageSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.InterceptMessageSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.InterceptReplySerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.InterceptableFieldSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.InterceptableMethodSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.InternalHeaderSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.MessageSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.MethodSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ObjSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ParameterSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.RaisedThrowableSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ReflectableSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ReturnValueAdapter;
-import net.ittera.pal.serdes.colfer.JSONSerializers.StaticFieldGetSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.StaticFieldPutDoneAdapter;
-import net.ittera.pal.serdes.colfer.JSONSerializers.StaticFieldPutSerializer;
-import net.ittera.pal.serdes.colfer.JSONSerializers.ThrowableSerializer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ClInitCallSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ClassMethodCallSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ClassSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ConstructorCallSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ConstructorSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ContextSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ExecMessageSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.FieldSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.InstanceFieldGetSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.InstanceFieldPutDoneAdapter;
+import net.ittera.pal.serdes.colfer.JsonSerializers.InstanceFieldPutSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.InstanceMethodCallSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptKeyMessageSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptMessageSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptReplySerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptableFieldSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.InterceptableMethodSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.InternalHeaderSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.MessageSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.MethodSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ObjSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ParameterSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.RaisedThrowableSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ReflectableSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ReturnValueAdapter;
+import net.ittera.pal.serdes.colfer.JsonSerializers.StaticFieldGetSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.StaticFieldPutDoneAdapter;
+import net.ittera.pal.serdes.colfer.JsonSerializers.StaticFieldPutSerializer;
+import net.ittera.pal.serdes.colfer.JsonSerializers.ThrowableSerializer;
 
 public class ColferUtils {
 
-  private static final Logger logger = LoggerFactory.getLogger(ColferUtils.class);
   private static final Gson jsonPrinter;
   private static final Gson jsonPrettyPrinter;
 
@@ -153,18 +150,18 @@ public class ColferUtils {
     return buf;
   }
 
-  public static String toJSON(Marshallable message) {
-    return toJSON(message, false);
+  public static String toJson(Marshallable message) {
+    return toJson(message, false);
   }
 
-  public static String toJSON(Marshallable message, boolean prettyPrint) {
+  public static String toJson(Marshallable message, boolean prettyPrint) {
     if (prettyPrint) {
       return jsonPrettyPrinter.toJson(message);
     }
     return jsonPrinter.toJson(message);
   }
 
-  public static Marshallable fromJSON(String json, Class<? extends Marshallable> messageClass)
+  public static Marshallable fromJson(String json, Class<? extends Marshallable> messageClass)
       throws JsonParseException {
     Gson gson = new Gson();
     JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
@@ -180,14 +177,14 @@ public class ColferUtils {
   /**
    * Returns a wrapper around a message, that is formatted lazily, for use in logging calls.
    *
-   * @param message
-   * @return
+   * @param message the message to format
+   * @return a wrapper object that will format the message when its toString method is called
    */
   public static Object format(Marshallable message) {
     return new Object() {
       @Override
       public String toString() {
-        return toJSON(message, false);
+        return toJson(message, false);
       }
     };
   }

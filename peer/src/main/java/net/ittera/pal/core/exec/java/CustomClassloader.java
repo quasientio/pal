@@ -24,7 +24,10 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,8 +87,13 @@ public class CustomClassloader extends URLClassLoader {
 
       classLoadedFuture.complete(clazz);
 
-      classLoadedFuture.thenRunAsync(
-          () -> notifyListeners(classLoadedFuture.join()), executorService);
+      CompletableFuture<?> notifyFuture =
+          classLoadedFuture.thenRunAsync(
+              () -> notifyListeners(classLoadedFuture.join()), executorService);
+
+      if (notifyFuture.isCompletedExceptionally()) {
+        logger.error("Failed to notify listeners for class {}", name);
+      }
 
       return classLoadedFuture.join();
     }

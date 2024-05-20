@@ -19,25 +19,28 @@
 
 package net.ittera.pal.common.util;
 
-import java.util.*;
+import com.google.common.collect.ImmutableMap;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public final class Classes {
 
-  private static final Map<String, String> simpleToLongNames =
-      new HashMap<String, String>() {
-        {
-          put("String", "java.lang.String");
-          put("Character", "java.lang.Character");
-          put("Boolean", "java.lang.Boolean");
-          put("Byte", "java.lang.Byte");
-          put("Short", "java.lang.Short");
-          put("Integer", "java.lang.Integer");
-          put("Long", "java.lang.Long");
-          put("Float", "java.lang.Float");
-          put("Double", "java.lang.Double");
-        }
-      };
+  private static final ImmutableMap<String, String> simpleToLongNames =
+      ImmutableMap.<String, String>builder()
+          .put("String", "java.lang.String")
+          .put("Character", "java.lang.Character")
+          .put("Boolean", "java.lang.Boolean")
+          .put("Byte", "java.lang.Byte")
+          .put("Short", "java.lang.Short")
+          .put("Integer", "java.lang.Integer")
+          .put("Long", "java.lang.Long")
+          .put("Float", "java.lang.Float")
+          .put("Double", "java.lang.Double")
+          .build();
 
   private static final Map<Class<?>, Class<?>> PRIMITIVE_TO_WRAPPER;
 
@@ -79,31 +82,6 @@ public final class Classes {
     ONLY_PRIMITIVE_NAMES = Collections.unmodifiableSet(primitives);
   }
 
-  private static final Map<String, Class<?>> WRAPPER_NAME_TO_CLASS;
-
-  static {
-    Map<String, Class<?>> map = new HashMap<>();
-    map.put("Boolean", Boolean.class);
-    map.put("java.lang.Boolean", Boolean.class);
-    map.put("Byte", Byte.class);
-    map.put("java.lang.Byte", Byte.class);
-    map.put("Character", Character.class);
-    map.put("java.lang.Character", Character.class);
-    map.put("Short", Short.class);
-    map.put("java.lang.Short", Short.class);
-    map.put("Integer", Integer.class);
-    map.put("java.lang.Integer", Integer.class);
-    map.put("Long", Long.class);
-    map.put("java.lang.Long", Long.class);
-    map.put("Double", Double.class);
-    map.put("java.lang.Double", Double.class);
-    map.put("Float", Float.class);
-    map.put("java.lang.Float", Float.class);
-    map.put("Void", Void.class);
-    map.put("java.lang.Void", Void.class);
-    WRAPPER_NAME_TO_CLASS = Collections.unmodifiableMap(map);
-  }
-
   // reverse map of primitiveWrapper
   private static final Map<Class<?>, Class<?>> WRAPPER_TO_PRIMITIVE;
 
@@ -127,18 +105,6 @@ public final class Classes {
   @SuppressWarnings("rawtypes")
   public static Class getClassForPrimitive(String primitiveName) {
     return PRIMITIVE_NAME_TO_CLASS.get(primitiveName);
-  }
-
-  public static Class<?> getClassForWrapper(String wrapperName) {
-    return WRAPPER_NAME_TO_CLASS.get(wrapperName);
-  }
-
-  public static Class<?> getClassForPrimitiveOrWrapper(String primitiveOrWrapperName) {
-    Class<?> primitive = getClassForPrimitive(primitiveOrWrapperName);
-    if (primitive != null) {
-      return primitive;
-    }
-    return WRAPPER_NAME_TO_CLASS.get(primitiveOrWrapperName);
   }
 
   public static boolean isPrimitiveOrWrapper(Class<?> type) {

@@ -26,7 +26,6 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
@@ -75,16 +74,14 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   protected ExecMessage wrapAfterExecMessage(
       Context ctxt, Object value, ObjectRef objectRef, boolean isVoid) {
 
-    final Optional<AccessibleObject> method =
-        Optional.of(((MethodSignature) ctxt.getSignature()).getMethod());
+    final AccessibleObject method = ((MethodSignature) ctxt.getSignature()).getMethod();
 
     if (value instanceof InvocationExceptionWrapper) {
-      Exception invocationException = ((InvocationExceptionWrapper) value).getException();
+      Exception invocationException = ((InvocationExceptionWrapper) value).exception();
       return messageBuilder.buildAccessibleObjectThrowable(
           peerUuid, method, ExecutableObjectType.METHOD, invocationException, null);
     } else {
-      return messageBuilder.buildReturnValue(
-          peerUuid, value, method.get(), objectRef, isVoid, null);
+      return messageBuilder.buildReturnValue(peerUuid, value, method, objectRef, isVoid, null);
     }
   }
 
@@ -127,13 +124,6 @@ public class ClassMethodDispatcher extends MethodDispatcher {
     return Arrays.asList(execMessage.getClassMethodCall().getParameters());
   }
 
-  /**
-   * @param execMessage
-   * @param parameterTypes
-   * @param args
-   * @return
-   * @throws ReflectiveOperationException
-   */
   @Override
   protected AccessibleObject loadAccessibleObject(
       ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)

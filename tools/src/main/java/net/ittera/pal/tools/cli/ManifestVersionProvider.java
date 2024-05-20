@@ -24,7 +24,7 @@ import picocli.CommandLine.IVersionProvider;
 public class ManifestVersionProvider implements IVersionProvider {
 
   @Override
-  public String[] getVersion() throws Exception {
+  public String[] getVersion() {
     Package p = getClass().getPackage();
     return new String[] {p.getImplementationVersion()};
   }

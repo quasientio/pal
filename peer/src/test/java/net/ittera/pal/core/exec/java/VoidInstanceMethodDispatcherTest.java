@@ -26,7 +26,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,49 +40,9 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
-
-// auxiliary class
-class ClassForVoidInstanceMethodTest {
-  public List<String> wordsCollected = new ArrayList<>();
-  private static final String WORD_REGEX = "^\\w+$";
-
-  ClassForVoidInstanceMethodTest() {}
-
-  private void addHelloWorld() {
-    wordsCollected.add("Hello");
-    wordsCollected.add("World");
-  }
-
-  public void addWord(String word) {
-    if (word == null) {
-      return;
-    }
-
-    if (word.matches(WORD_REGEX)) {
-      wordsCollected.add(word);
-    } else {
-      throw new IllegalArgumentException("Not a word: " + word);
-    }
-  }
-
-  void addWords(int n) {
-    for (int i = 0; i < n; i++) {
-      addWord("again");
-    }
-  }
-
-  protected void addWords(String... words) {
-    Arrays.stream(words).filter(w -> w.matches(WORD_REGEX)).forEach(w -> wordsCollected.add(w));
-  }
-
-  void addWordList(List<String> wordList) {
-    wordsCollected.addAll(wordList);
-  }
-}
 
 @RunWith(MockitoJUnitRunner.class)
 public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTest {
@@ -88,6 +51,7 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
   private final String sourceFilename = "NotARealClass.java";
 
   @Before
+  @Override
   public void setUp() {
     super.setUp();
     dispatcher =
@@ -457,7 +421,8 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     // dispatch
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
     try {
-      Object returned = dispatcher.dispatch(ctxt, this, target, args);
+      @SuppressWarnings("unused")
+      Object unused = dispatcher.dispatch(ctxt, this, target, args);
       fail("Should have failed with an IllegalArgumentException");
     } catch (IllegalArgumentException iae) {
       // all good
@@ -501,14 +466,9 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
         is("java.lang.IllegalArgumentException"));
   }
 
-  @Ignore
-  @Test
-  @Override
-  public void dispatchIncoming_throwsAmbiguousCallException_exceptionThrown() throws Exception {}
-
   @Override
   @Test
-  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() throws Exception {
+  public void dispatchIncoming_throwsNoSuchMethodException_exceptionThrown() {
 
     // create and store new instance
     ClassForVoidInstanceMethodTest target = new ClassForVoidInstanceMethodTest();
@@ -681,5 +641,45 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     replyMsg = ((ExecMessageDispatcher) dispatcher).dispatchIncoming(incomingMessage);
     assertNotNull(replyMsg.getReturnValue());
     assertNull(replyMsg.getRaisedThrowable());
+  }
+
+  // auxiliary class
+  @SuppressWarnings("unused")
+  private static class ClassForVoidInstanceMethodTest {
+    public List<String> wordsCollected = new ArrayList<>();
+    private static final String WORD_REGEX = "^\\w+$";
+
+    ClassForVoidInstanceMethodTest() {}
+
+    private void addHelloWorld() {
+      wordsCollected.add("Hello");
+      wordsCollected.add("World");
+    }
+
+    public void addWord(String word) {
+      if (word == null) {
+        return;
+      }
+
+      if (word.matches(WORD_REGEX)) {
+        wordsCollected.add(word);
+      } else {
+        throw new IllegalArgumentException("Not a word: " + word);
+      }
+    }
+
+    void addWords(int n) {
+      for (int i = 0; i < n; i++) {
+        addWord("again");
+      }
+    }
+
+    protected void addWords(String... words) {
+      Arrays.stream(words).filter(w -> w.matches(WORD_REGEX)).forEach(w -> wordsCollected.add(w));
+    }
+
+    void addWordList(List<String> wordList) {
+      wordsCollected.addAll(wordList);
+    }
   }
 }

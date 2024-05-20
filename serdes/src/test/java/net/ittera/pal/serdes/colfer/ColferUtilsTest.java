@@ -1,19 +1,23 @@
 package net.ittera.pal.serdes.colfer;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.messages.Marshallable;
 import net.ittera.pal.messages.colfer.InstanceFieldGet;
-import net.ittera.pal.messages.colfer.Obj;
 import org.junit.Test;
 
 public class ColferUtilsTest {
 
-  class ClassForColferUtilsTest {
+  static class ClassForColferUtilsTest {
     public int field;
   }
 
@@ -23,29 +27,23 @@ public class ColferUtilsTest {
         new FieldSignature(ClassForColferUtilsTest.class.getDeclaredField("field"));
     String sourceFile = "ColferUtilsTest.java";
     int lineNumber = 17;
-    Class withinType = ClassForColferUtilsTest.class;
+    Class<?> withinType = ClassForColferUtilsTest.class;
     // create context
     Context context = new Context(sourceFile, lineNumber, withinType, signature);
     net.ittera.pal.messages.colfer.Class clazz =
         Wrapper.getWrappedClass(signature.getDeclaringType());
 
     // create marshallable message
-    Object target = new ClassForColferUtilsTest();
-    Obj targetObj =
-        Wrapper.getWrappedObject(
-            target, signature.getDeclaringType().getName(), ObjectRef.randomRef());
     net.ittera.pal.messages.colfer.Field field =
         Wrapper.getWrappedField(signature.getFieldType(), signature.getName());
     int modifiers = signature.getModifiers();
     net.ittera.pal.messages.colfer.Context ctxt =
         Wrapper.getWrappedContext(context, this, ObjectRef.randomRef());
-    Marshallable message =
-        new InstanceFieldGet()
-            .withClazz(clazz)
-            .withField(field)
-            .withModifiers(modifiers)
-            .withContext(ctxt);
-    return message;
+    return new InstanceFieldGet()
+        .withClazz(clazz)
+        .withField(field)
+        .withModifiers(modifiers)
+        .withContext(ctxt);
   }
 
   @Test
@@ -58,23 +56,22 @@ public class ColferUtilsTest {
 
   @Test
   public void toBytes_NullInstanceFieldGet_null() {
-    byte[] result = ColferUtils.toBytes(null);
-    assertNull(result);
+    assertNull(ColferUtils.toBytes(null));
   }
 
   @Test
-  public void toJSON_Marshallable_NonPrettyJsonString() throws NoSuchFieldException {
+  public void toJson_Marshallable_NonPrettyJsonString() throws NoSuchFieldException {
     Marshallable message = createMarshallable();
-    String json = ColferUtils.toJSON(message);
+    String json = ColferUtils.toJson(message);
     assertNotNull(json);
     assertFalse(json.contains("\n"));
     assertFalse(json.contains(" "));
   }
 
   @Test
-  public void toJSON_MarshallableWithPrettyPrint_PrettyJsonString() throws NoSuchFieldException {
+  public void toJson_MarshallableWithPrettyPrint_PrettyJsonString() throws NoSuchFieldException {
     Marshallable message = createMarshallable();
-    String prettyJson = ColferUtils.toJSON(message, true);
+    String prettyJson = ColferUtils.toJson(message, true);
     assertNotNull(prettyJson);
     assertTrue(prettyJson.contains("\n"));
     assertTrue(prettyJson.contains(" "));
@@ -85,6 +82,6 @@ public class ColferUtilsTest {
     Marshallable message = createMarshallable();
     Object formatted = ColferUtils.format(message);
     assertNotNull(formatted);
-    assertEquals(ColferUtils.toJSON(message, false), formatted.toString());
+    assertEquals(ColferUtils.toJson(message, false), formatted.toString());
   }
 }

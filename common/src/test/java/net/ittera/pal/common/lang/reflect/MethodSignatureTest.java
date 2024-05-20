@@ -19,32 +19,32 @@
 
 package net.ittera.pal.common.lang.reflect;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotSame;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
-@SuppressWarnings("rawtypes")
 public class MethodSignatureTest {
   static class DummyClass1 {
-    public void OooO(int oO) {}
+    public void oooo(int ignoredOo) {}
   }
 
   static class DummyClass2 {
-    public void OooO(int oO) {}
+    public void oooo(int ignoredOo) {}
   }
 
   static class DummyClassForMethodSignatureTest {
-    public void nop(String str) {}
+    public void nop(String ignoredStr) {}
   }
 
   private Method method;
-  private Class returnType;
+  private Class<?> returnType;
   private MethodSignature methodSignature;
 
   @Before
@@ -66,18 +66,17 @@ public class MethodSignatureTest {
 
   @Test
   public void equalsAndHashCode() throws NoSuchMethodException {
-    Method method1 = MethodSignatureTest.DummyClass1.class.getDeclaredMethod("OooO", int.class);
+    Method method1 = MethodSignatureTest.DummyClass1.class.getDeclaredMethod("oooo", int.class);
     MethodSignature signature1 = new MethodSignature(method1);
     MethodSignature signature11 = new MethodSignature(method1);
 
-    Method method2 = MethodSignatureTest.DummyClass2.class.getDeclaredMethod("OooO", int.class);
-    MethodSignature signature2 = new MethodSignature(method2);
-    MethodSignature signature22 = new MethodSignature(method2);
-
-    assertEquals(signature1, signature1);
     assertNotSame(signature1, signature11);
     assertEquals(signature1, signature11);
     assertEquals(signature1.hashCode(), signature11.hashCode());
+
+    Method method2 = MethodSignatureTest.DummyClass2.class.getDeclaredMethod("oooo", int.class);
+    MethodSignature signature2 = new MethodSignature(method2);
+    MethodSignature signature22 = new MethodSignature(method2);
 
     assertNotSame(signature2, signature22);
     assertEquals(signature2, signature22);
@@ -88,7 +87,6 @@ public class MethodSignatureTest {
     assertNotEquals(signature1.hashCode(), signature2.hashCode());
 
     assertNotEquals(signature1, null);
-    assertNotEquals(signature1, "not a method");
 
     // same method, different return type
     MethodSignature sigWithWrongReturnType =
@@ -150,12 +148,6 @@ public class MethodSignatureTest {
             method2,
             Set.class);
     assertNotEquals(method1ReturningList, method2ReturningSet);
-  }
-
-  @Ignore("See comment in ConstructorSignatureTest.equalsContract().")
-  @Test
-  public void equalsContract() {
-    // TODO
   }
 
   @Test

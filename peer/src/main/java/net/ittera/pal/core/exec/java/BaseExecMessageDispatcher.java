@@ -23,7 +23,6 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
@@ -32,7 +31,7 @@ import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.runtime.Dispatcher;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.common.util.Classes;
-import net.ittera.pal.core.messages.SessionCmdMsg;
+import net.ittera.pal.core.messages.SessionCommandMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
@@ -61,6 +60,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     final ExecMessage beforeExecMsg = wrapBeforeExecMessage(ctxt, sender, target, args);
 
     // 2. Send message
+    @SuppressWarnings("unused")
     final ExecMessage beforeExecReplyMsg =
         connector.sendExecMessage(beforeExecMsg, ExecPhase.BEFORE);
 
@@ -85,6 +85,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         wrapAfterExecMessage(ctxt, returnValue, objectRef, returnsVoid);
 
     // 6. Send object or exception
+    @SuppressWarnings("unused")
     final ExecMessage afterExecReplyMsg = connector.sendExecMessage(afterExecMsg, ExecPhase.AFTER);
 
     // TODO if afterExecReplyMsg != afterExecMsg, unpack exception or return value
@@ -94,7 +95,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       if (logger.isTraceEnabled()) {
         logger.trace("dispatch:out re-raising exception: {}", returnValue);
       }
-      Exception invocationException = ((InvocationExceptionWrapper) returnValue).getException();
+      Exception invocationException = ((InvocationExceptionWrapper) returnValue).exception();
       // we want to throw the cause exception
       if (invocationException instanceof InvocationTargetException) {
         throw invocationException.getCause();
@@ -125,16 +126,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           isDirect);
     }
 
-    /**
-     * TODO: Verify that message is invokable:- Class can be loaded/found - Method or field can be
-     * found in class - Params can be unwrapped or loaded (if refs). What if they are remote?
-     */
+    // TODO: Verify that message is invokable:- Class can be loaded/found - Method or field can be
+    // found in class - Params can be unwrapped or loaded (if refs). What if they are remote?
 
-    /**
-     * TODO: What if this message has intercepts (i.e. around or sequential pre-) ? We should call
-     * an inner zmq service/connector and wait/get them, then execute that or go ahead and execute
-     * this message.
-     */
+    // TODO: What if this message has intercepts (i.e. around or sequential pre-) ? We should call
+    // an inner zmq service/connector and wait/get them, then execute that or go ahead and execute
+    // this message.
 
     // message doesn't come from log so we write-ahead before executing
     if (isDirect) {
@@ -143,9 +140,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
     Throwable exceptionWhileLoading = null;
     Throwable exceptionWhileInvoking = null;
-    Optional<AccessibleObject> accessibleObject = Optional.empty();
+    AccessibleObject accessibleObject = null;
     Object target = null;
-    Optional<Object> value = Optional.empty();
+    Object value = null;
     List<Object> args = null;
 
     // Loading phase
@@ -157,17 +154,17 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       args = getArgsFromMessage(incomingCall, parameterTypes);
 
       // 3. Load constructor/method/field to call
-      accessibleObject = Optional.of(loadAccessibleObject(incomingCall, parameterTypes, args));
+      accessibleObject = loadAccessibleObject(incomingCall, parameterTypes, args);
 
       // 4. Load target for instance methods/field ops
-      target = getTargetFromMessage(incomingCall, accessibleObject);
+      target = getTargetFromMessage(incomingCall);
 
       // 5. Load value for assigning field ops
       value = getValueFromMessage(incomingCall, accessibleObject);
 
       // 6. (Optionally) Set field/method accessible, allowing to break Java access rules
       if (allowNonPublicAccess) { // extra-check, since already checked in loadAccessibleObject
-        accessibleObject.ifPresent(aobj -> aobj.setAccessible(true));
+        accessibleObject.setAccessible(true);
       }
     } catch (Exception ex) {
       logger.error("Error during loading phase", ex);
@@ -238,10 +235,12 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   }
 
   /**
-   * @param execMessage
+   * Extracts parameter types from the message, and loads the classes for each parameter.
+   *
+   * @param execMessage The message to extract parameter types from
    * @return List of loaded classes for each parameter, or null if execMessage is not a call to
    *     constructor/method.
-   * @throws ClassNotFoundException
+   * @throws ClassNotFoundException if a parameter class cannot be found
    */
   private List<Class<?>> getParameterTypesFromMessage(ExecMessage execMessage)
       throws ClassNotFoundException {
@@ -314,36 +313,41 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   }
 
   /**
-   * To be overridden by dispatchers that assign a value (SetFieldDispatcher)
+   * To be overridden by dispatchers that assign a value (SetFieldDispatcher).
    *
-   * @return
+   * @param execMessage The message to extract the value/objectRef from
+   * @param accessibleObject The field to which the value will be assigned
+   * @return The value to assign to the field
    */
-  Optional<Object> getValueFromMessage(
-      ExecMessage execMessage, Optional<AccessibleObject> accessibleObject) {
-    return Optional.empty();
+  Object getValueFromMessage(ExecMessage execMessage, AccessibleObject accessibleObject) {
+    return null;
   }
 
   /**
-   * To be overridden by dispatchers that work on an instance method/variable
+   * To be overridden by dispatchers that work on an instance method/variable.
    *
-   * @return
+   * @param execMessage The message to extract the target from
+   * @return The target object on which the method/field will be invoked
    */
-  Object getTargetFromMessage(ExecMessage execMessage, Optional<AccessibleObject> accessibleObject)
+  Object getTargetFromMessage(ExecMessage execMessage)
       throws ClassNotFoundException, NullPointerException {
     return null;
   }
 
   /**
-   * @param messageUuid
-   * @param accessibleObject
-   * @param executableObjectType
+   * Wraps a Throwable message to be sent back to the client, after an exception occurred during
+   * loading or invoking an accessible object.
+   *
+   * @param messageUuid The UUID of the message that this is a reply to
+   * @param accessibleObject The accessible object that failed to be loaded or invoked
+   * @param executableObjectType The type of accessible object (Field, Constructor, Method)
    * @param exceptionWhileLoading Either this or exceptionWhileInvoking must be non-null
-   * @param exceptionWhileInvoking
-   * @return
+   * @param exceptionWhileInvoking Either this or exceptionWhileLoading must be non-null
+   * @return The wrapped ExecMessage with the Throwable
    */
   final ExecMessage wrapAfterExecThrowableMessage(
       String messageUuid,
-      Optional<AccessibleObject> accessibleObject,
+      AccessibleObject accessibleObject,
       ExecutableObjectType executableObjectType,
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking) {
@@ -355,9 +359,9 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   }
 
   private void storeObjectInSession(@Nonnull UUID peerUuid, @Nonnull ObjectRef objectRef) {
-    SessionCmdMsg sessionCmdMsg =
-        new SessionCmdMsg(SessionCommandType.STORE_OBJECT, peerUuid, objectRef);
-    connector.sendMessageToSessionService(sessionCmdMsg);
+    SessionCommandMsg sessionCommandMsg =
+        new SessionCommandMsg(SessionCommandType.STORE_OBJECT, peerUuid, objectRef);
+    connector.sendMessageToSessionService(sessionCommandMsg);
   }
 
   protected abstract ExecMessage wrapBeforeExecMessage(
@@ -372,28 +376,27 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       ExecMessage execMessage,
       Object valueObject,
       ObjectRef valueObjRef,
-      Optional<AccessibleObject> accessibleObject,
+      AccessibleObject accessibleObject,
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking);
 
   protected abstract Object invoke(Context ctxt, Object sender, Object target, Object[] args);
 
   /**
-   * @param accessibleObject
+   * Invokes the loaded constructor/method/field.
+   *
+   * @param accessibleObject The constructor/method/field to invoke
    * @param target Present only for instance methods/field ops
-   * @param args
+   * @param args The arguments to pass to the constructor/method
    * @param value Present only for value-assigning field ops.
-   * @return
-   * @throws Exception
+   * @return The return value of the constructor/method/field
+   * @throws Exception if an error occurs during invocation
    */
   protected abstract Object invokeIncoming(
-      Optional<AccessibleObject> accessibleObject,
-      Object target,
-      List<Object> args,
-      Optional<Object> value)
+      AccessibleObject accessibleObject, Object target, List<Object> args, Object value)
       throws Exception;
 
-  protected abstract boolean returnsVoid(Optional<AccessibleObject> accessibleObject);
+  protected abstract boolean returnsVoid(AccessibleObject accessibleObject);
 
   protected abstract ExecMessageType getBeforeExecMessageType();
 
@@ -402,18 +405,21 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * Method fails to be loaded (i.e. exceptionWhileLoading), and we require at least information
    * about the type of accessible to include in the Throwable message
    *
-   * @return
+   * @return The type of accessible object (Field, Constructor, Method)
    */
   protected abstract ExecutableObjectType getExecutableObjectType();
 
   protected abstract List<Parameter> getParameterList(ExecMessage execMessage);
 
   /**
-   * @param execMessage
+   * Loads the accessible object (Constructor, Method, Field) from the message.
+   *
+   * @param execMessage The message to extract the accessible object from
    * @param parameterTypes Used only by constructor and method dispatchers
-   * @param args
-   * @return
-   * @throws ReflectiveOperationException
+   * @param args Arguments. Only by constructor and method dispatchers
+   * @return The loaded accessible object
+   * @throws ReflectiveOperationException if the accessible object cannot be loaded
+   * @throws AmbiguousCallException if the call is ambiguous
    */
   protected abstract AccessibleObject loadAccessibleObject(
       ExecMessage execMessage, List<Class<?>> parameterTypes, List<Object> args)

@@ -27,7 +27,7 @@ import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
 /**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
  *
  * <p>TODO: - arrays
  */
@@ -115,9 +115,9 @@ public class NonVoidInstanceMethodMessageIT extends AbstractBinaryRPCMessageIT {
     ObjectRef listObjRef =
         ObjectRef.from(callEmptyConstructor("java.util.ArrayList").getObject().getRef());
 
-    // add some int's to the list
-    int[] someInts = {1, 2, 3, 5, 7, 9};
-    for (int someInt : someInts) {
+    // add some integers to the list
+    int[] someIntegers = {1, 2, 3, 5, 7, 9};
+    for (int someInt : someIntegers) {
       callInstanceMethod(
           "java.util.ArrayList",
           "add",
@@ -143,7 +143,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractBinaryRPCMessageIT {
 
     // test returned value
     Integer shouldReturn = 0;
-    for (int someInt : someInts) {
+    for (int someInt : someIntegers) {
       shouldReturn += someInt + offsetParam;
     }
     assertValueIsObjectOfType(retValue, shouldReturn.getClass().getName());
@@ -154,7 +154,7 @@ public class NonVoidInstanceMethodMessageIT extends AbstractBinaryRPCMessageIT {
   @Test
   public void callInstanceMethod_throwsCheckedException_exThrown() throws Exception {
 
-    String methodName = "throwMeACheckedException";
+    String methodName = "throwsCheckedException";
 
     // create new instance
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(className).getObject().getRef());

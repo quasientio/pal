@@ -24,27 +24,26 @@ import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
-@SuppressWarnings("rawtypes")
 public final class Params {
 
   @Nonnull private final String[] parameterNames;
-  @Nonnull private final Class[] parameterTypes;
+  @Nonnull private final Class<?>[] parameterTypes;
   @Nonnull private final Parameter[] parameters;
 
   public Params(
-      String[] parameterNames, @Nonnull Class[] parameterTypes, @Nonnull Parameter[] parameters) {
+      String[] parameterNames,
+      @Nonnull Class<?>[] parameterTypes,
+      @Nonnull Parameter[] parameters) {
     this.parameterTypes = Objects.requireNonNull(parameterTypes);
     this.parameters = Objects.requireNonNull(parameters);
     if (parameterTypes.length != parameters.length) {
       throw new IllegalArgumentException(
           "Length of arrays 'parameters' and 'parameterTypes' is different.");
     }
-    if (parameterNames == null) {
-      this.parameterNames =
-          Arrays.stream(parameters).map(Parameter::getName).toArray(String[]::new);
-    } else {
-      this.parameterNames = parameterNames;
-    }
+    this.parameterNames =
+        Objects.requireNonNullElseGet(
+            parameterNames,
+            () -> Arrays.stream(parameters).map(Parameter::getName).toArray(String[]::new));
   }
 
   public String[] getParameterNames() {
@@ -52,7 +51,7 @@ public final class Params {
   }
 
   @Nonnull
-  public Class[] getParameterTypes() {
+  public Class<?>[] getParameterTypes() {
     return parameterTypes;
   }
 

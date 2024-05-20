@@ -19,7 +19,7 @@
 
 package net.ittera.pal.common.lang.reflect;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -30,15 +30,16 @@ import org.junit.Test;
 public class CodeSignatureTest extends SignatureTest {
 
   static class DummyClass {
-    public void increment(int a, int b) {}
+    public void increment(int ignoredA, int ignoredB) {}
   }
 
-  protected Class[] exceptionTypes;
+  protected Class<?>[] exceptionTypes;
   protected String[] parameterNames;
-  protected Class[] parameterTypes;
+  protected Class<?>[] parameterTypes;
   protected Parameter[] parameters;
   private CodeSignature codeSignature;
 
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();
@@ -78,6 +79,7 @@ public class CodeSignatureTest extends SignatureTest {
   }
 
   @Test
+  @Override
   public void equalsContract() throws NoSuchMethodException {
     // EqualsVerifier requires prefabValues with actual instances of Parameter.
     // Since we can't instantiate Parameter, we use our DummyClass and reflection to get them.

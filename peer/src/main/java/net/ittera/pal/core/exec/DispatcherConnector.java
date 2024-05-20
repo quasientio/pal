@@ -38,10 +38,10 @@ import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.InterceptMatcher;
 import net.ittera.pal.core.RunOptions;
-import net.ittera.pal.core.messages.SessionCmdMsg;
+import net.ittera.pal.core.messages.SessionCommandMsg;
 import net.ittera.pal.core.messages.SessionReplyMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
@@ -62,7 +62,7 @@ import org.zeromq.ZMQException;
 public class DispatcherConnector {
 
   private static final Logger logger = LoggerFactory.getLogger(DispatcherConnector.class);
-  private static final int CALLBACK_RECV_TIMEOUT_MS = 3000;
+  private static final int CALLBACK_RECEIVE_TIMEOUT_MS = 3000;
 
   private final ZContext zmqContext;
   private final UUID peerUuid;
@@ -71,15 +71,15 @@ public class DispatcherConnector {
   private final InterceptMatcher interceptMatcher;
   private final String msgPublisherAddress;
   private final String sessionServiceAddress;
-  private final List<InternalHeader> WRITE_AHEAD_HEADERS;
+  private final List<InternalHeader> writeAheadHeaders;
   private final Set<RunOptions> runOptions;
 
   private final AtomicLong totalPubSocketTime = new AtomicLong();
-  private final AtomicLong totalPubReqs = new AtomicLong();
+  private final AtomicLong totalPublishedRequests = new AtomicLong();
 
   // per-thread REQ socket to publish exec messages
   private final ThreadLocal<Socket> threadPubSocket =
-      new ThreadLocal<Socket>() {
+      new ThreadLocal<>() {
         @Override
         protected Socket initialValue() {
           Socket worker = zmqContext.createSocket(SocketType.REQ);
@@ -96,7 +96,7 @@ public class DispatcherConnector {
   private final ThreadLocal<Boolean> threadPubSocketCreated = ThreadLocal.withInitial(() -> false);
 
   private final ThreadLocal<Socket> threadSessionsSocket =
-      new ThreadLocal<Socket>() {
+      new ThreadLocal<>() {
         @Override
         protected Socket initialValue() {
           Socket worker = zmqContext.createSocket(SocketType.REQ);
@@ -137,7 +137,7 @@ public class DispatcherConnector {
     this.interceptMatcher = interceptMatcher;
     this.msgPublisherAddress = msgPublisherAddress;
     this.sessionServiceAddress = sessionServiceAddress;
-    this.WRITE_AHEAD_HEADERS =
+    this.writeAheadHeaders =
         Collections.singletonList(messageBuilder.buildWriteAheadHeader(peerUuid));
   }
 
@@ -201,7 +201,7 @@ public class DispatcherConnector {
     ExecMessage callbackMessage =
         messageBuilder.buildCallbackForInterceptRequest(peerUuid, execMessage, interceptMessage);
     UUID interceptor = UUID.fromString(interceptMessage.getPeerUuid());
-    final byte[] reply;
+
     InterceptType interceptType = InterceptType.fromByte(interceptMessage.getInterceptType());
     try {
       if (interceptType.equals(InterceptType.BEFORE_ASYNC)
@@ -209,7 +209,9 @@ public class DispatcherConnector {
         sendAsyncCallbackToPeer(interceptor, callbackMessage);
       } else if (interceptType.equals(InterceptType.BEFORE)
           || interceptType.equals(InterceptType.AFTER)) {
-        reply = sendCallbackToPeer(interceptor, callbackMessage);
+        @SuppressWarnings("unused")
+        final byte[] unusedReply;
+        unusedReply = sendCallbackToPeer(interceptor, callbackMessage);
       } else {
         logger.error("Unsupported callback type: {}", interceptType);
       }
@@ -251,13 +253,13 @@ public class DispatcherConnector {
       logger.error("Error receiving reply from publisher socket", e);
     } finally {
       totalPubSocketTime.getAndAdd((Instant.now().toEpochMilli() - start));
-      totalPubReqs.getAndIncrement();
+      totalPublishedRequests.getAndIncrement();
     }
   }
 
   public void writeAhead(ExecMessage message) {
-    if (logger.isTraceEnabled()) {
-      logger.trace(
+    if (logger.isDebugEnabled()) {
+      logger.debug(
           "writeAhead:in w/ message with uuid: {},from {}",
           message.getMessageUuid(),
           message.getPeerUuid());
@@ -276,7 +278,7 @@ public class DispatcherConnector {
         new OutboundMsg(
             MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
-            WRITE_AHEAD_HEADERS,
+            writeAheadHeaders,
             UUID.fromString(message.getMessageUuid()),
             responseToUuid,
             messageBuilder.wrap(message));
@@ -295,7 +297,7 @@ public class DispatcherConnector {
     }
     byte[] reply;
     // get socket for peer and send callback msg
-    Socket req = getConnectedREQSocketFor(interceptor);
+    Socket req = getConnectedReqSocketFor(interceptor);
     final boolean sentOk = req.send(toBytes(messageBuilder.wrap(callbackMessage)), 0);
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -320,7 +322,7 @@ public class DispatcherConnector {
             logger.debug("Got reply from callback: {}", ColferUtils.format(callbackReplyMessage));
           }
         } else { // we hit the timeout, check if peer is alive
-          final PALDirectory palDirectory =
+          final PalDirectory palDirectory =
               directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
           peerIsUp = palDirectory.peerExists(interceptor);
           if (peerIsUp) {
@@ -332,7 +334,7 @@ public class DispatcherConnector {
         }
       }
     }
-    // TODO getReply  == false --> we still have to recv() !!
+    // TODO getReply  == false --> we still have to receive() !!
     return reply;
   }
 
@@ -340,15 +342,15 @@ public class DispatcherConnector {
     sendCallbackMessageToPeer(interceptor, message, false);
   }
 
-  public SessionReplyMsg sendMessageToSessionService(SessionCmdMsg sessionCmdMsg) {
+  public SessionReplyMsg sendMessageToSessionService(SessionCommandMsg sessionCommandMsg) {
     SessionReplyMsg replyMsg = null;
     final Socket sessionServiceSocket = threadSessionsSocket.get();
-    final boolean msgSent = sessionCmdMsg.send(sessionServiceSocket);
+    final boolean msgSent = sessionCommandMsg.send(sessionServiceSocket);
     if (msgSent) {
       if (logger.isDebugEnabled()) {
-        logger.debug("Sent session command message: {}", sessionCmdMsg);
+        logger.debug("Sent session command message: {}", sessionCommandMsg);
       }
-      replyMsg = SessionReplyMsg.recvMsg(sessionServiceSocket, true);
+      replyMsg = SessionReplyMsg.receive(sessionServiceSocket, true);
       if (logger.isDebugEnabled()) {
         logger.debug("Received session reply message: {}", replyMsg);
       }
@@ -360,7 +362,7 @@ public class DispatcherConnector {
     return sendCallbackMessageToPeer(interceptor, message, true);
   }
 
-  private Socket getConnectedREQSocketFor(UUID peer) throws Exception {
+  private Socket getConnectedReqSocketFor(UUID peer) throws Exception {
     // first check if socket for peer is already open
     if (callbackSockets.get().containsKey(peer)) {
       if (logger.isDebugEnabled()) {
@@ -375,9 +377,9 @@ public class DispatcherConnector {
     }
     final Socket reqSocket = zmqContext.createSocket(SocketType.REQ);
     // set receive timeout
-    reqSocket.setReceiveTimeOut(CALLBACK_RECV_TIMEOUT_MS);
+    reqSocket.setReceiveTimeOut(CALLBACK_RECEIVE_TIMEOUT_MS);
     // get peer's address
-    final PALDirectory palDirectory =
+    final PalDirectory palDirectory =
         directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
     String interceptorAddress = palDirectory.getPeerInfo(peer).getRpcAddress();
     reqSocket.connect(interceptorAddress);
@@ -388,31 +390,31 @@ public class DispatcherConnector {
   }
 
   private boolean isInterceptableType(ExecMessageType type) {
-    switch (type) {
-      case CONSTRUCTOR:
-      case INSTANCE_METHOD:
-      case CLASS_METHOD:
-      case GET_STATIC:
-      case GET_FIELD:
-      case PUT_STATIC:
-      case PUT_FIELD:
-        return true;
-      default:
-        return false;
-    }
+    return switch (type) {
+      case CONSTRUCTOR,
+              INSTANCE_METHOD,
+              CLASS_METHOD,
+              GET_STATIC,
+              GET_FIELD,
+              PUT_STATIC,
+              PUT_FIELD ->
+          true;
+      default -> false;
+    };
   }
 
   // TODO call from single-thread
   void printStats() {
     logger.info("totalPubSocketTime = {} ms", totalPubSocketTime);
-    logger.info("totalPubReqs = {}", totalPubReqs);
+    logger.info("totalPublishedRequests = {}", totalPublishedRequests);
   }
 
   void closeThreadLocalSockets() {
     printStats();
-    if (totalPubReqs.longValue() != 0) {
+    if (totalPublishedRequests.longValue() != 0) {
       logger.info(
-          "avg ms per pub = {} ms", totalPubSocketTime.longValue() / totalPubReqs.longValue());
+          "avg ms per pub = {} ms",
+          totalPubSocketTime.longValue() / totalPublishedRequests.longValue());
     }
 
     if (Boolean.TRUE.equals(threadPubSocketCreated.get())) {

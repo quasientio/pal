@@ -19,8 +19,8 @@
 
 package net.ittera.pal.apps.rpc;
 
+@SuppressWarnings("unused")
 public class StaticVars {
-
   public static String aClassString = "I'm classy";
   public static String aNullStaticStr;
   private static Integer aPrivateClassInt = 39328;

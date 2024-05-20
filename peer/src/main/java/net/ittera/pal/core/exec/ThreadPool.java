@@ -38,8 +38,9 @@ public class ThreadPool {
     if (!threadFactory.getCreatedThreads().isEmpty()) {
       throw new IllegalStateException("Some threads have already been started.");
     }
+    Runnable noOpRunnable = new NoOpRunnable();
     for (int i = 0; i < poolSize; i++) {
-      Thread t = threadFactory.newThread(null);
+      Thread t = threadFactory.newThread(noOpRunnable);
       t.start();
       logger.info("Started thread {}", t.getName());
     }

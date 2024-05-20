@@ -46,10 +46,10 @@ class MessageOffsetInformer extends CompletableFuture<Void> implements Callback 
   }
 
   /**
-   * Kafka producer Callback interface
+   * Kafka producer Callback interface. Called when the record has been acknowledged by the server.
    *
-   * @param recordMetadata
-   * @param e
+   * @param recordMetadata metadata for the record that was sent (i.e. the partition and offset)
+   * @param e The exception thrown during processing of this record. Null if no error occurred.
    */
   @Override
   public void onCompletion(RecordMetadata recordMetadata, Exception e) {

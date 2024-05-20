@@ -78,6 +78,7 @@ public final class InterceptableFieldOp extends Interceptable {
   }
 
   public static InterceptableFieldOp fromSerializedString(String serialized) {
+    @SuppressWarnings("StringSplitter")
     final String[] parts = serialized.split(FIELD_SEP);
     final String name = parts[0];
     final FieldOpType type = FieldOpType.fromByte(Byte.parseByte(parts[1]));

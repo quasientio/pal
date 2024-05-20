@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class NonVoidInstanceMethods {
 
   public final Integer anInt = 4;
@@ -32,30 +33,30 @@ public class NonVoidInstanceMethods {
   }
 
   public List<String> getListOfStrings() {
-    List<String> aList = new ArrayList<>();
-    aList.add("hello");
-    aList.add(" ");
-    aList.add("world");
-    aList.add("!");
-    return aList;
+    List<String> myList = new ArrayList<>();
+    myList.add("hello");
+    myList.add(" ");
+    myList.add("world");
+    myList.add("!");
+    return myList;
   }
 
   public List<String> getListOfStringsShorthand() {
     return Arrays.asList("hello", " ", "world", "!");
   }
 
-  protected Integer addOffsetToListAndSumUp(int offset, ArrayList<Integer> listOfInts) {
-    if (listOfInts != null) {
-      for (int i = 0; i < listOfInts.size(); i++) {
-        listOfInts.set(i, listOfInts.get(i) + offset);
-      }
+  protected Integer addOffsetToListAndSumUp(int offset, List<Integer> listOfIntegers) {
+    if (listOfIntegers != null) {
+      listOfIntegers.replaceAll(integer -> integer + offset);
     }
-
-    return listOfInts.stream().reduce(0, Integer::sum);
+    if (listOfIntegers == null) {
+      return 0;
+    }
+    return listOfIntegers.stream().reduce(0, Integer::sum);
   }
 
-  public String throwMeACheckedException(long aLongValue) throws Exception {
-    if (aLongValue > Integer.MAX_VALUE) {
+  public String throwsCheckedException(long someLongValue) throws Exception {
+    if (someLongValue > Integer.MAX_VALUE) {
       throw new Exception("long is really long!");
     }
     return "I'm fine";

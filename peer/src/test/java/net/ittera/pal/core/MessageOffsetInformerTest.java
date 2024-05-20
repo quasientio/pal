@@ -19,18 +19,15 @@
 
 package net.ittera.pal.core;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 
 import com.google.common.primitives.Longs;
 import java.lang.reflect.AccessibleObject;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Future;
 import net.ittera.pal.common.directory.nodes.LogInfo;
-import net.ittera.pal.common.util.UUIDUtils;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.KafkaKeySerializer;
 import net.ittera.pal.messages.colfer.KafkaSerializer;
@@ -52,7 +49,6 @@ import org.zeromq.ZMQ;
 public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
-  private static final Set<String> createdLogs = new HashSet<>();
   private final MessageBuilder messageBuilder = new MessageBuilder();
   private static final UUID peerUuid = UUID.randomUUID();
   private MockProducer<String, byte[]> producer;
@@ -91,7 +87,6 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
 
     // register log
     LogInfo log = new LogInfo("test.log");
-    createdLogs.add(log.getName());
 
     AccessibleObject from = this.getClass().getDeclaredMethod("publishOffsets", (Class<?>[]) null);
     ExecMessage replyMessage =
@@ -105,7 +100,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
     MessageOffsetInformer offsetInformer =
         new MessageOffsetInformer(UUID.fromString(replyMessage.getMessageUuid()), offsetPublisher);
     assertNotNull(newRecord);
-    Future<RecordMetadata> recordMetadataFuture = producer.send(newRecord, offsetInformer);
+    final RecordMetadata recordMetadata = producer.send(newRecord, offsetInformer).get();
 
     // wait for offset to be published
     offsetInformer.get();
@@ -115,11 +110,11 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
     assertThat(producer.history().get(0), is(newRecord));
 
     // get and verify published offsets
-    // multi-part msg: 1) offset as byte[], 2) uuid as byte[]
+    // multipart msg: 1) offset as byte[], 2) uuid as byte[]
     byte[] offsetBuff = offsetSubscriber.recv();
     byte[] uuidBuff = offsetSubscriber.recv();
-    assertThat(Longs.fromByteArray(offsetBuff), is(recordMetadataFuture.get().offset()));
-    assertThat(UUIDUtils.fromBytes(uuidBuff).toString(), is(replyMessage.getMessageUuid()));
+    assertThat(Longs.fromByteArray(offsetBuff), is(recordMetadata.offset()));
+    assertThat(UuidUtils.fromBytes(uuidBuff).toString(), is(replyMessage.getMessageUuid()));
     offsetSubscriber.close();
   }
 }

@@ -1,6 +1,9 @@
 package net.ittera.pal.serdes.colfer;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.AccessibleObject;
 import java.util.Arrays;
@@ -240,6 +243,7 @@ public class ExecMessageUtilsTest {
             UUID.randomUUID(), className, parameterTypes, args, null, null);
 
     List<String> returnedTypes = ExecMessageUtils.getParameterTypes(execMessage);
+    assertNotNull(returnedTypes);
     assertEquals(2, returnedTypes.size());
     assertTrue(returnedTypes.containsAll(Arrays.asList(parameterTypes)));
   }
@@ -258,6 +262,7 @@ public class ExecMessageUtilsTest {
             parameterTypes,
             args);
     List<String> returnedTypes = ExecMessageUtils.getParameterTypes(execMessage);
+    assertNotNull(returnedTypes);
     assertEquals(2, returnedTypes.size());
     assertTrue(returnedTypes.containsAll(Arrays.asList(parameterTypes)));
   }
@@ -271,6 +276,7 @@ public class ExecMessageUtilsTest {
         messageBuilder.buildClassMethod(
             UUID.randomUUID(), className, "testMethod", parameterTypes, null, null, args);
     List<String> returnedTypes = ExecMessageUtils.getParameterTypes(execMessage);
+    assertNotNull(returnedTypes);
     assertEquals(2, returnedTypes.size());
     assertTrue(returnedTypes.containsAll(Arrays.asList(parameterTypes)));
   }
@@ -280,6 +286,7 @@ public class ExecMessageUtilsTest {
     String className = "TestClass";
     ExecMessage execMessage = messageBuilder.buildEmptyConstructor(UUID.randomUUID(), className);
     List<String> returnedTypes = ExecMessageUtils.getParameterTypes(execMessage);
+    assertNotNull(returnedTypes);
     assertTrue(returnedTypes.isEmpty());
   }
 

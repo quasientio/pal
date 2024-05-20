@@ -27,6 +27,7 @@ import org.apache.kafka.common.serialization.Serializer;
 
 public class KafkaExecMessageSerde implements Serde<ExecMessage> {
 
+  @SuppressWarnings("rawtypes")
   private final Serde inner;
 
   public KafkaExecMessageSerde() {
@@ -34,6 +35,7 @@ public class KafkaExecMessageSerde implements Serde<ExecMessage> {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void configure(Map map, boolean b) {
     inner.serializer().configure(map, b);
     inner.deserializer().configure(map, b);
@@ -46,11 +48,13 @@ public class KafkaExecMessageSerde implements Serde<ExecMessage> {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public Serializer<ExecMessage> serializer() {
     return inner.serializer();
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public Deserializer<ExecMessage> deserializer() {
     return inner.deserializer();
   }

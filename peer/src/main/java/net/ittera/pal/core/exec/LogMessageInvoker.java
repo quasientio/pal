@@ -76,10 +76,11 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
       logger.debug("Start getting requests from socket");
     }
     while (!Thread.interrupted()) {
-      // recv req
+      // receive message
       InboundLogMsg msg = null;
       try {
-        msg = InboundLogMsg.recvMsg(socket, true);
+        msg = InboundLogMsg.receive(socket, true);
+        assert msg != null;
         if (logger.isDebugEnabled()) {
           logger.debug("Getting message with kafka offset: {}", msg.getOffset());
         }
@@ -107,7 +108,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
       }
 
       final Message requestMsg = new Message();
-      long started = System.currentTimeMillis();
+      final long started = System.currentTimeMillis();
 
       // parse req
       try {

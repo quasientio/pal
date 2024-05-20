@@ -32,7 +32,7 @@ import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-/** TODO replace this with a XPUB-XSUB proxy */
+// TODO replace this with a XPUB-XSUB proxy
 @Singleton
 class MessagePublisher extends ConnectedService {
 
@@ -43,7 +43,7 @@ class MessagePublisher extends ConnectedService {
   // zmq stuff
   private Socket repSocket;
   private Socket pubSocket;
-  private final String outCellAddress;
+  private final String outRepAddress;
   private final String outPubAddress;
 
   @Inject
@@ -53,10 +53,10 @@ class MessagePublisher extends ConnectedService {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("MessagePublisher.service") String serviceName,
-      @Named("out.cell") String outCellAddress,
+      @Named("out.cell") String outRepAddress,
       @Named("out.pub") String outPubAddress) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
-    this.outCellAddress = outCellAddress;
+    this.outRepAddress = outRepAddress;
     this.outPubAddress = outPubAddress;
   }
 
@@ -64,7 +64,7 @@ class MessagePublisher extends ConnectedService {
   protected void openConnections() {
     // open REP and PUB sockets
     repSocket = zmqContext.createSocket(SocketType.REP);
-    repSocket.bind(outCellAddress);
+    repSocket.bind(outRepAddress);
     pubSocket = zmqContext.createSocket(SocketType.PUB);
     pubSocket.bind(outPubAddress);
   }
@@ -75,7 +75,7 @@ class MessagePublisher extends ConnectedService {
     while (!Thread.interrupted() && !socketError) {
       OutboundMsg msg = null;
       try {
-        msg = OutboundMsg.recvMsg(repSocket, true);
+        msg = OutboundMsg.receive(repSocket, true);
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
         if (errorCode == ZError.ETERM) {

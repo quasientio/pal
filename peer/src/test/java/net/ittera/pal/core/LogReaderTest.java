@@ -37,7 +37,7 @@ import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
-import net.ittera.pal.cxn.PALDirectory;
+import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.Message;
@@ -58,7 +58,7 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import zmq.ZError;
 
-/** CAVEAT: this test doesn't cover Headers as they're not supported by MockConsumer */
+// TODO - CAVEAT: this test doesn't cover Headers as they're not supported by MockConsumer
 public class LogReaderTest extends ZmqEnabledTest {
 
   /*
@@ -69,7 +69,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     private final ZMQ.Socket socket;
     private final ZContext context;
     private final String dealerAddress;
-    private final Set<String> rcvdMsgUuids = new TreeSet<>();
+    private final Set<String> receivedMessageUuids = new TreeSet<>();
 
     Worker(ZContext context, String dealerAddress) {
       this.context = context;
@@ -86,17 +86,18 @@ public class LogReaderTest extends ZmqEnabledTest {
       while (!Thread.interrupted()) {
         InboundLogMsg logMsg;
         try {
-          logMsg = InboundLogMsg.recvMsg(socket, true);
+          logMsg = InboundLogMsg.receive(socket, true);
+          assert logMsg != null;
           Message wrapper = new Message();
           wrapper.unmarshal(logMsg.getBody(), 0);
           if (wrapper.getExecMessage() != null) {
             ExecMessage msg = wrapper.getExecMessage();
             logger.debug("ExecMessage received = {}", ColferUtils.format(msg));
-            rcvdMsgUuids.add(msg.getMessageUuid());
+            receivedMessageUuids.add(msg.getMessageUuid());
           } else {
             InterceptMessage msg = wrapper.getInterceptMessage();
             logger.debug("InterceptMessage msg received = {}", ColferUtils.format(msg));
-            rcvdMsgUuids.add(msg.getMessageUuid());
+            receivedMessageUuids.add(msg.getMessageUuid());
           }
         } catch (ZMQException ex) {
           int errorCode = ex.getErrorCode();
@@ -104,11 +105,11 @@ public class LogReaderTest extends ZmqEnabledTest {
             logger.warn("context terminated");
             break;
           } else if (errorCode == ZError.EINTR) {
-            logger.warn("interrupted during recv()");
+            logger.warn("interrupted during receive()");
             break;
           } else {
-            logger.error("unexpected error during recv()", ex);
-            throw (ex);
+            logger.error("unexpected error during receive()", ex);
+            throw ex;
           }
         } catch (Exception e) {
           logger.error("error parsing received message", e);
@@ -120,7 +121,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     }
 
     Set<String> getReceivedMessages() {
-      return rcvdMsgUuids;
+      return receivedMessageUuids;
     }
   }
 
@@ -133,8 +134,8 @@ public class LogReaderTest extends ZmqEnabledTest {
   private MockConsumer<String, byte[]> consumer;
   private LogInfo log;
   private final int partition = 0;
-  private final String DEALER_ADDR = "inproc://inlog_tests";
-  private final String OFFSET_PUB_ADDR = "inproc://offsets_tests";
+  private static final String DEALER_ADDRESS = "inproc://in_log_tests";
+  private static final String OFFSET_PUB_ADDRESS = "inproc://offsets_tests";
   private final ThreadGroup servicesThreadGroup = new ThreadGroup("services-thread-group");
   private Set<Service> services;
 
@@ -150,7 +151,7 @@ public class LogReaderTest extends ZmqEnabledTest {
   public void setup() throws Exception {
     execService = Executors.newSingleThreadExecutor();
     DirectoryConnectionProvider directoryConnectionProvider =
-        new DirectoryConnectionProvider(PALDirectory.NO_URL);
+        new DirectoryConnectionProvider(PalDirectory.NO_URL);
     zmqContext = this.createContext();
     consumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     logReader =
@@ -160,12 +161,12 @@ public class LogReaderTest extends ZmqEnabledTest {
             SYNC_SOCKET_ADDRESS,
             servicesThreadGroup,
             "LogReaderTest-Service",
-            DEALER_ADDR,
-            OFFSET_PUB_ADDR,
+            DEALER_ADDRESS,
+            OFFSET_PUB_ADDRESS,
             directoryConnectionProvider,
             consumer,
             10);
-    this.log = new LogInfo("testapp");
+    this.log = new LogInfo("test_app");
     TopicPartition topicPartition = new TopicPartition(log.getName(), 0);
     final List<TopicPartition> topicPartitionList = Collections.singletonList(topicPartition);
     consumer.assign(topicPartitionList);
@@ -175,8 +176,8 @@ public class LogReaderTest extends ZmqEnabledTest {
   }
 
   @Test
-  public void dontAcceptRequests() {
-    logger.trace("entering dontAcceptRequests()");
+  public void doNotAcceptRequests() {
+    logger.trace("entering doNotAcceptRequests()");
     assertThat(logReader.isRunning(), is(false));
     assertThat(logReader.isAcceptingRequests(), is(false));
 
@@ -189,8 +190,8 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logReader.isAcceptingRequests(), is(false));
 
     // start worker(s)
-    Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
-    execService.submit(logMsgInvoker);
+    Worker logMsgInvoker = new Worker(this.zmqContext, DEALER_ADDRESS);
+    execService.execute(logMsgInvoker);
 
     // send 1 message
     MessageBuilder msgBuilder = new MessageBuilder();
@@ -207,7 +208,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     // shut down
     manager.stopAsync().awaitStopped();
 
-    logger.trace("leaving dontAcceptRequests()");
+    logger.trace("leaving doNotAcceptRequests()");
   }
 
   @Test
@@ -224,8 +225,8 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logReader.isAcceptingRequests(), is(true));
 
     // start worker(s)
-    Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
-    execService.submit(logMsgInvoker);
+    Worker logMsgInvoker = new Worker(this.zmqContext, DEALER_ADDRESS);
+    execService.execute(logMsgInvoker);
 
     // send no messages
 
@@ -256,8 +257,8 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logReader.isAcceptingRequests(), is(true));
 
     // start worker(s)
-    Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
-    execService.submit(logMsgInvoker);
+    Worker logMsgInvoker = new Worker(this.zmqContext, DEALER_ADDRESS);
+    execService.execute(logMsgInvoker);
 
     // send 1 message
     MessageBuilder msgBuilder = new MessageBuilder();
@@ -271,7 +272,6 @@ public class LogReaderTest extends ZmqEnabledTest {
 
     Thread.sleep(300);
     // assert received
-    logger.debug("received: {}", String.join(",", logMsgInvoker.getReceivedMessages()));
     assertThat(logMsgInvoker.getReceivedMessages().size(), is(1));
     assertThat(
         logMsgInvoker.getReceivedMessages().stream().anyMatch(u -> u.equals(msg.getMessageUuid())),
@@ -299,8 +299,8 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logReader.isAcceptingRequests(), is(true));
 
     // start worker(s)
-    Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
-    execService.submit(logMsgInvoker);
+    Worker logMsgInvoker = new Worker(this.zmqContext, DEALER_ADDRESS);
+    execService.execute(logMsgInvoker);
 
     // send 1 message
     MessageBuilder msgBuilder = new MessageBuilder();
@@ -322,7 +322,6 @@ public class LogReaderTest extends ZmqEnabledTest {
 
     Thread.sleep(300);
     // assert received
-    logger.debug("received: {}", String.join(",", logMsgInvoker.getReceivedMessages()));
     assertThat(logMsgInvoker.getReceivedMessages().size(), is(1));
     assertThat(
         logMsgInvoker.getReceivedMessages().stream().anyMatch(u -> u.equals(msg.getMessageUuid())),
@@ -350,16 +349,16 @@ public class LogReaderTest extends ZmqEnabledTest {
     assertThat(logReader.isAcceptingRequests(), is(true));
 
     // start worker(s)
-    Worker logMsgInvoker = new Worker(this.zmqContext, this.DEALER_ADDR);
-    execService.submit(logMsgInvoker);
+    Worker logMsgInvoker = new Worker(this.zmqContext, DEALER_ADDRESS);
+    execService.execute(logMsgInvoker);
 
     // send many messages
     MessageBuilder msgBuilder = new MessageBuilder();
     String key = peerUuid.toString();
     Set<String> sentUuids = new TreeSet<>();
 
-    int msgsToSend = 20;
-    for (int i = 0; i < msgsToSend; i++) {
+    int messagesToSend = 20;
+    for (int i = 0; i < messagesToSend; i++) {
       ExecMessage msg = msgBuilder.buildEmptyConstructor(peerUuid, "java.lang.String");
       ConsumerRecord<String, byte[]> record =
           new ConsumerRecord<>(

@@ -21,7 +21,7 @@ package net.ittera.pal.rpc.json;
 
 import org.junit.Test;
 
-/** Naming convention to use: methodName_stateUnderTest_expectedBehavior */
+/** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
 public class ConstructorMessageIT extends AbstractJsonRPCMessageIT {
   @Test
   public void constructor_publicNoArgs_newObjectReturned() throws Exception {

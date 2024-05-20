@@ -21,18 +21,27 @@ package net.ittera.pal.tools.cli;
 
 import static java.lang.String.format;
 
+import com.google.common.base.Splitter;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.TextStyle;
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.management.ObjectName;
-import net.ittera.pal.common.cli.PALCommand;
+import net.ittera.pal.common.cli.PalCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.util.Strings;
@@ -53,9 +62,9 @@ import picocli.CommandLine.ParentCommand;
     sortOptions = false,
     optionListHeading = "%nOptions:%n",
     commandListHeading = "%nCommands:%n")
-public class List extends AbstractPALSubcommand {
+public class List extends AbstractPalSubcommand {
 
-  @ParentCommand PALCommand palCommand;
+  @ParentCommand PalCommand palCommand;
 
   @Option(
       names = {"-L", "--logs"},
@@ -94,6 +103,7 @@ public class List extends AbstractPALSubcommand {
       description = "JMX port used by kafka servers (default: ${DEFAULT-VALUE})")
   private Integer kafkaJmxPort;
 
+  @SuppressWarnings("unused")
   @Option(
       names = {"-h", "--help"},
       usageHelp = true,
@@ -114,13 +124,13 @@ public class List extends AbstractPALSubcommand {
   private static final short MAX_PEER_NAME_LEN = 15;
   private static final short MAX_ENDPOINT_LEN = 20;
 
-  /** name uuid size start --> end ctime */
+  // name uuid size start --> end CTime
   private static final String LOGS_LONG_FORMAT =
       format(
           "%%-%ds %%-36s  %%-%ds %%-%ds --> %%-%ds %%-8s",
           MAX_LOG_NAME_LEN, MAX_LOG_SIZE_LEN, MAX_LOG_IDX_LEN, MAX_LOG_IDX_LEN);
 
-  /** uuid name rpc jsonrpc pub jmx ctime */
+  // uuid name rpc jsonrpc pub jmx CTime
   private static final String PEERS_LONG_FORMAT =
       format(
           "%%-36s %%-%ds %%-%ds %%-%ds %%-%ds %%-%ds %%-8s",
@@ -133,9 +143,9 @@ public class List extends AbstractPALSubcommand {
   @Override
   protected void initialize() {
     initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
-    if (!directoryConnectionProvider.get().isPresent()) {
+    if (directoryConnectionProvider.get().isEmpty()) {
       err.println(
-          "A PALDirectory is required. Run with -d (--dir) or set the ENV variable PAL_DIRECTORY.");
+          "A PalDirectory is required. Run with -d (--dir) or set the ENV variable PAL_DIRECTORY.");
       System.exit(1);
     }
   }
@@ -174,16 +184,17 @@ public class List extends AbstractPALSubcommand {
   }
 
   /*  TODO fillMbeanInfo with JmxClient is a temporary hack.
-   *  All Log Info should be retrieved from PALDirectory, maintained by the running peers.
+   *  All Log Info should be retrieved from PalDirectory, maintained by the running peers.
    *  This approach, however, has the advantage of getting live log info as maintained by kafka
    */
   public void fillMbeanInfo(LogInfo logInfo) {
     if (logger.isDebugEnabled()) {
       logger.debug("Attempting to get mbean info for log: {}", logInfo);
     }
-    final JmxClient jmxCli = getJMXClientForServer(logInfo.getBootstrapServers());
+    final JmxClient jmxCli = getJmxClientForServer(logInfo.getBootstrapServers());
     if (jmxCli == null) {
-      logger.warn("No JMX client available for log '{}'", logInfo.getName());
+      logger.error("No JMX client available for log '{}'", logInfo.getName());
+      return;
     }
     try {
       // start offset
@@ -213,9 +224,9 @@ public class List extends AbstractPALSubcommand {
     }
   }
 
-  private JmxClient getJMXClientForServer(String server) {
+  private JmxClient getJmxClientForServer(String server) {
     if (!jmxClientsPerServer.containsKey(server)) {
-      String host = server.split(":")[0];
+      String host = Splitter.on(':').splitToList(server).get(0);
       JmxClient jmxClient = null;
       try {
         jmxClient = new JmxClient(host, kafkaJmxPort);
@@ -227,6 +238,19 @@ public class List extends AbstractPALSubcommand {
       }
     }
     return jmxClientsPerServer.get(server);
+  }
+
+  private static String getFormattedUptime(OffsetDateTime startDateTime) {
+    final OffsetDateTime now = OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC);
+    return DurationFormatUtils.formatDuration(
+        Duration.between(startDateTime, now).toMillis(), "H:mm:ss");
+  }
+
+  private static String trimTo(String astring, int maxLength) {
+    if (astring.length() <= maxLength) {
+      return astring;
+    }
+    return astring.substring(0, maxLength - 2) + "..";
   }
 
   private static String getFormattedDate(OffsetDateTime dateTime) {
@@ -262,44 +286,28 @@ public class List extends AbstractPALSubcommand {
     out.println(logInfoLine);
   }
 
-  private static String getFormattedUptime(OffsetDateTime startDateTime) {
-    final OffsetDateTime now = OffsetDateTime.ofInstant(Instant.now(), ZoneOffset.UTC);
-    return DurationFormatUtils.formatDuration(
-        Duration.between(startDateTime, now).toMillis(), "H:mm:ss");
-  }
-
-  private static String trimTo(String aString, int maxLength) {
-    if (aString.length() <= maxLength) {
-      return aString;
-    }
-    return aString.substring(0, maxLength - 2) + "..";
-  }
-
   private void print(PeerInfo peerInfo) {
     if (longListing) {
-      out.println(
-          format(
-              PEERS_LONG_FORMAT,
-              peerInfo.getUuid(),
-              peerInfo.getName() == null ? "" : trimTo(peerInfo.getName(), MAX_PEER_NAME_LEN),
-              peerInfo.getRpcAddress() == null
-                  ? ""
-                  : trimTo(
-                      Strings.stringAfter(peerInfo.getRpcAddress(), "tcp://"), MAX_ENDPOINT_LEN),
-              peerInfo.getJsonrpcAddress() == null
-                  ? ""
-                  : trimTo(
-                      Strings.stringAfter(peerInfo.getJsonrpcAddress(), "ws://"), MAX_ENDPOINT_LEN),
-              peerInfo.getPubAddress() == null
-                  ? ""
-                  : trimTo(
-                      Strings.stringAfter(peerInfo.getPubAddress(), "tcp://"), MAX_ENDPOINT_LEN),
-              peerInfo.getJmxAddress() == null
-                  ? ""
-                  : trimTo(peerInfo.getJmxAddress(), MAX_ENDPOINT_LEN),
-              getFormattedUptime(peerInfo.getCTime())));
+      out.printf(
+          PEERS_LONG_FORMAT + "%n",
+          peerInfo.getUuid(),
+          peerInfo.getName() == null ? "" : trimTo(peerInfo.getName(), MAX_PEER_NAME_LEN),
+          peerInfo.getRpcAddress() == null
+              ? ""
+              : trimTo(Strings.stringAfter(peerInfo.getRpcAddress(), "tcp://"), MAX_ENDPOINT_LEN),
+          peerInfo.getJsonrpcAddress() == null
+              ? ""
+              : trimTo(
+                  Strings.stringAfter(peerInfo.getJsonrpcAddress(), "ws://"), MAX_ENDPOINT_LEN),
+          peerInfo.getPubAddress() == null
+              ? ""
+              : trimTo(Strings.stringAfter(peerInfo.getPubAddress(), "tcp://"), MAX_ENDPOINT_LEN),
+          peerInfo.getJmxAddress() == null
+              ? ""
+              : trimTo(peerInfo.getJmxAddress(), MAX_ENDPOINT_LEN),
+          getFormattedUptime(peerInfo.getCTime()));
     } else {
-      out.println(format("%s", peerInfo.getUuid()));
+      out.printf("%s%n", peerInfo.getUuid());
     }
   }
 
@@ -331,8 +339,8 @@ public class List extends AbstractPALSubcommand {
       comparator = reverseOrder ? cTimeComparator : cTimeComparator.reversed();
     } else {
       final Comparator<PeerInfo> peerNameComparator =
-          (o1, o2) ->
-              Objects.compare( // no need to check for null PeerInfo's here since it can't happen
+          (o1, o2) -> // no need to check for null PeerInfo's here since it can't happen
+          Objects.compare(
                   o1.getName(), o2.getName(), Comparator.nullsLast(Comparator.naturalOrder()));
       comparator = reverseOrder ? peerNameComparator.reversed() : peerNameComparator;
     }
@@ -364,18 +372,14 @@ public class List extends AbstractPALSubcommand {
       logsInDirectory.stream()
           .map(LogInfo::getBootstrapServers)
           .distinct()
-          .forEach(
-              s -> {
-                allLogsInKafka.addAll(this.getLogsInKafkaServers(s));
-              });
+          .forEach(s -> allLogsInKafka.addAll(this.getLogsInKafkaServers(s)));
 
       // fill mbean info of all logs found in kafka (assumes JMX connection)
       logsInDirectory.stream().filter(allLogsInKafka::contains).forEach(this::fillMbeanInfo);
       if (longListing) {
-        out.println(format("total %d", logsInDirectory.size()));
+        out.printf("total %d%n", logsInDirectory.size());
         if (!logsInDirectory.isEmpty()) {
-          out.println(
-              (format(LOGS_LONG_FORMAT, "Name", "UUID", "Size", "Start", "End", "Created")));
+          out.printf(LOGS_LONG_FORMAT + "%n", "Name", "UUID", "Size", "Start", "End", "Created");
         }
       }
       printLogs(logsInDirectory);
@@ -385,11 +389,10 @@ public class List extends AbstractPALSubcommand {
       Set<PeerInfo> peers = getPalDirectory().getAllPeers();
       logger.debug("{} peers found in directory", peers.size());
       if (longListing) {
-        out.println(format("total %d", peers.size()));
+        out.printf("total %d%n", peers.size());
         if (!peers.isEmpty()) {
-          out.println(
-              (format(
-                  PEERS_LONG_FORMAT, "UUID", "Name", "RPC", "JSON-RPC", "PUB", "JMX", "Uptime")));
+          out.printf(
+              PEERS_LONG_FORMAT + "%n", "UUID", "Name", "RPC", "JSON-RPC", "PUB", "JMX", "Uptime");
         }
       }
       printPeers(peers);

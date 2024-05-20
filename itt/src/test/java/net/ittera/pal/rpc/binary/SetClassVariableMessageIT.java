@@ -27,7 +27,7 @@ import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
 /**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior
+ * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
  *
  * <p>TODO: - null value - private, protected, package-visible - primitives - arrays - objectrefs
  */
@@ -71,7 +71,7 @@ public class SetClassVariableMessageIT extends AbstractBinaryRPCMessageIT {
   @Test
   public void putStatic_stringNotNull_ok() throws Exception {
 
-    // test with a non null String
+    // test with a non-null String
     String fieldName = "aClassString";
     String fieldClassName = "java.lang.String";
 

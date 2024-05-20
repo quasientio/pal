@@ -22,7 +22,6 @@ package net.ittera.pal.core.exec.java;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Optional;
 import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ExecMessage;
@@ -31,20 +30,22 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
 
   @Override
   protected Object invokeIncoming(
-      Optional<AccessibleObject> accessibleObject,
-      Object target,
-      List<Object> args,
-      Optional<Object> value)
+      AccessibleObject accessibleObject, Object target, List<Object> args, Object value)
+      throws Exception {
+    // discard value
+    return invokeIncoming(accessibleObject, target, args);
+  }
+
+  private Object invokeIncoming(AccessibleObject accessibleObject, Object target, List<Object> args)
       throws Exception {
     if (logger.isTraceEnabled()) {
       logger.trace(
-          "invokeIncoming:in w/ accessibleObject: {}, target: {}, args: {}, value: {}",
+          "invokeIncoming:in w/ accessibleObject: {}, target: {}, args: {}",
           accessibleObject,
           target,
-          args,
-          value);
+          args);
     }
-    Method method = (Method) accessibleObject.get();
+    Method method = (Method) accessibleObject;
     return method.invoke(target, args.toArray());
   }
 
@@ -53,7 +54,7 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
       ExecMessage execMessage,
       Object valueObject,
       ObjectRef valueObjRef,
-      Optional<AccessibleObject> accessibleObject,
+      AccessibleObject accessibleObject,
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking) {
 
@@ -71,18 +72,15 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
     return messageBuilder.buildReturnValue(
         peerUuid,
         valueObject,
-        accessibleObject.get(),
+        accessibleObject,
         valueObjRef,
         returnsVoid(accessibleObject),
         messageUuid);
   }
 
   @Override
-  protected boolean returnsVoid(Optional<AccessibleObject> accessibleObject) {
-    return accessibleObject
-        .map(ao -> ((Method) ao).getReturnType())
-        .map(java.lang.Void.TYPE::equals)
-        .get();
+  protected boolean returnsVoid(AccessibleObject accessibleObject) {
+    return ((Method) accessibleObject).getReturnType().equals(java.lang.Void.TYPE);
   }
 
   @Override

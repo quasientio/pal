@@ -30,8 +30,7 @@ import java.util.UUID;
 import net.ittera.pal.common.lang.intercept.InterceptType;
 import net.ittera.pal.common.runtime.ExecPhase;
 import net.ittera.pal.core.exec.DuplicateInterceptException;
-import net.ittera.pal.core.messages.InterceptEvtMsg;
-import net.ittera.pal.core.messages.InterceptEvtMsg.Type;
+import net.ittera.pal.core.messages.InterceptEventMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.serdes.colfer.ColferUtils;
@@ -53,11 +52,12 @@ public class InterceptMatcher extends ConnectedService {
   private final String interceptRegAddress;
 
   // intercept registration reply codes
-  public static final String REG_OK_REPLY = "0";
-  public static final String UNREG_OK_REPLY = "0";
-  public static final String REG_DUP_REPLY = "1";
-  public static final String REG_PARSING_ERROR_REPLY = "2";
-  public static final String REG_UNKNOWN_ERROR_REPLY = "3";
+  public static final String REGISTER_OK_REPLY = "0";
+  public static final String UNREGISTER_OK_REPLY = "0";
+  public static final String REGISTER_DUP_REPLY = "1";
+  public static final String REGISTER_PARSING_ERROR_REPLY = "2";
+  public static final String REGISTER_UNKNOWN_ERROR_REPLY = "3";
+  public static final String UNREGISTER_UNKNOWN_ERROR_REPLY = "4";
 
   // map holding all intercepts
   private final Map<InterceptType, InterceptRequests> allIntercepts =
@@ -157,43 +157,48 @@ public class InterceptMatcher extends ConnectedService {
   }
 
   private void registerNewAndGoneIntercepts() {
-    InterceptEvtMsg interceptEvtMsg = InterceptEvtMsg.recvMsg(registerSocket, true);
-    if (interceptEvtMsg == null) {
+    InterceptEventMsg interceptEventMsg = InterceptEventMsg.receive(registerSocket, true);
+    if (interceptEventMsg == null) {
       return;
     }
 
     if (logger.isDebugEnabled()) {
-      logger.debug("Received new intercept evt message ({} bytes)", interceptEvtMsg.getSize());
+      logger.debug("Received new intercept evt message ({} bytes)", interceptEventMsg.getSize());
     }
     // parse message
-    if (interceptEvtMsg.getType().equals(Type.REGISTER)) {
+    if (interceptEventMsg.getType().equals(InterceptEventMsg.Type.REGISTER)) {
       InterceptMessage interceptMessage = null;
       try {
         interceptMessage = new InterceptMessage();
-        interceptMessage.unmarshal(interceptEvtMsg.getBody(), 0);
+        interceptMessage.unmarshal(interceptEventMsg.getBody(), 0);
       } catch (Exception e) {
         logger.error("Error parsing intercept request message", e);
-        registerSocket.send(REG_PARSING_ERROR_REPLY);
+        registerSocket.send(REGISTER_PARSING_ERROR_REPLY);
       }
       if (interceptMessage != null) {
         try {
           registerInterceptRequest(interceptMessage);
-          registerSocket.send(REG_OK_REPLY);
+          registerSocket.send(REGISTER_OK_REPLY);
         } catch (DuplicateInterceptException e) {
           logger.warn("Cannot register duplicate intercept request", e);
-          registerSocket.send(REG_DUP_REPLY);
+          registerSocket.send(REGISTER_DUP_REPLY);
         } catch (Exception e) {
-          registerSocket.send(REG_UNKNOWN_ERROR_REPLY);
+          registerSocket.send(REGISTER_UNKNOWN_ERROR_REPLY);
         }
       }
     } else { // Type.UNREGISTER
-      UUID interceptUuid = interceptEvtMsg.getInterceptMsgUUID();
+      UUID interceptUuid = interceptEventMsg.getInterceptMessageUuid();
+      if (interceptUuid == null) {
+        logger.error("Intercept UUID is null. Cannot unregister intercept request.");
+        registerSocket.send(UNREGISTER_UNKNOWN_ERROR_REPLY);
+        return;
+      }
       allIntercepts
           .values()
           .forEach(
               interceptRequests ->
                   interceptRequests.unregisterInterceptRequest(interceptUuid.toString()));
-      registerSocket.send(UNREG_OK_REPLY);
+      registerSocket.send(UNREGISTER_OK_REPLY);
     }
   }
 

@@ -19,7 +19,6 @@
 
 package net.ittera.pal.core.exec.java;
 
-import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.any;
@@ -40,8 +39,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.mockito.AdditionalAnswers;
 import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public abstract class AbstractDispatcherTest {
 
@@ -59,7 +56,6 @@ public abstract class AbstractDispatcherTest {
   protected DispatcherConnector dispatcherConnector;
   protected Dispatcher dispatcher;
   protected Dispatcher onlyPublicDispatcher;
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   protected AbstractDispatcherTest() {}
 
@@ -75,11 +71,8 @@ public abstract class AbstractDispatcherTest {
     verifyDispatcherConnectorSendExecMessageCalledTimes(1);
   }
 
-  protected String[] toNames(Class[] types) {
-    return Arrays.stream(types)
-        .map(Class::getName)
-        .collect(toList())
-        .toArray(new String[types.length]);
+  protected String[] toNames(Class<?>[] types) {
+    return Arrays.stream(types).map(Class::getName).toList().toArray(new String[types.length]);
   }
 
   @Before
@@ -99,15 +92,19 @@ public abstract class AbstractDispatcherTest {
   }
 
   // Stubs for accessibility tests
+  @SuppressWarnings("unused")
   public abstract void dispatchIncoming_publicAccessibleObject_noException() throws Throwable;
 
+  @SuppressWarnings("unused")
   public abstract void
       dispatchIncoming_packagePrivateAccessibleObject_reflectiveOperationException()
           throws Throwable;
 
+  @SuppressWarnings("unused")
   public abstract void dispatchIncoming_protectedAccessibleObject_reflectiveOperationException()
       throws Throwable;
 
+  @SuppressWarnings("unused")
   public abstract void dispatchIncoming_privateAccessibleObject_reflectiveOperationException()
       throws Throwable;
 }

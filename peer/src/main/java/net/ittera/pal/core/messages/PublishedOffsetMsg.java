@@ -23,7 +23,7 @@ import com.google.common.primitives.Longs;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
-import net.ittera.pal.common.util.UUIDUtils;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.BaseMsg;
 import org.zeromq.ZMQ;
 
@@ -69,14 +69,20 @@ public class PublishedOffsetMsg extends BaseMsg {
     }
 
     // 2. message uuid
-    buff = UUIDUtils.toBytes(messageUuid);
+    buff = UuidUtils.toBytes(messageUuid);
     size += buff.length;
     return socket.send(buff, 0);
   }
 
-  // blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
-  // ready, then all are)
-  public static PublishedOffsetMsg recvMsg(ZMQ.Socket socket, boolean blocking) {
+  /**
+   * Blocking flag only applies to first read, by virtue of messages being atomic (if 1st frame is
+   * ready, then all are).
+   *
+   * @param socket ZMQ socket
+   * @param blocking blocking read flag
+   * @return PublishedOffsetMsg instance, or null if non-blocking and no message available
+   */
+  public static PublishedOffsetMsg receive(ZMQ.Socket socket, boolean blocking) {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
@@ -91,19 +97,24 @@ public class PublishedOffsetMsg extends BaseMsg {
     // 2. message uuid
     buff = socket.recv();
     msgSize += buff.length;
-    final UUID messageUuid = UUIDUtils.fromBytes(buff);
+    final UUID messageUuid = UuidUtils.fromBytes(buff);
     return new PublishedOffsetMsg(offset, messageUuid, msgSize);
   }
 
   // default is non-blocking
-  public static PublishedOffsetMsg recvMsg(ZMQ.Socket socket) {
-    return recvMsg(socket, false);
+  public static PublishedOffsetMsg receive(ZMQ.Socket socket) {
+    return receive(socket, false);
   }
 
   @Override
+  @SuppressWarnings("EqualsGetClass")
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     PublishedOffsetMsg that = (PublishedOffsetMsg) o;
     return offset == that.offset && messageUuid.equals(that.messageUuid);
   }

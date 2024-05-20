@@ -19,11 +19,11 @@
 
 package net.ittera.pal.common.directory.events;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.util.UUID;
-import net.ittera.pal.common.directory.events.InterceptEvent.Type;
 import net.ittera.pal.common.directory.nodes.InterceptRequest;
 import net.ittera.pal.common.lang.FieldOpType;
 import net.ittera.pal.common.lang.intercept.InterceptType;
@@ -34,25 +34,25 @@ import org.junit.Test;
 
 public class InterceptEventTest {
 
-  private Type type;
+  private InterceptEvent.Type type;
   private String interceptPath;
-  private UUID peerUUID;
-  private UUID interceptUUID;
-  private InterceptRequest interceptRequest;
+  private UUID peerUuid;
+  private UUID interceptUuid;
+  private InterceptRequest<?> interceptRequest;
   InterceptEvent interceptEvent;
 
   @Before
   public void setUp() {
-    type = Type.INTERCEPT_ADDED;
+    type = InterceptEvent.Type.INTERCEPT_ADDED;
     interceptPath = "/a/mysterious/path";
-    peerUUID = UUID.randomUUID();
-    interceptUUID = UUID.randomUUID();
+    peerUuid = UUID.randomUUID();
+    interceptUuid = UUID.randomUUID();
     interceptRequest = createInterceptRequest();
     interceptEvent =
-        new InterceptEvent(type, interceptPath, peerUUID, interceptUUID, interceptRequest);
+        new InterceptEvent(type, interceptPath, peerUuid, interceptUuid, interceptRequest);
   }
 
-  private InterceptRequest createInterceptRequest() {
+  private InterceptRequest<?> createInterceptRequest() {
     UUID uuid = UUID.randomUUID();
     UUID peer = UUID.randomUUID();
     InterceptType type = InterceptType.BEFORE;
@@ -72,27 +72,27 @@ public class InterceptEventTest {
 
   @Test
   public void getType() {
-    assertEquals(type, interceptEvent.getType());
+    assertEquals(type, interceptEvent.type());
   }
 
   @Test
   public void getInterceptPath() {
-    assertEquals(interceptPath, interceptEvent.getInterceptPath());
+    assertEquals(interceptPath, interceptEvent.interceptPath());
   }
 
   @Test
-  public void getPeerUUID() {
-    assertEquals(peerUUID, interceptEvent.getPeerUUID());
+  public void getPeerUuid() {
+    assertEquals(peerUuid, interceptEvent.peerUuid());
   }
 
   @Test
-  public void getInterceptUUID() {
-    assertEquals(interceptUUID, interceptEvent.getInterceptUUID());
+  public void getInterceptUuid() {
+    assertEquals(interceptUuid, interceptEvent.interceptUuid());
   }
 
   @Test
   public void getInterceptRequest() {
-    assertEquals(interceptRequest, interceptEvent.getInterceptRequest());
+    assertEquals(interceptRequest, interceptEvent.interceptRequest());
   }
 
   @Test
@@ -100,19 +100,17 @@ public class InterceptEventTest {
     assertThat(
         interceptEvent.toString(),
         is(
-            "InterceptEvent{"
+            "InterceptEvent["
                 + "type="
                 + type
-                + ", interceptPath='"
+                + ", interceptPath="
                 + interceptPath
-                + '\''
-                + ", peerUUID="
-                + peerUUID
-                + ", interceptUUID="
-                + interceptUUID
-                + ", interceptRequest='"
+                + ", peerUuid="
+                + peerUuid
+                + ", interceptUuid="
+                + interceptUuid
+                + ", interceptRequest="
                 + interceptRequest
-                + '\''
-                + '}'));
+                + ']'));
   }
 }

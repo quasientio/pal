@@ -1,15 +1,23 @@
 package net.ittera.pal.cxn;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
-import io.etcd.jetcd.*;
+import io.etcd.jetcd.ByteSequence;
+import io.etcd.jetcd.Client;
+import io.etcd.jetcd.KV;
+import io.etcd.jetcd.KeyValue;
+import io.etcd.jetcd.Watch;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.options.GetOption;
 import io.etcd.jetcd.options.WatchOption;
 import io.etcd.jetcd.watch.WatchEvent;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -29,12 +37,13 @@ import org.slf4j.LoggerFactory;
 public class EtcdIT extends AbstractIntegrationTest {
 
   private static final Logger logger = LoggerFactory.getLogger("tests");
-  private final String LOGS_PATH = "/pal/logs";
-  private final String PEERS_PATH = "/pal/peers";
-  private final String INTERCEPTS_PATH = "/pal/intercepts";
-  private final ByteSequence LOGS_KEY = ByteSequence.from(LOGS_PATH.getBytes());
-  private final ByteSequence PEERS_KEY = ByteSequence.from(PEERS_PATH.getBytes());
-  private final ByteSequence INTERCEPTS_KEY = ByteSequence.from(INTERCEPTS_PATH.getBytes());
+  private static final String LOGS_PATH = "/pal/logs";
+  private static final String PEERS_PATH = "/pal/peers";
+  private static final String INTERCEPTS_PATH = "/pal/intercepts";
+  private static final ByteSequence PEERS_KEY =
+      ByteSequence.from(PEERS_PATH.getBytes(StandardCharsets.UTF_8));
+  private static final ByteSequence INTERCEPTS_KEY =
+      ByteSequence.from(INTERCEPTS_PATH.getBytes(StandardCharsets.UTF_8));
   private Client etcdClient;
   private KV kvClient;
   private Watch watchClient;
@@ -44,7 +53,7 @@ public class EtcdIT extends AbstractIntegrationTest {
 
   @Before
   public void setup() {
-    etcdClient = Client.builder().target(getPALDirectoryURL()).build();
+    etcdClient = Client.builder().target(getPalDirectoryUrl()).build();
     kvClient = etcdClient.getKVClient();
     watchClient = etcdClient.getWatchClient();
     logsCreated = new ArrayList<>();
@@ -54,7 +63,7 @@ public class EtcdIT extends AbstractIntegrationTest {
 
   @After
   public void cleanup() {
-    // delete all created keyvalues
+    // delete all created key-values
     Stream.of(logsCreated, peersCreated, interceptsCreated)
         .flatMap(Collection::stream)
         .forEach(
@@ -70,14 +79,16 @@ public class EtcdIT extends AbstractIntegrationTest {
     etcdClient.close();
   }
 
-  private LogInfo createLog(String logname, UUID logUuid)
+  private LogInfo createLog(String logName, UUID logUuid)
       throws ExecutionException, InterruptedException {
-    final String completeLogPath = String.format("%s/%s", LOGS_PATH, logname);
-    LogInfo logInfo = new LogInfo(logname, logUuid);
-    ByteSequence logKey = ByteSequence.from(completeLogPath.getBytes());
-    kvClient.put(logKey, ByteSequence.from(logInfo.toJSONString().getBytes())).get();
+    final String completeLogPath = String.format("%s/%s", LOGS_PATH, logName);
+    LogInfo logInfo = new LogInfo(logName, logUuid);
+    ByteSequence logKey = ByteSequence.from(completeLogPath.getBytes(StandardCharsets.UTF_8));
+    kvClient
+        .put(logKey, ByteSequence.from(logInfo.toJson().getBytes(StandardCharsets.UTF_8)))
+        .get();
     logsCreated.add(logKey);
-    logger.info("Created log with path: {} -- {}", completeLogPath, logInfo.toJSONString());
+    logger.info("Created log with path: {} -- {}", completeLogPath, logInfo.toJson());
     return logInfo;
   }
 
@@ -85,13 +96,15 @@ public class EtcdIT extends AbstractIntegrationTest {
       throws ExecutionException, InterruptedException {
     final String completePeerPath = String.format("%s/%s", PEERS_PATH, peerUuid.toString());
     PeerInfo peerInfo = new PeerInfo(peerUuid, peerName);
-    ByteSequence peerKey = ByteSequence.from(completePeerPath.getBytes());
-    kvClient.put(peerKey, ByteSequence.from(peerInfo.toJSONString().getBytes())).get();
+    ByteSequence peerKey = ByteSequence.from(completePeerPath.getBytes(StandardCharsets.UTF_8));
+    kvClient
+        .put(peerKey, ByteSequence.from(peerInfo.toJson().getBytes(StandardCharsets.UTF_8)))
+        .get();
     peersCreated.add(peerKey);
     logger.info("Created peer with path: {}", completePeerPath);
   }
 
-  private void createInterceptRequest(UUID peerUuid, InterceptRequest interceptRequest)
+  private void createInterceptRequest(InterceptRequest<?> interceptRequest)
       throws ExecutionException, InterruptedException {
     final byte[] interceptData = interceptRequest.toBytes(StandardCharsets.UTF_8);
     final String interceptPath =
@@ -106,16 +119,20 @@ public class EtcdIT extends AbstractIntegrationTest {
   @Test
   public void testLogsWithPrefix() throws ExecutionException, InterruptedException {
     List<LogInfo> appLogs = new ArrayList<>();
-    List<LogInfo> vmLogs = new ArrayList<>();
     appLogs.add(createLog("app_log1", UUID.randomUUID()));
     appLogs.add(createLog("app_log2", UUID.randomUUID()));
     appLogs.add(createLog("app_log3", UUID.randomUUID()));
+    List<LogInfo> vmLogs = new ArrayList<>();
     vmLogs.add(createLog("vm_log1", UUID.randomUUID()));
     vmLogs.add(createLog("vm_log2", UUID.randomUUID()));
     List<KeyValue> appLogEntries =
-        getAllKVs(ByteSequence.from(String.format("%s/%s", LOGS_PATH, "app_log").getBytes()));
+        getAllKeyValues(
+            ByteSequence.from(
+                String.format("%s/%s", LOGS_PATH, "app_log").getBytes(StandardCharsets.UTF_8)));
     List<KeyValue> vmLogEntries =
-        getAllKVs(ByteSequence.from(String.format("%s/%s", LOGS_PATH, "vm_log").getBytes()));
+        getAllKeyValues(
+            ByteSequence.from(
+                String.format("%s/%s", LOGS_PATH, "vm_log").getBytes(StandardCharsets.UTF_8)));
     assertThat(appLogEntries.size(), is(appLogs.size()));
     assertThat(vmLogEntries.size(), is(vmLogs.size()));
   }
@@ -136,7 +153,7 @@ public class EtcdIT extends AbstractIntegrationTest {
   public void testIntercepts() throws ExecutionException, InterruptedException {
     UUID peerUuid = UUID.randomUUID();
     createPeer("peer1forIntercepts", peerUuid);
-    InterceptRequest interceptRequest =
+    var interceptRequest =
         new InterceptRequest<>(
             UUID.randomUUID(),
             peerUuid,
@@ -150,7 +167,7 @@ public class EtcdIT extends AbstractIntegrationTest {
     CountDownLatch countDownLatch = new CountDownLatch(1);
     watchClient.watch(
         INTERCEPTS_KEY,
-        WatchOption.newBuilder().isPrefix(true).build(),
+        WatchOption.builder().isPrefix(true).build(),
         watchResponse -> {
           for (WatchEvent event : watchResponse.getEvents()) {
             switch (event.getEventType()) {
@@ -159,36 +176,18 @@ public class EtcdIT extends AbstractIntegrationTest {
                 break;
               case DELETE:
               case UNRECOGNIZED:
+                break;
+              default:
+                throw new IllegalStateException("Unexpected value: " + event.getEventType());
             }
           }
         });
-    createInterceptRequest(peerUuid, interceptRequest);
+    createInterceptRequest(interceptRequest);
     countDownLatch.await();
   }
 
-  private void printAllLogs() throws ExecutionException, InterruptedException {
-    printAllKVs(LOGS_KEY);
-  }
-
   private void printAllPeers() throws ExecutionException, InterruptedException {
-    printAllKVs(PEERS_KEY);
-  }
-
-  private List<KeyValue> getAllKVs(ByteSequence pathKey)
-      throws ExecutionException, InterruptedException {
-    GetOption option =
-        GetOption.newBuilder()
-            .withSortField(GetOption.SortTarget.CREATE)
-            .withSortOrder(GetOption.SortOrder.ASCEND)
-            .isPrefix(true)
-            .build();
-
-    CompletableFuture<GetResponse> futureResponse = kvClient.get(pathKey, option);
-    return futureResponse.get().getKvs();
-  }
-
-  private void printAllKVs(ByteSequence pathKey) throws ExecutionException, InterruptedException {
-    List<KeyValue> kvs = getAllKVs(pathKey);
+    List<KeyValue> kvs = getAllKeyValues(PEERS_KEY);
 
     if (kvs.isEmpty()) {
       logger.info("Failed to retrieve any key.");
@@ -200,5 +199,18 @@ public class EtcdIT extends AbstractIntegrationTest {
     }
 
     logger.info("Retrieved {} keys", kvs.size());
+  }
+
+  private List<KeyValue> getAllKeyValues(ByteSequence pathKey)
+      throws ExecutionException, InterruptedException {
+    GetOption option =
+        GetOption.builder()
+            .withSortField(GetOption.SortTarget.CREATE)
+            .withSortOrder(GetOption.SortOrder.ASCEND)
+            .isPrefix(true)
+            .build();
+
+    CompletableFuture<GetResponse> futureResponse = kvClient.get(pathKey, option);
+    return futureResponse.get().getKvs();
   }
 }

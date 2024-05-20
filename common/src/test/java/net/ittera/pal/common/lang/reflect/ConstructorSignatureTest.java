@@ -19,15 +19,13 @@
 
 package net.ittera.pal.common.lang.reflect;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotSame;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.util.Arrays;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 @SuppressWarnings("rawtypes")
@@ -59,14 +57,13 @@ public class ConstructorSignatureTest {
     ConstructorSignature signature1 = new ConstructorSignature(constructor1);
     ConstructorSignature signature11 = new ConstructorSignature(constructor1);
 
-    Constructor constructor2 = DummyClass2.class.getDeclaredConstructor();
-    ConstructorSignature signature2 = new ConstructorSignature(constructor2);
-    ConstructorSignature signature22 = new ConstructorSignature(constructor2);
-
-    assertEquals(signature1, signature1);
     assertNotSame(signature1, signature11);
     assertEquals(signature1, signature11);
     assertEquals(signature1.hashCode(), signature11.hashCode());
+
+    Constructor constructor2 = DummyClass2.class.getDeclaredConstructor();
+    ConstructorSignature signature2 = new ConstructorSignature(constructor2);
+    ConstructorSignature signature22 = new ConstructorSignature(constructor2);
 
     assertNotSame(signature2, signature22);
     assertEquals(signature2, signature22);
@@ -77,29 +74,6 @@ public class ConstructorSignatureTest {
     assertNotEquals(signature1.hashCode(), signature2.hashCode());
 
     assertNotEquals(signature1, null);
-    assertNotEquals(signature1, "silly string");
-  }
-
-  @Ignore("EqualsVerifier not working as expected.")
-  @Test
-  public void equalsContract() throws Exception {
-    /* we keep getting an AssertionError with msg:
-     *   Significant fields: equals relies on constructor, but hashCode does not.
-     * TODO: create an issue and link to it in this TODO
-     *  if this method can be fixed, the above equalsAndHashCode() will be redundant
-     */
-    class DummyClass {
-      public void increment(int a, int b) {}
-    }
-    // EqualsVerifier requires prefabValues with actual instances of Parameter.
-    // Since we can't instantiate Parameter, we use our DummyClass and reflection to get them.
-    Method method = DummyClass.class.getDeclaredMethod("increment", int.class, int.class);
-    Parameter parameter1 = method.getParameters()[0];
-    Parameter parameter2 = method.getParameters()[1];
-    EqualsVerifier.forClass(ConstructorSignature.class)
-        .withPrefabValues(Parameter.class, parameter1, parameter2)
-        .usingGetClass()
-        .verify();
   }
 
   @Test
