@@ -101,8 +101,11 @@ public final class Wrapper {
     }
 
     // set required fields
-    wrappedObject.setIsNull(object == null && objectRef == null);
-    wrappedObject.setIsVoid(object == void.class || object == Void.class);
+    boolean isNull = object == null && objectRef == null;
+    boolean isVoid = object == void.class || object == Void.class;
+
+    wrappedObject.setIsNull(isNull);
+    wrappedObject.setIsVoid(isVoid);
 
     // if classname is given, use it to set clazz, otherwise use the object's class
     if (classname != null) {
@@ -115,35 +118,52 @@ public final class Wrapper {
       wrappedObject.setIsArray(isArrayClassName(classname));
     }
 
+    wrappedObject.setIdentityHash(System.identityHashCode(object));
+
+    // wrap object reference
     if (objectRef != null) {
       wrappedObject.setRef(String.valueOf(objectRef.getRef()));
     }
-    wrappedObject.setIdentityHash(System.identityHashCode(object));
 
     // wrap object
     if (object != null) {
       wrappedObject.setHash(object.hashCode());
+
+      // wrap the object if:
+      // 1. is String or char sequence
+      // 2. is primitive or wrapper
+      // 3. is array of primitives or wrappers
+      // 4. is array of String or char sequences
+
       if ((object instanceof String) || isWrappableCharSeqClass(classname)) {
+        // 1. is String or char sequence
         wrappedObject.setValue(object.toString());
-      } else if (object.getClass().isArray()) {
+      } else if (Classes.isPrimitiveOrWrapper(object.getClass())) {
+        // 2. is primitive or wrapper
+        wrappedObject.setValue(String.valueOf(object));
+      } else if (object.getClass().isArray() // array
+          &&
+          // 3. is array of primitives or wrappers
+          (Classes.isPrimitiveOrWrapper(object.getClass().getComponentType())
+              // 4. is array of Strings or char sequences
+              || String.class.equals(object.getClass().getComponentType())
+              || isWrappableCharSeqClass(object.getClass().getComponentType().getName()))) {
         wrappedObject.setIsArray(true);
         // TODO only handles 1-dimensional arrays ?? Check out Arrays.deepToString
-
         final int length = Array.getLength(object);
-        final Obj[] arrayElems = new Obj[length];
+        final Obj[] arrayElements = new Obj[length];
         // NOTE: we iterate using reflection (Array) because the array type is unknown
         for (int i = 0; i < length; i++) {
           final java.lang.Object arrayElem = Array.get(object, i);
           // wrap all array elements -- recursive
-          arrayElems[i] = getWrappedObject(arrayElem, arrayElem.getClass().getName(), null);
+          arrayElements[i] = getWrappedObject(arrayElem, arrayElem.getClass().getName(), null);
         }
-        wrappedObject.setArrayValues(arrayElems);
-      } else if (Classes.isPrimitiveOrWrapper(object.getClass())) {
-        wrappedObject.setValue(String.valueOf(object));
+        wrappedObject.setArrayValues(arrayElements);
       } else {
-        // nothing we can do but leave a trace
-        if (logger.isTraceEnabled()) {
-          logger.warn("Don't know what to do to wrap object: {} of class: {}", object, classname);
+        // not wrappable
+        if (!isVoid && objectRef == null) {
+          throw new NonWrappableObjectException(
+              "ObjectRef is null and object is not wrappable", object);
         }
       }
     }
@@ -199,12 +219,18 @@ public final class Wrapper {
           classname,
           objectRef);
     }
+
+    if (object == null && classname == null && objectRef == null) {
+      throw new IllegalArgumentException("Object, classname and objectRef are all null");
+    }
+
     if (object instanceof Obj) {
       throw new NonWrappableObjectException(
           "Unexpected instance of Obj. Cannot wrap an already wrapped object", object);
     }
     if (objectRef == null && !isWrappable(object)) {
-      throw new NonWrappableObjectException(object);
+      throw new NonWrappableObjectException(
+          "ObjectRef is null and object is not wrappable", object);
     }
     if (classname != null && !Classes.isValidClassName(classname)) {
       throw new IllegalArgumentException("Invalid class name: " + classname);

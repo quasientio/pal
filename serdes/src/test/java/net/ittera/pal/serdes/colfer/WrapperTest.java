@@ -290,6 +290,41 @@ public class WrapperTest extends WrappingTestBase {
     Wrapper.getWrappedObject(new Object(), "238923", ObjectRef.randomRef());
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void getWrappedObject_nullArguments_illegalArgumentException() {
+    Wrapper.getWrappedObject(null, null, null);
+  }
+
+  @Test
+  public void getWrappedObject_arrayOfPrimitives_wrappedArrayValuesAndRef() {
+    Integer[] intArray = new Integer[] {1, 2, 3};
+    Obj wrapped =
+        Wrapper.getWrappedObject(intArray, intArray.getClass().getName(), ObjectRef.randomRef());
+    assertNotNull(wrapped);
+    assertFalse(wrapped.isVoid);
+    assertFalse(wrapped.isNull);
+    assertTrue(wrapped.isArray);
+    assertThat(wrapped.getValue(), is(emptyString()));
+    assertThat(wrapped.getArrayValues(), is(not(emptyArray())));
+    assertThat(wrapped.getRef(), is(not(emptyString())));
+  }
+
+  @Test
+  public void getWrappedObject_arrayOfObjects_onlyWrappedRef() {
+    @SuppressWarnings("InstantiatingAThreadWithDefaultRunMethod")
+    Thread[] threadArray = new Thread[] {new Thread(), new Thread()};
+    Obj wrapped =
+        Wrapper.getWrappedObject(
+            threadArray, threadArray.getClass().getName(), ObjectRef.randomRef());
+    assertNotNull(wrapped);
+    assertFalse(wrapped.isVoid);
+    assertFalse(wrapped.isNull);
+    assertTrue(wrapped.isArray);
+    assertThat(wrapped.getValue(), is(emptyString()));
+    assertThat(wrapped.getArrayValues(), is(emptyArray()));
+    assertThat(wrapped.getRef(), is(not(emptyString())));
+  }
+
   @Test
   public void getWrappedObject_EmptyArray_wrappedArrayWithZeroLength() {
     Integer[] emptyArray = new Integer[0];
@@ -316,12 +351,12 @@ public class WrapperTest extends WrappingTestBase {
   public void getWrappedObject_wrappableValuedObj_wrappedWithValue() {
 
     // test all wrappable objects except null & void
-    List<Object> valuedWrappableObjs =
+    List<Object> valuedWrappableObjects =
         wrappableObjects.stream()
             .filter(o -> o != null && o != void.class && o != Void.class)
             .toList();
 
-    for (Object obj : valuedWrappableObjs) {
+    for (Object obj : valuedWrappableObjects) {
       Obj wrappedObj = Wrapper.getWrappedObject(obj, obj.getClass().getName(), null);
       assertNotNull(wrappedObj);
       assertNotNull(wrappedObj.getClazz());

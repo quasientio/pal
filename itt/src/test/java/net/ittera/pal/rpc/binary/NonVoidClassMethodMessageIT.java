@@ -30,12 +30,7 @@ import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.junit.Test;
 
-/**
- * Naming convention to use: methodName_stateUnderTest_expectedBehavior.
- *
- * <p>TODO: - returningObjectRefArray() commented out below is failing. Add @Test, make it public
- * and fix.
- */
+/** Naming convention to use: methodName_stateUnderTest_expectedBehavior. */
 public class NonVoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
 
   protected final String className = "net.ittera.pal.apps.rpc.NonVoidStaticMethods";
@@ -238,8 +233,8 @@ public class NonVoidClassMethodMessageIT extends AbstractBinaryRPCMessageIT {
     assertEquals(appRef, secondAppRef);
   }
 
-  // TODO reinstate and fix if it doesn't pass
-  private void callClassMethod_returningObjectRefArray_refRetValue() throws Exception {
+  @Test
+  public void callClassMethod_returningObjectRefArray_refRetValue() throws Exception {
 
     String methodName = "getThreadArray";
 
