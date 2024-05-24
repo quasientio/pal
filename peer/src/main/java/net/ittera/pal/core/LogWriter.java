@@ -200,25 +200,26 @@ class LogWriter extends ConnectedService {
         logger.error("Error parsing received message", e);
       }
       if (msg != null) {
-        final List<Header> logHeaders =
-            msg.getHeaders() != null ? fromInternalToLog(msg.getHeaders()) : null;
+        final List<Header> logHeaders = fromInternalToLog(msg.getHeaders());
         sendToKafka(
             msg.getBody(), msg.getMessageUuid(), msg.getResponseToUuid(), peerUuid, logHeaders);
       }
     }
   }
 
-  private List<Header> fromInternalToLog(List<InternalHeader> internalHeaders) {
+  private List<Header> fromInternalToLog(@Nullable List<InternalHeader> internalHeaders) {
     if (logger.isDebugEnabled()) {
       StringBuilder logHeadersStr = new StringBuilder();
-      for (InternalHeader ih : internalHeaders) {
-        logHeadersStr
-            .append("InternalHeader [type = ")
-            .append(InternalHeaderType.fromByte(ih.getHeaderType()).name())
-            .append(", value = ")
-            .append(ih.getValue())
-            .append("]")
-            .append("\n");
+      if (internalHeaders != null) {
+        for (InternalHeader ih : internalHeaders) {
+          logHeadersStr
+              .append("InternalHeader [type = ")
+              .append(InternalHeaderType.fromByte(ih.getHeaderType()).name())
+              .append(", value = ")
+              .append(ih.getValue())
+              .append("]")
+              .append("\n");
+        }
       }
       // remove the last \n
       if (!logHeadersStr.isEmpty()) {
@@ -228,15 +229,16 @@ class LogWriter extends ConnectedService {
     }
     List<Header> logHeaders = new ArrayList<>();
     boolean isWriteAhead = false;
-    for (InternalHeader ih : internalHeaders) {
-      if (ih.getHeaderType() == InternalHeaderType.WRITE_AHEAD.toByte()) {
-        isWriteAhead = true;
-        logHeaders.add(SELF_HEADERS.get("SELF_DISPATCHING_HEADER"));
-        break;
+    if (internalHeaders != null) {
+      for (InternalHeader ih : internalHeaders) {
+        if (ih.getHeaderType() == InternalHeaderType.WRITE_AHEAD.toByte()) {
+          isWriteAhead = true;
+          logHeaders.add(SELF_HEADERS.get("SELF_DISPATCHING_HEADER"));
+          break;
+        }
       }
     }
-    if (!isWriteAhead) {
-      // we don't need an InternalHeader, we assume it's self-produced
+    if (!isWriteAhead) { // if not write-ahead, we assume it's self-produced
       logHeaders.add(SELF_HEADERS.get("SELF_PRODUCED_HEADER"));
     }
     if (logger.isDebugEnabled()) {
