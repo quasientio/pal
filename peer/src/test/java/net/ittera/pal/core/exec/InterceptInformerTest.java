@@ -189,7 +189,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
             "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-uuid",
             remotePeerUuid,
             interceptUuid,
-            interceptRequest);
+            null);
     interceptInformer.interceptEvent(interceptEvent);
 
     // verify that unregister messages were sent

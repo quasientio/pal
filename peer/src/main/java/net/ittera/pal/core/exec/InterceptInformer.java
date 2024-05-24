@@ -24,6 +24,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import net.ittera.pal.common.directory.events.InterceptEvent;
@@ -133,6 +134,7 @@ public class InterceptInformer implements InterceptNodeListener {
           }
           return;
         }
+        Objects.requireNonNull(interceptRequest);
         InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
         interceptEventMsg = new InterceptEventMsg(ColferUtils.toBytes(interceptMessage));
         break;
@@ -156,8 +158,8 @@ public class InterceptInformer implements InterceptNodeListener {
   }
 
   private void sendInterceptEventMsg(InterceptEventMsg message) {
-    if (logger.isDebugEnabled()) {
-      logger.debug("Sending new intercept evt message: {}", message);
+    if (logger.isTraceEnabled()) {
+      logger.trace("Sending new intercept evt message: {}", message);
     }
     // send
     Socket outSocket = threadSocket.get();

@@ -224,16 +224,17 @@ public class PalDirectory implements AutoCloseable {
         final UUID peerUuid = UUID.fromString(parts[2]);
         final UUID interceptUuid = UUID.fromString(parts[3]);
         final byte[] data = event.getKeyValue().getValue().getBytes();
+        final InterceptRequest<?> interceptRequest;
         logger.debug(
             "Creating intercept event from path: '{}' with value: '{}'",
             path,
             new String(data, getEncodingCharset()));
-        return new InterceptEvent(
-            type,
-            path,
-            peerUuid,
-            interceptUuid,
-            InterceptRequest.fromBytes(data, getEncodingCharset()));
+        if (type == InterceptEvent.Type.INTERCEPT_ADDED) {
+          interceptRequest = InterceptRequest.fromBytes(data, getEncodingCharset());
+        } else {
+          interceptRequest = null;
+        }
+        return new InterceptEvent(type, path, peerUuid, interceptUuid, interceptRequest);
       } catch (IllegalArgumentException e) {
         logger.warn("Invalid UUID or unexpected path of len=4: {}", path, e);
       }
@@ -247,7 +248,7 @@ public class PalDirectory implements AutoCloseable {
         case PUT, DELETE -> {
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "New intercepts {} -> key:{} - value:{}",
+                "New intercept event {} -> key:{} - value:{}",
                 event.getEventType().name(),
                 event.getKeyValue().getKey().toString(),
                 event.getKeyValue().getValue().toString());
