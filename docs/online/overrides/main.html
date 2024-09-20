@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  {% for icon in config.extra.favicons %}
+    <link rel="{{ icon.rel }}"
+          {% if icon.type %}type="{{ icon.type }}"{% endif %}
+          {% if icon.sizes %}sizes="{{ icon.sizes }}"{% endif %}
+          href="{{ icon.href }}"
+          {% if icon.color %}color="{{ icon.color }}"{% endif %}>
+  {% endfor %}
+  {% if config.extra.msapplication_tilecolor %}
+    <meta name="msapplication-TileColor" content="{{ config.extra.msapplication_tilecolor }}">
+  {% endif %}
+  {% if config.extra.msapplication_config %}
+    <meta name="msapplication-config" content="{{ config.extra.msapplication_config }}">
+  {% endif %}
+  {% if config.extra.theme_color %}
+    <meta name="theme-color" content="{{ config.extra.theme_color }}">
+  {% endif %}
+{% endblock %}

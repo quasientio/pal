@@ -1,0 +1,41 @@
+site_name: Pal Documentation
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+
+theme:
+  name: material
+  custom_dir: overrides
+  language: en
+  logo: assets/imgs/PAL-logo-01.png
+  palette:
+    - scheme: default
+      primary: cyan
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: cyan
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  font:
+    text: 'Roboto'
+    code: 'Roboto Mono'
+
+markdown_extensions:
+  - attr_list
+
+extra:
+  favicons:
+    - { rel: 'apple-touch-icon', sizes: '180x180', href: 'apple-touch-icon.png' }
+    - { rel: 'icon', type: 'image/png', sizes: '32x32', href: 'assets/imgs/favicon-32x32.png' }
+    - { rel: 'icon', type: 'image/png', sizes: '16x16', href: 'assets/imgs/favicon-16x16.png' }
+    - { rel: 'manifest', href: 'site.webmanifest' }
+    - { rel: 'mask-icon', href: 'assets/imgs/safari-pinned-tab.svg', color: '#5bbad5' }
+    # - { rel: 'shortcut icon', href: 'favicon.ico' }
+  msapplication_config: 'browserconfig.xml'
+  theme_color: '#ffffff'
