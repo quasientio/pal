@@ -18,6 +18,8 @@ stages:
   - unit-tests
   - integration-tests
   - publish-artifacts
+  - build_docs
+  - deploy_docs
 
 cache:
   paths:
@@ -89,5 +91,35 @@ deploy-pal:
   stage: publish-artifacts
   script: 
     - mvn deploy -s ci_settings.xml -DskipTests
+  only:
+    - main
+
+build_docs:
+  stage: build_docs
+  image: python:3.9
+  before_script:
+    - cd docs/online
+    - pip install --upgrade pip
+  script:
+    - pip install mkdocs mkdocs-material
+    - mkdocs build
+  artifacts:
+    paths:
+      - docs/online/site/
+    expire_in: 1 hour
+  only:
+    - main
+
+deploy_docs:
+  stage: deploy_docs
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - mkdir -p ~/.ssh
+    - cp "$DOCS_SSH_PRIVATE_KEY" ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - echo -e "Host $DOCS_SSH_HOST\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+  script:
+    - rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" docs/online/site/ $DOCS_SSH_USER@$DOCS_SSH_HOST:$REMOTE_DOCS_PATH
   only:
     - main
