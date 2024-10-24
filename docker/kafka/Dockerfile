@@ -3,7 +3,9 @@
 #
 # Build:
 #    build          docker build \
-#                     --tag registry.gitlab.com/cometera/pal/kafka:3.4.0 \
+#                     --build-arg SCALA_VERSION=2.13 \
+#                     --build-arg KAFKA_VERSION=3.8.0 \
+#                     --tag registry.gitlab.com/cometera/pal/kafka:3.8.0 \
 #                     --tag registry.gitlab.com/cometera/pal/kafka:latest \
 #                     --tag kafka:latest .
 #
@@ -22,39 +24,52 @@
 #
 ###################################################################
 
-FROM openjdk:8u151-jre-alpine
+# Use a Debian-based OpenJDK 11 image
+FROM openjdk:11-jre-slim
 
+# Set build-time variables
 ARG SCALA_VERSION="2.13"
-ARG KAFKA_VERSION="3.4.0"
+ARG KAFKA_VERSION="3.8.0"
 ARG VERSION="$SCALA_VERSION-$KAFKA_VERSION"
 
-# developer keys downloaded from https://downloads.apache.org/kafka/KEYS)
-ADD KEYS .
+# Install necessary packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    gnupg \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# install gnupg and import keys so we can verify binary signature
-RUN apk add --no-cache gnupg
-RUN gpg --import KEYS
-RUN rm KEYS
+# Download and import the KEYS file
+RUN wget https://downloads.apache.org/kafka/KEYS \
+    && gpg --import KEYS \
+    && rm KEYS
 
-# download & unpack kafka binaries
-RUN apk update
-RUN apk add wget
-
+# Set the working directory
 WORKDIR /usr/local/lib
-RUN wget -S https://downloads.apache.org/kafka/$KAFKA_VERSION/kafka_$VERSION.tgz
-RUN wget https://downloads.apache.org/kafka/$KAFKA_VERSION/kafka_$VERSION.tgz.asc
+
+# Download Kafka binaries and signature
+RUN wget -S https://downloads.apache.org/kafka/$KAFKA_VERSION/kafka_$VERSION.tgz \
+    && wget https://downloads.apache.org/kafka/$KAFKA_VERSION/kafka_$VERSION.tgz.asc
+
+# Verify the signature
 RUN gpg --verify kafka_$VERSION.tgz.asc kafka_$VERSION.tgz
-RUN tar zxvf kafka_$VERSION.tgz
-RUN rm kafka_$VERSION.tgz kafka_$VERSION.tgz.asc
-RUN ln -s kafka_$VERSION kafka
 
-# kafka scripts require bash
-RUN apk add bash
-RUN echo "export PATH=$PATH:/usr/local/lib/kafka/bin" >> ~/.bashrc
+# Extract Kafka and clean up
+RUN tar -xzf kafka_$VERSION.tgz \
+    && rm kafka_$VERSION.tgz kafka_$VERSION.tgz.asc \
+    && ln -s kafka_$VERSION kafka
 
+# Add Kafka binaries to PATH
+ENV PATH="$PATH:/usr/local/lib/kafka/bin"
+
+# Set the working directory to Kafka installation
 WORKDIR /usr/local/lib/kafka
-ADD run.sh .
 
+# Copy the run script into the image
+COPY run.sh .
+
+# Expose Kafka port
 EXPOSE 9092
 
-ENTRYPOINT [ "./run.sh" ]
+# Set the entrypoint
+ENTRYPOINT ["./run.sh"]

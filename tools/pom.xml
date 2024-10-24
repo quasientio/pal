@@ -128,10 +128,6 @@
                             <shadedPattern>${shading.prefix}.common</shadedPattern>
                         </relocation>
                         <relocation>
-                            <pattern>com.github.luben</pattern>
-                            <shadedPattern>${shading.prefix}.luben</shadedPattern>
-                        </relocation>
-                        <relocation>
                             <pattern>net.jpountz</pattern>
                             <shadedPattern>${shading.prefix}.jpountz</shadedPattern>
                         </relocation>
@@ -165,12 +161,6 @@
                             <artifact>org.apache.kafka:kafka-clients</artifact>
                             <excludes>
                                 <exclude>META-INF/services/**</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
-                            <artifact>com.github.luben:zstd-jni</artifact>
-                            <excludes>
-                                <exclude>include/</exclude>
                             </excludes>
                         </filter>
                         <filter>
