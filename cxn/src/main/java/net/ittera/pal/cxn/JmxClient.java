@@ -38,7 +38,13 @@ public class JmxClient {
   private JMXConnector conn;
   private final String serverUrl;
 
+  static {
+    // Disable RMI codebase download
+    System.setProperty("com.sun.jndi.rmi.object.trustURLCodebase", "false");
+  }
+
   public JmxClient(String host, int port) throws IOException {
+    logger.info("Creating JMX client for {}:{}", host, port);
     this.serverUrl = String.format("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi", host, port);
     connect();
   }
@@ -50,10 +56,8 @@ public class JmxClient {
 
   @SuppressWarnings("BanJNDI")
   private void connect() throws IOException {
-    // sanitize the serverUrl to remove the /jndi/ part
-    String rmiUrl = serverUrl.replaceFirst("/jndi/", "/");
-
-    conn = JMXConnectorFactory.connect(new JMXServiceURL(rmiUrl));
+    logger.debug("Connecting to: {}", serverUrl);
+    conn = JMXConnectorFactory.connect(new JMXServiceURL(serverUrl));
     conn.addConnectionNotificationListener(
         (notification, handback) -> {
           if (notification instanceof JMXConnectionNotification
