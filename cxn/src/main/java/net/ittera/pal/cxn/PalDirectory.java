@@ -107,6 +107,10 @@ public class PalDirectory implements AutoCloseable {
         this::interceptEventConsumer);
   }
 
+  public String getDirectoryUrl() {
+    return directoryUrl;
+  }
+
   // <editor-fold desc="Peer methods">
   public boolean peerExists(UUID peerUuid) throws ExecutionException, InterruptedException {
     return kvClient
