@@ -21,6 +21,8 @@ package net.ittera.pal.core.exec;
 
 import static java.lang.String.format;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -29,7 +31,11 @@ import javax.annotation.Nullable;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.colfer.ReturnValue;
+import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.serdes.colfer.JsonSerializers;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +58,9 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   protected final DispatcherConnector dispatcherConnector;
   protected final MessageBuilder messageBuilder;
 
+  // used to serialize JSON-RPC messages
+  protected Gson gson;
+
   AbstractMessageInvokerThread(
       ThreadGroup group,
       String name,
@@ -66,6 +75,7 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     this.incomingMessageDispatcher = incomingMessageDispatcher;
     this.dispatcherConnector = dispatcherConnector;
     this.peerUuid = peerUuid;
+    initializeGson();
     if (logger.isDebugEnabled()) {
       logger.debug("Initialized message invoker thread named: {}", name);
     }
@@ -83,9 +93,21 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     this.incomingMessageDispatcher = incomingMessageDispatcher;
     this.dispatcherConnector = null;
     this.peerUuid = peerUuid;
+    initializeGson();
     if (logger.isDebugEnabled()) {
       logger.debug("Initialized new message invoker thread");
     }
+  }
+
+  private void initializeGson() {
+    this.gson =
+        new GsonBuilder()
+            .registerTypeAdapter(
+                StaticFieldPutDone.class, new JsonSerializers.StaticFieldPutDoneAdapter())
+            .registerTypeAdapter(
+                InstanceFieldPutDone.class, new JsonSerializers.InstanceFieldPutDoneAdapter())
+            .registerTypeAdapter(ReturnValue.class, new JsonSerializers.ReturnValueAdapter())
+            .create();
   }
 
   protected final String getMessageUuid(Message msg) {
@@ -217,6 +239,25 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   private void notifyMessageDispatched(Message message) {
     for (MessageDispatchListener listener : messageDispatchListeners) {
       listener.onMessageDispatched(message);
+    }
+  }
+
+  protected void logMessageDispatch(Message requestMsg, String replyId, long dispatchStart) {
+    logMessageDispatch(getMessageUuid(requestMsg), replyId, dispatchStart);
+  }
+
+  protected void logMessageDispatch(Message requestMsg, Message replyMsg, long dispatchStart) {
+    logMessageDispatch(getMessageUuid(requestMsg), getMessageUuid(replyMsg), dispatchStart);
+  }
+
+  protected void logMessageDispatch(String requestId, String replyId, long dispatchStart) {
+    if (logger.isDebugEnabled()) {
+      final long took = System.currentTimeMillis() - dispatchStart;
+      logger.debug(
+          "Dispatched and sent message w/id: {} in reply to request w/id: {} in {} ms",
+          replyId,
+          requestId,
+          took);
     }
   }
 }

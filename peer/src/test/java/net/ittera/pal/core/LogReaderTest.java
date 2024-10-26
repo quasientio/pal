@@ -41,6 +41,7 @@ import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.types.MessageFormatType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -268,6 +269,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     ConsumerRecord<String, byte[]> record =
         new ConsumerRecord<>(
             this.log.getName(), partition, 0, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
+    record.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
     this.consumer.addRecord(record);
 
     Thread.sleep(300);
@@ -318,6 +320,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     ConsumerRecord<String, byte[]> record =
         new ConsumerRecord<>(
             this.log.getName(), partition, 0, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
+    record.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
     this.consumer.addRecord(record);
 
     Thread.sleep(300);
@@ -363,6 +366,7 @@ public class LogReaderTest extends ZmqEnabledTest {
       ConsumerRecord<String, byte[]> record =
           new ConsumerRecord<>(
               this.log.getName(), partition, i, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
+      record.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
       this.consumer.addRecord(record);
       sentUuids.add(msg.getMessageUuid());
     }

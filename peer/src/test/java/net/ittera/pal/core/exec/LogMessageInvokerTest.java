@@ -40,6 +40,7 @@ import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
+import net.ittera.pal.messages.types.MessageFormatType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
@@ -129,7 +130,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     // send request message to DEALER socket
     int fakeOffset = 0;
     InboundLogMsg msg =
-        new InboundLogMsg(fakeOffset, ColferUtils.toBytes(msgBuilder.wrap(invokable)));
+        new InboundLogMsg(
+            fakeOffset, MessageFormatType.COLFER, ColferUtils.toBytes(msgBuilder.wrap(invokable)));
     msg.send(dealerSocket);
 
     // wait for the message to be dispatched
@@ -172,7 +174,10 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     messagesToInvoke.forEach(
         invokable -> {
           InboundLogMsg msg =
-              new InboundLogMsg(fakeOffset, ColferUtils.toBytes(msgBuilder.wrap(invokable)));
+              new InboundLogMsg(
+                  fakeOffset,
+                  MessageFormatType.COLFER,
+                  ColferUtils.toBytes(msgBuilder.wrap(invokable)));
           msg.send(dealerSocket);
         });
 

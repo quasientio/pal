@@ -23,6 +23,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
@@ -51,6 +53,9 @@ import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.ControlStatusType;
+import net.ittera.pal.messages.types.JsonRpcType;
+import net.ittera.pal.messages.types.MessageFormatType;
+import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.JsonSerializers;
@@ -65,6 +70,8 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.Headers;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
@@ -472,17 +479,17 @@ public class ThinPeer implements AutoCloseable {
   }
 
   @SuppressWarnings("unused")
-  public Message getMessageAtOffset(Long seek) {
+  public LogMessage<?> getMessageAtOffset(Long seek) {
     return getMessageAtOffset(seek, true);
   }
 
-  private Message getMessageAtOffset(Long seek, boolean lookupCached) {
+  private LogMessage<?> getMessageAtOffset(Long seek, boolean lookupCached) {
     assertInitializedAndActive();
     if (logger.isDebugEnabled()) {
       logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
     }
     if (lookupCached) {
-      Message cachedMsg = getCachedMessageAtOffset(seek);
+      LogMessage<?> cachedMsg = getCachedMessageAtOffset(seek);
       if (cachedMsg != null) {
         if (logger.isDebugEnabled()) {
           logger.debug("Got cached record at offset {}", seek);
@@ -515,17 +522,62 @@ public class ThinPeer implements AutoCloseable {
     // now swap last batch (map) of records read with the new one
     this.lastRecordsRead = recordsRead;
 
-    Message message = new Message();
-    message.unmarshal(requestedRecord.value(), 0);
-    return message;
+    return createLogMessage(requestedRecord);
   }
 
-  private Message getCachedMessageAtOffset(Long offset) {
+  private LogMessage<?> createLogMessage(ConsumerRecord<String, byte[]> record) {
+    byte[] value = record.value();
+    MessageFormatType messageFormat = getMessageFormatFromHeader(record.headers());
+    if (messageFormat == null) {
+      throw new IllegalArgumentException("Message format not found in record headers");
+    }
+    LogMessage<?> logMessage;
+    Map<String, String> headers = new HashMap<>();
+
+    switch (messageFormat) {
+      case COLFER -> {
+        Message message = new Message();
+        message.unmarshal(value, 0);
+        logMessage = new LogMessage<>(record.offset(), headers, message);
+      }
+      case JSONRPC -> {
+        String json = new String(value, StandardCharsets.UTF_8);
+        String messageType = getMessageTypeFromHeader(record.headers());
+        if (JsonRpcType.REQUEST.name().equals(messageType)) {
+          JsonRpcRequest jsonRpcRequest = gson.fromJson(json, JsonRpcRequest.class);
+          logMessage = new LogMessage<>(record.offset(), headers, jsonRpcRequest);
+        } else if (JsonRpcType.RESPONSE.name().equals(messageType)) {
+          JsonRpcResponse jsonRpcResponse = gson.fromJson(json, JsonRpcResponse.class);
+          logMessage = new LogMessage<>(record.offset(), headers, jsonRpcResponse);
+        } else {
+          throw new IllegalArgumentException("Unsupported JSON-RPC message type: " + messageType);
+        }
+      }
+      default -> throw new IllegalArgumentException("Unsupported message format: " + messageFormat);
+    }
+
+    return logMessage;
+  }
+
+  private MessageFormatType getMessageFormatFromHeader(Headers headers) {
+    for (Header header : headers.headers("message-format")) {
+      byte formatByte = header.value()[0];
+      return MessageFormatType.fromByte(formatByte);
+    }
+    return null;
+  }
+
+  private String getMessageTypeFromHeader(Headers headers) {
+    for (Header header : headers.headers("message-type")) {
+      return new String(header.value(), StandardCharsets.UTF_8);
+    }
+    return null;
+  }
+
+  private LogMessage<?> getCachedMessageAtOffset(Long offset) {
     ConsumerRecord<String, byte[]> cached = lastRecordsRead.get(offset);
     if (cached != null) {
-      Message message = new Message();
-      message.unmarshal(cached.value(), 0);
-      return message;
+      return createLogMessage(cached);
     }
     return null;
   }
@@ -567,10 +619,14 @@ public class ThinPeer implements AutoCloseable {
     }
     // send to kafka
     final byte[] body = ColferUtils.toBytes(msgBuilder.wrap(message));
-    var sendFuture =
-        producer.send(
-            new ProducerRecord<>(
-                outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body));
+    final ProducerRecord<String, byte[]> record =
+        new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body);
+    record.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
+    record
+        .headers()
+        .add("message-type", MessageType.EXEC_MESSAGE.name().getBytes(StandardCharsets.UTF_8));
+    record.headers().add("producer", peerUuid.toString().getBytes(StandardCharsets.UTF_8));
+    var sendFuture = producer.send(record);
 
     // log any errors
     var unusedFuture =
@@ -585,6 +641,49 @@ public class ThinPeer implements AutoCloseable {
 
     if (logger.isDebugEnabled()) {
       logger.debug("Message sent to log:\n{} ({} bytes)", ColferUtils.format(message), body.length);
+    }
+  }
+
+  @SuppressWarnings("unused")
+  public <T> void sendToLogAndForget(T jsonRpcRequest, Class<T> jsonRpcType) {
+    assertInitializedAndActive();
+    if (logger.isTraceEnabled()) {
+      logger.trace("sendToLogAndForget: in with jsonRpcRequest: {}", jsonRpcRequest);
+    }
+
+    String rpcMessage;
+    if (jsonRpcType == JsonRpcRequest.class) {
+      rpcMessage = gson.toJson(jsonRpcRequest);
+    } else if (jsonRpcType == String.class) {
+      rpcMessage = (String) jsonRpcRequest;
+    } else {
+      throw new IllegalArgumentException("Unsupported type for jsonRpc");
+    }
+
+    final byte[] body = rpcMessage.getBytes(StandardCharsets.UTF_8);
+    final ProducerRecord<String, byte[]> record =
+        new ProducerRecord<>(
+            outLog.getName(), PRODUCER_PARTITION, UUID.randomUUID().toString(), body);
+    record.headers().add("message-format", new byte[] {MessageFormatType.JSONRPC.toByte()});
+    record
+        .headers()
+        .add("message-type", JsonRpcType.REQUEST.name().getBytes(StandardCharsets.UTF_8));
+    record.headers().add("producer", peerUuid.toString().getBytes(StandardCharsets.UTF_8));
+    var sendFuture = producer.send(record);
+
+    // log any errors
+    var unusedFuture =
+        producerErrorCheckingExecutorService.submit(
+            () -> {
+              try {
+                sendFuture.get();
+              } catch (Exception e) {
+                logger.error("Error sending message to log", e);
+              }
+            });
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Message sent to log:\n{} ({} bytes)", rpcMessage, body.length);
     }
   }
 
@@ -623,10 +722,14 @@ public class ThinPeer implements AutoCloseable {
     // send to kafka
     long sentRecordOffset;
     final byte[] body = ColferUtils.toBytes(msgBuilder.wrap(message));
-    Future<RecordMetadata> recordMetadataFuture =
-        producer.send(
-            new ProducerRecord<>(
-                outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body));
+    final ProducerRecord<String, byte[]> newRecord =
+        new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body);
+    newRecord.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
+    newRecord
+        .headers()
+        .add("message-type", MessageType.EXEC_MESSAGE.name().getBytes(StandardCharsets.UTF_8));
+    newRecord.headers().add("producer", peerUuid.toString().getBytes(StandardCharsets.UTF_8));
+    Future<RecordMetadata> recordMetadataFuture = producer.send(newRecord);
     try {
       RecordMetadata recordMetadata = recordMetadataFuture.get();
       if (logger.isDebugEnabled()) {
@@ -755,15 +858,16 @@ public class ThinPeer implements AutoCloseable {
     if (logger.isTraceEnabled()) {
       logger.trace("sendToPeer: in with jsonRpcRequest: {}", jsonRpcRequest);
     }
-    String rpc;
+
+    String rpcMessage;
     if (jsonRpcType == JsonRpcRequest.class) {
-      rpc = gson.toJson(jsonRpcRequest);
+      rpcMessage = gson.toJson(jsonRpcRequest);
     } else if (jsonRpcType == String.class) {
-      rpc = (String) jsonRpcRequest;
+      rpcMessage = (String) jsonRpcRequest;
     } else {
       throw new IllegalArgumentException("Unsupported type for jsonRpc");
     }
-    return wsClient.sendAsync(rpc);
+    return wsClient.sendAsync(rpcMessage);
   }
 
   // TODO: refactor this and above methods

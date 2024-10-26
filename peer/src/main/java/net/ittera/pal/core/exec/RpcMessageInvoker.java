@@ -21,8 +21,6 @@ package net.ittera.pal.core.exec;
 
 import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.Set;
@@ -31,14 +29,10 @@ import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
 import net.ittera.pal.core.messages.OutboundJsonRpcResponseMsg;
-import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.colfer.ReturnValue;
-import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.serdes.colfer.ColferUtils;
-import net.ittera.pal.serdes.colfer.JsonSerializers;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcRequestException;
 import org.zeromq.SocketType;
@@ -59,7 +53,6 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
 
   private int rpcSocketIndex = -1;
   private int jsonrpcSocketIndex = -1;
-  private Gson gson;
 
   public RpcMessageInvoker(
       ThreadGroup group,
@@ -83,7 +76,6 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     this.runOptions = runOptions;
     this.rpcDealerAddress = rpcDealerAddress;
     this.jsonrpcDealerAddress = jsonrpcDealerAddress;
-    initializeGson();
   }
 
   // Constructor for unit-testing
@@ -99,18 +91,6 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     this.runOptions = runOptions;
     this.rpcDealerAddress = rpcDealerAddress;
     this.jsonrpcDealerAddress = jsonrpcDealerAddress;
-    initializeGson();
-  }
-
-  private void initializeGson() {
-    this.gson =
-        new GsonBuilder()
-            .registerTypeAdapter(
-                StaticFieldPutDone.class, new JsonSerializers.StaticFieldPutDoneAdapter())
-            .registerTypeAdapter(
-                InstanceFieldPutDone.class, new JsonSerializers.InstanceFieldPutDoneAdapter())
-            .registerTypeAdapter(ReturnValue.class, new JsonSerializers.ReturnValueAdapter())
-            .create();
   }
 
   @Override
@@ -329,25 +309,6 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
         logger.debug("Re-throwing unexpected exception", ex);
       }
       throw ex;
-    }
-  }
-
-  private void logMessageDispatch(Message requestMsg, String replyId, long dispatchStart) {
-    logMessageDispatch(getMessageUuid(requestMsg), replyId, dispatchStart);
-  }
-
-  private void logMessageDispatch(Message requestMsg, Message replyMsg, long dispatchStart) {
-    logMessageDispatch(getMessageUuid(requestMsg), getMessageUuid(replyMsg), dispatchStart);
-  }
-
-  private void logMessageDispatch(String requestId, String replyId, long dispatchStart) {
-    if (logger.isDebugEnabled()) {
-      final long took = System.currentTimeMillis() - dispatchStart;
-      logger.debug(
-          "Dispatched and sent message w/id: {} in reply to request w/id: {} in {} ms",
-          replyId,
-          requestId,
-          took);
     }
   }
 

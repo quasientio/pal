@@ -43,6 +43,7 @@ import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.core.messages.PublishedOffsetMsg;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PalDirectory;
+import net.ittera.pal.messages.types.MessageFormatType;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -307,9 +308,19 @@ public class LogReader extends ConnectedService {
         }
         final long messageOffset = record.offset();
         lastOffsetRead = messageOffset;
+
+        // get message format (JSONRPC, COLFER, etc.)
+        var messageFormat = getMessageFormatFromHeader(record.headers());
+        if (messageFormat == null) {
+          logger.error(
+              "Message format not found in headers, skipping message with offset: {}",
+              messageOffset);
+          continue;
+        }
+
         if (!recordProducedOrDispatchingBySelf(record.headers())) {
           // send request to DEALER socket
-          InboundLogMsg msg = new InboundLogMsg(messageOffset, record.value());
+          InboundLogMsg msg = new InboundLogMsg(messageOffset, messageFormat, record.value());
           msg.send(logDealerSocket);
           if (logger.isDebugEnabled()) {
             logger.debug("Dealt new log message with offset: {}", messageOffset);
@@ -383,6 +394,14 @@ public class LogReader extends ConnectedService {
               }
               return false;
             });
+  }
+
+  private MessageFormatType getMessageFormatFromHeader(Headers headers) {
+    for (Header header : headers.headers("message-format")) {
+      byte formatByte = header.value()[0];
+      return MessageFormatType.fromByte(formatByte);
+    }
+    return null;
   }
 
   private Long nextOffset() {

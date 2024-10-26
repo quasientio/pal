@@ -22,6 +22,7 @@ package net.ittera.pal.core;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -42,6 +43,8 @@ import net.ittera.pal.messages.LogMessageHeader;
 import net.ittera.pal.messages.OutboundMsg;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.types.InternalHeaderType;
+import net.ittera.pal.messages.types.MessageFormatType;
+import net.ittera.pal.messages.types.MessageType;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -202,7 +205,13 @@ class LogWriter extends ConnectedService {
       if (msg != null) {
         final List<Header> logHeaders = fromInternalToLog(msg.getHeaders());
         sendToKafka(
-            msg.getBody(), msg.getMessageUuid(), msg.getResponseToUuid(), peerUuid, logHeaders);
+            MessageFormatType.COLFER,
+            msg.getMessageType(),
+            msg.getBody(),
+            msg.getMessageUuid(),
+            msg.getResponseToUuid(),
+            peerUuid,
+            logHeaders);
       }
     }
   }
@@ -248,6 +257,8 @@ class LogWriter extends ConnectedService {
   }
 
   private void sendToKafka(
+      MessageFormatType messageFormat,
+      MessageType messageType,
       byte[] message,
       UUID messageUuid,
       UUID responseToUuid,
@@ -259,6 +270,12 @@ class LogWriter extends ConnectedService {
     ProducerRecord<String, byte[]> newRecord =
         new ProducerRecord<>(outLog.getName(), 0, fromPeer.toString(), message, headers);
 
+    // add message description headers
+    newRecord.headers().add("message-format", new byte[] {messageFormat.toByte()});
+    newRecord.headers().add("message-type", messageType.name().getBytes(StandardCharsets.UTF_8));
+    newRecord.headers().add("producer", fromPeer.toString().getBytes(StandardCharsets.UTF_8));
+
+    // send the message
     Future<RecordMetadata> sendFuture;
     if (publishOffsets) {
       sendFuture =

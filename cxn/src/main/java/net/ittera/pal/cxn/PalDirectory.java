@@ -37,6 +37,7 @@ import io.etcd.jetcd.watch.WatchResponse;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,6 +63,10 @@ import org.slf4j.LoggerFactory;
 public class PalDirectory implements AutoCloseable {
 
   private static final Logger logger = LoggerFactory.getLogger(PalDirectory.class);
+
+  // etcd client keepalive settings
+  private static final Duration ETCD_KEEP_ALIVE_TIME = Duration.ofSeconds(60);
+  private static final Duration ETCD_KEEP_ALIVE_TIMEOUT = Duration.ofSeconds(20);
 
   // constant to denote pal directory URL is not provided
   public static final String NO_URL = "<none>";
@@ -94,8 +99,9 @@ public class PalDirectory implements AutoCloseable {
     this.client =
         Client.builder()
             .target(endpoints)
-            //            .keepaliveTime(ETCD_KEEP_ALIVE_TIME_SECS)
-            //            .keepaliveWithoutCalls(true)
+            .keepaliveTime(ETCD_KEEP_ALIVE_TIME)
+            .keepaliveTimeout(ETCD_KEEP_ALIVE_TIMEOUT)
+            .keepaliveWithoutCalls(true)
             .build();
     this.kvClient = client.getKVClient();
     Watch watchClient = client.getWatchClient();

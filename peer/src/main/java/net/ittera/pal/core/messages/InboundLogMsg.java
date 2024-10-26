@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;
 import net.ittera.pal.messages.BaseMsg;
+import net.ittera.pal.messages.types.MessageFormatType;
 import org.zeromq.ZMQ;
 
 public class InboundLogMsg extends BaseMsg {
@@ -36,23 +37,26 @@ public class InboundLogMsg extends BaseMsg {
    * -------
    * 0 [empty REQ envelope]: ""
    * 1. offset             : long
-   * 2. message body       : byte[]
+   * 2. message format     : byte
+   * 3. message body       : byte[]
    * </pre>
    */
 
   // fields
   private final long offset;
 
+  private final MessageFormatType messageFormat;
   private final byte[] body;
 
-  public InboundLogMsg(long offset, byte[] body) {
+  public InboundLogMsg(long offset, MessageFormatType messageFormat, byte[] body) {
     Stream.of(offset, body).forEach(Objects::requireNonNull);
     this.offset = offset;
+    this.messageFormat = messageFormat;
     this.body = body;
   }
 
-  private InboundLogMsg(long offset, byte[] body, int size) {
-    this(offset, body);
+  private InboundLogMsg(long offset, MessageFormatType messageFormat, byte[] body, int size) {
+    this(offset, messageFormat, body);
     this.size = size;
   }
 
@@ -71,6 +75,14 @@ public class InboundLogMsg extends BaseMsg {
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
     }
+
+    // message format
+    buff = new byte[] {messageFormat.toByte()};
+    size += buff.length;
+    if (!socket.send(buff, ZMQ.SNDMORE)) {
+      return false;
+    }
+
     // message body
     size += body.length;
     return socket.send(body, 0);
@@ -94,12 +106,20 @@ public class InboundLogMsg extends BaseMsg {
       return null;
     }
     int msgSize = buff.length;
+
     // message offset
     final long offset = Longs.fromByteArray(buff);
+
+    // message format
+    buff = socket.recv();
+    msgSize += buff.length;
+    final MessageFormatType messageFormat = MessageFormatType.fromByte(buff[0]);
+
     // message body
     final byte[] body = socket.recv();
     msgSize += body.length;
-    return new InboundLogMsg(offset, body, msgSize);
+
+    return new InboundLogMsg(offset, messageFormat, body, msgSize);
   }
 
   // default is non-blocking
@@ -117,12 +137,14 @@ public class InboundLogMsg extends BaseMsg {
       return false;
     }
     InboundLogMsg that = (InboundLogMsg) o;
-    return offset == that.offset && Arrays.equals(body, that.body);
+    return offset == that.offset
+        && messageFormat == that.messageFormat
+        && Arrays.equals(body, that.body);
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(offset);
+    int result = Objects.hash(offset, messageFormat);
     result = 31 * result + Arrays.hashCode(body);
     return result;
   }
@@ -132,6 +154,8 @@ public class InboundLogMsg extends BaseMsg {
     return "InboundLogMsg{"
         + ", offset="
         + offset
+        + ", messageFormat="
+        + messageFormat
         + ", body="
         + Arrays.toString(body)
         + ", size="
@@ -145,5 +169,9 @@ public class InboundLogMsg extends BaseMsg {
 
   public byte[] getBody() {
     return body;
+  }
+
+  public MessageFormatType getMessageFormat() {
+    return messageFormat;
   }
 }

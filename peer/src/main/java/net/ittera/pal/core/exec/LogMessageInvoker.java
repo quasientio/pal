@@ -19,11 +19,17 @@
 
 package net.ittera.pal.core.exec;
 
+import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
+
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcRequestException;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -107,32 +113,104 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
         continue;
       }
 
-      final Message requestMsg = new Message();
       final long started = System.currentTimeMillis();
 
-      // parse req
-      try {
-        requestMsg.unmarshal(msg.getBody(), 0);
-      } catch (Exception e) {
-        logger.error("Caught exception parsing message", e);
-        continue;
-      }
+      switch (msg.getMessageFormat()) {
+        case JSONRPC -> {
+          JsonRpcRequest jsonRpcRequest = null;
+          final JsonRpcResponse jsonRpcResponse;
+          String requestId = null;
+          Exception parseException = null;
 
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            "Received message with offset: {}, uuid: {}",
-            msg.getOffset(),
-            getMessageUuid(requestMsg));
-      }
+          // parse and validate JSON-RPC message
+          try {
+            jsonRpcRequest =
+                parseAndValidateJsonRpcMessage(new String(msg.getBody(), StandardCharsets.UTF_8));
+            requestId = jsonRpcRequest.getId();
+            if (logger.isDebugEnabled()) {
+              logger.debug("Received JSON-RPC request message with id: {}", requestId);
+            }
+          } catch (JsonRpcRequestException e) {
+            logger.error("Caught exception parsing message", e);
+            requestId = e.getRequestId();
+            parseException = e;
+          } catch (Exception e) {
+            parseException = e;
+            logger.error("Caught unexpected exception parsing message", e);
+          }
 
-      // dispatch it
-      dispatch(requestMsg, msg.getOffset());
-      if (logger.isDebugEnabled()) {
-        final long took = System.currentTimeMillis() - started;
-        if (logger.isDebugEnabled()) {
-          logger.debug(
-              "Dispatched log message with uuid: {} in {} ms", getMessageUuid(requestMsg), took);
+          if (parseException != null) {
+            // parsing+validating failed, log and send error response
+            jsonRpcResponse =
+                messageBuilder.jsonRpcResponseFromParseError(parseException, requestId);
+            // TODO write to Log (ie. send to LogWriter) -> gson.toJson(jsonRpcResponse))
+            logMessageDispatch(requestId, null, started);
+            return;
+          }
+
+          // create ExecMessage from JSON-RPC request message
+          final Message requestMsg =
+              messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, null);
+
+          // dispatch
+          Message replyMsg;
+          try {
+            replyMsg = dispatch(requestMsg);
+          } catch (Exception dispatchException) {
+
+            // dispatching failed, log and send error response
+            logger.error(
+                "Error dispatching message w/uuid {}",
+                getMessageUuid(requestMsg),
+                dispatchException);
+            jsonRpcResponse =
+                messageBuilder.jsonRpcResponseFromParseError(dispatchException, requestId);
+            // TODO write to Log (ie. send to LogWriter) -> gson.toJson(jsonRpcResponse))
+            logMessageDispatch(requestMsg, jsonRpcResponse.getId(), started);
+            return;
+          }
+          // create JSON-RPC response from ExecMessage reply
+          jsonRpcResponse =
+              messageBuilder.jsonRpcResponseFromExecMessageReply(replyMsg.getExecMessage());
+
+          // send response
+          // TODO write to Log (ie. send to LogWriter) -> gson.toJson(jsonRpcResponse))
+          logMessageDispatch(requestMsg, replyMsg, started);
         }
+        case COLFER -> {
+          final Message requestMsg = new Message();
+          // parse req
+          try {
+            requestMsg.unmarshal(msg.getBody(), 0);
+          } catch (Exception e) {
+            logger.error("Caught exception parsing message", e);
+            continue;
+          }
+
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Received message with offset: {}, uuid: {}",
+                msg.getOffset(),
+                getMessageUuid(requestMsg));
+          }
+
+          // dispatch it
+          dispatch(requestMsg, msg.getOffset());
+          if (logger.isDebugEnabled()) {
+            final long took = System.currentTimeMillis() - started;
+            if (logger.isDebugEnabled()) {
+              logger.debug(
+                  "Dispatched log message with uuid: {} in {} ms",
+                  getMessageUuid(requestMsg),
+                  took);
+            }
+          }
+        }
+        default ->
+            logger.error(
+                "Unknown message format: {}, skipping message with offset: {}",
+                msg.getMessageFormat(),
+                msg.getOffset());
       }
     }
 
