@@ -841,10 +841,21 @@ public class ThinPeer implements AutoCloseable {
 
   private void closePeerSocket() {
     try {
-      peerSocket.close();
-      logger.info("Peer socket closed.");
+      if (peerSocket != null) {
+        peerSocket.close();
+        logger.info("Peer socket closed.");
+      }
     } catch (Exception e) {
-      logger.warn("Error closing peer socket", e);
+      logger.warn("Error closing peer zmq socket", e);
+    }
+
+    try {
+      if (wsClient != null) {
+        wsClient.close();
+        logger.info("WebSocket client closed.");
+      }
+    } catch (Exception e) {
+      logger.warn("Error closing peer websocket", e);
     }
   }
 
