@@ -47,7 +47,10 @@ import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.cxn.JmxClient;
 import org.apache.commons.lang3.time.DurationFormatUtils;
-import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.ListOffsetsResult;
+import org.apache.kafka.clients.admin.OffsetSpec;
+import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -113,7 +116,7 @@ public class List extends AbstractPalSubcommand {
   private final Logger logger = LoggerFactory.getLogger(List.class);
   private static final UUID KAFKA_CLIENT_ID = UUID.randomUUID();
   private final Map<String, JmxClient> jmxClientsPerServer = new HashMap<>();
-  private final Map<String, AdminClient> adminClientsPerServer = new HashMap<>();
+  private final Map<String, Admin> adminClientsPerServer = new HashMap<>();
 
   /* Column widths for variable-length fields.
    NOTE: Adjust these values, not the format strings below.
@@ -160,12 +163,12 @@ public class List extends AbstractPalSubcommand {
     }
   }
 
-  private AdminClient getAdminClientForServers(String bootstrapServers) {
+  private Admin getAdminClientForServers(String bootstrapServers) {
     if (!adminClientsPerServer.containsKey(bootstrapServers)) {
       Properties props = new Properties();
       props.setProperty("bootstrap.servers", bootstrapServers);
       props.setProperty("client.id", KAFKA_CLIENT_ID.toString());
-      adminClientsPerServer.put(bootstrapServers, AdminClient.create(props));
+      adminClientsPerServer.put(bootstrapServers, Admin.create(props));
     }
     return adminClientsPerServer.get(bootstrapServers);
   }
@@ -183,44 +186,56 @@ public class List extends AbstractPalSubcommand {
     return logsInServers;
   }
 
+  public void fillLogInfosWithOffsets(Set<LogInfo> logInfos) {
+    // Group logInfos by their bootstrap servers
+    Map<String, Set<LogInfo>> logInfosByServer =
+        logInfos.stream()
+            .collect(Collectors.groupingBy(LogInfo::getBootstrapServers, Collectors.toSet()));
+
+    // Fetch offsets for each group of logInfos
+    logInfosByServer.forEach(
+        (server, logInfosSet) -> {
+          try {
+            Admin adminClient = getAdminClientForServers(server);
+            Map<String, Long> startOffsets =
+                KafkaOffsetFetcher.getStartOffsets(
+                    logInfosSet.stream().map(LogInfo::getName).collect(Collectors.toSet()),
+                    adminClient);
+            Map<String, Long> endOffsets =
+                KafkaOffsetFetcher.getEndOffsets(
+                    logInfosSet.stream().map(LogInfo::getName).collect(Collectors.toSet()),
+                    adminClient);
+
+            for (LogInfo logInfo : logInfosSet) {
+              logInfo.setStartOffset(startOffsets.get(logInfo.getName()));
+              logInfo.setEndOffset(endOffsets.get(logInfo.getName()));
+            }
+          } catch (Exception e) {
+            logger.error("Error setting offset properties for List of LogInfo's", e);
+          }
+        });
+  }
+
   /*  TODO fillMbeanInfo with JmxClient is a temporary hack.
    *  All Log Info should be retrieved from PalDirectory, maintained by the running peers.
    *  This approach, however, has the advantage of getting live log info as maintained by kafka
    */
-  public void fillMbeanInfo(LogInfo logInfo) {
+  public void fillLogInfoSize(LogInfo logInfo) {
     if (logger.isDebugEnabled()) {
       logger.debug("Attempting to get mbean info for log: {}", logInfo);
     }
-    final JmxClient jmxCli = getJmxClientForServer(logInfo.getBootstrapServers());
+    // use a JmxClient to fetch the byte size
+    String query = String.format("kafka.log:type=Log,name=Size,topic=%s,*", logInfo.getName());
+    JmxClient jmxCli = getJmxClientForServer(logInfo.getBootstrapServers());
     if (jmxCli == null) {
-      logger.error("No JMX client available for log '{}'", logInfo.getName());
+      logger.error("Cannot fetch bytes for logInfo: {} - no JMX client", logInfo);
       return;
     }
     try {
-      // start offset
-      String query =
-          String.format("kafka.log:type=Log,name=LogStartOffset,topic=%s,*", logInfo.getName());
       Set<ObjectName> objNames = jmxCli.query(query);
-      logInfo.setStartOffset((long) jmxCli.getValue(objNames.toArray(new ObjectName[] {})[0]));
-
-      // end offset
-      query = String.format("kafka.log:type=Log,name=LogEndOffset,topic=%s,*", logInfo.getName());
-      objNames = jmxCli.query(query);
-      logInfo.setEndOffset((long) jmxCli.getValue(objNames.toArray(new ObjectName[] {})[0]));
-
-      // size (bytes)
-      query = String.format("kafka.log:type=Log,name=Size,topic=%s,*", logInfo.getName());
-      objNames = jmxCli.query(query);
       logInfo.setBytes((long) jmxCli.getValue(objNames.toArray(new ObjectName[] {})[0]));
     } catch (Exception e) {
-      logger.error("Error retrieving log information from kafka via jmx", e);
-      if (e instanceof ArrayIndexOutOfBoundsException) {
-        logger.error(
-            "Log named '{}' with uuid '{}' probably doesn't exist in kafka",
-            logInfo.getName(),
-            logInfo.getUuid(),
-            e);
-      }
+      logger.error("Error setting bytes property for logInfo: {}", logInfo, e);
     }
   }
 
@@ -356,7 +371,7 @@ public class List extends AbstractPalSubcommand {
       jmxClient.close();
     }
     // close kafka admin clients
-    adminClientsPerServer.values().forEach(AdminClient::close);
+    adminClientsPerServer.values().forEach(Admin::close);
 
     super.closeResources();
   }
@@ -368,14 +383,21 @@ public class List extends AbstractPalSubcommand {
       Set<LogInfo> logsInDirectory = getPalDirectory().getAllLogs();
 
       // get logs from all different kafka servers
-      Set<LogInfo> allLogsInKafka = new HashSet<>();
+      Set<LogInfo> logsInKafka = new HashSet<>();
       logsInDirectory.stream()
           .map(LogInfo::getBootstrapServers)
           .distinct()
-          .forEach(s -> allLogsInKafka.addAll(this.getLogsInKafkaServers(s)));
+          .forEach(s -> logsInKafka.addAll(this.getLogsInKafkaServers(s)));
 
-      // fill mbean info of all logs found in kafka (assumes JMX connection)
-      logsInDirectory.stream().filter(allLogsInKafka::contains).forEach(this::fillMbeanInfo);
+      // filter out logs that are not in kafka
+      logsInDirectory.retainAll(logsInKafka);
+
+      // fill offsets of all logs using kafka admin client
+      fillLogInfosWithOffsets(logsInDirectory);
+
+      // fill byte size of all logs found in kafka using MBeans (assumes JMX connection)
+      logsInDirectory.forEach(this::fillLogInfoSize);
+
       if (longListing) {
         out.printf("total %d%n", logsInDirectory.size());
         if (!logsInDirectory.isEmpty()) {
@@ -398,5 +420,36 @@ public class List extends AbstractPalSubcommand {
       printPeers(peers);
     }
     return 0;
+  }
+
+  static class KafkaOffsetFetcher {
+
+    public static Map<String, Long> getStartOffsets(Set<String> logNames, Admin adminClient)
+        throws ExecutionException, InterruptedException {
+      java.util.List<TopicPartition> topicPartitions =
+          logNames.stream().map(logName -> new TopicPartition(logName, 0)).toList();
+      Map<TopicPartition, OffsetSpec> request =
+          topicPartitions.stream().collect(Collectors.toMap(tp -> tp, tp -> OffsetSpec.earliest()));
+      Map<TopicPartition, ListOffsetsResult.ListOffsetsResultInfo> result =
+          adminClient.listOffsets(request).all().get();
+      return result.entrySet().stream()
+          .collect(
+              Collectors.toMap(
+                  entry -> entry.getKey().topic(), entry -> entry.getValue().offset()));
+    }
+
+    public static Map<String, Long> getEndOffsets(Set<String> logNames, Admin adminClient)
+        throws ExecutionException, InterruptedException {
+      java.util.List<TopicPartition> topicPartitions =
+          logNames.stream().map(logName -> new TopicPartition(logName, 0)).toList();
+      Map<TopicPartition, OffsetSpec> request =
+          topicPartitions.stream().collect(Collectors.toMap(tp -> tp, tp -> OffsetSpec.latest()));
+      Map<TopicPartition, ListOffsetsResult.ListOffsetsResultInfo> result =
+          adminClient.listOffsets(request).all().get();
+      return result.entrySet().stream()
+          .collect(
+              Collectors.toMap(
+                  entry -> entry.getKey().topic(), entry -> entry.getValue().offset()));
+    }
   }
 }
