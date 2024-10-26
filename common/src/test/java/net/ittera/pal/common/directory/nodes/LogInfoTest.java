@@ -161,6 +161,8 @@ public class LogInfoTest {
                 + "'"
                 + logInfo.getBootstrapServers()
                 + "'"
+                + ", startOffset=null"
+                + ", endOffset=null"
                 + ", ctime="
                 + OffsetDateTime.ofInstant(Instant.ofEpochMilli(ctime), ZoneOffset.UTC)
                 + ", mtime="

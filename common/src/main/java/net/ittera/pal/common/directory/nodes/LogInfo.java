@@ -153,6 +153,10 @@ public final class LogInfo extends InfoNode implements Comparable<LogInfo> {
         + ", bootstrapServers='"
         + bootstrapServers
         + '\''
+        + ", startOffset="
+        + startOffset
+        + ", endOffset="
+        + endOffset
         + ", ctime="
         + getCTime()
         + ", mtime="
