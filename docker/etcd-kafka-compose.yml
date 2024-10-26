@@ -4,8 +4,6 @@
 # Usage: docker-compose --project-directory $PAL_HOME -f etcd-kafka-compose.yml up/config
 ###################################################################
 
-version: '3.7'
-
 networks:
   pal:
     driver: bridge
@@ -18,27 +16,35 @@ services:
     ports:
       - ${ETCD_CLIENT_PORT}:${ETCD_CLIENT_PORT}
       - ${ETCD_PEER_PORT}:${ETCD_PEER_PORT}
-    command: ./etcd -name etcd0
-      -advertise-client-urls http://${HOST}:${ETCD_CLIENT_PORT}
-      -listen-client-urls http://0.0.0.0:${ETCD_CLIENT_PORT}
+    command: ./etcd -name default
       -initial-advertise-peer-urls http://${HOST}:${ETCD_PEER_PORT}
       -listen-peer-urls http://0.0.0.0:${ETCD_PEER_PORT}
-      -initial-cluster-token etcd-cluster-1
-      -initial-cluster etcd0=http://${HOST}:${ETCD_PEER_PORT}
-      -initial-cluster-state new
+      -advertise-client-urls http://${HOST}:${ETCD_CLIENT_PORT}
+      -listen-client-urls http://0.0.0.0:${ETCD_CLIENT_PORT}
+      -initial-cluster default=http://${HOST}:${ETCD_PEER_PORT}
 
   kafka:
-    image: kafka:latest
+    image: apache/kafka:3.8.0
     networks:
       - pal
     ports:
-      - '9092:9092'
+      - "${KAFKA_PORT}:${KAFKA_PORT}"
+      - "${KAFKA_JMX_PORT}:${KAFKA_JMX_PORT}"
+    environment:
+      JMX_PORT: ${KAFKA_JMX_PORT}
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${HOST}:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 1
     ulimits:
       nofile:
         soft: 1024
         hard: 1024
-    volumes:
-      - type: bind
-        source: $PAL_HOME/config/kafka
-        target: /etc/kafka
-    command: format_start --config /etc/kafka/server.properties

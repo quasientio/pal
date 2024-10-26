@@ -8,6 +8,7 @@ export PAL_HOME=$(pwd)
 #
 export PAL_DIRECTORY=localhost:2379
 export KAFKA_SERVERS=localhost:9092
+export KAFKA_JMX_PORT=10121
 # export CLASSPATH=
 # export PEER_NAME=
 # export PEER_UUID=

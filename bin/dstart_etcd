@@ -1,32 +1,63 @@
 #!/bin/sh
 
 source $PAL_HOME/.env
-HOST=$(docker info | grep '^ *Name:' | tr -d ' ' | cut -d ':' -f 2)
 
-if ($(docker network ls | grep pal &> /dev/null ))
-then
-  echo '`pal` network already exists - skipping creation'
+# Set VERBOSE to 0 to suppress output, 1 to enable output
+VERBOSE=0
+
+# Parse command-line arguments
+while getopts "v" opt; do
+  case $opt in
+    v)
+      VERBOSE=1
+      ;;
+    *)
+      ;;
+  esac
+done
+
+# Function to print messages when VERBOSE is enabled
+log() {
+  if [ "$VERBOSE" -eq 1 ]; then
+    echo "$@"
+  fi
+}
+
+# Check if the 'pal' network exists; create it if it doesn't
+if docker network ls | grep -q pal; then
+  log '`pal` network already exists - skipping creation'
 else
-  docker network create pal --driver bridge
-  echo 'new `pal` network created'
+  docker network create pal --driver bridge >/dev/null
+  log 'new `pal` network created'
 fi
 
-docker container rm --volumes etcd
+# Check if a container named "etcd" is running
+if [ "$(docker ps -q -f name=etcd)" ]; then
+  echo "etcd container already running"
+  exit 1
+fi
 
-docker run \
+# Remove existing etcd container if it exists (stopped container)
+if [ "$(docker ps -a -q -f name=etcd)" ]; then
+  docker container rm --volumes etcd >/dev/null 2>&1 || true
+fi
+
+
+# use host name/ip as node
+HOST=$(docker info | grep '^ *Name:' | tr -d ' ' | cut -d ':' -f 2)
+
+CONTAINER_ID=$(docker run \
   --publish ${ETCD_CLIENT_PORT}:${ETCD_CLIENT_PORT} \
   --publish ${ETCD_PEER_PORT}:${ETCD_PEER_PORT} \
   --name etcd \
   --detach \
-  --env ETCD_NAME=etcd0 \
-  --env ETCD_ADVERTISE_CLIENT_URLS=http://${HOST}:${ETCD_CLIENT_PORT} \
-  --env ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:${ETCD_CLIENT_PORT} \
+  --env NAME=default \
   --env ETCD_INITIAL_ADVERTISE_PEER_URLS=http://${HOST}:${ETCD_PEER_PORT} \
   --env ETCD_LISTEN_PEER_URLS=http://0.0.0.0:${ETCD_PEER_PORT} \
-  --env ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster-1 \
-  --env ETCD_INITIAL_CLUSTER=etcd0=http://${HOST}:${ETCD_PEER_PORT} \
-  --env ETCD_INITIAL_CLUSTER_STATE=new \
-  --env ETCD_GRPC_KEEPALIVE_MIN_TIME=6s \
-  --env ETCD_GRPC_KEEPALIVE_INTERVAL=0 \
-  --env ETCD_GRPC_KEEPALIVE_TIMEOUT=0 \
-  etcd ./etcd
+  --env ETCD_ADVERTISE_CLIENT_URLS=http://${HOST}:${ETCD_CLIENT_PORT} \
+  --env ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:${ETCD_CLIENT_PORT} \
+  --env ETCD_INITIAL_CLUSTER=default=http://${HOST}:${ETCD_PEER_PORT} \
+  etcd ./etcd)
+
+# Suppress container ID output unless VERBOSE is enabled
+log "Etcd container started with ID: $CONTAINER_ID"

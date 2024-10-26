@@ -29,7 +29,7 @@
 
 FROM alpine:latest
 
-ARG ETCD_VERSION="v3.5.7"
+ARG ETCD_VERSION="v3.5.16"
 ARG GOOGLE_URL="https://storage.googleapis.com/etcd"
 
 RUN apk update

@@ -41,24 +41,35 @@ integration-tests:
     FF_NETWORK_PER_BUILD: 1
     PAL_DIRECTORY: 'etcd:2379'
     KAFKA_SERVERS: 'kafka:9092'
-    ETCD_NAME: etcd0
-    ETCD_ADVERTISE_CLIENT_URLS: 'http://etcd:2379'
-    ETCD_LISTEN_CLIENT_URLS: 'http://0.0.0.0:2379'
+
+    # etcd env variables
+    NAME: default
     ETCD_INITIAL_ADVERTISE_PEER_URLS: 'http://etcd:2380'
     ETCD_LISTEN_PEER_URLS: 'http://0.0.0.0:2380'
-    ETCD_INITIAL_CLUSTER_TOKEN: etcd-cluster-1
-    ETCD_INITIAL_CLUSTER: 'etcd0=http://etcd:2380'
-    ETCD_INITIAL_CLUSTER_STATE: new
+    ETCD_ADVERTISE_CLIENT_URLS: 'http://etcd:2379'
+    ETCD_LISTEN_CLIENT_URLS: 'http://0.0.0.0:2379'
+    ETCD_INITIAL_CLUSTER: 'default=http://etcd:2380'
+
+    # kafka env variables
+    KAFKA_NODE_ID: 1
+    KAFKA_PROCESS_ROLES: broker,controller
+    KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+    KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+    KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+    KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+    KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+    KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    KAFKA_NUM_PARTITIONS: 1
+
   services:
     - name: $CI_REGISTRY/cometera/pal/etcd:latest
       alias: etcd
       command: ["./etcd"]
-    - name: $CI_REGISTRY/cometera/pal/kafka:latest
+    - name: apache/kafka:3.8.0
       alias: kafka
-      command: ["format_start",
-                "--config", "./config/kraft/server.properties",
-                "--override", "controller.quorum.voters=1@kafka:9093",
-                "--override", "advertised.listeners=PLAINTEXT://kafka:9092"]
   script:
     - export PAL_HOME=$(pwd)
     - export PAL_VERSION=$(grep '<version>' pom.xml | head -1 | sed -E 's/.*<version>(.+)<\/version>.*/\1/')

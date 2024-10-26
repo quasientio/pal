@@ -4,8 +4,6 @@
 # CMD's (from `docker` dir):   docker-compose --project-directory .. -f etcd-peer-compose.yml up/config
 ###################################################################
 
-version: '3.7'
-
 networks:
   pal:
     driver: bridge
@@ -16,13 +14,14 @@ services:
     networks:
       - pal
     ports:
-      - '2379:2379'
-      - '2380:2380'
-    volumes:
-      - type: bind
-        source: $PAL_HOME/config/etcd
-        target: /etc/etcd
-    command: ./etcd --config-file /etc/etcd/etcd.conf.yml
+      - ${ETCD_CLIENT_PORT}:${ETCD_CLIENT_PORT}
+      - ${ETCD_PEER_PORT}:${ETCD_PEER_PORT}
+    command: ./etcd -name default
+      -initial-advertise-peer-urls http://${HOST}:${ETCD_PEER_PORT}
+      -listen-peer-urls http://0.0.0.0:${ETCD_PEER_PORT}
+      -advertise-client-urls http://${HOST}:${ETCD_CLIENT_PORT}
+      -listen-client-urls http://0.0.0.0:${ETCD_CLIENT_PORT}
+      -initial-cluster default=http://${HOST}:${ETCD_PEER_PORT}
 
   peer:
     build:
