@@ -39,7 +39,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -91,10 +90,6 @@ public class ThinPeer implements AutoCloseable {
   private boolean closed;
   private boolean initialized;
   private final MessageBuilder msgBuilder = new MessageBuilder();
-
-  // used to check that messages sent to the log complete successfully
-  private final ExecutorService producerErrorCheckingExecutorService =
-      Executors.newSingleThreadExecutor();
 
   // static
   private static final Logger logger = LoggerFactory.getLogger(ThinPeer.class);
@@ -455,7 +450,8 @@ public class ThinPeer implements AutoCloseable {
   public ExecMessage sendAndReceive(ExecMessage message) throws Exception {
     assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
-      logger.trace("sendAndReceive: in with message: {}", ColferUtils.format(message));
+      logger.trace(
+          "sendAndReceiveJsonRpcRequest: in with message: {}", ColferUtils.format(message));
     }
     if (talkingToPeer) {
       return sendToPeer(message);
@@ -464,14 +460,28 @@ public class ThinPeer implements AutoCloseable {
     }
   }
 
-  public <T> CompletableFuture<JsonRpcResponse> sendAndReceive(T jsonRpc, Class<T> jsonRpcType) {
+  /**
+   * Send a message to the peer via websocket.
+   *
+   * @param jsonRpc the JSON-RPC request as a String or instance of JsonRpcRequest.
+   * @return a CompletableFuture that will be completed with the response
+   */
+  public CompletableFuture<JsonRpcResponse> sendJsonRpcRequestToPeer(Object jsonRpc) {
     assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
-      logger.trace("sendAndReceive: in with jsonRpc: {}", jsonRpc);
+      logger.trace("sendAndReceiveJsonRpcRequest: in with jsonRpc: {}", jsonRpc);
     }
 
     if (talkingToPeer) {
-      return sendToPeer(jsonRpc, jsonRpcType);
+      String rpcMessage;
+      if (jsonRpc instanceof JsonRpcRequest) {
+        rpcMessage = gson.toJson(jsonRpc);
+      } else if (jsonRpc instanceof String) {
+        rpcMessage = (String) jsonRpc;
+      } else {
+        throw new IllegalArgumentException("Unsupported type for jsonRpc");
+      }
+      return wsClient.sendAsync(rpcMessage);
     } else {
       throw new IllegalStateException(
           "Not connected to any peer. Cannot send and receive JSON-RPC messages to/from log");
@@ -533,6 +543,10 @@ public class ThinPeer implements AutoCloseable {
     }
     LogMessage<?> logMessage;
     Map<String, String> headers = new HashMap<>();
+    String messageType = getMessageTypeFromHeader(record.headers());
+    if (messageType != null) {
+      headers.put("message-type", messageType);
+    }
 
     switch (messageFormat) {
       case COLFER -> {
@@ -542,7 +556,6 @@ public class ThinPeer implements AutoCloseable {
       }
       case JSONRPC -> {
         String json = new String(value, StandardCharsets.UTF_8);
-        String messageType = getMessageTypeFromHeader(record.headers());
         if (JsonRpcType.REQUEST.name().equals(messageType)) {
           JsonRpcRequest jsonRpcRequest = gson.fromJson(json, JsonRpcRequest.class);
           logMessage = new LogMessage<>(record.offset(), headers, jsonRpcRequest);
@@ -612,12 +625,13 @@ public class ThinPeer implements AutoCloseable {
     return peerUuid;
   }
 
-  public void sendToLogAndForget(ExecMessage message) {
+  public Future<RecordMetadata> sendExecMessageToLog(ExecMessage message) {
     assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
-      logger.trace("sendToLogAndForget: in with message: {}", ColferUtils.format(message));
+      logger.trace("sendExecMessageToLog: in with message: {}", ColferUtils.format(message));
     }
-    // send to kafka
+
+    // create kafka record
     final byte[] body = ColferUtils.toBytes(msgBuilder.wrap(message));
     final ProducerRecord<String, byte[]> record =
         new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body);
@@ -626,40 +640,31 @@ public class ThinPeer implements AutoCloseable {
         .headers()
         .add("message-type", MessageType.EXEC_MESSAGE.name().getBytes(StandardCharsets.UTF_8));
     record.headers().add("producer", peerUuid.toString().getBytes(StandardCharsets.UTF_8));
+
+    // send and return future
     var sendFuture = producer.send(record);
-
-    // log any errors
-    var unusedFuture =
-        producerErrorCheckingExecutorService.submit(
-            () -> {
-              try {
-                sendFuture.get();
-              } catch (Exception e) {
-                logger.error("Error sending message to log", e);
-              }
-            });
-
     if (logger.isDebugEnabled()) {
       logger.debug("Message sent to log:\n{} ({} bytes)", ColferUtils.format(message), body.length);
     }
+    return sendFuture;
   }
 
   @SuppressWarnings("unused")
-  public <T> void sendToLogAndForget(T jsonRpcRequest, Class<T> jsonRpcType) {
+  public Future<RecordMetadata> sendJsonRpcRequestToLog(Object jsonRpcRequest) {
     assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
-      logger.trace("sendToLogAndForget: in with jsonRpcRequest: {}", jsonRpcRequest);
+      logger.trace("sendJsonRpcRequestToLog: in with jsonRpcRequest: {}", jsonRpcRequest);
     }
-
     String rpcMessage;
-    if (jsonRpcType == JsonRpcRequest.class) {
+    if (jsonRpcRequest instanceof JsonRpcRequest) {
       rpcMessage = gson.toJson(jsonRpcRequest);
-    } else if (jsonRpcType == String.class) {
+    } else if (jsonRpcRequest instanceof String) {
       rpcMessage = (String) jsonRpcRequest;
     } else {
       throw new IllegalArgumentException("Unsupported type for jsonRpc");
     }
 
+    // create kafka record
     final byte[] body = rpcMessage.getBytes(StandardCharsets.UTF_8);
     final ProducerRecord<String, byte[]> record =
         new ProducerRecord<>(
@@ -669,22 +674,13 @@ public class ThinPeer implements AutoCloseable {
         .headers()
         .add("message-type", JsonRpcType.REQUEST.name().getBytes(StandardCharsets.UTF_8));
     record.headers().add("producer", peerUuid.toString().getBytes(StandardCharsets.UTF_8));
+
+    // send and return future
     var sendFuture = producer.send(record);
-
-    // log any errors
-    var unusedFuture =
-        producerErrorCheckingExecutorService.submit(
-            () -> {
-              try {
-                sendFuture.get();
-              } catch (Exception e) {
-                logger.error("Error sending message to log", e);
-              }
-            });
-
     if (logger.isDebugEnabled()) {
       logger.debug("Message sent to log:\n{} ({} bytes)", rpcMessage, body.length);
     }
+    return sendFuture;
   }
 
   private ExecMessage sendToLogAndReceive(ExecMessage message) throws Exception {
@@ -853,24 +849,6 @@ public class ThinPeer implements AutoCloseable {
     return replyMsg;
   }
 
-  public <T> CompletableFuture<JsonRpcResponse> sendToPeer(T jsonRpcRequest, Class<T> jsonRpcType) {
-    assertInitializedAndActive();
-    if (logger.isTraceEnabled()) {
-      logger.trace("sendToPeer: in with jsonRpcRequest: {}", jsonRpcRequest);
-    }
-
-    String rpcMessage;
-    if (jsonRpcType == JsonRpcRequest.class) {
-      rpcMessage = gson.toJson(jsonRpcRequest);
-    } else if (jsonRpcType == String.class) {
-      rpcMessage = (String) jsonRpcRequest;
-    } else {
-      throw new IllegalArgumentException("Unsupported type for jsonRpc");
-    }
-    return wsClient.sendAsync(rpcMessage);
-  }
-
-  // TODO: refactor this and above methods
   public ControlMessage sendToPeer(ControlMessage message) {
     assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
@@ -988,15 +966,6 @@ public class ThinPeer implements AutoCloseable {
     }
 
     // close log-related resources
-    producerErrorCheckingExecutorService.shutdown();
-    try {
-      if (!producerErrorCheckingExecutorService.awaitTermination(250, TimeUnit.MILLISECONDS)) {
-        producerErrorCheckingExecutorService.shutdownNow();
-      }
-    } catch (InterruptedException e) {
-      producerErrorCheckingExecutorService.shutdownNow();
-    }
-
     if (!producerGiven) {
       closeProducer();
     }

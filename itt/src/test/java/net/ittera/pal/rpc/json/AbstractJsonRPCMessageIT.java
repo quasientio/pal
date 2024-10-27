@@ -85,7 +85,7 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
     logger.debug("Sending JSON-RPC request: {}", jsonRpcRequest);
     final JsonRpcResponse response;
     try {
-      response = thinPeer.sendAndReceive(jsonRpcRequest, JsonRpcRequest.class).get();
+      response = thinPeer.sendJsonRpcRequestToPeer(jsonRpcRequest).get();
     } catch (Exception e) {
       logger.error(
           "Exception sending/receiving message with uuid: {}\n{}",

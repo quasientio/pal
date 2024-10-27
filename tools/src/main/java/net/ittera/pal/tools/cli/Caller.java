@@ -382,7 +382,7 @@ public class Caller extends AbstractPalSubcommand {
       if (stdinRequests == null || stdinRequests.isEmpty()) {
         // build and send 1 JSON-RPC request from cmd line args
         jsonRpcResponseFutures.add(
-            thinPeer.sendAndReceive(mainMethodCallBuilder.buildJsonRpc(), JsonRpcRequest.class));
+            thinPeer.sendJsonRpcRequestToPeer(mainMethodCallBuilder.buildJsonRpc()));
         requestsSent++;
       } else {
         // send N JSON-RPC request(s) read from stdin
@@ -392,9 +392,9 @@ public class Caller extends AbstractPalSubcommand {
             if (request.getId() == null || request.getId().isEmpty()) {
               request.setId(UUID.randomUUID().toString());
             }
-            jsonRpcResponseFutures.add(thinPeer.sendAndReceive(request, JsonRpcRequest.class));
+            jsonRpcResponseFutures.add(thinPeer.sendJsonRpcRequestToPeer(request));
           } else { // send raw JSON-RPC request
-            jsonRpcResponseFutures.add(thinPeer.sendAndReceive(jsonRpc, String.class));
+            jsonRpcResponseFutures.add(thinPeer.sendJsonRpcRequestToPeer(jsonRpc));
           }
           requestsSent++;
         }
@@ -431,7 +431,7 @@ public class Caller extends AbstractPalSubcommand {
    * to log, and doesn't wait for replies, useful for void methods or any other type of call where
    * we don't care about the returned value or thrown exceptions. The 'async' word in the method
    * name simply refers to the fact that ThinPeer won't wait for a reply to the message sent, as
-   * opposed to when calling ThinPeer.sendAndReceive().
+   * opposed to when calling ThinPeer.sendAndReceiveJsonRpcRequest().
    *
    * @return number of requests sent
    */
@@ -464,7 +464,7 @@ public class Caller extends AbstractPalSubcommand {
 
       // send message(s)
       long start = System.currentTimeMillis();
-      thinPeer.sendToLogAndForget(mainMethodCallBuilder.buildExecMessage());
+      thinPeer.sendExecMessageToLog(mainMethodCallBuilder.buildExecMessage());
       int requestsSent = 1;
 
       if (verbose) {
