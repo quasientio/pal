@@ -72,17 +72,6 @@ public class JsonRpcResponse extends JsonRpcMessage {
 
   @Override
   public String toString() {
-    return "JsonRpcResponse{"
-        + "jsonrpc='"
-        + jsonrpc
-        + '\''
-        + ", result="
-        + result
-        + ", error="
-        + error
-        + ", id='"
-        + id
-        + '\''
-        + '}';
+    return toJson();
   }
 }

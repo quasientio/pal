@@ -169,19 +169,7 @@ public class JsonRpcRequest extends JsonRpcMessage {
 
   @Override
   public String toString() {
-    return "JsonRpcRequest{"
-        + "jsonrpc='"
-        + jsonrpc
-        + '\''
-        + ", method='"
-        + method
-        + '\''
-        + ", params="
-        + params
-        + ", id='"
-        + id
-        + '\''
-        + '}';
+    return toJson();
   }
 
   private static boolean isNumeric(String str) {
