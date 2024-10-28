@@ -1,0 +1,66 @@
+#!/bin/sh
+
+source $PAL_HOME/.env
+
+# Set VERBOSE to 0 to suppress output, 1 to enable output
+VERBOSE=0
+
+# Parse command-line arguments
+while getopts "v" opt; do
+  case $opt in
+    v)
+      VERBOSE=1
+      ;;
+    *)
+      ;;
+  esac
+done
+
+# Function to print messages when VERBOSE is enabled
+log() {
+  if [ "$VERBOSE" -eq 1 ]; then
+    echo "$@"
+  fi
+}
+
+# Check if the 'pal' network exists; create it if it doesn't
+if docker network ls | grep -q pal; then
+  log '`pal` network already exists - skipping creation'
+else
+  docker network create pal --driver bridge >/dev/null
+  log 'new `pal` network created'
+fi
+
+# Check if a container named "kafka" is running
+if [ "$(docker ps -q -f name=kafka)" ]; then
+  echo "kafka container already running"
+  exit 1
+fi
+
+# Remove existing Kafka container if it exists (stopped container)
+if [ "$(docker ps -a -q -f name=kafka)" ]; then
+  docker container rm --volumes kafka >/dev/null 2>&1 || true
+fi
+
+# Initialize Docker run options
+DOCKER_RUN_OPTS=""
+
+# Check if KAFKA_JMX_PORT is set and is a valid integer
+if [ -n "$KAFKA_JMX_PORT" ] && [ "$KAFKA_JMX_PORT" -eq "$KAFKA_JMX_PORT" ] 2>/dev/null; then
+  # Valid integer; include JMX options
+  DOCKER_RUN_OPTS="$DOCKER_RUN_OPTS --env JMX_PORT=$KAFKA_JMX_PORT --publish $KAFKA_JMX_PORT:$KAFKA_JMX_PORT"
+  log "Setting JMX_PORT to $KAFKA_JMX_PORT"
+else
+  log "KAFKA_JMX_PORT not set or not a valid integer; skipping JMX_PORT configuration"
+fi
+
+# Run the Kafka container with the specified options
+CONTAINER_ID=$(docker run --name kafka \
+  --ulimit nofile=1024:1024 \
+  --detach \
+  --network pal \
+  --publish "$KAFKA_PORT":"$KAFKA_PORT" \
+  $DOCKER_RUN_OPTS apache/kafka:3.8.0)
+
+# Suppress container ID output unless VERBOSE is enabled
+log "Kafka container started with ID: $CONTAINER_ID"

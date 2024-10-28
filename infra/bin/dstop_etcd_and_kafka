@@ -1,0 +1,3 @@
+#!/bin/sh
+
+docker-compose --project-directory $PAL_HOME -f $PAL_HOME/docker/etcd-kafka-compose.yml stop -t 2
