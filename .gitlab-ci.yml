@@ -5,6 +5,8 @@ variables:
   DOCKER_DRIVER: overlay2
   # See https://github.com/docker-library/docker/pull/166
   DOCKER_TLS_CERTDIR: ""
+  # Custom variables
+  SKIP_NON_DEPLOY: "false"
 
 image: maven:3-openjdk-17
 
@@ -29,11 +31,19 @@ clean-install:
   stage: build
   script:
     - mvn $MAVEN_CLI_OPTS clean install -DskipTests
+  rules:
+    - if: '$SKIP_NON_DEPLOY == "true"'
+      when: never
+    - when: on_success
 
 unit-tests:
   stage: unit-tests
   script:
     - mvn $MAVEN_CLI_OPTS test
+  rules:
+    - if: '$SKIP_NON_DEPLOY == "true"'
+      when: never
+    - when: on_success
 
 integration-tests:
   stage: integration-tests
@@ -84,6 +94,10 @@ integration-tests:
       - itt/target/failsafe-reports
       - itt/logs
       - logs
+  rules:
+    - if: '$SKIP_NON_DEPLOY == "true"'
+      when: never
+    - when: on_success
 
 publish-pal-image:
   stage: publish-artifacts
@@ -97,6 +111,10 @@ publish-pal-image:
     - docker push $CI_REGISTRY/cometera/pal/pal:latest
   only:
     - main
+  rules:
+    - if: '$SKIP_NON_DEPLOY == "true"'
+      when: never
+    - when: on_success
 
 deploy-pal:
   stage: publish-artifacts
@@ -104,6 +122,10 @@ deploy-pal:
     - mvn deploy -s ci_settings.xml -DskipTests
   only:
     - main
+  rules:
+    - if: '$SKIP_NON_DEPLOY == "true"'
+      when: never
+    - when: on_success
 
 build_docs:
   stage: build_docs
@@ -120,6 +142,8 @@ build_docs:
     expire_in: 1 hour
   only:
     - main
+  rules:
+    - when: on_success
 
 deploy_docs:
   stage: deploy_docs
@@ -134,3 +158,5 @@ deploy_docs:
     - rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" docs/online/site/ $DOCS_SSH_USER@$DOCS_SSH_HOST:$REMOTE_DOCS_PATH
   only:
     - main
+  rules:
+    - when: on_success
