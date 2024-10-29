@@ -1,7 +1,7 @@
 ###################################################################
 # etcd-peer-compose.yml
 #
-# CMD's (from `docker` dir):   docker-compose --project-directory .. -f etcd-peer-compose.yml up/config
+# CMD's (from `docker` dir): docker-compose -f etcd-peer-compose.yml up/config
 ###################################################################
 
 networks:
@@ -17,11 +17,11 @@ services:
       - ${ETCD_CLIENT_PORT}:${ETCD_CLIENT_PORT}
       - ${ETCD_PEER_PORT}:${ETCD_PEER_PORT}
     command: ./etcd -name default
-      -initial-advertise-peer-urls http://${HOST}:${ETCD_PEER_PORT}
+      -initial-advertise-peer-urls http://etcd:${ETCD_PEER_PORT}
       -listen-peer-urls http://0.0.0.0:${ETCD_PEER_PORT}
-      -advertise-client-urls http://${HOST}:${ETCD_CLIENT_PORT}
+      -advertise-client-urls http://etcd:${ETCD_CLIENT_PORT}
       -listen-client-urls http://0.0.0.0:${ETCD_CLIENT_PORT}
-      -initial-cluster default=http://${HOST}:${ETCD_PEER_PORT}
+      -initial-cluster default=http://etcd:${ETCD_PEER_PORT}
 
   peer:
     build:

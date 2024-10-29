@@ -2,32 +2,33 @@
 # Dockerfile
 #
 # Build:
-#                   (run from $PAL_HOME)
-#                   docker build --file docker/Dockerfile --tag registry.gitlab.com/cometera/pal/pal .
+#                   docker build --tag registry.gitlab.com/cometera/pal/pal .
 #    push           docker push registry.gitlab.com/cometera/pal/pal
 #    tag            docker tag registry.gitlab.com/cometera/pal/pal:latest pal:latest
-# Build Args:       extra_lib
+# Build Args:       NONE
 # Run ENV-file:     SEE peer.env file
 # Run Cmd Example:  docker run --network=host --name pal --rm --env-file peer.env pal
 ###################################################################
 
-FROM openjdk:8u151-jre-alpine
+# Use OpenJDK 17 slim as the base image
+FROM openjdk:17-jdk-slim
 
-ARG extra_lib
-
+# Set the working directory in the image
 WORKDIR /app
 
-COPY bin/wait-for .
-COPY bin/pal .
-RUN chmod +x pal wait-for
-RUN mkdir lib/
-COPY tools/target/pal-*.jar lib/
+# Create necessary directories in the image
+RUN mkdir -p /app/bin /app/lib
 
-# workaround to copy $extra_lib if present
-RUN mkdir libs/
-RUN mkdir /throwaway
-COPY pom.xml *jar /throwaway/
-RUN cp /throwaway/$extra_lib* libs/ || true
-RUN rm -rf /throwaway
+# Copy files from the build environment's PAL_HOME to the image
+COPY bin/pal /app/bin/
+COPY bin/wait-for /app/bin/
+COPY lib/pal-*.jar /app/lib/
 
-ENTRYPOINT ["./pal"]
+# Make the pal script executable
+RUN chmod +x /app/bin/pal
+
+# Add /app/bin to PATH for easy access to the pal command
+ENV PATH="/app/bin:$PATH"
+
+# Set the entrypoint to the pal script
+ENTRYPOINT ["pal"]

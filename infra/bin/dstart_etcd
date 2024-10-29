@@ -1,39 +1,22 @@
 #!/bin/sh
 
-source $PAL_HOME/.env
+# Get bin directory, where this script is located
+SCRIPTS_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 
-# Set VERBOSE to 0 to suppress output, 1 to enable output
-VERBOSE=0
+# Load common functions
+source $SCRIPTS_DIR/docker_utils.sh
 
-# Parse command-line arguments
-while getopts "v" opt; do
-  case $opt in
-    v)
-      VERBOSE=1
-      ;;
-    *)
-      ;;
-  esac
-done
+check_var "PAL_AUTOMATE"
 
-# Function to print messages when VERBOSE is enabled
-log() {
-  if [ "$VERBOSE" -eq 1 ]; then
-    echo "$@"
-  fi
-}
+# Unset previously set ETCD_ env variables
+for v in `env | grep ^ETCD_ | cut -d'=' -f1`; do unset $v; done
 
-# Check if the 'pal' network exists; create it if it doesn't
-if docker network ls | grep -q pal; then
-  log '`pal` network already exists - skipping creation'
-else
-  docker network create pal --driver bridge >/dev/null
-  log 'new `pal` network created'
-fi
+# Load env variables
+source $PAL_AUTOMATE/docker/.env
 
 # Check if a container named "etcd" is running
 if [ "$(docker ps -q -f name=etcd)" ]; then
-  echo "etcd container already running"
+  log "etcd container already running"
   exit 1
 fi
 
@@ -42,22 +25,20 @@ if [ "$(docker ps -a -q -f name=etcd)" ]; then
   docker container rm --volumes etcd >/dev/null 2>&1 || true
 fi
 
-
-# use host name/ip as node
-HOST=$(docker info | grep '^ *Name:' | tr -d ' ' | cut -d ':' -f 2)
+createPalNetwork
 
 CONTAINER_ID=$(docker run \
-  --publish ${ETCD_CLIENT_PORT}:${ETCD_CLIENT_PORT} \
-  --publish ${ETCD_PEER_PORT}:${ETCD_PEER_PORT} \
   --name etcd \
   --detach \
+  --network pal \
   --env NAME=default \
-  --env ETCD_INITIAL_ADVERTISE_PEER_URLS=http://${HOST}:${ETCD_PEER_PORT} \
+  --env ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd:${ETCD_PEER_PORT} \
   --env ETCD_LISTEN_PEER_URLS=http://0.0.0.0:${ETCD_PEER_PORT} \
-  --env ETCD_ADVERTISE_CLIENT_URLS=http://${HOST}:${ETCD_CLIENT_PORT} \
+  --env ETCD_ADVERTISE_CLIENT_URLS=http://etcd:${ETCD_CLIENT_PORT} \
   --env ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:${ETCD_CLIENT_PORT} \
-  --env ETCD_INITIAL_CLUSTER=default=http://${HOST}:${ETCD_PEER_PORT} \
+  --env ETCD_INITIAL_CLUSTER=default=http://etcd:${ETCD_PEER_PORT} \
+  --publish ${ETCD_CLIENT_PORT}:${ETCD_CLIENT_PORT} \
+  --publish ${ETCD_PEER_PORT}:${ETCD_PEER_PORT} \
   etcd ./etcd)
 
-# Suppress container ID output unless VERBOSE is enabled
 log "Etcd container started with ID: $CONTAINER_ID"

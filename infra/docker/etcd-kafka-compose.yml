@@ -6,7 +6,7 @@
 
 networks:
   pal:
-    driver: bridge
+    external: true
 
 services:
   etcd:
@@ -17,11 +17,11 @@ services:
       - ${ETCD_CLIENT_PORT}:${ETCD_CLIENT_PORT}
       - ${ETCD_PEER_PORT}:${ETCD_PEER_PORT}
     command: ./etcd -name default
-      -initial-advertise-peer-urls http://${HOST}:${ETCD_PEER_PORT}
+      -initial-advertise-peer-urls http://etcd:${ETCD_PEER_PORT}
       -listen-peer-urls http://0.0.0.0:${ETCD_PEER_PORT}
-      -advertise-client-urls http://${HOST}:${ETCD_CLIENT_PORT}
+      -advertise-client-urls http://etcd:${ETCD_CLIENT_PORT}
       -listen-client-urls http://0.0.0.0:${ETCD_CLIENT_PORT}
-      -initial-cluster default=http://${HOST}:${ETCD_PEER_PORT}
+      -initial-cluster default=http://etcd:${ETCD_PEER_PORT}
 
   kafka:
     image: apache/kafka:3.8.0
@@ -35,7 +35,7 @@ services:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${HOST}:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
