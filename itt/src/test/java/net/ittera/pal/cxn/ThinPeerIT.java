@@ -106,6 +106,9 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .withProducer(producer)
             .withLog(createTestLog())
             .init();
+    assertThat(thinPeer.isInitialized(), is(true));
+    assertThat(thinPeer.isConsuming(), is(true));
+    assertThat(thinPeer.isProducing(), is(true));
     assertThat(thinPeer.isLogIOEnabled(), is(true));
   }
 
@@ -118,10 +121,10 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .withProducer(producer)
             .withLog(createTestLog())
             .init();
-    assertTrue(thinPeer.isInitialized());
+    assertThat(thinPeer.isInitialized(), is(true));
     assertThat(thinPeer.isLogIOEnabled(), is(true));
     thinPeer.close();
-    assertTrue(thinPeer.isClosed());
+    assertThat(thinPeer.isClosed(), is(true));
   }
 
   @Test
@@ -135,6 +138,17 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     assertThat(thinPeer.isLogIOEnabled(), is(true));
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void initWithSelfRegisterButMissingDirectory_IllegalArgumentException() throws Exception {
+    thinPeer =
+        new ThinPeer()
+            .withConsumer(consumer)
+            .withProducer(producer)
+            .withLog(createTestLog())
+            .withSelfRegistration(true)
+            .init();
+  }
+
   @Test
   public void initWithMissingConsumer() throws Exception {
     // no Consumer nor Consumer Properties
@@ -144,7 +158,16 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .withProducer(producer)
             .withLog(createTestLog())
             .init();
-    assertThat(thinPeer.isLogIOEnabled(), is(false));
+    assertThat(thinPeer.isLogIOEnabled(), is(true));
+    assertThat(thinPeer.isConsuming(), is(false));
+    assertThat(thinPeer.isProducing(), is(true));
+
+    // try to receive a message from the log
+    try {
+      thinPeer.getMessageAtOffset(33L);
+    } catch (IllegalStateException e) {
+      assertThat(e.getMessage().contains("ThinPeer log consumer not configured."), is(true));
+    }
   }
 
   @Test
@@ -156,7 +179,17 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .withConsumer(consumer)
             .withLog(createTestLog())
             .init();
-    assertThat(thinPeer.isLogIOEnabled(), is(false));
+    assertThat(thinPeer.isLogIOEnabled(), is(true));
+    assertThat(thinPeer.isConsuming(), is(true));
+    assertThat(thinPeer.isProducing(), is(false));
+
+    // try to send a message to the log
+    try {
+      thinPeer.sendExecMessageToLog(
+          msgBuilder.buildEmptyConstructor(thinPeer.getPeerUuid(), "java.lang.String"));
+    } catch (IllegalStateException e) {
+      assertThat(e.getMessage().contains("ThinPeer log producer not configured"), is(true));
+    }
   }
 
   @Test
@@ -229,7 +262,11 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     LogInfo inAndOutLog = createTestLog();
     PeerInfo initialPeer = findRpcPeer(RpcType.JSONRPC).orElseThrow();
     Properties producerProperties = new Properties();
+    producerProperties.setProperty(
+        "key.serializer", "net.ittera.pal.messages.colfer.KafkaKeySerializer");
     Properties consumerProperties = new Properties();
+    consumerProperties.setProperty(
+        "key.deserializer", "net.ittera.pal.messages.colfer.KafkaKeyDeserializer");
     UUID peerUuid = UUID.randomUUID();
     thinPeer =
         new ThinPeer()
@@ -247,21 +284,24 @@ public class ThinPeerIT extends AbstractIntegrationTest {
             .withSelfRegistration(false)
             .init();
 
-    assertEquals("test_peer", thinPeer.getName());
-    assertEquals(getPalDirectoryUrl(), thinPeer.getPalDirectoryUrl());
-    assertEquals(consumer, thinPeer.getConsumer());
-    assertEquals(producer, thinPeer.getProducer());
-    assertEquals(inAndOutLog, thinPeer.getInLog());
-    assertEquals(inAndOutLog, thinPeer.getOutLog());
-    assertEquals(peerUuid, thinPeer.getPeerUuid());
-    assertEquals(producerProperties, thinPeer.getProducerProperties());
-    assertEquals(producerProperties, thinPeer.getConsumerProperties());
-    assertEquals("tcp://localhost:1234", thinPeer.getRpcAddress());
-    assertEquals(RpcType.RPC, thinPeer.getOutboundRpcType());
-    assertEquals(initialPeer, thinPeer.getInitialPeer());
-    assertFalse(thinPeer.isSelfRegistering());
-    assertTrue(thinPeer.isTalkingToPeer());
-    assertEquals(initialPeer, thinPeer.getCurrentPeer());
-    assertTrue(thinPeer.isZmqSocketConnected());
+    assertThat(thinPeer.getName(), is("test_peer"));
+    assertThat(thinPeer.getPalDirectoryUrl(), is(getPalDirectoryUrl()));
+    assertThat(thinPeer.getConsumer(), is(consumer));
+    assertThat(thinPeer.getProducer(), is(producer));
+    assertThat(thinPeer.getInLog(), is(inAndOutLog));
+    assertThat(thinPeer.getOutLog(), is(inAndOutLog));
+    assertThat(thinPeer.getPeerUuid(), is(peerUuid));
+    assertThat(thinPeer.getProducerProperties(), is(producerProperties));
+    assertThat(thinPeer.getConsumerProperties(), is(consumerProperties));
+    assertThat(thinPeer.isLogIOEnabled(), is(true));
+    assertThat(thinPeer.isConsuming(), is(true));
+    assertThat(thinPeer.isProducing(), is(true));
+    assertThat(thinPeer.getRpcAddress(), is("tcp://localhost:1234"));
+    assertThat(thinPeer.getOutboundRpcType(), is(RpcType.RPC));
+    assertThat(thinPeer.getInitialPeer(), is(initialPeer));
+    assertThat(thinPeer.isSelfRegistering(), is(false));
+    assertThat(thinPeer.isTalkingToPeer(), is(true));
+    assertThat(thinPeer.getCurrentPeer(), is(initialPeer));
+    assertThat(thinPeer.isZmqSocketConnected(), is(true));
   }
 }

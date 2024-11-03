@@ -110,7 +110,9 @@ public class ThinPeer implements AutoCloseable {
   private Producer<String, byte[]> producer;
   private Consumer<String, byte[]> consumer;
   private boolean producerGiven;
+  private boolean producing;
   private boolean consumerGiven;
+  private boolean consuming;
   private Properties producerProperties;
   private Properties consumerProperties;
 
@@ -133,7 +135,7 @@ public class ThinPeer implements AutoCloseable {
   private DirectoryConnectionProvider directoryConnectionProvider;
   private boolean directoryGiven;
   private String palDirectoryUrl;
-  private boolean registerSelf = true;
+  private boolean registerSelf = false;
 
   public ThinPeer() {
     // TODO use factory method instead of empty constructor
@@ -252,7 +254,7 @@ public class ThinPeer implements AutoCloseable {
 
     if (palDirectoryUrl != null && directoryConnectionProvider != null) {
       throw new IllegalArgumentException(
-          "ThinPeer needs a PAL directory address or a connection provider, but not both");
+          "ThinPeer can use a PAL directory address or a connection provider, but not both");
     }
 
     // configure PAL directory
@@ -266,7 +268,10 @@ public class ThinPeer implements AutoCloseable {
     }
 
     // register self as peer
-    if (registerSelf && getPalDirectory() != null) {
+    if (registerSelf) {
+      if (getPalDirectory() == null) {
+        throw new IllegalArgumentException("Cannot register peer without PAL directory");
+      }
       try {
         final PeerInfo self = new PeerInfo(peerUuid);
         if (this.peerName != null) {
@@ -281,10 +286,9 @@ public class ThinPeer implements AutoCloseable {
       }
     }
 
-    final boolean logless =
-        (!producerGiven && producerProperties == null)
-            || (!consumerGiven && consumerProperties == null)
-            || initialPeer != null;
+    final boolean withProducer = producer != null || producerProperties != null;
+    final boolean withConsumer = consumer != null || consumerProperties != null;
+    final boolean logless = !withProducer && !withConsumer;
 
     if (!logless) {
       // get last log with prefix from PAL directory
@@ -294,68 +298,78 @@ public class ThinPeer implements AutoCloseable {
               ? getPalDirectory().getLastLogWithPrefix(kafkaTopicPrefix)
               : null;
 
-      // configure log(s) to connect to; fill bootstrap servers if only log names given
-      if (this.inLog == null) {
-        if (lastLog == null) {
-          throw new RuntimeException("Could not get last Log with prefix from PAL directory");
+      // configure log to read from; fill bootstrap servers if only log name given
+      if (withConsumer) {
+        if (this.inLog == null) {
+          if (lastLog == null) {
+            throw new RuntimeException("Could not get last Log with prefix from PAL directory");
+          }
+          this.inLog = lastLog;
+        } else {
+          if (this.inLog.getBootstrapServers() == null && bootstrapServers != null) {
+            this.inLog.setBootstrapServers(bootstrapServers);
+          }
         }
-        this.inLog = lastLog;
-      } else {
-        if (this.inLog.getBootstrapServers() == null && bootstrapServers != null) {
-          this.inLog.setBootstrapServers(bootstrapServers);
+        // configure kafka consumer
+        if (consumer == null) {
+          if (consumerProperties == null) {
+            throw new RuntimeException("You must supply either Consumer or ConsumerProperties");
+          }
+          consumerProperties.put("group.id", peerUuid.toString());
+          final String bootstrapServers = this.inLog.getBootstrapServers();
+          consumerProperties.put("bootstrap.servers", bootstrapServers);
+          this.consumer = new KafkaConsumer<>(consumerProperties);
+          logger.info(
+              "Kafka consumer initialized. Will connect to bootstrap servers: {}",
+              bootstrapServers);
         }
+
+        // set polling duration
+        if (pollingDuration == null) {
+          pollingDuration = Duration.of(DEFAULT_POLLING_DURATION_MILLIS, ChronoUnit.MILLIS);
+        }
+
+        // manual assignment of partition so we can control offset seek
+        inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
+        consumer.assign(Collections.singletonList(inTopicPartition));
+
+        // init executor
+        asyncConsumerExecutor = Executors.newSingleThreadExecutor();
+
+        consuming = true;
+        logger.info("Will read from log: {}", this.inLog);
       }
 
-      if (outLog == null) {
-        if (lastLog == null) {
-          throw new RuntimeException("Could not get last Log with prefix from PAL directory");
+      if (withProducer) {
+        // configure log to write to; fill bootstrap servers if only log name given
+        if (outLog == null) {
+          if (lastLog == null) {
+            throw new RuntimeException("Could not get last Log with prefix from PAL directory");
+          }
+          this.outLog = lastLog;
+        } else {
+          if (this.outLog.getBootstrapServers() == null && bootstrapServers != null) {
+            this.outLog.setBootstrapServers(bootstrapServers);
+          }
         }
-        this.outLog = lastLog;
-      } else {
-        if (this.outLog.getBootstrapServers() == null && bootstrapServers != null) {
-          this.outLog.setBootstrapServers(bootstrapServers);
+
+        // configure kafka producer
+        if (producer == null) {
+          if (producerProperties == null) {
+            throw new RuntimeException("You must supply either Producer or ProducerProperties");
+          }
+          producerProperties.put("client.id", peerUuid.toString());
+          final String bootstrapServers = this.outLog.getBootstrapServers();
+          producerProperties.put("bootstrap.servers", bootstrapServers);
+          this.producer = new KafkaProducer<>(producerProperties);
+          logger.info(
+              "Kafka producer initialized. Will connect to bootstrap servers: {}",
+              bootstrapServers);
         }
+
+        producing = true;
+        logger.info("Will write to log: {}", this.outLog);
       }
-
-      logger.info("Will read from log: {}, and write to log: {}", this.inLog, this.outLog);
-
-      // configure kafka producer
-      if (producer == null) {
-        if (producerProperties == null) {
-          throw new RuntimeException("You must supply either Producer or ProducerProperties");
-        }
-        producerProperties.put("client.id", peerUuid.toString());
-        final String bootstrapServers = this.outLog.getBootstrapServers();
-        producerProperties.put("bootstrap.servers", bootstrapServers);
-        this.producer = new KafkaProducer<>(producerProperties);
-        logger.info(
-            "Kafka producer initialized. Will connect to bootstrap servers: {}", bootstrapServers);
-      }
-
-      // configure kafka consumer
-      if (consumer == null) {
-        if (consumerProperties == null) {
-          throw new RuntimeException("You must supply either Consumer or ConsumerProperties");
-        }
-        consumerProperties.put("group.id", peerUuid.toString());
-        final String bootstrapServers = this.inLog.getBootstrapServers();
-        consumerProperties.put("bootstrap.servers", bootstrapServers);
-        this.consumer = new KafkaConsumer<>(consumerProperties);
-        logger.info(
-            "Kafka consumer initialized. Will connect to bootstrap servers: {}", bootstrapServers);
-      }
-
-      // set polling duration
-      if (pollingDuration == null) {
-        pollingDuration = Duration.of(DEFAULT_POLLING_DURATION_MILLIS, ChronoUnit.MILLIS);
-      }
-
-      // manual assignment of partition so we can control offset seek
-      inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
-      consumer.assign(Collections.singletonList(inTopicPartition));
-
-      // init executor
-      asyncConsumerExecutor = Executors.newSingleThreadExecutor();
 
       logIOEnabled = true;
     }
@@ -448,14 +462,23 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public ExecMessage sendAndReceive(ExecMessage message) throws Exception {
-    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
       logger.trace(
           "sendAndReceiveJsonRpcRequest: in with message: {}", ColferUtils.format(message));
     }
+    assertInitializedAndActive();
+
     if (talkingToPeer) {
       return sendToPeer(message);
     } else {
+      if (!producing) {
+        throw new IllegalStateException(
+            "ThinPeer log producer not configured. Cannot send messages.");
+      }
+      if (!consuming) {
+        throw new IllegalStateException(
+            "ThinPeer log consumer not configured. Cannot get messages.");
+      }
       return sendToLogAndReceive(message);
     }
   }
@@ -467,10 +490,10 @@ public class ThinPeer implements AutoCloseable {
    * @return a CompletableFuture that will be completed with the response
    */
   public CompletableFuture<JsonRpcResponse> sendJsonRpcRequestToPeer(Object jsonRpc) {
-    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
       logger.trace("sendAndReceiveJsonRpcRequest: in with jsonRpc: {}", jsonRpc);
     }
+    assertInitializedAndActive();
 
     if (talkingToPeer) {
       String rpcMessage;
@@ -495,6 +518,9 @@ public class ThinPeer implements AutoCloseable {
 
   private LogMessage<?> getMessageAtOffset(Long seek, boolean lookupCached) {
     assertInitializedAndActive();
+    if (!consuming) {
+      throw new IllegalStateException("ThinPeer log consumer not configured. Cannot get messages.");
+    }
     if (logger.isDebugEnabled()) {
       logger.debug("Getting message @ offset #{}, lookupCached = {}", seek, lookupCached);
     }
@@ -598,6 +624,9 @@ public class ThinPeer implements AutoCloseable {
   @SuppressWarnings("unused")
   public List<ConsumerRecord<?, ?>> getMessages(long startOffset, long numMessages) {
     assertInitializedAndActive();
+    if (!consuming) {
+      throw new IllegalStateException("ThinPeer log consumer not configured. Cannot get messages.");
+    }
     if (logger.isDebugEnabled()) {
       logger.debug("Getting {} messages starting @ offset #{}", numMessages, startOffset);
     }
@@ -626,9 +655,13 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public Future<RecordMetadata> sendExecMessageToLog(ExecMessage message) {
-    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
       logger.trace("sendExecMessageToLog: in with message: {}", ColferUtils.format(message));
+    }
+    assertInitializedAndActive();
+    if (!producing) {
+      throw new IllegalStateException(
+          "ThinPeer log producer not configured. Cannot send messages.");
     }
 
     // create kafka record
@@ -651,9 +684,13 @@ public class ThinPeer implements AutoCloseable {
 
   @SuppressWarnings("unused")
   public Future<RecordMetadata> sendJsonRpcRequestToLog(Object jsonRpcRequest) {
-    assertInitializedAndActive();
     if (logger.isTraceEnabled()) {
       logger.trace("sendJsonRpcRequestToLog: in with jsonRpcRequest: {}", jsonRpcRequest);
+    }
+    assertInitializedAndActive();
+    if (!producing) {
+      throw new IllegalStateException(
+          "ThinPeer log producer not configured. Cannot send messages.");
     }
     String rpcMessage;
     if (jsonRpcRequest instanceof JsonRpcRequest) {
@@ -788,6 +825,7 @@ public class ThinPeer implements AutoCloseable {
   }
 
   public void connectToPeer(UUID peerUuid) throws Exception {
+    assertInitializedAndActive();
     PeerInfo newPeer = null;
     if (getPalDirectory() == null) {
       throw new RuntimeException("Cannot connect to peer without PAL directory");
@@ -1085,6 +1123,14 @@ public class ThinPeer implements AutoCloseable {
 
   public boolean isZmqSocketConnected() {
     return isZmqSocketConnected;
+  }
+
+  public boolean isProducing() {
+    return producing;
+  }
+
+  public boolean isConsuming() {
+    return consuming;
   }
 
   // </editor-fold>

@@ -130,6 +130,7 @@ public class AbstractInterceptIT extends AbstractIntegrationTest implements Exec
         new ThinPeer()
             .withUuid(myPeerUuid)
             .withName("InterceptTestClient")
+            .withSelfRegistration(true)
             .withRpcAddress(RPC_ADDRESS)
             .withInitialPeer(interceptablePeer)
             .withDirectoryProvider(directoryConnectionProvider)
