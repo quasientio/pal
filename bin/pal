@@ -1,42 +1,49 @@
 #!/bin/sh
 
-MAIN_ARGS="$@"
-RUN_JMX_PROPS=""
-JVM_OPTS=""
-JMX_PROPS=""
-PAL_PROPS="-Dpal.logging=$PAL_HOME/.local/conf/peer-logging.xml"
+# Determine the command (first non-option argument)
+for arg in "$@"; do
+  case $arg in
+    -*)
+      # Skip options
+      ;;
+    *)
+      COMMAND="$arg"
+      break
+      ;;
+  esac
+done
 
-# Enable JMX for 'run' command only if ENV variables JMX_HOST and JMX_PORT are set.
-if [ -n "$JMX_HOST" ] && [ -n "$JMX_PORT" ]; then
-  RUN_JMX_PROPS="-Dcom.sun.management.jmxremote \
-                 -Djava.rmi.server.hostname=$JMX_HOST \
-                 -Dcom.sun.management.jmxremote.port=$JMX_PORT \
-                 -Dcom.sun.management.jmxremote.local.only=true \
-                 -Dcom.sun.management.jmxremote.authenticate=false \
-                 -Dcom.sun.management.jmxremote.ssl=false"
+# Default JVM options
+JAVA_OPTS=${JAVA_OPTS:-""}
+
+# Apply specific options for 'run' command
+if [ "$COMMAND" = "run" ]; then
+  JAVA_OPTS="$JAVA_OPTS -server -XX:+UseG1GC -XX:+UseNUMA -XX:+IgnoreUnrecognizedVMOptions -Xverify:none"
+
+  # Include JMX options if JMX_HOST and JMX_PORT are set
+  if [ -n "$JMX_HOST" ] && [ -n "$JMX_PORT" ]; then
+    JAVA_OPTS="$JAVA_OPTS \
+      -Dcom.sun.management.jmxremote \
+      -Djava.rmi.server.hostname=$JMX_HOST \
+      -Dcom.sun.management.jmxremote.port=$JMX_PORT \
+      -Dcom.sun.management.jmxremote.local.only=true \
+      -Dcom.sun.management.jmxremote.authenticate=false \
+      -Dcom.sun.management.jmxremote.ssl=false"
+  fi
 fi
 
-RUN_JVM_OPTS="-server \
-              -XX:+UseG1GC \
-              -XX:+UseNUMA \
-              -noverify"
-
-if [[ -n "$JAVA_AGENT" ]]; then
-    RUN_JVM_OPTS="$RUN_JVM_OPTS -javaagent:$JAVA_AGENT"
+# Include Java agent
+if [ -n "$JAVA_AGENT" ]; then
+  JAVA_OPTS="$JAVA_OPTS -javaagent:$JAVA_AGENT"
 fi
 
-
-echo $MAIN_ARGS | sed -E 's/^-+d[^:]*:[0-9]+ //' |  grep -q "^run"
-if [ "$?" -eq "0" ]; then
-  JVM_OPTS=$RUN_JVM_OPTS
-  JMX_PROPS=$RUN_JMX_PROPS
+# Include logging configuration
+if [ -f "$PAL_LOGGING_CONFIG" ]; then
+  JAVA_OPTS="$JAVA_OPTS -Dpal.logging=$PAL_LOGGING_CONFIG"
 fi
 
-if [ -n "$PAL_HOME" ]; then
-  PAL_JAR=$PAL_HOME/lib/pal-*.jar
-else
-  # if $PAL_HOME undefined, expect jar in $PWD/lib.
-  PAL_JAR=lib/pal-*.jar
-fi
+# Find pal's jar under $PAL_HOME/lib, fallback to lib/
+PAL_JAR="${PAL_HOME:-.}/lib/pal-*.jar"
 
-java $JVM_OPTS $JMX_PROPS $PAL_PROPS -jar $PAL_JAR $MAIN_ARGS
+# Execute the Pal application
+exec java $JAVA_OPTS -jar $PAL_JAR "$@"
