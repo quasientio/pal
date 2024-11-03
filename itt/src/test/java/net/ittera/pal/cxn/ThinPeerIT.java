@@ -165,6 +165,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
     // try to receive a message from the log
     try {
       thinPeer.getMessageAtOffset(33L);
+      fail("Should have raised IllegalStateException");
     } catch (IllegalStateException e) {
       assertThat(e.getMessage().contains("ThinPeer log consumer not configured."), is(true));
     }
@@ -185,8 +186,10 @@ public class ThinPeerIT extends AbstractIntegrationTest {
 
     // try to send a message to the log
     try {
-      thinPeer.sendExecMessageToLog(
-          msgBuilder.buildEmptyConstructor(thinPeer.getPeerUuid(), "java.lang.String"));
+      var unused =
+          thinPeer.sendExecMessageToLog(
+              msgBuilder.buildEmptyConstructor(thinPeer.getPeerUuid(), "java.lang.String"));
+      fail("Should have raised IllegalStateException");
     } catch (IllegalStateException e) {
       assertThat(e.getMessage().contains("ThinPeer log producer not configured"), is(true));
     }
