@@ -17,7 +17,7 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages.colfer;
+package net.ittera.pal.messages.serdes;
 
 import org.apache.kafka.common.serialization.StringSerializer;
 

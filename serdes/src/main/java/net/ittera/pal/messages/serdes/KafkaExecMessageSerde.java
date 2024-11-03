@@ -17,9 +17,10 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages.colfer;
+package net.ittera.pal.messages.serdes;
 
 import java.util.Map;
+import net.ittera.pal.messages.colfer.ExecMessage;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;

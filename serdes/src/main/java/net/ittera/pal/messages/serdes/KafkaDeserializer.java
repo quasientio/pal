@@ -17,13 +17,8 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages.colfer;
+package net.ittera.pal.messages.serdes;
 
-import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
-/**
- * The purpose of this subclass is to not have to change package name in kafka properties after
- * mvn-shading (see issue #168 more details). Having our own deserializer class means we can leave
- * the full package and class unchanged since we only relocate dependencies, not our own classes
- */
-public final class KafkaKeyDeserializer extends StringDeserializer {}
+public final class KafkaDeserializer extends ByteArrayDeserializer {}
