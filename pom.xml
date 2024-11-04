@@ -129,6 +129,15 @@
                         <style>google</style>
                     </configuration>
                 </plugin>
+                <!-- resources -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>${maven.plugin.resources.version}</version>
+                    <configuration>
+                        <propertiesEncoding>UTF-8</propertiesEncoding>
+                    </configuration>
+                </plugin>
                 <!-- tests -->
                 <plugin>
                   <groupId>org.apache.maven.plugins</groupId>
