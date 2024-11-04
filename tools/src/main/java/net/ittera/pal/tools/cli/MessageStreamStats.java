@@ -41,8 +41,8 @@ import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.MessageStreamer;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.serdes.KafkaExecMessageSerde;
 import net.ittera.pal.messages.types.ExecMessageType;
+import net.ittera.pal.serdes.kafka.KafkaMessageSerde;
 import net.ittera.pal.tools.AbstractTool;
 import net.ittera.pal.tools.stats.ContinuousPrinter;
 import net.ittera.pal.tools.stats.Counters;
@@ -352,7 +352,7 @@ public class MessageStreamStats extends AbstractTool implements Callable<Integer
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerId);
     props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, KafkaExecMessageSerde.class);
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, KafkaMessageSerde.class);
 
     /*
      2. DEFINE PROCESSING TOPOLOGY

@@ -40,10 +40,10 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.InterceptMessage;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.serdes.KafkaKeySerializer;
-import net.ittera.pal.messages.serdes.KafkaSerializer;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.kafka.KafkaKeySerializer;
+import net.ittera.pal.serdes.kafka.KafkaMessageSerializer;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.Cluster;
@@ -82,7 +82,7 @@ public class LogWriterTest extends ZmqEnabledTest {
     zmqContext = this.createContext();
     producer =
         new MockProducer<>(
-            Cluster.empty(), true, null, new KafkaKeySerializer(), new KafkaSerializer());
+            Cluster.empty(), true, null, new KafkaKeySerializer(), new KafkaMessageSerializer());
     logWriter =
         new LogWriter(
             UUID.randomUUID(),

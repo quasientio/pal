@@ -69,8 +69,6 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.header.Header;
-import org.apache.kafka.common.header.Headers;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
@@ -558,65 +556,18 @@ public class ThinPeer implements AutoCloseable {
     // now swap last batch (map) of records read with the new one
     this.lastRecordsRead = recordsRead;
 
-    return createLogMessage(requestedRecord);
-  }
-
-  private LogMessage<?> createLogMessage(ConsumerRecord<String, byte[]> record) {
-    byte[] value = record.value();
-    MessageFormatType messageFormat = getMessageFormatFromHeader(record.headers());
-    if (messageFormat == null) {
-      throw new IllegalArgumentException("Message format not found in record headers");
-    }
-    LogMessage<?> logMessage;
-    Map<String, String> headers = new HashMap<>();
-    String messageType = getMessageTypeFromHeader(record.headers());
-    if (messageType != null) {
-      headers.put("message-type", messageType);
-    }
-
-    switch (messageFormat) {
-      case COLFER -> {
-        Message message = new Message();
-        message.unmarshal(value, 0);
-        logMessage = new LogMessage<>(record.offset(), headers, message);
-      }
-      case JSONRPC -> {
-        String json = new String(value, StandardCharsets.UTF_8);
-        if (JsonRpcType.REQUEST.name().equals(messageType)) {
-          JsonRpcRequest jsonRpcRequest = gson.fromJson(json, JsonRpcRequest.class);
-          logMessage = new LogMessage<>(record.offset(), headers, jsonRpcRequest);
-        } else if (JsonRpcType.RESPONSE.name().equals(messageType)) {
-          JsonRpcResponse jsonRpcResponse = gson.fromJson(json, JsonRpcResponse.class);
-          logMessage = new LogMessage<>(record.offset(), headers, jsonRpcResponse);
-        } else {
-          throw new IllegalArgumentException("Unsupported JSON-RPC message type: " + messageType);
-        }
-      }
-      default -> throw new IllegalArgumentException("Unsupported message format: " + messageFormat);
-    }
-
-    return logMessage;
-  }
-
-  private MessageFormatType getMessageFormatFromHeader(Headers headers) {
-    for (Header header : headers.headers("message-format")) {
-      byte formatByte = header.value()[0];
-      return MessageFormatType.fromByte(formatByte);
-    }
-    return null;
-  }
-
-  private String getMessageTypeFromHeader(Headers headers) {
-    for (Header header : headers.headers("message-type")) {
-      return new String(header.value(), StandardCharsets.UTF_8);
-    }
-    return null;
+    return LogMessage.newInstance(
+        inLog.getName(),
+        requestedRecord.offset(),
+        requestedRecord.headers(),
+        requestedRecord.value());
   }
 
   private LogMessage<?> getCachedMessageAtOffset(Long offset) {
-    ConsumerRecord<String, byte[]> cached = lastRecordsRead.get(offset);
-    if (cached != null) {
-      return createLogMessage(cached);
+    ConsumerRecord<String, byte[]> cachedRecord = lastRecordsRead.get(offset);
+    if (cachedRecord != null) {
+      return LogMessage.newInstance(
+          inLog.getName(), offset, cachedRecord.headers(), cachedRecord.value());
     }
     return null;
   }
@@ -669,9 +620,7 @@ public class ThinPeer implements AutoCloseable {
     final ProducerRecord<String, byte[]> record =
         new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body);
     record.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
-    record
-        .headers()
-        .add("message-type", MessageType.EXEC_MESSAGE.name().getBytes(StandardCharsets.UTF_8));
+    record.headers().add("message-type", new byte[] {MessageType.EXEC_MESSAGE.toByte()});
     record.headers().add("producer", peerUuid.toString().getBytes(StandardCharsets.UTF_8));
 
     // send and return future
@@ -707,9 +656,7 @@ public class ThinPeer implements AutoCloseable {
         new ProducerRecord<>(
             outLog.getName(), PRODUCER_PARTITION, UUID.randomUUID().toString(), body);
     record.headers().add("message-format", new byte[] {MessageFormatType.JSONRPC.toByte()});
-    record
-        .headers()
-        .add("message-type", JsonRpcType.REQUEST.name().getBytes(StandardCharsets.UTF_8));
+    record.headers().add("message-type", new byte[] {JsonRpcType.REQUEST.toByte()});
     record.headers().add("producer", peerUuid.toString().getBytes(StandardCharsets.UTF_8));
 
     // send and return future

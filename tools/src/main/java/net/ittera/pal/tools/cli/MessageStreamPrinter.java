@@ -40,9 +40,9 @@ import net.ittera.pal.messages.MessageContext;
 import net.ittera.pal.messages.MessageStreamer;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.serdes.KafkaExecMessageSerde;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.kafka.KafkaMessageSerde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -220,7 +220,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerId);
     props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, KafkaExecMessageSerde.class);
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, KafkaMessageSerde.class);
 
     /*
      2. DEFINE PROCESSING TOPOLOGY

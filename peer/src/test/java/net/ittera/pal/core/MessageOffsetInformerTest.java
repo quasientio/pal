@@ -29,10 +29,10 @@ import java.util.UUID;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.serdes.KafkaKeySerializer;
-import net.ittera.pal.messages.serdes.KafkaSerializer;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.kafka.KafkaKeySerializer;
+import net.ittera.pal.serdes.kafka.KafkaMessageSerializer;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -61,7 +61,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
     zmqContext = this.createContext();
     producer =
         new MockProducer<>(
-            Cluster.empty(), true, null, new KafkaKeySerializer(), new KafkaSerializer());
+            Cluster.empty(), true, null, new KafkaKeySerializer(), new KafkaMessageSerializer());
     offsetPublisher = zmqContext.createSocket(SocketType.PUB);
     offsetPublisher.bind(offsetPubAddress);
   }

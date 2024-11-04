@@ -1,6 +1,7 @@
 package net.ittera.pal.messages.jsonrpc;
 
 import com.google.gson.annotations.SerializedName;
+import java.util.Objects;
 
 public class JsonRpcParameter {
   @SerializedName("value")
@@ -33,6 +34,20 @@ public class JsonRpcParameter {
 
   public void setIsRef(boolean isRef) {
     this.isRef = isRef;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof JsonRpcParameter that)) return false;
+    return isRef == that.isRef
+        && Objects.equals(value, that.value)
+        && Objects.equals(type, that.type);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(value, type, isRef);
   }
 
   @Override

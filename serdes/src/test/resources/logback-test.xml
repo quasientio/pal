@@ -20,7 +20,7 @@
 		<appender-ref ref="tests"/>
 	</logger>
 
-	<logger name="net.ittera.pal.serdes.colfer" level="trace" additivity="false">
+	<logger name="net.ittera.pal.serdes" level="debug" additivity="false">
 		<appender-ref ref="tests"/>
 	</logger>
 

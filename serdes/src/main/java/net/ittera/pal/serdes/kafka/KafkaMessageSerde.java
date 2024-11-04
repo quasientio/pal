@@ -17,27 +17,24 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages.serdes;
+package net.ittera.pal.serdes.kafka;
 
 import java.util.Map;
-import net.ittera.pal.messages.colfer.ExecMessage;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
 
-public class KafkaExecMessageSerde implements Serde<ExecMessage> {
+public class KafkaMessageSerde implements Serde<byte[]> {
 
-  @SuppressWarnings("rawtypes")
-  private final Serde inner;
+  private final Serde<byte[]> inner;
 
-  public KafkaExecMessageSerde() {
-    inner = Serdes.serdeFrom(new KafkaSerializer(), new KafkaDeserializer());
+  public KafkaMessageSerde() {
+    inner = Serdes.serdeFrom(new KafkaMessageSerializer(), new KafkaMessageDeserializer());
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public void configure(Map map, boolean b) {
+  public void configure(Map<String, ?> map, boolean b) {
     inner.serializer().configure(map, b);
     inner.deserializer().configure(map, b);
   }
@@ -49,14 +46,12 @@ public class KafkaExecMessageSerde implements Serde<ExecMessage> {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public Serializer<ExecMessage> serializer() {
+  public Serializer<byte[]> serializer() {
     return inner.serializer();
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public Deserializer<ExecMessage> deserializer() {
+  public Deserializer<byte[]> deserializer() {
     return inner.deserializer();
   }
 }

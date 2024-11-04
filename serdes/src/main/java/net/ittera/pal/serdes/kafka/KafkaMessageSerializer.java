@@ -17,8 +17,10 @@
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-package net.ittera.pal.messages.serdes;
+package net.ittera.pal.serdes.kafka;
 
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 
-public final class KafkaDeserializer extends ByteArrayDeserializer {}
+public final class KafkaMessageSerializer extends ByteArraySerializer {
+  public KafkaMessageSerializer() {}
+}

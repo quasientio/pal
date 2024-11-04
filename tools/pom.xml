@@ -220,6 +220,12 @@
                             </includes>
                         </filter>
                         <filter>
+                            <artifact>net.ittera.pal:serdes</artifact>
+                            <includes>
+                                <include>net/ittera/pal/**</include>
+                            </includes>
+                        </filter>
+                        <filter>
                             <artifact>org.aspectj:aspectjrt</artifact>
                             <includes>
                                  <include>org/aspectj/**</include>

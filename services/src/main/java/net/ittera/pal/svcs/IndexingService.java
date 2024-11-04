@@ -39,7 +39,7 @@ import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.ContextFillingTransformSupplier;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.serdes.KafkaExecMessageSerde;
+import net.ittera.pal.serdes.kafka.KafkaMessageSerde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -156,7 +156,7 @@ public class IndexingService implements Callable<Integer> {
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerId);
     props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, logInfo.getBootstrapServers());
     props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, KafkaExecMessageSerde.class);
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, KafkaMessageSerde.class);
 
     /*
      2. DEFINE PROCESSING TOPOLOGY
