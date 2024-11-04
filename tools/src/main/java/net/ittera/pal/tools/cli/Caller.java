@@ -464,7 +464,7 @@ public class Caller extends AbstractPalSubcommand {
 
       // send message(s)
       long start = System.currentTimeMillis();
-      thinPeer.sendExecMessageToLog(mainMethodCallBuilder.buildExecMessage());
+      var unused = thinPeer.sendExecMessageToLog(mainMethodCallBuilder.buildExecMessage());
       int requestsSent = 1;
 
       if (verbose) {

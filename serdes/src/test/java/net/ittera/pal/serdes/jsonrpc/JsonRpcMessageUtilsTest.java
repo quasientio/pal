@@ -1,6 +1,8 @@
 package net.ittera.pal.serdes.jsonrpc;
 
 import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -499,7 +501,7 @@ public class JsonRpcMessageUtilsTest {
                 throw new RuntimeException(e);
               }
               assertNotNull(jsonRpcRequest.getParams());
-              assertEquals(jsonRpcRequest.getParams().size(), 1);
+              assertThat(jsonRpcRequest.getParams().size(), is(1));
               assertNull(jsonRpcRequest.getParams().get(0).getValue());
               assertNull(jsonRpcRequest.getParams().get(0).getType());
             });
@@ -583,9 +585,9 @@ public class JsonRpcMessageUtilsTest {
             """;
     JsonRpcRequest jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonRpcMessage);
     assertNotNull(jsonRpcRequest.getParams());
-    assertEquals(jsonRpcRequest.getParams().size(), 1);
+    assertThat(jsonRpcRequest.getParams().size(), is(1));
     assertTrue(jsonRpcRequest.getParams().get(0).isRef());
-    assertEquals(jsonRpcRequest.getParams().get(0).getValue(), 23255);
+    assertThat(jsonRpcRequest.getParams().get(0).getValue(), is(23255));
 
     // type is NOT in Param when its value == "ref"
     assertNull(jsonRpcRequest.getParams().get(0).getType());
@@ -605,9 +607,9 @@ public class JsonRpcMessageUtilsTest {
             """;
     JsonRpcRequest jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonRpcMessage);
     assertNotNull(jsonRpcRequest.getParams());
-    assertEquals(jsonRpcRequest.getParams().size(), 1);
+    assertThat(jsonRpcRequest.getParams().size(), is(1));
     assertTrue(jsonRpcRequest.getParams().get(0).isRef());
-    assertEquals(jsonRpcRequest.getParams().get(0).getValue(), 23255);
+    assertThat(jsonRpcRequest.getParams().get(0).getValue(), is(23255));
 
     // type is NOT in Param when its value == "ref"
     assertNull(jsonRpcRequest.getParams().get(0).getType());
@@ -627,7 +629,7 @@ public class JsonRpcMessageUtilsTest {
             """;
     JsonRpcRequest jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonRpcMessage);
     assertNotNull(jsonRpcRequest.getParams());
-    assertEquals(jsonRpcRequest.getParams().size(), 1);
+    assertThat(jsonRpcRequest.getParams().size(), is(1));
     assertFalse(jsonRpcRequest.getParams().get(0).isRef());
   }
 
