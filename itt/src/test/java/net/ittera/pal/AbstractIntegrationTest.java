@@ -1,6 +1,9 @@
 package net.ittera.pal;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Predicate;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
@@ -10,8 +13,29 @@ import org.zeromq.ZContext;
 
 public abstract class AbstractIntegrationTest {
 
+  private static final String CONSUMER_PROPERTIES_PATH = "/consumer.properties";
+  private static final String PRODUCER_PROPERTIES_PATH = "/producer.properties";
+
   private static String PAL_DIRECTORY_URL;
   private static String KAFKA_SERVERS;
+
+  protected static Properties getKafkaConsumerProperties() throws IOException {
+    var properties = new Properties();
+    try (final InputStream stream =
+        AbstractIntegrationTest.class.getResourceAsStream(CONSUMER_PROPERTIES_PATH)) {
+      properties.load(stream);
+    }
+    return properties;
+  }
+
+  protected static Properties getKafkaProducerProperties() throws IOException {
+    var properties = new Properties();
+    try (final InputStream stream =
+        AbstractIntegrationTest.class.getResourceAsStream(PRODUCER_PROPERTIES_PATH)) {
+      properties.load(stream);
+    }
+    return properties;
+  }
 
   protected static String getPalDirectoryUrl() {
     if (PAL_DIRECTORY_URL == null) {

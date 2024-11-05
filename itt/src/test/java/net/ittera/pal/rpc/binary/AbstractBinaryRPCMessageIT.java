@@ -30,7 +30,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
-import java.io.InputStream;
 import java.util.Properties;
 import java.util.UUID;
 import net.ittera.pal.AbstractIntegrationTest;
@@ -53,9 +52,6 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
     implements ExecMessageAssertions {
 
   protected static final Logger logger = LoggerFactory.getLogger("tests");
-
-  private static final String CONSUMER_PROPERTIES_PATH = "/consumer.properties";
-  private static final String PRODUCER_PROPERTIES_PATH = "/producer.properties";
 
   protected static final UUID clientId = UUID.randomUUID();
 
@@ -83,16 +79,9 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
     final Injector injector = Guice.createInjector(module);
     messageBuilder = injector.getInstance(MessageBuilder.class);
 
-    final Properties consumerProperties = new Properties();
-    try (final InputStream stream =
-        AbstractBinaryRPCMessageIT.class.getResourceAsStream(CONSUMER_PROPERTIES_PATH)) {
-      consumerProperties.load(stream);
-    }
-    final Properties producerProperties = new Properties();
-    try (final InputStream stream =
-        AbstractBinaryRPCMessageIT.class.getResourceAsStream(PRODUCER_PROPERTIES_PATH)) {
-      producerProperties.load(stream);
-    }
+    final Properties consumerProperties = getKafkaConsumerProperties();
+    final Properties producerProperties = getKafkaProducerProperties();
+
     thinPeer =
         new ThinPeer()
             .withUuid(clientId)

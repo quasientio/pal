@@ -264,12 +264,8 @@ public class ThinPeerIT extends AbstractIntegrationTest {
   public void initFullyConnectedAndTestGetters() throws Exception {
     LogInfo inAndOutLog = createTestLog();
     PeerInfo initialPeer = findRpcPeer(RpcType.JSONRPC).orElseThrow();
-    Properties producerProperties = new Properties();
-    producerProperties.setProperty(
-        "key.serializer", "net.ittera.pal.serdes.kafka.KafkaKeySerializer");
-    Properties consumerProperties = new Properties();
-    consumerProperties.setProperty(
-        "key.deserializer", "net.ittera.pal.serdes.kafka.KafkaKeyDeserializer");
+    Properties producerProperties = getKafkaProducerProperties();
+    Properties consumerProperties = getKafkaConsumerProperties();
     UUID peerUuid = UUID.randomUUID();
     thinPeer =
         new ThinPeer()
