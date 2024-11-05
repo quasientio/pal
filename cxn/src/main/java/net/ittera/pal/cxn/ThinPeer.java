@@ -705,9 +705,7 @@ public class ThinPeer implements AutoCloseable {
     final ProducerRecord<String, byte[]> newRecord =
         new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body);
     newRecord.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
-    newRecord
-        .headers()
-        .add("message-type", MessageType.EXEC_MESSAGE.name().getBytes(StandardCharsets.UTF_8));
+    newRecord.headers().add("message-type", new byte[] {MessageType.EXEC_MESSAGE.toByte()});
     newRecord.headers().add("producer", peerUuid.toString().getBytes(StandardCharsets.UTF_8));
     Future<RecordMetadata> recordMetadataFuture = producer.send(newRecord);
     try {

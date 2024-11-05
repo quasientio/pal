@@ -272,7 +272,7 @@ class LogWriter extends ConnectedService {
 
     // add message description headers
     newRecord.headers().add("message-format", new byte[] {messageFormat.toByte()});
-    newRecord.headers().add("message-type", messageType.name().getBytes(StandardCharsets.UTF_8));
+    newRecord.headers().add("message-type", new byte[] {messageType.toByte()});
     newRecord.headers().add("producer", fromPeer.toString().getBytes(StandardCharsets.UTF_8));
 
     // send the message
