@@ -874,7 +874,7 @@ public class ThinPeer implements AutoCloseable {
     ControlMessage replyMsg = sendToPeer(msg);
     ControlStatusType statusType = ControlStatusType.fromByte(replyMsg.getStatus());
     if (Objects.requireNonNull(statusType) == ControlStatusType.OK) {
-      logger.info("Object w/ref {} was deleted.", objectRef);
+      logger.debug("Object w/ref {} was deleted.", objectRef);
     } else {
       throw new Exception(
           String.format(
@@ -1090,15 +1090,15 @@ public class ThinPeer implements AutoCloseable {
 
     @Override
     public void send(String message) {
-      if (logger.isTraceEnabled()) {
-        logger.trace("sending message to ws socket: {}", message);
+      if (logger.isDebugEnabled()) {
+        logger.debug("sending message to ws socket: {}", message);
       }
       super.send(message);
     }
 
     public CompletableFuture<JsonRpcResponse> sendAsync(String message) {
-      if (logger.isTraceEnabled()) {
-        logger.trace("in sendAsync - sending message to ws socket: {}", message);
+      if (logger.isDebugEnabled()) {
+        logger.debug("in sendAsync - sending message to ws socket: {}", message);
       }
       JsonRpcRequest request = gson.fromJson(message, JsonRpcRequest.class);
       CompletableFuture<JsonRpcResponse> futureResponse = new CompletableFuture<>();
@@ -1114,7 +1114,9 @@ public class ThinPeer implements AutoCloseable {
 
     @Override
     public void onMessage(String message) {
-      logger.info("Received message: {}", message);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Received message: {}", message);
+      }
       JsonRpcResponse response = gson.fromJson(message, JsonRpcResponse.class);
       CompletableFuture<JsonRpcResponse> futureResponse = futureResponses.get(response.getId());
       if (futureResponse == null) {
