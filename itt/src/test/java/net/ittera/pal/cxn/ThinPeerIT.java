@@ -33,6 +33,7 @@ import java.util.UUID;
 import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
+import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -58,8 +59,8 @@ public class ThinPeerIT extends AbstractIntegrationTest {
   private DirectoryConnectionProvider directoryConnectionProvider;
 
   // mock Kafka producer & consumer
-  private MockProducer<String, byte[]> producer;
-  private MockConsumer<String, byte[]> consumer;
+  private MockProducer<String, LogMessage<?>> producer;
+  private MockConsumer<String, LogMessage<?>> consumer;
 
   private static final Set<LogInfo> createdLogs = new HashSet<>();
   private ThinPeer thinPeer;

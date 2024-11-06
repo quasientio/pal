@@ -23,7 +23,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -49,16 +48,15 @@ import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.ControlStatusType;
-import net.ittera.pal.messages.types.JsonRpcType;
-import net.ittera.pal.messages.types.MessageFormatType;
-import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.JsonSerializers;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcRequestDeserializer;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcResponseDeserializer;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -105,8 +103,8 @@ public class ThinPeer implements AutoCloseable {
   private String logPrefix;
   public static final String DEFAULT_TOPIC_PREFIX = "app";
 
-  private Producer<String, byte[]> producer;
-  private Consumer<String, byte[]> consumer;
+  private Producer<String, LogMessage<?>> producer;
+  private Consumer<String, LogMessage<?>> consumer;
   private boolean producerGiven;
   private boolean producing;
   private boolean consumerGiven;
@@ -114,7 +112,7 @@ public class ThinPeer implements AutoCloseable {
   private Properties producerProperties;
   private Properties consumerProperties;
 
-  private Map<Long, ConsumerRecord<String, byte[]>> lastRecordsRead = new HashMap<>();
+  private Map<Long, ConsumerRecord<String, LogMessage<?>>> lastRecordsRead = new HashMap<>();
   private ExecutorService asyncConsumerExecutor;
 
   // rpc stuff
@@ -180,7 +178,7 @@ public class ThinPeer implements AutoCloseable {
     return this;
   }
 
-  public ThinPeer withConsumer(Consumer<String, byte[]> consumer) {
+  public ThinPeer withConsumer(Consumer<String, LogMessage<?>> consumer) {
     this.consumer = consumer;
     this.consumerGiven = true;
     return this;
@@ -196,7 +194,7 @@ public class ThinPeer implements AutoCloseable {
     return this;
   }
 
-  public ThinPeer withProducer(Producer<String, byte[]> producer) {
+  public ThinPeer withProducer(Producer<String, LogMessage<?>> producer) {
     this.producer = producer;
     this.producerGiven = true;
     return this;
@@ -405,6 +403,7 @@ public class ThinPeer implements AutoCloseable {
             .registerTypeAdapter(
                 InstanceFieldPutDone.class, new JsonSerializers.InstanceFieldPutDoneAdapter())
             .registerTypeAdapter(ReturnValue.class, new JsonSerializers.ReturnValueAdapter())
+            .registerTypeAdapter(JsonRpcRequest.class, new JsonRpcRequestDeserializer())
             .registerTypeAdapter(JsonRpcResponse.class, new JsonRpcResponseDeserializer())
             .create();
 
@@ -532,8 +531,7 @@ public class ThinPeer implements AutoCloseable {
       }
     }
 
-    Map<Long, ConsumerRecord<String, byte[]>> recordsRead = new HashMap<>();
-    ConsumerRecord<String, byte[]> requestedRecord = null;
+    Map<Long, ConsumerRecord<String, LogMessage<?>>> recordsRead = new HashMap<>();
 
     long actualSeekOffset = (seek - PRECEDING_RECS < 0) ? seek : seek - PRECEDING_RECS;
     if (logger.isDebugEnabled()) {
@@ -541,12 +539,13 @@ public class ThinPeer implements AutoCloseable {
     }
     consumer.seek(inTopicPartition, actualSeekOffset);
 
+    ConsumerRecord<String, LogMessage<?>> requestedRecord = null;
     while (requestedRecord == null) {
-      ConsumerRecords<String, byte[]> records = consumer.poll(pollingDuration);
+      ConsumerRecords<String, LogMessage<?>> records = consumer.poll(pollingDuration);
       if (logger.isDebugEnabled()) {
         logger.debug("Read {} records during poll", records.count());
       }
-      for (ConsumerRecord<String, byte[]> record : records) {
+      for (var record : records) {
         if (seek == record.offset()) {
           requestedRecord = record;
         }
@@ -556,18 +555,20 @@ public class ThinPeer implements AutoCloseable {
     // now swap last batch (map) of records read with the new one
     this.lastRecordsRead = recordsRead;
 
-    return LogMessage.newInstance(
-        inLog.getName(),
-        requestedRecord.offset(),
-        requestedRecord.headers(),
-        requestedRecord.value());
+    // set the offset in the LogMessage before returning
+    long offset = requestedRecord.offset();
+    LogMessage<?> logMessage = requestedRecord.value();
+    logMessage.setOffset(offset);
+    return logMessage;
   }
 
   private LogMessage<?> getCachedMessageAtOffset(Long offset) {
-    ConsumerRecord<String, byte[]> cachedRecord = lastRecordsRead.get(offset);
+    ConsumerRecord<String, LogMessage<?>> cachedRecord = lastRecordsRead.get(offset);
     if (cachedRecord != null) {
-      return LogMessage.newInstance(
-          inLog.getName(), offset, cachedRecord.headers(), cachedRecord.value());
+      // set the offset in the LogMessage before returning
+      LogMessage<?> logMessage = cachedRecord.value();
+      logMessage.setOffset(offset);
+      return logMessage;
     }
     return null;
   }
@@ -586,7 +587,7 @@ public class ThinPeer implements AutoCloseable {
     boolean gotAllMessages = false;
 
     while (!gotAllMessages) {
-      ConsumerRecords<String, byte[]> records = consumer.poll(pollingDuration);
+      var records = consumer.poll(pollingDuration);
       if (logger.isDebugEnabled()) {
         logger.debug("got {} records after poll", records.count());
       }
@@ -615,18 +616,20 @@ public class ThinPeer implements AutoCloseable {
           "ThinPeer log producer not configured. Cannot send messages.");
     }
 
+    // wrap in LogMessage
+    var headers = Map.of("producer", peerUuid.toString());
+    LogMessage<Message> logMessage =
+        new LogMessage<>(outLog.getName(), null, headers, msgBuilder.wrap(message));
+
     // create kafka record
-    final byte[] body = ColferUtils.toBytes(msgBuilder.wrap(message));
-    final ProducerRecord<String, byte[]> record =
-        new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body);
-    record.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
-    record.headers().add("message-type", new byte[] {MessageType.EXEC_MESSAGE.toByte()});
-    record.headers().add("producer", peerUuid.toString().getBytes(StandardCharsets.UTF_8));
+    ProducerRecord<String, LogMessage<?>> record =
+        new ProducerRecord<>(
+            outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), logMessage);
 
     // send and return future
     var sendFuture = producer.send(record);
     if (logger.isDebugEnabled()) {
-      logger.debug("Message sent to log:\n{} ({} bytes)", ColferUtils.format(message), body.length);
+      logger.debug("Message sent to log:\n{}", logMessage);
     }
     return sendFuture;
   }
@@ -641,28 +644,28 @@ public class ThinPeer implements AutoCloseable {
       throw new IllegalStateException(
           "ThinPeer log producer not configured. Cannot send messages.");
     }
-    String rpcMessage;
+
+    JsonRpcMessage jsonRpcMessage;
     if (jsonRpcRequest instanceof JsonRpcRequest) {
-      rpcMessage = gson.toJson(jsonRpcRequest);
+      jsonRpcMessage = (JsonRpcRequest) jsonRpcRequest;
     } else if (jsonRpcRequest instanceof String) {
-      rpcMessage = (String) jsonRpcRequest;
+      jsonRpcMessage = gson.fromJson((String) jsonRpcRequest, JsonRpcRequest.class);
     } else {
       throw new IllegalArgumentException("Unsupported type for jsonRpc");
     }
 
     // create kafka record
-    final byte[] body = rpcMessage.getBytes(StandardCharsets.UTF_8);
-    final ProducerRecord<String, byte[]> record =
+    var headers = Map.of("producer", peerUuid.toString());
+    LogMessage<JsonRpcMessage> logMessage =
+        new LogMessage<>(outLog.getName(), null, headers, jsonRpcMessage);
+    final ProducerRecord<String, LogMessage<?>> record =
         new ProducerRecord<>(
-            outLog.getName(), PRODUCER_PARTITION, UUID.randomUUID().toString(), body);
-    record.headers().add("message-format", new byte[] {MessageFormatType.JSONRPC.toByte()});
-    record.headers().add("message-type", new byte[] {JsonRpcType.REQUEST.toByte()});
-    record.headers().add("producer", peerUuid.toString().getBytes(StandardCharsets.UTF_8));
+            outLog.getName(), PRODUCER_PARTITION, UUID.randomUUID().toString(), logMessage);
 
     // send and return future
     var sendFuture = producer.send(record);
     if (logger.isDebugEnabled()) {
-      logger.debug("Message sent to log:\n{} ({} bytes)", rpcMessage, body.length);
+      logger.debug("Message sent to log:\n{}", logMessage);
     }
     return sendFuture;
   }
@@ -699,19 +702,24 @@ public class ThinPeer implements AutoCloseable {
     if (logger.isTraceEnabled()) {
       logger.trace("sendAndReceiveConsumingLog: in with message: {}", ColferUtils.format(message));
     }
-    // send to kafka
+
+    // wrap in LogMessage
+    var headers = Map.of("producer", peerUuid.toString());
+    LogMessage<Message> logMessage =
+        new LogMessage<>(outLog.getName(), null, headers, msgBuilder.wrap(message));
+
+    // create kafka record
+    ProducerRecord<String, LogMessage<?>> newRecord =
+        new ProducerRecord<>(
+            outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), logMessage);
+
+    // send and get offset
     long sentRecordOffset;
-    final byte[] body = ColferUtils.toBytes(msgBuilder.wrap(message));
-    final ProducerRecord<String, byte[]> newRecord =
-        new ProducerRecord<>(outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), body);
-    newRecord.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
-    newRecord.headers().add("message-type", new byte[] {MessageType.EXEC_MESSAGE.toByte()});
-    newRecord.headers().add("producer", peerUuid.toString().getBytes(StandardCharsets.UTF_8));
     Future<RecordMetadata> recordMetadataFuture = producer.send(newRecord);
     try {
       RecordMetadata recordMetadata = recordMetadataFuture.get();
       if (logger.isDebugEnabled()) {
-        logger.debug("Message sent ({} bytes):\n {}", body.length, ColferUtils.format(message));
+        logger.debug("Message sent:\n {}", logMessage);
       }
       sentRecordOffset = recordMetadata.offset();
     } catch (Exception e) {
@@ -727,15 +735,21 @@ public class ThinPeer implements AutoCloseable {
 
     // wait for reply  (should contain responseToUuid = sentRecordOffset in message)
     while (true) {
-      ConsumerRecords<String, byte[]> records = consumer.poll(pollingDuration);
+      var records = consumer.poll(pollingDuration);
       if (records.count() != 0 && logger.isDebugEnabled()) {
         logger.debug("Received {} records", records.count());
       }
-      for (ConsumerRecord<String, byte[]> record : records) {
-        final Message receivedMessage = new Message();
-        receivedMessage.unmarshal(record.value(), 0);
+      for (var record : records) {
+        final LogMessage<?> receivedMessage = record.value();
         long receivedMsgOffset = record.offset();
-        final ExecMessage execMessage = receivedMessage.getExecMessage();
+        if (!(receivedMessage.getContent() instanceof Message)) {
+          // skip non-Colfer messages
+          if (logger.isDebugEnabled()) {
+            logger.debug("Skipping record with offset {}", receivedMsgOffset);
+          }
+          continue;
+        }
+        final ExecMessage execMessage = ((Message) receivedMessage.getContent()).getExecMessage();
         final String responseToUuid = execMessage == null ? null : execMessage.getResponseToUuid();
         if (execMessage != null && message.getMessageUuid().equals(responseToUuid)) {
           if (logger.isDebugEnabled()) {
@@ -1014,11 +1028,11 @@ public class ThinPeer implements AutoCloseable {
     return pollingDuration;
   }
 
-  public Producer<String, byte[]> getProducer() {
+  public Producer<String, LogMessage<?>> getProducer() {
     return producer;
   }
 
-  public Consumer<String, byte[]> getConsumer() {
+  public Consumer<String, LogMessage<?>> getConsumer() {
     return consumer;
   }
 

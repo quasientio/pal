@@ -125,12 +125,12 @@ public class KafkaLogMessageSerdeTest {
     assertThat(records.size(), is(1));
     LogMessage<?> consumedLogMessage = records.get(0).value();
 
-    assertThat(consumedLogMessage.topic(), is(logMessage.topic()));
-    assertThat(consumedLogMessage.content().getClass(), is(logMessage.content().getClass()));
+    assertThat(consumedLogMessage.getTopic(), is(logMessage.getTopic()));
+    assertThat(consumedLogMessage.getContent().getClass(), is(logMessage.getContent().getClass()));
 
     // Cast the content to Message to compare fields
-    Message producedContent = logMessage.content();
-    Message consumedContent = (Message) consumedLogMessage.content();
+    Message producedContent = logMessage.getContent();
+    Message consumedContent = (Message) consumedLogMessage.getContent();
 
     assertThat(consumedContent.getExecMessage(), is(producedContent.getExecMessage()));
   }
@@ -219,12 +219,12 @@ public class KafkaLogMessageSerdeTest {
     assertThat(records.size(), is(1));
     LogMessage<?> consumedLogMessage = records.get(0).value();
 
-    assertThat(consumedLogMessage.topic(), is(logMessage.topic()));
-    assertThat(consumedLogMessage.content().getClass(), is(logMessage.content().getClass()));
+    assertThat(consumedLogMessage.getTopic(), is(logMessage.getTopic()));
+    assertThat(consumedLogMessage.getContent().getClass(), is(logMessage.getContent().getClass()));
 
     // Cast the content to JsonRpcRequest to compare fields
-    JsonRpcRequest producedContent = logMessage.content();
-    JsonRpcRequest consumedContent = (JsonRpcRequest) consumedLogMessage.content();
+    JsonRpcRequest producedContent = logMessage.getContent();
+    JsonRpcRequest consumedContent = (JsonRpcRequest) consumedLogMessage.getContent();
 
     assertThat(consumedContent.getId(), is(producedContent.getId()));
     assertThat(consumedContent.getMethod(), is(producedContent.getMethod()));

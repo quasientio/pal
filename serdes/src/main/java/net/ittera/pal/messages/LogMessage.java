@@ -43,8 +43,12 @@ import net.ittera.pal.serdes.jsonrpc.JsonRpcResponseDeserializer;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 
-public record LogMessage<T>(
-    @Nullable String topic, @Nullable Long offset, Map<String, String> headers, T content) {
+public class LogMessage<T> {
+
+  private final String topic;
+  private Long offset;
+  private final Map<String, String> headers;
+  private final T content;
   private static final Gson gson =
       new GsonBuilder()
           .registerTypeAdapter(JsonRpcParameter.class, new JsonRpcParameterDeserializer())
@@ -57,10 +61,15 @@ public record LogMessage<T>(
           .registerTypeAdapter(JsonRpcResponse.class, new JsonRpcResponseDeserializer())
           .create();
 
-  public LogMessage {
+  public LogMessage(
+      @Nullable String topic, @Nullable Long offset, Map<String, String> headers, T content) {
     if (!(content instanceof Message || content instanceof JsonRpcMessage)) {
       throw new IllegalArgumentException("content must be a Message or JsonRpcMessage");
     }
+    this.topic = topic;
+    this.offset = offset;
+    this.headers = headers;
+    this.content = content;
   }
 
   public static LogMessage<?> newInstance(
@@ -75,6 +84,9 @@ public record LogMessage<T>(
     LogMessage<?> logMessage;
     Map<String, String> headers = new HashMap<>();
     headers.put("message-format", messageFormat.name());
+
+    // add all string headers to headers map
+    headers.putAll(getStringHeadersFromRecordHeaders(recordHeaders));
 
     switch (messageFormat) {
       case COLFER -> {
@@ -94,6 +106,7 @@ public record LogMessage<T>(
         if (jsonRpcMessageType == null) {
           throw new IllegalArgumentException("JSON-RPC message type not found in record headers");
         }
+        headers.put("message-type", jsonRpcMessageType.name());
 
         switch (jsonRpcMessageType) {
           case REQUEST -> {
@@ -141,12 +154,44 @@ public record LogMessage<T>(
     return null;
   }
 
+  private static Map<String, String> getStringHeadersFromRecordHeaders(Headers recordHeaders) {
+    Map<String, String> headers = new HashMap<>();
+    for (Header header : recordHeaders) {
+      if (header.value().length == 1) {
+        // skip single byte headers (e.g. message-format, message-type)
+        continue;
+      }
+      headers.put(header.key(), new String(header.value(), StandardCharsets.UTF_8));
+    }
+    return headers;
+  }
+
+  public String getTopic() {
+    return topic;
+  }
+
+  public Long getOffset() {
+    return offset;
+  }
+
+  public Map<String, String> getHeaders() {
+    return headers;
+  }
+
+  public T getContent() {
+    return content;
+  }
+
+  public void setOffset(Long offset) {
+    this.offset = offset;
+  }
+
   @Override
   public String toString() {
     return "LogMessage{"
         + "topic='"
         + topic
-        + "offset="
+        + ",offset="
         + offset
         + ", headers="
         + headers

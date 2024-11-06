@@ -64,7 +64,7 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
       return null;
     }
 
-    Object content = logMessage.content();
+    Object content = logMessage.getContent();
 
     // this is a hack to get the unit tests to pass since the MockProducer doesn't pass in the
     // headers
@@ -76,10 +76,9 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
 
     byte[] data;
 
-    if (content instanceof Message) {
-      logger.debug("Serializing Message: {}", ColferUtils.toJson((Message) content, true));
+    if (content instanceof Message message) {
+      logger.debug("Serializing Message: {}", ColferUtils.toJson(message, true));
       MessageFormatType messageFormat = MessageFormatType.COLFER;
-      Message message = (Message) content;
 
       // Serialize using Colfer
       data = colferMessageToBytes(message);
@@ -87,9 +86,14 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
       // Set message-format and message-type headers
       headers.add("message-format", new byte[] {messageFormat.toByte()});
       headers.add("message-type", new byte[] {message.getMessageType()});
-    } else if (content instanceof JsonRpcMessage) {
+
+      // set log message headers in the kafka record headers
+      for (Map.Entry<String, String> entry : logMessage.getHeaders().entrySet()) {
+        headers.add(entry.getKey(), entry.getValue().getBytes(StandardCharsets.UTF_8));
+      }
+
+    } else if (content instanceof JsonRpcMessage jsonRpcMessage) {
       MessageFormatType messageFormat = MessageFormatType.JSONRPC;
-      JsonRpcMessage jsonRpcMessage = (JsonRpcMessage) content;
 
       // Serialize using Gson
       String json = gson.toJson(jsonRpcMessage);
