@@ -26,6 +26,10 @@
         <appender-ref ref="cli"/>
     </logger>
 
+    <logger name="net.ittera.pal.serdes.kafka" level="info" additivity="false">
+        <appender-ref ref="cli"/>
+    </logger>
+
     <logger name="${kafka.logger.name}" level="info" additivity="false">
         <appender-ref ref="kafka"/>
     </logger>

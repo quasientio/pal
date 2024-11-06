@@ -47,18 +47,20 @@ public class KafkaLogMessageDeserializer implements Deserializer<LogMessage<?>> 
     }
 
     LogMessage<?> logMessage = LogMessage.newInstance(topic, null, recordHeaders, data);
-    String contentAsString;
-    if (logMessage.getContent() instanceof Message) {
-      contentAsString = ColferUtils.toJson((Message) logMessage.getContent(), true);
-    } else { // JsonRpcMessage
-      contentAsString = logMessage.getContent().toString();
+    if (logger.isDebugEnabled()) {
+      String contentAsString;
+      if (logMessage.getContent() instanceof Message) {
+        contentAsString = ColferUtils.toJson((Message) logMessage.getContent(), true);
+      } else { // JsonRpcMessage
+        contentAsString = logMessage.getContent().toString();
+      }
+      logger.debug(
+          "Deserialized LogMessage with topic: {}, offset: {}, headers:{}, content: {}",
+          logMessage.getTopic(),
+          logMessage.getOffset(),
+          logMessage.getHeaders(),
+          contentAsString);
     }
-    logger.debug(
-        "Deserialized LogMessage with topic: {}, offset: {}, headers:{}, content: {}",
-        logMessage.getTopic(),
-        logMessage.getOffset(),
-        logMessage.getHeaders(),
-        contentAsString);
     return logMessage;
   }
 }
