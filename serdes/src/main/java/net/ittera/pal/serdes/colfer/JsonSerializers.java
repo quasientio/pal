@@ -84,7 +84,6 @@ import org.slf4j.LoggerFactory;
  * resembling as much as possible to generic JSON serializers. So even if we know
  * that a value will be present and non-blank, we should still serialize only
  * after checking that notEmpty(value) == true.
- * This check must be skipped for boolean values, which are always serialized.
  *
  * In Colfer, empty means:
  * - null for objects
@@ -114,6 +113,10 @@ public class JsonSerializers {
 
   private static <E> boolean notEmpty(E[] value) {
     return value != null && value.length != 0;
+  }
+
+  private static boolean notEmpty(boolean value) {
+    return value;
   }
 
   public static class ExecMessageSerializer implements JsonSerializer<ExecMessage> {
@@ -360,7 +363,9 @@ public class JsonSerializers {
       if (notEmpty(message.clazz)) {
         jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
       }
-      jsonElement.addProperty("in_initializer", message.inInitializer);
+      if (notEmpty(message.inInitializer)) {
+        jsonElement.addProperty("in_initializer", message.inInitializer);
+      }
       if (notEmpty(message.constructor)) {
         jsonElement.addProperty("constructor", message.constructor);
       }
@@ -680,7 +685,9 @@ public class JsonSerializers {
       if (notEmpty(message.responseToUuid)) {
         jsonElement.addProperty("response_to", message.responseToUuid);
       }
-      jsonElement.addProperty("result", message.result);
+      if (notEmpty(message.result)) {
+        jsonElement.addProperty("result", message.result);
+      }
       return jsonElement;
     }
   }
@@ -693,7 +700,9 @@ public class JsonSerializers {
       if (notEmpty(message.name)) {
         jsonElement.addProperty("name", message.name);
       }
-      jsonElement.addProperty("unknown", message.unknown);
+      if (notEmpty(message.unknown)) {
+        jsonElement.addProperty("unknown", message.unknown);
+      }
       return jsonElement;
     }
   }
@@ -715,15 +724,21 @@ public class JsonSerializers {
       if (notEmpty(message.clazz)) {
         jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
       }
-      jsonElement.addProperty("is_array", message.isArray);
+      if (notEmpty(message.isArray)) {
+        jsonElement.addProperty("is_array", message.isArray);
+      }
       if (notEmpty(message.arrayValues)) {
         jsonElement.add("array_values", jsonSerializationContext.serialize(message.arrayValues));
       }
       if (notEmpty(message.ref)) {
         jsonElement.addProperty("ref", message.ref);
       }
-      jsonElement.addProperty("is_null", message.isNull);
-      jsonElement.addProperty("is_void", message.isVoid);
+      if (notEmpty(message.isNull)) {
+        jsonElement.addProperty("is_null", message.isNull);
+      }
+      if (notEmpty(message.isVoid)) {
+        jsonElement.addProperty("is_void", message.isVoid);
+      }
       return jsonElement;
     }
   }
@@ -802,7 +817,9 @@ public class JsonSerializers {
       if (notEmpty(message.Type)) {
         jsonElement.add("type", jsonSerializationContext.serialize(message.Type));
       }
-      jsonElement.addProperty("is_ref", message.isRef);
+      if (notEmpty(message.isRef)) {
+        jsonElement.addProperty("is_ref", message.isRef);
+      }
       return jsonElement;
     }
   }
@@ -813,8 +830,12 @@ public class JsonSerializers {
     public JsonElement serialize(
         ReturnValue message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      jsonElement.addProperty("is_void", message.isVoid);
-      jsonElement.addProperty("is_class", message.isClass);
+      if (notEmpty(message.isVoid)) {
+        jsonElement.addProperty("is_void", message.isVoid);
+      }
+      if (notEmpty(message.isClass)) {
+        jsonElement.addProperty("is_class", message.isClass);
+      }
       if (notEmpty(message.object)) {
         jsonElement.add("object", jsonSerializationContext.serialize(message.object));
       }
@@ -833,8 +854,12 @@ public class JsonSerializers {
         throws JsonParseException {
       final JsonObject jsonObject = json.getAsJsonObject();
       final ReturnValue returnValue = new ReturnValue();
-      returnValue.isVoid = jsonObject.get("is_void").getAsBoolean();
-      returnValue.isClass = jsonObject.get("is_class").getAsBoolean();
+      if (jsonObject.has("is_void")) {
+        returnValue.isVoid = jsonObject.get("is_void").getAsBoolean();
+      }
+      if (jsonObject.has("is_class")) {
+        returnValue.isClass = jsonObject.get("is_class").getAsBoolean();
+      }
       if (jsonObject.has("object")) {
         returnValue.object = context.deserialize(jsonObject.get("object"), Obj.class);
       }
