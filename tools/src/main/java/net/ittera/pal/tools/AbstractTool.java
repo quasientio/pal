@@ -21,9 +21,14 @@ package net.ittera.pal.tools;
 
 import java.util.Locale;
 import javax.annotation.Nullable;
+import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
+import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.MessageType;
+import net.ittera.pal.serdes.colfer.ColferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,5 +88,60 @@ public class AbstractTool {
         return null;
       }
     }
+  }
+
+  protected static String getMessageType(JsonRpcMessage message) {
+    if (message instanceof JsonRpcRequest) {
+      return "JSONRPC_REQUEST";
+    } else if (message instanceof JsonRpcResponse) {
+      return "JSONRPC_RESPONSE";
+    } else {
+      return null;
+    }
+  }
+
+  protected static String getMessageType(LogMessage<?> message) {
+    if (isColfer(message)) {
+      return getMessageType((Message) message.getContent());
+    } else if (isJsonRpc(message)) {
+      return getMessageType((JsonRpcMessage) message.getContent());
+    }
+    return null;
+  }
+
+  protected static String getMessageFormat(LogMessage<?> logMessage) {
+    if (isColfer(logMessage)) {
+      return "COLFER";
+    } else if (isJsonRpc(logMessage)) {
+      return "JSONRPC";
+    }
+    return null;
+  }
+
+  protected static boolean isColfer(LogMessage<?> logMessage) {
+    return logMessage.getContent() instanceof Message;
+  }
+
+  protected static boolean isJsonRpc(LogMessage<?> logMessage) {
+    return logMessage.getContent() instanceof JsonRpcMessage;
+  }
+
+  protected static String getId(LogMessage<?> logMessage) {
+    if (isColfer(logMessage)) {
+      return getMessageUuid((Message) logMessage.getContent());
+    } else if (isJsonRpc(logMessage)) {
+      return ((JsonRpcMessage) logMessage.getContent()).getId();
+    }
+    return null;
+  }
+
+  protected static String getMessageContentAsJsonString(LogMessage<?> logMessage, boolean pretty) {
+    if (isColfer(logMessage)) {
+      return ColferUtils.toJson((Message) logMessage.getContent(), pretty);
+    } else if (isJsonRpc(logMessage)) {
+      return ((JsonRpcMessage) logMessage.getContent()).toJson(pretty);
+    }
+    throw new IllegalArgumentException(
+        "Unknown message type of class: " + logMessage.getContent().getClass());
   }
 }

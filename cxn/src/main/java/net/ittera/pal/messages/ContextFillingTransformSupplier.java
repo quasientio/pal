@@ -21,13 +21,12 @@ package net.ittera.pal.messages;
 
 import java.util.HashMap;
 import java.util.Map;
-import net.ittera.pal.messages.colfer.Message;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;
 
 public class ContextFillingTransformSupplier
-    implements Transformer<String, Message, KeyValue<String, Map<String, Object>>> {
+    implements Transformer<String, LogMessage<?>, KeyValue<String, Map<String, Object>>> {
   private ProcessorContext processorContext;
 
   @Override
@@ -36,15 +35,14 @@ public class ContextFillingTransformSupplier
   }
 
   @Override
-  public KeyValue<String, Map<String, Object>> transform(String key, Message message) {
+  public KeyValue<String, Map<String, Object>> transform(String key, LogMessage message) {
     Map<String, Object> map = new HashMap<>();
     MessageContext messageContext =
         new MessageContext(
             processorContext.offset(),
             processorContext.partition(),
             processorContext.timestamp(),
-            processorContext.topic(),
-            processorContext.headers());
+            processorContext.topic());
     map.put("message", message);
     map.put("context", messageContext);
     return new KeyValue<>(key, map);

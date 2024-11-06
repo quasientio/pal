@@ -38,11 +38,10 @@ import kong.unirest.Unirest;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.ContextFillingTransformSupplier;
-import net.ittera.pal.messages.colfer.Message;
+import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.serdes.kafka.KafkaMessageSerde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
@@ -162,18 +161,8 @@ public class IndexingService implements Callable<Integer> {
      2. DEFINE PROCESSING TOPOLOGY
     */
     final StreamsBuilder builder = new StreamsBuilder();
-    //    KStream<String, ExecMessage> stream = builder.stream(logName);
-    // stream: deserialize value
-    KStream<String, Message> stream =
-        builder.<String, byte[]>stream(logName)
-            .map(
-                (k, v) -> {
-                  Message message = new Message();
-                  message.unmarshal(v, 0);
-                  return new KeyValue<>(k, message);
-                });
+    KStream<String, LogMessage<?>> stream = builder.stream(logName);
 
-    @SuppressWarnings("deprecation")
     KStream<String, Map<String, Object>> streamWithCtxt =
         stream.transform(ContextFillingTransformSupplier::new);
 

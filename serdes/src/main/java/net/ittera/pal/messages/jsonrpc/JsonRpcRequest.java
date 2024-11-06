@@ -5,7 +5,6 @@ import com.google.gson.annotations.SerializedName;
 import java.util.Arrays;
 import java.util.List;
 import net.ittera.pal.messages.types.ExecMessageType;
-import net.ittera.pal.messages.types.JsonRpcRequestType;
 
 /**
  * Represents a JSON-RPC 2.0 request message. See <a
@@ -102,21 +101,11 @@ public class JsonRpcRequest extends JsonRpcMessage {
   private transient String methodName;
   private transient String fieldName;
 
-  @SerializedName("jsonrpc")
-  private String jsonrpc;
-
   @SerializedName("method")
   private String method;
 
   @SerializedName("params")
   private List<JsonRpcParameter> params;
-
-  @SerializedName("id")
-  private String id;
-
-  public String getJsonrpc() {
-    return jsonrpc;
-  }
 
   public String getMethod() {
     return method;
@@ -126,24 +115,12 @@ public class JsonRpcRequest extends JsonRpcMessage {
     return params;
   }
 
-  public String getId() {
-    return id;
-  }
-
-  public void setJsonrpc(String jsonrpc) {
-    this.jsonrpc = jsonrpc;
-  }
-
   public void setMethod(String method) {
     this.method = method;
   }
 
   public void setParams(List<JsonRpcParameter> params) {
     this.params = params;
-  }
-
-  public void setId(String id) {
-    this.id = id;
   }
 
   // Helper methods
@@ -178,14 +155,6 @@ public class JsonRpcRequest extends JsonRpcMessage {
       return true;
     } catch (NumberFormatException e) {
       return false;
-    }
-  }
-
-  public JsonRpcRequestType getJsonRpcRequestType() {
-    if (getId() != null && !getId().isEmpty()) {
-      return JsonRpcRequestType.REQUEST;
-    } else {
-      return JsonRpcRequestType.NOTIFICATION;
     }
   }
 

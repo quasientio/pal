@@ -26,33 +26,11 @@ import com.google.gson.annotations.SerializedName;
  */
 public class JsonRpcResponse extends JsonRpcMessage {
 
-  @SerializedName("jsonrpc")
-  private String jsonrpc;
-
   @SerializedName("result")
   private JsonRpcResult result;
 
   @SerializedName("error")
   private JsonRpcError error;
-
-  @SerializedName("id")
-  private String id;
-
-  public String getJsonrpc() {
-    return jsonrpc;
-  }
-
-  public String getId() {
-    return id;
-  }
-
-  public void setJsonrpc(String jsonrpc) {
-    this.jsonrpc = jsonrpc;
-  }
-
-  public void setId(String id) {
-    this.id = id;
-  }
 
   public JsonRpcResult getResult() {
     return result;

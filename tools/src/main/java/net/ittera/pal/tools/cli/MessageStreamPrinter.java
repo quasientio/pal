@@ -35,17 +35,16 @@ import java.util.stream.Stream;
 import net.ittera.pal.common.cli.PalCommand;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.PalDirectory;
-import net.ittera.pal.messages.ContextFillingTransformSupplier;
+import net.ittera.pal.messages.ContextFillingFixedKeyProcessor;
+import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.MessageContext;
 import net.ittera.pal.messages.MessageStreamer;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
-import net.ittera.pal.serdes.kafka.KafkaMessageSerde;
+import net.ittera.pal.serdes.kafka.typed.KafkaLogMessageSerde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
@@ -87,27 +86,34 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       description = "subscribe to peer with given address")
   private String peerAddress;
 
+  @Option(
+      names = {"--formats"},
+      arity = "0..*",
+      description = "format(s) of messages to filter by (COLFER, JSONRPC)")
+  private List<String> msgFormats;
+
   // TODO consider using EnumSet for msgTypes
   @Option(
-      names = {"-t", "--types"},
+      names = {"--types"},
       arity = "0..*",
       description =
           "type(s) of messages to filter by ("
               + "STATIC_CONSTRUCTOR, RETURN_CLASS, CONSTRUCTOR, INSTANCE_METHOD,"
               + " CLASS_METHOD, GET_STATIC, GET_FIELD, PUT_STATIC, PUT_FIELD,"
-              + " PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE, RETURN_VALUE)")
+              + " PUT_STATIC_DONE, PUT_FIELD_DONE, THROWABLE, RETURN_VALUE,"
+              + " JSONRPC_REQUEST, JSONRPC_RESPONSE)")
   private List<String> msgTypes;
 
   @Option(
       names = {"-fp", "--from-peer"},
       paramLabel = "uuid",
-      description = "filter by peer uuid")
+      description = "filter by peer uuid (only valid for COLFER messages)")
   private String fromPeer;
 
   @Option(
       names = {"-ft", "--from-thread"},
       paramLabel = "thread_name",
-      description = "filter by thread name")
+      description = "filter by thread name (only valid for COLFER messages)")
   private String threadName;
 
   /**
@@ -121,10 +127,10 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   protected Long offset;
 
   @Option(
-      names = {"-u", "--uuid"},
-      paramLabel = "uuid",
-      description = "print message with given UUID")
-  private String uuid;
+      names = {"--id"},
+      paramLabel = "id",
+      description = "print messages with given ID")
+  private String id;
 
   @Option(
       names = {"-f", "--full-output"},
@@ -220,7 +226,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerId);
     props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, KafkaMessageSerde.class);
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, KafkaLogMessageSerde.class);
 
     /*
      2. DEFINE PROCESSING TOPOLOGY
@@ -228,52 +234,72 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     final StreamsBuilder builder = new StreamsBuilder();
 
     // stream: deserialize value
-    KStream<String, Message> stream =
-        builder.<String, byte[]>stream(logName)
-            .map(
-                (k, v) -> {
-                  Message message = new Message();
-                  message.unmarshal(v, 0);
-                  return new KeyValue<>(k, message);
-                });
+    KStream<String, LogMessage<?>> stream = builder.stream(logName);
+
+    // stream: apply filter: message formats
+    if (msgFormats != null) {
+      stream =
+          stream.filter(
+              (k, message) -> {
+                String messageFormat = getMessageFormat(message);
+                if (messageFormat == null) {
+                  throw new RuntimeException("Unknown message format of message: " + message);
+                }
+                return msgFormats.contains(messageFormat);
+              });
+    }
 
     // stream: apply filter: message types
     if (msgTypes != null) {
       stream =
           stream.filter(
-              (k, m) -> {
-                ExecMessage execMessage = m.getExecMessage();
-                return execMessage != null
-                    && msgTypes.contains(
-                        ExecMessageType.fromByte(execMessage.getExecMessageType()).toString());
+              (k, message) -> {
+                String messageType = getMessageType(message);
+                if (messageType == null) {
+                  throw new RuntimeException("Unknown message format of message: " + message);
+                }
+                return msgTypes.contains(messageType);
               });
     }
 
     // stream: apply filter: from peer (uuid)
     if (fromPeer != null) {
-      stream = stream.filter((k, m) -> fromPeer.equalsIgnoreCase(getPeerUuid(m)));
+      stream =
+          stream.filter(
+              (k, message) -> {
+                if (isColfer(message)) {
+                  return fromPeer.equalsIgnoreCase(getPeerUuid((Message) message.getContent()));
+                } else { // since we don't have the peer for JSONRPC messages, we can't filter by it
+                  return true;
+                }
+              });
     }
 
     // stream: apply filter: from thread name
     if (threadName != null) {
       stream =
           stream.filter(
-              (k, m) -> {
-                ExecMessage execMessage = m.getExecMessage();
-                return execMessage != null
-                    && threadName.equalsIgnoreCase(execMessage.getThreadName());
+              (k, message) -> {
+                if (isColfer(message)
+                    && ((Message) message.getContent()).getExecMessage() != null) {
+                  ExecMessage execMessage = ((Message) message.getContent()).getExecMessage();
+                  return execMessage != null
+                      && threadName.equalsIgnoreCase(execMessage.getThreadName());
+                } else { // since we don't have the thread name for non-ExecMessages, we can't
+                  // filter by it
+                  return true;
+                }
               });
     }
 
-    // stream: apply filter: msg UUID
-    if (uuid != null) {
-      stream = stream.filter((k, m) -> uuid.equalsIgnoreCase(getMessageUuid(m)));
+    // stream: apply filter: msg ID (uuid for colfer messages, id for JSONRPC messages)
+    if (id != null) {
+      stream = stream.filter((k, message) -> id.equalsIgnoreCase(getId(message)));
     }
 
     // stream: transform: add context  (offset, partition, timestamp, headers, etc.)
-    @SuppressWarnings("deprecation")
     KStream<String, Map<String, Object>> streamWithCtxt =
-        stream.transform(ContextFillingTransformSupplier::new);
+        stream.processValues(ContextFillingFixedKeyProcessor::new);
 
     // stream: apply filter: offset
     if (offset != null) {
@@ -285,23 +311,29 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     // stream: print
     streamWithCtxt.foreach(
         (k, m) -> {
-          Message msg = (Message) m.get("message");
+          var msg = (LogMessage<?>) m.get("message");
           MessageContext ctxt = (MessageContext) m.get("context");
           if (fullOutput) {
             System.out.printf(
-                "CTXT: offset: %d, partition: %d, timestamp: %d, headers: %s, %nMESSAGE:%n%s%n",
+                "CONTEXT: offset: %d, topic: %s, partition: %d, key: %s, timestamp: %d %nHEADERS: %s%n%s%n",
                 ctxt.getOffset(),
+                ctxt.getTopic(),
                 ctxt.getPartition(),
+                k,
                 ctxt.getTimestamp(),
-                ctxt.getHeadersToString(),
-                msg.toString());
-          } else if (jsonOutput) {
+                msg.getHeaders(),
+                getMessageContentAsJsonString(msg, true));
+          } else if (jsonOutput) { // JSON format pretty-print
             System.out.printf(
-                "offset: %d,%nmessage: %s%n", ctxt.getOffset(), ColferUtils.toJson(msg, true));
-          } else { // compact format (default)
+                "offset: %d,%n%s%n", ctxt.getOffset(), getMessageContentAsJsonString(msg, true));
+          } else { // JSON format compact
             System.out.printf(
-                "offset=%d uuid=%s key=%s type=%s%n",
-                ctxt.getOffset(), getMessageUuid(msg), k, getMessageType(msg));
+                "offset=%d id=%s format=%s type=%s message=%s%n",
+                ctxt.getOffset(),
+                getId(msg),
+                getMessageFormat(msg),
+                getMessageType(msg),
+                getMessageContentAsJsonString(msg, false));
           }
         });
 
@@ -392,8 +424,8 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
           }
 
           // stream: apply filter: msg UUID
-          if (uuid != null) {
-            stream = stream.filter(m -> uuid.equalsIgnoreCase(getMessageUuid(m)));
+          if (id != null) {
+            stream = stream.filter(m -> id.equalsIgnoreCase(getMessageUuid(m)));
           }
 
           // stream: print
