@@ -41,9 +41,7 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
   /** */
   public String name;
 
-  /** (target) one of */
-  public Obj object;
-
+  /** target */
   public String objectRef;
 
   public int modifiers;
@@ -163,7 +161,6 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
     long n =
         1L + 6 + (long) this.name.length() * 3 + 6 + (long) this.objectRef.length() * 3 + 5 + 6;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
-    if (this.object != null) n += 1 + (long) this.object.marshalFit();
     for (Parameter o : this.parameters) {
       if (o == null) n++;
       else n += o.marshalFit();
@@ -269,13 +266,8 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
         buf[ii] = (byte) size;
       }
 
-      if (this.object != null) {
-        buf[i++] = (byte) 2;
-        i = this.object.marshal(buf, i);
-      }
-
       if (!this.objectRef.isEmpty()) {
-        buf[i++] = (byte) 3;
+        buf[i++] = (byte) 2;
         int start = ++i;
 
         String s = this.objectRef;
@@ -325,12 +317,12 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
       if (this.modifiers != 0) {
         int x = this.modifiers;
         if ((x & ~((1 << 21) - 1)) != 0) {
-          buf[i++] = (byte) (4 | 0x80);
+          buf[i++] = (byte) (3 | 0x80);
           buf[i++] = (byte) (x >>> 24);
           buf[i++] = (byte) (x >>> 16);
           buf[i++] = (byte) (x >>> 8);
         } else {
-          buf[i++] = (byte) 4;
+          buf[i++] = (byte) 3;
           while (x > 0x7f) {
             buf[i++] = (byte) (x | 0x80);
             x >>>= 7;
@@ -340,7 +332,7 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
       }
 
       if (this.parameters.length != 0) {
-        buf[i++] = (byte) 5;
+        buf[i++] = (byte) 4;
         Parameter[] a = this.parameters;
 
         int x = a.length;
@@ -366,7 +358,7 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
       }
 
       if (this.context != null) {
-        buf[i++] = (byte) 6;
+        buf[i++] = (byte) 5;
         i = this.context.marshal(buf, i);
       }
 
@@ -443,12 +435,6 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
       }
 
       if (header == (byte) 2) {
-        this.object = new Obj();
-        i = this.object.unmarshal(buf, i, end);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 3) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -467,7 +453,7 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
         header = buf[i++];
       }
 
-      if (header == (byte) 4) {
+      if (header == (byte) 3) {
         int x = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -476,7 +462,7 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
         }
         this.modifiers = x;
         header = buf[i++];
-      } else if (header == (byte) (4 | 0x80)) {
+      } else if (header == (byte) (3 | 0x80)) {
         this.modifiers =
             (buf[i++] & 0xff) << 24
                 | (buf[i++] & 0xff) << 16
@@ -485,7 +471,7 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
         header = buf[i++];
       }
 
-      if (header == (byte) 5) {
+      if (header == (byte) 4) {
         int length = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -508,7 +494,7 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
         header = buf[i++];
       }
 
-      if (header == (byte) 6) {
+      if (header == (byte) 5) {
         this.context = new Context();
         i = this.context.unmarshal(buf, i, end);
         header = buf[i++];
@@ -531,7 +517,7 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 7L;
+  private static final long serialVersionUID = 6L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -611,35 +597,6 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
    */
   public InstanceMethodCall withName(String value) {
     this.name = value;
-    return this;
-  }
-
-  /**
-   * Gets net.ittera.pal.messages/colfer.InstanceMethodCall.object.
-   *
-   * @return the value.
-   */
-  public Obj getObject() {
-    return this.object;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.InstanceMethodCall.object.
-   *
-   * @param value the replacement.
-   */
-  public void setObject(Obj value) {
-    this.object = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.InstanceMethodCall.object.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public InstanceMethodCall withObject(Obj value) {
-    this.object = value;
     return this;
   }
 
@@ -764,7 +721,6 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
     int h = 1;
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     if (this.name != null) h = 31 * h + this.name.hashCode();
-    if (this.object != null) h = 31 * h + this.object.hashCode();
     if (this.objectRef != null) h = 31 * h + this.objectRef.hashCode();
     h = 31 * h + this.modifiers;
     for (Parameter o : this.parameters) h = 31 * h + (o == null ? 0 : o.hashCode());
@@ -783,7 +739,6 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
 
     return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
         && (this.name == null ? o.name == null : this.name.equals(o.name))
-        && (this.object == null ? o.object == null : this.object.equals(o.object))
         && (this.objectRef == null ? o.objectRef == null : this.objectRef.equals(o.objectRef))
         && this.modifiers == o.modifiers
         && java.util.Arrays.equals(this.parameters, o.parameters)
@@ -800,11 +755,6 @@ public class InstanceMethodCall implements Serializable, net.ittera.pal.messages
 
       if (json.has("name")) {
         this.name = json.get("name").getAsString();
-      }
-
-      if (json.has("object")) {
-        JsonObject jsonObj = json.getAsJsonObject("object");
-        this.object = new Obj().fromJson(jsonObj);
       }
 
       if (json.has("objectRef")) {

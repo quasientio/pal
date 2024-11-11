@@ -245,9 +245,6 @@ public class JsonSerializers {
       if (notEmpty(message.name)) {
         jsonElement.addProperty("name", message.name);
       }
-      if (notEmpty(message.object)) {
-        jsonElement.add("object", jsonSerializationContext.serialize(message.object));
-      }
       if (notEmpty(message.objectRef)) {
         jsonElement.addProperty("objectref", message.objectRef);
       }

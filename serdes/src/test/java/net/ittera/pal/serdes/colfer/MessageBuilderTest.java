@@ -386,14 +386,7 @@ public class MessageBuilderTest {
         createContextForInstanceMethod(clazz, methodName, String.class, int.class, List.class);
     ExecMessage execMessage =
         messageBuilderWithContext.buildInstanceMethod(
-            peerUuid,
-            instanceMethodContext,
-            sender,
-            senderObjRef,
-            target,
-            targetObjRef,
-            args,
-            argObjRefs);
+            peerUuid, instanceMethodContext, sender, senderObjRef, targetObjRef, args, argObjRefs);
     assertNotNull(execMessage);
     assertEquals(ExecMessageType.INSTANCE_METHOD.toByte(), execMessage.execMessageType);
     assertNotNull(execMessage.getInstanceMethodCall());
@@ -1066,14 +1059,7 @@ public class MessageBuilderTest {
         createContextForInstanceMethod(clazz, "dummyMethod", String.class, int.class, List.class);
     ExecMessage execMessage =
         messageBuilderWithContext.buildInstanceMethod(
-            peerUuid,
-            instanceMethodContext,
-            sender,
-            senderObjRef,
-            target,
-            targetObjRef,
-            args,
-            argObjRefs);
+            peerUuid, instanceMethodContext, sender, senderObjRef, targetObjRef, args, argObjRefs);
     InterceptKeyMessage interceptKeyMessage = messageBuilder.buildInterceptKey(execMessage);
 
     assertNotNull(interceptKeyMessage);
@@ -1217,7 +1203,7 @@ public class MessageBuilderTest {
             target.getClass(), methodName, String.class, int.class, List.class);
     ExecMessage interceptedExecMessage =
         messageBuilder.buildInstanceMethod(
-            peerUuid, context, sender, senderObjRef, target, targetObjRef, args, argObjRefs);
+            peerUuid, context, sender, senderObjRef, targetObjRef, args, argObjRefs);
 
     // create an InterceptMessage from which the callback will be built
     String callbackClassName = "SomeClassWithCallbackMethod";

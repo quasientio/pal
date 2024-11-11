@@ -36,11 +36,9 @@ import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.core.exec.DispatcherConnector;
 import net.ittera.pal.core.exec.java.reflect.ReflectionHelper;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.Parameter;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
-import net.ittera.pal.serdes.colfer.Unwrapper;
 
 @Singleton
 public class InstanceMethodDispatcher extends MethodDispatcher {
@@ -69,7 +67,6 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
         ctxt,
         sender,
         storeObject(sender),
-        target,
         storeObject(target),
         args,
         Arrays.stream(args).map(this::storeObject).toArray(ObjectRef[]::new));
@@ -130,11 +127,8 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   }
 
   @Override
-  protected Object getTargetFromMessage(ExecMessage execMessage)
-      throws ClassNotFoundException, NullPointerException {
-    final Obj methodCallObject = execMessage.getInstanceMethodCall().getObject();
+  protected Object getTargetFromMessage(ExecMessage execMessage) throws NullPointerException {
     if (logger.isTraceEnabled()) {
-      logger.trace("methodCallObject: {}", methodCallObject);
       if (execMessage.getInstanceMethodCall().getObjectRef() != null
           && !execMessage.getInstanceMethodCall().getObjectRef().isEmpty()) {
         logger.trace("ObjectRef: {}", execMessage.getInstanceMethodCall().getObjectRef());
@@ -142,31 +136,19 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
     }
 
     Object target;
-    if (methodCallObject != null) {
-      Class<?> objClass =
-          Class.forName(
-              execMessage.getInstanceMethodCall().getClazz().getName(),
-              true,
-              Thread.currentThread().getContextClassLoader());
-      target = Unwrapper.unwrapObject(methodCallObject, objClass);
-      if (logger.isTraceEnabled()) {
-        logger.trace("Unwrapped target: {}", target);
-      }
+    ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceMethodCall().getObjectRef());
+    if (objectLookupStore.containsObjectRef(targetObjRef)) {
+      target = objectLookupStore.lookupObject(targetObjRef);
     } else {
-      ObjectRef targetObjRef = ObjectRef.from(execMessage.getInstanceMethodCall().getObjectRef());
-      if (objectLookupStore.containsObjectRef(targetObjRef)) {
-        target = objectLookupStore.lookupObject(targetObjRef);
-      } else {
-        Exception objectNotFoundException =
-            new ObjectNotFoundException(
-                String.format("No object found with objRef: %d", targetObjRef.getRef()));
-        NullPointerException npe = new NullPointerException(objectNotFoundException.getMessage());
-        npe.initCause(objectNotFoundException);
-        throw npe;
-      }
-      if (logger.isTraceEnabled()) {
-        logger.trace("Loaded target: {}", target);
-      }
+      Exception objectNotFoundException =
+          new ObjectNotFoundException(
+              String.format("No object found with objRef: %d", targetObjRef.getRef()));
+      NullPointerException npe = new NullPointerException(objectNotFoundException.getMessage());
+      npe.initCause(objectNotFoundException);
+      throw npe;
+    }
+    if (logger.isTraceEnabled()) {
+      logger.trace("Loaded target: {}", target);
     }
     return target;
   }

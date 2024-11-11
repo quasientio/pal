@@ -32,8 +32,7 @@ type InstanceMethodCall struct {
 	//method name
 	name text
 
-	// (target) one of
-	object    Obj
+	// target
 	objectRef text
 
 	modifiers uint32

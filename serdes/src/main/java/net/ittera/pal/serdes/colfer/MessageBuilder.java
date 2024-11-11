@@ -425,7 +425,6 @@ public final class MessageBuilder {
       Context context,
       Object sender,
       ObjectRef senderObjRef,
-      Object target,
       ObjectRef targetObjRef,
       Object[] args,
       ObjectRef[] argObjRefs) {
@@ -437,8 +436,7 @@ public final class MessageBuilder {
             .withParameters(createNamedParameters(context, args, argObjRefs))
             .withClazz(getWrappedClass(codeSignature.getDeclaringTypeName()))
             .withName(codeSignature.getName())
-            .withObject(
-                getWrappedObject(target, codeSignature.getDeclaringTypeName(), targetObjRef))
+            .withObjectRef(targetObjRef.asString())
             .withModifiers(codeSignature.getModifiers());
 
     if (includeSourceContext) {
