@@ -79,7 +79,7 @@ public class InterceptRequestEntryTest {
             UUID.randomUUID(),
             InterceptType.BEFORE,
             "java.util.ArrayList",
-            "new",
+            "<init>",
             List.of(),
             "org.some.package.MyInterceptor",
             "callMe");

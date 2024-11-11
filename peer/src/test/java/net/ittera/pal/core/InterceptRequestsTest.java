@@ -45,7 +45,7 @@ public class InterceptRequestsTest {
             UUID.randomUUID(),
             InterceptType.BEFORE,
             "java.util.ArrayList",
-            "new",
+            "<init>",
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
@@ -124,7 +124,7 @@ public class InterceptRequestsTest {
             UUID.randomUUID(),
             InterceptType.BEFORE,
             "java.util.ArrayList",
-            "new",
+            "<init>",
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");

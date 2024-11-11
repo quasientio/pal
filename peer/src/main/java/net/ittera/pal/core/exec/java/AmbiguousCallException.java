@@ -41,7 +41,7 @@ public class AmbiguousCallException extends Exception {
       String className,
       List<Class<?>> parameterTypesToMatch,
       List<? extends Executable> matchingExecutables) {
-    this(className, "new", parameterTypesToMatch, matchingExecutables);
+    this(className, "<init>", parameterTypesToMatch, matchingExecutables);
   }
 
   @Override

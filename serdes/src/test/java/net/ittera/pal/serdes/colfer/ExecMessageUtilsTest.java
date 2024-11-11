@@ -126,7 +126,7 @@ public class ExecMessageUtilsTest {
   public void getExecutableName_constructor() {
     String className = "TestClass";
     ExecMessage execMessage = messageBuilder.buildEmptyConstructor(UUID.randomUUID(), className);
-    assertEquals("new", ExecMessageUtils.getExecutableName(execMessage));
+    assertEquals("<init>", ExecMessageUtils.getExecutableName(execMessage));
   }
 
   @Test
