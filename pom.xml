@@ -395,7 +395,6 @@
         <module>serdes</module>
         <module>cxn</module>
         <module>tools</module>
-        <module>services</module>
         <module>itt-apps</module>
         <module>itt</module>
         <module>installer</module>

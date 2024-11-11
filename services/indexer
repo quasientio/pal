@@ -1,3 +1,0 @@
-#!/bin/bash
-MAIN_ARGS="$@"
-mvn exec:java -Dexec.mainClass="net.ittera.pal.svcs.IndexingService" -Dexec.args="$MAIN_ARGS"
