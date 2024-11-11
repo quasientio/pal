@@ -26,7 +26,7 @@ public class MessageContext {
   private final int partition;
   private final String topic;
 
-  MessageContext(long offset, int partition, long timestamp, String topic) {
+  public MessageContext(long offset, int partition, long timestamp, String topic) {
     this.offset = offset;
     this.partition = partition;
     this.timestamp = timestamp;
@@ -48,5 +48,20 @@ public class MessageContext {
   @SuppressWarnings("unused")
   public String getTopic() {
     return topic;
+  }
+
+  @Override
+  public String toString() {
+    return "MessageContext{"
+        + "offset="
+        + offset
+        + ", timestamp="
+        + timestamp
+        + ", partition="
+        + partition
+        + ", topic='"
+        + topic
+        + '\''
+        + '}';
   }
 }
