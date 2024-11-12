@@ -378,7 +378,6 @@ public class MessageBuilderTest {
     ObjectRef senderObjRef = ObjectRef.randomRef();
     var clazz = DummyClassForTest.class;
     String methodName = "dummyMethod";
-    Object target = new DummyClassForTest();
     ObjectRef targetObjRef = ObjectRef.randomRef();
     Object[] args = {"test", 123, new ArrayList<>()};
     ObjectRef[] argObjRefs = {null, null, ObjectRef.randomRef()};
