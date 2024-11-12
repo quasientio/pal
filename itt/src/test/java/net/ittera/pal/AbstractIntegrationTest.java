@@ -7,6 +7,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Predicate;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
 import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.messages.types.RpcType;
 import org.zeromq.ZContext;
@@ -61,7 +62,8 @@ public abstract class AbstractIntegrationTest {
     return KAFKA_SERVERS;
   }
 
-  protected static Optional<PeerInfo> findRpcPeer(RpcType rpcType)
+  protected static Optional<PeerInfo> findRpcPeer(
+      RpcType rpcType, DirectoryConnectionProvider directoryConnectionProvider)
       throws ExecutionException, InterruptedException {
     Predicate<PeerInfo> hasRpcType =
         peerInfo -> {
@@ -71,10 +73,9 @@ public abstract class AbstractIntegrationTest {
             return peerInfo.getJsonrpcAddress() != null;
           }
         };
-
-    try (PalDirectory palDirectory = new PalDirectory(getPalDirectoryUrl())) {
-      return palDirectory.getAllPeers().stream().filter(hasRpcType).findFirst();
-    }
+    PalDirectory palDirectory =
+        directoryConnectionProvider.get().orElseThrow(RuntimeException::new);
+    return palDirectory.getAllPeers().stream().filter(hasRpcType).findFirst();
   }
 
   protected static ZContext createZmqContext() {

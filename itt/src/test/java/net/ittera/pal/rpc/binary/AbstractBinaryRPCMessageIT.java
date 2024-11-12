@@ -91,6 +91,14 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
             .init();
   }
 
+  @AfterClass
+  public static void finalizeStuff() {
+    logger.debug("Finalizing after tests...");
+    if (thinPeer != null) {
+      thinPeer.close();
+    }
+  }
+
   private ExecMessage sendAndReceive(ExecMessage message) throws Exception {
     ExecMessage reply;
     try {
@@ -104,14 +112,6 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       throw e;
     }
     return reply;
-  }
-
-  @AfterClass
-  public static void finalizeStuff() {
-    logger.debug("Finalizing after tests...");
-    if (thinPeer != null) {
-      thinPeer.close();
-    }
   }
 
   protected ReturnValue callConstructor(

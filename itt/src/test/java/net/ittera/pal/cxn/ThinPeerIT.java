@@ -264,7 +264,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
   @Test
   public void initFullyConnectedAndTestGetters() throws Exception {
     LogInfo inAndOutLog = createTestLog();
-    PeerInfo initialPeer = findRpcPeer(RpcType.JSONRPC).orElseThrow();
+    PeerInfo initialPeer = findRpcPeer(RpcType.JSONRPC, directoryConnectionProvider).orElseThrow();
     Properties producerProperties = getKafkaProducerProperties();
     Properties consumerProperties = getKafkaConsumerProperties();
     UUID peerUuid = UUID.randomUUID();

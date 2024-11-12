@@ -30,6 +30,8 @@ import net.ittera.pal.AbstractIntegrationTest;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ConcurrentHashMapObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectLookupStore;
+import net.ittera.pal.cxn.DirectoryConnectionProvider;
+import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
@@ -45,10 +47,14 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
   protected static final UUID clientId = UUID.randomUUID();
   protected static MessageBuilder messageBuilder;
   protected static ThinPeer thinPeer;
+  private static DirectoryConnectionProvider directoryConnectionProvider;
 
   @BeforeClass
   public static void initialize() throws Exception {
 
+    directoryConnectionProvider = new DirectoryConnectionProvider(getPalDirectoryUrl());
+
+    logger.debug("Initializing before tests...");
     // configure wiring
     AbstractModule module =
         new AbstractModule() {
@@ -69,15 +75,26 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
 
     // find a peer listening with JSON-RPC enabled
     PeerInfo jsonRpcPeer =
-        findRpcPeer(RpcType.JSONRPC)
+        findRpcPeer(RpcType.JSONRPC, directoryConnectionProvider)
             .orElseThrow(() -> new RuntimeException("No peer found with JSON-RPC enabled"));
     thinPeer =
         new ThinPeer()
             .withUuid(clientId)
-            .withDirectoryUrl(getPalDirectoryUrl())
+            .withDirectoryProvider(directoryConnectionProvider)
             .withInitialPeer(jsonRpcPeer)
             .withOutboundRpcType(RpcType.JSONRPC)
             .init();
+  }
+
+  @AfterClass
+  public static void finalizeStuff() {
+    logger.debug("Finalizing after tests...");
+    if (thinPeer != null) {
+      thinPeer.close();
+    }
+    if (directoryConnectionProvider != null) {
+      directoryConnectionProvider.get().ifPresent(PalDirectory::close);
+    }
   }
 
   private JsonRpcResponse sendAndReceive(JsonRpcRequest jsonRpcRequest)
@@ -95,14 +112,6 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
       throw e;
     }
     return response;
-  }
-
-  @AfterClass
-  public static void finalizeStuff() {
-    logger.debug("Finalizing after tests...");
-    if (thinPeer != null) {
-      thinPeer.close();
-    }
   }
 
   protected Object callEmptyConstructor(String className) throws Exception {
