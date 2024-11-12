@@ -615,9 +615,9 @@ public class PalDirectory implements AutoCloseable {
   // <editor-fold desc="Misc methods">
   @Override
   public void close() {
-    logger.info("Closing etcd client to {}", directoryUrl);
     kvClient.close();
     client.close();
+    logger.info("Closed directory {}", directoryUrl);
   }
 
   // </editor-fold>
