@@ -801,7 +801,7 @@ public class ThinPeer implements AutoCloseable {
 
   private void connectToPeer(PeerInfo peer) throws Exception {
     if (logger.isTraceEnabled()) {
-      logger.trace("connectToPeer: in with peerUuid: {}", peerUuid);
+      logger.trace("connectToPeer: in with peer: {}", peer.getUuid());
     }
     if (!allowP2P) {
       throw new RuntimeException("Cannot connect to peer: p2p is disallowed");
