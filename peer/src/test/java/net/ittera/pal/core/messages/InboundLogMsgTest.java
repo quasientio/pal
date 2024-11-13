@@ -26,6 +26,8 @@ import static org.hamcrest.Matchers.not;
 import java.nio.charset.StandardCharsets;
 import net.ittera.pal.core.ZmqEnabledTest;
 import net.ittera.pal.messages.types.MessageFormatType;
+import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +43,8 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
     long offset = 199;
     byte[] body = "whatever".getBytes(StandardCharsets.UTF_8);
 
-    InboundLogMsg msgOut = new InboundLogMsg(offset, MessageFormatType.COLFER, body);
+    Headers emptyHeaders = new RecordHeaders();
+    InboundLogMsg msgOut = new InboundLogMsg(offset, MessageFormatType.COLFER, emptyHeaders, body);
 
     // send
     String socketAddress = "inproc://here";
@@ -67,23 +70,29 @@ public class InboundLogMsgTest extends ZmqEnabledTest {
   @Test
   public void testEquals() {
     long offset = 199;
+    Headers emptyHeaders = new RecordHeaders();
     byte[] body = "whatever".getBytes(StandardCharsets.UTF_8);
 
-    InboundLogMsg msg1 = new InboundLogMsg(offset, MessageFormatType.COLFER, body);
+    InboundLogMsg msg1 = new InboundLogMsg(offset, MessageFormatType.COLFER, emptyHeaders, body);
 
     // equal
-    assertThat(new InboundLogMsg(offset, MessageFormatType.COLFER, body), is(msg1));
+    assertThat(new InboundLogMsg(offset, MessageFormatType.COLFER, emptyHeaders, body), is(msg1));
 
     // different offset
-    assertThat(new InboundLogMsg(offset + 1, MessageFormatType.COLFER, body), is(not(msg1)));
+    assertThat(
+        new InboundLogMsg(offset + 1, MessageFormatType.COLFER, emptyHeaders, body), is(not(msg1)));
 
     // different format
-    assertThat(new InboundLogMsg(offset, MessageFormatType.JSONRPC, body), is(not(msg1)));
+    assertThat(
+        new InboundLogMsg(offset, MessageFormatType.JSONRPC, emptyHeaders, body), is(not(msg1)));
 
     // different body
     assertThat(
         new InboundLogMsg(
-            offset, MessageFormatType.COLFER, "whatevah".getBytes(StandardCharsets.UTF_8)),
+            offset,
+            MessageFormatType.COLFER,
+            emptyHeaders,
+            "whatevah".getBytes(StandardCharsets.UTF_8)),
         is(not(msg1)));
   }
 }

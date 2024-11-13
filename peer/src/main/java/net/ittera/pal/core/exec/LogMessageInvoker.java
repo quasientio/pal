@@ -23,6 +23,7 @@ import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidate
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.core.exec.java.IncomingMessageDispatcher;
 import net.ittera.pal.core.messages.InboundLogMsg;
 import net.ittera.pal.messages.colfer.Message;
@@ -148,9 +149,18 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
             return;
           }
 
+          UUID fromPeerUuid = null;
+          try {
+            byte[] producerIdBytes =
+                msg.getHeaders().headers("producer-id").iterator().next().value();
+            fromPeerUuid = UuidUtils.fromBytes(producerIdBytes);
+          } catch (Exception e) {
+            logger.error("Error getting producer-id header", e);
+          }
+
           // create ExecMessage from JSON-RPC request message
           final Message requestMsg =
-              messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, null);
+              messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, fromPeerUuid);
 
           // dispatch
           Message replyMsg;

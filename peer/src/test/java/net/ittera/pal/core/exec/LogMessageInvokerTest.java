@@ -43,6 +43,8 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.types.MessageFormatType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -129,9 +131,13 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
 
     // send request message to DEALER socket
     int fakeOffset = 0;
+    Headers emptyHeaders = new RecordHeaders();
     InboundLogMsg msg =
         new InboundLogMsg(
-            fakeOffset, MessageFormatType.COLFER, ColferUtils.toBytes(msgBuilder.wrap(invokable)));
+            fakeOffset,
+            MessageFormatType.COLFER,
+            emptyHeaders,
+            ColferUtils.toBytes(msgBuilder.wrap(invokable)));
     msg.send(dealerSocket);
 
     // wait for the message to be dispatched
@@ -171,12 +177,14 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     logMessageInvoker.addMessageDispatchListener(listener);
 
     // send log messages to DEALER socket
+    Headers emptyHeaders = new RecordHeaders();
     messagesToInvoke.forEach(
         invokable -> {
           InboundLogMsg msg =
               new InboundLogMsg(
                   fakeOffset,
                   MessageFormatType.COLFER,
+                  emptyHeaders,
                   ColferUtils.toBytes(msgBuilder.wrap(invokable)));
           msg.send(dealerSocket);
         });

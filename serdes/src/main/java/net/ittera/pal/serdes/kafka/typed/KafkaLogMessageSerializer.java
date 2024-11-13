@@ -23,6 +23,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.Marshallable;
 import net.ittera.pal.messages.colfer.Message;
@@ -89,7 +90,13 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
 
       // set log message headers in the kafka record headers
       for (Map.Entry<String, String> entry : logMessage.getHeaders().entrySet()) {
-        headers.add(entry.getKey(), entry.getValue().getBytes(StandardCharsets.UTF_8));
+        if (entry.getKey().endsWith("-id")) {
+          // "-id" headers are byte-serialized UUIDs
+          headers.add(entry.getKey(), UuidUtils.toBytes(entry.getValue()));
+        } else {
+          // All other headers are UTF-8 encoded strings
+          headers.add(entry.getKey(), entry.getValue().getBytes(StandardCharsets.UTF_8));
+        }
       }
 
     } else if (content instanceof JsonRpcMessage jsonRpcMessage) {

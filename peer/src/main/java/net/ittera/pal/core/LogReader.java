@@ -320,7 +320,8 @@ public class LogReader extends ConnectedService {
 
         if (!recordProducedOrDispatchingBySelf(record.headers())) {
           // send request to DEALER socket
-          InboundLogMsg msg = new InboundLogMsg(messageOffset, messageFormat, record.value());
+          InboundLogMsg msg =
+              new InboundLogMsg(messageOffset, messageFormat, record.headers(), record.value());
           msg.send(logDealerSocket);
           if (logger.isDebugEnabled()) {
             logger.debug("Dealt new log message with offset: {}", messageOffset);
@@ -380,7 +381,7 @@ public class LogReader extends ConnectedService {
   }
 
   private boolean recordProducedOrDispatchingBySelf(Headers headers) {
-    return Stream.of("produced-by", "dispatching-by")
+    return Stream.of("producer-id", "dispatcher-id")
         .anyMatch(
             hdrName -> {
               for (Header header : headers.headers(hdrName)) {

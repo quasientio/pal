@@ -31,6 +31,14 @@ public final class UuidUtils {
     return toBytes(UUID.fromString(uuid));
   }
 
+  /**
+   * Converts a UUID to a byte array. The serialization length is 16 bytes, with the least
+   * significant bits first. A string-serialized uuid, as in
+   * uuid.toString().getBytes(StandardCharsets.UTF_8) will use 36 bytes.
+   *
+   * @param uuid the UUID to convert
+   * @return the byte array representation of the UUID
+   */
   public static byte[] toBytes(UUID uuid) {
     Objects.requireNonNull(uuid);
     byte[] lsbB = Longs.toByteArray(uuid.getLeastSignificantBits());

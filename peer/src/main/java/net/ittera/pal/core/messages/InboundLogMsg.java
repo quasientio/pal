@@ -19,12 +19,17 @@
 
 package net.ittera.pal.core.messages;
 
+import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;
 import net.ittera.pal.messages.BaseMsg;
 import net.ittera.pal.messages.types.MessageFormatType;
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.header.internals.RecordHeader;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.zeromq.ZMQ;
 
 public class InboundLogMsg extends BaseMsg {
@@ -46,17 +51,20 @@ public class InboundLogMsg extends BaseMsg {
   private final long offset;
 
   private final MessageFormatType messageFormat;
+  private final Headers headers;
   private final byte[] body;
 
-  public InboundLogMsg(long offset, MessageFormatType messageFormat, byte[] body) {
-    Stream.of(offset, body).forEach(Objects::requireNonNull);
+  public InboundLogMsg(long offset, MessageFormatType messageFormat, Headers headers, byte[] body) {
+    Stream.of(offset, headers, body).forEach(Objects::requireNonNull);
     this.offset = offset;
     this.messageFormat = messageFormat;
+    this.headers = headers;
     this.body = body;
   }
 
-  private InboundLogMsg(long offset, MessageFormatType messageFormat, byte[] body, int size) {
-    this(offset, messageFormat, body);
+  private InboundLogMsg(
+      long offset, MessageFormatType messageFormat, Headers headers, byte[] body, int size) {
+    this(offset, messageFormat, headers, body);
     this.size = size;
   }
 
@@ -81,6 +89,22 @@ public class InboundLogMsg extends BaseMsg {
     size += buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
+    }
+
+    // headers
+    int headerCount = headers.toArray().length;
+    buff = Ints.toByteArray(headerCount);
+    size += buff.length;
+    if (!socket.send(buff, ZMQ.SNDMORE)) {
+      return false;
+    }
+    for (Header header : headers) {
+      byte[] keyBytes = header.key().getBytes(ZMQ.CHARSET);
+      byte[] valueBytes = header.value();
+      if (!socket.send(keyBytes, ZMQ.SNDMORE) || !socket.send(valueBytes, ZMQ.SNDMORE)) {
+        return false;
+      }
+      size += keyBytes.length + valueBytes.length;
     }
 
     // message body
@@ -115,11 +139,23 @@ public class InboundLogMsg extends BaseMsg {
     msgSize += buff.length;
     final MessageFormatType messageFormat = MessageFormatType.fromByte(buff[0]);
 
+    // headers
+    buff = socket.recv();
+    msgSize += buff.length;
+    int headerCount = Ints.fromByteArray(buff);
+    Headers headers = new RecordHeaders();
+    for (int i = 0; i < headerCount; i++) {
+      byte[] keyBytes = socket.recv();
+      byte[] valueBytes = socket.recv();
+      msgSize += keyBytes.length + valueBytes.length;
+      headers.add(new RecordHeader(new String(keyBytes, ZMQ.CHARSET), valueBytes));
+    }
+
     // message body
     final byte[] body = socket.recv();
     msgSize += body.length;
 
-    return new InboundLogMsg(offset, messageFormat, body, msgSize);
+    return new InboundLogMsg(offset, messageFormat, headers, body, msgSize);
   }
 
   // default is non-blocking
@@ -139,12 +175,13 @@ public class InboundLogMsg extends BaseMsg {
     InboundLogMsg that = (InboundLogMsg) o;
     return offset == that.offset
         && messageFormat == that.messageFormat
+        && headers.equals(that.headers)
         && Arrays.equals(body, that.body);
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(offset, messageFormat);
+    int result = Objects.hash(offset, messageFormat, headers);
     result = 31 * result + Arrays.hashCode(body);
     return result;
   }
@@ -165,6 +202,10 @@ public class InboundLogMsg extends BaseMsg {
 
   public long getOffset() {
     return offset;
+  }
+
+  public Headers getHeaders() {
+    return headers;
   }
 
   public byte[] getBody() {

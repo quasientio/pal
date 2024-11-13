@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nullable;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.colfer.ReturnValue;
@@ -81,13 +82,18 @@ public class LogMessage<T> {
     if (messageFormat == null) {
       throw new IllegalArgumentException("Message format not found in record headers");
     }
-    LogMessage<?> logMessage;
+
+    // create headers map
     Map<String, String> headers = new HashMap<>();
     headers.put("message-format", messageFormat.name());
 
     // add all string headers to headers map
     headers.putAll(getStringHeadersFromRecordHeaders(recordHeaders));
 
+    // add all "-id" headers to headers map
+    headers.putAll(getIdHeadersFromRecordHeaders(recordHeaders));
+
+    LogMessage<?> logMessage;
     switch (messageFormat) {
       case COLFER -> {
         // deserialize
@@ -161,7 +167,22 @@ public class LogMessage<T> {
         // skip single byte headers (e.g. message-format, message-type)
         continue;
       }
+      if (header.key().endsWith("-id")) {
+        // skip id headers (byte-formatted with UuidUtils)
+        continue;
+      }
+
       headers.put(header.key(), new String(header.value(), StandardCharsets.UTF_8));
+    }
+    return headers;
+  }
+
+  private static Map<String, String> getIdHeadersFromRecordHeaders(Headers recordHeaders) {
+    Map<String, String> headers = new HashMap<>();
+    for (Header header : recordHeaders) {
+      if (header.key().endsWith("-id")) {
+        headers.put(header.key(), UuidUtils.fromBytes(header.value()).toString());
+      }
     }
     return headers;
   }

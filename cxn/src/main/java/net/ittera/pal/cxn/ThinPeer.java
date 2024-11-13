@@ -23,6 +23,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -41,6 +42,7 @@ import java.util.concurrent.Future;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.objects.ObjectRef;
+import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
@@ -439,13 +441,22 @@ public class ThinPeer implements AutoCloseable {
   }
 
   private void connectZmqSocket(PeerInfo peer) {
-    peerSocket.setIdentity(("ThinPeer-" + peerUuid.toString()).getBytes(ZMQ.CHARSET));
+    byte[] prefixBytes = "ThinPeer-".getBytes(ZMQ.CHARSET);
+    byte[] uuidBytes = UuidUtils.toBytes(peerUuid);
+    byte[] identityBytes =
+        ByteBuffer.allocate(prefixBytes.length + uuidBytes.length)
+            .put(prefixBytes)
+            .put(uuidBytes)
+            .array();
+
+    peerSocket.setIdentity(identityBytes);
     peerSocket.connect(peer.getRpcAddress());
     isZmqSocketConnected = true;
   }
 
   private void connectWebSocket(PeerInfo peer) throws URISyntaxException, InterruptedException {
-    wsClient = new WsClient(new URI(peer.getJsonrpcAddress()));
+    Map<String, String> headers = Map.of("peer-id", peerUuid.toString());
+    wsClient = new WsClient(new URI(peer.getJsonrpcAddress()), headers);
     wsClient.connectBlocking();
   }
 
@@ -617,7 +628,7 @@ public class ThinPeer implements AutoCloseable {
     }
 
     // wrap in LogMessage
-    var headers = Map.of("producer", peerUuid.toString());
+    var headers = Map.of("producer-id", peerUuid.toString());
     LogMessage<Message> logMessage =
         new LogMessage<>(outLog.getName(), null, headers, msgBuilder.wrap(message));
 
@@ -655,7 +666,7 @@ public class ThinPeer implements AutoCloseable {
     }
 
     // create kafka record
-    var headers = Map.of("producer", peerUuid.toString());
+    var headers = Map.of("producer-id", peerUuid.toString());
     LogMessage<JsonRpcMessage> logMessage =
         new LogMessage<>(outLog.getName(), null, headers, jsonRpcMessage);
     final ProducerRecord<String, LogMessage<?>> record =
@@ -704,7 +715,7 @@ public class ThinPeer implements AutoCloseable {
     }
 
     // wrap in LogMessage
-    var headers = Map.of("producer", peerUuid.toString());
+    var headers = Map.of("producer-id", peerUuid.toString());
     LogMessage<Message> logMessage =
         new LogMessage<>(outLog.getName(), null, headers, msgBuilder.wrap(message));
 
@@ -1098,8 +1109,8 @@ public class ThinPeer implements AutoCloseable {
     private final Map<String, CompletableFuture<JsonRpcResponse>> futureResponses =
         new ConcurrentHashMap<>();
 
-    WsClient(URI uri) {
-      super(uri);
+    WsClient(URI uri, Map<String, String> httpHeaders) {
+      super(uri, httpHeaders);
     }
 
     @Override

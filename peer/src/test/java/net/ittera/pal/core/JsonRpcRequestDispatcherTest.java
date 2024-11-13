@@ -3,7 +3,7 @@ package net.ittera.pal.core;
 import static net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils.parseAndValidateJsonRpcMessage;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.util.concurrent.Service;
@@ -121,11 +121,11 @@ public class JsonRpcRequestDispatcherTest extends ZmqEnabledTest {
 
     // wait for response
     jsonRpcResponseFuture.get();
-    assertEquals("RETURN_VALUE", jsonRpcResponseFuture.get().getResult().getResultType().name());
+    assertThat(jsonRpcResponseFuture.get().getResult().getResultType().name(), is("RETURN_VALUE"));
     assertTrue(((ReturnValue) jsonRpcResponseFuture.get().getResult().getObject()).getIsVoid());
 
     // check received message ids
-    assertEquals(rpcMessageInvoker.getReceivedMessageIds().size(), 1);
+    assertThat(rpcMessageInvoker.getReceivedMessageIds().size(), is(1));
     assertTrue(rpcMessageInvoker.getReceivedMessageIds().contains(requestId.toString()));
   }
 
@@ -147,12 +147,13 @@ public class JsonRpcRequestDispatcherTest extends ZmqEnabledTest {
     // wait for responses
     for (CompletableFuture<JsonRpcResponse> jsonRpcResponseFuture : jsonRpcResponseFutures) {
       jsonRpcResponseFuture.get();
-      assertEquals("RETURN_VALUE", jsonRpcResponseFuture.get().getResult().getResultType().name());
+      assertThat(
+          jsonRpcResponseFuture.get().getResult().getResultType().name(), is("RETURN_VALUE"));
       assertTrue(((ReturnValue) jsonRpcResponseFuture.get().getResult().getObject()).getIsVoid());
     }
 
     // check message ids received by worker
-    assertEquals(rpcMessageInvoker.getReceivedMessageIds().size(), requestsCount);
+    assertThat(rpcMessageInvoker.getReceivedMessageIds().size(), is(requestsCount));
     assertThat(
         rpcMessageInvoker.getReceivedMessageIds(),
         containsInAnyOrder(sentRequestIds.stream().map(UUID::toString).toArray()));
@@ -211,7 +212,7 @@ public class JsonRpcRequestDispatcherTest extends ZmqEnabledTest {
           returnValue.setIsVoid(true);
           jsonRpcResponse.setResult(new JsonRpcResult(returnValue));
           String responseAsJson = this.gson.toJson(jsonRpcResponse);
-          new OutboundJsonRpcResponseMsg(rpcRequestMsg.getClientId(), responseAsJson).send(socket);
+          new OutboundJsonRpcResponseMsg(rpcRequestMsg.getPeerId(), responseAsJson).send(socket);
         } catch (ZMQException ex) {
           int errorCode = ex.getErrorCode();
           if (errorCode == ZError.ETERM) {

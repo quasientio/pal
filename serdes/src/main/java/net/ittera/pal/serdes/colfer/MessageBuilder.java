@@ -1167,8 +1167,8 @@ public final class MessageBuilder {
 
     // Create an instance of ExecMessage and initialize required common fields
     ExecMessage execMessage = new ExecMessage();
-    if (fromPeerUuid != null) { // fromPeerUuid is null if the message is from the Log, not a socket
-      execMessage.setPeerUuid("<unknown>");
+    if (fromPeerUuid != null) {
+      execMessage.setPeerUuid(fromPeerUuid.toString());
     }
     execMessage.setMessageUuid(jsonRpcRequest.getId());
     execMessage.setExecMessageType(jsonRpcRequest.getExecMessageType().toByte());

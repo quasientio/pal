@@ -22,7 +22,6 @@ package net.ittera.pal.core;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -148,10 +147,10 @@ class LogWriter extends ConnectedService {
 
     // create and store immutable headers (instead of creating with every send)
     SELF_HEADERS.put(
-        "SELF_PRODUCED_HEADER", new LogMessageHeader("produced-by", UuidUtils.toBytes(peerUuid)));
+        "SELF_PRODUCED_HEADER", new LogMessageHeader("producer-id", UuidUtils.toBytes(peerUuid)));
     SELF_HEADERS.put(
         "SELF_DISPATCHING_HEADER",
-        new LogMessageHeader("dispatching-by", UuidUtils.toBytes(peerUuid)));
+        new LogMessageHeader("dispatcher-id", UuidUtils.toBytes(peerUuid)));
   }
 
   public void writeToLog(LogInfo outLog, boolean publishOffsets) {
@@ -273,7 +272,6 @@ class LogWriter extends ConnectedService {
     // add message description headers
     newRecord.headers().add("message-format", new byte[] {messageFormat.toByte()});
     newRecord.headers().add("message-type", new byte[] {messageType.toByte()});
-    newRecord.headers().add("producer", fromPeer.toString().getBytes(StandardCharsets.UTF_8));
 
     // send the message
     Future<RecordMetadata> sendFuture;

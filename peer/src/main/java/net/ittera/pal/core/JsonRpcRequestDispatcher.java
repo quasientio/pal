@@ -57,7 +57,7 @@ class JsonRpcRequestDispatcher extends ConnectedService {
 
   private static final Logger logger = LoggerFactory.getLogger(JsonRpcRequestDispatcher.class);
   private final Map<WebSocket, UUID> webSocketConnectionMapping = new HashMap<>();
-  private final Map<UUID, ConnectionStats> clientStatsMap = new HashMap<>();
+  private final Map<UUID, ConnectionStats> peerStatsMap = new HashMap<>();
 
   // websocket stuff
   private final String websocketAddress;
@@ -146,9 +146,8 @@ class JsonRpcRequestDispatcher extends ConnectedService {
           OutboundJsonRpcResponseMsg responseMsg =
               OutboundJsonRpcResponseMsg.receive(dealerSocket, true);
           assert responseMsg != null;
-          UUID clientId = responseMsg.getClientId();
           String jsonRpcResponse = responseMsg.getJsonMessage();
-          sendResponseToWebSocketClient(clientId, jsonRpcResponse);
+          sendResponseToWebSocketClient(responseMsg.getPeerId(), jsonRpcResponse);
         }
 
         // get requests from WebSocket clients and forward to DEALER socket
@@ -158,7 +157,7 @@ class JsonRpcRequestDispatcher extends ConnectedService {
           boolean sent = requestMsg.send(dealerSocket);
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Sent message from connection id: {} to dispatchers", requestMsg.getClientId());
+                "Sent message from connection id: {} to dispatchers", requestMsg.getPeerId());
           }
           if (!sent) {
             logger.error("Error dealing message for dispatch: {}", requestMsg);
@@ -221,19 +220,18 @@ class JsonRpcRequestDispatcher extends ConnectedService {
         .orElse(null);
   }
 
-  public void sendResponseToWebSocketClient(UUID connId, String response) {
-    WebSocket connSocket = getConnectionSocketFromId(connId);
+  public void sendResponseToWebSocketClient(UUID peerId, String response) {
+    WebSocket connSocket = getConnectionSocketFromId(peerId);
     if (connSocket == null) {
-      logger.error(
-          "Error sending back response: no WebSocket client found for connection id: {}", connId);
+      logger.error("Error sending back response: no WebSocket peer found for id: {}", peerId);
       return;
     }
     try {
       connSocket.send(response);
-      clientStatsMap.get(connId).incrementTotalMessagesSent();
-      logger.debug("Sent back response to client w/connection id: {}", connId);
+      peerStatsMap.get(peerId).incrementTotalMessagesSent();
+      logger.debug("Sent back response to peer w/id: {}", peerId);
     } catch (Exception e) {
-      logger.error("Error sending back response to client w/connection id: {}", connId, e);
+      logger.error("Error sending back response to peer w/id: {}", peerId, e);
     }
   }
 
@@ -248,15 +246,20 @@ class JsonRpcRequestDispatcher extends ConnectedService {
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-      UUID connId = UUID.randomUUID();
+      UUID peerId;
       if (logger.isDebugEnabled()) {
         logger.debug(
-            "New connection from: {} assigned id: {}",
-            conn.getRemoteSocketAddress().getAddress().getHostAddress(),
-            connId);
+            "New connection from: {}", conn.getRemoteSocketAddress().getAddress().getHostAddress());
       }
-      webSocketConnectionMapping.put(conn, connId);
-      clientStatsMap.put(connId, new ConnectionStats());
+      if (handshake.hasFieldValue("peer-id")) {
+        peerId = UUID.fromString(handshake.getFieldValue("peer-id"));
+      } else {
+        peerId = UUID.randomUUID();
+        logger.debug("No peer-id header found in handshake. Assigned new id: {}", peerId);
+      }
+
+      webSocketConnectionMapping.put(conn, peerId);
+      peerStatsMap.put(peerId, new ConnectionStats());
     }
 
     @Override
@@ -266,31 +269,31 @@ class JsonRpcRequestDispatcher extends ConnectedService {
             "Closed connection from: {}",
             conn.getRemoteSocketAddress().getAddress().getHostAddress());
       }
-      UUID connId = webSocketConnectionMapping.remove(conn);
+      UUID peerId = webSocketConnectionMapping.remove(conn);
       if (logger.isDebugEnabled()) {
         // log connection status
-        ConnectionStats stats = clientStatsMap.get(connId);
+        ConnectionStats stats = peerStatsMap.get(peerId);
         logger.debug(
-            "Stats for connection id: {} -> Messages sent: {}, Messages received: {}",
-            connId,
+            "Stats for peer w/id: {} -> Messages sent: {}, Messages received: {}",
+            peerId,
             stats.getTotalMessagesSent(),
             stats.getTotalMessagesReceived());
       }
-      clientStatsMap.remove(connId);
+      peerStatsMap.remove(peerId);
     }
 
     @Override
     public void onMessage(WebSocket conn, String message) {
-      UUID connId = webSocketConnectionMapping.get(conn);
-      clientStatsMap.get(connId).incrementTotalMessagesReceived();
-      logger.debug("New message from client w/connection id: {}", connId);
+      UUID peerId = webSocketConnectionMapping.get(conn);
+      peerStatsMap.get(peerId).incrementTotalMessagesReceived();
+      logger.debug("New message from peer w/id: {}", peerId);
       if (logger.isTraceEnabled()) {
         logger.trace("Message received: {}", message);
       }
-      InboundJsonRpcRequestMsg requestMsg = new InboundJsonRpcRequestMsg(connId, message);
+      InboundJsonRpcRequestMsg requestMsg = new InboundJsonRpcRequestMsg(peerId, message);
       boolean sentOk = requestMsg.send(pushSocket, false);
       if (logger.isDebugEnabled()) {
-        logger.debug("Pushed message from connection id: {} for dispatch", connId);
+        logger.debug("Pushed message from connection id: {} for dispatch", peerId);
       }
       if (!sentOk) {
         logger.error("Error pushing message for dispatch: {}", message);

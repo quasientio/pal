@@ -33,24 +33,24 @@ public class OutboundJsonRpcResponseMsg extends BaseMsg {
    * <pre>
    * FRAMES:
    * -------
-   * 1. clientId           : byte[] (UUID of WebSocket client)
+   * 1. peerId           : byte[] (UUID of WebSocket peer)
    * 2. message            : byte[] (JSON-RPC response)
    * </pre>
    */
 
   // fields
-  private final UUID clientId;
+  private final UUID peerId;
 
   private final String jsonMessage;
 
-  public OutboundJsonRpcResponseMsg(UUID clientId, String message) {
-    Stream.of(clientId, message).forEach(Objects::requireNonNull);
-    this.clientId = clientId;
+  public OutboundJsonRpcResponseMsg(UUID peerId, String message) {
+    Stream.of(peerId, message).forEach(Objects::requireNonNull);
+    this.peerId = peerId;
     this.jsonMessage = message;
   }
 
-  private OutboundJsonRpcResponseMsg(UUID clientId, String message, int size) {
-    this(clientId, message);
+  private OutboundJsonRpcResponseMsg(UUID peerId, String message, int size) {
+    this(peerId, message);
     this.size = size;
   }
 
@@ -59,8 +59,8 @@ public class OutboundJsonRpcResponseMsg extends BaseMsg {
     if (socket == null) {
       throw new IllegalArgumentException("Socket is null");
     }
-    // clientId
-    byte[] buff = UuidUtils.toBytes(clientId);
+    // peerId
+    byte[] buff = UuidUtils.toBytes(peerId);
     size = buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
@@ -94,15 +94,15 @@ public class OutboundJsonRpcResponseMsg extends BaseMsg {
     }
     int msgSize = buff.length;
 
-    // clientId
-    final UUID clientId = UuidUtils.fromBytes(buff);
+    // peerId
+    final UUID peerId = UuidUtils.fromBytes(buff);
 
     // message body
     buff = socket.recv();
     msgSize += buff.length;
     final String message = new String(buff, ZMQ.CHARSET);
 
-    return new OutboundJsonRpcResponseMsg(clientId, message, msgSize);
+    return new OutboundJsonRpcResponseMsg(peerId, message, msgSize);
   }
 
   // default is non-blocking
@@ -120,21 +120,21 @@ public class OutboundJsonRpcResponseMsg extends BaseMsg {
       return false;
     }
     OutboundJsonRpcResponseMsg that = (OutboundJsonRpcResponseMsg) o;
-    return Objects.equals(clientId, that.clientId) && Objects.equals(jsonMessage, that.jsonMessage);
+    return Objects.equals(peerId, that.peerId) && Objects.equals(jsonMessage, that.jsonMessage);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(clientId, jsonMessage);
+    return Objects.hash(peerId, jsonMessage);
   }
 
   @Override
   public String toString() {
-    return "OutboundJsonRpcResponseMsg{clientId=" + clientId + ", message=" + jsonMessage + '}';
+    return "OutboundJsonRpcResponseMsg{peerId=" + peerId + ", message=" + jsonMessage + '}';
   }
 
-  public UUID getClientId() {
-    return clientId;
+  public UUID getPeerId() {
+    return peerId;
   }
 
   public String getJsonMessage() {

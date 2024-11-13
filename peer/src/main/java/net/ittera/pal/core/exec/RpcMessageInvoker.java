@@ -246,7 +246,7 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     try {
       jsonRpcRequest = parseAndValidateJsonRpcMessage(jsonrpcMsg.getJsonMessage());
       if (logger.isDebugEnabled()) {
-        logger.debug("Received JSON-RPC message from client uuid: {}", jsonrpcMsg.getClientId());
+        logger.debug("Received JSON-RPC message from peer w/id: {}", jsonrpcMsg.getPeerId());
       }
       requestId = jsonRpcRequest.getId();
     } catch (JsonRpcRequestException e) {
@@ -262,7 +262,7 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
 
       // parsing+validating failed, log and send error response
       jsonRpcResponse = messageBuilder.jsonRpcResponseFromParseError(parseException, requestId);
-      new OutboundJsonRpcResponseMsg(jsonrpcMsg.getClientId(), gson.toJson(jsonRpcResponse))
+      new OutboundJsonRpcResponseMsg(jsonrpcMsg.getPeerId(), gson.toJson(jsonRpcResponse))
           .send(jsonrpcSocket);
       logMessageDispatch(requestId, null, started);
       return;
@@ -270,7 +270,7 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
 
     // create ExecMessage from JSON-RPC request message
     final Message requestMsg =
-        messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getClientId());
+        messageBuilder.jsonRpcRequestToExecMessage(jsonRpcRequest, jsonrpcMsg.getPeerId());
 
     // dispatch
     Message replyMsg;
@@ -282,7 +282,7 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
       logger.error(
           "Error dispatching message w/uuid {}", getMessageUuid(requestMsg), dispatchException);
       jsonRpcResponse = messageBuilder.jsonRpcResponseFromParseError(dispatchException, requestId);
-      new OutboundJsonRpcResponseMsg(jsonrpcMsg.getClientId(), gson.toJson(jsonRpcResponse))
+      new OutboundJsonRpcResponseMsg(jsonrpcMsg.getPeerId(), gson.toJson(jsonRpcResponse))
           .send(jsonrpcSocket);
       logMessageDispatch(requestMsg, jsonRpcResponse.getId(), started);
       return;
@@ -292,7 +292,7 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     jsonRpcResponse = messageBuilder.jsonRpcResponseFromExecMessageReply(replyMsg.getExecMessage());
 
     // send response
-    new OutboundJsonRpcResponseMsg(jsonrpcMsg.getClientId(), gson.toJson(jsonRpcResponse))
+    new OutboundJsonRpcResponseMsg(jsonrpcMsg.getPeerId(), gson.toJson(jsonRpcResponse))
         .send(jsonrpcSocket);
     logMessageDispatch(requestMsg, replyMsg, started);
   }
