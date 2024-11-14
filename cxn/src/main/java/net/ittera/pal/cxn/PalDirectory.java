@@ -29,6 +29,7 @@ import io.etcd.jetcd.Watch;
 import io.etcd.jetcd.kv.DeleteResponse;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.kv.PutResponse;
+import io.etcd.jetcd.maintenance.StatusResponse;
 import io.etcd.jetcd.options.DeleteOption;
 import io.etcd.jetcd.options.GetOption;
 import io.etcd.jetcd.options.WatchOption;
@@ -86,14 +87,18 @@ public class PalDirectory implements AutoCloseable {
   private final List<InterceptNodeListener> interceptListeners = new ArrayList<>();
 
   public PalDirectory(String connectionString) {
-    this(connectionString, null);
+    this(connectionString, null, false);
+  }
+
+  public PalDirectory(String connectionString, boolean blocking) {
+    this(connectionString, null, blocking);
   }
 
   public PalDirectory(List<URI> endpoints) {
     this(endpoints.stream().map(URI::toString).collect(Collectors.joining(",")), null);
   }
 
-  public PalDirectory(String endpoints, String namespace) {
+  public PalDirectory(String endpoints, String namespace, boolean blocking) {
     this.directoryUrl = endpoints;
     logger.info("Will connect to etcd endpoints: {}", endpoints);
     this.client =
@@ -103,6 +108,21 @@ public class PalDirectory implements AutoCloseable {
             .keepaliveTimeout(ETCD_KEEP_ALIVE_TIMEOUT)
             .keepaliveWithoutCalls(true)
             .build();
+
+    if (blocking) {
+      // perform a status check to block until connected
+      try {
+        // block until the etcd cluster responds with status
+        StatusResponse status = client.getMaintenanceClient().statusMember(endpoints).get();
+        logger.info("Connected to etcd cluster: {}", status);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt(); // Restore the interrupted status
+        throw new RuntimeException("Thread was interrupted while connecting to etcd", e);
+      } catch (ExecutionException e) {
+        throw new RuntimeException("Failed to connect to etcd cluster", e.getCause());
+      }
+    }
+
     this.kvClient = client.getKVClient();
     Watch watchClient = client.getWatchClient();
     this.namespace = namespace != null ? namespace : DEFAULT_PAL_NAMESPACE;
@@ -111,6 +131,10 @@ public class PalDirectory implements AutoCloseable {
         getInterceptsPathKey(),
         WatchOption.builder().isPrefix(true).build(),
         this::interceptEventConsumer);
+  }
+
+  public PalDirectory(String endpoints, String namespace) {
+    this(endpoints, namespace, false);
   }
 
   public String getDirectoryUrl() {
