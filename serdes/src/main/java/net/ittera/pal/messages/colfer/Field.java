@@ -32,11 +32,9 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
   /** The upper limit for serial byte sizes. */
   public static int colferSizeMax = 16 * 1024 * 1024;
 
-  public String name;
-
   public Class clazz;
 
-  public String repr;
+  public String name;
 
   /** Default constructor */
   public Field() {
@@ -46,7 +44,6 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
   /** Colfer zero values. */
   private void init() {
     name = "";
-    repr = "";
   }
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
@@ -140,7 +137,7 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.name.length() * 3 + 6 + (long) this.repr.length() * 3;
+    long n = 1L + 6 + (long) this.name.length() * 3;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     if (n < 0 || n > (long) Field.colferSizeMax) return Field.colferSizeMax;
     return (int) n;
@@ -184,8 +181,13 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
     int i = offset;
 
     try {
-      if (!this.name.isEmpty()) {
+      if (this.clazz != null) {
         buf[i++] = (byte) 0;
+        i = this.clazz.marshal(buf, i);
+      }
+
+      if (!this.name.isEmpty()) {
+        buf[i++] = (byte) 1;
         int start = ++i;
 
         String s = this.name;
@@ -216,59 +218,6 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
           throw new IllegalStateException(
               format(
                   "colfer: net.ittera.pal.messages/colfer.Field.name size %d exceeds %d UTF-8 bytes",
-                  size, Field.colferSizeMax));
-
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
-        }
-        buf[ii] = (byte) size;
-      }
-
-      if (this.clazz != null) {
-        buf[i++] = (byte) 1;
-        i = this.clazz.marshal(buf, i);
-      }
-
-      if (!this.repr.isEmpty()) {
-        buf[i++] = (byte) 2;
-        int start = ++i;
-
-        String s = this.repr;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
-          }
-        }
-        int size = i - start;
-        if (size > Field.colferSizeMax)
-          throw new IllegalStateException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.Field.repr size %d exceeds %d UTF-8 bytes",
                   size, Field.colferSizeMax));
 
         int ii = start - 1;
@@ -331,6 +280,12 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
       byte header = buf[i++];
 
       if (header == (byte) 0) {
+        this.clazz = new Class();
+        i = this.clazz.unmarshal(buf, i, end);
+        header = buf[i++];
+      }
+
+      if (header == (byte) 1) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -346,31 +301,6 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
         int start = i;
         i += size;
         this.name = new String(buf, start, size, StandardCharsets.UTF_8);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 1) {
-        this.clazz = new Class();
-        i = this.clazz.unmarshal(buf, i, end);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 2) {
-        int size = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          size |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        if (size < 0 || size > Field.colferSizeMax)
-          throw new SecurityException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.Field.repr size %d exceeds %d UTF-8 bytes",
-                  size, Field.colferSizeMax));
-
-        int start = i;
-        i += size;
-        this.repr = new String(buf, start, size, StandardCharsets.UTF_8);
         header = buf[i++];
       }
 
@@ -390,7 +320,7 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 3L;
+  private static final long serialVersionUID = 2L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -413,35 +343,6 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
   // {@link Serializable} Colfer extension.
   private void readObjectNoData() throws ObjectStreamException {
     init();
-  }
-
-  /**
-   * Gets net.ittera.pal.messages/colfer.Field.name.
-   *
-   * @return the value.
-   */
-  public String getName() {
-    return this.name;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Field.name.
-   *
-   * @param value the replacement.
-   */
-  public void setName(String value) {
-    this.name = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Field.name.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public Field withName(String value) {
-    this.name = value;
-    return this;
   }
 
   /**
@@ -474,40 +375,39 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.Field.repr.
+   * Gets net.ittera.pal.messages/colfer.Field.name.
    *
    * @return the value.
    */
-  public String getRepr() {
-    return this.repr;
+  public String getName() {
+    return this.name;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.Field.repr.
+   * Sets net.ittera.pal.messages/colfer.Field.name.
    *
    * @param value the replacement.
    */
-  public void setRepr(String value) {
-    this.repr = value;
+  public void setName(String value) {
+    this.name = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.Field.repr.
+   * Sets net.ittera.pal.messages/colfer.Field.name.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public Field withRepr(String value) {
-    this.repr = value;
+  public Field withName(String value) {
+    this.name = value;
     return this;
   }
 
   @Override
   public final int hashCode() {
     int h = 1;
-    if (this.name != null) h = 31 * h + this.name.hashCode();
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
-    if (this.repr != null) h = 31 * h + this.repr.hashCode();
+    if (this.name != null) h = 31 * h + this.name.hashCode();
     return h;
   }
 
@@ -520,25 +420,20 @@ public class Field implements Serializable, net.ittera.pal.messages.Marshallable
     if (o == null) return false;
     if (o == this) return true;
 
-    return (this.name == null ? o.name == null : this.name.equals(o.name))
-        && (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
-        && (this.repr == null ? o.repr == null : this.repr.equals(o.repr));
+    return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
+        && (this.name == null ? o.name == null : this.name.equals(o.name));
   }
 
   @Override
   public Field fromJson(JsonObject json) throws JsonParseException {
     try {
-      if (json.has("name")) {
-        this.name = json.get("name").getAsString();
-      }
-
       if (json.has("clazz")) {
         JsonObject jsonObj = json.getAsJsonObject("clazz");
         this.clazz = new Class().fromJson(jsonObj);
       }
 
-      if (json.has("repr")) {
-        this.repr = json.get("repr").getAsString();
+      if (json.has("name")) {
+        this.name = json.get("name").getAsString();
       }
 
     } catch (Exception e) {

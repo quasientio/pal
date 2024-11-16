@@ -30,7 +30,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import net.ittera.pal.common.lang.reflect.ConstructorSignature;
-import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
@@ -83,7 +82,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
     if (value instanceof InvocationExceptionWrapper) {
       Exception invocationException = ((InvocationExceptionWrapper) value).exception();
       return messageBuilder.buildAccessibleObjectThrowable(
-          peerUuid, constructor, getExecutableObjectType(), invocationException, null);
+          peerUuid, constructor, invocationException, null);
     } else {
       return messageBuilder.buildReturnValue(peerUuid, value, constructor, objectRef, false, null);
     }
@@ -102,11 +101,7 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
 
     if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
       return wrapAfterExecThrowableMessage(
-          messageUuid,
-          accessibleObject,
-          getExecutableObjectType(),
-          exceptionWhileLoading,
-          exceptionWhileInvoking);
+          messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
     }
 
     return messageBuilder.buildReturnValue(
@@ -162,11 +157,6 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   @Override
   protected final ExecMessageType getBeforeExecMessageType() {
     return ExecMessageType.CONSTRUCTOR;
-  }
-
-  @Override
-  protected final ExecutableObjectType getExecutableObjectType() {
-    return ExecutableObjectType.CONSTRUCTOR;
   }
 
   @Override

@@ -6,6 +6,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -15,6 +17,13 @@ import org.junit.Test;
 
 public class ExecMessageUtilsTest {
   private final MessageBuilder messageBuilder = new MessageBuilder();
+
+  @SuppressWarnings("unused")
+  static class ClassForTest {
+    public int testField;
+
+    public void testMethod() {}
+  }
 
   // <editor-fold desc="getClassname">
   @Test
@@ -81,9 +90,9 @@ public class ExecMessageUtilsTest {
     assertEquals(className, ExecMessageUtils.getClassname(execMessage));
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void getClassname_throwsExceptionForUnsupported_ReturnValue() {
-    AccessibleObject accessibleObject = this.getClass().getMethods()[0];
+  @Test
+  public void getClassname_returnValue() {
+    AccessibleObject accessibleObject = ClassForTest.class.getMethods()[0];
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
             UUID.randomUUID(),
@@ -92,31 +101,31 @@ public class ExecMessageUtilsTest {
             ObjectRef.randomRef(),
             false,
             UUID.randomUUID().toString());
-    ExecMessageUtils.getClassname(execMessage);
+    assertEquals(ClassForTest.class.getName(), ExecMessageUtils.getClassname(execMessage));
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void getClassname_throwsExceptionForUnsupported_PutObjectDone() {
-    AccessibleObject accessibleObject = this.getClass().getDeclaredFields()[0];
+  @Test
+  public void getClassname_putObjectDone() {
+    AccessibleObject accessibleObject = ClassForTest.class.getDeclaredFields()[0];
     ExecMessage execMessage =
         messageBuilder.buildPutObjectDone(
             UUID.randomUUID(),
             accessibleObject,
             UUID.randomUUID().toString(),
             UUID.randomUUID().toString());
-    ExecMessageUtils.getClassname(execMessage);
+    assertEquals(ClassForTest.class.getName(), ExecMessageUtils.getClassname(execMessage));
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void getClassname_throwsExceptionForUnsupported_PutStaticDone() {
-    AccessibleObject accessibleObject = this.getClass().getDeclaredFields()[0];
+  @Test
+  public void getClassname_putStaticDone() {
+    AccessibleObject accessibleObject = ClassForTest.class.getDeclaredFields()[0];
     ExecMessage execMessage =
         messageBuilder.buildPutStaticDone(
             UUID.randomUUID(),
             accessibleObject,
             UUID.randomUUID().toString(),
             UUID.randomUUID().toString());
-    ExecMessageUtils.getClassname(execMessage);
+    assertEquals(ClassForTest.class.getName(), ExecMessageUtils.getClassname(execMessage));
   }
 
   // </editor-fold>
@@ -193,13 +202,13 @@ public class ExecMessageUtilsTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void getExecutableName_throwsExceptionForUnsupported_ReturnValue() {
-    AccessibleObject accessibleObject = this.getClass().getMethods()[0];
+  public void getExecutableName_returnValue() {
+    Method method = ClassForTest.class.getMethods()[0];
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
             UUID.randomUUID(),
             "test",
-            accessibleObject,
+            method,
             ObjectRef.randomRef(),
             false,
             UUID.randomUUID().toString());
@@ -207,8 +216,8 @@ public class ExecMessageUtilsTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void getExecutableName_throwsExceptionForUnsupported_PutObjectDone() {
-    AccessibleObject accessibleObject = this.getClass().getDeclaredFields()[0];
+  public void getExecutableName_putObjectDone() {
+    Field accessibleObject = ClassForTest.class.getDeclaredFields()[0];
     ExecMessage execMessage =
         messageBuilder.buildPutObjectDone(
             UUID.randomUUID(),
@@ -219,8 +228,8 @@ public class ExecMessageUtilsTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void getExecutableName_throwsExceptionForUnsupported_PutStaticDone() {
-    AccessibleObject accessibleObject = this.getClass().getDeclaredFields()[0];
+  public void getExecutableName_putStaticDone() {
+    Field accessibleObject = ClassForTest.class.getDeclaredFields()[0];
     ExecMessage execMessage =
         messageBuilder.buildPutStaticDone(
             UUID.randomUUID(),
@@ -228,6 +237,128 @@ public class ExecMessageUtilsTest {
             UUID.randomUUID().toString(),
             UUID.randomUUID().toString());
     ExecMessageUtils.getExecutableName(execMessage);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void getExecutableName_raisedThrowable() {
+    Method method = ClassForTest.class.getMethods()[0];
+    Throwable throwable = new Throwable("some message");
+    ExecMessage execMessage =
+        messageBuilder.buildAccessibleObjectThrowable(
+            UUID.randomUUID(), method, throwable, UUID.randomUUID().toString());
+    ExecMessageUtils.getExecutableName(execMessage);
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="getFromExecutableName">
+
+  @Test
+  public void getFromExecutableName_putFieldDone() {
+    Field field = ClassForTest.class.getDeclaredFields()[0];
+    ExecMessage execMessage =
+        messageBuilder.buildPutObjectDone(
+            UUID.randomUUID(), field, UUID.randomUUID().toString(), UUID.randomUUID().toString());
+    assertEquals(field.getName(), ExecMessageUtils.getFromExecutableName(execMessage));
+  }
+
+  @Test
+  public void getFromExecutableName_putStaticDone() {
+    Field field = ClassForTest.class.getDeclaredFields()[0];
+    ExecMessage execMessage =
+        messageBuilder.buildPutStaticDone(
+            UUID.randomUUID(), field, UUID.randomUUID().toString(), UUID.randomUUID().toString());
+    assertEquals(field.getName(), ExecMessageUtils.getFromExecutableName(execMessage));
+  }
+
+  @Test
+  public void getFromExecutableName_returnValue() {
+    Method method = ClassForTest.class.getMethods()[0];
+    ExecMessage execMessage =
+        messageBuilder.buildReturnValue(
+            UUID.randomUUID(),
+            "test",
+            method,
+            ObjectRef.randomRef(),
+            false,
+            UUID.randomUUID().toString());
+    assertEquals(method.getName(), ExecMessageUtils.getFromExecutableName(execMessage));
+  }
+
+  @Test
+  public void getFromExecutableName_raisedThrowable() {
+    Method method = ClassForTest.class.getMethods()[0];
+    Throwable throwable = new Throwable("some message");
+    ExecMessage execMessage =
+        messageBuilder.buildAccessibleObjectThrowable(
+            UUID.randomUUID(), method, throwable, UUID.randomUUID().toString());
+    assertEquals(method.getName(), ExecMessageUtils.getFromExecutableName(execMessage));
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void getFromExecutableName_constructor() {
+    String className = "TestClass";
+    ExecMessage execMessage = messageBuilder.buildEmptyConstructor(UUID.randomUUID(), className);
+    ExecMessageUtils.getFromExecutableName(execMessage);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void getFromExecutableName_instanceMethod() {
+    String className = "TestClass";
+    String methodName = "testMethod";
+    ExecMessage execMessage =
+        messageBuilder.buildInstanceMethod(
+            UUID.randomUUID(), className, methodName, ObjectRef.randomRef(), null, null);
+    ExecMessageUtils.getFromExecutableName(execMessage);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void getFromExecutableName_classMethod() {
+    String className = "TestClass";
+    String methodName = "testMethod";
+    ExecMessage execMessage =
+        messageBuilder.buildClassMethod(
+            UUID.randomUUID(), className, methodName, null, null, null, null);
+    ExecMessageUtils.getFromExecutableName(execMessage);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void getFromExecutableName_getStatic() {
+    String className = "TestClass";
+    String fieldName = "testField";
+    ExecMessage execMessage =
+        messageBuilder.buildGetStatic(UUID.randomUUID(), className, fieldName);
+    ExecMessageUtils.getFromExecutableName(execMessage);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void getFromExecutableName_getField() {
+    String className = "TestClass";
+    String fieldName = "testField";
+    ExecMessage execMessage =
+        messageBuilder.buildGetObject(
+            UUID.randomUUID(), className, fieldName, ObjectRef.randomRef());
+    ExecMessageUtils.getFromExecutableName(execMessage);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void getFromExecutableName_putStatic() {
+    String className = "TestClass";
+    String fieldName = "testField";
+    ExecMessage execMessage =
+        messageBuilder.buildPutStatic(
+            UUID.randomUUID(), className, fieldName, ObjectRef.randomRef());
+    ExecMessageUtils.getFromExecutableName(execMessage);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void getFromExecutableName_putField() {
+    String className = "TestClass";
+    String fieldName = "testField";
+    ExecMessage execMessage =
+        messageBuilder.buildPutObject(
+            UUID.randomUUID(), className, fieldName, ObjectRef.randomRef(), ObjectRef.randomRef());
+    ExecMessageUtils.getFromExecutableName(execMessage);
   }
 
   // </editor-fold>
@@ -324,7 +455,7 @@ public class ExecMessageUtilsTest {
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
 
     // PutFieldDone
-    AccessibleObject accessibleObject = this.getClass().getDeclaredFields()[0];
+    AccessibleObject accessibleObject = ClassForTest.class.getDeclaredFields()[0];
     execMessage =
         messageBuilder.buildPutObjectDone(
             UUID.randomUUID(),
@@ -334,7 +465,7 @@ public class ExecMessageUtilsTest {
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
 
     // PutStaticDone
-    accessibleObject = this.getClass().getDeclaredFields()[0];
+    accessibleObject = ClassForTest.class.getDeclaredFields()[0];
     execMessage =
         messageBuilder.buildPutStaticDone(
             UUID.randomUUID(),
@@ -346,7 +477,7 @@ public class ExecMessageUtilsTest {
 
   @Test
   public void getParameterTypes_returnsNullForUnsupported_ReturnValue() {
-    AccessibleObject accessibleObject = this.getClass().getMethods()[0];
+    AccessibleObject accessibleObject = ClassForTest.class.getMethods()[0];
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
             UUID.randomUUID(),

@@ -22,7 +22,6 @@ package net.ittera.pal.core.exec.java;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.List;
-import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.messages.colfer.ExecMessage;
 
@@ -62,11 +61,7 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
 
     if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
       return wrapAfterExecThrowableMessage(
-          messageUuid,
-          accessibleObject,
-          getExecutableObjectType(),
-          exceptionWhileLoading,
-          exceptionWhileInvoking);
+          messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
     }
 
     return messageBuilder.buildReturnValue(
@@ -81,10 +76,5 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
   @Override
   protected boolean returnsVoid(AccessibleObject accessibleObject) {
     return ((Method) accessibleObject).getReturnType().equals(java.lang.Void.TYPE);
-  }
-
-  @Override
-  protected final ExecutableObjectType getExecutableObjectType() {
-    return ExecutableObjectType.METHOD;
   }
 }

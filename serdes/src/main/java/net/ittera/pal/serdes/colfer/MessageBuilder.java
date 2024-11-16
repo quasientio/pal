@@ -32,7 +32,6 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
@@ -52,7 +51,6 @@ import net.ittera.pal.common.lang.intercept.InterceptableFieldOp;
 import net.ittera.pal.common.lang.intercept.InterceptableMethodCall;
 import net.ittera.pal.common.lang.reflect.CodeSignature;
 import net.ittera.pal.common.lang.reflect.ConstructorSignature;
-import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -130,9 +128,7 @@ public final class MessageBuilder {
   // <editor-fold desc="Private Auxiliary methods">
   private Parameter createParameter(String parameterType, Object arg, ObjectRef argObjRef) {
     Object argValue = arg instanceof Obj ? ((Obj) arg).getValue() : arg;
-    return new Parameter()
-        .withType(getWrappedClass(parameterType))
-        .withValue(getWrappedObject(argValue, parameterType, argObjRef));
+    return new Parameter().withValue(getWrappedObject(argValue, parameterType, argObjRef));
   }
 
   private Parameter createNamedParameter(
@@ -144,7 +140,6 @@ public final class MessageBuilder {
 
     return new Parameter()
         .withName(paramName == null ? parameter.getName() : paramName)
-        .withType(getWrappedClass(paramType == null ? parameter.getType().getName() : paramType))
         .withValue(getWrappedObject(param, paramType, paramObjRef));
   }
 
@@ -829,49 +824,51 @@ public final class MessageBuilder {
   public ExecMessage buildAccessibleObjectThrowable(
       UUID peerUuid,
       @Nullable AccessibleObject accessibleObject,
-      ExecutableObjectType executableObjectType,
       Throwable exception,
       String responseToUuid) {
 
     final RaisedThrowable raisedThrowable = new RaisedThrowable();
     if (accessibleObject != null) {
       if (accessibleObject instanceof Constructor) {
-        raisedThrowable.setConstructor(
-            ((Constructor<?>) accessibleObject).getDeclaringClass().getName());
+        raisedThrowable.setFrom(
+            new Reflectable()
+                .withConstructor(
+                    new net.ittera.pal.messages.colfer.Constructor()
+                        .withClazz(
+                            getWrappedClass(
+                                ((Constructor<?>) accessibleObject)
+                                    .getDeclaringClass()
+                                    .getName()))));
         raisedThrowable.setModifiers(((Constructor<?>) accessibleObject).getModifiers());
       } else if (accessibleObject instanceof Method) {
-        raisedThrowable.setMethod(((Method) accessibleObject).getName());
+        raisedThrowable.setFrom(
+            new Reflectable()
+                .withMethod(
+                    new net.ittera.pal.messages.colfer.Method()
+                        .withClazz(
+                            getWrappedClass(
+                                ((Method) accessibleObject).getDeclaringClass().getName()))
+                        .withName(((Method) accessibleObject).getName())));
         raisedThrowable.setModifiers(((Method) accessibleObject).getModifiers());
       } else if (accessibleObject instanceof Field) {
-        raisedThrowable.setField(((Field) accessibleObject).getName());
+        raisedThrowable.setFrom(
+            new Reflectable()
+                .withField(
+                    new net.ittera.pal.messages.colfer.Field()
+                        .withClazz(
+                            getWrappedClass(
+                                ((Field) accessibleObject).getDeclaringClass().getName()))
+                        .withName(((Field) accessibleObject).getName())));
         raisedThrowable.setModifiers(((Field) accessibleObject).getModifiers());
       } else {
         throw new UnsupportedOperationException(
             String.format(
                 "Unsupported accessibleObject type: %s", accessibleObject.getClass().getName()));
       }
-    } else {
-      switch (executableObjectType) {
-        case CONSTRUCTOR:
-          raisedThrowable.setConstructor("<info not available>");
-          break;
-        case METHOD:
-          raisedThrowable.setMethod("<info not available>");
-          break;
-        case FIELD:
-          raisedThrowable.setField("<info not available>");
-          break;
-        default:
-          throw new UnsupportedOperationException(
-              String.format("Unsupported executableObjectType: %s", executableObjectType.name()));
-      }
     }
 
     return newWrapper(ExecMessageType.THROWABLE, peerUuid, responseToUuid)
-        .withRaisedThrowable(
-            raisedThrowable
-                .withClazz(getWrappedClass(exception.getClass().getName()))
-                .withThrowable(buildThrowableMessage(exception)));
+        .withRaisedThrowable(raisedThrowable.withThrowable(buildThrowableMessage(exception)));
   }
 
   // </editor-fold>
@@ -901,20 +898,21 @@ public final class MessageBuilder {
           new Reflectable()
               .withConstructor(
                   new net.ittera.pal.messages.colfer.Constructor()
-                      .withRepr(((Executable) accessibleObject).toGenericString())));
+                      .withClazz(getWrappedClass(declaringClass.getName()))));
     } else if (accessibleObject instanceof Method) {
       valueMessage.setFrom(
           new Reflectable()
               .withMethod(
                   new net.ittera.pal.messages.colfer.Method()
-                      .withRepr(((Executable) accessibleObject).toGenericString())));
+                      .withClazz(getWrappedClass(declaringClass.getName()))
+                      .withName(((Method) accessibleObject).getName())));
     } else if (accessibleObject instanceof Field) {
       valueMessage.setFrom(
           new Reflectable()
               .withField(
                   new net.ittera.pal.messages.colfer.Field()
-                      .withName(((Field) accessibleObject).getName())
-                      .withRepr(((Field) accessibleObject).toGenericString())));
+                      .withClazz(getWrappedClass(declaringClass.getName()))
+                      .withName(((Field) accessibleObject).getName())));
     } else {
       throw new RuntimeException(
           String.format("Unable to handle accessible object of type: %s", accessibleObject));
@@ -1078,7 +1076,6 @@ public final class MessageBuilder {
       }
       colferParams[i] =
           new Parameter()
-              .withType(getWrappedClass(jsonParam.getType()))
               .withIsRef(jsonParam.isRef())
               .withValue(
                   getWrappedObject(

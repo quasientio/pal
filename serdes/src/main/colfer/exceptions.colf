@@ -27,19 +27,12 @@ type Throwable struct {
 }
 
 type RaisedThrowable struct {
-	//TODO: Reference ID or hash to the constructor or method message that caused it
-	//TODO: more context, i.e. args, etc.
-
-	clazz Class
-
 	//for static init (<clinit>)
 	inInitializer bool
 
-	//makes sense only if wrapping real constructor, as name same as classname
-	constructor text
+	// the method/constructor raising this throwable
+	from Reflectable
 
-	method    text
-	field     text
 	modifiers uint32
 	throwable Throwable
 }

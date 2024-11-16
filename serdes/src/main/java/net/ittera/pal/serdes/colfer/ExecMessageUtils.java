@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Parameter;
+import net.ittera.pal.messages.colfer.RaisedThrowable;
+import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.types.ExecMessageType;
 
 public class ExecMessageUtils {
@@ -39,6 +41,10 @@ public class ExecMessageUtils {
       case GET_FIELD -> execMessage.getInstanceFieldGet().getClazz().getName();
       case PUT_STATIC -> execMessage.getStaticFieldPut().getClazz().getName();
       case PUT_FIELD -> execMessage.getInstanceFieldPut().getClazz().getName();
+      case PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getClazz().getName();
+      case PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getClazz().getName();
+      case THROWABLE -> execMessage.getRaisedThrowable().getThrowable().getType();
+      case RETURN_VALUE -> execMessage.getReturnValue().getClazz().getName();
       default ->
           throw new IllegalArgumentException(
               String.format("Unsupported ExecMessage type: %s", msgType));
@@ -60,6 +66,42 @@ public class ExecMessageUtils {
           throw new IllegalArgumentException(
               String.format("Unsupported ExecMessage type: %s", execMessageType));
     };
+  }
+
+  public static String getFromExecutableName(ExecMessage execMessage) {
+    final ExecMessageType execMessageType =
+        ExecMessageType.fromByte(execMessage.getExecMessageType());
+    return switch (execMessageType) {
+      case PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getField().getName();
+      case PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getField().getName();
+      case RETURN_VALUE -> getFromReflectableName(execMessage.getReturnValue());
+      case THROWABLE -> getFromReflectableName(execMessage.getRaisedThrowable());
+      default ->
+          throw new IllegalArgumentException(
+              String.format("Unsupported ExecMessage type: %s", execMessageType));
+    };
+  }
+
+  private static String getFromReflectableName(ReturnValue returnValue) {
+    if (returnValue.getFrom().getConstructor() != null) {
+      return returnValue.getFrom().getConstructor().getClazz().getName();
+    } else if (returnValue.getFrom().getMethod() != null) {
+      return returnValue.getFrom().getMethod().getName();
+    } else if (returnValue.getFrom().getField() != null) {
+      return returnValue.getFrom().getField().getName();
+    }
+    return null;
+  }
+
+  private static String getFromReflectableName(RaisedThrowable raisedThrowable) {
+    if (raisedThrowable.getFrom().getConstructor() != null) {
+      return raisedThrowable.getFrom().getConstructor().getClazz().getName();
+    } else if (raisedThrowable.getFrom().getMethod() != null) {
+      return raisedThrowable.getFrom().getMethod().getName();
+    } else if (raisedThrowable.getFrom().getField() != null) {
+      return raisedThrowable.getFrom().getField().getName();
+    }
+    return null;
   }
 
   /**
@@ -88,7 +130,18 @@ public class ExecMessageUtils {
     }
 
     if (params != null && params.length > 0) {
-      return Arrays.stream(params).map(p -> p.getType().getName()).collect(Collectors.toList());
+      return Arrays.stream(params)
+          .map(
+              param -> {
+                if (param.getValue().getClazz() == null
+                    || param.getValue().getClazz().getUnknown()
+                    || param.getValue().getClazz().name.isEmpty()) {
+                  return "unknown";
+                } else {
+                  return param.getValue().getClazz().getName();
+                }
+              })
+          .collect(Collectors.toList());
     }
     return Collections.emptyList();
   }

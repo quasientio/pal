@@ -21,7 +21,6 @@ package net.ittera.pal.core.exec.java;
 
 import java.lang.reflect.AccessibleObject;
 import java.util.List;
-import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.lang.reflect.FieldSignature;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
@@ -55,7 +54,7 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
     if (value instanceof InvocationExceptionWrapper) {
       Exception invocationException = ((InvocationExceptionWrapper) value).exception();
       return messageBuilder.buildAccessibleObjectThrowable(
-          peerUuid, field, getExecutableObjectType(), invocationException, null);
+          peerUuid, field, invocationException, null);
     } else {
       if (!returnsVoid()) {
         return messageBuilder.buildReturnValue(peerUuid, value, field, objectRef, false, null);
@@ -68,11 +67,6 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
   @Override
   protected List<Parameter> getParameterList(ExecMessage execMessage) {
     return null;
-  }
-
-  @Override
-  protected final ExecutableObjectType getExecutableObjectType() {
-    return ExecutableObjectType.FIELD;
   }
 
   protected abstract boolean returnsVoid();

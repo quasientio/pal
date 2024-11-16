@@ -77,11 +77,7 @@ public abstract class GetFieldDispatcher extends FieldOpDispatcher {
 
     if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
       return wrapAfterExecThrowableMessage(
-          messageUuid,
-          accessibleObject,
-          getExecutableObjectType(),
-          exceptionWhileLoading,
-          exceptionWhileInvoking);
+          messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
     }
 
     return messageBuilder.buildReturnValue(

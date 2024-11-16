@@ -156,8 +156,7 @@ class JsonRpcRequestDispatcher extends ConnectedService {
           assert requestMsg != null;
           boolean sent = requestMsg.send(dealerSocket);
           if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Sent message from connection id: {} to dispatchers", requestMsg.getPeerId());
+            logger.debug("Sent message from peer w/id: {} to dispatchers", requestMsg.getPeerId());
           }
           if (!sent) {
             logger.error("Error dealing message for dispatch: {}", requestMsg);
@@ -293,7 +292,7 @@ class JsonRpcRequestDispatcher extends ConnectedService {
       InboundJsonRpcRequestMsg requestMsg = new InboundJsonRpcRequestMsg(peerId, message);
       boolean sentOk = requestMsg.send(pushSocket, false);
       if (logger.isDebugEnabled()) {
-        logger.debug("Pushed message from connection id: {} for dispatch", peerId);
+        logger.debug("Pushed message from peer w/id: {} for dispatch", peerId);
       }
       if (!sentOk) {
         logger.error("Error pushing message for dispatch: {}", message);

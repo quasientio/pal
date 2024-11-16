@@ -18,7 +18,6 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
-import java.nio.charset.StandardCharsets;
 import java.util.InputMismatchException;
 
 /**
@@ -32,7 +31,7 @@ public class Constructor implements Serializable, net.ittera.pal.messages.Marsha
   /** The upper limit for serial byte sizes. */
   public static int colferSizeMax = 16 * 1024 * 1024;
 
-  public String repr;
+  public Class clazz;
 
   /** Default constructor */
   public Constructor() {
@@ -40,9 +39,7 @@ public class Constructor implements Serializable, net.ittera.pal.messages.Marsha
   }
 
   /** Colfer zero values. */
-  private void init() {
-    repr = "";
-  }
+  private void init() {}
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
   public static class Unmarshaller {
@@ -136,7 +133,8 @@ public class Constructor implements Serializable, net.ittera.pal.messages.Marsha
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.repr.length() * 3;
+    long n = 1L;
+    if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     if (n < 0 || n > (long) Constructor.colferSizeMax) return Constructor.colferSizeMax;
     return (int) n;
   }
@@ -179,52 +177,9 @@ public class Constructor implements Serializable, net.ittera.pal.messages.Marsha
     int i = offset;
 
     try {
-      if (!this.repr.isEmpty()) {
+      if (this.clazz != null) {
         buf[i++] = (byte) 0;
-        int start = ++i;
-
-        String s = this.repr;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
-          }
-        }
-        int size = i - start;
-        if (size > Constructor.colferSizeMax)
-          throw new IllegalStateException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.Constructor.repr size %d exceeds %d UTF-8 bytes",
-                  size, Constructor.colferSizeMax));
-
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
-        }
-        buf[ii] = (byte) size;
+        i = this.clazz.marshal(buf, i);
       }
 
       buf[i++] = (byte) 0x7f;
@@ -273,21 +228,8 @@ public class Constructor implements Serializable, net.ittera.pal.messages.Marsha
       byte header = buf[i++];
 
       if (header == (byte) 0) {
-        int size = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          size |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        if (size < 0 || size > Constructor.colferSizeMax)
-          throw new SecurityException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.Constructor.repr size %d exceeds %d UTF-8 bytes",
-                  size, Constructor.colferSizeMax));
-
-        int start = i;
-        i += size;
-        this.repr = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.clazz = new Class();
+        i = this.clazz.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
@@ -333,38 +275,38 @@ public class Constructor implements Serializable, net.ittera.pal.messages.Marsha
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.Constructor.repr.
+   * Gets net.ittera.pal.messages/colfer.Constructor.clazz.
    *
    * @return the value.
    */
-  public String getRepr() {
-    return this.repr;
+  public Class getClazz() {
+    return this.clazz;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.Constructor.repr.
+   * Sets net.ittera.pal.messages/colfer.Constructor.clazz.
    *
    * @param value the replacement.
    */
-  public void setRepr(String value) {
-    this.repr = value;
+  public void setClazz(Class value) {
+    this.clazz = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.Constructor.repr.
+   * Sets net.ittera.pal.messages/colfer.Constructor.clazz.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public Constructor withRepr(String value) {
-    this.repr = value;
+  public Constructor withClazz(Class value) {
+    this.clazz = value;
     return this;
   }
 
   @Override
   public final int hashCode() {
     int h = 1;
-    if (this.repr != null) h = 31 * h + this.repr.hashCode();
+    if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     return h;
   }
 
@@ -377,14 +319,15 @@ public class Constructor implements Serializable, net.ittera.pal.messages.Marsha
     if (o == null) return false;
     if (o == this) return true;
 
-    return (this.repr == null ? o.repr == null : this.repr.equals(o.repr));
+    return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz));
   }
 
   @Override
   public Constructor fromJson(JsonObject json) throws JsonParseException {
     try {
-      if (json.has("repr")) {
-        this.repr = json.get("repr").getAsString();
+      if (json.has("clazz")) {
+        JsonObject jsonObj = json.getAsJsonObject("clazz");
+        this.clazz = new Class().fromJson(jsonObj);
       }
 
     } catch (Exception e) {

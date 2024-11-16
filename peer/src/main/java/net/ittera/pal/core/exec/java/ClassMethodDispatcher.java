@@ -27,7 +27,6 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.lang.reflect.MethodSignature;
 import net.ittera.pal.common.objects.ObjectLookupStore;
 import net.ittera.pal.common.objects.ObjectRef;
@@ -79,7 +78,7 @@ public class ClassMethodDispatcher extends MethodDispatcher {
     if (value instanceof InvocationExceptionWrapper) {
       Exception invocationException = ((InvocationExceptionWrapper) value).exception();
       return messageBuilder.buildAccessibleObjectThrowable(
-          peerUuid, method, ExecutableObjectType.METHOD, invocationException, null);
+          peerUuid, method, invocationException, null);
     } else {
       return messageBuilder.buildReturnValue(peerUuid, value, method, objectRef, isVoid, null);
     }

@@ -265,7 +265,6 @@ public final class Wrapper {
         new net.ittera.pal.messages.colfer.Field();
     wrappedField.setName(field.getName());
     wrappedField.setClazz(getWrappedClass(field.getDeclaringClass()));
-    wrappedField.setRepr(field.toGenericString());
     return wrappedField;
   }
 

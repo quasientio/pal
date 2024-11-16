@@ -340,7 +340,7 @@ public class MessageBuilderTest {
     // compare parameter types and args
     for (int i = 0; i < execMessage.getConstructorCall().getParameters().length; i++) {
       Parameter parameter = execMessage.getConstructorCall().getParameters()[i];
-      assertEquals(parameterTypes[i], parameter.getType().getName());
+      assertEquals(parameterTypes[i], parameter.getValue().getClazz().getName());
       assertEquals(args[i], Unwrapper.unwrapObject(parameter.getValue()));
     }
   }
@@ -433,7 +433,7 @@ public class MessageBuilderTest {
     // compare parameter types and args
     for (int i = 0; i < execMessage.getInstanceMethodCall().getParameters().length; i++) {
       Parameter parameter = execMessage.getInstanceMethodCall().getParameters()[i];
-      assertEquals(parameterTypes[i], parameter.getType().getName());
+      assertEquals(parameterTypes[i], parameter.getValue().getClazz().getName());
       assertEquals(args[i], Unwrapper.unwrapObject(parameter.getValue()));
     }
   }
@@ -476,7 +476,7 @@ public class MessageBuilderTest {
     // compare parameter types
     for (int i = 0; i < execMessage.getClassMethodCall().getParameters().length; i++) {
       Parameter parameter = execMessage.getClassMethodCall().getParameters()[i];
-      assertEquals(parameterTypes[i], parameter.getType().getName());
+      assertEquals(parameterTypes[i], parameter.getValue().getClazz().getName());
     }
     // compare parameter values
     assertArrayEquals(
@@ -545,7 +545,7 @@ public class MessageBuilderTest {
     // compare parameter types and values
     for (int i = 0; i < execMessage.getClassMethodCall().getParameters().length; i++) {
       Parameter parameter = execMessage.getClassMethodCall().getParameters()[i];
-      assertEquals(parameterTypes[i], parameter.getType().getName());
+      assertEquals(parameterTypes[i], parameter.getValue().getClazz().getName());
     }
     // compare parameter values
     assertArrayEquals(
@@ -1071,13 +1071,13 @@ public class MessageBuilderTest {
         execMessage.getInstanceMethodCall().getParameters().length,
         interceptKeyMessage.getParameterTypes().length);
     assertEquals(
-        execMessage.getInstanceMethodCall().getParameters()[0].getType().getName(),
+        execMessage.getInstanceMethodCall().getParameters()[0].getValue().getClazz().getName(),
         interceptKeyMessage.getParameterTypes()[0]);
     assertEquals(
-        execMessage.getInstanceMethodCall().getParameters()[1].getType().getName(),
+        execMessage.getInstanceMethodCall().getParameters()[1].getValue().getClazz().getName(),
         interceptKeyMessage.getParameterTypes()[1]);
     assertEquals(
-        execMessage.getInstanceMethodCall().getParameters()[2].getType().getName(),
+        execMessage.getInstanceMethodCall().getParameters()[2].getValue().getClazz().getName(),
         interceptKeyMessage.getParameterTypes()[2]);
   }
 
@@ -1122,11 +1122,31 @@ public class MessageBuilderTest {
         interceptedExecMessage.getConstructorCall().getParameters().length,
         callbackExecMessage.getClassMethodCall().getParameters().length);
     assertEquals(
-        interceptedExecMessage.getConstructorCall().getParameters()[0].getType().getName(),
-        callbackExecMessage.getClassMethodCall().getParameters()[0].getType().getName());
+        interceptedExecMessage
+            .getConstructorCall()
+            .getParameters()[0]
+            .getValue()
+            .getClazz()
+            .getName(),
+        callbackExecMessage
+            .getClassMethodCall()
+            .getParameters()[0]
+            .getValue()
+            .getClazz()
+            .getName());
     assertEquals(
-        interceptedExecMessage.getConstructorCall().getParameters()[1].getType().getName(),
-        callbackExecMessage.getClassMethodCall().getParameters()[1].getType().getName());
+        interceptedExecMessage
+            .getConstructorCall()
+            .getParameters()[1]
+            .getValue()
+            .getClazz()
+            .getName(),
+        callbackExecMessage
+            .getClassMethodCall()
+            .getParameters()[1]
+            .getValue()
+            .getClazz()
+            .getName());
   }
 
   @Test
@@ -1178,11 +1198,31 @@ public class MessageBuilderTest {
         interceptedExecMessage.getClassMethodCall().getParameters().length,
         callbackExecMessage.getClassMethodCall().getParameters().length);
     assertEquals(
-        interceptedExecMessage.getClassMethodCall().getParameters()[0].getType().getName(),
-        callbackExecMessage.getClassMethodCall().getParameters()[0].getType().getName());
+        interceptedExecMessage
+            .getClassMethodCall()
+            .getParameters()[0]
+            .getValue()
+            .getClazz()
+            .getName(),
+        callbackExecMessage
+            .getClassMethodCall()
+            .getParameters()[0]
+            .getValue()
+            .getClazz()
+            .getName());
     assertEquals(
-        interceptedExecMessage.getClassMethodCall().getParameters()[1].getType().getName(),
-        callbackExecMessage.getClassMethodCall().getParameters()[1].getType().getName());
+        interceptedExecMessage
+            .getClassMethodCall()
+            .getParameters()[1]
+            .getValue()
+            .getClazz()
+            .getName(),
+        callbackExecMessage
+            .getClassMethodCall()
+            .getParameters()[1]
+            .getValue()
+            .getClazz()
+            .getName());
   }
 
   @Test
@@ -1231,14 +1271,44 @@ public class MessageBuilderTest {
         interceptedExecMessage.getInstanceMethodCall().getParameters().length,
         callbackExecMessage.getClassMethodCall().getParameters().length);
     assertEquals(
-        interceptedExecMessage.getInstanceMethodCall().getParameters()[0].getType().getName(),
-        callbackExecMessage.getClassMethodCall().getParameters()[0].getType().getName());
+        interceptedExecMessage
+            .getInstanceMethodCall()
+            .getParameters()[0]
+            .getValue()
+            .getClazz()
+            .getName(),
+        callbackExecMessage
+            .getClassMethodCall()
+            .getParameters()[0]
+            .getValue()
+            .getClazz()
+            .getName());
     assertEquals(
-        interceptedExecMessage.getInstanceMethodCall().getParameters()[1].getType().getName(),
-        callbackExecMessage.getClassMethodCall().getParameters()[1].getType().getName());
+        interceptedExecMessage
+            .getInstanceMethodCall()
+            .getParameters()[1]
+            .getValue()
+            .getClazz()
+            .getName(),
+        callbackExecMessage
+            .getClassMethodCall()
+            .getParameters()[1]
+            .getValue()
+            .getClazz()
+            .getName());
     assertEquals(
-        interceptedExecMessage.getInstanceMethodCall().getParameters()[2].getType().getName(),
-        callbackExecMessage.getClassMethodCall().getParameters()[2].getType().getName());
+        interceptedExecMessage
+            .getInstanceMethodCall()
+            .getParameters()[2]
+            .getValue()
+            .getClazz()
+            .getName(),
+        callbackExecMessage
+            .getClassMethodCall()
+            .getParameters()[2]
+            .getValue()
+            .getClazz()
+            .getName());
   }
 
   @Test
@@ -1367,7 +1437,7 @@ public class MessageBuilderTest {
       try {
         execMessage =
             messageBuilder.buildAccessibleObjectThrowable(
-                peerUuid, accessibleObject, null, throwable, responseToUuid);
+                peerUuid, accessibleObject, throwable, responseToUuid);
       } catch (UnsupportedOperationException e) {
         assertTrue(e.getMessage().contains("Unsupported accessibleObject type:"));
         continue;
@@ -1382,26 +1452,29 @@ public class MessageBuilderTest {
             ((Method) accessibleObject).getModifiers(),
             execMessage.getRaisedThrowable().getModifiers());
         assertEquals(
-            ((Method) accessibleObject).getName(), execMessage.getRaisedThrowable().getMethod());
+            ((Method) accessibleObject).getName(),
+            execMessage.getRaisedThrowable().getFrom().getMethod().getName());
       } else if (accessibleObject instanceof Constructor) {
         assertEquals(
             ((Constructor<?>) accessibleObject).getModifiers(),
             execMessage.getRaisedThrowable().getModifiers());
         assertEquals(
             ((Constructor<?>) accessibleObject).getDeclaringClass().getName(),
-            execMessage.getRaisedThrowable().getConstructor());
+            execMessage.getRaisedThrowable().getFrom().getConstructor().getClazz().getName());
       } else if (accessibleObject instanceof Field) {
         assertEquals(
             ((Field) accessibleObject).getModifiers(),
             execMessage.getRaisedThrowable().getModifiers());
         assertEquals(
-            ((Field) accessibleObject).getName(), execMessage.getRaisedThrowable().getField());
+            ((Field) accessibleObject).getName(),
+            execMessage.getRaisedThrowable().getFrom().getField().getName());
       } else {
         fail("Unexpected AccessibleObject: " + accessibleObject);
       }
       assertNotNull(execMessage.getRaisedThrowable().getThrowable());
       assertEquals(
-          throwable.getClass().getName(), execMessage.getRaisedThrowable().getClazz().getName());
+          throwable.getClass().getName(),
+          execMessage.getRaisedThrowable().getThrowable().getType());
       assertEquals(
           throwable.getClass().getName(),
           execMessage.getRaisedThrowable().getThrowable().getType());
@@ -1425,7 +1498,7 @@ public class MessageBuilderTest {
             executableObjectType -> {
               ExecMessage execMessage =
                   messageBuilder.buildAccessibleObjectThrowable(
-                      peerUuid, null, executableObjectType, throwable, responseToUuid);
+                      peerUuid, null, throwable, responseToUuid);
 
               assertNotNull(execMessage);
               assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
@@ -1433,15 +1506,9 @@ public class MessageBuilderTest {
               assertNotNull(execMessage.getRaisedThrowable());
               switch (executableObjectType) {
                 case METHOD:
-                  assertEquals(
-                      "<info not available>", execMessage.getRaisedThrowable().getMethod());
-                  break;
                 case CONSTRUCTOR:
-                  assertEquals(
-                      "<info not available>", execMessage.getRaisedThrowable().getConstructor());
-                  break;
                 case FIELD:
-                  assertEquals("<info not available>", execMessage.getRaisedThrowable().getField());
+                  assertNull(execMessage.getRaisedThrowable().getFrom());
                   break;
                 default:
                   fail("Unexpected ExecutableObjectType: " + executableObjectType);
@@ -1479,8 +1546,8 @@ public class MessageBuilderTest {
     assertEquals(RETURN_VALUE.toByte(), execMessage.getExecMessageType());
     assertNotNull(execMessage.getReturnValue());
     assertEquals(
-        constructor.toGenericString(),
-        execMessage.getReturnValue().getFrom().getConstructor().getRepr());
+        constructor.getName(),
+        execMessage.getReturnValue().getFrom().getConstructor().getClazz().getName());
     assertEquals(
         returnValue.getClass().getName(),
         execMessage.getReturnValue().getObject().getClazz().getName());
@@ -1511,8 +1578,7 @@ public class MessageBuilderTest {
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(RETURN_VALUE.toByte(), execMessage.getExecMessageType());
     assertNotNull(execMessage.getReturnValue());
-    assertEquals(
-        method.toGenericString(), execMessage.getReturnValue().getFrom().getMethod().getRepr());
+    assertEquals(method.getName(), execMessage.getReturnValue().getFrom().getMethod().getName());
     assertEquals("int", execMessage.getReturnValue().getObject().getClazz().getName());
     assertEquals(
         returnValueObjRef.getRef(),
@@ -1536,8 +1602,7 @@ public class MessageBuilderTest {
     assertEquals(peerUuid.toString(), execMessage.getPeerUuid());
     assertEquals(RETURN_VALUE.toByte(), execMessage.getExecMessageType());
     assertNotNull(execMessage.getReturnValue());
-    assertEquals(
-        field.toGenericString(), execMessage.getReturnValue().getFrom().getField().getRepr());
+    assertEquals(field.getName(), execMessage.getReturnValue().getFrom().getField().getName());
     assertEquals(
         returnValue.getClass().getName(),
         execMessage.getReturnValue().getObject().getClazz().getName());

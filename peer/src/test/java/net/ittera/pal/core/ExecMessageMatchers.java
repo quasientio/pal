@@ -83,27 +83,38 @@ public class ExecMessageMatchers {
           return ((ReturnValue) returnValue)
               .getFrom()
               .getField()
-              .getRepr()
-              .contains(clazz.getName());
+              .getClazz()
+              .getName()
+              .equals(clazz.getName());
         } else if (((ReturnValue) returnValue).getFrom().getConstructor() != null) {
           return ((ReturnValue) returnValue)
               .getFrom()
               .getConstructor()
-              .getRepr()
-              .contains(clazz.getName());
+              .getClazz()
+              .getName()
+              .equals(clazz.getName());
         } else if (((ReturnValue) returnValue).getFrom().getMethod() != null) {
           return ((ReturnValue) returnValue)
               .getFrom()
               .getMethod()
-              .getRepr()
-              .contains(clazz.getName());
+              .getClazz()
+              .getName()
+              .equals(clazz.getName());
         } else {
           return false;
         }
       } else if (returnValue instanceof StaticFieldPutDone) {
-        return ((StaticFieldPutDone) returnValue).getField().getRepr().contains(clazz.getName());
+        return ((StaticFieldPutDone) returnValue)
+            .getField()
+            .getClazz()
+            .getName()
+            .equals(clazz.getName());
       } else if (returnValue instanceof InstanceFieldPutDone) {
-        return ((InstanceFieldPutDone) returnValue).getField().getRepr().contains(clazz.getName());
+        return ((InstanceFieldPutDone) returnValue)
+            .getField()
+            .getClazz()
+            .getName()
+            .equals(clazz.getName());
       } else {
         return false;
       }
@@ -130,30 +141,27 @@ public class ExecMessageMatchers {
     protected boolean matchesSafely(Object returnValue) {
       if (returnValue instanceof ReturnValue) {
         if (((ReturnValue) returnValue).getFrom().getField() != null) {
-          return ((ReturnValue) returnValue)
-              .getFrom()
-              .getField()
-              .getRepr()
-              .contains(reflectableName);
+          return ((ReturnValue) returnValue).getFrom().getField().getName().equals(reflectableName);
         } else if (((ReturnValue) returnValue).getFrom().getConstructor() != null) {
           return ((ReturnValue) returnValue)
               .getFrom()
               .getConstructor()
-              .getRepr()
-              .contains(reflectableName);
+              .getClazz()
+              .getName()
+              .equals(reflectableName);
         } else if (((ReturnValue) returnValue).getFrom().getMethod() != null) {
           return ((ReturnValue) returnValue)
               .getFrom()
               .getMethod()
-              .getRepr()
-              .contains(reflectableName);
+              .getName()
+              .equals(reflectableName);
         } else {
           return false;
         }
       } else if (returnValue instanceof StaticFieldPutDone) {
-        return ((StaticFieldPutDone) returnValue).getField().getRepr().contains(reflectableName);
+        return ((StaticFieldPutDone) returnValue).getField().getName().equals(reflectableName);
       } else if (returnValue instanceof InstanceFieldPutDone) {
-        return ((InstanceFieldPutDone) returnValue).getField().getRepr().contains(reflectableName);
+        return ((InstanceFieldPutDone) returnValue).getField().getName().equals(reflectableName);
       } else {
         return false;
       }

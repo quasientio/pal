@@ -357,20 +357,11 @@ public class JsonSerializers {
     public JsonElement serialize(
         RaisedThrowable message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      if (notEmpty(message.clazz)) {
-        jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
-      }
       if (notEmpty(message.inInitializer)) {
         jsonElement.addProperty("in_initializer", message.inInitializer);
       }
-      if (notEmpty(message.constructor)) {
-        jsonElement.addProperty("constructor", message.constructor);
-      }
-      if (notEmpty(message.method)) {
-        jsonElement.addProperty("method", message.method);
-      }
-      if (notEmpty(message.field)) {
-        jsonElement.addProperty("field", message.field);
+      if (notEmpty(message.from)) {
+        jsonElement.add("from", jsonSerializationContext.serialize(message.from));
       }
       if (notEmpty(message.modifiers)) {
         jsonElement.addProperty("modifiers", message.modifiers);
@@ -751,9 +742,6 @@ public class JsonSerializers {
       if (notEmpty(message.clazz)) {
         jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
       }
-      if (notEmpty(message.repr)) {
-        jsonElement.addProperty("repr", message.repr);
-      }
       return jsonElement;
     }
   }
@@ -763,8 +751,11 @@ public class JsonSerializers {
     public JsonElement serialize(
         Method message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      if (notEmpty(message.repr)) {
-        jsonElement.addProperty("repr", message.repr);
+      if (notEmpty(message.name)) {
+        jsonElement.addProperty("name", message.name);
+      }
+      if (notEmpty(message.clazz)) {
+        jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
       }
       return jsonElement;
     }
@@ -775,8 +766,8 @@ public class JsonSerializers {
     public JsonElement serialize(
         Constructor message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      if (notEmpty(message.repr)) {
-        jsonElement.addProperty("repr", message.repr);
+      if (notEmpty(message.clazz)) {
+        jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
       }
       return jsonElement;
     }
@@ -810,9 +801,6 @@ public class JsonSerializers {
       }
       if (notEmpty(message.value)) {
         jsonElement.add("value", jsonSerializationContext.serialize(message.value));
-      }
-      if (notEmpty(message.Type)) {
-        jsonElement.add("type", jsonSerializationContext.serialize(message.Type));
       }
       if (notEmpty(message.isRef)) {
         jsonElement.addProperty("is_ref", message.isRef);

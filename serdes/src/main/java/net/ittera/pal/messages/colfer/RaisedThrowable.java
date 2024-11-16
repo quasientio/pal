@@ -18,7 +18,6 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
-import java.nio.charset.StandardCharsets;
 import java.util.InputMismatchException;
 
 /**
@@ -32,17 +31,11 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
   /** The upper limit for serial byte sizes. */
   public static int colferSizeMax = 16 * 1024 * 1024;
 
-  public Class clazz;
-
   /** */
   public boolean inInitializer;
 
-  /** */
-  public String constructor;
-
-  public String method;
-
-  public String field;
+  /** the method/constructor raising this throwable */
+  public Reflectable from;
 
   public int modifiers;
 
@@ -54,11 +47,7 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
   }
 
   /** Colfer zero values. */
-  private void init() {
-    constructor = "";
-    method = "";
-    field = "";
-  }
+  private void init() {}
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
   public static class Unmarshaller {
@@ -153,17 +142,8 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n =
-        1L
-            + 1
-            + 6
-            + (long) this.constructor.length() * 3
-            + 6
-            + (long) this.method.length() * 3
-            + 6
-            + (long) this.field.length() * 3
-            + 5;
-    if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
+    long n = 1L + 1 + 5;
+    if (this.from != null) n += 1 + (long) this.from.marshalFit();
     if (this.throwable != null) n += 1 + (long) this.throwable.marshalFit();
     if (n < 0 || n > (long) RaisedThrowable.colferSizeMax) return RaisedThrowable.colferSizeMax;
     return (int) n;
@@ -207,168 +187,24 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
     int i = offset;
 
     try {
-      if (this.clazz != null) {
-        buf[i++] = (byte) 0;
-        i = this.clazz.marshal(buf, i);
-      }
-
       if (this.inInitializer) {
+        buf[i++] = (byte) 0;
+      }
+
+      if (this.from != null) {
         buf[i++] = (byte) 1;
-      }
-
-      if (!this.constructor.isEmpty()) {
-        buf[i++] = (byte) 2;
-        int start = ++i;
-
-        String s = this.constructor;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
-          }
-        }
-        int size = i - start;
-        if (size > RaisedThrowable.colferSizeMax)
-          throw new IllegalStateException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.RaisedThrowable.constructor size %d exceeds %d UTF-8 bytes",
-                  size, RaisedThrowable.colferSizeMax));
-
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
-        }
-        buf[ii] = (byte) size;
-      }
-
-      if (!this.method.isEmpty()) {
-        buf[i++] = (byte) 3;
-        int start = ++i;
-
-        String s = this.method;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
-          }
-        }
-        int size = i - start;
-        if (size > RaisedThrowable.colferSizeMax)
-          throw new IllegalStateException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.RaisedThrowable.method size %d exceeds %d UTF-8 bytes",
-                  size, RaisedThrowable.colferSizeMax));
-
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
-        }
-        buf[ii] = (byte) size;
-      }
-
-      if (!this.field.isEmpty()) {
-        buf[i++] = (byte) 4;
-        int start = ++i;
-
-        String s = this.field;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
-          }
-        }
-        int size = i - start;
-        if (size > RaisedThrowable.colferSizeMax)
-          throw new IllegalStateException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.RaisedThrowable.field size %d exceeds %d UTF-8 bytes",
-                  size, RaisedThrowable.colferSizeMax));
-
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
-        }
-        buf[ii] = (byte) size;
+        i = this.from.marshal(buf, i);
       }
 
       if (this.modifiers != 0) {
         int x = this.modifiers;
         if ((x & ~((1 << 21) - 1)) != 0) {
-          buf[i++] = (byte) (5 | 0x80);
+          buf[i++] = (byte) (2 | 0x80);
           buf[i++] = (byte) (x >>> 24);
           buf[i++] = (byte) (x >>> 16);
           buf[i++] = (byte) (x >>> 8);
         } else {
-          buf[i++] = (byte) 5;
+          buf[i++] = (byte) 2;
           while (x > 0x7f) {
             buf[i++] = (byte) (x | 0x80);
             x >>>= 7;
@@ -378,7 +214,7 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
       }
 
       if (this.throwable != null) {
-        buf[i++] = (byte) 6;
+        buf[i++] = (byte) 3;
         i = this.throwable.marshal(buf, i);
       }
 
@@ -428,74 +264,17 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
       byte header = buf[i++];
 
       if (header == (byte) 0) {
-        this.clazz = new Class();
-        i = this.clazz.unmarshal(buf, i, end);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 1) {
         this.inInitializer = true;
         header = buf[i++];
       }
 
+      if (header == (byte) 1) {
+        this.from = new Reflectable();
+        i = this.from.unmarshal(buf, i, end);
+        header = buf[i++];
+      }
+
       if (header == (byte) 2) {
-        int size = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          size |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        if (size < 0 || size > RaisedThrowable.colferSizeMax)
-          throw new SecurityException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.RaisedThrowable.constructor size %d exceeds %d UTF-8 bytes",
-                  size, RaisedThrowable.colferSizeMax));
-
-        int start = i;
-        i += size;
-        this.constructor = new String(buf, start, size, StandardCharsets.UTF_8);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 3) {
-        int size = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          size |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        if (size < 0 || size > RaisedThrowable.colferSizeMax)
-          throw new SecurityException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.RaisedThrowable.method size %d exceeds %d UTF-8 bytes",
-                  size, RaisedThrowable.colferSizeMax));
-
-        int start = i;
-        i += size;
-        this.method = new String(buf, start, size, StandardCharsets.UTF_8);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 4) {
-        int size = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          size |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        if (size < 0 || size > RaisedThrowable.colferSizeMax)
-          throw new SecurityException(
-              format(
-                  "colfer: net.ittera.pal.messages/colfer.RaisedThrowable.field size %d exceeds %d UTF-8 bytes",
-                  size, RaisedThrowable.colferSizeMax));
-
-        int start = i;
-        i += size;
-        this.field = new String(buf, start, size, StandardCharsets.UTF_8);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 5) {
         int x = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -504,7 +283,7 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
         }
         this.modifiers = x;
         header = buf[i++];
-      } else if (header == (byte) (5 | 0x80)) {
+      } else if (header == (byte) (2 | 0x80)) {
         this.modifiers =
             (buf[i++] & 0xff) << 24
                 | (buf[i++] & 0xff) << 16
@@ -513,7 +292,7 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
         header = buf[i++];
       }
 
-      if (header == (byte) 6) {
+      if (header == (byte) 3) {
         this.throwable = new Throwable();
         i = this.throwable.unmarshal(buf, i, end);
         header = buf[i++];
@@ -536,7 +315,7 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 7L;
+  private static final long serialVersionUID = 4L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -559,35 +338,6 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
   // {@link Serializable} Colfer extension.
   private void readObjectNoData() throws ObjectStreamException {
     init();
-  }
-
-  /**
-   * Gets net.ittera.pal.messages/colfer.RaisedThrowable.clazz.
-   *
-   * @return the value.
-   */
-  public Class getClazz() {
-    return this.clazz;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.RaisedThrowable.clazz.
-   *
-   * @param value the replacement.
-   */
-  public void setClazz(Class value) {
-    this.clazz = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.RaisedThrowable.clazz.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public RaisedThrowable withClazz(Class value) {
-    this.clazz = value;
-    return this;
   }
 
   /**
@@ -620,89 +370,31 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.RaisedThrowable.constructor.
+   * Gets net.ittera.pal.messages/colfer.RaisedThrowable.from.
    *
    * @return the value.
    */
-  public String getConstructor() {
-    return this.constructor;
+  public Reflectable getFrom() {
+    return this.from;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.RaisedThrowable.constructor.
+   * Sets net.ittera.pal.messages/colfer.RaisedThrowable.from.
    *
    * @param value the replacement.
    */
-  public void setConstructor(String value) {
-    this.constructor = value;
+  public void setFrom(Reflectable value) {
+    this.from = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.RaisedThrowable.constructor.
+   * Sets net.ittera.pal.messages/colfer.RaisedThrowable.from.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public RaisedThrowable withConstructor(String value) {
-    this.constructor = value;
-    return this;
-  }
-
-  /**
-   * Gets net.ittera.pal.messages/colfer.RaisedThrowable.method.
-   *
-   * @return the value.
-   */
-  public String getMethod() {
-    return this.method;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.RaisedThrowable.method.
-   *
-   * @param value the replacement.
-   */
-  public void setMethod(String value) {
-    this.method = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.RaisedThrowable.method.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public RaisedThrowable withMethod(String value) {
-    this.method = value;
-    return this;
-  }
-
-  /**
-   * Gets net.ittera.pal.messages/colfer.RaisedThrowable.field.
-   *
-   * @return the value.
-   */
-  public String getField() {
-    return this.field;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.RaisedThrowable.field.
-   *
-   * @param value the replacement.
-   */
-  public void setField(String value) {
-    this.field = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.RaisedThrowable.field.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public RaisedThrowable withField(String value) {
-    this.field = value;
+  public RaisedThrowable withFrom(Reflectable value) {
+    this.from = value;
     return this;
   }
 
@@ -767,11 +459,8 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
   @Override
   public final int hashCode() {
     int h = 1;
-    if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     h = 31 * h + (this.inInitializer ? 1231 : 1237);
-    if (this.constructor != null) h = 31 * h + this.constructor.hashCode();
-    if (this.method != null) h = 31 * h + this.method.hashCode();
-    if (this.field != null) h = 31 * h + this.field.hashCode();
+    if (this.from != null) h = 31 * h + this.from.hashCode();
     h = 31 * h + this.modifiers;
     if (this.throwable != null) h = 31 * h + this.throwable.hashCode();
     return h;
@@ -786,13 +475,8 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
     if (o == null) return false;
     if (o == this) return true;
 
-    return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
-        && this.inInitializer == o.inInitializer
-        && (this.constructor == null
-            ? o.constructor == null
-            : this.constructor.equals(o.constructor))
-        && (this.method == null ? o.method == null : this.method.equals(o.method))
-        && (this.field == null ? o.field == null : this.field.equals(o.field))
+    return this.inInitializer == o.inInitializer
+        && (this.from == null ? o.from == null : this.from.equals(o.from))
         && this.modifiers == o.modifiers
         && (this.throwable == null ? o.throwable == null : this.throwable.equals(o.throwable));
   }
@@ -800,25 +484,13 @@ public class RaisedThrowable implements Serializable, net.ittera.pal.messages.Ma
   @Override
   public RaisedThrowable fromJson(JsonObject json) throws JsonParseException {
     try {
-      if (json.has("clazz")) {
-        JsonObject jsonObj = json.getAsJsonObject("clazz");
-        this.clazz = new Class().fromJson(jsonObj);
-      }
-
       if (json.has("inInitializer")) {
         this.inInitializer = json.get("inInitializer").getAsBoolean();
       }
 
-      if (json.has("constructor")) {
-        this.constructor = json.get("constructor").getAsString();
-      }
-
-      if (json.has("method")) {
-        this.method = json.get("method").getAsString();
-      }
-
-      if (json.has("field")) {
-        this.field = json.get("field").getAsString();
+      if (json.has("from")) {
+        JsonObject jsonObj = json.getAsJsonObject("from");
+        this.from = new Reflectable().fromJson(jsonObj);
       }
 
       if (json.has("modifiers")) {

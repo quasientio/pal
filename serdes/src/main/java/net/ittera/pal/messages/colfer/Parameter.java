@@ -36,8 +36,6 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
 
   public Obj value;
 
-  public Class Type;
-
   public boolean isRef;
 
   /** Default constructor */
@@ -144,7 +142,6 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
   public int marshalFit() {
     long n = 1L + 6 + (long) this.name.length() * 3 + 1;
     if (this.value != null) n += 1 + (long) this.value.marshalFit();
-    if (this.Type != null) n += 1 + (long) this.Type.marshalFit();
     if (n < 0 || n > (long) Parameter.colferSizeMax) return Parameter.colferSizeMax;
     return (int) n;
   }
@@ -240,13 +237,8 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
         i = this.value.marshal(buf, i);
       }
 
-      if (this.Type != null) {
-        buf[i++] = (byte) 2;
-        i = this.Type.marshal(buf, i);
-      }
-
       if (this.isRef) {
-        buf[i++] = (byte) 3;
+        buf[i++] = (byte) 2;
       }
 
       buf[i++] = (byte) 0x7f;
@@ -320,12 +312,6 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
       }
 
       if (header == (byte) 2) {
-        this.Type = new Class();
-        i = this.Type.unmarshal(buf, i, end);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 3) {
         this.isRef = true;
         header = buf[i++];
       }
@@ -346,7 +332,7 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 4L;
+  private static final long serialVersionUID = 3L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -430,35 +416,6 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.Parameter.Type.
-   *
-   * @return the value.
-   */
-  public Class getType() {
-    return this.Type;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Parameter.Type.
-   *
-   * @param value the replacement.
-   */
-  public void setType(Class value) {
-    this.Type = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Parameter.Type.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public Parameter withType(Class value) {
-    this.Type = value;
-    return this;
-  }
-
-  /**
    * Gets net.ittera.pal.messages/colfer.Parameter.isRef.
    *
    * @return the value.
@@ -492,7 +449,6 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
     int h = 1;
     if (this.name != null) h = 31 * h + this.name.hashCode();
     if (this.value != null) h = 31 * h + this.value.hashCode();
-    if (this.Type != null) h = 31 * h + this.Type.hashCode();
     h = 31 * h + (this.isRef ? 1231 : 1237);
     return h;
   }
@@ -508,7 +464,6 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
 
     return (this.name == null ? o.name == null : this.name.equals(o.name))
         && (this.value == null ? o.value == null : this.value.equals(o.value))
-        && (this.Type == null ? o.Type == null : this.Type.equals(o.Type))
         && this.isRef == o.isRef;
   }
 
@@ -522,11 +477,6 @@ public class Parameter implements Serializable, net.ittera.pal.messages.Marshall
       if (json.has("value")) {
         JsonObject jsonObj = json.getAsJsonObject("value");
         this.value = new Obj().fromJson(jsonObj);
-      }
-
-      if (json.has("Type")) {
-        JsonObject jsonObj = json.getAsJsonObject("Type");
-        this.Type = new Class().fromJson(jsonObj);
       }
 
       if (json.has("isRef")) {

@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
-import net.ittera.pal.common.lang.reflect.ExecutableObjectType;
 import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.common.runtime.Dispatcher;
@@ -254,16 +253,19 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         || execMessageType.equals(ExecMessageType.CLASS_METHOD)
         || execMessageType.equals(ExecMessageType.INSTANCE_METHOD)) {
       for (Parameter param : parameterList) {
-        if (param.getType().getUnknown()) { // param class is unknown
+        if (param.getValue().getClazz() == null
+            || param.getValue().getClazz().getUnknown()
+            || param.getValue().getClazz().name.isEmpty()) {
           paramClasses.add(null);
         } else {
-          Class<?> primitiveClass = Classes.getClassForPrimitive(param.getType().getName());
+          Class<?> primitiveClass =
+              Classes.getClassForPrimitive(param.getValue().getClazz().getName());
           if (primitiveClass != null) { // param is primitive
             paramClasses.add(primitiveClass);
           } else { // ie. not a primitive
             paramClasses.add(
                 Class.forName(
-                    param.getType().getName(),
+                    param.getValue().getClazz().getName(),
                     true,
                     Thread.currentThread().getContextClassLoader()));
           }
@@ -329,8 +331,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * @param execMessage The message to extract the target from
    * @return The target object on which the method/field will be invoked
    */
-  Object getTargetFromMessage(ExecMessage execMessage)
-      throws ClassNotFoundException, NullPointerException {
+  Object getTargetFromMessage(ExecMessage execMessage) throws NullPointerException {
     return null;
   }
 
@@ -340,7 +341,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    *
    * @param messageUuid The UUID of the message that this is a reply to
    * @param accessibleObject The accessible object that failed to be loaded or invoked
-   * @param executableObjectType The type of accessible object (Field, Constructor, Method)
    * @param exceptionWhileLoading Either this or exceptionWhileInvoking must be non-null
    * @param exceptionWhileInvoking Either this or exceptionWhileLoading must be non-null
    * @return The wrapped ExecMessage with the Throwable
@@ -348,14 +348,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   final ExecMessage wrapAfterExecThrowableMessage(
       String messageUuid,
       AccessibleObject accessibleObject,
-      ExecutableObjectType executableObjectType,
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking) {
 
     Throwable throwable =
         exceptionWhileLoading != null ? exceptionWhileLoading : exceptionWhileInvoking;
     return messageBuilder.buildAccessibleObjectThrowable(
-        peerUuid, accessibleObject, executableObjectType, throwable, messageUuid);
+        peerUuid, accessibleObject, throwable, messageUuid);
   }
 
   private void storeObjectInSession(@Nonnull UUID peerUuid, @Nonnull ObjectRef objectRef) {
@@ -399,15 +398,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   protected abstract boolean returnsVoid(AccessibleObject accessibleObject);
 
   protected abstract ExecMessageType getBeforeExecMessageType();
-
-  /**
-   * We need this method and the ExecutableObjectType enum for cases where a Field, Constructor or
-   * Method fails to be loaded (i.e. exceptionWhileLoading), and we require at least information
-   * about the type of accessible to include in the Throwable message
-   *
-   * @return The type of accessible object (Field, Constructor, Method)
-   */
-  protected abstract ExecutableObjectType getExecutableObjectType();
 
   protected abstract List<Parameter> getParameterList(ExecMessage execMessage);
 

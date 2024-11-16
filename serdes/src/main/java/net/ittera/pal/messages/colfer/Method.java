@@ -32,7 +32,9 @@ public class Method implements Serializable, net.ittera.pal.messages.Marshallabl
   /** The upper limit for serial byte sizes. */
   public static int colferSizeMax = 16 * 1024 * 1024;
 
-  public String repr;
+  public Class clazz;
+
+  public String name;
 
   /** Default constructor */
   public Method() {
@@ -41,7 +43,7 @@ public class Method implements Serializable, net.ittera.pal.messages.Marshallabl
 
   /** Colfer zero values. */
   private void init() {
-    repr = "";
+    name = "";
   }
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
@@ -135,7 +137,8 @@ public class Method implements Serializable, net.ittera.pal.messages.Marshallabl
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.repr.length() * 3;
+    long n = 1L + 6 + (long) this.name.length() * 3;
+    if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     if (n < 0 || n > (long) Method.colferSizeMax) return Method.colferSizeMax;
     return (int) n;
   }
@@ -178,11 +181,16 @@ public class Method implements Serializable, net.ittera.pal.messages.Marshallabl
     int i = offset;
 
     try {
-      if (!this.repr.isEmpty()) {
+      if (this.clazz != null) {
         buf[i++] = (byte) 0;
+        i = this.clazz.marshal(buf, i);
+      }
+
+      if (!this.name.isEmpty()) {
+        buf[i++] = (byte) 1;
         int start = ++i;
 
-        String s = this.repr;
+        String s = this.name;
         for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
           char c = s.charAt(sIndex);
           if (c < '\u0080') {
@@ -209,7 +217,7 @@ public class Method implements Serializable, net.ittera.pal.messages.Marshallabl
         if (size > Method.colferSizeMax)
           throw new IllegalStateException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.Method.repr size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.Method.name size %d exceeds %d UTF-8 bytes",
                   size, Method.colferSizeMax));
 
         int ii = start - 1;
@@ -272,6 +280,12 @@ public class Method implements Serializable, net.ittera.pal.messages.Marshallabl
       byte header = buf[i++];
 
       if (header == (byte) 0) {
+        this.clazz = new Class();
+        i = this.clazz.unmarshal(buf, i, end);
+        header = buf[i++];
+      }
+
+      if (header == (byte) 1) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -281,12 +295,12 @@ public class Method implements Serializable, net.ittera.pal.messages.Marshallabl
         if (size < 0 || size > Method.colferSizeMax)
           throw new SecurityException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.Method.repr size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.Method.name size %d exceeds %d UTF-8 bytes",
                   size, Method.colferSizeMax));
 
         int start = i;
         i += size;
-        this.repr = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.name = new String(buf, start, size, StandardCharsets.UTF_8);
         header = buf[i++];
       }
 
@@ -306,7 +320,7 @@ public class Method implements Serializable, net.ittera.pal.messages.Marshallabl
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 2L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -332,38 +346,68 @@ public class Method implements Serializable, net.ittera.pal.messages.Marshallabl
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.Method.repr.
+   * Gets net.ittera.pal.messages/colfer.Method.clazz.
    *
    * @return the value.
    */
-  public String getRepr() {
-    return this.repr;
+  public Class getClazz() {
+    return this.clazz;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.Method.repr.
+   * Sets net.ittera.pal.messages/colfer.Method.clazz.
    *
    * @param value the replacement.
    */
-  public void setRepr(String value) {
-    this.repr = value;
+  public void setClazz(Class value) {
+    this.clazz = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.Method.repr.
+   * Sets net.ittera.pal.messages/colfer.Method.clazz.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public Method withRepr(String value) {
-    this.repr = value;
+  public Method withClazz(Class value) {
+    this.clazz = value;
+    return this;
+  }
+
+  /**
+   * Gets net.ittera.pal.messages/colfer.Method.name.
+   *
+   * @return the value.
+   */
+  public String getName() {
+    return this.name;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.Method.name.
+   *
+   * @param value the replacement.
+   */
+  public void setName(String value) {
+    this.name = value;
+  }
+
+  /**
+   * Sets net.ittera.pal.messages/colfer.Method.name.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public Method withName(String value) {
+    this.name = value;
     return this;
   }
 
   @Override
   public final int hashCode() {
     int h = 1;
-    if (this.repr != null) h = 31 * h + this.repr.hashCode();
+    if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
+    if (this.name != null) h = 31 * h + this.name.hashCode();
     return h;
   }
 
@@ -376,14 +420,20 @@ public class Method implements Serializable, net.ittera.pal.messages.Marshallabl
     if (o == null) return false;
     if (o == this) return true;
 
-    return (this.repr == null ? o.repr == null : this.repr.equals(o.repr));
+    return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
+        && (this.name == null ? o.name == null : this.name.equals(o.name));
   }
 
   @Override
   public Method fromJson(JsonObject json) throws JsonParseException {
     try {
-      if (json.has("repr")) {
-        this.repr = json.get("repr").getAsString();
+      if (json.has("clazz")) {
+        JsonObject jsonObj = json.getAsJsonObject("clazz");
+        this.clazz = new Class().fromJson(jsonObj);
+      }
+
+      if (json.has("name")) {
+        this.name = json.get("name").getAsString();
       }
 
     } catch (Exception e) {

@@ -44,17 +44,17 @@ type Obj struct {
 }
 
 type Field struct {
-	name  text
 	clazz Class
-	repr  text
+	name  text
 }
 
 type Method struct {
-	repr text
+	clazz Class
+	name  text
 }
 
 type Constructor struct {
-	repr text
+	clazz Class
 }
 
 type Reflectable struct {
@@ -66,6 +66,5 @@ type Reflectable struct {
 type Parameter struct {
 	name  text
 	value Obj
-	Type  Class
 	isRef bool
 }
