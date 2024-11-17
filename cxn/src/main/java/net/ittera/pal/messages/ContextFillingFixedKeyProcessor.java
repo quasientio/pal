@@ -11,7 +11,13 @@ import org.apache.kafka.streams.processor.api.RecordMetadata;
 public class ContextFillingFixedKeyProcessor
     implements FixedKeyProcessor<String, LogMessage<?>, Map<String, Object>> {
 
+  private final String logId;
+
   private FixedKeyProcessorContext<String, Map<String, Object>> context;
+
+  public ContextFillingFixedKeyProcessor(String logId) {
+    this.logId = logId;
+  }
 
   @Override
   public void init(FixedKeyProcessorContext<String, Map<String, Object>> context) {
@@ -33,7 +39,7 @@ public class ContextFillingFixedKeyProcessor
 
       // Create MessageContext with available metadata
       MessageContext messageContext =
-          new MessageContext(meta.offset(), meta.partition(), timestamp, meta.topic());
+          new MessageContext(meta.offset(), meta.partition(), timestamp, meta.topic(), logId);
 
       map.put("message", record.value());
       map.put("context", messageContext);

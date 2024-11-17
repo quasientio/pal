@@ -49,6 +49,8 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Named;
+import org.apache.kafka.streams.processor.api.FixedKeyProcessorSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -298,14 +300,19 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     }
 
     // stream: transform: add context  (offset, partition, timestamp, headers, etc.)
+    String logId = log.getUuid() != null ? log.getUuid().toString() : null;
+
+    // Create the processor supplier
+    FixedKeyProcessorSupplier<String, LogMessage<?>, Map<String, Object>> processorSupplier =
+        () -> new ContextFillingFixedKeyProcessor(logId);
+
     KStream<String, Map<String, Object>> streamWithCtxt =
-        stream.processValues(ContextFillingFixedKeyProcessor::new);
+        stream.processValues(processorSupplier, Named.as("context-filling-processor"));
 
     // stream: apply filter: offset
     if (offset != null) {
       streamWithCtxt =
-          streamWithCtxt.filter(
-              (k, m) -> ((MessageContext) m.get("context")).getOffset() == offset);
+          streamWithCtxt.filter((k, m) -> ((MessageContext) m.get("context")).offset() == offset);
     }
 
     // stream: print
@@ -316,11 +323,11 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
           if (fullOutput) {
             System.out.printf(
                 "CONTEXT: offset: %d, topic: %s, partition: %d, key: %s, timestamp: %d %nHEADERS: %s%n%s%n",
-                ctxt.getOffset(),
-                ctxt.getTopic(),
-                ctxt.getPartition(),
+                ctxt.offset(),
+                ctxt.topic(),
+                ctxt.partition(),
                 k,
-                ctxt.getTimestamp(),
+                ctxt.timestamp(),
                 msg.getHeaders(),
                 getMessageContentAsJsonString(msg, true));
           } else if (jsonOutput) { // JSON format pretty-print

@@ -19,34 +19,12 @@
 
 package net.ittera.pal.messages;
 
-/** Used by ContextFillingFixedKeyProcessor to encapsulate context of a kafka log message. */
-public class MessageContext {
-  private final long offset;
-  private final long timestamp;
-  private final int partition;
-  private final String topic;
+public record MessageContext(
+    long offset, int partition, long timestamp, String topic, String logId) {
 
-  public MessageContext(long offset, int partition, long timestamp, String topic) {
-    this.offset = offset;
-    this.partition = partition;
-    this.timestamp = timestamp;
-    this.topic = topic;
-  }
-
-  public long getOffset() {
-    return offset;
-  }
-
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-  public int getPartition() {
-    return partition;
-  }
-
+  @Override
   @SuppressWarnings("unused")
-  public String getTopic() {
+  public String topic() {
     return topic;
   }
 
@@ -62,6 +40,8 @@ public class MessageContext {
         + ", topic='"
         + topic
         + '\''
+        + ", logId="
+        + logId
         + '}';
   }
 }
