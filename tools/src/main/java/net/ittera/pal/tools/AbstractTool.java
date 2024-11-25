@@ -19,6 +19,8 @@
 
 package net.ittera.pal.tools;
 
+import static net.ittera.pal.serdes.colfer.ExecMessageSummaryUtil.getOneLinerSummary;
+
 import java.util.Locale;
 import javax.annotation.Nullable;
 import net.ittera.pal.messages.LogMessage;
@@ -135,11 +137,26 @@ public class AbstractTool {
     return null;
   }
 
-  protected static String getMessageContentAsJsonString(LogMessage<?> logMessage, boolean pretty) {
+  protected static String getMessageContentAsPrettyJson(LogMessage<?> logMessage) {
     if (isColfer(logMessage)) {
-      return ColferUtils.toJson((Message) logMessage.getContent(), pretty);
+      return ColferUtils.toJson((Message) logMessage.getContent(), true);
     } else if (isJsonRpc(logMessage)) {
-      return ((JsonRpcMessage) logMessage.getContent()).toJson(pretty);
+      return ((JsonRpcMessage) logMessage.getContent()).toJson(true);
+    }
+    throw new IllegalArgumentException(
+        "Unknown message type of class: " + logMessage.getContent().getClass());
+  }
+
+  protected static String getMessageOneLiner(LogMessage<?> logMessage) {
+    if (isColfer(logMessage)) {
+      Message message = (Message) logMessage.getContent();
+      if (message.getMessageType() == MessageType.EXEC_MESSAGE.toByte()) {
+        return getOneLinerSummary(message.getExecMessage());
+      }
+      // TODO: Add support for other message types; for now we return the 1-line Json representation
+      return ColferUtils.toJson((Message) logMessage.getContent(), false);
+    } else if (isJsonRpc(logMessage)) {
+      return ((JsonRpcMessage) logMessage.getContent()).toJson(false);
     }
     throw new IllegalArgumentException(
         "Unknown message type of class: " + logMessage.getContent().getClass());

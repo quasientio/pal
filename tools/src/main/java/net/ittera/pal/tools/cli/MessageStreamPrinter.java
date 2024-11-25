@@ -329,18 +329,13 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
                 k,
                 ctxt.timestamp(),
                 msg.getHeaders(),
-                getMessageContentAsJsonString(msg, true));
+                getMessageContentAsPrettyJson(msg));
           } else if (jsonOutput) { // JSON format pretty-print
             System.out.printf(
-                "offset: %d,%n%s%n", ctxt.getOffset(), getMessageContentAsJsonString(msg, true));
+                "offset: %d,%n%s%n", ctxt.offset(), getMessageContentAsPrettyJson(msg));
           } else { // JSON format compact
             System.out.printf(
-                "offset=%d id=%s format=%s type=%s message=%s%n",
-                ctxt.getOffset(),
-                getId(msg),
-                getMessageFormat(msg),
-                getMessageType(msg),
-                getMessageContentAsJsonString(msg, false));
+                "offset=%d id=%s message=%s%n", ctxt.offset(), getId(msg), getMessageOneLiner(msg));
           }
         });
 
