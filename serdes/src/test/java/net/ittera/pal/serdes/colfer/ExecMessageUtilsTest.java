@@ -91,17 +91,18 @@ public class ExecMessageUtilsTest {
   }
 
   @Test
-  public void getClassname_returnValue() {
-    AccessibleObject accessibleObject = ClassForTest.class.getMethods()[0];
+  public void getClassname_returnValue() throws NoSuchMethodException {
+    Method method = ClassForTest.class.getMethod("testMethod");
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
             UUID.randomUUID(),
             "test",
-            accessibleObject,
+            method,
             ObjectRef.randomRef(),
             false,
             UUID.randomUUID().toString());
-    assertEquals(ClassForTest.class.getName(), ExecMessageUtils.getClassname(execMessage));
+    assertEquals(
+        method.getReturnType().getSimpleName(), ExecMessageUtils.getClassname(execMessage));
   }
 
   @Test
@@ -202,8 +203,8 @@ public class ExecMessageUtilsTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void getExecutableName_returnValue() {
-    Method method = ClassForTest.class.getMethods()[0];
+  public void getExecutableName_returnValue() throws NoSuchMethodException {
+    Method method = ClassForTest.class.getMethod("testMethod");
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
             UUID.randomUUID(),
@@ -240,8 +241,8 @@ public class ExecMessageUtilsTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void getExecutableName_raisedThrowable() {
-    Method method = ClassForTest.class.getMethods()[0];
+  public void getExecutableName_raisedThrowable() throws NoSuchMethodException {
+    Method method = ClassForTest.class.getMethod("testMethod");
     Throwable throwable = new Throwable("some message");
     ExecMessage execMessage =
         messageBuilder.buildAccessibleObjectThrowable(
@@ -272,8 +273,8 @@ public class ExecMessageUtilsTest {
   }
 
   @Test
-  public void getFromExecutableName_returnValue() {
-    Method method = ClassForTest.class.getMethods()[0];
+  public void getFromExecutableName_returnValue() throws NoSuchMethodException {
+    Method method = ClassForTest.class.getMethod("testMethod");
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
             UUID.randomUUID(),
@@ -286,8 +287,8 @@ public class ExecMessageUtilsTest {
   }
 
   @Test
-  public void getFromExecutableName_raisedThrowable() {
-    Method method = ClassForTest.class.getMethods()[0];
+  public void getFromExecutableName_raisedThrowable() throws NoSuchMethodException {
+    Method method = ClassForTest.class.getMethod("testMethod");
     Throwable throwable = new Throwable("some message");
     ExecMessage execMessage =
         messageBuilder.buildAccessibleObjectThrowable(
@@ -476,8 +477,9 @@ public class ExecMessageUtilsTest {
   }
 
   @Test
-  public void getParameterTypes_returnsNullForUnsupported_ReturnValue() {
-    AccessibleObject accessibleObject = ClassForTest.class.getMethods()[0];
+  public void getParameterTypes_returnsNullForUnsupported_ReturnValue()
+      throws NoSuchMethodException {
+    AccessibleObject accessibleObject = ClassForTest.class.getMethod("testMethod");
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
             UUID.randomUUID(),
