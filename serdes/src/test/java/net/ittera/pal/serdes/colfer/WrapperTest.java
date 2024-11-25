@@ -301,9 +301,7 @@ public class WrapperTest extends WrappingTestBase {
     Obj wrapped =
         Wrapper.getWrappedObject(intArray, intArray.getClass().getName(), ObjectRef.randomRef());
     assertNotNull(wrapped);
-    assertFalse(wrapped.isVoid);
     assertFalse(wrapped.isNull);
-    assertTrue(wrapped.isArray);
     assertThat(wrapped.getValue(), is(emptyString()));
     assertThat(wrapped.getArrayValues(), is(not(emptyArray())));
     assertThat(wrapped.getRef(), is(not(emptyString())));
@@ -317,9 +315,7 @@ public class WrapperTest extends WrappingTestBase {
         Wrapper.getWrappedObject(
             threadArray, threadArray.getClass().getName(), ObjectRef.randomRef());
     assertNotNull(wrapped);
-    assertFalse(wrapped.isVoid);
     assertFalse(wrapped.isNull);
-    assertTrue(wrapped.isArray);
     assertThat(wrapped.getValue(), is(emptyString()));
     assertThat(wrapped.getArrayValues(), is(emptyArray()));
     assertThat(wrapped.getRef(), is(not(emptyString())));
@@ -364,14 +360,17 @@ public class WrapperTest extends WrappingTestBase {
 
       assertThat(wrappedObj.getRef(), is(emptyString()));
       assertFalse(wrappedObj.getIsNull());
-      if (wrappedObj.isArray) {
+      if (isArrayClassName(wrappedObj.getClazz().getName())) {
         assertNotNull(wrappedObj.getArrayValues());
       } else {
         assertThat(wrappedObj.getValue(), is(not(emptyString())));
         assertThat(wrappedObj.getArrayValues(), is(emptyArray()));
       }
-      assertFalse(wrappedObj.getIsVoid());
     }
+  }
+
+  private static boolean isArrayClassName(String className) {
+    return className.startsWith("[");
   }
 
   @Test
@@ -387,7 +386,6 @@ public class WrapperTest extends WrappingTestBase {
     assertThat(wrappedObj.getRef(), is(emptyString()));
     assertFalse(wrappedObj.getIsNull());
     assertThat(wrappedObj.getValue(), is(emptyString()));
-    assertTrue(wrappedObj.getIsVoid());
   }
 
   @Test
@@ -402,7 +400,6 @@ public class WrapperTest extends WrappingTestBase {
     assertThat(wrappedObj.getRef(), is(emptyString()));
     assertFalse(wrappedObj.getIsNull());
     assertThat(wrappedObj.getValue(), is(emptyString()));
-    assertTrue(wrappedObj.getIsVoid());
   }
 
   @Test
@@ -417,7 +414,6 @@ public class WrapperTest extends WrappingTestBase {
     assertThat(wrappedObj.getRef(), is(emptyString()));
     assertTrue(wrappedObj.getIsNull());
     assertThat(wrappedObj.getValue(), is(emptyString()));
-    assertFalse(wrappedObj.getIsVoid());
   }
 
   @Test

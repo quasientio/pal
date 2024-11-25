@@ -37,16 +37,18 @@ public class UnwrapperTest extends WrappingTestBase {
     assertNull(Unwrapper.unwrapObject(wrappedObj));
   }
 
-  @Test
-  public void unwrapObject_wrappedVoidObject_originalValue() throws ClassNotFoundException {
+  @Test(expected = IllegalArgumentException.class)
+  public void unwrapObject_wrappedVoidObject_illegalArgumentException()
+      throws ClassNotFoundException {
     Object wrappable = void.class;
     Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
     Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
     assertEquals(void.class, unwrapped);
   }
 
-  @Test
-  public void unwrapObject_wrappedVoidClass_originalValue() throws ClassNotFoundException {
+  @Test(expected = IllegalArgumentException.class)
+  public void unwrapObject_wrappedVoidClass_illegalArgumentException()
+      throws ClassNotFoundException {
     Object wrappable = Void.class;
     Obj wrappedObj = Wrapper.getWrappedObject(wrappable, wrappable.getClass().getName(), null);
     Object unwrapped = Unwrapper.unwrapObject(wrappedObj);
@@ -98,14 +100,6 @@ public class UnwrapperTest extends WrappingTestBase {
         assertEquals(wrappable, unwrapped);
       }
     }
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void unwrapObject_TypeIsArrayButWrappedObjectIsNot_illegalArgumentException() {
-    Obj wrappedObj = new Obj();
-    var arrayClass = int[].class;
-    wrappedObj.setIsArray(false);
-    Unwrapper.unwrapObject(wrappedObj, arrayClass);
   }
 
   @Test

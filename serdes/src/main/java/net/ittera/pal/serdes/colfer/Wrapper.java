@@ -64,10 +64,6 @@ public final class Wrapper {
     return reconstructableCharSeqClassNames.contains(classname);
   }
 
-  public static boolean isArrayClassName(String className) {
-    return className.startsWith("[");
-  }
-
   /**
    * Helper method for getWrappedObject() that does the actual wrapping work. It is recursive and
    * will be called for each element of an array/collection.
@@ -75,7 +71,6 @@ public final class Wrapper {
    * <pre>
    * Wrappable objects:
    *  - null
-   *  - void.class, Void.class
    *  - all primitive types
    *  - all primitive wrapper types
    *  - reconstructable char sequence types: String, StringBuilder, StringBuffer
@@ -102,10 +97,8 @@ public final class Wrapper {
 
     // set required fields
     boolean isNull = object == null && objectRef == null;
-    boolean isVoid = object == void.class || object == Void.class;
 
     wrappedObject.setIsNull(isNull);
-    wrappedObject.setIsVoid(isVoid);
 
     // if classname is given, use it to set clazz, otherwise use the object's class
     if (classname != null) {
@@ -114,12 +107,6 @@ public final class Wrapper {
       wrappedObject.setClazz(getWrappedClass(object == null ? null : object.getClass()));
     }
 
-    if (classname != null) {
-      wrappedObject.setIsArray(isArrayClassName(classname));
-    }
-
-    wrappedObject.setIdentityHash(System.identityHashCode(object));
-
     // wrap object reference
     if (objectRef != null) {
       wrappedObject.setRef(String.valueOf(objectRef.getRef()));
@@ -127,8 +114,6 @@ public final class Wrapper {
 
     // wrap object
     if (object != null) {
-      wrappedObject.setHash(object.hashCode());
-
       // wrap the object if:
       // 1. is String or char sequence
       // 2. is primitive or wrapper
@@ -148,7 +133,6 @@ public final class Wrapper {
               // 4. is array of Strings or char sequences
               || String.class.equals(object.getClass().getComponentType())
               || isWrappableCharSeqClass(object.getClass().getComponentType().getName()))) {
-        wrappedObject.setIsArray(true);
         // TODO only handles 1-dimensional arrays ?? Check out Arrays.deepToString
         final int length = Array.getLength(object);
         final Obj[] arrayElements = new Obj[length];
@@ -161,6 +145,7 @@ public final class Wrapper {
         wrappedObject.setArrayValues(arrayElements);
       } else {
         // not wrappable
+        boolean isVoid = object == void.class || object == Void.class;
         if (!isVoid && objectRef == null) {
           throw new NonWrappableObjectException(
               "ObjectRef is null and object is not wrappable", object);

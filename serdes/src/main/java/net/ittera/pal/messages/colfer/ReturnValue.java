@@ -33,18 +33,10 @@ public class ReturnValue implements Serializable, net.ittera.pal.messages.Marsha
 
   public boolean isVoid;
 
-  public boolean isClass;
-
   public Obj object;
 
   /** the method/constructor returning this object */
   public Reflectable from;
-
-  /**
-   * the class returning this object through a fieldop, constructor or method (i.e. the declaring
-   * class)
-   */
-  public Class clazz;
 
   /** Default constructor */
   public ReturnValue() {
@@ -146,10 +138,9 @@ public class ReturnValue implements Serializable, net.ittera.pal.messages.Marsha
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 1 + 1;
+    long n = 1L + 1;
     if (this.object != null) n += 1 + (long) this.object.marshalFit();
     if (this.from != null) n += 1 + (long) this.from.marshalFit();
-    if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     if (n < 0 || n > (long) ReturnValue.colferSizeMax) return ReturnValue.colferSizeMax;
     return (int) n;
   }
@@ -196,23 +187,14 @@ public class ReturnValue implements Serializable, net.ittera.pal.messages.Marsha
         buf[i++] = (byte) 0;
       }
 
-      if (this.isClass) {
-        buf[i++] = (byte) 1;
-      }
-
       if (this.object != null) {
-        buf[i++] = (byte) 2;
+        buf[i++] = (byte) 1;
         i = this.object.marshal(buf, i);
       }
 
       if (this.from != null) {
-        buf[i++] = (byte) 3;
+        buf[i++] = (byte) 2;
         i = this.from.marshal(buf, i);
-      }
-
-      if (this.clazz != null) {
-        buf[i++] = (byte) 4;
-        i = this.clazz.marshal(buf, i);
       }
 
       buf[i++] = (byte) 0x7f;
@@ -266,25 +248,14 @@ public class ReturnValue implements Serializable, net.ittera.pal.messages.Marsha
       }
 
       if (header == (byte) 1) {
-        this.isClass = true;
-        header = buf[i++];
-      }
-
-      if (header == (byte) 2) {
         this.object = new Obj();
         i = this.object.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 3) {
+      if (header == (byte) 2) {
         this.from = new Reflectable();
         i = this.from.unmarshal(buf, i, end);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 4) {
-        this.clazz = new Class();
-        i = this.clazz.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
@@ -304,7 +275,7 @@ public class ReturnValue implements Serializable, net.ittera.pal.messages.Marsha
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 5L;
+  private static final long serialVersionUID = 3L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -355,35 +326,6 @@ public class ReturnValue implements Serializable, net.ittera.pal.messages.Marsha
    */
   public ReturnValue withIsVoid(boolean value) {
     this.isVoid = value;
-    return this;
-  }
-
-  /**
-   * Gets net.ittera.pal.messages/colfer.ReturnValue.isClass.
-   *
-   * @return the value.
-   */
-  public boolean getIsClass() {
-    return this.isClass;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.ReturnValue.isClass.
-   *
-   * @param value the replacement.
-   */
-  public void setIsClass(boolean value) {
-    this.isClass = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.ReturnValue.isClass.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public ReturnValue withIsClass(boolean value) {
-    this.isClass = value;
     return this;
   }
 
@@ -445,43 +387,12 @@ public class ReturnValue implements Serializable, net.ittera.pal.messages.Marsha
     return this;
   }
 
-  /**
-   * Gets net.ittera.pal.messages/colfer.ReturnValue.clazz.
-   *
-   * @return the value.
-   */
-  public Class getClazz() {
-    return this.clazz;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.ReturnValue.clazz.
-   *
-   * @param value the replacement.
-   */
-  public void setClazz(Class value) {
-    this.clazz = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.ReturnValue.clazz.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public ReturnValue withClazz(Class value) {
-    this.clazz = value;
-    return this;
-  }
-
   @Override
   public final int hashCode() {
     int h = 1;
     h = 31 * h + (this.isVoid ? 1231 : 1237);
-    h = 31 * h + (this.isClass ? 1231 : 1237);
     if (this.object != null) h = 31 * h + this.object.hashCode();
     if (this.from != null) h = 31 * h + this.from.hashCode();
-    if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     return h;
   }
 
@@ -495,10 +406,8 @@ public class ReturnValue implements Serializable, net.ittera.pal.messages.Marsha
     if (o == this) return true;
 
     return this.isVoid == o.isVoid
-        && this.isClass == o.isClass
         && (this.object == null ? o.object == null : this.object.equals(o.object))
-        && (this.from == null ? o.from == null : this.from.equals(o.from))
-        && (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz));
+        && (this.from == null ? o.from == null : this.from.equals(o.from));
   }
 
   @Override
@@ -506,10 +415,6 @@ public class ReturnValue implements Serializable, net.ittera.pal.messages.Marsha
     try {
       if (json.has("isVoid")) {
         this.isVoid = json.get("isVoid").getAsBoolean();
-      }
-
-      if (json.has("isClass")) {
-        this.isClass = json.get("isClass").getAsBoolean();
       }
 
       if (json.has("object")) {
@@ -520,11 +425,6 @@ public class ReturnValue implements Serializable, net.ittera.pal.messages.Marsha
       if (json.has("from")) {
         JsonObject jsonObj = json.getAsJsonObject("from");
         this.from = new Reflectable().fromJson(jsonObj);
-      }
-
-      if (json.has("clazz")) {
-        JsonObject jsonObj = json.getAsJsonObject("clazz");
-        this.clazz = new Class().fromJson(jsonObj);
       }
 
     } catch (Exception e) {

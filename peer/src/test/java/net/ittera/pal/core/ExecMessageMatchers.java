@@ -28,47 +28,6 @@ import org.hamcrest.TypeSafeMatcher;
 
 public class ExecMessageMatchers {
 
-  // Matches if ReturnValue is of DeclaringClass
-  public static final class HasDeclaringClassOf extends TypeSafeMatcher<Object> {
-
-    private final Class<?> declaringClass;
-
-    HasDeclaringClassOf(Class<?> declaringClass) {
-      this.declaringClass = declaringClass;
-    }
-
-    @Override
-    protected boolean matchesSafely(Object returnValue) {
-      if (returnValue instanceof ReturnValue) {
-        return ((ReturnValue) returnValue)
-            .getClazz()
-            .getName()
-            .equalsIgnoreCase(declaringClass.getName());
-      } else if (returnValue instanceof StaticFieldPutDone) {
-        return ((StaticFieldPutDone) returnValue)
-            .getClazz()
-            .getName()
-            .equalsIgnoreCase(declaringClass.getName());
-      } else if (returnValue instanceof InstanceFieldPutDone) {
-        return ((InstanceFieldPutDone) returnValue)
-            .getClazz()
-            .getName()
-            .equalsIgnoreCase(declaringClass.getName());
-      } else {
-        return false;
-      }
-    }
-
-    @Override
-    public void describeTo(Description description) {
-      description.appendText("has declaring class " + declaringClass.getName());
-    }
-
-    public static Matcher<Object> hasDeclaringClass(Class<?> declaringClass) {
-      return new HasDeclaringClassOf(declaringClass);
-    }
-  }
-
   public static final class ComesFromClass extends TypeSafeMatcher<Object> {
     private final Class<?> clazz;
 

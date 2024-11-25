@@ -703,17 +703,8 @@ public class JsonSerializers {
       if (notEmpty(message.value)) {
         jsonElement.addProperty("value", message.value);
       }
-      if (notEmpty(message.hash)) {
-        jsonElement.addProperty("hash", message.hash);
-      }
-      if (notEmpty(message.identityHash)) {
-        jsonElement.addProperty("identity_hash", message.identityHash);
-      }
       if (notEmpty(message.clazz)) {
         jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
-      }
-      if (notEmpty(message.isArray)) {
-        jsonElement.addProperty("is_array", message.isArray);
       }
       if (notEmpty(message.arrayValues)) {
         jsonElement.add("array_values", jsonSerializationContext.serialize(message.arrayValues));
@@ -723,9 +714,6 @@ public class JsonSerializers {
       }
       if (notEmpty(message.isNull)) {
         jsonElement.addProperty("is_null", message.isNull);
-      }
-      if (notEmpty(message.isVoid)) {
-        jsonElement.addProperty("is_void", message.isVoid);
       }
       return jsonElement;
     }
@@ -802,9 +790,6 @@ public class JsonSerializers {
       if (notEmpty(message.value)) {
         jsonElement.add("value", jsonSerializationContext.serialize(message.value));
       }
-      if (notEmpty(message.isRef)) {
-        jsonElement.addProperty("is_ref", message.isRef);
-      }
       return jsonElement;
     }
   }
@@ -818,17 +803,11 @@ public class JsonSerializers {
       if (notEmpty(message.isVoid)) {
         jsonElement.addProperty("is_void", message.isVoid);
       }
-      if (notEmpty(message.isClass)) {
-        jsonElement.addProperty("is_class", message.isClass);
-      }
       if (notEmpty(message.object)) {
         jsonElement.add("object", jsonSerializationContext.serialize(message.object));
       }
       if (notEmpty(message.from)) {
         jsonElement.add("from", jsonSerializationContext.serialize(message.from));
-      }
-      if (notEmpty(message.clazz)) {
-        jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
       }
       return jsonElement;
     }
@@ -842,17 +821,11 @@ public class JsonSerializers {
       if (jsonObject.has("is_void")) {
         returnValue.isVoid = jsonObject.get("is_void").getAsBoolean();
       }
-      if (jsonObject.has("is_class")) {
-        returnValue.isClass = jsonObject.get("is_class").getAsBoolean();
-      }
       if (jsonObject.has("object")) {
         returnValue.object = context.deserialize(jsonObject.get("object"), Obj.class);
       }
       if (jsonObject.has("from")) {
         returnValue.from = context.deserialize(jsonObject.get("from"), Reflectable.class);
-      }
-      if (jsonObject.has("class")) {
-        returnValue.clazz = context.deserialize(jsonObject.get("class"), Class.class);
       }
       return returnValue;
     }

@@ -44,7 +44,10 @@ public class ExecMessageUtils {
       case PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getClazz().getName();
       case PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getClazz().getName();
       case THROWABLE -> execMessage.getRaisedThrowable().getThrowable().getType();
-      case RETURN_VALUE -> execMessage.getReturnValue().getClazz().getName();
+      case RETURN_VALUE ->
+          execMessage.getReturnValue().getIsVoid()
+              ? "void"
+              : execMessage.getReturnValue().getObject().getClazz().getName();
       default ->
           throw new IllegalArgumentException(
               String.format("Unsupported ExecMessage type: %s", msgType));

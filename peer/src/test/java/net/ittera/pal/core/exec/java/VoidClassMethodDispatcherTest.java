@@ -21,7 +21,6 @@ package net.ittera.pal.core.exec.java;
 
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromClass.comesFromClass;
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable.comesFrom;
-import static net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
@@ -136,7 +135,6 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertTrue(ClassForVoidClassMethodTest.slept);
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -202,7 +200,6 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -265,7 +262,6 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -303,7 +299,6 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.millisSlept, is(millisToSleep));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -339,7 +334,6 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     assertThat(objectLookupStore.size(), is(0L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(ClassForVoidClassMethodTest.verified, is(nullValue()));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -402,7 +396,6 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(sumContainer.get(0), is(LongStream.of(someNumbers).sum()));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }

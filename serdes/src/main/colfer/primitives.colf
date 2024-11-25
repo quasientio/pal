@@ -32,15 +32,11 @@ type Class struct {
 }
 
 type Obj struct {
-	value        text
-	hash         uint32
-	identityHash uint32
-	clazz        Class
-	isArray      bool
-	arrayValues  []Obj
-	ref          text
-	isNull       bool
-	isVoid       bool
+	value       text
+	clazz       Class
+	arrayValues []Obj
+	ref         text
+	isNull      bool
 }
 
 type Field struct {
@@ -66,5 +62,4 @@ type Reflectable struct {
 type Parameter struct {
 	name  text
 	value Obj
-	isRef bool
 }

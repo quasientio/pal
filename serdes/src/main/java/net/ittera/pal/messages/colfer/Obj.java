@@ -38,21 +38,13 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
 
   public String value;
 
-  public int hash;
-
-  public int identityHash;
-
   public Class clazz;
-
-  public boolean isArray;
 
   public Obj[] arrayValues;
 
   public String ref;
 
   public boolean isNull;
-
-  public boolean isVoid;
 
   /** Default constructor */
   public Obj() {
@@ -160,18 +152,7 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n =
-        1L
-            + 6
-            + (long) this.value.length() * 3
-            + 5
-            + 5
-            + 1
-            + 6
-            + 6
-            + (long) this.ref.length() * 3
-            + 1
-            + 1;
+    long n = 1L + 6 + (long) this.value.length() * 3 + 6 + 6 + (long) this.ref.length() * 3 + 1;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     for (Obj o : this.arrayValues) {
       if (o == null) n++;
@@ -271,51 +252,13 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
         buf[ii] = (byte) size;
       }
 
-      if (this.hash != 0) {
-        int x = this.hash;
-        if ((x & ~((1 << 21) - 1)) != 0) {
-          buf[i++] = (byte) (1 | 0x80);
-          buf[i++] = (byte) (x >>> 24);
-          buf[i++] = (byte) (x >>> 16);
-          buf[i++] = (byte) (x >>> 8);
-        } else {
-          buf[i++] = (byte) 1;
-          while (x > 0x7f) {
-            buf[i++] = (byte) (x | 0x80);
-            x >>>= 7;
-          }
-        }
-        buf[i++] = (byte) x;
-      }
-
-      if (this.identityHash != 0) {
-        int x = this.identityHash;
-        if ((x & ~((1 << 21) - 1)) != 0) {
-          buf[i++] = (byte) (2 | 0x80);
-          buf[i++] = (byte) (x >>> 24);
-          buf[i++] = (byte) (x >>> 16);
-          buf[i++] = (byte) (x >>> 8);
-        } else {
-          buf[i++] = (byte) 2;
-          while (x > 0x7f) {
-            buf[i++] = (byte) (x | 0x80);
-            x >>>= 7;
-          }
-        }
-        buf[i++] = (byte) x;
-      }
-
       if (this.clazz != null) {
-        buf[i++] = (byte) 3;
+        buf[i++] = (byte) 1;
         i = this.clazz.marshal(buf, i);
       }
 
-      if (this.isArray) {
-        buf[i++] = (byte) 4;
-      }
-
       if (this.arrayValues.length != 0) {
-        buf[i++] = (byte) 5;
+        buf[i++] = (byte) 2;
         Obj[] a = this.arrayValues;
 
         int x = a.length;
@@ -341,7 +284,7 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
       }
 
       if (!this.ref.isEmpty()) {
-        buf[i++] = (byte) 6;
+        buf[i++] = (byte) 3;
         int start = ++i;
 
         String s = this.ref;
@@ -389,11 +332,7 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
       }
 
       if (this.isNull) {
-        buf[i++] = (byte) 7;
-      }
-
-      if (this.isVoid) {
-        buf[i++] = (byte) 8;
+        buf[i++] = (byte) 4;
       }
 
       buf[i++] = (byte) 0x7f;
@@ -462,53 +401,12 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
       }
 
       if (header == (byte) 1) {
-        int x = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          x |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        this.hash = x;
-        header = buf[i++];
-      } else if (header == (byte) (1 | 0x80)) {
-        this.hash =
-            (buf[i++] & 0xff) << 24
-                | (buf[i++] & 0xff) << 16
-                | (buf[i++] & 0xff) << 8
-                | (buf[i++] & 0xff);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 2) {
-        int x = 0;
-        for (int shift = 0; true; shift += 7) {
-          byte b = buf[i++];
-          x |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
-        }
-        this.identityHash = x;
-        header = buf[i++];
-      } else if (header == (byte) (2 | 0x80)) {
-        this.identityHash =
-            (buf[i++] & 0xff) << 24
-                | (buf[i++] & 0xff) << 16
-                | (buf[i++] & 0xff) << 8
-                | (buf[i++] & 0xff);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 3) {
         this.clazz = new Class();
         i = this.clazz.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 4) {
-        this.isArray = true;
-        header = buf[i++];
-      }
-
-      if (header == (byte) 5) {
+      if (header == (byte) 2) {
         int length = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -531,7 +429,7 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
         header = buf[i++];
       }
 
-      if (header == (byte) 6) {
+      if (header == (byte) 3) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -550,13 +448,8 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
         header = buf[i++];
       }
 
-      if (header == (byte) 7) {
+      if (header == (byte) 4) {
         this.isNull = true;
-        header = buf[i++];
-      }
-
-      if (header == (byte) 8) {
-        this.isVoid = true;
         header = buf[i++];
       }
 
@@ -575,7 +468,7 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 9L;
+  private static final long serialVersionUID = 5L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -630,64 +523,6 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.Obj.hash.
-   *
-   * @return the value.
-   */
-  public int getHash() {
-    return this.hash;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Obj.hash.
-   *
-   * @param value the replacement.
-   */
-  public void setHash(int value) {
-    this.hash = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Obj.hash.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public Obj withHash(int value) {
-    this.hash = value;
-    return this;
-  }
-
-  /**
-   * Gets net.ittera.pal.messages/colfer.Obj.identityHash.
-   *
-   * @return the value.
-   */
-  public int getIdentityHash() {
-    return this.identityHash;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Obj.identityHash.
-   *
-   * @param value the replacement.
-   */
-  public void setIdentityHash(int value) {
-    this.identityHash = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Obj.identityHash.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public Obj withIdentityHash(int value) {
-    this.identityHash = value;
-    return this;
-  }
-
-  /**
    * Gets net.ittera.pal.messages/colfer.Obj.clazz.
    *
    * @return the value.
@@ -713,35 +548,6 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
    */
   public Obj withClazz(Class value) {
     this.clazz = value;
-    return this;
-  }
-
-  /**
-   * Gets net.ittera.pal.messages/colfer.Obj.isArray.
-   *
-   * @return the value.
-   */
-  public boolean getIsArray() {
-    return this.isArray;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Obj.isArray.
-   *
-   * @param value the replacement.
-   */
-  public void setIsArray(boolean value) {
-    this.isArray = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Obj.isArray.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public Obj withIsArray(boolean value) {
-    this.isArray = value;
     return this;
   }
 
@@ -832,47 +638,14 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
     return this;
   }
 
-  /**
-   * Gets net.ittera.pal.messages/colfer.Obj.isVoid.
-   *
-   * @return the value.
-   */
-  public boolean getIsVoid() {
-    return this.isVoid;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Obj.isVoid.
-   *
-   * @param value the replacement.
-   */
-  public void setIsVoid(boolean value) {
-    this.isVoid = value;
-  }
-
-  /**
-   * Sets net.ittera.pal.messages/colfer.Obj.isVoid.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public Obj withIsVoid(boolean value) {
-    this.isVoid = value;
-    return this;
-  }
-
   @Override
   public final int hashCode() {
     int h = 1;
     if (this.value != null) h = 31 * h + this.value.hashCode();
-    h = 31 * h + this.hash;
-    h = 31 * h + this.identityHash;
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
-    h = 31 * h + (this.isArray ? 1231 : 1237);
     for (Obj o : this.arrayValues) h = 31 * h + (o == null ? 0 : o.hashCode());
     if (this.ref != null) h = 31 * h + this.ref.hashCode();
     h = 31 * h + (this.isNull ? 1231 : 1237);
-    h = 31 * h + (this.isVoid ? 1231 : 1237);
     return h;
   }
 
@@ -886,14 +659,10 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
     if (o == this) return true;
 
     return (this.value == null ? o.value == null : this.value.equals(o.value))
-        && this.hash == o.hash
-        && this.identityHash == o.identityHash
         && (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
-        && this.isArray == o.isArray
         && java.util.Arrays.equals(this.arrayValues, o.arrayValues)
         && (this.ref == null ? o.ref == null : this.ref.equals(o.ref))
-        && this.isNull == o.isNull
-        && this.isVoid == o.isVoid;
+        && this.isNull == o.isNull;
   }
 
   @Override
@@ -903,21 +672,9 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
         this.value = json.get("value").getAsString();
       }
 
-      if (json.has("hash")) {
-        this.hash = json.get("hash").getAsInt();
-      }
-
-      if (json.has("identityHash")) {
-        this.identityHash = json.get("identityHash").getAsInt();
-      }
-
       if (json.has("clazz")) {
         JsonObject jsonObj = json.getAsJsonObject("clazz");
         this.clazz = new Class().fromJson(jsonObj);
-      }
-
-      if (json.has("isArray")) {
-        this.isArray = json.get("isArray").getAsBoolean();
       }
 
       if (json.has("arrayValues")) {
@@ -934,10 +691,6 @@ public class Obj implements Serializable, net.ittera.pal.messages.Marshallable {
 
       if (json.has("isNull")) {
         this.isNull = json.get("isNull").getAsBoolean();
-      }
-
-      if (json.has("isVoid")) {
-        this.isVoid = json.get("isVoid").getAsBoolean();
       }
 
     } catch (Exception e) {

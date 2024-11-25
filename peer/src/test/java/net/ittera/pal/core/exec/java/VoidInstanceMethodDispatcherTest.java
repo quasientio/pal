@@ -21,7 +21,6 @@ package net.ittera.pal.core.exec.java;
 
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromClass.comesFromClass;
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable.comesFrom;
-import static net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
@@ -130,7 +129,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(2));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -194,7 +192,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(1));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -257,7 +254,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(numberOfWordsToAdd));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -296,7 +292,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     assertThat(objectLookupStore.size(), is(2L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(wordList.size()));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -332,7 +327,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(0));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -397,7 +391,6 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
     assertThat(objectLookupStore.size(), is(1L));
     assertTrue(replyMsg.getReturnValue().getIsVoid());
     assertThat(target.wordsCollected.size(), is(4));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }

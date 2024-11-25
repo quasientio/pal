@@ -21,7 +21,6 @@ package net.ittera.pal.core.exec.java;
 
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromClass.comesFromClass;
 import static net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable.comesFrom;
-import static net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf.hasDeclaringClass;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
@@ -130,7 +129,6 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     assertThat(objectLookupStore.size(), is(2L));
     String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(value.toUpperCase(Locale.getDefault())));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -194,7 +192,6 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     assertThat(objectLookupStore.size(), is(2L));
     String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(value + args[0]));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -257,7 +254,6 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     assertThat(objectLookupStore.size(), is(2L));
     String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(String.valueOf(floatArg)));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -296,7 +292,6 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     assertThat(objectLookupStore.size(), is(3L));
     String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is("blanket"));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -334,7 +329,6 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     assertThat(objectLookupStore.size(), is(2L));
     String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(value));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }
@@ -400,7 +394,6 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
     assertThat(objectLookupStore.size(), is(2L));
     String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is("package::class::method"));
-    assertThat(replyMsg.getReturnValue(), hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(), allOf(comesFromClass(targetClass), comesFrom(methodName)));
   }

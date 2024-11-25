@@ -56,13 +56,11 @@ public interface ExecMessageAssertions {
         isArray);
 
     assertFalse(returnValue.getIsVoid());
-    assertFalse(returnValue.getIsClass());
-    assertThat(returnValue.getClazz(), is(not(nullValue())));
     assertEquals(className, returnValue.getObject().getClazz().getName());
     assertThat(returnValue.getObject(), is(not(nullValue())));
 
     Obj retObj = returnValue.getObject();
-    assertEquals(isArray, retObj.getIsArray());
+    assertEquals(isArray, isArrayClassName(retObj.getClazz().getName()));
     assertEquals(isNull, retObj.getIsNull());
     assertEquals(hasObjRef, retObj.getRef() != null && !retObj.getRef().isEmpty());
     assertThat(retObj.getClazz(), is(not(nullValue())));
@@ -88,6 +86,10 @@ public interface ExecMessageAssertions {
 
   default void assertValueIsNullArrayOfType(ReturnValue returnValue, String className) {
     assertIsObjectOfType(returnValue, className, false, true, true);
+  }
+
+  private static boolean isArrayClassName(String className) {
+    return className.startsWith("[");
   }
 
   @SuppressWarnings("unchecked")

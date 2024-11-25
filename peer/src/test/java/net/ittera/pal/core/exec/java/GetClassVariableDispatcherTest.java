@@ -38,7 +38,6 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromClass;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable;
-import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.hamcrest.Matchers;
@@ -112,7 +111,6 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     short returned = (short) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.someShort));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -157,7 +155,6 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     byte[] returned = (byte[]) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.bytes));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -202,7 +199,6 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     Integer returned = (Integer) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.someInteger));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -247,7 +243,6 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(ClassForGetStaticTest.aString));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -294,7 +289,6 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         objectLookupStore.lookupObject(
             ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
     assertThat(returned, sameInstance(ClassForGetStaticTest.anObject));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -338,7 +332,6 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
     assertThat(objectLookupStore.size(), is(0L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     assertTrue(replyMsg.getReturnValue().getObject().getIsNull());
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -386,7 +379,6 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
         objectLookupStore.lookupObject(
             ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
     assertThat(returned, sameInstance(ClassForGetStaticTest.objects));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -435,7 +427,6 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
             objectLookupStore.lookupObject(
                 ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
     assertThat(returned, is(ClassForGetStaticTest.lastError));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(

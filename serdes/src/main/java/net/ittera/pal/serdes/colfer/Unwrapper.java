@@ -81,10 +81,6 @@ public class Unwrapper {
       return null;
     }
 
-    if (object.getIsVoid()) {
-      return void.class;
-    }
-
     // if clazz (from parameter type) is null
     if (clazz == null) {
       if (object.getClazz() == null || object.getClazz().getUnknown()) {
@@ -140,10 +136,6 @@ public class Unwrapper {
         throw new IllegalArgumentException("Unsupported primitive type:" + clazz.getName());
       }
     } else if (clazz.isArray()) { // ARRAY
-      if (!object.getIsArray()) {
-        throw new IllegalArgumentException(
-            "Type is array but wrapped object isn't:" + clazz.getName());
-      }
       final Obj[] arrayValues = object.getArrayValues();
       // String[]
       if (clazz == String[].class) {

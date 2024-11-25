@@ -36,7 +36,6 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromClass;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable;
-import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import org.hamcrest.Matchers;
 import org.junit.Before;
@@ -122,7 +121,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         objectLookupStore.lookupObject(
             ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
         instanceOf(targetClass));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -182,7 +180,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
         objectLookupStore.lookupObject(
             ObjectRef.from(replyMsg.getReturnValue().getObject().getRef())),
         instanceOf(targetClass));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -238,7 +235,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     assertThat(
         ((ClassForConstructorTest) objectLookupStore.lookupObject(objRef)).aLong,
         is((long) args[1] + 1));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -272,7 +268,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     assertThat(objectLookupStore.lookupObject(retObjRef), instanceOf(targetClass));
     assertThat(
         ((ClassForConstructorTest) objectLookupStore.lookupObject(retObjRef)).someInteger, is(arg));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -305,7 +300,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     assertThat(
         ((ClassForConstructorTest) objectLookupStore.lookupObject(objRef)).someInteger,
         is(nullValue()));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -390,7 +384,6 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
     ObjectRef objRef = ObjectRef.from(replyMsg.getReturnValue().getObject().getRef());
     assertTrue(objectLookupStore.containsObjectRef(objRef));
     assertThat(objectLookupStore.lookupObject(objRef), instanceOf(targetClass));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(

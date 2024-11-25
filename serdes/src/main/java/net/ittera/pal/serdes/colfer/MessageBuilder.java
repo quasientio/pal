@@ -267,7 +267,7 @@ public final class MessageBuilder {
       if (includeSourceContext) {
         constructorCall.setContext(getWrappedContext(context, sender, senderObjRef));
       }
-      constructorCall.setClazz(getWrappedClass(codeSignature.getName()));
+      constructorCall.setClazz(getWrappedClass(codeSignature.getDeclaringTypeName()));
     } else {
       constructorCall.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
       constructorCall.setClazz(getWrappedClass(className));
@@ -920,8 +920,7 @@ public final class MessageBuilder {
 
     // set class and isVoid
     return newWrapper(ExecMessageType.RETURN_VALUE, peerUuid, responseToUuid)
-        .withReturnValue(
-            valueMessage.withIsVoid(isVoid).withClazz(getWrappedClass(declaringClass)));
+        .withReturnValue(valueMessage.withIsVoid(isVoid));
   }
 
   private static Class<?> getClassOfAccessible(
@@ -1076,7 +1075,6 @@ public final class MessageBuilder {
       }
       colferParams[i] =
           new Parameter()
-              .withIsRef(jsonParam.isRef())
               .withValue(
                   getWrappedObject(
                       jsonParam.isRef() ? null : jsonParam.getValue(),

@@ -35,7 +35,6 @@ import net.ittera.pal.common.objects.ObjectRef;
 import net.ittera.pal.common.runtime.Context;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromClass;
 import net.ittera.pal.core.ExecMessageMatchers.ComesFromReflectable;
-import net.ittera.pal.core.ExecMessageMatchers.HasDeclaringClassOf;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.serdes.colfer.Unwrapper;
 import org.hamcrest.Matchers;
@@ -113,7 +112,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     short returned = (short) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(target.someShort));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -163,7 +161,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     byte[] returned = (byte[]) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(target.bytes));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -213,7 +210,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     Integer returned = (Integer) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(target.someInteger));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -263,7 +259,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
     assertThat(returned, is(target.aString));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -315,7 +310,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         objectLookupStore.lookupObject(
             ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
     assertThat(returned, is(target.anObject));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -364,7 +358,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
     assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     assertTrue(replyMsg.getReturnValue().getObject().getIsNull());
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -416,7 +409,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         objectLookupStore.lookupObject(
             ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
     assertThat(returned, is(target.objects));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
@@ -468,7 +460,6 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
         objectLookupStore.lookupObject(
             ObjectRef.from(replyMsg.getReturnValue().getObject().getRef()));
     assertThat(returned, is(target.lastError));
-    assertThat(replyMsg.getReturnValue(), HasDeclaringClassOf.hasDeclaringClass(targetClass));
     assertThat(
         replyMsg.getReturnValue(),
         Matchers.allOf(
