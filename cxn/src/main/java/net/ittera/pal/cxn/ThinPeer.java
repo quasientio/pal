@@ -36,8 +36,6 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
@@ -116,7 +114,6 @@ public class ThinPeer implements AutoCloseable {
   private Properties consumerProperties;
 
   private Map<Long, ConsumerRecord<String, LogMessage<?>>> lastRecordsRead = new HashMap<>();
-  private ExecutorService asyncConsumerExecutor;
 
   // rpc stuff
   private ZContext zmqContext;
@@ -331,9 +328,6 @@ public class ThinPeer implements AutoCloseable {
         // manual assignment of partition so we can control offset seek
         inTopicPartition = new TopicPartition(this.inLog.getName(), 0);
         consumer.assign(Collections.singletonList(inTopicPartition));
-
-        // init executor
-        asyncConsumerExecutor = Executors.newSingleThreadExecutor();
 
         consuming = true;
         logger.info("Will read from log: {}", this.inLog);
@@ -998,10 +992,6 @@ public class ThinPeer implements AutoCloseable {
     }
     if (!consumerGiven) {
       closeConsumer();
-    }
-    if (asyncConsumerExecutor != null) {
-      asyncConsumerExecutor.shutdown();
-      logger.info("Consumer executor service shut down");
     }
 
     // unregister self
