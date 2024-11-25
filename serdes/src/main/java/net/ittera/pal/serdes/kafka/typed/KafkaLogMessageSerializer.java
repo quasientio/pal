@@ -79,7 +79,7 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
 
     if (content instanceof Message message) {
       logger.debug("Serializing Message: {}", ColferUtils.toJson(message, true));
-      MessageFormatType messageFormat = MessageFormatType.COLFER;
+      MessageFormatType messageFormat = MessageFormatType.BINARY_RPC;
 
       // Serialize using Colfer
       data = colferMessageToBytes(message);
@@ -100,7 +100,7 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
       }
 
     } else if (content instanceof JsonRpcMessage jsonRpcMessage) {
-      MessageFormatType messageFormat = MessageFormatType.JSONRPC;
+      MessageFormatType messageFormat = MessageFormatType.JSON_RPC;
 
       // Serialize using Gson
       String json = gson.toJson(jsonRpcMessage);

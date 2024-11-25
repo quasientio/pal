@@ -91,7 +91,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   @Option(
       names = {"--formats"},
       arity = "0..*",
-      description = "format(s) of messages to filter by (COLFER, JSONRPC)")
+      description = "format(s) of messages to filter by (BINARY_RPC, JSON_RPC)")
   private List<String> msgFormats;
 
   // TODO consider using EnumSet for msgTypes
@@ -109,13 +109,13 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
   @Option(
       names = {"-fp", "--from-peer"},
       paramLabel = "uuid",
-      description = "filter by peer uuid (only valid for COLFER messages)")
+      description = "filter by peer uuid (only valid for BINARY_RPC messages)")
   private String fromPeer;
 
   @Option(
       names = {"-ft", "--from-thread"},
       paramLabel = "thread_name",
-      description = "filter by thread name (only valid for COLFER messages)")
+      description = "filter by thread name (only valid for BINARY_RPC messages)")
   private String threadName;
 
   /**
@@ -269,7 +269,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       stream =
           stream.filter(
               (k, message) -> {
-                if (isColfer(message)) {
+                if (isBinaryRpc(message)) {
                   return fromPeer.equalsIgnoreCase(getPeerUuid((Message) message.getContent()));
                 } else { // since we don't have the peer for JSONRPC messages, we can't filter by it
                   return true;
@@ -282,7 +282,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       stream =
           stream.filter(
               (k, message) -> {
-                if (isColfer(message)
+                if (isBinaryRpc(message)
                     && ((Message) message.getContent()).getExecMessage() != null) {
                   ExecMessage execMessage = ((Message) message.getContent()).getExecMessage();
                   return execMessage != null
@@ -294,7 +294,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
               });
     }
 
-    // stream: apply filter: msg ID (uuid for colfer messages, id for JSONRPC messages)
+    // stream: apply filter: msg ID (uuid for BINARY_RPC messages, id for JSON_RPC messages)
     if (id != null) {
       stream = stream.filter((k, message) -> id.equalsIgnoreCase(getId(message)));
     }

@@ -764,7 +764,7 @@ public class ThinPeer implements AutoCloseable {
         final LogMessage<?> receivedMessage = record.value();
         long receivedMsgOffset = record.offset();
         if (!(receivedMessage.getContent() instanceof Message)) {
-          // skip non-Colfer messages
+          // skip non-binary_rpc messages
           if (logger.isDebugEnabled()) {
             logger.debug("Skipping record with offset {}", receivedMsgOffset);
           }

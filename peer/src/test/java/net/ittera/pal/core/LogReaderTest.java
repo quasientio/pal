@@ -269,7 +269,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     ConsumerRecord<String, byte[]> record =
         new ConsumerRecord<>(
             this.log.getName(), partition, 0, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
-    record.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
+    record.headers().add("message-format", new byte[] {MessageFormatType.BINARY_RPC.toByte()});
     this.consumer.addRecord(record);
 
     Thread.sleep(300);
@@ -320,7 +320,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     ConsumerRecord<String, byte[]> record =
         new ConsumerRecord<>(
             this.log.getName(), partition, 0, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
-    record.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
+    record.headers().add("message-format", new byte[] {MessageFormatType.BINARY_RPC.toByte()});
     this.consumer.addRecord(record);
 
     Thread.sleep(300);
@@ -366,7 +366,7 @@ public class LogReaderTest extends ZmqEnabledTest {
       ConsumerRecord<String, byte[]> record =
           new ConsumerRecord<>(
               this.log.getName(), partition, i, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
-      record.headers().add("message-format", new byte[] {MessageFormatType.COLFER.toByte()});
+      record.headers().add("message-format", new byte[] {MessageFormatType.BINARY_RPC.toByte()});
       this.consumer.addRecord(record);
       sentUuids.add(msg.getMessageUuid());
     }

@@ -103,7 +103,7 @@ public class AbstractTool {
   }
 
   protected static String getMessageType(LogMessage<?> message) {
-    if (isColfer(message)) {
+    if (isBinaryRpc(message)) {
       return getMessageType((Message) message.getContent());
     } else if (isJsonRpc(message)) {
       return getMessageType((JsonRpcMessage) message.getContent());
@@ -112,15 +112,15 @@ public class AbstractTool {
   }
 
   protected static String getMessageFormat(LogMessage<?> logMessage) {
-    if (isColfer(logMessage)) {
-      return "COLFER";
+    if (isBinaryRpc(logMessage)) {
+      return "BINARY_RPC";
     } else if (isJsonRpc(logMessage)) {
-      return "JSONRPC";
+      return "JSON_RPC";
     }
     return null;
   }
 
-  protected static boolean isColfer(LogMessage<?> logMessage) {
+  protected static boolean isBinaryRpc(LogMessage<?> logMessage) {
     return logMessage.getContent() instanceof Message;
   }
 
@@ -129,7 +129,7 @@ public class AbstractTool {
   }
 
   protected static String getId(LogMessage<?> logMessage) {
-    if (isColfer(logMessage)) {
+    if (isBinaryRpc(logMessage)) {
       return getMessageUuid((Message) logMessage.getContent());
     } else if (isJsonRpc(logMessage)) {
       return ((JsonRpcMessage) logMessage.getContent()).getId();
@@ -138,7 +138,7 @@ public class AbstractTool {
   }
 
   protected static String getMessageContentAsPrettyJson(LogMessage<?> logMessage) {
-    if (isColfer(logMessage)) {
+    if (isBinaryRpc(logMessage)) {
       return ColferUtils.toJson((Message) logMessage.getContent(), true);
     } else if (isJsonRpc(logMessage)) {
       return ((JsonRpcMessage) logMessage.getContent()).toJson(true);
@@ -148,7 +148,7 @@ public class AbstractTool {
   }
 
   protected static String getMessageOneLiner(LogMessage<?> logMessage) {
-    if (isColfer(logMessage)) {
+    if (isBinaryRpc(logMessage)) {
       Message message = (Message) logMessage.getContent();
       if (message.getMessageType() == MessageType.EXEC_MESSAGE.toByte()) {
         return getOneLinerSummary(message.getExecMessage());

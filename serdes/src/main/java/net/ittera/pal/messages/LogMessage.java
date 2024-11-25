@@ -95,19 +95,19 @@ public class LogMessage<T> {
 
     LogMessage<?> logMessage;
     switch (messageFormat) {
-      case COLFER -> {
+      case BINARY_RPC -> {
         // deserialize
         Message message = new Message();
         message.unmarshal(data, 0);
 
         // get message type and set it in headers
-        MessageType messageType = getColferMessageTypeFromHeader(recordHeaders);
+        MessageType messageType = getBinaryRpcMessageTypeFromHeader(recordHeaders);
         if (messageType != null) {
           headers.put("message-type", messageType.name());
         }
         logMessage = new LogMessage<>(topic, offset, headers, message);
       }
-      case JSONRPC -> {
+      case JSON_RPC -> {
         JsonRpcType jsonRpcMessageType = getJsonRpcMessageTypeFromHeader(recordHeaders);
         if (jsonRpcMessageType == null) {
           throw new IllegalArgumentException("JSON-RPC message type not found in record headers");
@@ -152,7 +152,7 @@ public class LogMessage<T> {
     return null;
   }
 
-  private static MessageType getColferMessageTypeFromHeader(Headers headers) {
+  private static MessageType getBinaryRpcMessageTypeFromHeader(Headers headers) {
     for (Header header : headers.headers("message-type")) {
       byte typeByte = header.value()[0];
       return MessageType.fromByte(typeByte);

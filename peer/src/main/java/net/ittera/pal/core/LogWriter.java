@@ -204,7 +204,7 @@ class LogWriter extends ConnectedService {
       if (msg != null) {
         final List<Header> logHeaders = fromInternalToLog(msg.getHeaders());
         sendToKafka(
-            MessageFormatType.COLFER,
+            MessageFormatType.BINARY_RPC,
             msg.getMessageType(),
             msg.getBody(),
             msg.getMessageUuid(),

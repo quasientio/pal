@@ -135,7 +135,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     InboundLogMsg msg =
         new InboundLogMsg(
             fakeOffset,
-            MessageFormatType.COLFER,
+            MessageFormatType.BINARY_RPC,
             emptyHeaders,
             ColferUtils.toBytes(msgBuilder.wrap(invokable)));
     msg.send(dealerSocket);
@@ -183,7 +183,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
           InboundLogMsg msg =
               new InboundLogMsg(
                   fakeOffset,
-                  MessageFormatType.COLFER,
+                  MessageFormatType.BINARY_RPC,
                   emptyHeaders,
                   ColferUtils.toBytes(msgBuilder.wrap(invokable)));
           msg.send(dealerSocket);

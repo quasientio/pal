@@ -45,7 +45,7 @@ public class KafkaLogMessageSerdeTest {
   public void tearDown() {}
 
   @Test
-  public void testColferMessageSerialization() {
+  public void testBinaryRpcMessageSerialization() {
     // Topic to use for testing
     String topic = "test-topic";
 

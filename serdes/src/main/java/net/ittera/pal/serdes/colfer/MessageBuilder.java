@@ -1061,19 +1061,19 @@ public final class MessageBuilder {
 
   // <editor-fold desc="JSON-RPC messages">
   // TODO
-  private Parameter[] jsonRpcParamsToColferParams(List<JsonRpcParameter> jsonParams) {
+  private Parameter[] jsonRpcParamsToBinaryRpcParams(List<JsonRpcParameter> jsonParams) {
     if (jsonParams == null || jsonParams.isEmpty()) {
       return new Parameter[0];
     }
 
-    Parameter[] colferParams = new Parameter[jsonParams.size()];
+    Parameter[] binaryRpcParams = new Parameter[jsonParams.size()];
     for (int i = 0; i < jsonParams.size(); i++) {
       JsonRpcParameter jsonParam = jsonParams.get(i);
       ObjectRef objectRef = null;
       if (jsonParam.isRef()) {
         objectRef = ObjectRef.from((Integer) jsonParam.getValue());
       }
-      colferParams[i] =
+      binaryRpcParams[i] =
           new Parameter()
               .withValue(
                   getWrappedObject(
@@ -1081,7 +1081,7 @@ public final class MessageBuilder {
                       jsonParam.getType(),
                       objectRef));
     }
-    return colferParams;
+    return binaryRpcParams;
   }
 
   private InstanceMethodCall createInstanceMethodCall(JsonRpcRequest jsonRpcRequest) {
@@ -1089,7 +1089,7 @@ public final class MessageBuilder {
     instanceMethodCall.setClazz(getWrappedClass(jsonRpcRequest.getFullyQualifiedClassName()));
     instanceMethodCall.setName(jsonRpcRequest.getMethodName());
     instanceMethodCall.setObjectRef(jsonRpcRequest.getObjectRef());
-    instanceMethodCall.setParameters(jsonRpcParamsToColferParams(jsonRpcRequest.getParams()));
+    instanceMethodCall.setParameters(jsonRpcParamsToBinaryRpcParams(jsonRpcRequest.getParams()));
     return instanceMethodCall;
   }
 
@@ -1097,7 +1097,7 @@ public final class MessageBuilder {
     ClassMethodCall classMethodCall = new ClassMethodCall();
     classMethodCall.setClazz(getWrappedClass(jsonRpcRequest.getFullyQualifiedClassName()));
     classMethodCall.setName(jsonRpcRequest.getMethodName());
-    classMethodCall.setParameters(jsonRpcParamsToColferParams(jsonRpcRequest.getParams()));
+    classMethodCall.setParameters(jsonRpcParamsToBinaryRpcParams(jsonRpcRequest.getParams()));
     return classMethodCall;
   }
 
@@ -1154,7 +1154,7 @@ public final class MessageBuilder {
     constructorCall.setClazz(
         new net.ittera.pal.messages.colfer.Class()
             .withName(jsonRpcRequest.getFullyQualifiedClassName()));
-    constructorCall.setParameters(jsonRpcParamsToColferParams(jsonRpcRequest.getParams()));
+    constructorCall.setParameters(jsonRpcParamsToBinaryRpcParams(jsonRpcRequest.getParams()));
     return constructorCall;
   }
 
