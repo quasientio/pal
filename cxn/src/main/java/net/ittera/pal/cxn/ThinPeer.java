@@ -107,6 +107,7 @@ public class ThinPeer implements AutoCloseable {
 
   private Producer<String, LogMessage<?>> producer;
   private Consumer<String, LogMessage<?>> consumer;
+  private final Object consumerLock = new Object();
   private boolean producerGiven;
   private boolean producing;
   private boolean consumerGiven;
@@ -548,11 +549,16 @@ public class ThinPeer implements AutoCloseable {
     if (logger.isDebugEnabled()) {
       logger.debug("Seek to offset #{}", actualSeekOffset);
     }
-    consumer.seek(inTopicPartition, actualSeekOffset);
+    synchronized (consumerLock) {
+      consumer.seek(inTopicPartition, actualSeekOffset);
+    }
 
     ConsumerRecord<String, LogMessage<?>> requestedRecord = null;
     while (requestedRecord == null) {
-      ConsumerRecords<String, LogMessage<?>> records = consumer.poll(pollingDuration);
+      ConsumerRecords<String, LogMessage<?>> records;
+      synchronized (consumerLock) {
+        records = consumer.poll(pollingDuration);
+      }
       if (logger.isDebugEnabled()) {
         logger.debug("Read {} records during poll", records.count());
       }
@@ -593,12 +599,17 @@ public class ThinPeer implements AutoCloseable {
     if (logger.isDebugEnabled()) {
       logger.debug("Getting {} messages starting @ offset #{}", numMessages, startOffset);
     }
-    consumer.seek(inTopicPartition, startOffset);
+    synchronized (consumerLock) {
+      consumer.seek(inTopicPartition, startOffset);
+    }
     List<ConsumerRecord<?, ?>> messages = new ArrayList<>();
     boolean gotAllMessages = false;
 
     while (!gotAllMessages) {
-      var records = consumer.poll(pollingDuration);
+      ConsumerRecords<String, LogMessage<?>> records;
+      synchronized (consumerLock) {
+        records = consumer.poll(pollingDuration);
+      }
       if (logger.isDebugEnabled()) {
         logger.debug("got {} records after poll", records.count());
       }
@@ -742,11 +753,16 @@ public class ThinPeer implements AutoCloseable {
     if (logger.isDebugEnabled()) {
       logger.debug("Consumer seeking to offset: {}", sentRecordOffset);
     }
-    consumer.seek(inTopicPartition, sentRecordOffset);
+    synchronized (consumerLock) {
+      consumer.seek(inTopicPartition, sentRecordOffset);
+    }
 
     // wait for reply  (should contain responseToUuid = sentRecordOffset in message)
     while (true) {
-      var records = consumer.poll(pollingDuration);
+      ConsumerRecords<String, LogMessage<?>> records;
+      synchronized (consumerLock) {
+        records = consumer.poll(pollingDuration);
+      }
       if (records.count() != 0 && logger.isDebugEnabled()) {
         logger.debug("Received {} records", records.count());
       }
@@ -910,7 +926,10 @@ public class ThinPeer implements AutoCloseable {
   private void closeConsumer() {
     if (consumer != null) {
       try {
-        consumer.close(Duration.of(500, ChronoUnit.MILLIS));
+        synchronized (consumerLock) {
+          consumer.unsubscribe();
+          consumer.close(Duration.of(500, ChronoUnit.MILLIS));
+        }
         logger.info("Log consumer closed.");
       } catch (Exception e) {
         logger.warn("Error closing consumer", e);
