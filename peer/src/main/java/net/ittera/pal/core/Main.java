@@ -54,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nonnull;
 import net.ittera.pal.common.cli.PalCommand;
+import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.common.directory.nodes.PeerInfo;
 import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.core.exec.InterceptInformer;
@@ -667,17 +668,36 @@ public class Main implements Callable<Integer> {
             urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
   }
 
-  private void registerSelfAsPeer(Injector injector) {
+  private void registerLogsToUse(Injector injector, PeerInfo self, LogInfo inLog, LogInfo outLog) {
+    final PalDirectory palDirectory =
+        injector
+            .getInstance(DirectoryConnectionProvider.class)
+            .get()
+            .orElseThrow(RuntimeException::new);
+    try {
+      if (inLog != null) {
+        palDirectory.registerPeerInLog(self, inLog);
+      }
+      if (outLog != null) {
+        palDirectory.registerPeerOutLog(self, outLog);
+      }
+    } catch (Exception ex) {
+      fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_SELF_LOGS);
+    }
+  }
+
+  private PeerInfo registerSelfAsPeer(Injector injector) {
 
     final PalDirectory palDirectory =
         injector
             .getInstance(DirectoryConnectionProvider.class)
             .get()
             .orElseThrow(RuntimeException::new);
+    PeerInfo self = null;
 
     // register self as new peer
     try {
-      final PeerInfo self = new PeerInfo(uuid);
+      self = new PeerInfo(uuid);
       // public listening interfaces
       if (runOptions.contains(RunOptions.WITH_RPC)) {
         self.setRpcAddress(properties.getProperty("in.rpc"));
@@ -700,9 +720,10 @@ public class Main implements Callable<Integer> {
       }
       palDirectory.registerPeer(self);
     } catch (Exception ex) {
-      fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_PEER);
+      fatalExit(ex, PeerException.FatalCode.ERROR_REGISTERING_SELF);
     }
-    logger.info("Registered self in directory");
+    logger.info("Registered self in directory with new PeerInfo: {}", self);
+    return self;
   }
 
   private Set<Service> createManagedServices(Injector injector) {
@@ -896,24 +917,31 @@ public class Main implements Callable<Integer> {
       customClassloader.addClassLoadListener(injector.getInstance(AnnotationsProcessor.class));
     }
 
-    // register peer asynchronously
-    final CountDownLatch selfRegistrationLatch = new CountDownLatch(1);
-    if (runOptions.contains(RunOptions.WITH_PALDIR)) {
-      singleExecutor.execute(
-          () -> {
-            registerSelfAsPeer(injector);
-            selfRegistrationLatch.countDown();
-          });
-    }
-
     // init logs IO
+    LogConfigurator logConfigurator = null;
     if (runOptions.contains(RunOptions.WITH_IN_LOG)
         || runOptions.contains(RunOptions.WITH_OUT_LOG)) {
       try {
-        new LogConfigurator(inLog, logOffset, outLog, properties, injector).init();
+        logConfigurator = new LogConfigurator(inLog, logOffset, outLog, properties, injector);
+        logConfigurator.init();
       } catch (Exception ex) {
         fatalExit(ex, PeerException.FatalCode.ERROR_INITIALIZING_LOGS);
       }
+    }
+
+    // register self in directory
+    final CountDownLatch selfRegistrationLatch = new CountDownLatch(1);
+    if (runOptions.contains(RunOptions.WITH_PALDIR)) {
+      final LogInfo peerInLog =
+          logConfigurator != null ? logConfigurator.getInLog().orElse(null) : null;
+      final LogInfo peerOutLog =
+          logConfigurator != null ? logConfigurator.getOutLog().orElse(null) : null;
+      singleExecutor.execute(
+          () -> {
+            PeerInfo self = registerSelfAsPeer(injector);
+            registerLogsToUse(injector, self, peerInLog, peerOutLog);
+            selfRegistrationLatch.countDown();
+          });
     }
 
     // set up managed services

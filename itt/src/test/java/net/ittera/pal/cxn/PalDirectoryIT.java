@@ -279,6 +279,47 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
+  public void registerPeerLogs_peerRegistered_peerLogsRegistered() throws Exception {
+
+    // register new peer
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID());
+    peerInfo.setRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.registerPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
+
+    // create and register In and Out logs for the new peer
+    LogInfo inLogInfo = palDirectory.newLog("test_in_log", getKafkaServers());
+    LogInfo outLogInfo = palDirectory.newLog("test_out_log", getKafkaServers());
+    palDirectory.registerPeerInLog(peerInfo, inLogInfo);
+    palDirectory.registerPeerOutLog(peerInfo, outLogInfo);
+    createdLogs.add(inLogInfo.getName());
+
+    // load them
+    Set<LogInfo> peerInLogs = palDirectory.getPeerInLogs(peerInfo.getUuid());
+    Set<LogInfo> peerOutLogs = palDirectory.getPeerOutLogs(peerInfo.getUuid());
+
+    // verify
+    assertEquals(1, peerInLogs.size());
+    assertEquals(1, peerOutLogs.size());
+    assertEquals(inLogInfo, peerInLogs.iterator().next());
+    assertEquals(outLogInfo, peerOutLogs.iterator().next());
+
+    // try to unregister the peer logs
+    try {
+      palDirectory.unregisterLog(inLogInfo.getName());
+      fail("Should have raised IllegalArgumentException because the log is in use by a peer");
+    } catch (IllegalArgumentException e) {
+      // ok
+    }
+    try {
+      palDirectory.unregisterLog(outLogInfo.getName());
+      fail("Should have raised IllegalArgumentException because the log is in use by a peer");
+    } catch (IllegalArgumentException e) {
+      // ok
+    }
+  }
+
+  @Test
   public void getLogInfo_noSuchLog_exception() throws Exception {
     String logName = "test.strange_topic";
     assertFalse(palDirectory.logExists(logName));

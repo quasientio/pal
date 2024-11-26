@@ -21,6 +21,7 @@ package net.ittera.pal.core;
 
 import com.google.inject.Injector;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import net.ittera.pal.common.directory.nodes.LogInfo;
 import net.ittera.pal.cxn.DirectoryConnectionProvider;
@@ -38,6 +39,8 @@ class LogConfigurator {
   private final boolean noPaldir;
   private final Injector injector;
   private final String kafkaServers;
+  private LogInfo inLog;
+  private LogInfo outLog;
 
   LogConfigurator(
       String inLogName,
@@ -108,8 +111,6 @@ class LogConfigurator {
   void init() throws Exception {
 
     // register log(s)
-    LogInfo inLog = null;
-    LogInfo outLog = null;
     LogInfo newLog = null;
 
     if ("auto".equalsIgnoreCase(inLogName)) {
@@ -142,5 +143,13 @@ class LogConfigurator {
     if (outLog != null) {
       writeToLog(outLog);
     }
+  }
+
+  Optional<LogInfo> getInLog() {
+    return Optional.ofNullable(inLog);
+  }
+
+  Optional<LogInfo> getOutLog() {
+    return Optional.ofNullable(outLog);
   }
 }

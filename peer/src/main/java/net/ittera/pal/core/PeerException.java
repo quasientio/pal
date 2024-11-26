@@ -21,27 +21,30 @@ package net.ittera.pal.core;
 
 public class PeerException extends Exception {
 
+  private static int counter = 1;
+
   public enum FatalCode {
 
     // TODO use i18n resources for messages
-    ERROR_LOADING_PROPERTIES(1, "Error loading application properties"),
-    ERROR_REGISTERING_PEER(2, "Error registering peer"),
-    ERROR_NO_LOG_GIVEN(3, "Offset given but no log to read from"),
+    ERROR_LOADING_PROPERTIES("Error loading application properties"),
+    ERROR_REGISTERING_SELF("Error registering self as peer"),
+    ERROR_REGISTERING_SELF_LOGS("Error registering logs used by self"),
+    ERROR_NO_LOG_GIVEN("Offset given but no log to read from"),
 
-    ERROR_NO_KAFKA_SERVERS_GIVEN(4, "No kafka servers given, required for IN/OUT logs"),
-    ERROR_INITIALIZING_LOGS(5, "Error initializing IN/OUT logs"),
-    ERROR_SERVICE_MANAGER_FAILED(6, "Service manager failure"),
-    ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST(7, "JAR not found or missing MANIFEST"),
-    ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST(8, "No Main-Class in MANIFEST"),
-    ERROR_FINDING_RND_PORT(9, "Error finding local random port for socket"),
-    ERROR_PARSING_RPC_PORT_NUMBER(10, "Invalid RPC port"),
-    ERROR_PARSING_JSONRPC_PORT_NUMBER(11, "Invalid JSONRPC port");
+    ERROR_NO_KAFKA_SERVERS_GIVEN("No kafka servers given, required for IN/OUT logs"),
+    ERROR_INITIALIZING_LOGS("Error initializing IN/OUT logs"),
+    ERROR_SERVICE_MANAGER_FAILED("Service manager failure"),
+    ERROR_JAR_NOT_FOUND_OR_MISSING_MANIFEST("JAR not found or missing MANIFEST"),
+    ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST("No Main-Class in MANIFEST"),
+    ERROR_FINDING_RND_PORT("Error finding local random port for socket"),
+    ERROR_PARSING_RPC_PORT_NUMBER("Invalid RPC port"),
+    ERROR_PARSING_JSONRPC_PORT_NUMBER("Invalid JSONRPC port");
 
     private final int code;
     private final String message;
 
-    FatalCode(int code, String message) {
-      this.code = code;
+    FatalCode(String message) {
+      this.code = counter++;
       this.message = message;
     }
 
