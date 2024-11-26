@@ -23,11 +23,11 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.InetSocketAddress;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ClosedSelectorException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.ittera.pal.common.util.Strings;
 import net.ittera.pal.core.messages.InboundJsonRpcRequestMsg;
@@ -62,13 +62,13 @@ class JsonRpcRequestDispatcher extends ConnectedService {
   // websocket stuff
   private final String websocketAddress;
   private WebSocketServer webSocketServer;
-  private static final int WS_THREAD_POOL_SIZE = 1;
+  private static final int WS_THREAD_POOL_SIZE = 2;
 
   // zmq stuff
   private final String dealerAddress;
-  private final String pushAddress = "inproc://websocket-push";
   private Socket dealerSocket;
-  private Socket pushSocket;
+
+  private final BlockingQueue<InboundJsonRpcRequestMsg> requestQueue = new LinkedBlockingQueue<>();
 
   @Inject
   public JsonRpcRequestDispatcher(
@@ -96,64 +96,25 @@ class JsonRpcRequestDispatcher extends ConnectedService {
     // to send the requests to the dispatcher threads
     this.dealerSocket = zmqContext.createSocket(SocketType.DEALER);
     dealerSocket.bind(dealerAddress);
-
-    // PUSH socket for sending messages by the WebSocket server thread
-    this.pushSocket = zmqContext.createSocket(SocketType.PUSH);
-    pushSocket.bind(pushAddress);
   }
 
   @Override
   public final void run() {
 
-    // to pull incoming messages from WebSocket server
-    Socket pullSocket = zmqContext.createSocket(SocketType.PULL);
-    pullSocket.connect(pushAddress);
-
-    // create poller and register sockets
-    ZMQ.Poller poller = zmqContext.createPoller(2);
+    // create poller and register socket
+    ZMQ.Poller poller = zmqContext.createPoller(1);
     poller.register(dealerSocket, ZMQ.Poller.POLLIN);
-    poller.register(pullSocket, ZMQ.Poller.POLLIN);
 
+    // start WS server
     webSocketServer.start();
     boolean socketError = false;
+
     while (!shutdownRequested && !Thread.interrupted() && !socketError) {
-      int signaled;
-      try {
-        signaled = poller.poll();
-      } catch (ZError.IOException e) {
-        if (e.getCause() instanceof ClosedChannelException) {
-          // we are probably shutting down
-          if (logger.isDebugEnabled()) {
-            logger.debug("Caught ClosedChannelException during poll. Breaking out.");
-          }
-          break;
-        } else {
-          logger.error("Caught unexpected ZError exception during poll", e);
-          throw e;
-        }
-      }
-
-      if (signaled < 1) {
-        if (logger.isInfoEnabled()) {
-          logger.info("Poller returned from poll with {} sockets ready. Breaking out.", signaled);
-        }
-        break;
-      }
 
       try {
-        // get responses from DEALER socket and forward to WebSocket clients
-        if (poller.pollin(0)) {
-          OutboundJsonRpcResponseMsg responseMsg =
-              OutboundJsonRpcResponseMsg.receive(dealerSocket, true);
-          assert responseMsg != null;
-          String jsonRpcResponse = responseMsg.getJsonMessage();
-          sendResponseToWebSocketClient(responseMsg.getPeerId(), jsonRpcResponse);
-        }
-
-        // get requests from WebSocket clients and forward to DEALER socket
-        if (poller.pollin(1)) {
-          InboundJsonRpcRequestMsg requestMsg = InboundJsonRpcRequestMsg.receive(pullSocket, true);
-          assert requestMsg != null;
+        // process incoming WebSocket requests from the queue
+        InboundJsonRpcRequestMsg requestMsg = requestQueue.poll();
+        if (requestMsg != null) {
           boolean sent = requestMsg.send(dealerSocket);
           if (logger.isDebugEnabled()) {
             logger.debug("Sent message from peer w/id: {} to dispatchers", requestMsg.getPeerId());
@@ -162,21 +123,32 @@ class JsonRpcRequestDispatcher extends ConnectedService {
             logger.error("Error dealing message for dispatch: {}", requestMsg);
           }
         }
-      } catch (ClosedSelectorException ex) {
-        if (logger.isDebugEnabled()) {
-          logger.debug("Caught ClosedSelectorException. Breaking out.");
+
+        // get responses from DEALER socket and forward to WebSocket clients
+        int events = poller.poll(0);
+        if (events > 0 && poller.pollin(0)) {
+          OutboundJsonRpcResponseMsg responseMsg =
+              OutboundJsonRpcResponseMsg.receive(dealerSocket, true);
+          if (responseMsg != null) {
+            String jsonRpcResponse = responseMsg.getJsonMessage();
+            sendResponseToWebSocketClient(responseMsg.getPeerId(), jsonRpcResponse);
+          } else {
+            logger.warn("Unexpected null response message");
+          }
         }
-        socketError = true;
+
+        // Sleep briefly to prevent busy waiting
+        Thread.sleep(1);
+
+      } catch (InterruptedException e) {
+        logger.info("Dispatcher thread interrupted, shutting down.");
+        Thread.currentThread().interrupt();
+        break;
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
-        if (errorCode == ZError.ETERM) {
+        if (errorCode == ZError.ETERM || errorCode == ZError.EINTR) {
           if (logger.isDebugEnabled()) {
-            logger.debug("Caught ETERM during blocking read. Breaking out.");
-          }
-          socketError = true;
-        } else if (errorCode == ZError.EINTR) {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Caught EINTR during blocking read. Breaking out.");
+            logger.debug("ZeroMQ exception during polling. Error code: {}", errorCode);
           }
           socketError = true;
         } else {
@@ -184,8 +156,6 @@ class JsonRpcRequestDispatcher extends ConnectedService {
         }
       }
     }
-
-    poller.close();
   }
 
   @Override
@@ -198,7 +168,6 @@ class JsonRpcRequestDispatcher extends ConnectedService {
     }
 
     closeConnection(dealerSocket, "Error closing JSON-RPC dealer socket");
-    closeConnection(pushSocket, "Error closing JSON-RPC push socket");
   }
 
   @Override
@@ -290,12 +259,10 @@ class JsonRpcRequestDispatcher extends ConnectedService {
         logger.trace("Message received: {}", message);
       }
       InboundJsonRpcRequestMsg requestMsg = new InboundJsonRpcRequestMsg(peerId, message);
-      boolean sentOk = requestMsg.send(pushSocket, false);
+      // Add the message to the queue
+      requestQueue.offer(requestMsg);
       if (logger.isDebugEnabled()) {
         logger.debug("Pushed message from peer w/id: {} for dispatch", peerId);
-      }
-      if (!sentOk) {
-        logger.error("Error pushing message for dispatch: {}", message);
       }
     }
 
