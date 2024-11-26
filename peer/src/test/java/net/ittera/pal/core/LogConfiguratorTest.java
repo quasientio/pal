@@ -20,6 +20,7 @@
 package net.ittera.pal.core;
 
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyLong;
@@ -38,6 +39,7 @@ import net.ittera.pal.cxn.PalDirectory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 
 @SuppressWarnings("DoNotMock")
@@ -99,7 +101,8 @@ public class LogConfiguratorTest {
     // verify interactions
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
-    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, null);
+    verify(mockedLogReader)
+        .readFromLog(argThat(new LogInfoMatcher(new LogInfo(inLogName))), eq(false), eq(null));
     verify(mockedLogWriter, never()).writeToLog(any(), anyBoolean());
   }
 
@@ -116,7 +119,8 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
     verify(mockedPalDirectory, never()).newLog(any(), any());
-    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, null);
+    verify(mockedLogReader)
+        .readFromLog(argThat(new LogInfoMatcher(new LogInfo(inLogName))), eq(false), eq(null));
     verify(mockedLogWriter, never()).writeToLog(eq(new LogInfo("app_random1")), anyBoolean());
   }
 
@@ -133,8 +137,10 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).logExists(inLogName);
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
     verify(mockedPalDirectory, never()).newLog(any(), any());
-    verify(mockedLogReader).readFromLog(new LogInfo("auto"), true, null);
-    verify(mockedLogWriter).writeToLog(eq(new LogInfo("auto")), anyBoolean());
+    verify(mockedLogReader)
+        .readFromLog(argThat(new LogInfoMatcher(new LogInfo("auto"))), eq(true), eq(null));
+    verify(mockedLogWriter)
+        .writeToLog(argThat(new LogInfoMatcher(new LogInfo("auto"))), anyBoolean());
   }
 
   @Test
@@ -151,8 +157,10 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).getLogInfo(inLogName);
     verify(mockedPalDirectory, never()).registerLog(any(LogInfo.class));
     verify(mockedPalDirectory, never()).newLog(any(), any());
-    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, null);
-    verify(mockedLogWriter).writeToLog(eq(new LogInfo("auto")), anyBoolean());
+    verify(mockedLogReader)
+        .readFromLog(argThat(new LogInfoMatcher(new LogInfo(inLogName))), eq(false), eq(null));
+    verify(mockedLogWriter)
+        .writeToLog(argThat(new LogInfoMatcher(new LogInfo("auto"))), anyBoolean());
   }
 
   @Test
@@ -170,8 +178,10 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).logExists(outLogName);
     verify(mockedPalDirectory, never()).getLogInfo(outLogName);
     verify(mockedPalDirectory, never()).newLog(any(), any());
-    verify(mockedLogReader).readFromLog(new LogInfo(inLogName), false, null);
-    verify(mockedLogWriter).writeToLog(eq(new LogInfo(outLogName)), anyBoolean());
+    verify(mockedLogReader)
+        .readFromLog(argThat(new LogInfoMatcher(new LogInfo(inLogName))), eq(false), eq(null));
+    verify(mockedLogWriter)
+        .writeToLog(argThat(new LogInfoMatcher(new LogInfo(outLogName))), anyBoolean());
   }
 
   @Test
@@ -186,8 +196,10 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).logExists(logName);
     verify(mockedPalDirectory, never()).getLogInfo(logName);
     verify(mockedPalDirectory, never()).newLog(any(), any());
-    verify(mockedLogReader).readFromLog(new LogInfo(logName), true, null);
-    verify(mockedLogWriter).writeToLog(eq(new LogInfo(logName)), anyBoolean());
+    verify(mockedLogReader)
+        .readFromLog(argThat(new LogInfoMatcher(new LogInfo(logName))), eq(true), eq(null));
+    verify(mockedLogWriter)
+        .writeToLog(argThat(new LogInfoMatcher(new LogInfo(logName))), anyBoolean());
   }
 
   @Test
@@ -203,6 +215,29 @@ public class LogConfiguratorTest {
     verify(mockedPalDirectory, never()).getLogInfo(outLogName);
     verify(mockedPalDirectory, never()).newLog(any(), any());
     verify(mockedLogReader, never()).readFromLog(any(), anyBoolean(), anyLong());
-    verify(mockedLogWriter).writeToLog(eq(new LogInfo(outLogName)), anyBoolean());
+    verify(mockedLogWriter)
+        .writeToLog(argThat(new LogInfoMatcher(new LogInfo(outLogName))), anyBoolean());
+  }
+
+  // ArgumentMatcher for LogInfo which ignores the UUID and bootstrapServers on equals()
+  class LogInfoMatcher implements ArgumentMatcher<LogInfo> {
+    private final LogInfo expected;
+
+    public LogInfoMatcher(LogInfo expected) {
+      this.expected = expected;
+    }
+
+    @Override
+    public boolean matches(LogInfo actual) {
+      if (actual == null) {
+        return false;
+      }
+      return expected.getName().equals(actual.getName());
+    }
+
+    @Override
+    public String toString() {
+      return "LogInfo with name: " + expected.getName();
+    }
   }
 }

@@ -125,16 +125,15 @@ public class LogInfoTest {
 
   @Test
   public void equalsContract() {
-    EqualsVerifier.forClass(LogInfo.class)
+    EqualsVerifier.simple()
+        .forClass(LogInfo.class)
         .usingGetClass()
         .withIgnoredFields(
-            "uuid",
             "startOffset",
             "endOffset",
             "bytes",
             "exists",
             "humanReadableByteSize",
-            "bootstrapServers",
             "ctime",
             "mtime")
         .verify();
