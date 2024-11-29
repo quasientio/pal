@@ -219,11 +219,8 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
       System.out.println("CONFIG:");
       System.out.println("=======");
       System.out.printf(
-          "Kafka config: topic=%s bootstrap_servers=%s app_id=%s%n",
+          "Kafka config: topic=%s bootstrap_servers=%s app_id=%s%n%n",
           logName, bootstrapServers, consumerId);
-      if (msgTypes != null) {
-        System.out.printf("Filtering by type(s): %s%n", String.join(",", msgTypes));
-      }
     }
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerId);
     props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -240,6 +237,9 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
     // stream: apply filter: message formats
     if (msgFormats != null) {
+      if (verbose) {
+        System.out.printf("Filtering by format(s): %s%n", String.join(",", msgFormats));
+      }
       stream =
           stream.filter(
               (k, message) -> {
@@ -253,6 +253,9 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
     // stream: apply filter: message types
     if (msgTypes != null) {
+      if (verbose) {
+        System.out.printf("Filtering by type(s): %s%n", String.join(",", msgTypes));
+      }
       stream =
           stream.filter(
               (k, message) -> {
@@ -266,6 +269,9 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
     // stream: apply filter: from peer (uuid)
     if (fromPeer != null) {
+      if (verbose) {
+        System.out.printf("Filtering by peer: %s%n", fromPeer);
+      }
       stream =
           stream.filter(
               (k, message) -> {
@@ -279,6 +285,9 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
     // stream: apply filter: from thread name
     if (threadName != null) {
+      if (verbose) {
+        System.out.printf("Filtering by thread: %s%n", threadName);
+      }
       stream =
           stream.filter(
               (k, message) -> {
@@ -296,6 +305,9 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
 
     // stream: apply filter: msg ID (uuid for BINARY_RPC messages, id for JSON_RPC messages)
     if (id != null) {
+      if (verbose) {
+        System.out.printf("Filtering by message id: %s%n", id);
+      }
       stream = stream.filter((k, message) -> id.equalsIgnoreCase(getId(message)));
     }
 
@@ -342,6 +354,8 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
     final Topology topology = builder.build();
 
     if (verbose) {
+      System.out.println("TOPOLOGY:");
+      System.out.println("=========");
       System.out.println(topology.describe());
     }
 
