@@ -68,7 +68,7 @@ public class InterceptEventTest {
             type,
             "/a/mysterious/path/ahead",
             UUID.randomUUID(),
-            UUID.randomUUID(),
+            UUID.randomUUID().toString(),
             createInterceptRequest());
 
     assertEquals(type, interceptEvent.type());
@@ -81,7 +81,7 @@ public class InterceptEventTest {
         null,
         "/a/mysterious/path/ahead",
         UUID.randomUUID(),
-        UUID.randomUUID(),
+        UUID.randomUUID().toString(),
         createInterceptRequest());
   }
 
@@ -92,7 +92,7 @@ public class InterceptEventTest {
             InterceptEvent.Type.INTERCEPT_ADDED,
             "/a/mysterious/path/ahead",
             UUID.randomUUID(),
-            UUID.randomUUID(),
+            UUID.randomUUID().toString(),
             createInterceptRequest());
 
     assertEquals("/a/mysterious/path/ahead", interceptEvent.interceptPath());
@@ -105,7 +105,7 @@ public class InterceptEventTest {
         InterceptEvent.Type.INTERCEPT_ADDED,
         null,
         UUID.randomUUID(),
-        UUID.randomUUID(),
+        UUID.randomUUID().toString(),
         createInterceptRequest());
   }
 
@@ -115,7 +115,7 @@ public class InterceptEventTest {
         InterceptEvent.Type.INTERCEPT_ADDED,
         "",
         UUID.randomUUID(),
-        UUID.randomUUID(),
+        UUID.randomUUID().toString(),
         createInterceptRequest());
   }
 
@@ -127,7 +127,7 @@ public class InterceptEventTest {
             InterceptEvent.Type.INTERCEPT_ADDED,
             "/a/mysterious/path/ahead",
             peerUuid,
-            UUID.randomUUID(),
+            UUID.randomUUID().toString(),
             createInterceptRequest());
 
     assertEquals(peerUuid, interceptEvent.peerUuid());
@@ -140,22 +140,22 @@ public class InterceptEventTest {
         InterceptEvent.Type.INTERCEPT_ADDED,
         "/a/mysterious/path/ahead",
         null,
-        UUID.randomUUID(),
+        UUID.randomUUID().toString(),
         createInterceptRequest());
   }
 
   @Test
   public void getInterceptUuid() {
-    UUID interceptUuid = UUID.randomUUID();
+    String interceptId = UUID.randomUUID().toString();
     InterceptEvent interceptEvent =
         new InterceptEvent(
             InterceptEvent.Type.INTERCEPT_ADDED,
             "/a/mysterious/path/ahead",
             UUID.randomUUID(),
-            interceptUuid,
+            interceptId,
             createInterceptRequest());
 
-    assertEquals(interceptUuid, interceptEvent.interceptUuid());
+    assertEquals(interceptId, interceptEvent.interceptId());
   }
 
   @SuppressWarnings("DataFlowIssue")
@@ -177,7 +177,7 @@ public class InterceptEventTest {
             InterceptEvent.Type.INTERCEPT_ADDED,
             "/a/mysterious/path/ahead",
             UUID.randomUUID(),
-            UUID.randomUUID(),
+            UUID.randomUUID().toString(),
             interceptRequest);
 
     assertEquals(interceptRequest, interceptEvent.interceptRequest());
@@ -189,7 +189,7 @@ public class InterceptEventTest {
         InterceptEvent.Type.INTERCEPT_ADDED,
         "/a/mysterious/path/ahead",
         UUID.randomUUID(),
-        UUID.randomUUID(),
+        UUID.randomUUID().toString(),
         null);
   }
 
@@ -200,7 +200,7 @@ public class InterceptEventTest {
             InterceptEvent.Type.INTERCEPT_REMOVED,
             "/a/mysterious/path/ahead",
             UUID.randomUUID(),
-            UUID.randomUUID(),
+            UUID.randomUUID().toString(),
             null);
     assertThat(interceptEvent.interceptRequest(), is(nullValue()));
   }
@@ -210,11 +210,11 @@ public class InterceptEventTest {
     InterceptEvent.Type type = InterceptEvent.Type.INTERCEPT_ADDED;
     String interceptPath = "/a/mysterious/path/ahead";
     UUID peerUuid = UUID.randomUUID();
-    UUID interceptUuid = UUID.randomUUID();
+    String interceptId = UUID.randomUUID().toString();
     InterceptRequest<?> interceptRequest = createInterceptRequest();
 
     InterceptEvent interceptEvent =
-        new InterceptEvent(type, interceptPath, peerUuid, interceptUuid, interceptRequest);
+        new InterceptEvent(type, interceptPath, peerUuid, interceptId, interceptRequest);
 
     assertThat(
         interceptEvent.toString(),
@@ -226,8 +226,8 @@ public class InterceptEventTest {
                 + interceptPath
                 + ", peerUuid="
                 + peerUuid
-                + ", interceptUuid="
-                + interceptUuid
+                + ", interceptId="
+                + interceptId
                 + ", interceptRequest="
                 + interceptRequest
                 + ']'));

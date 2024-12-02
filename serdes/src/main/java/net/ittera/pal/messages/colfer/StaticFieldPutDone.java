@@ -37,7 +37,7 @@ public class StaticFieldPutDone implements Serializable, net.ittera.pal.messages
 
   public Field field;
 
-  public String staticFieldPutUuid;
+  public String staticFieldPutId;
 
   /** Default constructor */
   public StaticFieldPutDone() {
@@ -46,7 +46,7 @@ public class StaticFieldPutDone implements Serializable, net.ittera.pal.messages
 
   /** Colfer zero values. */
   private void init() {
-    staticFieldPutUuid = "";
+    staticFieldPutId = "";
   }
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
@@ -142,7 +142,7 @@ public class StaticFieldPutDone implements Serializable, net.ittera.pal.messages
    * @return the number of bytes.
    */
   public int marshalFit() {
-    long n = 1L + 6 + (long) this.staticFieldPutUuid.length() * 3;
+    long n = 1L + 6 + (long) this.staticFieldPutId.length() * 3;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     if (this.field != null) n += 1 + (long) this.field.marshalFit();
     if (n < 0 || n > (long) StaticFieldPutDone.colferSizeMax)
@@ -198,11 +198,11 @@ public class StaticFieldPutDone implements Serializable, net.ittera.pal.messages
         i = this.field.marshal(buf, i);
       }
 
-      if (!this.staticFieldPutUuid.isEmpty()) {
+      if (!this.staticFieldPutId.isEmpty()) {
         buf[i++] = (byte) 2;
         int start = ++i;
 
-        String s = this.staticFieldPutUuid;
+        String s = this.staticFieldPutId;
         for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
           char c = s.charAt(sIndex);
           if (c < '\u0080') {
@@ -229,7 +229,7 @@ public class StaticFieldPutDone implements Serializable, net.ittera.pal.messages
         if (size > StaticFieldPutDone.colferSizeMax)
           throw new IllegalStateException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.StaticFieldPutDone.staticFieldPutUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.StaticFieldPutDone.staticFieldPutId size %d exceeds %d UTF-8 bytes",
                   size, StaticFieldPutDone.colferSizeMax));
 
         int ii = start - 1;
@@ -313,12 +313,12 @@ public class StaticFieldPutDone implements Serializable, net.ittera.pal.messages
         if (size < 0 || size > StaticFieldPutDone.colferSizeMax)
           throw new SecurityException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.StaticFieldPutDone.staticFieldPutUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.StaticFieldPutDone.staticFieldPutId size %d exceeds %d UTF-8 bytes",
                   size, StaticFieldPutDone.colferSizeMax));
 
         int start = i;
         i += size;
-        this.staticFieldPutUuid = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.staticFieldPutId = new String(buf, start, size, StandardCharsets.UTF_8);
         header = buf[i++];
       }
 
@@ -423,31 +423,31 @@ public class StaticFieldPutDone implements Serializable, net.ittera.pal.messages
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.StaticFieldPutDone.staticFieldPutUuid.
+   * Gets net.ittera.pal.messages/colfer.StaticFieldPutDone.staticFieldPutId.
    *
    * @return the value.
    */
-  public String getStaticFieldPutUuid() {
-    return this.staticFieldPutUuid;
+  public String getStaticFieldPutId() {
+    return this.staticFieldPutId;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.StaticFieldPutDone.staticFieldPutUuid.
+   * Sets net.ittera.pal.messages/colfer.StaticFieldPutDone.staticFieldPutId.
    *
    * @param value the replacement.
    */
-  public void setStaticFieldPutUuid(String value) {
-    this.staticFieldPutUuid = value;
+  public void setStaticFieldPutId(String value) {
+    this.staticFieldPutId = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.StaticFieldPutDone.staticFieldPutUuid.
+   * Sets net.ittera.pal.messages/colfer.StaticFieldPutDone.staticFieldPutId.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public StaticFieldPutDone withStaticFieldPutUuid(String value) {
-    this.staticFieldPutUuid = value;
+  public StaticFieldPutDone withStaticFieldPutId(String value) {
+    this.staticFieldPutId = value;
     return this;
   }
 
@@ -456,7 +456,7 @@ public class StaticFieldPutDone implements Serializable, net.ittera.pal.messages
     int h = 1;
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     if (this.field != null) h = 31 * h + this.field.hashCode();
-    if (this.staticFieldPutUuid != null) h = 31 * h + this.staticFieldPutUuid.hashCode();
+    if (this.staticFieldPutId != null) h = 31 * h + this.staticFieldPutId.hashCode();
     return h;
   }
 
@@ -471,9 +471,9 @@ public class StaticFieldPutDone implements Serializable, net.ittera.pal.messages
 
     return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
         && (this.field == null ? o.field == null : this.field.equals(o.field))
-        && (this.staticFieldPutUuid == null
-            ? o.staticFieldPutUuid == null
-            : this.staticFieldPutUuid.equals(o.staticFieldPutUuid));
+        && (this.staticFieldPutId == null
+            ? o.staticFieldPutId == null
+            : this.staticFieldPutId.equals(o.staticFieldPutId));
   }
 
   @Override
@@ -489,8 +489,8 @@ public class StaticFieldPutDone implements Serializable, net.ittera.pal.messages
         this.field = new Field().fromJson(jsonObj);
       }
 
-      if (json.has("staticFieldPutUuid")) {
-        this.staticFieldPutUuid = json.get("staticFieldPutUuid").getAsString();
+      if (json.has("staticFieldPutId")) {
+        this.staticFieldPutId = json.get("staticFieldPutId").getAsString();
       }
 
     } catch (Exception e) {

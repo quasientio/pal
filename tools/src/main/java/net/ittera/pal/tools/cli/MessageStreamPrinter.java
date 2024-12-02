@@ -303,7 +303,7 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
               });
     }
 
-    // stream: apply filter: msg ID (uuid for BINARY_RPC messages, id for JSON_RPC messages)
+    // stream: apply filter: msg ID
     if (id != null) {
       if (verbose) {
         System.out.printf("Filtering by message id: %s%n", id);
@@ -439,9 +439,9 @@ public class MessageStreamPrinter extends AbstractPalSubcommand {
                     });
           }
 
-          // stream: apply filter: msg UUID
+          // stream: apply filter: msg ID
           if (id != null) {
-            stream = stream.filter(m -> id.equalsIgnoreCase(getMessageUuid(m)));
+            stream = stream.filter(m -> id.equalsIgnoreCase(getMessageId(m)));
           }
 
           // stream: print

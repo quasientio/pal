@@ -147,13 +147,12 @@ class InterceptRequests {
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   private List<InterceptRequestEntry> cloneListWithDeletedRequest(
-      List<InterceptRequestEntry> list, String interceptMessageUuid) {
+      List<InterceptRequestEntry> list, String interceptMessageId) {
 
     final List<Integer> occurrences = new ArrayList<>();
     for (int i = 0; i < list.size(); i++) {
       InterceptRequestEntry requestEntry = list.get(i);
-      if (interceptMessageUuid.equalsIgnoreCase(
-          requestEntry.getInterceptMessage().getMessageUuid())) {
+      if (interceptMessageId.equalsIgnoreCase(requestEntry.getInterceptMessage().getMessageId())) {
         occurrences.add(i);
       }
     }
@@ -169,12 +168,11 @@ class InterceptRequests {
 
   // This method is called by the InterceptMatcher.run() thread only
   @SuppressWarnings("NonAtomicOperationOnVolatileField")
-  void unregisterInterceptRequest(String interceptMessageUuid) {
-    constructorIntercepts =
-        cloneListWithDeletedRequest(constructorIntercepts, interceptMessageUuid);
-    methodIntercepts = cloneListWithDeletedRequest(methodIntercepts, interceptMessageUuid);
-    fieldGetIntercepts = cloneListWithDeletedRequest(fieldGetIntercepts, interceptMessageUuid);
-    fieldPutIntercepts = cloneListWithDeletedRequest(fieldPutIntercepts, interceptMessageUuid);
+  void unregisterInterceptRequest(String interceptMessageId) {
+    constructorIntercepts = cloneListWithDeletedRequest(constructorIntercepts, interceptMessageId);
+    methodIntercepts = cloneListWithDeletedRequest(methodIntercepts, interceptMessageId);
+    fieldGetIntercepts = cloneListWithDeletedRequest(fieldGetIntercepts, interceptMessageId);
+    fieldPutIntercepts = cloneListWithDeletedRequest(fieldPutIntercepts, interceptMessageId);
   }
 
   int getRegisteredRequestsSize() {

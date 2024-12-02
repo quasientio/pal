@@ -58,20 +58,20 @@ public class OutboundMsgTest {
 
   @Test
   public void sendWithNullables() {
-    UUID execMessageUuid = UUID.randomUUID();
+    String execMessageId = UUID.randomUUID().toString();
     byte[] body = "whatever".getBytes(UTF_8);
     ExecPhase execPhase = ExecPhase.BEFORE;
 
-    // with null headers and responseToUuid
+    // with null headers and responseToId
     OutboundMsg msgOut =
-        new OutboundMsg(MessageType.EXEC_MESSAGE, execPhase, null, execMessageUuid, null, body);
+        new OutboundMsg(MessageType.EXEC_MESSAGE, execPhase, null, execMessageId, null, body);
 
     // verify getters
     assertThat(msgOut.getMessageType(), is(MessageType.EXEC_MESSAGE));
     assertThat(msgOut.getExecPhase(), is(execPhase));
     assertThat(msgOut.getHeaders(), is(nullValue()));
-    assertThat(msgOut.getMessageUuid(), is(execMessageUuid));
-    assertThat(msgOut.getResponseToUuid(), is(nullValue()));
+    assertThat(msgOut.getMessageId(), is(execMessageId));
+    assertThat(msgOut.getResponseToId(), is(nullValue()));
     assertThat(msgOut.getBody(), is(body));
 
     // send
@@ -94,8 +94,8 @@ public class OutboundMsgTest {
 
   @Test
   public void send() throws UnsupportedEncodingException {
-    UUID interceptMessageUuid = UUID.randomUUID();
-    UUID followingMessageUuid = UUID.randomUUID();
+    String interceptMessageId = UUID.randomUUID().toString();
+    String followingMessageId = UUID.randomUUID().toString();
     byte[] body = "whatever".getBytes(UTF_8);
     InternalHeader writeAhead = messageBuilder.buildWriteAheadHeader(UUID.randomUUID());
     List<InternalHeader> headers = Collections.singletonList(writeAhead);
@@ -106,8 +106,8 @@ public class OutboundMsgTest {
             MessageType.INTERCEPT_MESSAGE,
             ExecPhase.UNDEFINED,
             headers,
-            interceptMessageUuid,
-            followingMessageUuid,
+            interceptMessageId,
+            followingMessageId,
             body);
 
     // verify getters
@@ -116,8 +116,8 @@ public class OutboundMsgTest {
     assertThat(msgOut.getHeaders(), is(notNullValue()));
     assertThat(msgOut.getHeaders().size(), is(1));
     assertThat(msgOut.getHeaders().get(0), is(writeAhead));
-    assertThat(msgOut.getMessageUuid(), is(interceptMessageUuid));
-    assertThat(msgOut.getResponseToUuid(), is(followingMessageUuid));
+    assertThat(msgOut.getMessageId(), is(interceptMessageId));
+    assertThat(msgOut.getResponseToId(), is(followingMessageId));
     assertThat(msgOut.getBody(), is(body));
 
     // send
@@ -142,13 +142,14 @@ public class OutboundMsgTest {
 
   @Test
   public void testNullPointerException() {
-    UUID messageUuid = UUID.randomUUID();
+    String messageId = UUID.randomUUID().toString();
+    String responseToId = UUID.randomUUID().toString();
     byte[] body = "whatever".getBytes(UTF_8);
     List<InternalHeader> headers = Collections.emptyList();
 
     // null messageType
     try {
-      new OutboundMsg(null, ExecPhase.UNDEFINED, headers, messageUuid, UUID.randomUUID(), body);
+      new OutboundMsg(null, ExecPhase.UNDEFINED, headers, messageId, responseToId, body);
       fail("Should have thrown NPE");
     } catch (NullPointerException e) {
       // ok then
@@ -156,22 +157,16 @@ public class OutboundMsgTest {
 
     // null execPhase
     try {
-      new OutboundMsg(
-          MessageType.INTERCEPT_MESSAGE, null, headers, messageUuid, UUID.randomUUID(), body);
+      new OutboundMsg(MessageType.INTERCEPT_MESSAGE, null, headers, messageId, responseToId, body);
       fail("Should have thrown NPE");
     } catch (NullPointerException e) {
       // ok then
     }
 
-    // null messageUuid
+    // null messageId
     try {
       new OutboundMsg(
-          MessageType.INTERCEPT_MESSAGE,
-          ExecPhase.UNDEFINED,
-          headers,
-          null,
-          UUID.randomUUID(),
-          body);
+          MessageType.INTERCEPT_MESSAGE, ExecPhase.UNDEFINED, headers, null, responseToId, body);
       fail("Should have thrown NPE");
     } catch (NullPointerException e) {
       // ok then
@@ -183,8 +178,8 @@ public class OutboundMsgTest {
           MessageType.INTERCEPT_MESSAGE,
           ExecPhase.UNDEFINED,
           headers,
-          messageUuid,
-          UUID.randomUUID(),
+          messageId,
+          responseToId,
           (byte[]) null);
       fail("Should have thrown NPE");
     } catch (NullPointerException e) {
@@ -194,8 +189,8 @@ public class OutboundMsgTest {
 
   @Test
   public void testEquals() {
-    UUID messageUuid = UUID.randomUUID();
-    UUID followingMessageUuid = UUID.randomUUID();
+    String messageId = UUID.randomUUID().toString();
+    String responseToMessageId = UUID.randomUUID().toString();
     byte[] body = "whatever".getBytes(UTF_8);
     InternalHeader writeAhead = messageBuilder.buildWriteAheadHeader(UUID.randomUUID());
     List<InternalHeader> headers = Collections.singletonList(writeAhead);
@@ -205,8 +200,8 @@ public class OutboundMsgTest {
             MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
-            messageUuid,
-            followingMessageUuid,
+            messageId,
+            responseToMessageId,
             body);
 
     // equal
@@ -215,8 +210,8 @@ public class OutboundMsgTest {
             MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
-            messageUuid,
-            followingMessageUuid,
+            messageId,
+            responseToMessageId,
             body),
         is(msg1));
 
@@ -226,8 +221,8 @@ public class OutboundMsgTest {
             MessageType.INTERCEPT_MESSAGE,
             ExecPhase.BEFORE,
             headers,
-            messageUuid,
-            followingMessageUuid,
+            messageId,
+            responseToMessageId,
             body),
         is(not(msg1)));
 
@@ -239,30 +234,30 @@ public class OutboundMsgTest {
             MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             otherHeaders,
-            messageUuid,
-            followingMessageUuid,
+            messageId,
+            responseToMessageId,
             body),
         is(not(msg1)));
 
-    // different message UUID
+    // different message ID
     assertThat(
         new OutboundMsg(
             MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
-            UUID.randomUUID(),
-            followingMessageUuid,
+            UUID.randomUUID().toString(),
+            responseToMessageId,
             body),
         is(not(msg1)));
 
-    // different responseToUuid
+    // different responseToId
     assertThat(
         new OutboundMsg(
             MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
-            messageUuid,
-            UUID.randomUUID(),
+            messageId,
+            UUID.randomUUID().toString(),
             body),
         is(not(msg1)));
 
@@ -272,8 +267,8 @@ public class OutboundMsgTest {
             MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
-            messageUuid,
-            followingMessageUuid,
+            messageId,
+            responseToMessageId,
             "whatevah".getBytes(UTF_8)),
         is(not(msg1)));
   }

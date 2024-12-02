@@ -41,8 +41,8 @@ type StaticFieldPutDone struct {
 	//redundant if field->class is set
 	clazz Class
 
-	field              Field
-	staticFieldPutUuid text
+	field            Field
+	staticFieldPutId text
 }
 
 type InstanceFieldGet struct {
@@ -65,7 +65,7 @@ type InstanceFieldPut struct {
 
 type InstanceFieldPutDone struct {
 	//TODO from here all should be replaced by reference to originator InstanceFieldPut message
-	clazz                Class
-	field                Field
-	instanceFieldPutUuid text
+	clazz              Class
+	field              Field
+	instanceFieldPutId text
 }

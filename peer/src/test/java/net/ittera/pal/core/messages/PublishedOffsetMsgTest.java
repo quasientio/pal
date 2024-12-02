@@ -39,13 +39,13 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
   @Test
   public void send() {
     long offset = 472;
-    UUID messageUuid = UUID.randomUUID();
+    String messageId = UUID.randomUUID().toString();
 
-    PublishedOffsetMsg msgOut = new PublishedOffsetMsg(offset, messageUuid);
+    PublishedOffsetMsg msgOut = new PublishedOffsetMsg(offset, messageId);
 
     // verify getters
     assertThat(msgOut.getOffset(), is(offset));
-    assertThat(msgOut.getMessageUuid(), is(messageUuid));
+    assertThat(msgOut.getMessageId(), is(messageId));
 
     // send
     String socketAddress = "inproc://here";
@@ -70,17 +70,17 @@ public class PublishedOffsetMsgTest extends ZmqEnabledTest {
   @Test
   public void testEquals() {
     long offset = 472;
-    UUID messageUuid = UUID.randomUUID();
+    String messageId = UUID.randomUUID().toString();
 
-    PublishedOffsetMsg msg1 = new PublishedOffsetMsg(offset, messageUuid);
+    PublishedOffsetMsg msg1 = new PublishedOffsetMsg(offset, messageId);
 
     // assert content equality
-    assertThat(new PublishedOffsetMsg(offset, messageUuid), is(msg1));
+    assertThat(new PublishedOffsetMsg(offset, messageId), is(msg1));
 
     // different offset
-    assertThat(new PublishedOffsetMsg(offset + 1, messageUuid), is(not(msg1)));
+    assertThat(new PublishedOffsetMsg(offset + 1, messageId), is(not(msg1)));
 
-    // different messageUuid
-    assertThat(new PublishedOffsetMsg(offset, UUID.randomUUID()), is(not(msg1)));
+    // different messageId
+    assertThat(new PublishedOffsetMsg(offset, UUID.randomUUID().toString()), is(not(msg1)));
   }
 }

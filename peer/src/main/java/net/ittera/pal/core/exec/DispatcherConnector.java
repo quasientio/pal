@@ -155,12 +155,6 @@ public class DispatcherConnector {
           headers);
     }
 
-    final String responseToUuidStr = execMessage.getResponseToUuid();
-    UUID responseToUuid =
-        responseToUuidStr == null || responseToUuidStr.isEmpty()
-            ? null
-            : UUID.fromString(execMessage.getResponseToUuid());
-
     ExecMessageType execMessageType = ExecMessageType.fromByte(execMessage.getExecMessageType());
     List<InterceptMessage> matchingIntercepts = null;
 
@@ -176,8 +170,8 @@ public class DispatcherConnector {
               MessageType.EXEC_MESSAGE,
               execPhase,
               headers,
-              UUID.fromString(execMessage.getMessageUuid()),
-              responseToUuid,
+              execMessage.getMessageId(),
+              execMessage.getResponseToId(),
               messageBuilder.wrap(execMessage));
       publishMessage(msg);
     }
@@ -189,7 +183,7 @@ public class DispatcherConnector {
     // if no intercepts, return received ExecMessage
     if (matchingIntercepts == null || matchingIntercepts.isEmpty()) {
       if (logger.isDebugEnabled()) {
-        logger.debug("No intercepts for execMessage w/uuid: {}", execMessage.getMessageUuid());
+        logger.debug("No intercepts for execMessage w/id: {}", execMessage.getMessageId());
       }
       return execMessage;
     }
@@ -260,8 +254,8 @@ public class DispatcherConnector {
   public void writeAhead(ExecMessage message) {
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "writeAhead:in w/ message with uuid: {},from {}",
-          message.getMessageUuid(),
+          "writeAhead:in w/ message with id: {},from {}",
+          message.getMessageId(),
           message.getPeerUuid());
     }
 
@@ -269,18 +263,13 @@ public class DispatcherConnector {
       return;
     }
 
-    final String responseToUuidStr = message.getResponseToUuid();
-    UUID responseToUuid =
-        responseToUuidStr == null || responseToUuidStr.isEmpty()
-            ? null
-            : UUID.fromString(message.getResponseToUuid());
     final OutboundMsg msg =
         new OutboundMsg(
             MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             writeAheadHeaders,
-            UUID.fromString(message.getMessageUuid()),
-            responseToUuid,
+            message.getMessageId(),
+            message.getResponseToId(),
             messageBuilder.wrap(message));
 
     // no intercept matching, just publish it

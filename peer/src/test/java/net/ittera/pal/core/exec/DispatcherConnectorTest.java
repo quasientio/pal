@@ -405,8 +405,7 @@ public class DispatcherConnectorTest extends ZmqEnabledTest {
           message.unmarshal(msg.getBody(), 0);
           messagesReceived.add(message);
           repSocket.send("0"); // OK_REPLY
-          logger.debug(
-              "Publisher stub replied to received message w/uuid: {}", msg.getMessageUuid());
+          logger.debug("Publisher stub replied to received message w/id: {}", msg.getMessageId());
         } catch (ZMQException ex) {
           int errorCode = ex.getErrorCode();
           if (errorCode == ZError.ETERM) {

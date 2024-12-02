@@ -103,24 +103,24 @@ public class LogWriterTest extends ZmqEnabledTest {
     collectGoSignals(services.size(), zmqContext);
   }
 
-  private String getMessageUuid(Message msg) throws IllegalArgumentException {
+  private String getMessageId(Message msg) throws IllegalArgumentException {
     ExecMessage execMessage = msg.getExecMessage();
     if (execMessage != null) {
-      return execMessage.getMessageUuid();
+      return execMessage.getMessageId();
     }
     InterceptMessage interceptMessage = msg.getInterceptMessage();
     if (interceptMessage != null) {
-      return interceptMessage.getMessageUuid();
+      return interceptMessage.getMessageId();
     }
     throw new IllegalArgumentException(format("Unsupported message type: %s", msg));
   }
 
-  private UUID getResponseToUuid(Message msg) {
+  private String getResponseToId(Message msg) {
     ExecMessage execMessage = msg.getExecMessage();
     if (execMessage != null) {
-      String responseToUuid = execMessage.getResponseToUuid();
-      if (responseToUuid != null && !responseToUuid.isEmpty()) {
-        return UUID.fromString(responseToUuid);
+      String responseToId = execMessage.getResponseToId();
+      if (responseToId != null && !responseToId.isEmpty()) {
+        return responseToId;
       }
     }
     return null;
@@ -173,12 +173,7 @@ public class LogWriterTest extends ZmqEnabledTest {
           ExecPhase execPhase = hasExecMessage ? ExecPhase.BEFORE : ExecPhase.UNDEFINED;
           OutboundMsg outMsg =
               new OutboundMsg(
-                  msgType,
-                  execPhase,
-                  null,
-                  UUID.fromString(getMessageUuid(msg)),
-                  getResponseToUuid(msg),
-                  msg);
+                  msgType, execPhase, null, getMessageId(msg), getResponseToId(msg), msg);
           outMsg.send(pubSocket);
         });
 
@@ -190,10 +185,10 @@ public class LogWriterTest extends ZmqEnabledTest {
     for (ProducerRecord<String, byte[]> record : producer.history()) {
       Message msg = new Message();
       msg.unmarshal(record.value(), 0);
-      producedMsgUuids.add(getMessageUuid(msg));
+      producedMsgUuids.add(getMessageId(msg));
     }
     List<String> sentMsgUuids =
-        messagesCreated.stream().map(this::getMessageUuid).collect(Collectors.toList());
+        messagesCreated.stream().map(this::getMessageId).collect(Collectors.toList());
     assertThat(producer.history().size(), is(execMessagesToSend + interceptMessagesToSend));
     assertThat(producedMsgUuids, is(sentMsgUuids));
   }
@@ -223,8 +218,8 @@ public class LogWriterTest extends ZmqEnabledTest {
                   MessageType.EXEC_MESSAGE,
                   ExecPhase.BEFORE,
                   headers,
-                  UUID.fromString(getMessageUuid(msg)),
-                  getResponseToUuid(msg),
+                  getMessageId(msg),
+                  getResponseToId(msg),
                   msg);
           outMsg.send(pubSocket);
         });
@@ -237,10 +232,10 @@ public class LogWriterTest extends ZmqEnabledTest {
     for (ProducerRecord<String, byte[]> record : producer.history()) {
       Message msg = new Message();
       msg.unmarshal(record.value(), 0);
-      producedMsgUuids.add(getMessageUuid(msg));
+      producedMsgUuids.add(getMessageId(msg));
     }
     List<String> sentMsgUuids =
-        messagesCreated.stream().map(this::getMessageUuid).collect(Collectors.toList());
+        messagesCreated.stream().map(this::getMessageId).collect(Collectors.toList());
     assertThat(producer.history().size(), is(messagesToSend));
     assertThat(producedMsgUuids, is(sentMsgUuids));
   }

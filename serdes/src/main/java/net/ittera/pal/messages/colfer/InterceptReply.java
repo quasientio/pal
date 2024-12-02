@@ -34,7 +34,7 @@ public class InterceptReply implements Serializable, net.ittera.pal.messages.Mar
 
   public String peerUuid;
 
-  public String responseToUuid;
+  public String responseToId;
 
   public boolean result;
 
@@ -46,7 +46,7 @@ public class InterceptReply implements Serializable, net.ittera.pal.messages.Mar
   /** Colfer zero values. */
   private void init() {
     peerUuid = "";
-    responseToUuid = "";
+    responseToId = "";
   }
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
@@ -143,12 +143,7 @@ public class InterceptReply implements Serializable, net.ittera.pal.messages.Mar
    */
   public int marshalFit() {
     long n =
-        1L
-            + 6
-            + (long) this.peerUuid.length() * 3
-            + 6
-            + (long) this.responseToUuid.length() * 3
-            + 1;
+        1L + 6 + (long) this.peerUuid.length() * 3 + 6 + (long) this.responseToId.length() * 3 + 1;
     if (n < 0 || n > (long) InterceptReply.colferSizeMax) return InterceptReply.colferSizeMax;
     return (int) n;
   }
@@ -239,11 +234,11 @@ public class InterceptReply implements Serializable, net.ittera.pal.messages.Mar
         buf[ii] = (byte) size;
       }
 
-      if (!this.responseToUuid.isEmpty()) {
+      if (!this.responseToId.isEmpty()) {
         buf[i++] = (byte) 1;
         int start = ++i;
 
-        String s = this.responseToUuid;
+        String s = this.responseToId;
         for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
           char c = s.charAt(sIndex);
           if (c < '\u0080') {
@@ -270,7 +265,7 @@ public class InterceptReply implements Serializable, net.ittera.pal.messages.Mar
         if (size > InterceptReply.colferSizeMax)
           throw new IllegalStateException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.InterceptReply.responseToUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.InterceptReply.responseToId size %d exceeds %d UTF-8 bytes",
                   size, InterceptReply.colferSizeMax));
 
         int ii = start - 1;
@@ -365,12 +360,12 @@ public class InterceptReply implements Serializable, net.ittera.pal.messages.Mar
         if (size < 0 || size > InterceptReply.colferSizeMax)
           throw new SecurityException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.InterceptReply.responseToUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.InterceptReply.responseToId size %d exceeds %d UTF-8 bytes",
                   size, InterceptReply.colferSizeMax));
 
         int start = i;
         i += size;
-        this.responseToUuid = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.responseToId = new String(buf, start, size, StandardCharsets.UTF_8);
         header = buf[i++];
       }
 
@@ -451,31 +446,31 @@ public class InterceptReply implements Serializable, net.ittera.pal.messages.Mar
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.InterceptReply.responseToUuid.
+   * Gets net.ittera.pal.messages/colfer.InterceptReply.responseToId.
    *
    * @return the value.
    */
-  public String getResponseToUuid() {
-    return this.responseToUuid;
+  public String getResponseToId() {
+    return this.responseToId;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.InterceptReply.responseToUuid.
+   * Sets net.ittera.pal.messages/colfer.InterceptReply.responseToId.
    *
    * @param value the replacement.
    */
-  public void setResponseToUuid(String value) {
-    this.responseToUuid = value;
+  public void setResponseToId(String value) {
+    this.responseToId = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.InterceptReply.responseToUuid.
+   * Sets net.ittera.pal.messages/colfer.InterceptReply.responseToId.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public InterceptReply withResponseToUuid(String value) {
-    this.responseToUuid = value;
+  public InterceptReply withResponseToId(String value) {
+    this.responseToId = value;
     return this;
   }
 
@@ -512,7 +507,7 @@ public class InterceptReply implements Serializable, net.ittera.pal.messages.Mar
   public final int hashCode() {
     int h = 1;
     if (this.peerUuid != null) h = 31 * h + this.peerUuid.hashCode();
-    if (this.responseToUuid != null) h = 31 * h + this.responseToUuid.hashCode();
+    if (this.responseToId != null) h = 31 * h + this.responseToId.hashCode();
     h = 31 * h + (this.result ? 1231 : 1237);
     return h;
   }
@@ -527,9 +522,9 @@ public class InterceptReply implements Serializable, net.ittera.pal.messages.Mar
     if (o == this) return true;
 
     return (this.peerUuid == null ? o.peerUuid == null : this.peerUuid.equals(o.peerUuid))
-        && (this.responseToUuid == null
-            ? o.responseToUuid == null
-            : this.responseToUuid.equals(o.responseToUuid))
+        && (this.responseToId == null
+            ? o.responseToId == null
+            : this.responseToId.equals(o.responseToId))
         && this.result == o.result;
   }
 
@@ -540,8 +535,8 @@ public class InterceptReply implements Serializable, net.ittera.pal.messages.Mar
         this.peerUuid = json.get("peerUuid").getAsString();
       }
 
-      if (json.has("responseToUuid")) {
-        this.responseToUuid = json.get("responseToUuid").getAsString();
+      if (json.has("responseToId")) {
+        this.responseToId = json.get("responseToId").getAsString();
       }
 
       if (json.has("result")) {

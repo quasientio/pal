@@ -34,7 +34,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
 
   public String peerUuid;
 
-  public String messageUuid;
+  public String messageId;
 
   public byte execMessageType;
 
@@ -46,7 +46,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
 
   public int builderSeq;
 
-  public String responseToUuid;
+  public String responseToId;
 
   /** oneof */
   public ConstructorCall constructorCall;
@@ -81,10 +81,10 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
   /** Colfer zero values. */
   private void init() {
     peerUuid = "";
-    messageUuid = "";
+    messageId = "";
     threadName = "";
     currentTime = "";
-    responseToUuid = "";
+    responseToId = "";
   }
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
@@ -184,7 +184,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
             + 6
             + (long) this.peerUuid.length() * 3
             + 6
-            + (long) this.messageUuid.length() * 3
+            + (long) this.messageId.length() * 3
             + 2
             + 6
             + (long) this.threadName.length() * 3
@@ -193,7 +193,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
             + 5
             + 5
             + 6
-            + (long) this.responseToUuid.length() * 3;
+            + (long) this.responseToId.length() * 3;
     if (this.constructorCall != null) n += 1 + (long) this.constructorCall.marshalFit();
     if (this.instanceMethodCall != null) n += 1 + (long) this.instanceMethodCall.marshalFit();
     if (this.classMethodCall != null) n += 1 + (long) this.classMethodCall.marshalFit();
@@ -296,11 +296,11 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         buf[ii] = (byte) size;
       }
 
-      if (!this.messageUuid.isEmpty()) {
+      if (!this.messageId.isEmpty()) {
         buf[i++] = (byte) 1;
         int start = ++i;
 
-        String s = this.messageUuid;
+        String s = this.messageId;
         for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
           char c = s.charAt(sIndex);
           if (c < '\u0080') {
@@ -327,7 +327,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         if (size > ExecMessage.colferSizeMax)
           throw new IllegalStateException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.ExecMessage.messageUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.ExecMessage.messageId size %d exceeds %d UTF-8 bytes",
                   size, ExecMessage.colferSizeMax));
 
         int ii = start - 1;
@@ -479,11 +479,11 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         buf[i++] = (byte) x;
       }
 
-      if (!this.responseToUuid.isEmpty()) {
+      if (!this.responseToId.isEmpty()) {
         buf[i++] = (byte) 7;
         int start = ++i;
 
-        String s = this.responseToUuid;
+        String s = this.responseToId;
         for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
           char c = s.charAt(sIndex);
           if (c < '\u0080') {
@@ -510,7 +510,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         if (size > ExecMessage.colferSizeMax)
           throw new IllegalStateException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.ExecMessage.responseToUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.ExecMessage.responseToId size %d exceeds %d UTF-8 bytes",
                   size, ExecMessage.colferSizeMax));
 
         int ii = start - 1;
@@ -661,12 +661,12 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         if (size < 0 || size > ExecMessage.colferSizeMax)
           throw new SecurityException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.ExecMessage.messageUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.ExecMessage.messageId size %d exceeds %d UTF-8 bytes",
                   size, ExecMessage.colferSizeMax));
 
         int start = i;
         i += size;
-        this.messageUuid = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.messageId = new String(buf, start, size, StandardCharsets.UTF_8);
         header = buf[i++];
       }
 
@@ -759,12 +759,12 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         if (size < 0 || size > ExecMessage.colferSizeMax)
           throw new SecurityException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.ExecMessage.responseToUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.ExecMessage.responseToId size %d exceeds %d UTF-8 bytes",
                   size, ExecMessage.colferSizeMax));
 
         int start = i;
         i += size;
-        this.responseToUuid = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.responseToId = new String(buf, start, size, StandardCharsets.UTF_8);
         header = buf[i++];
       }
 
@@ -911,31 +911,31 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.ExecMessage.messageUuid.
+   * Gets net.ittera.pal.messages/colfer.ExecMessage.messageId.
    *
    * @return the value.
    */
-  public String getMessageUuid() {
-    return this.messageUuid;
+  public String getMessageId() {
+    return this.messageId;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.ExecMessage.messageUuid.
+   * Sets net.ittera.pal.messages/colfer.ExecMessage.messageId.
    *
    * @param value the replacement.
    */
-  public void setMessageUuid(String value) {
-    this.messageUuid = value;
+  public void setMessageId(String value) {
+    this.messageId = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.ExecMessage.messageUuid.
+   * Sets net.ittera.pal.messages/colfer.ExecMessage.messageId.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public ExecMessage withMessageUuid(String value) {
-    this.messageUuid = value;
+  public ExecMessage withMessageId(String value) {
+    this.messageId = value;
     return this;
   }
 
@@ -1085,31 +1085,31 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.ExecMessage.responseToUuid.
+   * Gets net.ittera.pal.messages/colfer.ExecMessage.responseToId.
    *
    * @return the value.
    */
-  public String getResponseToUuid() {
-    return this.responseToUuid;
+  public String getResponseToId() {
+    return this.responseToId;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.ExecMessage.responseToUuid.
+   * Sets net.ittera.pal.messages/colfer.ExecMessage.responseToId.
    *
    * @param value the replacement.
    */
-  public void setResponseToUuid(String value) {
-    this.responseToUuid = value;
+  public void setResponseToId(String value) {
+    this.responseToId = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.ExecMessage.responseToUuid.
+   * Sets net.ittera.pal.messages/colfer.ExecMessage.responseToId.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public ExecMessage withResponseToUuid(String value) {
-    this.responseToUuid = value;
+  public ExecMessage withResponseToId(String value) {
+    this.responseToId = value;
     return this;
   }
 
@@ -1465,13 +1465,13 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
   public final int hashCode() {
     int h = 1;
     if (this.peerUuid != null) h = 31 * h + this.peerUuid.hashCode();
-    if (this.messageUuid != null) h = 31 * h + this.messageUuid.hashCode();
+    if (this.messageId != null) h = 31 * h + this.messageId.hashCode();
     h = 31 * h + (this.execMessageType & 0xff);
     if (this.threadName != null) h = 31 * h + this.threadName.hashCode();
     if (this.currentTime != null) h = 31 * h + this.currentTime.hashCode();
     h = 31 * h + this.dispatchSeq;
     h = 31 * h + this.builderSeq;
-    if (this.responseToUuid != null) h = 31 * h + this.responseToUuid.hashCode();
+    if (this.responseToId != null) h = 31 * h + this.responseToId.hashCode();
     if (this.constructorCall != null) h = 31 * h + this.constructorCall.hashCode();
     if (this.instanceMethodCall != null) h = 31 * h + this.instanceMethodCall.hashCode();
     if (this.classMethodCall != null) h = 31 * h + this.classMethodCall.hashCode();
@@ -1497,9 +1497,7 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
     if (o == this) return true;
 
     return (this.peerUuid == null ? o.peerUuid == null : this.peerUuid.equals(o.peerUuid))
-        && (this.messageUuid == null
-            ? o.messageUuid == null
-            : this.messageUuid.equals(o.messageUuid))
+        && (this.messageId == null ? o.messageId == null : this.messageId.equals(o.messageId))
         && this.execMessageType == o.execMessageType
         && (this.threadName == null ? o.threadName == null : this.threadName.equals(o.threadName))
         && (this.currentTime == null
@@ -1507,9 +1505,9 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
             : this.currentTime.equals(o.currentTime))
         && this.dispatchSeq == o.dispatchSeq
         && this.builderSeq == o.builderSeq
-        && (this.responseToUuid == null
-            ? o.responseToUuid == null
-            : this.responseToUuid.equals(o.responseToUuid))
+        && (this.responseToId == null
+            ? o.responseToId == null
+            : this.responseToId.equals(o.responseToId))
         && (this.constructorCall == null
             ? o.constructorCall == null
             : this.constructorCall.equals(o.constructorCall))
@@ -1553,8 +1551,8 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         this.peerUuid = json.get("peerUuid").getAsString();
       }
 
-      if (json.has("messageUuid")) {
-        this.messageUuid = json.get("messageUuid").getAsString();
+      if (json.has("messageId")) {
+        this.messageId = json.get("messageId").getAsString();
       }
 
       if (json.has("execMessageType")) {
@@ -1577,8 +1575,8 @@ public class ExecMessage implements Serializable, net.ittera.pal.messages.Marsha
         this.builderSeq = json.get("builderSeq").getAsInt();
       }
 
-      if (json.has("responseToUuid")) {
-        this.responseToUuid = json.get("responseToUuid").getAsString();
+      if (json.has("responseToId")) {
+        this.responseToId = json.get("responseToId").getAsString();
       }
 
       if (json.has("constructorCall")) {

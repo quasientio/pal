@@ -105,8 +105,8 @@ public abstract class AbstractBinaryRPCMessageIT extends AbstractIntegrationTest
       reply = thinPeer.sendAndReceive(message);
     } catch (Exception e) {
       logger.error(
-          "Exception sending/receiving message with uuid: {}\n{}",
-          message.getMessageUuid(),
+          "Exception sending/receiving message with id: {}\n{}",
+          message.getMessageId(),
           ColferUtils.format(message),
           e);
       throw e;

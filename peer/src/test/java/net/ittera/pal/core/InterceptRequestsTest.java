@@ -135,7 +135,7 @@ public class InterceptRequestsTest {
     assertThat(interceptRequests.getRegisteredRequestsSize(), is(1));
 
     // now unregister
-    interceptRequests.unregisterInterceptRequest(interceptMessage.getMessageUuid());
+    interceptRequests.unregisterInterceptRequest(interceptMessage.getMessageId());
     assertThat(interceptRequests.getRegisteredRequestsSize(), is(0));
   }
 }

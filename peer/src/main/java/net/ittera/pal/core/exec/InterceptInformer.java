@@ -147,8 +147,8 @@ public class InterceptInformer implements InterceptNodeListener {
           }
           return;
         }
-        UUID interceptMsg = event.interceptUuid();
-        interceptEventMsg = new InterceptEventMsg(interceptMsg);
+        String interceptMsgId = event.interceptId();
+        interceptEventMsg = new InterceptEventMsg(interceptMsgId);
         break;
       default:
         throw new IllegalStateException("Unexpected intercept event type: " + event.type());

@@ -187,9 +187,9 @@ public class InterceptMatcher extends ConnectedService {
         }
       }
     } else { // Type.UNREGISTER
-      UUID interceptUuid = interceptEventMsg.getInterceptMessageUuid();
-      if (interceptUuid == null) {
-        logger.error("Intercept UUID is null. Cannot unregister intercept request.");
+      String interceptMessageId = interceptEventMsg.getInterceptMessageId();
+      if (interceptMessageId == null) {
+        logger.error("Intercept id is null. Cannot unregister intercept request.");
         registerSocket.send(UNREGISTER_UNKNOWN_ERROR_REPLY);
         return;
       }
@@ -197,7 +197,7 @@ public class InterceptMatcher extends ConnectedService {
           .values()
           .forEach(
               interceptRequests ->
-                  interceptRequests.unregisterInterceptRequest(interceptUuid.toString()));
+                  interceptRequests.unregisterInterceptRequest(interceptMessageId));
       registerSocket.send(UNREGISTER_OK_REPLY);
     }
   }

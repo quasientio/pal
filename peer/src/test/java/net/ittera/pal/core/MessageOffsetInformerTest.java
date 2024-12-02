@@ -21,13 +21,13 @@ package net.ittera.pal.core;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertNotNull;
 
-import com.google.common.primitives.Longs;
 import java.lang.reflect.AccessibleObject;
 import java.util.UUID;
 import net.ittera.pal.common.directory.nodes.LogInfo;
-import net.ittera.pal.common.util.UuidUtils;
+import net.ittera.pal.core.messages.PublishedOffsetMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -98,7 +98,7 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
         new ProducerRecord<>(
             log.getName(), 0, peerUuid.toString(), ColferUtils.toBytes(replyMessage));
     MessageOffsetInformer offsetInformer =
-        new MessageOffsetInformer(UUID.fromString(replyMessage.getMessageUuid()), offsetPublisher);
+        new MessageOffsetInformer(replyMessage.getMessageId(), offsetPublisher);
     assertNotNull(newRecord);
     final RecordMetadata recordMetadata = producer.send(newRecord, offsetInformer).get();
 
@@ -110,11 +110,10 @@ public class MessageOffsetInformerTest extends ZmqEnabledTest {
     assertThat(producer.history().get(0), is(newRecord));
 
     // get and verify published offsets
-    // multipart msg: 1) offset as byte[], 2) uuid as byte[]
-    byte[] offsetBuff = offsetSubscriber.recv();
-    byte[] uuidBuff = offsetSubscriber.recv();
-    assertThat(Longs.fromByteArray(offsetBuff), is(recordMetadata.offset()));
-    assertThat(UuidUtils.fromBytes(uuidBuff).toString(), is(replyMessage.getMessageUuid()));
+    PublishedOffsetMsg publishedOffsetMsg = PublishedOffsetMsg.receive(offsetSubscriber);
+    assertThat(publishedOffsetMsg, is(notNullValue()));
+    assertThat(publishedOffsetMsg.getOffset(), is(recordMetadata.offset()));
+    assertThat(publishedOffsetMsg.getMessageId(), is(replyMessage.getMessageId()));
     offsetSubscriber.close();
   }
 }

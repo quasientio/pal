@@ -115,14 +115,14 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.someShort, is(newFieldValue));
     assertThat(
         replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
-    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutId(), notNullValue());
   }
 
   @Override
@@ -164,14 +164,14 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.bytes, is(newFieldValue));
     assertThat(
         replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
-    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutId(), notNullValue());
   }
 
   @Override
@@ -215,14 +215,14 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.someBoolean, is(newFieldValue));
     assertThat(
         replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
-    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutId(), notNullValue());
   }
 
   @Override
@@ -264,14 +264,14 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.aString, is(newFieldValue));
     assertThat(
         replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
-    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutId(), notNullValue());
   }
 
   @Override
@@ -313,14 +313,14 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.aCollection, sameInstance(newFieldValue));
     assertThat(
         replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
-    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutId(), notNullValue());
   }
 
   @Override
@@ -360,14 +360,14 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(0L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.aCollection, is(nullValue()));
     assertThat(
         replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
-    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutId(), notNullValue());
   }
 
   @Override
@@ -408,14 +408,14 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.objects, sameInstance(newFieldValue));
     assertThat(
         replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
-    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutId(), notNullValue());
   }
 
   @Override
@@ -456,14 +456,14 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertThat(replyMsg.getReturnValue(), is(nullValue()));
     assertThat(replyMsg.getStaticFieldPutDone().getField().getName(), is(fieldName));
     assertThat(ClassForPutStaticTest.lastError, sameInstance(newFieldValue));
     assertThat(
         replyMsg.getStaticFieldPutDone(), allOf(comesFromClass(targetClass), comesFrom(fieldName)));
-    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutUuid(), notNullValue());
+    assertThat(replyMsg.getStaticFieldPutDone().getStaticFieldPutId(), notNullValue());
   }
 
   @Override

@@ -114,7 +114,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
             MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             null,
-            UUID.fromString(msg.getMessageUuid()),
+            msg.getMessageId(),
             null,
             msgBuilder.wrap(msg));
     outMsg.send(reqSocket);
@@ -144,7 +144,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
             MessageType.EXEC_MESSAGE,
             ExecPhase.BEFORE,
             headers,
-            UUID.fromString(msg.getMessageUuid()),
+            msg.getMessageId(),
             null,
             msgBuilder.wrap(msg));
     outMsg.send(reqSocket);
@@ -182,7 +182,7 @@ public class MessagePublisherTest extends ZmqEnabledTest {
               MessageType.EXEC_MESSAGE,
               ExecPhase.BEFORE,
               null,
-              UUID.fromString(msg.getMessageUuid()),
+              msg.getMessageId(),
               null,
               msgBuilder.wrap(msg));
       outMsg.send(reqSocket);

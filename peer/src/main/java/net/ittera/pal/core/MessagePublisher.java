@@ -102,7 +102,7 @@ class MessagePublisher extends ConnectedService {
         msg.send(pubSocket);
         if (logger.isDebugEnabled()) {
           logger.debug(
-              "Published new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
+              "Published new message w/id: {} ({} bytes)", msg.getMessageId(), msg.getSize());
         }
       }
     }

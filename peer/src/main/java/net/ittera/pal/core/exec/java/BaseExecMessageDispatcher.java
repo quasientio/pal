@@ -120,8 +120,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   public ExecMessage dispatchIncoming(ExecMessage incomingCall, boolean isDirect) {
     if (logger.isTraceEnabled()) {
       logger.trace(
-          "dispatchIncoming:in w/ message uuid: {}, isDirect: {}",
-          incomingCall.getMessageUuid(),
+          "dispatchIncoming:in w/ message id: {}, isDirect: {}",
+          incomingCall.getMessageId(),
           isDirect);
     }
 
@@ -339,14 +339,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * Wraps a Throwable message to be sent back to the client, after an exception occurred during
    * loading or invoking an accessible object.
    *
-   * @param messageUuid The UUID of the message that this is a reply to
+   * @param messageId The id of the message that this is a reply to
    * @param accessibleObject The accessible object that failed to be loaded or invoked
    * @param exceptionWhileLoading Either this or exceptionWhileInvoking must be non-null
    * @param exceptionWhileInvoking Either this or exceptionWhileLoading must be non-null
    * @return The wrapped ExecMessage with the Throwable
    */
   final ExecMessage wrapAfterExecThrowableMessage(
-      String messageUuid,
+      String messageId,
       AccessibleObject accessibleObject,
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking) {
@@ -354,7 +354,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     Throwable throwable =
         exceptionWhileLoading != null ? exceptionWhileLoading : exceptionWhileInvoking;
     return messageBuilder.buildAccessibleObjectThrowable(
-        peerUuid, accessibleObject, throwable, messageUuid);
+        peerUuid, accessibleObject, throwable, messageId);
   }
 
   private void storeObjectInSession(@Nonnull UUID peerUuid, @Nonnull ObjectRef objectRef) {

@@ -97,15 +97,15 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking) {
 
-    String messageUuid = execMessage.getMessageUuid();
+    String messageId = execMessage.getMessageId();
 
     if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
       return wrapAfterExecThrowableMessage(
-          messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
+          messageId, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
     }
 
     return messageBuilder.buildReturnValue(
-        peerUuid, valueObject, accessibleObject, valueObjRef, false, messageUuid);
+        peerUuid, valueObject, accessibleObject, valueObjRef, false, messageId);
   }
 
   @Override

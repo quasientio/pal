@@ -21,13 +21,13 @@ package colfer
 
 type ExecMessage struct {
 	peerUuid        text
-	messageUuid     text
+	messageId       text
 	execMessageType uint8
 	threadName      text
 	currentTime     text
 	dispatchSeq     uint32
 	builderSeq      uint32
-	responseToUuid  text
+	responseToId    text
 
 	// oneof
 	constructorCall      ConstructorCall

@@ -23,9 +23,7 @@ import static net.ittera.pal.serdes.colfer.ColferUtils.toBytes;
 
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.UUID;
 import javax.annotation.Nullable;
-import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.BaseMsg;
 import net.ittera.pal.messages.Marshallable;
 import org.zeromq.ZMQ;
@@ -39,7 +37,7 @@ public class InterceptEventMsg extends BaseMsg {
    * -------
    * 1. type               : Type (register/unregister)
    * 2. body               : byte[] (body of intercept message to register)
-   * 2. message uuid       : byte[] (UUID of message to unregister)
+   * 2. message id         : byte[] (ID of message to unregister)
    * </pre>
    */
   public enum Type {
@@ -67,7 +65,7 @@ public class InterceptEventMsg extends BaseMsg {
 
   // fields
   private final Type type;
-  @Nullable private final UUID interceptMessageUuid;
+  @Nullable private final String interceptMessageId;
   @Nullable private final byte[] body;
 
   public InterceptEventMsg(byte[] body) {
@@ -78,30 +76,30 @@ public class InterceptEventMsg extends BaseMsg {
     this(Type.REGISTER, null, message, null);
   }
 
-  public InterceptEventMsg(UUID interceptMessageUuid) {
-    this(Type.UNREGISTER, null, null, interceptMessageUuid);
+  public InterceptEventMsg(String interceptMessageId) {
+    this(Type.UNREGISTER, null, null, interceptMessageId);
   }
 
   private InterceptEventMsg(
       Type type,
       @Nullable byte[] body,
       @Nullable Marshallable marshallable,
-      @Nullable UUID interceptMessageUuid) {
+      @Nullable String interceptMessageId) {
     if (type.equals(Type.REGISTER) && (body == null && marshallable == null)) {
       throw new NullPointerException("Both body and marshallable are null.");
     }
 
     if (type.equals(Type.UNREGISTER)) {
-      Objects.requireNonNull(interceptMessageUuid);
+      Objects.requireNonNull(interceptMessageId);
     }
 
     this.type = type;
     this.body = marshallable != null ? toBytes(marshallable) : body;
-    this.interceptMessageUuid = interceptMessageUuid;
+    this.interceptMessageId = interceptMessageId;
   }
 
-  private InterceptEventMsg(Type type, byte[] body, @Nullable UUID interceptMessageUuid, int size) {
-    this(type, body, null, interceptMessageUuid);
+  private InterceptEventMsg(Type type, byte[] body, @Nullable String interceptMessageId, int size) {
+    this(type, body, null, interceptMessageId);
     this.size = size;
   }
 
@@ -119,7 +117,7 @@ public class InterceptEventMsg extends BaseMsg {
     if (type.equals(Type.REGISTER)) {
       buff = body;
     } else { // (type.equals(Type.UNREGISTER))
-      buff = UuidUtils.toBytes(interceptMessageUuid);
+      buff = interceptMessageId.getBytes(ZMQ.CHARSET);
     }
     assert buff != null;
     size += buff.length;
@@ -148,17 +146,17 @@ public class InterceptEventMsg extends BaseMsg {
     int msgSize = buff.length;
     Type type = Type.fromByte(buff[0]);
 
-    // body | msgUUID
+    // body | msgId
     buff = socket.recv();
     msgSize += buff.length;
     byte[] body = null;
-    UUID interceptMsgUuid = null;
+    String interceptMsgId = null;
     if (type.equals(Type.REGISTER)) {
       body = buff;
     } else { // UNREGISTER
-      interceptMsgUuid = UuidUtils.fromBytes(buff);
+      interceptMsgId = new String(buff, ZMQ.CHARSET);
     }
-    return new InterceptEventMsg(type, body, interceptMsgUuid, msgSize);
+    return new InterceptEventMsg(type, body, interceptMsgId, msgSize);
   }
 
   // default is non-blocking
@@ -177,13 +175,13 @@ public class InterceptEventMsg extends BaseMsg {
     }
     InterceptEventMsg that = (InterceptEventMsg) o;
     return type == that.type
-        && Objects.equals(interceptMessageUuid, that.interceptMessageUuid)
+        && Objects.equals(interceptMessageId, that.interceptMessageId)
         && Arrays.equals(body, that.body);
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(type, interceptMessageUuid);
+    int result = Objects.hash(type, interceptMessageId);
     result = 31 * result + Arrays.hashCode(body);
     return result;
   }
@@ -193,8 +191,8 @@ public class InterceptEventMsg extends BaseMsg {
     return "InterceptEventMsg{"
         + "type="
         + type
-        + ", interceptMsgUUID="
-        + interceptMessageUuid
+        + ", interceptMsgId="
+        + interceptMessageId
         + ", body="
         + Arrays.toString(body)
         + ", size="
@@ -207,8 +205,8 @@ public class InterceptEventMsg extends BaseMsg {
   }
 
   @Nullable
-  public UUID getInterceptMessageUuid() {
-    return interceptMessageUuid;
+  public String getInterceptMessageId() {
+    return interceptMessageId;
   }
 
   @Nullable

@@ -170,9 +170,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 
             // dispatching failed, log and send error response
             logger.error(
-                "Error dispatching message w/uuid {}",
-                getMessageUuid(requestMsg),
-                dispatchException);
+                "Error dispatching message w/id {}", getMessageId(requestMsg), dispatchException);
             jsonRpcResponse =
                 messageBuilder.jsonRpcResponseFromParseError(dispatchException, requestId);
             // TODO write to Log (ie. send to LogWriter) -> gson.toJson(jsonRpcResponse))
@@ -199,9 +197,9 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
 
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Received message with offset: {}, uuid: {}",
+                "Received message with offset: {}, id: {}",
                 msg.getOffset(),
-                getMessageUuid(requestMsg));
+                getMessageId(requestMsg));
           }
 
           // dispatch it
@@ -210,9 +208,7 @@ class LogMessageInvoker extends AbstractMessageInvokerThread {
             final long took = System.currentTimeMillis() - started;
             if (logger.isDebugEnabled()) {
               logger.debug(
-                  "Dispatched log message with uuid: {} in {} ms",
-                  getMessageUuid(requestMsg),
-                  took);
+                  "Dispatched log message with id: {} in {} ms", getMessageId(requestMsg), took);
             }
           }
         }

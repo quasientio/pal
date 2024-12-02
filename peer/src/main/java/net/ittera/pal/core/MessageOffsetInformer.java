@@ -19,7 +19,6 @@
 
 package net.ittera.pal.core;
 
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import net.ittera.pal.core.messages.PublishedOffsetMsg;
 import org.apache.kafka.clients.producer.Callback;
@@ -35,13 +34,13 @@ import org.zeromq.ZMQ.Socket;
  */
 class MessageOffsetInformer extends CompletableFuture<Void> implements Callback {
 
-  private final UUID messageUuid;
+  private final String messageId;
   private final Socket offsetPubSocket;
 
   private static final Logger logger = LoggerFactory.getLogger(MessageOffsetInformer.class);
 
-  MessageOffsetInformer(UUID messageUuid, Socket offsetPubSocket) {
-    this.messageUuid = messageUuid;
+  MessageOffsetInformer(String messageId, Socket offsetPubSocket) {
+    this.messageId = messageId;
     this.offsetPubSocket = offsetPubSocket;
   }
 
@@ -55,9 +54,9 @@ class MessageOffsetInformer extends CompletableFuture<Void> implements Callback 
   public void onCompletion(RecordMetadata recordMetadata, Exception e) {
     // publish new record offset
     if (logger.isDebugEnabled()) {
-      logger.debug("New offset {} for message w/uuid: {}", recordMetadata.offset(), messageUuid);
+      logger.debug("New offset {} for message w/id: {}", recordMetadata.offset(), messageId);
     }
-    PublishedOffsetMsg offsetMsg = new PublishedOffsetMsg(recordMetadata.offset(), messageUuid);
+    PublishedOffsetMsg offsetMsg = new PublishedOffsetMsg(recordMetadata.offset(), messageId);
     offsetMsg.send(offsetPubSocket);
     complete(null);
   }

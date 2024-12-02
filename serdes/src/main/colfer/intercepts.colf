@@ -44,7 +44,7 @@ type InterceptableField struct {
 
 type InterceptMessage struct {
 	peerUuid       text
-	messageUuid    text
+	messageId      text
 	interceptType  uint8
 	clazz          text
 	field          InterceptableField
@@ -61,7 +61,7 @@ type InterceptKeyMessage struct {
 }
 
 type InterceptReply struct {
-	peerUuid       text
-	responseToUuid text
-	result         bool
+	peerUuid     text
+	responseToId text
+	result       bool
 }

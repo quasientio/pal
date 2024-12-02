@@ -90,8 +90,8 @@ public class SessionMessageDispatcher {
       default:
         String errorMessage =
             String.format(
-                "Incoming message w/uuid %s ignored - no handler:%n%s",
-                controlMessage.getMessageUuid(), ColferUtils.format(controlMessage));
+                "Incoming message w/id %s ignored - no handler:%n%s",
+                controlMessage.getMessageId(), ColferUtils.format(controlMessage));
         logger.error(errorMessage);
         return messageBuilder.buildControlMessage(
             peerUuid, ControlStatusType.UNSUPPORTED_COMMAND, errorMessage);

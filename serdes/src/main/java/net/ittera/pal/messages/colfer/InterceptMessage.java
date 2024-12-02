@@ -34,7 +34,7 @@ public class InterceptMessage implements Serializable, net.ittera.pal.messages.M
 
   public String peerUuid;
 
-  public String messageUuid;
+  public String messageId;
 
   public byte interceptType;
 
@@ -56,7 +56,7 @@ public class InterceptMessage implements Serializable, net.ittera.pal.messages.M
   /** Colfer zero values. */
   private void init() {
     peerUuid = "";
-    messageUuid = "";
+    messageId = "";
     clazz = "";
     callbackClass = "";
     callbackMethod = "";
@@ -160,7 +160,7 @@ public class InterceptMessage implements Serializable, net.ittera.pal.messages.M
             + 6
             + (long) this.peerUuid.length() * 3
             + 6
-            + (long) this.messageUuid.length() * 3
+            + (long) this.messageId.length() * 3
             + 2
             + 6
             + (long) this.clazz.length() * 3
@@ -260,11 +260,11 @@ public class InterceptMessage implements Serializable, net.ittera.pal.messages.M
         buf[ii] = (byte) size;
       }
 
-      if (!this.messageUuid.isEmpty()) {
+      if (!this.messageId.isEmpty()) {
         buf[i++] = (byte) 1;
         int start = ++i;
 
-        String s = this.messageUuid;
+        String s = this.messageId;
         for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
           char c = s.charAt(sIndex);
           if (c < '\u0080') {
@@ -291,7 +291,7 @@ public class InterceptMessage implements Serializable, net.ittera.pal.messages.M
         if (size > InterceptMessage.colferSizeMax)
           throw new IllegalStateException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.InterceptMessage.messageUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.InterceptMessage.messageId size %d exceeds %d UTF-8 bytes",
                   size, InterceptMessage.colferSizeMax));
 
         int ii = start - 1;
@@ -541,12 +541,12 @@ public class InterceptMessage implements Serializable, net.ittera.pal.messages.M
         if (size < 0 || size > InterceptMessage.colferSizeMax)
           throw new SecurityException(
               format(
-                  "colfer: net.ittera.pal.messages/colfer.InterceptMessage.messageUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: net.ittera.pal.messages/colfer.InterceptMessage.messageId size %d exceeds %d UTF-8 bytes",
                   size, InterceptMessage.colferSizeMax));
 
         int start = i;
         i += size;
-        this.messageUuid = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.messageId = new String(buf, start, size, StandardCharsets.UTF_8);
         header = buf[i++];
       }
 
@@ -696,31 +696,31 @@ public class InterceptMessage implements Serializable, net.ittera.pal.messages.M
   }
 
   /**
-   * Gets net.ittera.pal.messages/colfer.InterceptMessage.messageUuid.
+   * Gets net.ittera.pal.messages/colfer.InterceptMessage.messageId.
    *
    * @return the value.
    */
-  public String getMessageUuid() {
-    return this.messageUuid;
+  public String getMessageId() {
+    return this.messageId;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.InterceptMessage.messageUuid.
+   * Sets net.ittera.pal.messages/colfer.InterceptMessage.messageId.
    *
    * @param value the replacement.
    */
-  public void setMessageUuid(String value) {
-    this.messageUuid = value;
+  public void setMessageId(String value) {
+    this.messageId = value;
   }
 
   /**
-   * Sets net.ittera.pal.messages/colfer.InterceptMessage.messageUuid.
+   * Sets net.ittera.pal.messages/colfer.InterceptMessage.messageId.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public InterceptMessage withMessageUuid(String value) {
-    this.messageUuid = value;
+  public InterceptMessage withMessageId(String value) {
+    this.messageId = value;
     return this;
   }
 
@@ -902,7 +902,7 @@ public class InterceptMessage implements Serializable, net.ittera.pal.messages.M
   public final int hashCode() {
     int h = 1;
     if (this.peerUuid != null) h = 31 * h + this.peerUuid.hashCode();
-    if (this.messageUuid != null) h = 31 * h + this.messageUuid.hashCode();
+    if (this.messageId != null) h = 31 * h + this.messageId.hashCode();
     h = 31 * h + (this.interceptType & 0xff);
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     if (this.field != null) h = 31 * h + this.field.hashCode();
@@ -922,9 +922,7 @@ public class InterceptMessage implements Serializable, net.ittera.pal.messages.M
     if (o == this) return true;
 
     return (this.peerUuid == null ? o.peerUuid == null : this.peerUuid.equals(o.peerUuid))
-        && (this.messageUuid == null
-            ? o.messageUuid == null
-            : this.messageUuid.equals(o.messageUuid))
+        && (this.messageId == null ? o.messageId == null : this.messageId.equals(o.messageId))
         && this.interceptType == o.interceptType
         && (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
         && (this.field == null ? o.field == null : this.field.equals(o.field))
@@ -944,8 +942,8 @@ public class InterceptMessage implements Serializable, net.ittera.pal.messages.M
         this.peerUuid = json.get("peerUuid").getAsString();
       }
 
-      if (json.has("messageUuid")) {
-        this.messageUuid = json.get("messageUuid").getAsString();
+      if (json.has("messageId")) {
+        this.messageId = json.get("messageId").getAsString();
       }
 
       if (json.has("interceptType")) {

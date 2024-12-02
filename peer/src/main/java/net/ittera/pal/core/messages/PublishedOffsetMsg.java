@@ -21,9 +21,7 @@ package net.ittera.pal.core.messages;
 
 import com.google.common.primitives.Longs;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.Stream;
-import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.BaseMsg;
 import org.zeromq.ZMQ;
 
@@ -35,23 +33,23 @@ public class PublishedOffsetMsg extends BaseMsg {
    * FRAMES:
    * -------
    * 1. offset             : long
-   * 2. message uuid       : byte[]
+   * 2. message id         : byte[]
    * </pre>
    */
 
   // fields
   private final long offset;
 
-  private final UUID messageUuid;
+  private final String messageId;
 
-  public PublishedOffsetMsg(long offset, UUID messageUuid) {
-    Stream.of(offset, messageUuid).forEach(Objects::requireNonNull);
+  public PublishedOffsetMsg(long offset, String messageId) {
+    Stream.of(offset, messageId).forEach(Objects::requireNonNull);
     this.offset = offset;
-    this.messageUuid = messageUuid;
+    this.messageId = messageId;
   }
 
-  private PublishedOffsetMsg(long offset, UUID messageUuid, int size) {
-    this(offset, messageUuid);
+  private PublishedOffsetMsg(long offset, String messageId, int size) {
+    this(offset, messageId);
     this.size = size;
   }
 
@@ -68,8 +66,8 @@ public class PublishedOffsetMsg extends BaseMsg {
       return false;
     }
 
-    // 2. message uuid
-    buff = UuidUtils.toBytes(messageUuid);
+    // 2. message id
+    buff = messageId.getBytes(ZMQ.CHARSET);
     size += buff.length;
     return socket.send(buff, 0);
   }
@@ -94,11 +92,11 @@ public class PublishedOffsetMsg extends BaseMsg {
     // 1. message offset
     int msgSize = buff.length;
     final long offset = Longs.fromByteArray(buff);
-    // 2. message uuid
+    // 2. message id
     buff = socket.recv();
     msgSize += buff.length;
-    final UUID messageUuid = UuidUtils.fromBytes(buff);
-    return new PublishedOffsetMsg(offset, messageUuid, msgSize);
+    final String messageId = new String(buff, ZMQ.CHARSET);
+    return new PublishedOffsetMsg(offset, messageId, msgSize);
   }
 
   // default is non-blocking
@@ -116,12 +114,12 @@ public class PublishedOffsetMsg extends BaseMsg {
       return false;
     }
     PublishedOffsetMsg that = (PublishedOffsetMsg) o;
-    return offset == that.offset && messageUuid.equals(that.messageUuid);
+    return offset == that.offset && messageId.equals(that.messageId);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(offset, messageUuid);
+    return Objects.hash(offset, messageId);
   }
 
   @Override
@@ -129,8 +127,8 @@ public class PublishedOffsetMsg extends BaseMsg {
     return "PublishedOffsetMsg{"
         + "offset="
         + offset
-        + ", messageUuid="
-        + messageUuid
+        + ", messageId="
+        + messageId
         + " size="
         + (getSize() == -1 ? "<unknown>" : getSize())
         + '}';
@@ -140,7 +138,7 @@ public class PublishedOffsetMsg extends BaseMsg {
     return offset;
   }
 
-  public UUID getMessageUuid() {
-    return messageUuid;
+  public String getMessageId() {
+    return messageId;
   }
 }

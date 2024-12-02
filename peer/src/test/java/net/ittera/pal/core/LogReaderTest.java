@@ -70,7 +70,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     private final ZMQ.Socket socket;
     private final ZContext context;
     private final String dealerAddress;
-    private final Set<String> receivedMessageUuids = new TreeSet<>();
+    private final Set<String> receivedMessageIds = new TreeSet<>();
 
     Worker(ZContext context, String dealerAddress) {
       this.context = context;
@@ -94,11 +94,11 @@ public class LogReaderTest extends ZmqEnabledTest {
           if (wrapper.getExecMessage() != null) {
             ExecMessage msg = wrapper.getExecMessage();
             logger.debug("ExecMessage received = {}", ColferUtils.format(msg));
-            receivedMessageUuids.add(msg.getMessageUuid());
+            receivedMessageIds.add(msg.getMessageId());
           } else {
             InterceptMessage msg = wrapper.getInterceptMessage();
             logger.debug("InterceptMessage msg received = {}", ColferUtils.format(msg));
-            receivedMessageUuids.add(msg.getMessageUuid());
+            receivedMessageIds.add(msg.getMessageId());
           }
         } catch (ZMQException ex) {
           int errorCode = ex.getErrorCode();
@@ -122,7 +122,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     }
 
     Set<String> getReceivedMessages() {
-      return receivedMessageUuids;
+      return receivedMessageIds;
     }
   }
 
@@ -276,7 +276,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     // assert received
     assertThat(logMsgInvoker.getReceivedMessages().size(), is(1));
     assertThat(
-        logMsgInvoker.getReceivedMessages().stream().anyMatch(u -> u.equals(msg.getMessageUuid())),
+        logMsgInvoker.getReceivedMessages().stream().anyMatch(u -> u.equals(msg.getMessageId())),
         is(true));
 
     // shut down
@@ -327,7 +327,7 @@ public class LogReaderTest extends ZmqEnabledTest {
     // assert received
     assertThat(logMsgInvoker.getReceivedMessages().size(), is(1));
     assertThat(
-        logMsgInvoker.getReceivedMessages().stream().anyMatch(u -> u.equals(msg.getMessageUuid())),
+        logMsgInvoker.getReceivedMessages().stream().anyMatch(u -> u.equals(msg.getMessageId())),
         is(true));
 
     // shut down
@@ -368,7 +368,7 @@ public class LogReaderTest extends ZmqEnabledTest {
               this.log.getName(), partition, i, key, ColferUtils.toBytes(msgBuilder.wrap(msg)));
       record.headers().add("message-format", new byte[] {MessageFormatType.BINARY_RPC.toByte()});
       this.consumer.addRecord(record);
-      sentUuids.add(msg.getMessageUuid());
+      sentUuids.add(msg.getMessageId());
     }
 
     Thread.sleep(1000);

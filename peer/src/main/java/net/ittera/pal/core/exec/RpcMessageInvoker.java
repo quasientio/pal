@@ -193,7 +193,7 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
     try {
       requestMsg.unmarshal(rpcReq, 0);
       if (logger.isDebugEnabled()) {
-        logger.debug("Received RPC message with uuid: {}", getMessageUuid(requestMsg));
+        logger.debug("Received RPC message with id: {}", getMessageId(requestMsg));
       }
     } catch (Exception e) {
       logger.error("Caught exception parsing message", e);
@@ -212,15 +212,15 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
           final long took = System.currentTimeMillis() - started;
           if (logger.isDebugEnabled()) {
             logger.debug(
-                "Dispatched and sent message w/uuid: {} in reply to RPC request"
-                    + " w/uuid: {} in {} ms",
-                getMessageUuid(replyMsg),
-                getMessageUuid(requestMsg),
+                "Dispatched and sent message w/id: {} in reply to RPC request"
+                    + " w/id: {} in {} ms",
+                getMessageId(replyMsg),
+                getMessageId(requestMsg),
                 took);
           }
         }
       } catch (Exception e) {
-        logger.error("Error dispatching message w/uuid {}", getMessageUuid(requestMsg), e);
+        logger.error("Error dispatching message w/id {}", getMessageId(requestMsg), e);
       }
     }
   }
@@ -280,7 +280,7 @@ class RpcMessageInvoker extends AbstractMessageInvokerThread {
 
       // dispatching failed, log and send error response
       logger.error(
-          "Error dispatching message w/uuid {}", getMessageUuid(requestMsg), dispatchException);
+          "Error dispatching message w/id {}", getMessageId(requestMsg), dispatchException);
       jsonRpcResponse = messageBuilder.jsonRpcResponseFromParseError(dispatchException, requestId);
       new OutboundJsonRpcResponseMsg(jsonrpcMsg.getPeerId(), gson.toJson(jsonRpcResponse))
           .send(jsonrpcSocket);

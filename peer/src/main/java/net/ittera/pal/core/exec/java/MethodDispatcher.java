@@ -57,11 +57,11 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking) {
 
-    String messageUuid = execMessage.getMessageUuid();
+    String messageId = execMessage.getMessageId();
 
     if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
       return wrapAfterExecThrowableMessage(
-          messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
+          messageId, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
     }
 
     return messageBuilder.buildReturnValue(
@@ -70,7 +70,7 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
         accessibleObject,
         valueObjRef,
         returnsVoid(accessibleObject),
-        messageUuid);
+        messageId);
   }
 
   @Override

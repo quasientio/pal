@@ -93,7 +93,7 @@ public class MessageStreamerTest {
                     MessageType.EXEC_MESSAGE,
                     ExecPhase.BEFORE,
                     new ArrayList<>(),
-                    UUID.randomUUID(),
+                    UUID.randomUUID().toString(),
                     null,
                     msgBuilder.wrap(msg));
             outboundMsg.send(socket);

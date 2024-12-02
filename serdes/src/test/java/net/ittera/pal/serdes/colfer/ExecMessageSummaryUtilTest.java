@@ -140,11 +140,11 @@ public class ExecMessageSummaryUtilTest {
     String fieldName = "myField";
     String instanceFieldPutUuid = UUID.randomUUID().toString();
     AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
-    String responseToUuid = UUID.randomUUID().toString();
+    String responseToId = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
         messageBuilder.buildPutObjectDone(
-            peerUuid, accessibleObject, instanceFieldPutUuid, responseToUuid);
+            peerUuid, accessibleObject, instanceFieldPutUuid, responseToId);
     assertEquals(
         "put_done " + getClassnameWithoutPackage(targetClass.getName()) + "." + fieldName,
         ExecMessageSummaryUtil.getOneLinerSummary(execMessage));
@@ -162,11 +162,11 @@ public class ExecMessageSummaryUtilTest {
     String fieldName = "aStaticField";
     String staticFieldPutUuid = UUID.randomUUID().toString();
     AccessibleObject accessibleObject = targetClass.getDeclaredField(fieldName);
-    String responseToUuid = UUID.randomUUID().toString();
+    String responseToId = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
         messageBuilder.buildPutStaticDone(
-            peerUuid, accessibleObject, staticFieldPutUuid, responseToUuid);
+            peerUuid, accessibleObject, staticFieldPutUuid, responseToId);
     assertEquals(
         "put_done " + getClassnameWithoutPackage(targetClass.getName()) + "." + fieldName,
         ExecMessageSummaryUtil.getOneLinerSummary(execMessage));
@@ -185,11 +185,11 @@ public class ExecMessageSummaryUtilTest {
     String throwableMessage = "my throwable message";
     Throwable throwable = new RuntimeException(throwableMessage);
     AccessibleObject accessibleObject = DummyClass.class.getMethod("myMethod");
-    String responseToUuid = UUID.randomUUID().toString();
+    String responseToId = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
         messageBuilder.buildAccessibleObjectThrowable(
-            peerUuid, accessibleObject, throwable, responseToUuid);
+            peerUuid, accessibleObject, throwable, responseToId);
     assertEquals(
         "throw RuntimeException: \"" + throwableMessage + "\"",
         ExecMessageSummaryUtil.getOneLinerSummary(execMessage));
@@ -205,7 +205,7 @@ public class ExecMessageSummaryUtilTest {
     UUID peerUuid = UUID.randomUUID();
     Method method = DummyClass.class.getMethod("addInts", int.class, int.class);
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
-    String responseToUuid = UUID.randomUUID().toString();
+    String responseToId = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
@@ -214,7 +214,7 @@ public class ExecMessageSummaryUtilTest {
             method,
             returnValueObjRef,
             method.getReturnType() == void.class,
-            responseToUuid);
+            responseToId);
 
     assertEquals("return void", ExecMessageSummaryUtil.getOneLinerSummary(execMessage));
   }
@@ -233,7 +233,7 @@ public class ExecMessageSummaryUtilTest {
     Method method = targetClass.getMethod("addInts", int.class, int.class);
     ObjectRef returnValueObjRef = ObjectRef.randomRef();
     int returnValue = 4;
-    String responseToUuid = UUID.randomUUID().toString();
+    String responseToId = UUID.randomUUID().toString();
 
     ExecMessage execMessage =
         messageBuilder.buildReturnValue(
@@ -242,7 +242,7 @@ public class ExecMessageSummaryUtilTest {
             method,
             returnValueObjRef,
             method.getReturnType() == void.class,
-            responseToUuid);
+            responseToId);
 
     assertEquals(
         "return "

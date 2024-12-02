@@ -116,11 +116,11 @@ public class SetClassVariableDispatcher extends SetFieldDispatcher {
       AccessibleObject accessibleObject,
       Throwable exceptionWhileLoading,
       Throwable exceptionWhileInvoking) {
-    String messageUuid = execMessage.getMessageUuid();
+    String messageId = execMessage.getMessageId();
     if (exceptionWhileLoading != null || exceptionWhileInvoking != null) {
       return wrapAfterExecThrowableMessage(
-          messageUuid, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
+          messageId, accessibleObject, exceptionWhileLoading, exceptionWhileInvoking);
     }
-    return messageBuilder.buildPutStaticDone(peerUuid, accessibleObject, messageUuid, messageUuid);
+    return messageBuilder.buildPutStaticDone(peerUuid, accessibleObject, messageId, messageId);
   }
 }

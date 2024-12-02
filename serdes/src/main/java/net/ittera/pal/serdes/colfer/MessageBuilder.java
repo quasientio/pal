@@ -186,19 +186,19 @@ public final class MessageBuilder {
     return params;
   }
 
-  private ExecMessage newWrapper(ExecMessageType msgType, UUID peerUuid, String responseToUuid) {
+  private ExecMessage newWrapper(ExecMessageType msgType, UUID peerUuid, String responseToId) {
     ExecMessage msgWrapper =
         new ExecMessage()
             .withPeerUuid(peerUuid.toString())
-            .withMessageUuid(UUID.randomUUID().toString())
+            .withMessageId(UUID.randomUUID().toString())
             .withExecMessageType(msgType.toByte())
             .withThreadName(Thread.currentThread().getName())
             .withDispatchSeq(threadDispatchSequence.get().intValue())
             .withBuilderSeq(threadBuilderSequence.get().getAndIncrement())
             .withCurrentTime(dtf.format(ZonedDateTime.now(ZoneOffset.UTC)));
 
-    if (responseToUuid != null && !responseToUuid.isEmpty()) {
-      msgWrapper.setResponseToUuid(responseToUuid);
+    if (responseToId != null && !responseToId.isEmpty()) {
+      msgWrapper.setResponseToId(responseToId);
     }
 
     return msgWrapper;
@@ -757,15 +757,15 @@ public final class MessageBuilder {
   public ExecMessage buildPutStaticDone(
       UUID peerUuid,
       AccessibleObject accessibleObject,
-      String staticFieldPutUuid,
-      String responseToUuid) {
+      String staticFieldPutId,
+      String responseToId) {
 
-    return newWrapper(ExecMessageType.PUT_STATIC_DONE, peerUuid, responseToUuid)
+    return newWrapper(ExecMessageType.PUT_STATIC_DONE, peerUuid, responseToId)
         .withStaticFieldPutDone(
             new StaticFieldPutDone()
                 .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
                 .withField(getWrappedField((Field) accessibleObject))
-                .withStaticFieldPutUuid(staticFieldPutUuid));
+                .withStaticFieldPutId(staticFieldPutId));
   }
 
   // </editor-fold>
@@ -807,15 +807,15 @@ public final class MessageBuilder {
   public ExecMessage buildPutObjectDone(
       UUID peerUuid,
       AccessibleObject accessibleObject,
-      String instanceFieldPutUuid,
-      String responseToUuid) {
+      String instanceFieldPutId,
+      String responseToId) {
 
-    return newWrapper(ExecMessageType.PUT_FIELD_DONE, peerUuid, responseToUuid)
+    return newWrapper(ExecMessageType.PUT_FIELD_DONE, peerUuid, responseToId)
         .withInstanceFieldPutDone(
             new InstanceFieldPutDone()
                 .withClazz(getWrappedClass(((Field) accessibleObject).getDeclaringClass()))
                 .withField(getWrappedField((Field) accessibleObject))
-                .withInstanceFieldPutUuid(instanceFieldPutUuid));
+                .withInstanceFieldPutId(instanceFieldPutId));
   }
 
   // </editor-fold>
@@ -825,7 +825,7 @@ public final class MessageBuilder {
       UUID peerUuid,
       @Nullable AccessibleObject accessibleObject,
       Throwable exception,
-      String responseToUuid) {
+      String responseToId) {
 
     final RaisedThrowable raisedThrowable = new RaisedThrowable();
     if (accessibleObject != null) {
@@ -867,7 +867,7 @@ public final class MessageBuilder {
       }
     }
 
-    return newWrapper(ExecMessageType.THROWABLE, peerUuid, responseToUuid)
+    return newWrapper(ExecMessageType.THROWABLE, peerUuid, responseToId)
         .withRaisedThrowable(raisedThrowable.withThrowable(buildThrowableMessage(exception)));
   }
 
@@ -880,7 +880,7 @@ public final class MessageBuilder {
       AccessibleObject accessibleObject,
       ObjectRef objectRef,
       boolean isVoid,
-      String responseToUuid) {
+      String responseToId) {
 
     final ReturnValue valueMessage = new ReturnValue();
 
@@ -919,7 +919,7 @@ public final class MessageBuilder {
     }
 
     // set class and getIsVoid
-    return newWrapper(ExecMessageType.RETURN_VALUE, peerUuid, responseToUuid)
+    return newWrapper(ExecMessageType.RETURN_VALUE, peerUuid, responseToId)
         .withReturnValue(valueMessage.withIsVoid(isVoid));
   }
 
@@ -954,7 +954,7 @@ public final class MessageBuilder {
     return new InterceptMessage()
         .withPeerUuid(peerUuid.toString())
         .withInterceptType(type.toByte())
-        .withMessageUuid(UUID.randomUUID().toString())
+        .withMessageId(UUID.randomUUID().toString())
         .withClazz(className)
         .withMethod(
             new net.ittera.pal.messages.colfer.InterceptableMethod()
@@ -976,7 +976,7 @@ public final class MessageBuilder {
     return new InterceptMessage()
         .withPeerUuid(peerUuid.toString())
         .withInterceptType(type.toByte())
-        .withMessageUuid(UUID.randomUUID().toString())
+        .withMessageId(UUID.randomUUID().toString())
         .withClazz(className)
         .withField(
             new net.ittera.pal.messages.colfer.InterceptableField()
@@ -995,7 +995,7 @@ public final class MessageBuilder {
       return new InterceptMessage()
           .withPeerUuid(intercept.getPeer().toString())
           .withInterceptType(intercept.getType().toByte())
-          .withMessageUuid(intercept.getUuid().toString())
+          .withMessageId(intercept.getUuid().toString())
           .withClazz(intercept.getClazz())
           .withMethod(
               new net.ittera.pal.messages.colfer.InterceptableMethod()
@@ -1012,7 +1012,7 @@ public final class MessageBuilder {
     return new InterceptMessage()
         .withPeerUuid(intercept.getPeer().toString())
         .withInterceptType(intercept.getType().toByte())
-        .withMessageUuid(intercept.getUuid().toString())
+        .withMessageId(intercept.getUuid().toString())
         .withClazz(intercept.getClazz())
         .withField(
             new net.ittera.pal.messages.colfer.InterceptableField()
@@ -1026,10 +1026,10 @@ public final class MessageBuilder {
         .withCallbackMethod(intercept.getCallbackMethod());
   }
 
-  public InterceptReply buildInterceptReply(UUID peerUuid, UUID responseToUuid, boolean result) {
+  public InterceptReply buildInterceptReply(UUID peerUuid, UUID responseToId, boolean result) {
     return new InterceptReply()
         .withPeerUuid(peerUuid.toString())
-        .withResponseToUuid(responseToUuid.toString())
+        .withResponseToId(responseToId.toString())
         .withResult(result);
   }
 
@@ -1179,7 +1179,7 @@ public final class MessageBuilder {
     if (fromPeerUuid != null) {
       execMessage.setPeerUuid(fromPeerUuid.toString());
     }
-    execMessage.setMessageUuid(jsonRpcRequest.getId());
+    execMessage.setMessageId(jsonRpcRequest.getId());
     ExecMessageType execMessageType = JsonRpcMessageUtils.getExecMessageType(jsonRpcRequest);
     execMessage.setExecMessageType(execMessageType.toByte());
 
@@ -1220,7 +1220,7 @@ public final class MessageBuilder {
 
     // Create a JSON-RPC response object
     final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
-    jsonRpcResponse.setId(execMessageResponse.getResponseToUuid());
+    jsonRpcResponse.setId(execMessageResponse.getResponseToId());
 
     switch (ExecMessageType.fromByte(execMessageResponse.getExecMessageType())) {
       case PUT_STATIC_DONE:
@@ -1313,7 +1313,7 @@ public final class MessageBuilder {
     final ControlMessage controlMessage =
         new ControlMessage()
             .withFromPeer(fromPeer.toString())
-            .withMessageUuid(UUID.randomUUID().toString())
+            .withMessageId(UUID.randomUUID().toString())
             .withCommand(ControlCommandType.DELETE_OBJECT.toByte());
 
     if (body != null && !body.isEmpty()) {
@@ -1325,7 +1325,7 @@ public final class MessageBuilder {
   public ControlMessage buildDeleteSessionControlMessage(UUID fromPeer) {
     return new ControlMessage()
         .withFromPeer(fromPeer.toString())
-        .withMessageUuid(UUID.randomUUID().toString())
+        .withMessageId(UUID.randomUUID().toString())
         .withCommand(ControlCommandType.DELETE_SESSION.toByte());
   }
 
@@ -1334,7 +1334,7 @@ public final class MessageBuilder {
     final ControlMessage controlMessage =
         new ControlMessage()
             .withFromPeer(fromPeerUuid.toString())
-            .withMessageUuid(UUID.randomUUID().toString())
+            .withMessageId(UUID.randomUUID().toString())
             .withStatus(statusType.toByte());
 
     if (body != null && !body.isEmpty()) {

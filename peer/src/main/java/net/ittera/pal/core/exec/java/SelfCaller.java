@@ -19,7 +19,6 @@
 
 package net.ittera.pal.core.exec.java;
 
-import com.google.common.primitives.Longs;
 import com.google.inject.name.Named;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -32,10 +31,10 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.stream.IntStream;
 import net.ittera.pal.common.objects.ObjectRef;
-import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.core.PeerException;
 import net.ittera.pal.core.RunOptions;
 import net.ittera.pal.core.exec.UnsupportedMessageException;
+import net.ittera.pal.core.messages.PublishedOffsetMsg;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -146,24 +145,24 @@ public class SelfCaller {
     if (runOptions.contains(RunOptions.WITH_OUT_LOG)) {
       boolean offsetPublished = false;
       long offset = -1;
-      UUID uuid = null;
+      String msgId = null;
       while (!offsetPublished) {
         assert offsetSubscriber != null;
-        // multipart msg: 1) offset as byte[], 2) uuid as byte[]
-        offset = Longs.fromByteArray(offsetSubscriber.recv(0));
-        uuid = UuidUtils.fromBytes(offsetSubscriber.recv(0));
-        if (reply.getMessageUuid().equalsIgnoreCase(uuid.toString())) {
+        PublishedOffsetMsg publishedOffsetMsg = PublishedOffsetMsg.receive(offsetSubscriber, true);
+        offset = publishedOffsetMsg.getOffset();
+        msgId = publishedOffsetMsg.getMessageId();
+        if (reply.getMessageId().equalsIgnoreCase(msgId)) {
           offsetPublished = true;
         }
       }
       // close socket
       offsetSubscriber.close();
       if (logger.isDebugEnabled()) {
-        logger.debug("Returned reply message with offset={} and uuid={}", offset, uuid);
+        logger.debug("Returned reply message with offset={} and id={}", offset, msgId);
       }
     } else {
       if (logger.isDebugEnabled()) {
-        logger.debug("Returned reply message with uuid={}", reply.getMessageUuid());
+        logger.debug("Returned reply message with id={}", reply.getMessageId());
       }
     }
 

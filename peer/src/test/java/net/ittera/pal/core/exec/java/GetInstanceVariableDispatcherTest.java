@@ -107,7 +107,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(2L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     short returned = (short) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
@@ -156,7 +156,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     byte[] returned = (byte[]) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
@@ -205,7 +205,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     Integer returned = (Integer) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
@@ -254,7 +254,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(2L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     String returned = (String) Unwrapper.unwrapObject(replyMsg.getReturnValue().getObject());
@@ -303,7 +303,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(2L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     Object returned =
@@ -354,7 +354,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(1L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     assertTrue(replyMsg.getReturnValue().getObject().getIsNull());
@@ -402,7 +402,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(2L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     Object returned =
@@ -453,7 +453,7 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     // expect
     verifyDispatcherConnectorSendExecMessageCalledOnce();
-    assertThat(replyMsg.getResponseToUuid(), is(incomingMessage.getMessageUuid()));
+    assertThat(replyMsg.getResponseToId(), is(incomingMessage.getMessageId()));
     assertThat(objectLookupStore.size(), is(2L));
     assertFalse(replyMsg.getReturnValue().getIsVoid());
     Object returned =

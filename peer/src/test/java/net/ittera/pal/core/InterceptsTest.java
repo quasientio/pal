@@ -234,7 +234,7 @@ public class InterceptsTest extends ZmqEnabledTest {
             Collections.emptyList(),
             this.getClass().getName(),
             "someCallbackMethod");
-    final UUID interceptUuid = UUID.fromString(interceptMessage.getMessageUuid());
+    final String interceptId = interceptMessage.getMessageId();
     new InterceptEventMsg(interceptMessage).send(registerSocket);
 
     // verify reply
@@ -242,7 +242,7 @@ public class InterceptsTest extends ZmqEnabledTest {
     assertThat(reply, is(InterceptMatcher.REGISTER_OK_REPLY));
 
     // now unregister
-    new InterceptEventMsg(interceptUuid).send(registerSocket);
+    new InterceptEventMsg(interceptId).send(registerSocket);
 
     // verify reply
     reply = registerSocket.recvStr();

@@ -64,7 +64,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
   private DirectoryConnectionProvider directoryConnectionProvider;
   private PalDirectory palDirectory;
   private List<InterceptMessage> interceptRequestMessages;
-  private List<UUID> requestsToUnregister;
+  private List<String> requestsToUnregister;
   private static final String INTERCEPT_REG_ADDRESS = "inproc://intercepts.reg";
 
   private class InterceptsStub implements Runnable {
@@ -81,7 +81,7 @@ public class InterceptInformerTest extends ZmqEnabledTest {
             interceptMessage.unmarshal(interceptEventMsg.getBody(), 0);
             interceptRequestMessages.add(interceptMessage);
           } else { // Type.UNREGISTER
-            requestsToUnregister.add(interceptEventMsg.getInterceptMessageUuid());
+            requestsToUnregister.add(interceptEventMsg.getInterceptMessageId());
           }
           repSocket.send("0");
         } catch (ZMQException e) {
@@ -132,16 +132,16 @@ public class InterceptInformerTest extends ZmqEnabledTest {
 
     // create and send new intercept event to informer
     final UUID remotePeerUuid = UUID.randomUUID();
-    final UUID interceptUuid = UUID.randomUUID();
+    final String interceptId = UUID.randomUUID().toString();
     interceptInformer =
         new InterceptInformer(
             context, msgBuilder, directoryConnectionProvider, peerUuid, INTERCEPT_REG_ADDRESS);
     final InterceptEvent interceptEvent =
         new InterceptEvent(
             InterceptEvent.Type.INTERCEPT_ADDED,
-            "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-uuid",
+            "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-id",
             remotePeerUuid,
-            interceptUuid,
+            interceptId,
             interceptRequest);
     interceptInformer.interceptEvent(interceptEvent);
 
@@ -166,16 +166,16 @@ public class InterceptInformerTest extends ZmqEnabledTest {
 
     // create and send new intercept event to informer
     final UUID remotePeerUuid = UUID.randomUUID();
-    final UUID interceptUuid = UUID.randomUUID();
+    final String interceptId = UUID.randomUUID().toString();
     interceptInformer =
         new InterceptInformer(
             context, msgBuilder, directoryConnectionProvider, peerUuid, INTERCEPT_REG_ADDRESS);
     InterceptEvent interceptEvent =
         new InterceptEvent(
             InterceptEvent.Type.INTERCEPT_ADDED,
-            "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-uuid",
+            "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-id",
             remotePeerUuid,
-            interceptUuid,
+            interceptId,
             interceptRequest);
     interceptInformer.interceptEvent(interceptEvent);
 
@@ -186,9 +186,9 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     interceptEvent =
         new InterceptEvent(
             InterceptEvent.Type.INTERCEPT_REMOVED,
-            "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-uuid",
+            "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-id",
             remotePeerUuid,
-            interceptUuid,
+            interceptId,
             null);
     interceptInformer.interceptEvent(interceptEvent);
 
@@ -212,16 +212,16 @@ public class InterceptInformerTest extends ZmqEnabledTest {
     execService.execute(new InterceptsStub());
 
     // create and send new intercept event to informer
-    final UUID interceptUuid = UUID.randomUUID();
+    final String interceptId = UUID.randomUUID().toString();
     interceptInformer =
         new InterceptInformer(
             context, msgBuilder, directoryConnectionProvider, peerUuid, INTERCEPT_REG_ADDRESS);
     final InterceptEvent interceptEvent =
         new InterceptEvent(
             InterceptEvent.Type.INTERCEPT_ADDED,
-            "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-uuid",
+            "/root/intercepts/dummy-peer-uuid/dummy-intercept-req-id",
             peerUuid,
-            interceptUuid,
+            interceptId,
             interceptRequest);
     interceptInformer.interceptEvent(interceptEvent);
 

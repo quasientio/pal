@@ -35,21 +35,24 @@ import net.ittera.pal.common.directory.nodes.InterceptRequest;
  *     intercept was removed.
  * @param interceptPath The path of the intercept.
  * @param peerUuid The UUID of the peer that owns the new or removed intercept.
- * @param interceptUuid The UUID of the intercept that was added or removed.
+ * @param interceptId The Id of the intercept that was added or removed.
  * @param interceptRequest The intercept request that was added. Null if the intercept was removed.
  */
 public record InterceptEvent(
     @Nonnull InterceptEvent.Type type,
     @Nonnull String interceptPath,
     @Nonnull UUID peerUuid,
-    @Nonnull UUID interceptUuid,
+    @Nonnull String interceptId,
     @Nullable InterceptRequest<?> interceptRequest) {
 
   public InterceptEvent {
     Objects.requireNonNull(type, "type cannot be null");
     validatePath(interceptPath);
     Objects.requireNonNull(peerUuid, "peerUuid cannot be null");
-    Objects.requireNonNull(interceptUuid, "interceptUuid cannot be null");
+    Objects.requireNonNull(interceptId, "interceptId cannot be null");
+    if (interceptId.isEmpty()) {
+      throw new IllegalArgumentException("interceptId cannot be empty");
+    }
     if (type == Type.INTERCEPT_ADDED) {
       Objects.requireNonNull(interceptRequest, "interceptRequest cannot be null");
     }

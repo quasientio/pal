@@ -64,11 +64,11 @@ public class AbstractTool {
     };
   }
 
-  protected static String getMessageUuid(Message msg) {
+  protected static String getMessageId(Message msg) {
     final MessageType messageType = MessageType.fromByte(msg.getMessageType());
     return switch (messageType) {
-      case EXEC_MESSAGE -> msg.getExecMessage().getMessageUuid();
-      case INTERCEPT_MESSAGE -> msg.getInterceptMessage().getMessageUuid();
+      case EXEC_MESSAGE -> msg.getExecMessage().getMessageId();
+      case INTERCEPT_MESSAGE -> msg.getInterceptMessage().getMessageId();
       default -> null;
     };
   }
@@ -131,7 +131,7 @@ public class AbstractTool {
 
   protected static String getId(LogMessage<?> logMessage) {
     if (isBinaryRpc(logMessage)) {
-      return getMessageUuid((Message) logMessage.getContent());
+      return getMessageId((Message) logMessage.getContent());
     } else if (isJsonRpc(logMessage)) {
       return ((JsonRpcMessage) logMessage.getContent()).getId();
     }

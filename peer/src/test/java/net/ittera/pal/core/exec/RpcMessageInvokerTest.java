@@ -104,7 +104,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
                     logger.error("Error getting constructor", e);
                   }
                   return msgBuilder.buildReturnValue(
-                      peerUuid, "", constructor, null, false, incomingMsg.getMessageUuid());
+                      peerUuid, "", constructor, null, false, incomingMsg.getMessageId());
                 });
 
     this.rpcMessageInvoker =
@@ -152,8 +152,8 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     assertThat(listenerReceived.get(), is(1));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
 
-    // assert reply msg followsUuid of original
-    assertThat(replyMsg.getExecMessage().getResponseToUuid(), is(invokable.getMessageUuid()));
+    // assert reply msg is response to original
+    assertThat(replyMsg.getExecMessage().getResponseToId(), is(invokable.getMessageId()));
   }
 
   @Test
@@ -199,7 +199,7 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     assertThat(listenerReceived.get(), is(1));
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), anyBoolean());
 
-    // assert reply msg followsUuid of original
+    // assert reply msg is response to original
     assertThat(jsonRpcResponse.getId(), is(requestUuid.toString()));
   }
 
@@ -238,10 +238,10 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     assertThat(listenerReceived.get(), is(msgCount));
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), anyBoolean());
 
-    // assert reply msg followsUuid of original
+    // assert reply msg is response to original
     for (int i = 0; i < msgCount; i++) {
       assertThat(
-          replyMessages.get(i).getResponseToUuid(), is(messagesToInvoke.get(i).getMessageUuid()));
+          replyMessages.get(i).getResponseToId(), is(messagesToInvoke.get(i).getMessageId()));
     }
   }
 

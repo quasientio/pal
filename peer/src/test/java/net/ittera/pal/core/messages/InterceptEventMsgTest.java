@@ -72,14 +72,14 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
   @Test
   public void sendUnregister() {
 
-    final UUID interceptMsgUuid = UUID.randomUUID();
+    final String interceptMsgId = UUID.randomUUID().toString();
     final var type = InterceptEventMsg.Type.UNREGISTER;
 
-    InterceptEventMsg msg = new InterceptEventMsg(interceptMsgUuid);
+    InterceptEventMsg msg = new InterceptEventMsg(interceptMsgId);
 
     // verify getters
     assertThat(msg.getType(), is(type));
-    assertThat(msg.getInterceptMessageUuid(), is(interceptMsgUuid));
+    assertThat(msg.getInterceptMessageId(), is(interceptMsgId));
 
     // send
     String socketAddress = "inproc://here";
@@ -116,7 +116,7 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
       // ok then
     }
     try {
-      new InterceptEventMsg((UUID) null);
+      new InterceptEventMsg((String) null);
       fail("Should have raised NPE");
     } catch (NullPointerException e) {
       // ok then
@@ -137,13 +137,13 @@ public class InterceptEventMsgTest extends ZmqEnabledTest {
         new InterceptEventMsg("another body".getBytes(StandardCharsets.UTF_8)), is(not(msg)));
 
     // UNREGISTER type
-    UUID interceptMsgUuid = UUID.randomUUID();
-    msg = new InterceptEventMsg(interceptMsgUuid);
+    String interceptMsgId = UUID.randomUUID().toString();
+    msg = new InterceptEventMsg(interceptMsgId);
 
     // assert equality
-    assertThat(new InterceptEventMsg(interceptMsgUuid), is(msg));
+    assertThat(new InterceptEventMsg(interceptMsgId), is(msg));
 
-    // different messageUuid
-    assertThat(new InterceptEventMsg(UUID.randomUUID()), is(not(msg)));
+    // different messageId
+    assertThat(new InterceptEventMsg(UUID.randomUUID().toString()), is(not(msg)));
   }
 }

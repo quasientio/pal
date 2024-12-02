@@ -314,7 +314,7 @@ public class PalDirectory implements AutoCloseable {
     if (parts.length == 4) {
       try {
         final UUID peerUuid = UUID.fromString(parts[2]);
-        final UUID interceptUuid = UUID.fromString(parts[3]);
+        final String interceptId = parts[3];
         final byte[] data = event.getKeyValue().getValue().getBytes();
         final InterceptRequest<?> interceptRequest;
         logger.debug(
@@ -326,7 +326,7 @@ public class PalDirectory implements AutoCloseable {
         } else {
           interceptRequest = null;
         }
-        return new InterceptEvent(type, path, peerUuid, interceptUuid, interceptRequest);
+        return new InterceptEvent(type, path, peerUuid, interceptId, interceptRequest);
       } catch (IllegalArgumentException e) {
         logger.warn("Invalid UUID or unexpected path of len=4: {}", path, e);
       }

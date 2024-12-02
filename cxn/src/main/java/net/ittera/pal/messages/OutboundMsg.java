@@ -25,11 +25,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.runtime.ExecPhase;
-import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.colfer.InternalHeader;
 import net.ittera.pal.messages.types.MessageType;
 import org.slf4j.Logger;
@@ -51,8 +49,8 @@ public class OutboundMsg extends BaseMsg {
    * 2. [execution phase]  : int (ExecPhase: Undefined if MessageType != ExecMessage)
    * 3. headers to follow  : int
    * 4. [headers]          : byte[]* (InternalHeader)
-   * 5. message uuid       : byte[]
-   * 6. responseToUuid      : byte[]
+   * 5. message id         : byte[]
+   * 6. responseToId       : byte[]
    * 7. message body       : byte[]
    * </pre>
    */
@@ -62,8 +60,8 @@ public class OutboundMsg extends BaseMsg {
 
   private final ExecPhase execPhase;
   @Nullable private final List<InternalHeader> headers;
-  private final UUID messageUuid;
-  @Nullable private final UUID responseToUuid;
+  private final String messageId;
+  @Nullable private final String responseToId;
   private final byte[] body;
 
   // Only used by unit test
@@ -71,16 +69,16 @@ public class OutboundMsg extends BaseMsg {
       MessageType messageType,
       ExecPhase execPhase,
       @Nullable List<InternalHeader> headers,
-      UUID messageUuid,
-      @Nullable UUID responseToUuid,
+      String messageId,
+      @Nullable String responseToId,
       byte[] body) {
 
-    Stream.of(messageType, execPhase, messageUuid, body).forEach(Objects::requireNonNull);
+    Stream.of(messageType, execPhase, messageId, body).forEach(Objects::requireNonNull);
     this.messageType = messageType;
     this.execPhase = execPhase;
     this.headers = headers;
-    this.messageUuid = messageUuid;
-    this.responseToUuid = responseToUuid;
+    this.messageId = messageId;
+    this.responseToId = responseToId;
     this.body = body;
   }
 
@@ -88,16 +86,16 @@ public class OutboundMsg extends BaseMsg {
       MessageType messageType,
       ExecPhase execPhase,
       @Nullable List<InternalHeader> headers,
-      UUID messageUuid,
-      @Nullable UUID responseToUuid,
+      String messageId,
+      @Nullable String responseToId,
       @Nullable Marshallable marshallable) {
 
-    Stream.of(messageType, execPhase, messageUuid, marshallable).forEach(Objects::requireNonNull);
+    Stream.of(messageType, execPhase, messageId, marshallable).forEach(Objects::requireNonNull);
     this.messageType = messageType;
     this.execPhase = execPhase;
     this.headers = headers;
-    this.messageUuid = messageUuid;
-    this.responseToUuid = responseToUuid;
+    this.messageId = messageId;
+    this.responseToId = responseToId;
     this.body = toBytes(marshallable);
   }
 
@@ -105,11 +103,11 @@ public class OutboundMsg extends BaseMsg {
       MessageType messageType,
       ExecPhase execPhase,
       @Nullable List<InternalHeader> headers,
-      UUID messageUuid,
-      @Nullable UUID responseToUuid,
+      String messageId,
+      @Nullable String responseToId,
       byte[] body,
       int size) {
-    this(messageType, execPhase, headers, messageUuid, responseToUuid, body);
+    this(messageType, execPhase, headers, messageId, responseToId, body);
     this.size = size;
   }
 
@@ -157,18 +155,18 @@ public class OutboundMsg extends BaseMsg {
       }
     }
 
-    // message uuid
-    buff = UuidUtils.toBytes(messageUuid);
+    // message id
+    buff = messageId.getBytes(ZMQ.CHARSET);
     size += buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
     }
 
-    // responseToUuid
+    // responseToId
     buff =
-        responseToUuid == null
+        responseToId == null
             ? String.valueOf(0).getBytes(ZMQ.CHARSET)
-            : UuidUtils.toBytes(responseToUuid);
+            : responseToId.getBytes(ZMQ.CHARSET);
     size += buff.length;
     if (!socket.send(buff, ZMQ.SNDMORE)) {
       return false;
@@ -219,27 +217,26 @@ public class OutboundMsg extends BaseMsg {
       headers = null;
     }
 
-    // message uuid
+    // message id
     buff = socket.recv();
     msgSize += buff.length;
-    final UUID messageUuid = UuidUtils.fromBytes(buff);
+    final String messageId = new String(buff, ZMQ.CHARSET);
 
-    // responseToUuid
+    // responseToId
     buff = socket.recv();
     msgSize += buff.length;
-    final UUID responseToUuid;
+    final String responseToId;
     if (!"0".equals(new String(buff, ZMQ.CHARSET))) {
-      responseToUuid = UuidUtils.fromBytes(buff);
+      responseToId = new String(buff, ZMQ.CHARSET);
     } else {
-      responseToUuid = null;
+      responseToId = null;
     }
 
     // message body
     final byte[] body = socket.recv();
     msgSize += body.length;
 
-    return new OutboundMsg(
-        messageType, execPhase, headers, messageUuid, responseToUuid, body, msgSize);
+    return new OutboundMsg(messageType, execPhase, headers, messageId, responseToId, body, msgSize);
   }
 
   // default is non-blocking
@@ -260,14 +257,14 @@ public class OutboundMsg extends BaseMsg {
     return messageType == that.messageType
         && execPhase.equals(that.execPhase)
         && Objects.equals(headers, that.headers)
-        && messageUuid.equals(that.messageUuid)
-        && Objects.equals(responseToUuid, that.responseToUuid)
+        && messageId.equals(that.messageId)
+        && Objects.equals(responseToId, that.responseToId)
         && Arrays.equals(body, that.body);
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(messageType, execPhase, headers, messageUuid, responseToUuid);
+    int result = Objects.hash(messageType, execPhase, headers, messageId, responseToId);
     result = 31 * result + Arrays.hashCode(body);
     return result;
   }
@@ -281,10 +278,10 @@ public class OutboundMsg extends BaseMsg {
         + execPhase
         + ", headers="
         + headers
-        + ", messageUuid="
-        + messageUuid
-        + ", responseToUuid="
-        + responseToUuid
+        + ", messageId="
+        + messageId
+        + ", responseToId="
+        + responseToId
         + ", body="
         + Arrays.toString(body)
         + ", size="
@@ -306,13 +303,13 @@ public class OutboundMsg extends BaseMsg {
     return headers;
   }
 
-  public UUID getMessageUuid() {
-    return messageUuid;
+  public String getMessageId() {
+    return messageId;
   }
 
   @Nullable
-  public UUID getResponseToUuid() {
-    return responseToUuid;
+  public String getResponseToId() {
+    return responseToId;
   }
 
   public byte[] getBody() {

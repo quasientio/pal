@@ -93,7 +93,7 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
                   }
                   ExecMessage reply =
                       msgBuilder.buildReturnValue(
-                          peerUuid, "", constructor, null, false, incomingMsg.getMessageUuid());
+                          peerUuid, "", constructor, null, false, incomingMsg.getMessageId());
                   execMessageReplies.add(reply);
                   return reply;
                 });
@@ -148,8 +148,8 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     assertThat(execMessageReplies.size(), is(1));
     assertThat(logMessageInvoker.getRequestsDispatched().get(), is((long) 1));
 
-    // assert reply msg followsUuid of original
-    assertThat(execMessageReplies.get(0).getResponseToUuid(), is(invokable.getMessageUuid()));
+    // assert reply msg is response to original
+    assertThat(execMessageReplies.get(0).getResponseToId(), is(invokable.getMessageId()));
   }
 
   @Test
@@ -197,11 +197,10 @@ public class LogMessageInvokerTest extends ZmqEnabledTest {
     assertThat(logMessageInvoker.getRequestsDispatched().get(), is((long) msgCount));
     assertThat(execMessageReplies.size(), is(msgCount));
 
-    // assert reply msg followsUuid of original
+    // assert reply msg is response to original
     for (int i = 0; i < msgCount; i++) {
       assertThat(
-          execMessageReplies.get(i).getResponseToUuid(),
-          is(messagesToInvoke.get(i).getMessageUuid()));
+          execMessageReplies.get(i).getResponseToId(), is(messagesToInvoke.get(i).getMessageId()));
     }
   }
 }

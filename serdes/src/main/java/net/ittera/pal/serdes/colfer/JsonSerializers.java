@@ -131,8 +131,8 @@ public class JsonSerializers {
         jsonElement.addProperty("peer_uuid", message.peerUuid);
       }
 
-      if (notEmpty(message.messageUuid)) {
-        jsonElement.addProperty("message_uuid", message.messageUuid);
+      if (notEmpty(message.messageId)) {
+        jsonElement.addProperty("message_id", message.messageId);
       }
 
       jsonElement.addProperty("msg_type", execMessageType.name());
@@ -153,8 +153,8 @@ public class JsonSerializers {
         jsonElement.addProperty("builder_seq", message.builderSeq);
       }
 
-      if (notEmpty(message.responseToUuid)) {
-        jsonElement.addProperty("response_to", message.responseToUuid);
+      if (notEmpty(message.responseToId)) {
+        jsonElement.addProperty("response_to", message.responseToId);
       }
 
       switch (execMessageType) {
@@ -436,8 +436,8 @@ public class JsonSerializers {
       if (notEmpty(message.field)) {
         jsonElement.add("field", jsonSerializationContext.serialize(message.field));
       }
-      if (notEmpty(message.staticFieldPutUuid)) {
-        jsonElement.addProperty("static_field_put_uuid", message.staticFieldPutUuid);
+      if (notEmpty(message.staticFieldPutId)) {
+        jsonElement.addProperty("static_field_put_id", message.staticFieldPutId);
       }
 
       return jsonElement;
@@ -455,9 +455,8 @@ public class JsonSerializers {
       if (jsonObject.has("field")) {
         staticFieldPutDone.field = context.deserialize(jsonObject.get("field"), Field.class);
       }
-      if (jsonObject.has("static_field_put_uuid")) {
-        staticFieldPutDone.staticFieldPutUuid =
-            jsonObject.get("static_field_put_uuid").getAsString();
+      if (jsonObject.has("static_field_put_id")) {
+        staticFieldPutDone.staticFieldPutId = jsonObject.get("static_field_put_id").getAsString();
       }
       return staticFieldPutDone;
     }
@@ -535,8 +534,8 @@ public class JsonSerializers {
       if (notEmpty(message.field)) {
         jsonElement.add("field", jsonSerializationContext.serialize(message.field));
       }
-      if (notEmpty(message.instanceFieldPutUuid)) {
-        jsonElement.addProperty("instance_field_put_uuid", message.instanceFieldPutUuid);
+      if (notEmpty(message.instanceFieldPutId)) {
+        jsonElement.addProperty("instance_field_put_id", message.instanceFieldPutId);
       }
 
       return jsonElement;
@@ -554,9 +553,9 @@ public class JsonSerializers {
       if (jsonObject.has("field")) {
         instanceFieldPutDone.field = context.deserialize(jsonObject.get("field"), Field.class);
       }
-      if (jsonObject.has("instance_field_put_uuid")) {
-        instanceFieldPutDone.instanceFieldPutUuid =
-            jsonObject.get("instance_field_put_uuid").getAsString();
+      if (jsonObject.has("instance_field_put_id")) {
+        instanceFieldPutDone.instanceFieldPutId =
+            jsonObject.get("instance_field_put_id").getAsString();
       }
       return instanceFieldPutDone;
     }
@@ -616,8 +615,8 @@ public class JsonSerializers {
       if (notEmpty(message.peerUuid)) {
         jsonElement.addProperty("peer_uuid", message.peerUuid);
       }
-      if (notEmpty(message.messageUuid)) {
-        jsonElement.addProperty("message_uuid", message.messageUuid);
+      if (notEmpty(message.messageId)) {
+        jsonElement.addProperty("message_id", message.messageId);
       }
 
       final InterceptType interceptType = InterceptType.fromByte(message.interceptType);
@@ -670,8 +669,8 @@ public class JsonSerializers {
       if (notEmpty(message.peerUuid)) {
         jsonElement.addProperty("peer_uuid", message.peerUuid);
       }
-      if (notEmpty(message.responseToUuid)) {
-        jsonElement.addProperty("response_to", message.responseToUuid);
+      if (notEmpty(message.responseToId)) {
+        jsonElement.addProperty("response_to", message.responseToId);
       }
       if (notEmpty(message.result)) {
         jsonElement.addProperty("result", message.result);
@@ -839,8 +838,8 @@ public class JsonSerializers {
       if (notEmpty(message.fromPeer)) {
         jsonElement.addProperty("from_peer", message.fromPeer);
       }
-      if (notEmpty(message.messageUuid)) {
-        jsonElement.addProperty("message_uuid", message.messageUuid);
+      if (notEmpty(message.messageId)) {
+        jsonElement.addProperty("message_id", message.messageId);
       }
       if (notEmpty(message.command)) {
         ControlCommandType commandType = ControlCommandType.fromByte(message.getCommand());

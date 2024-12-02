@@ -181,7 +181,7 @@ class LogWriter extends ConnectedService {
         assert msg != null;
         if (logger.isDebugEnabled()) {
           logger.debug(
-              "Received new message w/uuid: {} ({} bytes)", msg.getMessageUuid(), msg.getSize());
+              "Received new message w/id: {} ({} bytes)", msg.getMessageId(), msg.getSize());
         }
       } catch (ZMQException ex) {
         int errorCode = ex.getErrorCode();
@@ -207,8 +207,8 @@ class LogWriter extends ConnectedService {
             MessageFormatType.BINARY_RPC,
             msg.getMessageType(),
             msg.getBody(),
-            msg.getMessageUuid(),
-            msg.getResponseToUuid(),
+            msg.getMessageId(),
+            msg.getResponseToId(),
             peerUuid,
             logHeaders);
       }
@@ -259,12 +259,12 @@ class LogWriter extends ConnectedService {
       MessageFormatType messageFormat,
       MessageType messageType,
       byte[] message,
-      UUID messageUuid,
-      UUID responseToUuid,
+      String messageId,
+      String responseId,
       UUID fromPeer,
       @Nullable Iterable<Header> headers) {
     if (logger.isDebugEnabled()) {
-      logger.debug("sending new message to kafka log with uuid: {}", messageUuid);
+      logger.debug("sending new message to kafka log with id: {}", messageId);
     }
     ProducerRecord<String, byte[]> newRecord =
         new ProducerRecord<>(outLog.getName(), 0, fromPeer.toString(), message, headers);
@@ -277,7 +277,7 @@ class LogWriter extends ConnectedService {
     Future<RecordMetadata> sendFuture;
     if (publishOffsets) {
       sendFuture =
-          producer.send(newRecord, new MessageOffsetInformer(messageUuid, offsetPublisherSocket));
+          producer.send(newRecord, new MessageOffsetInformer(messageId, offsetPublisherSocket));
     } else {
       sendFuture = producer.send(newRecord);
     }
@@ -289,11 +289,11 @@ class LogWriter extends ConnectedService {
             messagesSent.getAndIncrement();
             if (logger.isDebugEnabled()) {
               logger.debug(
-                  "new message written to log at offset: {}, w/uuid: {},"
-                      + " in reply to message w/uuid: {} ({} bytes)",
+                  "new message written to log at offset: {}, w/id: {},"
+                      + " in reply to message w/id: {} ({} bytes)",
                   sentRecordMetadata.offset(),
-                  messageUuid,
-                  responseToUuid,
+                  messageId,
+                  responseId,
                   message.length);
             }
           } catch (Exception e) {

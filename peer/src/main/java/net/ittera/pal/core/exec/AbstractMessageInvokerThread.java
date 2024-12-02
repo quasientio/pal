@@ -110,15 +110,15 @@ public abstract class AbstractMessageInvokerThread extends Thread {
             .create();
   }
 
-  protected final String getMessageUuid(Message msg) {
+  protected final String getMessageId(Message msg) {
     final ExecMessage execMessage = msg.getExecMessage();
     if (execMessage != null) {
-      return execMessage.getMessageUuid();
+      return execMessage.getMessageId();
     }
 
     final ControlMessage controlMessage = msg.getControlMessage();
     if (controlMessage != null) {
-      return controlMessage.getMessageUuid();
+      return controlMessage.getMessageId();
     }
 
     return null;
@@ -191,9 +191,9 @@ public abstract class AbstractMessageInvokerThread extends Thread {
     if (logger.isDebugEnabled()) {
       logger.debug(
           "Invoker dispatched Exec Message w/uuid: {} and recordOffset: {}, reply uuid: {}",
-          requestMsg.getMessageUuid(),
+          requestMsg.getMessageId(),
           recordOffset,
-          replyMsg.getMessageUuid());
+          replyMsg.getMessageId());
     }
     updateCounters();
     return replyMsg;
@@ -210,8 +210,8 @@ public abstract class AbstractMessageInvokerThread extends Thread {
       if (logger.isDebugEnabled()) {
         logger.debug(
             "Invoker dispatched Exec Message w/uuid: {} , reply uuid: {}",
-            controlMsg.getMessageUuid(),
-            replyMsg.getMessageUuid());
+            controlMsg.getMessageId(),
+            replyMsg.getMessageId());
       }
       updateCounters();
     }
@@ -243,11 +243,11 @@ public abstract class AbstractMessageInvokerThread extends Thread {
   }
 
   protected void logMessageDispatch(Message requestMsg, String replyId, long dispatchStart) {
-    logMessageDispatch(getMessageUuid(requestMsg), replyId, dispatchStart);
+    logMessageDispatch(getMessageId(requestMsg), replyId, dispatchStart);
   }
 
   protected void logMessageDispatch(Message requestMsg, Message replyMsg, long dispatchStart) {
-    logMessageDispatch(getMessageUuid(requestMsg), getMessageUuid(replyMsg), dispatchStart);
+    logMessageDispatch(getMessageId(requestMsg), getMessageId(replyMsg), dispatchStart);
   }
 
   protected void logMessageDispatch(String requestId, String replyId, long dispatchStart) {

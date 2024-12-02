@@ -623,7 +623,7 @@ public class ThinPeer implements AutoCloseable {
     // create kafka record
     ProducerRecord<String, LogMessage<?>> record =
         new ProducerRecord<>(
-            outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), logMessage);
+            outLog.getName(), PRODUCER_PARTITION, message.getMessageId(), logMessage);
 
     // send and return future
     var sendFuture = producer.send(record);
@@ -711,7 +711,7 @@ public class ThinPeer implements AutoCloseable {
     // create kafka record
     ProducerRecord<String, LogMessage<?>> newRecord =
         new ProducerRecord<>(
-            outLog.getName(), PRODUCER_PARTITION, message.getMessageUuid(), logMessage);
+            outLog.getName(), PRODUCER_PARTITION, message.getMessageId(), logMessage);
 
     // send and get offset
     long sentRecordOffset;
@@ -735,7 +735,7 @@ public class ThinPeer implements AutoCloseable {
       consumer.seek(inTopicPartition, sentRecordOffset);
     }
 
-    // wait for reply  (should contain responseToUuid = sentRecordOffset in message)
+    // wait for reply  (should contain responseToId = sentRecordOffset in message)
     while (true) {
       ConsumerRecords<String, LogMessage<?>> records;
       synchronized (consumerLock) {
@@ -755,13 +755,13 @@ public class ThinPeer implements AutoCloseable {
           continue;
         }
         final ExecMessage execMessage = ((Message) receivedMessage.getContent()).getExecMessage();
-        final String responseToUuid = execMessage == null ? null : execMessage.getResponseToUuid();
-        if (execMessage != null && message.getMessageUuid().equals(responseToUuid)) {
+        final String responseToId = execMessage == null ? null : execMessage.getResponseToId();
+        if (execMessage != null && message.getMessageId().equals(responseToId)) {
           if (logger.isDebugEnabled()) {
             logger.debug(
                 "Got reply with offset {} and uuid {} ",
                 receivedMsgOffset,
-                execMessage.getMessageUuid());
+                execMessage.getMessageId());
           }
           // try switching to direct peer talk (i.e. p2p)
           if (allowP2P) {
