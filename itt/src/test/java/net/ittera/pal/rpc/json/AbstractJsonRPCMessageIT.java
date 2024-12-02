@@ -35,8 +35,10 @@ import net.ittera.pal.cxn.PalDirectory;
 import net.ittera.pal.cxn.ThinPeer;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.messages.jsonrpc.Params;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
+import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
@@ -98,7 +100,7 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
   }
 
   private JsonRpcResponse sendAndReceive(JsonRpcRequest jsonRpcRequest)
-      throws ExecutionException, InterruptedException {
+      throws ExecutionException, InterruptedException, JsonSerializationException {
     logger.debug("Sending JSON-RPC request: {}", jsonRpcRequest);
     final JsonRpcResponse response;
     try {
@@ -115,14 +117,16 @@ public abstract class AbstractJsonRPCMessageIT extends AbstractIntegrationTest {
   }
 
   protected Object callEmptyConstructor(String className) throws Exception {
-    JsonRpcRequest jsonRpc = new JsonRpcRequest();
-    jsonRpc.setJsonrpc("2.0");
-    jsonRpc.setId(UUID.randomUUID().toString());
-    jsonRpc.setMethod("new:" + className);
+    JsonRpcRequest jsonRpc =
+        new JsonRpcRequest.Builder()
+            .withId(UUID.randomUUID().toString())
+            .withMethod("new")
+            .withParams(new Params.Builder().withType(className).build())
+            .build();
     JsonRpcResponse replyMsg = sendAndReceive(jsonRpc);
 
     // basic assertions
     // TODO
-    return replyMsg.getResult().getObject();
+    return replyMsg.getResult().getValue();
   }
 }

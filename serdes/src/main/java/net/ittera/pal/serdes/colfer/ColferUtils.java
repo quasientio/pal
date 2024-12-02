@@ -23,6 +23,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import java.util.ArrayList;
+import java.util.List;
 import net.ittera.pal.messages.Marshallable;
 import net.ittera.pal.messages.colfer.ClInitCall;
 import net.ittera.pal.messages.colfer.ClassMethodCall;
@@ -52,6 +54,8 @@ import net.ittera.pal.messages.colfer.StaticFieldGet;
 import net.ittera.pal.messages.colfer.StaticFieldPut;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.colfer.Throwable;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
+import net.ittera.pal.messages.jsonrpc.ResponseObject;
 import net.ittera.pal.serdes.colfer.JsonSerializers.ClInitCallSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.ClassMethodCallSerializer;
 import net.ittera.pal.serdes.colfer.JsonSerializers.ClassSerializer;
@@ -187,5 +191,35 @@ public class ColferUtils {
         return toJson(message, false);
       }
     };
+  }
+
+  /* The following methods serialize colfer-response types
+   * to be included in Json-Rpc response messages */
+
+  public static JsonRpcResponseReturnValue toResponseReturnValue(ReturnValue returnValue) {
+    JsonRpcResponseReturnValue jsonRpcResponseReturnValue = new JsonRpcResponseReturnValue();
+    jsonRpcResponseReturnValue.setIsVoid(returnValue.getIsVoid());
+    if (!returnValue.getIsVoid()) {
+      jsonRpcResponseReturnValue.setValue(toResponseObject(returnValue.getObject()));
+    }
+    return jsonRpcResponseReturnValue;
+  }
+
+  private static ResponseObject toResponseObject(Obj object) {
+    ResponseObject responseObject = new ResponseObject();
+    responseObject.setType(object.getClazz().getName());
+    responseObject.setIsNull(object.getIsNull());
+    responseObject.setValue(object.getValue());
+    if (object.getRef() != null && !object.getRef().isEmpty()) {
+      responseObject.setRef(Integer.parseInt(object.getRef()));
+    }
+    if (object.getArrayValues() != null && object.getArrayValues().length > 0) {
+      List<ResponseObject> arrayValues = new ArrayList<>();
+      for (Obj arrayValue : object.getArrayValues()) {
+        arrayValues.add(toResponseObject(arrayValue));
+      }
+      responseObject.setArrayValues(arrayValues.toArray(new ResponseObject[0]));
+    }
+    return responseObject;
   }
 }

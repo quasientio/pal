@@ -76,11 +76,12 @@ import net.ittera.pal.messages.colfer.ReturnValue;
 import net.ittera.pal.messages.colfer.StaticFieldGet;
 import net.ittera.pal.messages.colfer.StaticFieldPut;
 import net.ittera.pal.messages.colfer.StaticFieldPutDone;
+import net.ittera.pal.messages.jsonrpc.Argument;
 import net.ittera.pal.messages.jsonrpc.JsonRpcError;
-import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
+import net.ittera.pal.messages.jsonrpc.JsonRpcErrorData;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
-import net.ittera.pal.messages.jsonrpc.JsonRpcResult;
+import net.ittera.pal.messages.jsonrpc.JsonRpcResponseReturnValue;
 import net.ittera.pal.messages.types.ControlCommandType;
 import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.ExecMessageType;
@@ -89,6 +90,7 @@ import net.ittera.pal.messages.types.JsonRpcErrorCode;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcParamsException;
 import net.ittera.pal.serdes.jsonrpc.InvalidJsonRpcRequestException;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcMessageUtils;
 import net.ittera.pal.serdes.jsonrpc.JsonRpcParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,8 +98,6 @@ import org.slf4j.LoggerFactory;
 public final class MessageBuilder {
 
   private static final Logger logger = LoggerFactory.getLogger(MessageBuilder.class);
-
-  private static final String JSON_RPC_VERSION = "2.0";
 
   // ISO 8601 with millis (fraction-of-second) + TZ (no name, only offset)
   private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
@@ -918,7 +918,7 @@ public final class MessageBuilder {
           String.format("Unable to handle accessible object of type: %s", accessibleObject));
     }
 
-    // set class and isVoid
+    // set class and getIsVoid
     return newWrapper(ExecMessageType.RETURN_VALUE, peerUuid, responseToUuid)
         .withReturnValue(valueMessage.withIsVoid(isVoid));
   }
@@ -1061,54 +1061,62 @@ public final class MessageBuilder {
 
   // <editor-fold desc="JSON-RPC messages">
   // TODO
-  private Parameter[] jsonRpcParamsToBinaryRpcParams(List<JsonRpcParameter> jsonParams) {
-    if (jsonParams == null || jsonParams.isEmpty()) {
+  private Parameter[] jsonRpcParamsToBinaryRpcParams(List<Argument> jsonArgs) {
+    if (jsonArgs == null || jsonArgs.isEmpty()) {
       return new Parameter[0];
     }
 
-    Parameter[] binaryRpcParams = new Parameter[jsonParams.size()];
-    for (int i = 0; i < jsonParams.size(); i++) {
-      JsonRpcParameter jsonParam = jsonParams.get(i);
-      ObjectRef objectRef = null;
-      if (jsonParam.isRef()) {
-        objectRef = ObjectRef.from((Integer) jsonParam.getValue());
+    Parameter[] binaryRpcParams = new Parameter[jsonArgs.size()];
+    for (int i = 0; i < jsonArgs.size(); i++) {
+      Argument arg = jsonArgs.get(i);
+      Obj valueObj;
+      if (arg.getRef() != null) {
+        ObjectRef objectRef = ObjectRef.from(arg.getRef());
+        valueObj = new Obj().withRef(String.valueOf(arg.getRef()));
+        getWrappedObject(null, null, objectRef);
+      } else {
+        valueObj = getWrappedObject(arg.getValue(), arg.getType(), null);
       }
-      binaryRpcParams[i] =
-          new Parameter()
-              .withValue(
-                  getWrappedObject(
-                      jsonParam.isRef() ? null : jsonParam.getValue(),
-                      jsonParam.getType(),
-                      objectRef));
+      binaryRpcParams[i] = new Parameter().withValue(valueObj);
     }
     return binaryRpcParams;
   }
 
   private InstanceMethodCall createInstanceMethodCall(JsonRpcRequest jsonRpcRequest) {
+    var callParams = jsonRpcRequest.getParams();
+    String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
+
     InstanceMethodCall instanceMethodCall = new InstanceMethodCall();
-    instanceMethodCall.setClazz(getWrappedClass(jsonRpcRequest.getFullyQualifiedClassName()));
-    instanceMethodCall.setName(jsonRpcRequest.getMethodName());
-    instanceMethodCall.setObjectRef(jsonRpcRequest.getObjectRef());
-    instanceMethodCall.setParameters(jsonRpcParamsToBinaryRpcParams(jsonRpcRequest.getParams()));
+    instanceMethodCall.setClazz(getWrappedClass(className));
+    instanceMethodCall.setName(callParams.getMethod());
+    instanceMethodCall.setObjectRef(String.valueOf(callParams.getInstance()));
+    instanceMethodCall.setParameters(jsonRpcParamsToBinaryRpcParams(callParams.getArgs()));
     return instanceMethodCall;
   }
 
   private ClassMethodCall createClassMethodCall(JsonRpcRequest jsonRpcRequest) {
+    var callParams = jsonRpcRequest.getParams();
+    String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
+
     ClassMethodCall classMethodCall = new ClassMethodCall();
-    classMethodCall.setClazz(getWrappedClass(jsonRpcRequest.getFullyQualifiedClassName()));
-    classMethodCall.setName(jsonRpcRequest.getMethodName());
-    classMethodCall.setParameters(jsonRpcParamsToBinaryRpcParams(jsonRpcRequest.getParams()));
+    classMethodCall.setClazz(getWrappedClass(className));
+    classMethodCall.setName(callParams.getMethod());
+    classMethodCall.setParameters(jsonRpcParamsToBinaryRpcParams(callParams.getArgs()));
     return classMethodCall;
   }
 
   private InstanceFieldPut createInstanceFieldPut(JsonRpcRequest jsonRpcRequest) {
+    var putParams = jsonRpcRequest.getParams();
+    String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
+    String fieldName = JsonRpcMessageUtils.getFieldName(jsonRpcRequest).orElseThrow();
+
     InstanceFieldPut instanceFieldPut = new InstanceFieldPut();
-    instanceFieldPut.setClazz(getWrappedClass(jsonRpcRequest.getFullyQualifiedClassName()));
-    instanceFieldPut.setField(getWrappedField((String) null, jsonRpcRequest.getFieldName()));
-    instanceFieldPut.setObjectRef(jsonRpcRequest.getObjectRef());
-    JsonRpcParameter value = jsonRpcRequest.getParams().get(0);
-    if ("objectRef".equals(value.getType())) { // value is an object reference
-      instanceFieldPut.setValueObjectRef(value.getValue().toString());
+    instanceFieldPut.setClazz(getWrappedClass(className));
+    instanceFieldPut.setField(getWrappedField(className, fieldName));
+    instanceFieldPut.setObjectRef(String.valueOf(putParams.getInstance()));
+    Argument value = putParams.getValue();
+    if (value.getRef() != null) { // value is an object reference
+      instanceFieldPut.setValueObjectRef(value.getRef().toString());
     } else {
       instanceFieldPut.setValueObject(getWrappedObject(value.getValue(), value.getType(), null));
     }
@@ -1116,12 +1124,16 @@ public final class MessageBuilder {
   }
 
   private StaticFieldPut createStaticFieldPut(JsonRpcRequest jsonRpcRequest) {
+    var putParams = jsonRpcRequest.getParams();
+    String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
+    String fieldName = JsonRpcMessageUtils.getFieldName(jsonRpcRequest).orElseThrow();
+
     StaticFieldPut staticFieldPut = new StaticFieldPut();
-    staticFieldPut.setClazz(getWrappedClass(jsonRpcRequest.getFullyQualifiedClassName()));
-    staticFieldPut.setField(getWrappedField((String) null, jsonRpcRequest.getFieldName()));
-    JsonRpcParameter value = jsonRpcRequest.getParams().get(0);
-    if ("objectRef".equals(value.getType())) { // value is an object reference
-      staticFieldPut.setValueObjectRef(value.getValue().toString());
+    staticFieldPut.setClazz(getWrappedClass(className));
+    staticFieldPut.setField(getWrappedField(className, fieldName));
+    Argument value = putParams.getValue();
+    if (value.getRef() != null) { // value is an object reference
+      staticFieldPut.setValueObjectRef(value.getRef().toString());
     } else {
       staticFieldPut.setValueObject(getWrappedObject(value.getValue(), value.getType(), null));
     }
@@ -1129,32 +1141,34 @@ public final class MessageBuilder {
   }
 
   private InstanceFieldGet createInstanceFieldGet(JsonRpcRequest jsonRpcRequest) {
+    var getParams = jsonRpcRequest.getParams();
+    String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
+    String fieldName = JsonRpcMessageUtils.getFieldName(jsonRpcRequest).orElseThrow();
+
     InstanceFieldGet instanceFieldGet = new InstanceFieldGet();
-    instanceFieldGet.setClazz(
-        new net.ittera.pal.messages.colfer.Class()
-            .withName(jsonRpcRequest.getFullyQualifiedClassName()));
-    instanceFieldGet.setField(
-        new net.ittera.pal.messages.colfer.Field().withName(jsonRpcRequest.getFieldName()));
-    instanceFieldGet.setObjectRef(jsonRpcRequest.getObjectRef());
+    instanceFieldGet.setClazz(new net.ittera.pal.messages.colfer.Class().withName(className));
+    instanceFieldGet.setField(new net.ittera.pal.messages.colfer.Field().withName(fieldName));
+    instanceFieldGet.setObjectRef(String.valueOf(getParams.getInstance()));
     return instanceFieldGet;
   }
 
   private StaticFieldGet createStaticFieldGet(JsonRpcRequest jsonRpcRequest) {
+    String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
+    String fieldName = JsonRpcMessageUtils.getFieldName(jsonRpcRequest).orElseThrow();
+
     StaticFieldGet staticFieldGet = new StaticFieldGet();
-    staticFieldGet.setClazz(
-        new net.ittera.pal.messages.colfer.Class()
-            .withName(jsonRpcRequest.getFullyQualifiedClassName()));
-    staticFieldGet.setField(
-        new net.ittera.pal.messages.colfer.Field().withName(jsonRpcRequest.getFieldName()));
+    staticFieldGet.setClazz(new net.ittera.pal.messages.colfer.Class().withName(className));
+    staticFieldGet.setField(new net.ittera.pal.messages.colfer.Field().withName(fieldName));
     return staticFieldGet;
   }
 
   private ConstructorCall createConstructorCall(JsonRpcRequest jsonRpcRequest) {
+    var newParams = jsonRpcRequest.getParams();
+    String className = JsonRpcMessageUtils.getClassName(jsonRpcRequest).orElseThrow();
+
     ConstructorCall constructorCall = new ConstructorCall();
-    constructorCall.setClazz(
-        new net.ittera.pal.messages.colfer.Class()
-            .withName(jsonRpcRequest.getFullyQualifiedClassName()));
-    constructorCall.setParameters(jsonRpcParamsToBinaryRpcParams(jsonRpcRequest.getParams()));
+    constructorCall.setClazz(new net.ittera.pal.messages.colfer.Class().withName(className));
+    constructorCall.setParameters(jsonRpcParamsToBinaryRpcParams(newParams.getArgs()));
     return constructorCall;
   }
 
@@ -1166,14 +1180,15 @@ public final class MessageBuilder {
       execMessage.setPeerUuid(fromPeerUuid.toString());
     }
     execMessage.setMessageUuid(jsonRpcRequest.getId());
-    execMessage.setExecMessageType(jsonRpcRequest.getExecMessageType().toByte());
+    ExecMessageType execMessageType = JsonRpcMessageUtils.getExecMessageType(jsonRpcRequest);
+    execMessage.setExecMessageType(execMessageType.toByte());
 
     // currentTime is meant for the client to indicate when then message is sent; as we don't have
     // it in a JSON-RPC request, we set it here to the time the message is received
     execMessage.setCurrentTime(dtf.format(ZonedDateTime.now(ZoneOffset.UTC)));
 
     // Create the appropriate ExecMessage call object based on the ExecMessageType
-    switch (jsonRpcRequest.getExecMessageType()) {
+    switch (execMessageType) {
       case CONSTRUCTOR:
         execMessage.setConstructorCall(createConstructorCall(jsonRpcRequest));
         break;
@@ -1196,8 +1211,7 @@ public final class MessageBuilder {
         execMessage.setInstanceMethodCall(createInstanceMethodCall(jsonRpcRequest));
         break;
       default:
-        throw new IllegalArgumentException(
-            "Unsupported ExecMessageType: " + jsonRpcRequest.getExecMessageType());
+        throw new IllegalArgumentException("Unsupported ExecMessageType: " + execMessageType);
     }
     return wrap(execMessage);
   }
@@ -1207,19 +1221,26 @@ public final class MessageBuilder {
     // Create a JSON-RPC response object
     final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
     jsonRpcResponse.setId(execMessageResponse.getResponseToUuid());
-    jsonRpcResponse.setJsonrpc(JSON_RPC_VERSION);
 
     switch (ExecMessageType.fromByte(execMessageResponse.getExecMessageType())) {
       case PUT_STATIC_DONE:
-        jsonRpcResponse.setResult(new JsonRpcResult(execMessageResponse.getStaticFieldPutDone()));
-        break;
       case PUT_FIELD_DONE:
-        jsonRpcResponse.setResult(new JsonRpcResult(execMessageResponse.getInstanceFieldPutDone()));
+        jsonRpcResponse.setResult(
+            new JsonRpcResponseReturnValue.Builder().withIsVoid(true).build());
         break;
       case RETURN_VALUE:
-        jsonRpcResponse.setResult(new JsonRpcResult(execMessageResponse.getReturnValue()));
+        jsonRpcResponse.setResult(
+            ColferUtils.toResponseReturnValue(execMessageResponse.getReturnValue()));
         break;
       case THROWABLE:
+        net.ittera.pal.messages.colfer.Throwable raisedThrowable =
+            execMessageResponse.getRaisedThrowable().getThrowable();
+        JsonRpcErrorData errorData =
+            new JsonRpcErrorData.Builder()
+                .withThrowableType(raisedThrowable.getType())
+                .withMessage(raisedThrowable.getMessage())
+                .withStackTrace(raisedThrowable.getStackTraceElements())
+                .build();
         if (execMessageResponse.getRaisedThrowable() != null
             && isMethodNotFoundError(
                 execMessageResponse.getRaisedThrowable().getThrowable().getType())) {
@@ -1227,15 +1248,13 @@ public final class MessageBuilder {
               new JsonRpcError(
                   JsonRpcErrorCode.METHOD_NOT_FOUND.getCode(),
                   JsonRpcErrorCode.METHOD_NOT_FOUND.getMessage(),
-                  ColferUtils.toJson(
-                      execMessageResponse.getRaisedThrowable().getThrowable(), true)));
+                  errorData));
         } else {
           jsonRpcResponse.setError(
               new JsonRpcError(
                   JsonRpcErrorCode.SERVER_ERROR.getCode(),
                   JsonRpcErrorCode.SERVER_ERROR.getMessage(),
-                  ColferUtils.toJson(
-                      execMessageResponse.getRaisedThrowable().getThrowable(), true)));
+                  errorData));
         }
         break;
       default:
@@ -1250,33 +1269,38 @@ public final class MessageBuilder {
 
     final JsonRpcResponse jsonRpcResponse = new JsonRpcResponse();
     jsonRpcResponse.setId(requestId);
-    jsonRpcResponse.setJsonrpc(JSON_RPC_VERSION);
     final JsonRpcError error;
+    JsonRpcErrorData errorData = new JsonRpcErrorData();
 
     if (exception instanceof JsonRpcParseException) {
+      errorData.setMessage(
+          ((JsonRpcParseException) exception).getJsonParsingException().getMessage());
       error =
           new JsonRpcError(
               JsonRpcErrorCode.PARSE_ERROR.getCode(),
               JsonRpcErrorCode.PARSE_ERROR.getMessage(),
-              ((JsonRpcParseException) exception).getJsonParseException().getMessage());
+              errorData);
     } else if (exception instanceof InvalidJsonRpcParamsException) {
+      errorData.setMessage(exception.getMessage());
       error =
           new JsonRpcError(
               JsonRpcErrorCode.INVALID_PARAMS.getCode(),
               JsonRpcErrorCode.INVALID_PARAMS.getMessage(),
-              exception.getMessage());
+              errorData);
     } else if (exception instanceof InvalidJsonRpcRequestException) {
+      errorData.setMessage(exception.getMessage());
       error =
           new JsonRpcError(
               JsonRpcErrorCode.INVALID_REQUEST.getCode(),
               JsonRpcErrorCode.INVALID_REQUEST.getMessage(),
-              exception.getMessage());
+              errorData);
     } else {
+      errorData.setMessage(exception.getMessage());
       error =
           new JsonRpcError(
               JsonRpcErrorCode.INTERNAL_ERROR.getCode(),
               JsonRpcErrorCode.INTERNAL_ERROR.getMessage(),
-              exception.getMessage());
+              errorData);
     }
     jsonRpcResponse.setError(error);
     return jsonRpcResponse;

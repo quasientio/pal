@@ -1,18 +1,14 @@
 package net.ittera.pal.messages.jsonrpc;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.annotations.SerializedName;
-import net.ittera.pal.messages.RpcMessage;
+import com.google.gson.annotations.JsonAdapter;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcMessageIdAdapter;
 
-public abstract class JsonRpcMessage implements RpcMessage {
-  private static final Gson gson = new GsonBuilder().create();
-  private static final Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
+public abstract class JsonRpcMessage {
+  public static final String JSON_RPC_VERSION = "2.0";
 
-  @SerializedName("jsonrpc")
-  protected String jsonrpc;
+  private String jsonrpc;
 
-  @SerializedName("id")
+  @JsonAdapter(JsonRpcMessageIdAdapter.class) // ensure id is given as a string or number
   protected String id;
 
   public String getJsonrpc() {
@@ -31,11 +27,11 @@ public abstract class JsonRpcMessage implements RpcMessage {
     this.id = id;
   }
 
-  public String toJson() {
-    return toJson(false);
+  public void setId(long id) {
+    this.id = String.valueOf(id);
   }
 
-  public String toJson(boolean pretty) {
-    return pretty ? prettyGson.toJson(this) : gson.toJson(this);
+  public void setId(int id) {
+    this.id = String.valueOf(id);
   }
 }

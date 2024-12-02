@@ -1,15 +1,65 @@
 package net.ittera.pal.messages.jsonrpc;
 
-/**
- * When a rpc call encounters an error, the Response Object MUST contain the error member with a
- * value that is an Object with the following members.
- *
- * @param code A Number that indicates the error type that occurred. This MUST be an integer.
- * @param message A string providing a short description of the error. The message SHOULD be limited
- *     to a concise single sentence.
- * @param data A Primitive or Structured value that contains additional information about the error.
- */
-public record JsonRpcError(int code, String message, Object data) {
+import java.util.Objects;
+
+public class JsonRpcError {
+
+  private int code;
+
+  private String message;
+
+  @javax.annotation.Nullable private JsonRpcErrorData data;
+
+  public JsonRpcError() {}
+
+  public JsonRpcError(int code, String message) {
+    this.code = code;
+    this.message = message;
+  }
+
+  public JsonRpcError(int code, String message, @javax.annotation.Nullable JsonRpcErrorData data) {
+    this.code = code;
+    this.message = message;
+    this.data = data;
+  }
+
+  public int getCode() {
+    return code;
+  }
+
+  public void setCode(int code) {
+    this.code = code;
+  }
+
+  public String getMessage() {
+    return message;
+  }
+
+  public void setMessage(String message) {
+    this.message = message;
+  }
+
+  @javax.annotation.Nullable
+  public JsonRpcErrorData getData() {
+    return data;
+  }
+
+  public void setData(@javax.annotation.Nullable JsonRpcErrorData data) {
+    this.data = data;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof JsonRpcError that)) return false;
+    return code == that.code
+        && Objects.equals(message, that.message)
+        && Objects.equals(data, that.data);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(code, message, data);
+  }
 
   @Override
   public String toString() {
@@ -22,5 +72,28 @@ public record JsonRpcError(int code, String message, Object data) {
         + ", data="
         + data
         + '}';
+  }
+
+  public static class Builder {
+    private final JsonRpcError error = new JsonRpcError();
+
+    public Builder withCode(int code) {
+      error.setCode(code);
+      return this;
+    }
+
+    public Builder withMessage(String message) {
+      error.setMessage(message);
+      return this;
+    }
+
+    public Builder withData(@javax.annotation.Nullable JsonRpcErrorData data) {
+      error.setData(data);
+      return this;
+    }
+
+    public JsonRpcError build() {
+      return error;
+    }
   }
 }

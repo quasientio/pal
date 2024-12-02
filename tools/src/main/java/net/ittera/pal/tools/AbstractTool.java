@@ -31,6 +31,7 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.ExecMessageType;
 import net.ittera.pal.messages.types.MessageType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -141,10 +142,15 @@ public class AbstractTool {
     if (isBinaryRpc(logMessage)) {
       return ColferUtils.toJson((Message) logMessage.getContent(), true);
     } else if (isJsonRpc(logMessage)) {
-      return ((JsonRpcMessage) logMessage.getContent()).toJson(true);
+      try {
+        return JsonRpcSerializer.toPrettyJson((JsonRpcMessage) logMessage.getContent());
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Failed to serialize JSON-RPC message", e);
+      }
+    } else {
+      throw new IllegalArgumentException(
+          "Unknown message type of class: " + logMessage.getContent().getClass());
     }
-    throw new IllegalArgumentException(
-        "Unknown message type of class: " + logMessage.getContent().getClass());
   }
 
   protected static String getMessageOneLiner(LogMessage<?> logMessage) {
@@ -156,9 +162,14 @@ public class AbstractTool {
       // TODO: Add support for other message types; for now we return the 1-line Json representation
       return ColferUtils.toJson((Message) logMessage.getContent(), false);
     } else if (isJsonRpc(logMessage)) {
-      return ((JsonRpcMessage) logMessage.getContent()).toJson(false);
+      try {
+        return JsonRpcSerializer.toJson((JsonRpcMessage) logMessage.getContent());
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Failed to serialize JSON-RPC message", e);
+      }
+    } else {
+      throw new IllegalArgumentException(
+          "Unknown message type of class: " + logMessage.getContent().getClass());
     }
-    throw new IllegalArgumentException(
-        "Unknown message type of class: " + logMessage.getContent().getClass());
   }
 }

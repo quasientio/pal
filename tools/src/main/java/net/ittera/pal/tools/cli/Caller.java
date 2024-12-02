@@ -49,9 +49,10 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Obj;
 import net.ittera.pal.messages.colfer.RaisedThrowable;
 import net.ittera.pal.messages.colfer.ReturnValue;
-import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
+import net.ittera.pal.messages.jsonrpc.Argument;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.messages.jsonrpc.Params;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
@@ -578,7 +579,7 @@ public class Caller extends AbstractPalSubcommand {
 
   private void print(JsonRpcResponse response) {
     if (response.getResult() != null) {
-      out.println(response.getResult().getObject());
+      out.println(response.getResult().toString());
     } else if (response.getError() != null) {
       out.println(response.getError());
     }
@@ -644,20 +645,21 @@ public class Caller extends AbstractPalSubcommand {
     }
 
     public JsonRpcRequest buildJsonRpc() {
-      JsonRpcRequest jsonRpc = new JsonRpcRequest();
-      jsonRpc.setJsonrpc("2.0");
-      jsonRpc.setId(UUID.randomUUID().toString());
-      jsonRpc.setMethod(String.format("%s.%s", className, methodName));
+      Params.Builder paramsBuilder =
+          new Params.Builder().withMethod(methodName).withType(className);
+
       if (argList != null) {
-        JsonRpcParameter parameter = new JsonRpcParameter();
-        String[] argArray = argList.toArray(new String[0]);
-        parameter.setValue(argArray);
-        parameter.setType("[Ljava.lang.String;");
-        List<JsonRpcParameter> parameterList = new ArrayList<>();
-        parameterList.add(parameter);
-        jsonRpc.setParams(parameterList);
+        paramsBuilder.addArg(
+            new Argument.Builder()
+                .withType("[Ljava.lang.String;")
+                .withValue(argList.toArray(new String[0]))
+                .build());
       }
-      return jsonRpc;
+
+      return new JsonRpcRequest.Builder()
+          .withId(UUID.randomUUID().toString())
+          .withParams(paramsBuilder.build())
+          .build();
     }
   }
 }

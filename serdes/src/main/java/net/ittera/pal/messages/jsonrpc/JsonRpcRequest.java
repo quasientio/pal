@@ -1,215 +1,88 @@
 package net.ittera.pal.messages.jsonrpc;
 
-import com.google.common.base.Splitter;
-import com.google.gson.annotations.SerializedName;
-import java.util.Arrays;
-import java.util.List;
-import net.ittera.pal.messages.types.ExecMessageType;
+import java.util.Objects;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcRequestValidator;
 
-/**
- * Represents a JSON-RPC 2.0 request message. See <a
- * href="https://www.jsonrpc.org/specification">JSON-RPC 2.0 Spec</a>
- *
- * <p>Message example:
- *
- * <pre>
- *   {
- *     "jsonrpc": "2.0",
- *     "method": "net.ittera.pal.core.exec.RPCMessageInvoker.1234.getPeerUuid",
- *     "params": [],
- *     "id": 1
- *   }
- *   </pre>
- *
- * <p>The <b>jsonrpc</b> field is always "2.0".
- *
- * <p>For the <b>method</b> field, the following formats are supported:
- *
- * <ul>
- *   <li>The format "ClassName.methodName" indicates a static method call.
- *   <li>The format "ClassName.1234.methodName" indicates an instance method call.
- *   <li>The format "new:ClassName" indicates a constructor call.
- *   <li>The format "get:ClassName.fieldName" indicates a static field get.
- *   <li>The format "put:ClassName.fieldName" indicates a static field put.
- *   <li>The format "get:ClassName.1234.fieldName" indicates an instance field get.
- *   <li>The format "put:ClassName.1234.fieldName" indicates an instance field put.
- * </ul>
- *
- * <p>The <b>params</b> field is an array of parameters given by-position.
- *
- * <p>Each element of the array can be either a single value, or an Object. When given as an Object,
- * it can have any of the following fields:
- *
- * <ul>
- *   <li>value: the actual parameter value. If omitted, it’s considered null. The value is also
- *       considered null if either the object itself is null, or an empty object, ie. {}
- *   <li>type: if given, it must be a string representing the value’s type. The special type “ref”
- *       is used to indicate that the param value is an ObjectRef. If type is “ref”, then value
- *       cannot be null and must be an integer.
- * </ul>
- *
- * <p>The <b>id</b> field is an integer that is used to correlate the request with the response. The
- * <b>id</b> field is currently mandatory (i.e. notifications are not supported).
- *
- * <p>The following table shows the mapping between the method field and the ExecMessageType enum:
- *
- * <pre>
- *
- * <p><table>
- * <tr>
- * <th>Method field</th>
- * <th>ExecMessageType</th>
- * </tr>
- *
- * <tr>
- * <td>new:ClassName</td>
- * <td>CONSTRUCTOR</td>
- * </tr>
- * <tr>
- * <td>ClassName.methodName</td>
- * <td>CLASS_METHOD</td>
- * </tr>
- * <tr>
- * <td>ClassName.1234.methodName</td>
- * <td>INSTANCE_METHOD</td>
- * </tr>
- * <tr>
- * <td>get:ClassName.fieldName</td>
- * <td>GET_STATIC</td>
- * </tr>
- * <tr>
- * <td>get:ClassName.1234.fieldName</td>
- * <td>GET_INSTANCE_FIELD</td>
- * </tr>
- *
- * <tr>
- * <td>put:ClassName.fieldName</td>
- * <td>PUT_STATIC</td>
- * </tr>
- * <tr>
- * <td>put:ClassName.1234.fieldName</td>
- * <td>PUT_INSTANCE_FIELD</td>
- * </tr>
- * </table>
- * </pre>
- */
 public class JsonRpcRequest extends JsonRpcMessage {
-  private transient ExecMessageType execMessageType;
-  private transient String objectRef;
-  private transient String className;
-  private transient String fullyQualifiedClassName;
-  private transient String methodName;
-  private transient String fieldName;
-
-  @SerializedName("method")
   private String method;
 
-  @SerializedName("params")
-  private List<JsonRpcParameter> params;
+  private Params params;
 
   public String getMethod() {
     return method;
-  }
-
-  public List<JsonRpcParameter> getParams() {
-    return params;
   }
 
   public void setMethod(String method) {
     this.method = method;
   }
 
-  public void setParams(List<JsonRpcParameter> params) {
+  public Params getParams() {
+    return params;
+  }
+
+  public void setParams(Params params) {
     this.params = params;
   }
 
-  // Helper methods
-  public String getFullyQualifiedClassName() {
-    return fullyQualifiedClassName;
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof JsonRpcRequest that)) return false;
+    return Objects.equals(method, that.method) && Objects.equals(params, that.params);
   }
 
-  public String getMethodName() {
-    return methodName;
-  }
-
-  public String getFieldName() {
-    return fieldName;
-  }
-
-  public String getClassName() {
-    return className;
-  }
-
-  public String getObjectRef() {
-    return objectRef;
+  @Override
+  public int hashCode() {
+    return Objects.hash(method, params);
   }
 
   @Override
   public String toString() {
-    return toJson();
+    return "JsonRpcRequest{"
+        + "method='"
+        + method
+        + '\''
+        + ", params="
+        + params
+        + ", id='"
+        + id
+        + '\''
+        + '}';
   }
 
-  private static boolean isNumeric(String str) {
-    try {
-      Integer.parseInt(str);
-      return true;
-    } catch (NumberFormatException e) {
-      return false;
+  public static class Builder {
+    private final JsonRpcRequest request = new JsonRpcRequest();
+
+    public Builder withId(String id) {
+      request.setId(id);
+      return this;
     }
-  }
 
-  public ExecMessageType getExecMessageType() {
-    return execMessageType;
-  }
+    public Builder withId(long id) {
+      request.setId(id);
+      return this;
+    }
 
-  public void processMethodParts() {
-    final String[] parts = Splitter.on(".").splitToList(method).toArray(new String[0]);
+    public Builder withId(int id) {
+      request.setId(id);
+      return this;
+    }
 
-    // set objectRef
-    this.objectRef =
-        parts.length > 2 && isNumeric(parts[parts.length - 2]) ? parts[parts.length - 2] : null;
+    public Builder withMethod(String method) {
+      request.setMethod(method);
+      return this;
+    }
 
-    // set execMessageType and other fields
-    if (parts[0].startsWith("new:")) {
-      execMessageType = ExecMessageType.CONSTRUCTOR;
-      parts[0] = Splitter.on(":").splitToList(parts[0]).get(1); // Remove 'new'
-      className = parts[parts.length - 1];
-      fullyQualifiedClassName = String.join(".", Arrays.copyOfRange(parts, 0, parts.length));
-    } else if (parts[0].startsWith("get:")) {
-      parts[0] = Splitter.on(":").splitToList(parts[0]).get(1); // Remove 'get'
-      fieldName = parts[parts.length - 1];
-      if (objectRef != null) {
-        execMessageType = ExecMessageType.GET_FIELD;
-        className = parts[parts.length - 3];
-        fullyQualifiedClassName = String.join(".", Arrays.copyOfRange(parts, 0, parts.length - 2));
-      } else {
-        execMessageType = ExecMessageType.GET_STATIC;
-        className = parts[parts.length - 2];
-        fullyQualifiedClassName = String.join(".", Arrays.copyOfRange(parts, 0, parts.length - 1));
+    public Builder withParams(Params params) {
+      request.setParams(params);
+      return this;
+    }
+
+    public JsonRpcRequest build() {
+      if (request.getJsonrpc() == null) {
+        request.setJsonrpc(JsonRpcMessage.JSON_RPC_VERSION);
       }
-    } else if (parts[0].startsWith("put:")) {
-      parts[0] = Splitter.on(":").splitToList(parts[0]).get(1); // Remove 'put'
-      fieldName = parts[parts.length - 1];
-      if (objectRef != null) {
-        execMessageType = ExecMessageType.PUT_FIELD;
-        className = parts[parts.length - 3];
-        fullyQualifiedClassName = String.join(".", Arrays.copyOfRange(parts, 0, parts.length - 2));
-      } else {
-        execMessageType = ExecMessageType.PUT_STATIC;
-        className = parts[parts.length - 2];
-        fullyQualifiedClassName = String.join(".", Arrays.copyOfRange(parts, 0, parts.length - 1));
-      }
-    } else {
-      methodName = parts[parts.length - 1];
-      if (objectRef != null) {
-        execMessageType = ExecMessageType.INSTANCE_METHOD;
-        className = parts[parts.length - 3];
-        fullyQualifiedClassName = String.join(".", Arrays.copyOfRange(parts, 0, parts.length - 2));
-      } else {
-        execMessageType = ExecMessageType.CLASS_METHOD;
-        className = parts[parts.length - 2];
-        fullyQualifiedClassName = String.join(".", Arrays.copyOfRange(parts, 0, parts.length - 1));
-      }
+      JsonRpcRequestValidator.validate(request);
+      return request;
     }
   }
 }

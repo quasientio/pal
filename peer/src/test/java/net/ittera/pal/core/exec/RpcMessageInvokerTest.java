@@ -48,6 +48,7 @@ import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
+import net.ittera.pal.messages.jsonrpc.Params;
 import net.ittera.pal.serdes.colfer.ColferUtils;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import org.junit.After;
@@ -167,13 +168,14 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     rpcMessageInvoker.addMessageDispatchListener(dispatchListener);
 
     // create new JSON-RPC request
-    JsonRpcRequest request = new JsonRpcRequest();
-    request.setJsonrpc("2.0");
-    request.setMethod("new:java.lang.String");
     final UUID requestUuid = UUID.randomUUID();
+    JsonRpcRequest request =
+        new JsonRpcRequest.Builder()
+            .withMethod("new")
+            .withId(requestUuid.toString())
+            .withParams(new Params.Builder().withType("java.lang.String").build())
+            .build();
     final UUID clientId = UUID.randomUUID();
-    request.setId(requestUuid.toString());
-    request.processMethodParts();
 
     // deal msg
     String jsonRpcRequestAsString = gson.toJson(request);
@@ -258,13 +260,14 @@ public class RpcMessageInvokerTest extends ZmqEnabledTest {
     int msgCount = 10;
     for (int i = 0; i < msgCount; i++) {
       // create JSON-RPC request
-      JsonRpcRequest request = new JsonRpcRequest();
-      request.setJsonrpc("2.0");
-      request.setMethod("new:java.lang.String");
       final UUID requestUuid = UUID.randomUUID();
+      JsonRpcRequest request =
+          new JsonRpcRequest.Builder()
+              .withId(requestUuid.toString())
+              .withMethod("new")
+              .withParams(new Params.Builder().withType("java.lang.String").build())
+              .build();
       final UUID clientId = UUID.randomUUID();
-      request.setId(requestUuid.toString());
-      request.processMethodParts();
       // deal msg
       String jsonRpcRequestAsString = gson.toJson(request);
       InboundJsonRpcRequestMsg inboundJsonRpcRequestMsg =

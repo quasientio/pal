@@ -19,8 +19,6 @@
 
 package net.ittera.pal.serdes.kafka.typed;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import net.ittera.pal.common.util.UuidUtils;
@@ -33,6 +31,8 @@ import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.JsonRpcType;
 import net.ittera.pal.messages.types.MessageFormatType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
+import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.common.serialization.Serializer;
@@ -42,11 +42,6 @@ import org.slf4j.LoggerFactory;
 public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
 
   private static final Logger logger = LoggerFactory.getLogger(KafkaLogMessageSerializer.class);
-
-  private static final Gson gson =
-      new GsonBuilder()
-          // Register any custom serializers if needed
-          .create();
 
   @Override
   public void configure(Map<String, ?> configs, boolean isKey) {
@@ -103,7 +98,14 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
       MessageFormatType messageFormat = MessageFormatType.JSON_RPC;
 
       // Serialize using Gson
-      String json = gson.toJson(jsonRpcMessage);
+      String json;
+      try {
+        json = JsonRpcSerializer.toJson(jsonRpcMessage);
+      } catch (JsonSerializationException e) {
+        logger.error("Failed to serialize JsonRpcMessage: {}", jsonRpcMessage, e);
+        return null;
+      }
+
       data = json.getBytes(StandardCharsets.UTF_8);
 
       // Set the message-format header

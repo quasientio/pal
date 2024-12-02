@@ -220,7 +220,7 @@ public class LogConfiguratorTest {
   }
 
   // ArgumentMatcher for LogInfo which ignores the UUID and bootstrapServers on equals()
-  class LogInfoMatcher implements ArgumentMatcher<LogInfo> {
+  static class LogInfoMatcher implements ArgumentMatcher<LogInfo> {
     private final LogInfo expected;
 
     public LogInfoMatcher(LogInfo expected) {

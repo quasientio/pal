@@ -48,7 +48,7 @@ public interface ExecMessageAssertions {
       boolean isArray) {
     logger.trace(
         "in assertIsObjectOfType w/: returnValue:\n{}"
-            + ", className: {}, hasObjRef: {}, isNull: {}, isArray: {}",
+            + ", className: {}, hasObjRef: {}, getIsNull: {}, isArray: {}",
         returnValue,
         className,
         hasObjRef,

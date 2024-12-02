@@ -1,0 +1,111 @@
+package net.ittera.pal.messages.jsonrpc;
+
+import com.google.gson.annotations.SerializedName;
+import java.util.Arrays;
+import java.util.Objects;
+
+public class JsonRpcErrorData {
+
+  public JsonRpcErrorData() {}
+
+  @SerializedName("throwable_type")
+  private String throwableType;
+
+  private String message;
+
+  @SerializedName("stack_trace")
+  private String[] stackTrace;
+
+  @javax.annotation.Nullable private JsonRpcErrorData cause;
+
+  @javax.annotation.Nullable
+  public JsonRpcErrorData getCause() {
+    return cause;
+  }
+
+  public void setCause(@javax.annotation.Nullable JsonRpcErrorData cause) {
+    this.cause = cause;
+  }
+
+  public String getMessage() {
+    return message;
+  }
+
+  public void setMessage(String message) {
+    this.message = message;
+  }
+
+  public String[] getStackTrace() {
+    return stackTrace;
+  }
+
+  public void setStackTrace(String[] stackTrace) {
+    this.stackTrace = stackTrace;
+  }
+
+  public String getThrowableType() {
+    return throwableType;
+  }
+
+  public void setThrowableType(String throwableType) {
+    this.throwableType = throwableType;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof JsonRpcErrorData that)) return false;
+    return Objects.equals(throwableType, that.throwableType)
+        && Objects.equals(message, that.message)
+        && Objects.deepEquals(stackTrace, that.stackTrace)
+        && Objects.equals(cause, that.cause);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(throwableType, message, Arrays.hashCode(stackTrace), cause);
+  }
+
+  @Override
+  public String toString() {
+    return "JsonRpcErrorData{"
+        + "cause="
+        + cause
+        + ", throwableType='"
+        + throwableType
+        + '\''
+        + ", message='"
+        + message
+        + '\''
+        + ", stackTrace="
+        + Arrays.deepToString(stackTrace)
+        + '}';
+  }
+
+  public static class Builder {
+    private final JsonRpcErrorData errorData = new JsonRpcErrorData();
+
+    public Builder withThrowableType(String throwableType) {
+      errorData.setThrowableType(throwableType);
+      return this;
+    }
+
+    public Builder withMessage(String message) {
+      errorData.setMessage(message);
+      return this;
+    }
+
+    public Builder withStackTrace(String[] stackTrace) {
+      errorData.setStackTrace(stackTrace);
+      return this;
+    }
+
+    public Builder withCause(@javax.annotation.Nullable JsonRpcErrorData cause) {
+      errorData.setCause(cause);
+      return this;
+    }
+
+    public JsonRpcErrorData build() {
+      return errorData;
+    }
+  }
+}

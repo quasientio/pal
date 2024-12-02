@@ -19,28 +19,20 @@
 
 package net.ittera.pal.messages;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nullable;
 import net.ittera.pal.common.util.UuidUtils;
-import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.colfer.ReturnValue;
-import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
-import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.JsonRpcType;
 import net.ittera.pal.messages.types.MessageFormatType;
 import net.ittera.pal.messages.types.MessageType;
-import net.ittera.pal.serdes.colfer.JsonSerializers;
-import net.ittera.pal.serdes.jsonrpc.JsonRpcParameterDeserializer;
-import net.ittera.pal.serdes.jsonrpc.JsonRpcRequestDeserializer;
-import net.ittera.pal.serdes.jsonrpc.JsonRpcResponseDeserializer;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
+import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 
@@ -50,17 +42,6 @@ public class LogMessage<T> {
   private Long offset;
   private final Map<String, String> headers;
   private final T content;
-  private static final Gson gson =
-      new GsonBuilder()
-          .registerTypeAdapter(JsonRpcParameter.class, new JsonRpcParameterDeserializer())
-          .registerTypeAdapter(JsonRpcRequest.class, new JsonRpcRequestDeserializer())
-          .registerTypeAdapter(
-              StaticFieldPutDone.class, new JsonSerializers.StaticFieldPutDoneAdapter())
-          .registerTypeAdapter(
-              InstanceFieldPutDone.class, new JsonSerializers.InstanceFieldPutDoneAdapter())
-          .registerTypeAdapter(ReturnValue.class, new JsonSerializers.ReturnValueAdapter())
-          .registerTypeAdapter(JsonRpcResponse.class, new JsonRpcResponseDeserializer())
-          .create();
 
   public LogMessage(
       @Nullable String topic, @Nullable Long offset, Map<String, String> headers, T content) {
@@ -116,13 +97,23 @@ public class LogMessage<T> {
 
         switch (jsonRpcMessageType) {
           case REQUEST -> {
-            JsonRpcRequest jsonRpcRequest =
-                gson.fromJson(new String(data, StandardCharsets.UTF_8), JsonRpcRequest.class);
+            String json = new String(data, StandardCharsets.UTF_8);
+            JsonRpcRequest jsonRpcRequest;
+            try {
+              jsonRpcRequest = JsonRpcSerializer.fromJson(json, JsonRpcRequest.class);
+            } catch (JsonSerializationException e) {
+              throw new RuntimeException(e);
+            }
             logMessage = new LogMessage<>(topic, offset, headers, jsonRpcRequest);
           }
           case RESPONSE -> {
-            JsonRpcResponse jsonRpcResponse =
-                gson.fromJson(new String(data, StandardCharsets.UTF_8), JsonRpcResponse.class);
+            String json = new String(data, StandardCharsets.UTF_8);
+            JsonRpcResponse jsonRpcResponse;
+            try {
+              jsonRpcResponse = JsonRpcSerializer.fromJson(json, JsonRpcResponse.class);
+            } catch (JsonSerializationException e) {
+              throw new RuntimeException(e);
+            }
             logMessage = new LogMessage<>(topic, offset, headers, jsonRpcResponse);
           }
           default ->

@@ -11,6 +11,10 @@ public class InvalidJsonRpcRequestException extends JsonRpcRequestException {
     this.requestId = requestId;
   }
 
+  public InvalidJsonRpcRequestException(Exception cause) {
+    super(cause);
+  }
+
   public InvalidJsonRpcRequestException(Exception cause, String requestId) {
     super(cause);
     this.requestId = requestId;

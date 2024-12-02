@@ -19,8 +19,6 @@
 
 package net.ittera.pal.cxn;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -44,20 +42,16 @@ import net.ittera.pal.common.util.UuidUtils;
 import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.ControlMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
-import net.ittera.pal.messages.colfer.InstanceFieldPutDone;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.colfer.ReturnValue;
-import net.ittera.pal.messages.colfer.StaticFieldPutDone;
 import net.ittera.pal.messages.jsonrpc.JsonRpcMessage;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
 import net.ittera.pal.messages.jsonrpc.JsonRpcResponse;
 import net.ittera.pal.messages.types.ControlStatusType;
 import net.ittera.pal.messages.types.RpcType;
 import net.ittera.pal.serdes.colfer.ColferUtils;
-import net.ittera.pal.serdes.colfer.JsonSerializers;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
-import net.ittera.pal.serdes.jsonrpc.JsonRpcRequestDeserializer;
-import net.ittera.pal.serdes.jsonrpc.JsonRpcResponseDeserializer;
+import net.ittera.pal.serdes.jsonrpc.JsonRpcSerializer;
+import net.ittera.pal.serdes.jsonrpc.JsonSerializationException;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -120,7 +114,6 @@ public class ThinPeer implements AutoCloseable {
   private Socket peerSocket;
   private WsClient wsClient;
   private String rpcAddress;
-  private Gson gson;
   private RpcType outboundRpcType = RpcType.RPC;
   private PeerInfo initialPeer;
   private PeerInfo currentPeer;
@@ -392,18 +385,6 @@ public class ThinPeer implements AutoCloseable {
       }
     }
 
-    // initialize gson, registering custom adapters for JSON-RPC Response messages
-    this.gson =
-        new GsonBuilder()
-            .registerTypeAdapter(
-                StaticFieldPutDone.class, new JsonSerializers.StaticFieldPutDoneAdapter())
-            .registerTypeAdapter(
-                InstanceFieldPutDone.class, new JsonSerializers.InstanceFieldPutDoneAdapter())
-            .registerTypeAdapter(ReturnValue.class, new JsonSerializers.ReturnValueAdapter())
-            .registerTypeAdapter(JsonRpcRequest.class, new JsonRpcRequestDeserializer())
-            .registerTypeAdapter(JsonRpcResponse.class, new JsonRpcResponseDeserializer())
-            .create();
-
     initialized = true;
     logger.info(
         """
@@ -492,7 +473,8 @@ public class ThinPeer implements AutoCloseable {
    * @param jsonRpc the JSON-RPC request as a String or instance of JsonRpcRequest.
    * @return a CompletableFuture that will be completed with the response
    */
-  public CompletableFuture<JsonRpcResponse> sendJsonRpcRequestToPeer(Object jsonRpc) {
+  public CompletableFuture<JsonRpcResponse> sendJsonRpcRequestToPeer(Object jsonRpc)
+      throws JsonSerializationException {
     if (logger.isTraceEnabled()) {
       logger.trace("sendAndReceiveJsonRpcRequest: in with jsonRpc: {}", jsonRpc);
     }
@@ -500,14 +482,15 @@ public class ThinPeer implements AutoCloseable {
 
     if (talkingToPeer) {
       String rpcMessage;
-      if (jsonRpc instanceof JsonRpcRequest) {
-        rpcMessage = gson.toJson(jsonRpc);
+      if (jsonRpc instanceof JsonRpcRequest jsonRpcRequest) {
+        rpcMessage = JsonRpcSerializer.toJson(jsonRpcRequest);
+        return wsClient.sendAsync(rpcMessage, jsonRpcRequest.getId());
       } else if (jsonRpc instanceof String) {
         rpcMessage = (String) jsonRpc;
+        return wsClient.sendAsync(rpcMessage, null);
       } else {
         throw new IllegalArgumentException("Unsupported type for jsonRpc");
       }
-      return wsClient.sendAsync(rpcMessage);
     } else {
       throw new IllegalStateException(
           "Not connected to any peer. Cannot send and receive JSON-RPC messages to/from log");
@@ -651,7 +634,8 @@ public class ThinPeer implements AutoCloseable {
   }
 
   @SuppressWarnings("unused")
-  public Future<RecordMetadata> sendJsonRpcRequestToLog(Object jsonRpcRequest) {
+  public Future<RecordMetadata> sendJsonRpcRequestToLog(Object jsonRpcRequest)
+      throws JsonSerializationException {
     if (logger.isTraceEnabled()) {
       logger.trace("sendJsonRpcRequestToLog: in with jsonRpcRequest: {}", jsonRpcRequest);
     }
@@ -665,7 +649,7 @@ public class ThinPeer implements AutoCloseable {
     if (jsonRpcRequest instanceof JsonRpcRequest) {
       jsonRpcMessage = (JsonRpcRequest) jsonRpcRequest;
     } else if (jsonRpcRequest instanceof String) {
-      jsonRpcMessage = gson.fromJson((String) jsonRpcRequest, JsonRpcRequest.class);
+      jsonRpcMessage = JsonRpcSerializer.fromJson((String) jsonRpcRequest, JsonRpcRequest.class);
     } else {
       throw new IllegalArgumentException("Unsupported type for jsonRpc");
     }
@@ -1114,7 +1098,7 @@ public class ThinPeer implements AutoCloseable {
 
   // </editor-fold>
 
-  private final class WsClient extends WebSocketClient {
+  private static final class WsClient extends WebSocketClient {
     private final Map<String, CompletableFuture<JsonRpcResponse>> futureResponses =
         new ConcurrentHashMap<>();
 
@@ -1130,13 +1114,20 @@ public class ThinPeer implements AutoCloseable {
       super.send(message);
     }
 
-    public CompletableFuture<JsonRpcResponse> sendAsync(String message) {
+    public CompletableFuture<JsonRpcResponse> sendAsync(String message, String messageId)
+        throws JsonSerializationException {
       if (logger.isDebugEnabled()) {
         logger.debug("in sendAsync - sending message to ws socket: {}", message);
       }
-      JsonRpcRequest request = gson.fromJson(message, JsonRpcRequest.class);
+      String id;
+      if (messageId == null) {
+        JsonRpcRequest request = JsonRpcSerializer.fromJson(message, JsonRpcRequest.class);
+        id = request.getId();
+      } else {
+        id = messageId;
+      }
       CompletableFuture<JsonRpcResponse> futureResponse = new CompletableFuture<>();
-      futureResponses.put(request.getId(), futureResponse);
+      futureResponses.put(id, futureResponse);
       send(message);
       return futureResponse;
     }
@@ -1151,7 +1142,13 @@ public class ThinPeer implements AutoCloseable {
       if (logger.isDebugEnabled()) {
         logger.debug("Received message: {}", message);
       }
-      JsonRpcResponse response = gson.fromJson(message, JsonRpcResponse.class);
+      JsonRpcResponse response;
+      try {
+        response = JsonRpcSerializer.fromJson(message, JsonRpcResponse.class);
+      } catch (JsonSerializationException e) {
+        logger.error("Error deserializing JSON-RPC response", e);
+        throw new RuntimeException(e);
+      }
       CompletableFuture<JsonRpcResponse> futureResponse = futureResponses.get(response.getId());
       if (futureResponse == null) {
         logger.error("No future response found for message id: {}", response.getId());

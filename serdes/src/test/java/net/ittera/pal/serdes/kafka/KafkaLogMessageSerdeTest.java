@@ -13,8 +13,9 @@ import java.util.stream.Collectors;
 import net.ittera.pal.messages.LogMessage;
 import net.ittera.pal.messages.colfer.ExecMessage;
 import net.ittera.pal.messages.colfer.Message;
-import net.ittera.pal.messages.jsonrpc.JsonRpcParameter;
+import net.ittera.pal.messages.jsonrpc.Argument;
 import net.ittera.pal.messages.jsonrpc.JsonRpcRequest;
+import net.ittera.pal.messages.jsonrpc.Params;
 import net.ittera.pal.messages.types.JsonRpcType;
 import net.ittera.pal.serdes.colfer.MessageBuilder;
 import net.ittera.pal.serdes.kafka.typed.KafkaLogMessageDeserializer;
@@ -139,10 +140,9 @@ public class KafkaLogMessageSerdeTest {
   public void testJsonRpcMessageSerialization() {
     // Create sample JSON-RPC content
     JsonRpcRequest jsonRpcRequest = new JsonRpcRequest();
-    jsonRpcRequest.setJsonrpc("2.0");
     jsonRpcRequest.setId("1");
-    jsonRpcRequest.setMethod("sampleMethod");
-    jsonRpcRequest.setParams(convertList(List.of("Hello", ", ", "world!")));
+    jsonRpcRequest.setMethod("call");
+    jsonRpcRequest.setParams(createCallParams("testMethod", List.of("Hello", ", ", "world!")));
 
     // Prepare message headers
     Map<String, String> messageHeaders = new HashMap<>();
@@ -231,14 +231,20 @@ public class KafkaLogMessageSerdeTest {
     assertThat(consumedContent.getParams(), is(producedContent.getParams()));
   }
 
-  public static List<JsonRpcParameter> convertList(List<String> stringList) {
-    return stringList.stream()
-        .map(
-            str -> {
-              JsonRpcParameter param = new JsonRpcParameter();
-              param.setValue(str);
-              return param;
-            })
-        .collect(Collectors.toList());
+  public static Params createCallParams(String methodName, List<String> stringList) {
+    Params callParams = new Params();
+    callParams.setMethod(methodName);
+    callParams.setType("org.tests.DummyClass");
+    var args =
+        stringList.stream()
+            .map(
+                str -> {
+                  Argument arg = new Argument();
+                  arg.setValue(str);
+                  return arg;
+                })
+            .collect(Collectors.toList());
+    callParams.setArgs(args);
+    return callParams;
   }
 }
