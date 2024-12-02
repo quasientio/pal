@@ -13,7 +13,7 @@ public class Params {
 
   @javax.annotation.Nullable private Integer instance;
 
-  private List<Argument> args;
+  private List<Argument> args = new ArrayList<>();
 
   @javax.annotation.Nullable private Argument value;
 
@@ -55,7 +55,11 @@ public class Params {
   }
 
   public void setArgs(List<Argument> args) {
-    this.args = (args != null) ? args : new ArrayList<>();
+    if (args == null) {
+      this.args = new ArrayList<>();
+    } else {
+      this.args = args;
+    }
   }
 
   public Argument getValue() {

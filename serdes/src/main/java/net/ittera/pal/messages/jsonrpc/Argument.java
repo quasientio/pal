@@ -12,6 +12,15 @@ public class Argument {
 
   public Argument() {}
 
+  public Argument(Object value, String type) {
+    this.value = value;
+    this.type = type;
+  }
+
+  public Argument(Integer ref) {
+    this.ref = ref;
+  }
+
   @javax.annotation.Nullable
   public Object getValue() {
     return value;
