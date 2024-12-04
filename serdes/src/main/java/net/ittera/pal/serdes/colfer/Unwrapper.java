@@ -19,6 +19,7 @@
 
 package net.ittera.pal.serdes.colfer;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import net.ittera.pal.common.util.Classes;
 import net.ittera.pal.messages.colfer.Obj;
@@ -136,6 +137,11 @@ public class Unwrapper {
         throw new IllegalArgumentException("Unsupported primitive type:" + clazz.getName());
       }
     } else if (clazz.isArray()) { // ARRAY
+      Class<?> componentType = clazz.getComponentType();
+      // primitive or wrapper array
+      if (Classes.isPrimitiveOrWrapper(componentType)) {
+        return unwrapPrimitiveArray(object.getArrayValues(), componentType);
+      }
       final Obj[] arrayValues = object.getArrayValues();
       // String[]
       if (clazz == String[].class) {
@@ -145,120 +151,8 @@ public class Unwrapper {
           array[idx++] = strObj.getValue();
         }
         return array;
-      } else if (clazz == Integer[].class) { // PRIMITIVE WRAPPERS
-        Integer[] array = new Integer[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Integer.valueOf(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == Boolean[].class) {
-        Boolean[] array = new Boolean[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Boolean.valueOf(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == Byte[].class) {
-        Byte[] array = new Byte[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Byte.valueOf(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == Character[].class) {
-        Character[] array = new Character[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = strObj.getValue().charAt(0);
-        }
-        return array;
-      } else if (clazz == Short[].class) {
-        Short[] array = new Short[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Short.valueOf(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == Long[].class) {
-        Long[] array = new Long[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Long.valueOf(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == Float[].class) {
-        Float[] array = new Float[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Float.valueOf(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == Double[].class) {
-        Double[] array = new Double[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Double.valueOf(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == int[].class) { // PRIMITIVES
-        int[] array = new int[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Integer.parseInt(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == boolean[].class) {
-        boolean[] array = new boolean[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Boolean.parseBoolean(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == byte[].class) {
-        byte[] array = new byte[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Byte.parseByte(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == char[].class) {
-        char[] array = new char[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = strObj.getValue().charAt(0);
-        }
-        return array;
-      } else if (clazz == short[].class) {
-        short[] array = new short[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Short.parseShort(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == long[].class) {
-        long[] array = new long[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Long.parseLong(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == float[].class) {
-        float[] array = new float[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Float.parseFloat(strObj.getValue());
-        }
-        return array;
-      } else if (clazz == double[].class) {
-        double[] array = new double[arrayValues.length];
-        int idx = 0;
-        for (Obj strObj : arrayValues) {
-          array[idx++] = Double.parseDouble(strObj.getValue());
-        }
-        return array;
-      } else if (Wrapper.reconstructableCharSeqClasses.contains(clazz.getComponentType())) {
-        switch (clazz.getComponentType().getName()) {
+      } else if (Wrapper.reconstructableCharSeqClasses.contains(componentType)) {
+        switch (componentType.getName()) {
           case "java.lang.StringBuilder":
             final StringBuilder[] sbArray = new StringBuilder[arrayValues.length];
             int sbIdx = 0;
@@ -294,5 +188,15 @@ public class Unwrapper {
           Class.forName(objClassName, true, Thread.currentThread().getContextClassLoader());
     }
     return unwrapObject(object, objectClass);
+  }
+
+  private static Object unwrapPrimitiveArray(Obj[] arrayValues, Class<?> componentType) {
+    int length = arrayValues.length;
+    Object array = Array.newInstance(componentType, length);
+    for (int i = 0; i < length; i++) {
+      Object value = unwrapObject(arrayValues[i], componentType);
+      Array.set(array, i, value);
+    }
+    return array;
   }
 }
